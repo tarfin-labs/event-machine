@@ -23,6 +23,8 @@ class State
         $this->initialize();
     }
 
+    // region Initialization
+
     protected function initialize(): void
     {
         $this->initializeMachine();
@@ -152,4 +154,6 @@ class State
             ]);
         }
     }
+
+    // endregion
 }
