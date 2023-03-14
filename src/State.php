@@ -15,6 +15,7 @@ class State
         public ?State $parent = null,
         public State|string|null $initialState = null,
         public string|int|null $value = null,
+        public array|null $states = null,
     ) {
         // If parent machine is not defined, use this (State) as parent
         $this->machine = $this->parent ? $this->parent->machine : $this;
@@ -24,6 +25,17 @@ class State
 
         // If value is not defined, use name as value
         $this->value = $this->value ?? $this->name;
+
+        // Initialize states
+        if (!is_null($this->states)) {
+            foreach ($this->states as $key => $state) {
+                unset($this->states[$key]);
+                $this->states[$key] = Machine::define([
+                    'name'   => $key,
+                    'parent' => $this,
+                ]);
+            }
+        }
 
         // If initial state is not initialized, initialize it
         if (!empty($this->initialState)) {
