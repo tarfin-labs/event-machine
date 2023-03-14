@@ -21,6 +21,7 @@
         "illuminate/contracts": "^10.0"
     },
     "require-dev": {
+        "infection/infection": "^0.26.19",
         "laravel/pint": "^1.0",
         "nunomaduro/collision": "^7.9",
         "nunomaduro/larastan": "^2.0.1",
@@ -52,13 +53,15 @@
         "pestc": "vendor/bin/pest --coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
         "pestcp": "vendor/bin/pest --parallel --coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
         "pint": "vendor/bin/pint",
-        "lint": "@pint"
+        "lint": "@pint",
+        "infection": "vendor/bin/infection --test-framework=pest --show-mutations --threads=max --min-msi=100 --min-covered-msi=100 --ansi"
     },
     "config": {
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
-            "phpstan/extension-installer": true
+            "phpstan/extension-installer": true,
+            "infection/extension-installer": true
         }
     },
     "extra": {
