@@ -51,7 +51,8 @@
         "pestp": "vendor/bin/pest --parallel --colors=always --order-by=random --configuration=phpunit.xml.dist",
         "pestc": "vendor/bin/pest --coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
         "pestcp": "vendor/bin/pest --parallel --coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
-        "pint": "vendor/bin/pint"
+        "pint": "vendor/bin/pint",
+        "lint": "@pint"
     },
     "config": {
         "sort-packages": true,
