@@ -6,8 +6,10 @@ namespace Tarfinlabs\EventMachine;
 
 class Machine
 {
-    public static function define(): State
+    public static function define(?array $definition = null): State
     {
-        return new State();
+        return new State(
+            name: $definition['name'] ?? null,
+        );
     }
 }
