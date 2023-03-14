@@ -13,6 +13,7 @@ class State
     public function __construct(
         public ?string $name = null,
         public ?State $parent = null,
+        public string|int|null $value = null,
     ) {
         // If parent machine is not defined, use this (State) as parent
         $this->machine = $this->parent ? $this->parent->machine : $this;

@@ -10,6 +10,7 @@ class Machine
     {
         return new State(
             name: $definition['name'] ?? null,
+            value: $definition['value'] ?? null,
         );
     }
 }
