@@ -10,6 +10,8 @@ class State
 
     public ?State $machine = null;
 
+    public ?string $path = null;
+
     public function __construct(
         public ?string $name = null,
         public ?string $description = null,
@@ -33,6 +35,9 @@ class State
 
         // If description is empty, make it null
         $this->description = !empty($this->description) ? $this->description : null;
+
+        // Generate state path
+        $this->path = $this->parent ? $this->parent->path.'.'.$this->name : $this->name;
 
         // Initialize states
         if (!is_null($this->states)) {
