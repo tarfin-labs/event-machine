@@ -11,8 +11,6 @@ class Machine
      *
      * This method is declared as private to prevent direct instantiation of the Machine class.
      * Instead, it should be called by static factory method ({@see \Tarfinlabs\EventMachine\Facades\Machine::define()}).
-     *
-     * @access private
      */
     private function __construct()
     {
@@ -22,6 +20,7 @@ class Machine
     {
         return new State(
             name: $definition['name'] ?? null,
+            initialState: $definition['initial_state'] ?? null,
             value: $definition['value'] ?? null,
         );
     }

@@ -13,6 +13,7 @@ class State
     public function __construct(
         public ?string $name = null,
         public ?State $parent = null,
+        public State|string|null $initialState = null,
         public string|int|null $value = null,
     ) {
         // If parent machine is not defined, use this (State) as parent
@@ -23,5 +24,13 @@ class State
 
         // If value is not defined, use name as value
         $this->value = $this->value ?? $this->name;
+
+        // If initial state is not initialized, initialize it
+        if (!empty($this->initialState)) {
+            $this->initialState = Machine::define([
+                'name'   => $this->initialState,
+                'parent' => $this,
+            ]);
+        }
     }
 }
