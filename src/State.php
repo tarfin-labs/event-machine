@@ -27,6 +27,9 @@ class State
         // If value is not defined, use name as value
         $this->value = $this->value ?? $this->name;
 
+        // Version must be greater than 0
+        $this->version = $this->version >= 1 ? $this->version : 1;
+
         // Initialize states
         if (!is_null($this->states)) {
             foreach ($this->states as $key => $state) {
