@@ -70,7 +70,7 @@
                 "Tarfinlabs\\EventMachine\\MachineServiceProvider"
             ],
             "aliases": {
-                "Machine": "Tarfinlabs\\EventMachine\\Facades\\Machine"
+                "MachineFacade": "Tarfinlabs\\EventMachine\\Facades\\MachineFacade"
             }
         }
     },
