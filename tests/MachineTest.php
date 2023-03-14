@@ -18,3 +18,9 @@ test('a Machine has a name', function (): void {
 
     expect($machine)->name->toBe('traffic_lights_machine');
 });
+
+test('a Machine without name has a default name', function (): void {
+    $machine = Machine::define([]);
+
+    expect($machine)->name->toBe(State::DEFAULT_NAME);
+});
