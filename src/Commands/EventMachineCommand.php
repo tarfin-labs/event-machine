@@ -1,12 +1,12 @@
 <?php
 
-namespace VendorName\Skeleton\Commands;
+namespace Tarfinlabs\EventMachine\Commands;
 
 use Illuminate\Console\Command;
 
-class SkeletonCommand extends Command
+class EventMachineCommand extends Command
 {
-    public $signature = 'skeleton';
+    public $signature = 'event-machine';
 
     public $description = 'My command';
 

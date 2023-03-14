@@ -1,22 +1,22 @@
 {
-    "name": ":vendor_slug/:package_slug",
-    "description": ":package_description",
+    "name": "tarfin-labs/event-machine",
+    "description": "This is my package event-machine",
     "keywords": [
-        ":vendor_name",
+        "tarfin-labs",
         "laravel",
-        ":package_slug"
+        "event-machine"
     ],
-    "homepage": "https://github.com/:vendor_slug/:package_slug",
+    "homepage": "https://github.com/tarfin-labs/event-machine",
     "license": "MIT",
     "authors": [
         {
-            "name": ":author_name",
-            "email": "author@domain.com",
+            "name": "Yunus Emre Deligöz",
+            "email": "ye@deligoz.me",
             "role": "Developer"
         }
     ],
     "require": {
-        "php": "^8.1",
+        "php": "^8.1 | ^8.2",
         "spatie/laravel-package-tools": "^1.14.0",
         "illuminate/contracts": "^10.0"
     },
@@ -30,26 +30,28 @@
         "pestphp/pest-plugin-laravel": "^2.0",
         "phpstan/extension-installer": "^1.1",
         "phpstan/phpstan-deprecation-rules": "^1.0",
-        "phpstan/phpstan-phpunit": "^1.0",
-        "spatie/laravel-ray": "^1.26"
+        "phpstan/phpstan-phpunit": "^1.0"
     },
     "autoload": {
         "psr-4": {
-            "VendorName\\Skeleton\\": "src",
-            "VendorName\\Skeleton\\Database\\Factories\\": "database/factories"
+            "Tarfinlabs\\EventMachine\\": "src",
+            "Tarfinlabs\\EventMachine\\Database\\Factories\\": "database/factories"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "VendorName\\Skeleton\\Tests\\": "tests"
+            "Tarfinlabs\\EventMachine\\Tests\\": "tests"
         }
     },
     "scripts": {
         "post-autoload-dump": "@php ./vendor/bin/testbench package:discover --ansi",
-        "analyse": "vendor/bin/phpstan analyse",
-        "test": "vendor/bin/pest",
-        "test-coverage": "vendor/bin/pest --coverage",
-        "format": "vendor/bin/pint"
+        "phpstan": "vendor/bin/phpstan analyse --configuration=phpstan.neon.dist",
+        "test": "@pest",
+        "pest": "vendor/bin/pest --colors=always --order-by=random --configuration=phpunit.xml.dist",
+        "pestp": "vendor/bin/pest --parallel --colors=always --order-by=random --configuration=phpunit.xml.dist",
+        "pestc": "vendor/bin/pest --coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
+        "pestcp": "vendor/bin/pest --parallel --coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
+        "pint": "vendor/bin/pint"
     },
     "config": {
         "sort-packages": true,
@@ -61,10 +63,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "VendorName\\Skeleton\\SkeletonServiceProvider"
+                "Tarfinlabs\\EventMachine\\EventMachineServiceProvider"
             ],
             "aliases": {
-                "Skeleton": "VendorName\\Skeleton\\Facades\\Skeleton"
+                "EventMachine": "Tarfinlabs\\EventMachine\\Facades\\EventMachine"
             }
         }
     },
