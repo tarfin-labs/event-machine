@@ -50,3 +50,11 @@ test('a Machine has a default value', function (): void {
 
     expect($machine->value)->toBe('traffic_lights_machine');
 });
+
+test('a Machine has a version', function (): void {
+    $machine = Machine::define([
+        'version' => 2,
+    ]);
+
+    expect($machine)->version->toBe(2);
+});

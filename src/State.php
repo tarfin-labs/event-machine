@@ -12,6 +12,7 @@ class State
 
     public function __construct(
         public ?string $name = null,
+        public ?int $version = 1,
         public ?State $parent = null,
         public State|string|null $initialState = null,
         public string|int|null $value = null,
