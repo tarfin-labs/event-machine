@@ -67,10 +67,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Tarfinlabs\\EventMachine\\EventMachineServiceProvider"
+                "Tarfinlabs\\EventMachine\\MachineServiceProvider"
             ],
             "aliases": {
-                "EventMachine": "Tarfinlabs\\EventMachine\\Facades\\EventMachine"
+                "Machine": "Tarfinlabs\\EventMachine\\Facades\\Machine"
             }
         }
     },

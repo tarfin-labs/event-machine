@@ -7,12 +7,12 @@ namespace Tarfinlabs\EventMachine\Facades;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @see \Tarfinlabs\EventMachine\EventMachine
+ * @see \Tarfinlabs\EventMachine\Machine
  */
-class EventMachine extends Facade
+class Machine extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return \Tarfinlabs\EventMachine\EventMachine::class;
+        return \Tarfinlabs\EventMachine\Machine::class;
     }
 }

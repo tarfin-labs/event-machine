@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine;
 
 use Spatie\LaravelPackageTools\Package;
+use Tarfinlabs\EventMachine\Commands\MachineCommand;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Tarfinlabs\EventMachine\Commands\EventMachineCommand;
 
-class EventMachineServiceProvider extends PackageServiceProvider
+class MachineServiceProvider extends PackageServiceProvider
 {
     public function configurePackage(Package $package): void
     {
@@ -19,8 +19,8 @@ class EventMachineServiceProvider extends PackageServiceProvider
          */
         $package
             ->name('event-machine')
-            ->hasConfigFile()
-            ->hasMigration('create_event-machine_table')
-            ->hasCommand(EventMachineCommand::class);
+            ->hasConfigFile('machine')
+            ->hasMigration('create_machine_table')
+            ->hasCommand(MachineCommand::class);
     }
 }

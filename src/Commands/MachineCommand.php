@@ -6,7 +6,7 @@ namespace Tarfinlabs\EventMachine\Commands;
 
 use Illuminate\Console\Command;
 
-class EventMachineCommand extends Command
+class MachineCommand extends Command
 {
     public $signature = 'event-machine';
 

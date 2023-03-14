@@ -6,7 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests;
 
 use Orchestra\Testbench\TestCase as Orchestra;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Tarfinlabs\EventMachine\EventMachineServiceProvider;
+use Tarfinlabs\EventMachine\MachineServiceProvider;
 
 class TestCase extends Orchestra
 {
@@ -22,7 +22,7 @@ class TestCase extends Orchestra
     protected function getPackageProviders($app)
     {
         return [
-            EventMachineServiceProvider::class,
+            MachineServiceProvider::class,
         ];
     }
 
