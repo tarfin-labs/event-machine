@@ -1,8 +1,9 @@
 <?php
 
+declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\Machine;
 use Tarfinlabs\EventMachine\State;
+use Tarfinlabs\EventMachine\Machine;
 
 test('a machine can have states', function ($definition): void {
     $machine = Machine::define($definition);
@@ -12,7 +13,7 @@ test('a machine can have states', function ($definition): void {
         ->machine->toBe($machine)
         ->parent->toBeNull()
         ->states->toBeArray()
-                ->toHaveCount(3);
+        ->toHaveCount(3);
 
     foreach ($machine->states as $stateName => $stateInstance) {
         expect($stateInstance)
@@ -25,7 +26,7 @@ test('a machine can have states', function ($definition): void {
 })->with('states');
 
 dataset('states', [
-    'with state implementation'            => [
+    'with state implementation' => [
         [
             'name'          => 'traffic_lights_machine',
             'initial_state' => 'red',
@@ -36,7 +37,7 @@ dataset('states', [
             ],
         ],
     ],
-    'without state implementation'         => [
+    'without state implementation' => [
         [
             'name'          => 'traffic_lights_machine',
             'initial_state' => 'red',
