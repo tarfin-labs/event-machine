@@ -12,6 +12,14 @@ test('a Machine with a negative version', function (): void {
     expect($machine)->version->toBe(1);
 });
 
+test('a Machine with the 0 version', function (): void {
+    $machine = Machine::define([
+        'version' => 0,
+    ]);
+
+    expect($machine)->version->toBe(1);
+});
+
 test('a Machine without description', function (): void {
     $machineDefinition = [];
 
