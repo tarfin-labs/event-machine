@@ -8,8 +8,7 @@ use Illuminate\Console\Command;
 
 class MachineCommand extends Command
 {
-    public $signature = 'event-machine';
-
+    public $signature   = 'event-machine';
     public $description = 'My command';
 
     public function handle(): int

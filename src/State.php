@@ -9,8 +9,7 @@ class State
     public const DEFAULT_NAME = 'machine';
 
     public ?State $machine = null;
-
-    public ?string $path = null;
+    public ?string $path   = null;
 
     public function __construct(
         public ?string $name = null,

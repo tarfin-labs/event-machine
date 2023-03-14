@@ -77,6 +77,14 @@
       "anonymous_classes_opening_brace": "same_line",
       "allow_single_line_empty_anonymous_classes": true,
       "allow_single_line_anonymous_functions": true
+    },
+    "class_attributes_separation": {
+      "elements": {
+        "const": "one",
+        "method": "one",
+        "property": "none",
+        "trait_import": "none"
+      }
     }
   }
 }
