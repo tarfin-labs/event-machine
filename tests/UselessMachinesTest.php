@@ -2,28 +2,58 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\State;
 use Tarfinlabs\EventMachine\Machine;
 
-test('a Machine with a negative version', function (): void {
-    $machine = Machine::define([
-        'version' => -2,
-    ]);
+test('a useless machine')
+    ->with('useless_machines')
+    ->expect(Machine::define())
+    ->toBeInstanceOf(State::class)
+    ->machine->toBeInstanceOf(State::class)
+    ->name->toBe(State::DEFAULT_NAME)
+    ->value->toBe(State::DEFAULT_NAME)
+    ->path->toBe(State::DEFAULT_NAME)
+    ->version->toBe(1)
+    ->description->toBeNull()
+    ->parent->toBeNull()
+    ->initialState->toBeNull()
+    ->states->toBeNull();
 
-    expect($machine)->version->toBe(1);
-});
-
-test('a Machine with the 0 version', function (): void {
-    $machine = Machine::define([
-        'version' => 0,
-    ]);
-
-    expect($machine)->version->toBe(1);
-});
-
-test('a Machine without description', function (): void {
-    $machineDefinition = [];
-
-    $machine = Machine::define($machineDefinition);
-
-    expect($machine)->description->toBeNull();
-});
+dataset('useless_machines', [
+    'no definition' => [
+        //
+    ],
+    'empty definition' => [
+        [],
+    ],
+    'empty name' => [
+        [
+            'name' => '',
+        ],
+    ],
+    'negative version' => [
+        [
+            'version' => -1,
+        ],
+    ],
+    'zero version' => [
+        [
+            'version' => 0,
+        ],
+    ],
+    'empty description' => [
+        [
+            'description' => '',
+        ],
+    ],
+    'empty states' => [
+        [
+            'states',
+        ],
+    ],
+    'empty array states' => [
+        [
+            'states' => [],
+        ],
+    ],
+]);
