@@ -12,6 +12,7 @@ class State
 
     public function __construct(
         public ?string $name = null,
+        public ?string $description = null,
         public ?int $version = 1,
         public ?State $parent = null,
         public State|string|null $initialState = null,
@@ -29,6 +30,9 @@ class State
 
         // Version must be greater than 0
         $this->version = $this->version >= 1 ? $this->version : 1;
+
+        // If description is empty, make it null
+        $this->description = !empty($this->description) ? $this->description : null;
 
         // Initialize states
         if (!is_null($this->states)) {

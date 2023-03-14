@@ -58,3 +58,13 @@ test('a Machine has a version', function (): void {
 
     expect($machine)->version->toBe(2);
 });
+
+test('a machine can have a description', function (): void {
+    $machineDefinition = [
+        'description' => 'A Traffic Lights Machine',
+    ];
+
+    $machine = Machine::define($machineDefinition);
+
+    expect($machine)->description->toBe('A Traffic Lights Machine');
+});

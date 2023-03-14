@@ -20,8 +20,9 @@ class Machine
     {
         return new State(
             name: $definition['name'] ?? null,
-            parent: $definition['parent'] ?? null,
+            description: $definition['description'] ?? null,
             version: $definition['version'] ?? null,
+            parent: $definition['parent'] ?? null,
             initialState: $definition['initial_state'] ?? null,
             value: $definition['value'] ?? null,
             states: $definition['states'] ?? null,
