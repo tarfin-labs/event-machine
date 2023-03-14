@@ -22,9 +22,9 @@ class Machine
             name: $definition['name'] ?? null,
             description: $definition['description'] ?? null,
             version: $definition['version'] ?? null,
+            value: $definition['value'] ?? null,
             parent: $definition['parent'] ?? null,
             initialState: $definition['initial_state'] ?? null,
-            value: $definition['value'] ?? null,
             states: $definition['states'] ?? null,
         );
     }
