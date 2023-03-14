@@ -24,3 +24,9 @@ test('a Machine without name has a default name', function (): void {
 
     expect($machine)->name->toBe(State::DEFAULT_NAME);
 });
+
+test('a Machine has a machine', function (): void {
+    $machine = Machine::define([]);
+
+    expect($machine->machine)->toBeInstanceOf(State::class);
+});
