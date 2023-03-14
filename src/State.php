@@ -20,5 +20,8 @@ class State
 
         // If name is not defined, use the default name
         $this->name = !empty($this->name) ? $this->name : self::DEFAULT_NAME;
+
+        // If value is not defined, use name as value
+        $this->value = $this->value ?? $this->name;
     }
 }

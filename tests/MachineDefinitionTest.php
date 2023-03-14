@@ -31,7 +31,7 @@ test('a Machine has a machine', function (): void {
     expect($machine->machine)->toBeInstanceOf(State::class);
 });
 
-test('a machine has a value', function (): void {
+test('a Machine has a value', function (): void {
     $value = random_int(0, 1) ? 'red' : 1;
 
     $machine = Machine::define([
@@ -40,4 +40,13 @@ test('a machine has a value', function (): void {
     ]);
 
     expect($machine->value)->toBe($value);
+});
+
+test('a Machine has a default value', function (): void {
+    $machine = Machine::define([
+        'name'  => 'traffic_lights_machine',
+        'value' => null,
+    ]);
+
+    expect($machine->value)->toBe('traffic_lights_machine');
 });
