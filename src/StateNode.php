@@ -17,9 +17,9 @@ class StateNode
     /**
      * The child state nodes.
      *
-     * @var array<\Tarfinlabs\EventMachine\StateNode>
+     * @var null|array<\Tarfinlabs\EventMachine\StateNode>
      */
-    public array $states = [];
+    public ?array $states = null;
 
     /** The relative key of the state node, which represents its location in the overall state value. */
     public string $key;

@@ -15,8 +15,8 @@ class EventMachine
     public ?string $version = null;
     public StateNode $root;
 
-    /** @var array<\Tarfinlabs\EventMachine\StateNode> */
-    public array $states = [];
+    /** @var null|array<\Tarfinlabs\EventMachine\StateNode> */
+    public ?array $states = null;
 
     /**
      * TODO: Consider SplObjectStorage?
