@@ -54,6 +54,7 @@
         "pestcp": "vendor/bin/pest --parallel --coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
         "pint": "vendor/bin/pint",
         "lint": "@pint",
+        "lintc": "vendor/bin/pint && (git diff-index --quiet HEAD || (git add . && git commit -m 'chore: Fix styling'))",
         "infection": "vendor/bin/infection --test-framework=pest --show-mutations --threads=max --min-msi=100 --min-covered-msi=100 --ansi"
     },
     "config": {
