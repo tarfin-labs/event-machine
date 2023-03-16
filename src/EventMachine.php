@@ -18,6 +18,9 @@ class EventMachine
     /** @var null|array<\Tarfinlabs\EventMachine\StateNode> */
     public ?array $states = null;
 
+    /** @var array<string> */
+    public array $events = [];
+
     /**
      * TODO: Consider SplObjectStorage?
      *
@@ -43,5 +46,6 @@ class EventMachine
         $this->root->_initialize();
 
         $this->states = $this->root->states;
+        $this->events = $this->root->events;
     }
 }

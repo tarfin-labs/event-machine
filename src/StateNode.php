@@ -21,6 +21,13 @@ class StateNode
      */
     public ?array $states = null;
 
+    /**
+     * All the event types accepted by this state node and its descendants.
+     *
+     * @var array<string>
+     */
+    public array $events = [];
+
     /** The relative key of the state node, which represents its location in the overall state value. */
     public string $key;
 
@@ -42,9 +49,6 @@ class StateNode
 
     public ?string $description = null;
 
-    /**
-     * @throws \Exception
-     */
     public function __construct(
         public ?array $config = null,
         ?array $options = null,
@@ -83,6 +87,8 @@ class StateNode
             : null;
 
         $this->validateCompoundStateInitial();
+
+        $this->events = $this->getEvents();
     }
 
     protected function mapValues(array $collection, callable $iteratee): array
@@ -110,5 +116,41 @@ class StateNode
 
     public function _initialize(): void
     {
+    }
+
+    protected function getEvents(): array
+    {
+        // TODO: Consider caching events
+
+        $events = $this->ownEvents();
+
+        if ($this->states === null) {
+            return $events;
+        }
+
+        foreach ($this->states as $state) {
+            foreach ($state->getEvents() as $event) {
+                $events[] = $event;
+            }
+        }
+
+        return array_unique($events);
+    }
+
+    protected function ownEvents(): array
+    {
+        $events = [];
+
+        if (isset($this->config['on'])) {
+            $events = array_merge($events, array_keys($this->config['on']));
+        }
+
+        if (isset($this->config['initial'])) {
+            $initialState = $this->states[$this->config['initial']];
+
+            $events = array_merge($events, $initialState->ownEvents());
+        }
+
+        return array_unique($events);
     }
 }
