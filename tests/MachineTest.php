@@ -2,14 +2,17 @@
 
 declare(strict_types=1);
 
-// region machine
-
-// region machine.states
-
 use Tarfinlabs\EventMachine\Machine;
 
-it('should properly register machine states', function (): void {
-    $machine = Machine::define([
+it('should properly register machine states', function ($machineDefinition): void {
+    $machine = Machine::define($machineDefinition);
+
+    expect($machine->states)->toHaveKeys(['green', 'yellow', 'red']);
+})->with('machine_definitions');
+
+dataset('machine_definitions', [
+    'traffic_lights' => [[
+        'name'    => 'traffic_lights',
         'initial' => 'green',
         'states'  => [
             'green' => [
@@ -28,11 +31,5 @@ it('should properly register machine states', function (): void {
                 ],
             ],
         ],
-    ]);
-
-    expect($machine->states)->toHaveKeys(['green', 'yellow', 'red']);
-});
-
-// endregion
-
-// endregion
+    ]],
+]);
