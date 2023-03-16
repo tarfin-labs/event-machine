@@ -14,6 +14,13 @@ class StateNode
     /** The root machine node.  */
     public EventMachine $machine;
 
+    /**
+     * The child state nodes.
+     *
+     * @var array<\Tarfinlabs\EventMachine\StateNode>
+     */
+    public array $states = [];
+
     /** The relative key of the state node, which represents its location in the overall state value. */
     public string $key;
 
