@@ -15,9 +15,7 @@ class EventMachine
     public ?string $version = null;
     public StateNode $root;
 
-    /**
-     * @var array<\Tarfinlabs\EventMachine\StateNode>
-     */
+    /** @var array<\Tarfinlabs\EventMachine\StateNode> */
     public array $states = [];
 
     /**
