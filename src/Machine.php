@@ -16,16 +16,11 @@ class Machine
     {
     }
 
-    public static function define(?array $definition = null): State
-    {
-        return new State(
-            name: $definition['name'] ?? null,
-            description: $definition['description'] ?? null,
-            version: $definition['version'] ?? null,
-            value: $definition['value'] ?? null,
-            parent: $definition['parent'] ?? null,
-            initialState: $definition['initial_state'] ?? null,
-            states: $definition['states'] ?? null,
+    public static function define(
+        ?array $config = null,
+    ): EventMachine {
+        return new EventMachine(
+            config: $config,
         );
     }
 }
