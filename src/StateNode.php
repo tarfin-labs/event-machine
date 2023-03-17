@@ -64,8 +64,9 @@ class StateNode
         $this->id = $this->config['id'] ??
             implode($this->machine->delimiter, array_merge([$this->machine->id], $this->path));
 
-        $this->type = $this->config['type'] ??
-            match (true) {
+        $this->type = isset($this->config['type'])
+            ? StateNodeType::from($this->config['type'])
+            : match (true) {
                 isset($this->config['states']) && count(array_keys($this->config['states'])) > 0 => StateNodeType::COMPOUND,
                 isset($this->config['history']) && $this->config['history']                      => StateNodeType::HISTORY,
                 default                                                                          => StateNodeType::ATOMIC,
@@ -112,10 +113,6 @@ class StateNode
                 ."Try adding [ 'initial' => '{$firstStateKey}' ] to the state config."
             );
         }
-    }
-
-    public function _initialize(): void
-    {
     }
 
     protected function getEvents(): array
