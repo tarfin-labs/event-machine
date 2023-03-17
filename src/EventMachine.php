@@ -43,9 +43,16 @@ class EventMachine
             ],
         );
 
-        $this->root->_initialize();
-
         $this->states = $this->root->states;
         $this->events = $this->root->events;
+    }
+
+    public function start(): State
+    {
+        // TODO:
+        // - Run the machine
+        // - Register event listeners to Laravel
+
+        return new State();
     }
 }
