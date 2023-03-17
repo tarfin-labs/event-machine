@@ -134,7 +134,7 @@ class StateNode
             }
         }
 
-        return array_unique($events);
+        return array_values(array_unique($events));
     }
 
     protected function ownEvents(): array
@@ -151,6 +151,6 @@ class StateNode
             $events = array_merge($events, $initialState->ownEvents());
         }
 
-        return array_unique($events);
+        return array_values(array_unique($events));
     }
 }
