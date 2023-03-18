@@ -29,3 +29,15 @@ test('machine id should represent the id (state node)', function (): void {
 
     expect($idMachine->states['idle']->id)->toBe('idle');
 });
+
+test('machine id should use the key as the ID if no ID is provided (state node)', function (): void {
+    $noStateNodeIDMachine = Machine::define([
+        'id' => 'some-id',
+        'initial' => 'idle',
+        'states' => [
+            'idle' => [],
+        ],
+    ]);
+
+    expect($noStateNodeIDMachine->states['idle']->id)->toBe('some-id.idle');
+});
