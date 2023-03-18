@@ -32,9 +32,9 @@ test('machine id should represent the id (state node)', function (): void {
 
 test('machine id should use the key as the ID if no ID is provided (state node)', function (): void {
     $noStateNodeIDMachine = Machine::define([
-        'id' => 'some-id',
+        'id'      => 'some-id',
         'initial' => 'idle',
-        'states' => [
+        'states'  => [
             'idle' => [],
         ],
     ]);
