@@ -13,9 +13,9 @@ class EventMachine
     public string $id;
     public string $delimiter;
     public ?string $version = null;
-    public StateNode $root;
+    public StateDefinition $root;
 
-    /** @var null|array<\Tarfinlabs\EventMachine\StateNode> */
+    /** @var null|array<\Tarfinlabs\EventMachine\StateDefinition> */
     public ?array $states = null;
 
     /** @var array<string> */
@@ -24,7 +24,7 @@ class EventMachine
     /**
      * TODO: Consider SplObjectStorage?
      *
-     * @var array<string, \Tarfinlabs\EventMachine\StateNode>
+     * @var array<string, \Tarfinlabs\EventMachine\StateDefinition>
      */
     public array $idMap = [];
 
@@ -35,7 +35,7 @@ class EventMachine
         $this->delimiter = $this->config['delimiter'] ?? self::STATE_DELIMITER;
         $this->version   = $this->config['version'] ?? null;
 
-        $this->root = new StateNode(
+        $this->root = new StateDefinition(
             config: $this->config,
             options: [
                 '_key'     => $this->id,
@@ -47,12 +47,12 @@ class EventMachine
         $this->events = $this->root->events;
     }
 
-    public function start(): State
+    public function start(): CurrentState
     {
         // TODO:
         // - Run the machine
         // - Register event listeners to Laravel
 
-        return new State();
+        return new CurrentState();
     }
 }

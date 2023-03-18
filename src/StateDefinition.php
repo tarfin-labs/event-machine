@@ -6,10 +6,10 @@ namespace Tarfinlabs\EventMachine;
 
 use InvalidArgumentException;
 
-class StateNode
+class StateDefinition
 {
     /** The parent state node. */
-    public ?StateNode $parent = null;
+    public ?StateDefinition $parent = null;
 
     /** The root machine node.  */
     public EventMachine $machine;
@@ -17,7 +17,7 @@ class StateNode
     /**
      * The child state nodes.
      *
-     * @var null|array<\Tarfinlabs\EventMachine\StateNode>
+     * @var null|array<\Tarfinlabs\EventMachine\StateDefinition>
      */
     public ?array $states = null;
 
@@ -79,7 +79,7 @@ class StateNode
 
         $this->states = isset($this->config['states'])
             ? $this->mapValues($this->config['states'], function ($stateConfig, $key) {
-                return new StateNode($stateConfig, [
+                return new StateDefinition($stateConfig, [
                     '_parent'  => $this,
                     '_key'     => $key,
                     '_machine' => $this->machine,
