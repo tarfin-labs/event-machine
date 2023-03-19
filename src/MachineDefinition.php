@@ -9,4 +9,9 @@ class MachineDefinition
     private function __construct()
     {
     }
+
+    public static function define(): self
+    {
+        return new self();
+    }
 }
