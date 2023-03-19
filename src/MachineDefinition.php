@@ -6,12 +6,18 @@ namespace Tarfinlabs\EventMachine;
 
 class MachineDefinition
 {
-    private function __construct()
-    {
+    public const DEFAULT_NAME = '(machine)';
+
+    private function __construct(
+        public string $name,
+    ) {
     }
 
-    public static function define(): self
-    {
-        return new self();
+    public static function define(
+        ?array $definition = null,
+    ): self {
+        return new self(
+            name: $definition['name'] ?? self::DEFAULT_NAME,
+        );
     }
 }
