@@ -43,6 +43,8 @@ class EventMachine
             ],
         );
 
+        $this->root->initialize();
+
         $this->states = $this->root->states;
         $this->events = $this->root->events;
     }

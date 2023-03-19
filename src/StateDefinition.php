@@ -21,6 +21,9 @@ class StateDefinition
      */
     public ?array $states = null;
 
+    public array $transitions = [];
+    public ?array $always     = null;
+
     /**
      * All the event types accepted by this state node and its descendants.
      *
@@ -48,6 +51,10 @@ class StateDefinition
     public int $order = -1;
 
     public ?string $description = null;
+
+    public const NULL_EVENT = '';
+
+    public const TARGETLESS_KEY = '';
 
     public function __construct(
         public ?array $config = null,
@@ -113,6 +120,81 @@ class StateDefinition
                 ."Try adding [ 'initial' => '{$firstStateKey}' ] to the state config."
             );
         }
+    }
+
+    public function initialize(): void
+    {
+        $this->transitions = $this->initializeTransitions();
+
+        if (is_array($this->states)) {
+            /** @var \Tarfinlabs\EventMachine\StateDefinition $stateDefinition */
+            foreach ($this->states as $stateDefinition) {
+                $stateDefinition->initializeTransitions();
+            }
+        }
+    }
+
+    public function initializeTransitions(): array
+    {
+        $transitionDefinitions = [];
+
+        if (!isset($this->config['on'])) {
+            return $transitionDefinitions;
+        }
+
+        foreach ($this->config['on'] as $eventType => $configs) {
+            if ($eventType === self::NULL_EVENT) {
+                throw new Exception('Null events ("") cannot be specified as a transition key. Use `always => [ ... ]` instead.');
+            }
+        }
+
+        if (isset($stateDefinition->config['on'])) {
+            if (is_array($stateDefinition->config['on'])) {
+                $transitionDefinitions = [...$transitionDefinitions, ...$stateDefinition->config['on']];
+            } else {
+                $namedTransitionDefinitions = $stateDefinition->config['on'];
+
+                foreach ($namedTransitionDefinitions as $eventType => $configs) {
+                    if ($eventType === self::NULL_EVENT) {
+                        throw new Exception('Null events ("") cannot be specified as a transition key. Use `always => [ ... ]` instead.');
+                    }
+
+                    $eventTransitionConfigs = $this->toTransitionDefinitionArray($eventType, $configs);
+                    $transitionDefinitions  = [...$transitionDefinitions, ...$eventTransitionConfigs];
+                }
+            }
+        }
+
+        $formattedTransitions = [];
+
+        foreach ($transitionDefinitions as $transitionDefinition) {
+            $formattedTransitions[] = $this->formatTransition($stateDefinition, $transitionDefinition);
+        }
+
+        return $formattedTransitions;
+    }
+
+    protected function formatTransition(StateDefinition $stateDefinition, null|array|string $transitionDefinition): array
+    {
+        // Normalize the target and resolve it
+        $normalizedTarget = $this->normalizeTarget($transitionDefinition['target'] ?? null);
+        $target           = $this->resolveTarget($stateDefinition, $normalizedTarget);
+
+        return new TransitionDefinition(
+            source: $stateDefinition,
+            event: 'event',
+            target: $target,
+            actions: $transitionDefinition['actions'] ?? [],
+        );
+    }
+
+    protected function normalizeTarget($target): ?array
+    {
+        if ($target === null || $target === self::TARGETLESS_KEY) {
+            return null;
+        }
+
+        return is_array($target) ? $target : [$target];
     }
 
     protected function getEvents(): array
