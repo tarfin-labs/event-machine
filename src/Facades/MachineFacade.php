@@ -13,6 +13,6 @@ class MachineFacade extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return \Tarfinlabs\EventMachine\Machine::class;
+        return \Tarfinlabs\EventMachine\MachineDefinition::class;
     }
 }
