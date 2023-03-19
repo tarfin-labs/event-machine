@@ -17,3 +17,11 @@ test('a machine has a name', function (): void {
 
     expect($machine->name)->toBe('machine-name');
 });
+
+test('a machine has a default name', function (): void {
+    $machine = MachineDefinition::define([
+        'name' => null,
+    ]);
+
+    expect($machine->name)->toBe(MachineDefinition::DEFAULT_NAME);
+});
