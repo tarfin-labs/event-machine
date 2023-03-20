@@ -20,7 +20,12 @@ class MachineDefinition
         /** The string delimiter for serializing the path to a string. */
         public string $delimiter = self::STATE_DELIMITER,
     ) {
-        $this->root = new StateDefinition(config: $config ?? null);
+        $this->root = new StateDefinition(
+            config: $config ?? null,
+            options: [
+                'machine' => $this,
+            ]
+        );
     }
 
     public static function define(

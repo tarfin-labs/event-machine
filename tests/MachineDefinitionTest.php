@@ -87,3 +87,9 @@ test('a machine definition has a root state definition', function (): void {
     expect($machine)->toHaveProperty('root');
     expect($machine->root)->toBeInstanceOf(StateDefinition::class);
 });
+
+test('root state definition has a reference to the machine definition', function (): void {
+    $nullMachine = MachineDefinition::define();
+
+    expect($nullMachine->root->machine)->toBe($nullMachine);
+});
