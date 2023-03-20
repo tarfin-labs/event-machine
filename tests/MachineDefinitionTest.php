@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\StateDefinition;
 use Tarfinlabs\EventMachine\MachineDefinition;
 
 test('a machine definition is an instance of a MachineDefinition', function (): void {
@@ -78,4 +79,11 @@ test('a machine definition has a default delimiter', function (): void {
 
     expect($nullMachine)->toHaveProperty('delimiter');
     expect($nullMachine->delimiter)->toBe(MachineDefinition::STATE_DELIMITER);
+});
+
+test('a machine definition has a root state definition', function (): void {
+    $machine = MachineDefinition::define();
+
+    expect($machine)->toHaveProperty('root');
+    expect($machine->root)->toBeInstanceOf(StateDefinition::class);
 });
