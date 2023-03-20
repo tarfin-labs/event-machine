@@ -18,3 +18,11 @@ test('state definition has a machine reference', function (): void {
     expect($machine->root->machine)->toBeInstanceOf(MachineDefinition::class);
     expect($machine->root->machine)->toBe($machine);
 });
+
+test('state definition has a local id', function (): void {
+    $localId = 'state_id';
+    $machine = MachineDefinition::define(config: ['name' => $localId]);
+
+    expect($machine->root)->toHaveProperty('localId');
+    expect($machine->root->localId)->toBe($localId);
+});
