@@ -11,6 +11,7 @@ class MachineDefinition
     private function __construct(
         public ?array $config,
         public string $name,
+        public ?string $version,
     ) {
     }
 
@@ -20,6 +21,7 @@ class MachineDefinition
         return new self(
             config: $config ?? null,
             name: $config['name'] ?? self::DEFAULT_NAME,
+            version: $config['version'] ?? null,
         );
     }
 }

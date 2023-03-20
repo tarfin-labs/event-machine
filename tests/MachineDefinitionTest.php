@@ -40,3 +40,12 @@ test('a machine definition has a default name', function (): void {
     expect($nullNameMachine->name)->toBe(MachineDefinition::DEFAULT_NAME);
     expect($nullMachine->name)->toBe(MachineDefinition::DEFAULT_NAME);
 });
+
+test('a machine definition can have a version', function (): void {
+    $machineWithVersion = MachineDefinition::define(config: [
+        'version' => '2.3.4',
+    ]);
+
+    expect($machineWithVersion)->toHaveProperty('version');
+    expect($machineWithVersion->version)->toBe('2.3.4');
+});
