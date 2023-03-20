@@ -9,6 +9,7 @@ class MachineDefinition
     public const DEFAULT_NAME = '(machine)';
 
     private function __construct(
+        public ?array $config,
         public string $name,
     ) {
     }
@@ -17,6 +18,7 @@ class MachineDefinition
         ?array $config = null,
     ): self {
         return new self(
+            config: $config ?? null,
             name: $config['name'] ?? self::DEFAULT_NAME,
         );
     }

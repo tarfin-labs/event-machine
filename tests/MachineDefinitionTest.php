@@ -10,6 +10,18 @@ test('a machine definition is an instance of a MachineDefinition', function (): 
     expect($nullMachine)->toBeInstanceOf(MachineDefinition::class);
 });
 
+test('a machine definition has its config', function (): void {
+    $config = [
+        'name' => 'machine-name',
+    ];
+
+    $machineWithName = MachineDefinition::define(config: $config);
+
+    expect($machineWithName)
+        ->toHaveProperty('config')
+        ->and($machineWithName->config)->toBe($config);
+});
+
 test('a machine definition has a name', function (): void {
     $machineWithName = MachineDefinition::define(config: [
         'name' => 'machine-name',
