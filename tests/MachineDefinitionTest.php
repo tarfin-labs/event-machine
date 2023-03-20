@@ -72,3 +72,10 @@ test('a machine definition has a delimiter', function (): void {
     expect($machineWithDelimiter)->toHaveProperty('delimiter');
     expect($machineWithDelimiter->delimiter)->toBe('->');
 });
+
+test('a machine definition has a default delimiter', function (): void {
+    $nullMachine = MachineDefinition::define();
+
+    expect($nullMachine)->toHaveProperty('delimiter');
+    expect($nullMachine->delimiter)->toBe(MachineDefinition::STATE_DELIMITER);
+});
