@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Facade;
 /**
  * @see \Tarfinlabs\EventMachine\Machine
  */
-class MachineFacade extends Facade
+class Machine extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
