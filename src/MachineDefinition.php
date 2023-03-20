@@ -23,7 +23,8 @@ class MachineDefinition
         $this->root = new StateDefinition(
             config: $config ?? null,
             options: [
-                'machine' => $this,
+                'machine'  => $this,
+                'local_id' => $this->name,
             ]
         );
     }
