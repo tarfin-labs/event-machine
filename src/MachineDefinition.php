@@ -14,10 +14,10 @@ class MachineDefinition
     }
 
     public static function define(
-        ?array $definition = null,
+        ?array $config = null,
     ): self {
         return new self(
-            name: $definition['name'] ?? self::DEFAULT_NAME,
+            name: $config['name'] ?? self::DEFAULT_NAME,
         );
     }
 }

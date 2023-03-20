@@ -11,7 +11,7 @@ test('a machine is an instance of a MachineDefinition', function (): void {
 });
 
 test('a machine has a name', function (): void {
-    $machineWithName = MachineDefinition::define([
+    $machineWithName = MachineDefinition::define(config: [
         'name' => 'machine-name',
     ]);
 
@@ -21,7 +21,7 @@ test('a machine has a name', function (): void {
 test('a machine has a default name', function (): void {
     $nullMachine = MachineDefinition::define();
 
-    $nullNameMachine = MachineDefinition::define([
+    $nullNameMachine = MachineDefinition::define(config: [
         'name' => null,
     ]);
 
