@@ -58,8 +58,8 @@ test('a machine definition can have a version', function (): void {
 });
 
 test('a machine definition version is null if no version config given', function (): void {
-    $machineWithVersion = MachineDefinition::define(config: []);
+    $nullMachine = MachineDefinition::define();
 
-    expect($machineWithVersion)->toHaveProperty('version');
-    expect($machineWithVersion->version)->toBeNull();
+    expect($nullMachine)->toHaveProperty('version');
+    expect($nullMachine->version)->toBeNull();
 });
