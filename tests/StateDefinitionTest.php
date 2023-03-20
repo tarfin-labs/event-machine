@@ -6,7 +6,7 @@ use Tarfinlabs\EventMachine\StateDefinition;
 use Tarfinlabs\EventMachine\MachineDefinition;
 
 test('state definition is an instance of StateDefinition', function (): void {
-    $machine         = MachineDefinition::define();
+    $machine = MachineDefinition::define();
 
     expect($machine->root)->toBeInstanceOf(StateDefinition::class);
 });
@@ -29,7 +29,7 @@ test('state definition has a local id', function (): void {
 
 test('state definition has a null local id when not provided', function (): void {
     // TODO: This test can be written better.
-    $machine = MachineDefinition::define();
+    $machine         = MachineDefinition::define();
     $stateDefinition = new StateDefinition(config: null, options: ['machine' => $machine]);
 
     expect($stateDefinition)->toHaveProperty('localId');
