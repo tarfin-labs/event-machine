@@ -8,11 +8,15 @@ class MachineDefinition
 {
     public const DEFAULT_NAME = '(machine)';
 
+    public const STATE_DELIMITER = '.';
+
     private function __construct(
         /** The raw config used to create the machine. */
         public ?array $config,
         public string $name,
         public ?string $version,
+        /** The string delimiter for serializing the path to a string. */
+        public string $delimiter = self::STATE_DELIMITER,
     ) {
     }
 
@@ -23,6 +27,7 @@ class MachineDefinition
             config: $config ?? null,
             name: $config['name'] ?? self::DEFAULT_NAME,
             version: $config['version'] ?? null,
+            delimiter: $config['delimiter'] ?? self::STATE_DELIMITER,
         );
     }
 }

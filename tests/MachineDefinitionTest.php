@@ -63,3 +63,12 @@ test('a machine definition version is null if no version config given', function
     expect($nullMachine)->toHaveProperty('version');
     expect($nullMachine->version)->toBeNull();
 });
+
+test('a machine definition has a delimiter', function (): void {
+    $machineWithDelimiter = MachineDefinition::define(config: [
+        'delimiter' => '->',
+    ]);
+
+    expect($machineWithDelimiter)->toHaveProperty('delimiter');
+    expect($machineWithDelimiter->delimiter)->toBe('->');
+});
