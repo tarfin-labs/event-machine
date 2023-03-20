@@ -45,3 +45,10 @@ test('state definition has a config', function (): void {
     expect($machine->root)->toHaveProperty('config');
     expect($machine->root->config)->toBe($machineConfiguration);
 });
+
+test('state definition has a null config when not provided', function (): void {
+    $machine = MachineDefinition::define();
+
+    expect($machine->root)->toHaveProperty('config');
+    expect($machine->root->config)->toBeNull();
+});
