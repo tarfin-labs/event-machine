@@ -5,23 +5,28 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\MachineDefinition;
 
 test('a machine is an instance of a MachineDefinition', function (): void {
-    $machine = MachineDefinition::define();
+    $nullMachine = MachineDefinition::define();
 
-    expect($machine)->toBeInstanceOf(MachineDefinition::class);
+    expect($nullMachine)->toBeInstanceOf(MachineDefinition::class);
 });
 
 test('a machine has a name', function (): void {
-    $machine = MachineDefinition::define([
+    $machineWithName = MachineDefinition::define([
         'name' => 'machine-name',
     ]);
 
-    expect($machine->name)->toBe('machine-name');
+    expect($machineWithName->name)->toBe('machine-name');
 });
 
 test('a machine has a default name', function (): void {
-    $machine = MachineDefinition::define([
+    $nullMachine = MachineDefinition::define();
+
+    $nullNameMachine = MachineDefinition::define([
         'name' => null,
     ]);
 
-    expect($machine->name)->toBe(MachineDefinition::DEFAULT_NAME);
+    expect($nullNameMachine->name)
+        ->toBe(MachineDefinition::DEFAULT_NAME)
+        ->and($nullMachine->name)
+        ->toBe(MachineDefinition::DEFAULT_NAME);
 });
