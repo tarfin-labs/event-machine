@@ -21,6 +21,13 @@ test('a machine definition has its config', function (): void {
     expect($machineWithName->config)->toBe($config);
 });
 
+test('a machine definition config is null if no config given', function (): void {
+    $nullMachine = MachineDefinition::define();
+
+    expect($nullMachine)->toHaveProperty('config');
+    expect($nullMachine->config)->toBeNull();
+});
+
 test('a machine definition has a name', function (): void {
     $machineWithName = MachineDefinition::define(config: [
         'name' => 'machine-name',
