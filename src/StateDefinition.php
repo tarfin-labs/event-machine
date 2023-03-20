@@ -10,7 +10,7 @@ class StateDefinition
     public MachineDefinition $machine;
 
     /** The local id of the state definition, representing its location in the overall state value. */
-    public string $localId;
+    public ?string $localId;
 
     /**
      * Create a new state definition with the given configuration and options.
