@@ -101,3 +101,10 @@ test('root state definition has a local id', function (): void {
     expect($machine->root)->toHaveProperty('localId');
     expect($machine->root->localId)->toBe($machineName);
 });
+
+test('root state definition has a default local id', function (): void {
+    $machine = MachineDefinition::define();
+
+    expect($machine->root)->toHaveProperty('localId');
+    expect($machine->root->localId)->toBe(MachineDefinition::DEFAULT_NAME);
+});
