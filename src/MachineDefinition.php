@@ -9,6 +9,7 @@ class MachineDefinition
     public const DEFAULT_NAME = '(machine)';
 
     private function __construct(
+        /** The raw config used to create the machine. */
         public ?array $config,
         public string $name,
         public ?string $version,
