@@ -72,3 +72,13 @@ test('state definition has a path', function (): void {
     expect($machine->root)->toHaveProperty('path');
     expect($machine->root->path)->toBe([]);
 });
+
+test('a state definition can have a description', function (): void {
+    $description = 'This is a description';
+    $machine     = MachineDefinition::define(config: [
+        'description' => $description,
+    ]);
+
+    expect($machine->root)->toHaveProperty('description');
+    expect($machine->root->description)->toBe($description);
+});

@@ -25,6 +25,9 @@ class StateDefinition
      */
     public array $path;
 
+    /** The description of the state definition. */
+    public ?string $description;
+
     /**
      * Create a new state definition with the given configuration and options.
      *
@@ -42,6 +45,8 @@ class StateDefinition
         $this->path = $this->parent
             ? array_merge($this->parent->path, [$this->localId])
             : [];
+
+        $this->description = $this->config['description'] ?? null;
 
         // Assign the global ID to either the 'id' value from the config,
         // or generate a unique ID by merging the machine ID with
