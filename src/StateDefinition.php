@@ -16,6 +16,13 @@ class StateDefinition
     public ?string $localId;
 
     /**
+     * The string path from the root machine definition to this state definition.
+     *
+     * @var array<string>
+     */
+    public array $path;
+
+    /**
      * Create a new state definition with the given configuration and options.
      *
      * @param  ?array  $config The raw configuration array used to create the state definition.
@@ -28,5 +35,9 @@ class StateDefinition
         $this->parent  = $options['parent'] ?? null;
         $this->machine = $options['machine'] ?? null;
         $this->localId = $options['local_id'] ?? null;
+
+        $this->path = $this->parent
+            ? array_merge($this->parent->path, [$this->localId])
+            : [];
     }
 }
