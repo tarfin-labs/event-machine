@@ -19,7 +19,7 @@ test('state definition has a machine reference', function (): void {
     expect($machine->root->machine)->toBe($machine);
 });
 
-test('state definition has a local id', function (): void {
+test('a state definition has a local id', function (): void {
     $localId = 'state_id';
     $machine = MachineDefinition::define(config: ['name' => $localId]);
 
@@ -27,7 +27,7 @@ test('state definition has a local id', function (): void {
     expect($machine->root->localId)->toBe($localId);
 });
 
-test('state definition has a null local id when not provided', function (): void {
+test('a state definition has a null local id when not provided', function (): void {
     // TODO: This test can be written better.
     $machine         = MachineDefinition::define();
     $stateDefinition = new StateDefinition(config: null, options: ['machine' => $machine]);
@@ -36,7 +36,7 @@ test('state definition has a null local id when not provided', function (): void
     expect($stateDefinition->localId)->toBeNull();
 });
 
-test('state definition has a config', function (): void {
+test('a state definition has a config', function (): void {
     $machineConfiguration = [
         'name' => 'machine_name',
     ];
@@ -46,14 +46,14 @@ test('state definition has a config', function (): void {
     expect($machine->root->config)->toBe($machineConfiguration);
 });
 
-test('state definition has a null config when not provided', function (): void {
+test('a state definition has a null config when not provided', function (): void {
     $machine = MachineDefinition::define();
 
     expect($machine->root)->toHaveProperty('config');
     expect($machine->root->config)->toBeNull();
 });
 
-test('state definition has a parent state definition', function (): void {
+test('a state definition has a parent state definition', function (): void {
     // TODO: This test can be written better without using the root state definition and without expecting a null parent
     $machine = MachineDefinition::define();
 
@@ -65,7 +65,7 @@ test('the parent of a state definition is null if it has no parent', function ()
     // TODO: Write this test after implementing states on state definition
 })->todo();
 
-test('state definition has a path', function (): void {
+test('a state definition has a path', function (): void {
     // TODO: This test can be written better without using the root state definition
     $machine = MachineDefinition::define();
 
