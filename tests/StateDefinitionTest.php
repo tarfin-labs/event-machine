@@ -53,6 +53,14 @@ test('state definition has a null config when not provided', function (): void {
     expect($machine->root->config)->toBeNull();
 });
 
+test('state definition has a parent state definition', function (): void {
+    // TODO: This test can be written better without using the root state definition and without expecting a null parent
+    $machine = MachineDefinition::define();
+
+    expect($machine->root)->toHaveProperty('parent');
+    expect($machine->root->parent)->toBeNull();
+});
+
 test('state definition has a path', function (): void {
     // TODO: This test can be written better without using the root state definition
     $machine = MachineDefinition::define();
