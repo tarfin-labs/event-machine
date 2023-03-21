@@ -82,3 +82,10 @@ test('a state definition can have a description', function (): void {
     expect($machine->root)->toHaveProperty('description');
     expect($machine->root->description)->toBe($description);
 });
+
+test('the state definition is null if not provided', function (): void {
+    $nullMachine = MachineDefinition::define();
+
+    expect($nullMachine->root)->toHaveProperty('description');
+    expect($nullMachine->root->description)->toBeNull();
+});
