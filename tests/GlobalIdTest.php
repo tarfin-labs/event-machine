@@ -1,0 +1,15 @@
+<?php
+
+declare(strict_types=1);
+
+use Tarfinlabs\EventMachine\MachineDefinition;
+
+test('global id represent root state definition', function (): void {
+    // TODO: This test can be written better after implementing states in state definition.
+
+    $machineWithName = MachineDefinition::define(config: [
+        'name' => 'machine-name',
+    ]);
+
+    expect($machineWithName->root->globalId)->toBe('machine-name');
+});
