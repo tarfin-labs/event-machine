@@ -32,6 +32,13 @@ class StateDefinition
     public int $order = -1;
 
     /**
+     * The child state definitions of this state definition.
+     *
+     * @var null|array<\Tarfinlabs\EventMachine\StateDefinition>
+     */
+    public ?array $states = null;
+
+    /**
      * Create a new state definition with the given configuration and options.
      *
      * @param  ?array  $config The raw configuration array used to create the state definition.
@@ -59,5 +66,28 @@ class StateDefinition
 
         $this->order = $this->machine->idMap->count();
         $this->machine->idMap->attach($this, $this->globalId);
+
+        $this->states = $this->initializeStates();
+    }
+
+    protected function initializeStates(): ?array
+    {
+        if (!isset($this->config['states']) || !is_array($this->config['states'])) {
+            return null;
+        }
+
+        $states = [];
+        foreach ($this->config['states'] as $stateName => $stateConfig) {
+            $states[$stateName] = new StateDefinition(
+                config: $stateConfig,
+                options: [
+                    'parent'  => $this,
+                    'machine' => $this->machine,
+                    'local_id' => $stateName,
+                ]
+            );
+        }
+
+        return $states;
     }
 }

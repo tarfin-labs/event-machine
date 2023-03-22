@@ -99,3 +99,18 @@ test('a state definition has an order', function (): void {
     expect($machineWithName->root)->toHaveProperty('order');
     expect($machineWithName->root->order)->toBe(0);
 });
+
+test('a state definition has states', function (): void {
+    $machineWithStates = MachineDefinition::define(config: [
+        'states' => [
+            'green' => [],
+            'yellow' => [],
+            'red' => [],
+        ],
+    ]);
+
+    expect($machineWithStates->root->states)
+        ->toBeArray()
+        ->toHaveKeys(['green', 'yellow', 'red']);
+});
+
