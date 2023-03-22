@@ -93,9 +93,7 @@ test('a machine definition has a idMap', function (): void {
     $machine = MachineDefinition::define();
 
     expect($machine)->toHaveProperty('idMap');
-    expect($machine->idMap)
-        ->toBeArray()
-        ->toMatchArray([
-            MachineDefinition::DEFAULT_NAME => $machine->root,
-        ]);
+    expect($machine->idMap)->toBeInstanceOf(SplObjectStorage::class);
+    expect($machine->idMap->contains($machine->root))->toBeTrue();
+    expect($machine->idMap->count())->toBe(1);
 });

@@ -57,7 +57,7 @@ class StateDefinition
         // TODO: Extract this to a method.
         $this->globalId = $this->config['id'] ?? implode($this->machine->delimiter, array_merge([$this->machine->name], $this->path));
 
-        $this->order                           = count($this->machine->idMap);
-        $this->machine->idMap[$this->globalId] = $this;
+        $this->order = $this->machine->idMap->count();
+        $this->machine->idMap->attach($this, $this->globalId);
     }
 }

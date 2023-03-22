@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine;
 
+use SplObjectStorage;
+
 class MachineDefinition
 {
     /** The default name for the root machine definition. */
@@ -15,8 +17,7 @@ class MachineDefinition
     /** The root state definition for this machine definition. */
     public StateDefinition $root;
 
-    /** @var array<string, \Tarfinlabs\EventMachine\StateDefinition> */
-    public array $idMap = [];
+    public SplObjectStorage $idMap;
 
     /**
      * @param  array|null  $config The raw configuration array used to create the machine definition.
@@ -30,6 +31,8 @@ class MachineDefinition
         public ?string $version,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
+        $this->idMap = new SplObjectStorage();
+
         $this->root = new StateDefinition(
             config: $config ?? null,
             options: [
