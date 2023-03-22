@@ -114,3 +114,18 @@ test('a state definition has states', function (): void {
         ->toHaveKeys(['green', 'yellow', 'red'])
         ->each->toBeInstanceOf(StateDefinition::class);
 });
+
+test('a state config can be null', function (): void {
+    $machineWithStates = MachineDefinition::define(config: [
+        'states' => [
+            'green'  => null,
+            'yellow' => null,
+            'red'    => null,
+        ],
+    ]);
+
+    expect($machineWithStates->states)
+        ->toBeArray()
+        ->toHaveKeys(['green', 'yellow', 'red'])
+        ->each->toBeInstanceOf(StateDefinition::class);
+});
