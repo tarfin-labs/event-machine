@@ -54,11 +54,22 @@ test('a state definition has a null config when not provided', function (): void
 });
 
 test('a state definition has a parent state definition', function (): void {
-    // TODO: This test can be written better without using the root state definition and without expecting a null parent
-    $machine = MachineDefinition::define();
+    $machineWithStates = MachineDefinition::define(config: [
+        'states' => [
+            'green'  => [],
+            'yellow' => [],
+            'red'    => [],
+        ],
+    ]);
 
-    expect($machine->root)->toHaveProperty('parent');
-    expect($machine->root->parent)->toBeNull();
+    expect($machineWithStates->states['green'])->toHaveProperty('parent');
+    expect($machineWithStates->states['green']->parent)->toBe($machineWithStates->root);
+
+    expect($machineWithStates->states['yellow'])->toHaveProperty('parent');
+    expect($machineWithStates->states['yellow']->parent)->toBe($machineWithStates->root);
+
+    expect($machineWithStates->states['red'])->toHaveProperty('parent');
+    expect($machineWithStates->states['red']->parent)->toBe($machineWithStates->root);
 });
 
 test('the parent of a state definition is null if it has no parent', function (): void {
