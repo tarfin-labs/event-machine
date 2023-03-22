@@ -111,5 +111,6 @@ test('a state definition has states', function (): void {
 
     expect($machineWithStates->root->states)
         ->toBeArray()
-        ->toHaveKeys(['green', 'yellow', 'red']);
+        ->toHaveKeys(['green', 'yellow', 'red'])
+        ->each->toBeInstanceOf(StateDefinition::class);
 });
