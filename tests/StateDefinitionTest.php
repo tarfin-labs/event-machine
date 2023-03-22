@@ -23,8 +23,8 @@ test('a state definition has a local id', function (): void {
     $localId = 'state_id';
     $machine = MachineDefinition::define(config: ['id' => $localId]);
 
-    expect($machine->root)->toHaveProperty('localId');
-    expect($machine->root->localId)->toBe($localId);
+    expect($machine->root)->toHaveProperty('key');
+    expect($machine->root->key)->toBe($localId);
 });
 
 test('a state definition has a null local id when not provided', function (): void {
@@ -32,8 +32,8 @@ test('a state definition has a null local id when not provided', function (): vo
     $machine         = MachineDefinition::define();
     $stateDefinition = new StateDefinition(config: null, options: ['machine' => $machine]);
 
-    expect($stateDefinition)->toHaveProperty('localId');
-    expect($stateDefinition->localId)->toBeNull();
+    expect($stateDefinition)->toHaveProperty('key');
+    expect($stateDefinition->key)->toBeNull();
 });
 
 test('a state definition has a config', function (): void {

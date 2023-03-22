@@ -14,13 +14,13 @@ test('root state definition has a local id', function (): void {
     $machineName = 'custom_machine_name';
     $machine     = MachineDefinition::define(config: ['id' => $machineName]);
 
-    expect($machine->root)->toHaveProperty('localId');
-    expect($machine->root->localId)->toBe($machineName);
+    expect($machine->root)->toHaveProperty('key');
+    expect($machine->root->key)->toBe($machineName);
 });
 
 test('root state definition has a default local id', function (): void {
     $machine = MachineDefinition::define();
 
-    expect($machine->root)->toHaveProperty('localId');
-    expect($machine->root->localId)->toBe(MachineDefinition::DEFAULT_ID);
+    expect($machine->root)->toHaveProperty('key');
+    expect($machine->root->key)->toBe(MachineDefinition::DEFAULT_ID);
 });

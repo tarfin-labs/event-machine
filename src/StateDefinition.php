@@ -12,8 +12,8 @@ class StateDefinition
     /** The parent state definition. */
     public ?StateDefinition $parent;
 
-    /** The local id of the state definition, representing its location in the overall state value. */
-    public ?string $localId;
+    /** The key of the state definition, representing its location in the overall state value. */
+    public ?string $key;
 
     /** The unique global id of the state definition. */
     public string $globalId;
@@ -50,7 +50,7 @@ class StateDefinition
     ) {
         $this->parent  = $options['parent'] ?? null;
         $this->machine = $options['machine'] ?? null;
-        $this->localId = $options['local_id'] ?? null;
+        $this->key     = $options['key'] ?? null;
 
         $this->path     = $this->initializePath();
         $this->globalId = $this->initializeGlobalId();
@@ -66,7 +66,7 @@ class StateDefinition
     protected function initializePath(): array
     {
         return $this->parent
-            ? array_merge($this->parent->path, [$this->localId])
+            ? array_merge($this->parent->path, [$this->key])
             : [];
     }
 
@@ -86,9 +86,9 @@ class StateDefinition
             $states[$stateName] = new StateDefinition(
                 config: $stateConfig,
                 options: [
-                    'parent'   => $this,
-                    'machine'  => $this->machine,
-                    'local_id' => $stateName,
+                    'parent'  => $this,
+                    'machine' => $this->machine,
+                    'key'     => $stateName,
                 ]
             );
         }
