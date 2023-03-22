@@ -63,6 +63,11 @@ class StateDefinition
         $this->states = $this->initializeStates();
     }
 
+    /**
+     * Initialize the path for this state definition by appending its key to the parent's path.
+     *
+     * @return array<string> The path for this state definition.
+     */
     protected function initializePath(): array
     {
         return $this->parent
@@ -70,11 +75,23 @@ class StateDefinition
             : [];
     }
 
+    /**
+     * Initialize the global id for this state definition by concatenating the machine id,
+     * path, and delimiter.
+     *
+     * @return string The global id for this state definition.
+     */
     protected function initializeGlobalId(): string
     {
         return $this->config['id'] ?? implode($this->machine->delimiter, array_merge([$this->machine->id], $this->path));
     }
 
+    /**
+     * Initialize the child state definitions for this state definition by iterating through
+     * the 'states' configuration and creating new StateDefinition instances.
+     *
+     * @return ?array<\Tarfinlabs\EventMachine\StateDefinition> An array of child state definitions or null if no child states are defined.
+     */
     protected function initializeStates(): ?array
     {
         if (!isset($this->config['states']) || !is_array($this->config['states'])) {
