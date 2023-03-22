@@ -15,6 +15,9 @@ class MachineDefinition
     /** The root state definition for this machine definition. */
     public StateDefinition $root;
 
+    /** @var array<string, \Tarfinlabs\EventMachine\StateDefinition> */
+    public array $idMap = [];
+
     /**
      * @param  array|null  $config The raw configuration array used to create the machine definition.
      * @param  string  $name The name of the machine.

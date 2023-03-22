@@ -87,3 +87,15 @@ test('a machine definition has a root state definition', function (): void {
     expect($machine)->toHaveProperty('root');
     expect($machine->root)->toBeInstanceOf(StateDefinition::class);
 });
+
+test('a machine definition has a idMap', function (): void {
+    // TODO: This test can be written better after implementing states in state definition.
+    $machine = MachineDefinition::define();
+
+    expect($machine)->toHaveProperty('idMap');
+    expect($machine->idMap)
+        ->toBeArray()
+        ->toMatchArray([
+            MachineDefinition::DEFAULT_NAME => $machine->root,
+        ]);
+});
