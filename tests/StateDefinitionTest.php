@@ -6,9 +6,16 @@ use Tarfinlabs\EventMachine\StateDefinition;
 use Tarfinlabs\EventMachine\MachineDefinition;
 
 test('state definition is an instance of StateDefinition', function (): void {
-    $machine = MachineDefinition::define();
+    $machineWithStates = MachineDefinition::define(config: [
+        'states' => [
+            'green'  => [],
+            'yellow' => [],
+            'red'    => [],
+        ],
+    ]);
 
-    expect($machine->root)->toBeInstanceOf(StateDefinition::class);
+    expect($machineWithStates->root)->toBeInstanceOf(StateDefinition::class);
+    expect($machineWithStates->states)->each->toBeInstanceOf(StateDefinition::class);
 });
 
 test('state definition has a machine reference', function (): void {
