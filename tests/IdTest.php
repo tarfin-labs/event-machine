@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\MachineDefinition;
 
-test('it should correctly assign machine definition id', function (): void {
+it('should correctly assign machine definition id', function (): void {
     $idMachine = MachineDefinition::define(config: [
         'id'     => 'some-id',
         'states' => [
@@ -15,7 +15,7 @@ test('it should correctly assign machine definition id', function (): void {
     expect($idMachine->id)->toBe('some-id');
 });
 
-test('it should correctly assign state definition id', function (): void {
+it('should correctly assign state definition id', function (): void {
     $idMachine = MachineDefinition::define(config: [
         'id'     => 'some-id',
         'states' => [
