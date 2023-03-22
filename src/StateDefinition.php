@@ -53,7 +53,7 @@ class StateDefinition
         $this->key     = $options['key'] ?? null;
 
         $this->path = $this->initializePath();
-        $this->id   = $this->initializeGlobalId();
+        $this->id   = $this->initializeId();
 
         $this->description = $this->config['description'] ?? null;
 
@@ -76,12 +76,12 @@ class StateDefinition
     }
 
     /**
-     * Initialize the global id for this state definition by concatenating the machine id,
-     * path, and delimiter.
+     * Initialize id for this state definition by concatenating
+     * the machine id, path, and delimiter.
      *
      * @return string The global id for this state definition.
      */
-    protected function initializeGlobalId(): string
+    protected function initializeId(): string
     {
         return $this->config['id'] ?? implode($this->machine->delimiter, array_merge([$this->machine->id], $this->path));
     }
