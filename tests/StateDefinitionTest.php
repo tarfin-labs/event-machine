@@ -62,8 +62,16 @@ test('a state definition has a parent state definition', function (): void {
 });
 
 test('the parent of a state definition is null if it has no parent', function (): void {
-    // TODO: Write this test after implementing states on state definition
-})->todo();
+    $machineWithStates = MachineDefinition::define(config: [
+        'states' => [
+            'green'  => [],
+            'yellow' => [],
+            'red'    => [],
+        ],
+    ]);
+
+    expect($machineWithStates->root->parent)->toBeNull();
+});
 
 test('a state definition has a path', function (): void {
     $machineWithStates = MachineDefinition::define(config: [
