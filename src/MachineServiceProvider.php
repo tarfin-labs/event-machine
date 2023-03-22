@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine;
 
 use Spatie\LaravelPackageTools\Package;
-use Tarfinlabs\EventMachine\Commands\MachineCommand;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
 class MachineServiceProvider extends PackageServiceProvider
@@ -20,7 +19,6 @@ class MachineServiceProvider extends PackageServiceProvider
         $package
             ->name('event-machine')
             ->hasConfigFile('machine')
-            ->hasMigration('create_machine_table')
-            ->hasCommand(MachineCommand::class);
+            ->hasMigration('create_machine_table');
     }
 }
