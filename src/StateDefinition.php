@@ -55,19 +55,19 @@ class StateDefinition
         $this->path = $this->parent
             ? array_merge($this->parent->path, [$this->localId])
             : [];
+        $this->globalId = $this->initializeGlobalId();
 
         $this->description = $this->config['description'] ?? null;
-
-        // Assign the global ID to either the 'id' value from the config,
-        // or generate a unique ID by merging the machine ID with
-        // the path, separated by the machine delimiter.
-        // TODO: Extract this to a method.
-        $this->globalId = $this->config['id'] ?? implode($this->machine->delimiter, array_merge([$this->machine->name], $this->path));
 
         $this->order = $this->machine->idMap->count();
         $this->machine->idMap->attach($this, $this->globalId);
 
         $this->states = $this->initializeStates();
+    }
+
+    protected function initializeGlobalId(): string
+    {
+        return $this->config['id'] ?? implode($this->machine->delimiter, array_merge([$this->machine->name], $this->path));
     }
 
     protected function initializeStates(): ?array
