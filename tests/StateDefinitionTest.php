@@ -19,12 +19,26 @@ test('state definition has a machine reference', function (): void {
     expect($machine->root->machine)->toBe($machine);
 });
 
-test('a state definition has a local id', function (): void {
-    $localId = 'state_id';
-    $machine = MachineDefinition::define(config: ['id' => $localId]);
+test('a state definition has a key', function (): void {
+    $machineWithStates = MachineDefinition::define(config: [
+        'states' => [
+            'green'  => [],
+            'yellow' => [],
+            'red'    => [],
+        ],
+    ]);
 
-    expect($machine->root)->toHaveProperty('key');
-    expect($machine->root->key)->toBe($localId);
+    expect($machineWithStates->root)->toHaveProperty('key');
+    expect($machineWithStates->root->key)->toBe(MachineDefinition::DEFAULT_ID);
+
+    expect($machineWithStates->states['green'])->toHaveProperty('key');
+    expect($machineWithStates->states['green']->key)->toBe('green');
+
+    expect($machineWithStates->states['yellow'])->toHaveProperty('key');
+    expect($machineWithStates->states['yellow']->key)->toBe('yellow');
+
+    expect($machineWithStates->states['red'])->toHaveProperty('key');
+    expect($machineWithStates->states['red']->key)->toBe('red');
 });
 
 test('a state definition has a config', function (): void {
