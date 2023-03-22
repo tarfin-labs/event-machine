@@ -11,5 +11,5 @@ test('global id represent root state definition', function (): void {
         'id' => 'machine-id',
     ]);
 
-    expect($machineWithName->root->globalId)->toBe('machine-id');
+    expect($machineWithName->root->id)->toBe('machine-id');
 });

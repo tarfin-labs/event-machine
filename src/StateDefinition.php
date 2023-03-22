@@ -15,8 +15,8 @@ class StateDefinition
     /** The key of the state definition, representing its location in the overall state value. */
     public ?string $key;
 
-    /** The unique global id of the state definition. */
-    public string $globalId;
+    /** The unique id of the state definition. */
+    public string $id;
 
     /**
      * The string path from the root machine definition to this state definition.
@@ -52,13 +52,13 @@ class StateDefinition
         $this->machine = $options['machine'] ?? null;
         $this->key     = $options['key'] ?? null;
 
-        $this->path     = $this->initializePath();
-        $this->globalId = $this->initializeGlobalId();
+        $this->path = $this->initializePath();
+        $this->id   = $this->initializeGlobalId();
 
         $this->description = $this->config['description'] ?? null;
 
         $this->order = $this->machine->idMap->count();
-        $this->machine->idMap->attach($this, $this->globalId);
+        $this->machine->idMap->attach($this, $this->id);
 
         $this->states = $this->initializeStates();
     }
