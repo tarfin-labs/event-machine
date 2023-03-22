@@ -81,8 +81,8 @@ class StateDefinition
             $states[$stateName] = new StateDefinition(
                 config: $stateConfig,
                 options: [
-                    'parent'  => $this,
-                    'machine' => $this->machine,
+                    'parent'   => $this,
+                    'machine'  => $this->machine,
                     'local_id' => $stateName,
                 ]
             );

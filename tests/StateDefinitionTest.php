@@ -103,9 +103,9 @@ test('a state definition has an order', function (): void {
 test('a state definition has states', function (): void {
     $machineWithStates = MachineDefinition::define(config: [
         'states' => [
-            'green' => [],
+            'green'  => [],
             'yellow' => [],
-            'red' => [],
+            'red'    => [],
         ],
     ]);
 
@@ -113,4 +113,3 @@ test('a state definition has states', function (): void {
         ->toBeArray()
         ->toHaveKeys(['green', 'yellow', 'red']);
 });
-
