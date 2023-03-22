@@ -20,6 +20,13 @@ class MachineDefinition
     public SplObjectStorage $idMap;
 
     /**
+     * The child state definitions of this state definition.
+     *
+     * @var null|array<\Tarfinlabs\EventMachine\StateDefinition>
+     */
+    public ?array $states = null;
+
+    /**
      * @param  array|null  $config     The raw configuration array used to create the machine definition.
      * @param  string  $id         The id of the machine.
      * @param  string|null  $version    The version of the machine.
@@ -40,6 +47,8 @@ class MachineDefinition
                 'key'     => $this->id,
             ]
         );
+
+        $this->states = $this->root->states;
     }
 
     /**
