@@ -12,7 +12,7 @@ test('root state definition has a reference to the machine definition', function
 
 test('root state definition has a local id', function (): void {
     $machineName = 'custom_machine_name';
-    $machine     = MachineDefinition::define(config: ['name' => $machineName]);
+    $machine     = MachineDefinition::define(config: ['id' => $machineName]);
 
     expect($machine->root)->toHaveProperty('localId');
     expect($machine->root->localId)->toBe($machineName);
@@ -22,5 +22,5 @@ test('root state definition has a default local id', function (): void {
     $machine = MachineDefinition::define();
 
     expect($machine->root)->toHaveProperty('localId');
-    expect($machine->root->localId)->toBe(MachineDefinition::DEFAULT_NAME);
+    expect($machine->root->localId)->toBe(MachineDefinition::DEFAULT_ID);
 });

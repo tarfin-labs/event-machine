@@ -13,7 +13,7 @@ test('a machine definition is an instance of a MachineDefinition', function (): 
 
 test('a machine definition has its config', function (): void {
     $config = [
-        'name' => 'machine-name',
+        'id' => 'machine-id',
     ];
 
     $machineWithName = MachineDefinition::define(config: $config);
@@ -29,24 +29,24 @@ test('a machine definition config is null if no config given', function (): void
     expect($nullMachine->config)->toBeNull();
 });
 
-test('a machine definition has a name', function (): void {
+test('a machine definition has a id', function (): void {
     $machineWithName = MachineDefinition::define(config: [
-        'name' => 'machine-name',
+        'id' => 'machine-id',
     ]);
 
-    expect($machineWithName)->toHaveProperty('name');
-    expect($machineWithName->name)->toBe('machine-name');
+    expect($machineWithName)->toHaveProperty('id');
+    expect($machineWithName->id)->toBe('machine-id');
 });
 
-test('a machine definition has a default name', function (): void {
+test('a machine definition has a default id', function (): void {
     $nullMachine = MachineDefinition::define();
 
     $nullNameMachine = MachineDefinition::define(config: [
-        'name' => null,
+        'id' => null,
     ]);
 
-    expect($nullNameMachine->name)->toBe(MachineDefinition::DEFAULT_NAME);
-    expect($nullMachine->name)->toBe(MachineDefinition::DEFAULT_NAME);
+    expect($nullNameMachine->id)->toBe(MachineDefinition::DEFAULT_ID);
+    expect($nullMachine->id)->toBe(MachineDefinition::DEFAULT_ID);
 });
 
 test('a machine definition can have a version', function (): void {

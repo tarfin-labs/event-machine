@@ -21,7 +21,7 @@ test('state definition has a machine reference', function (): void {
 
 test('a state definition has a local id', function (): void {
     $localId = 'state_id';
-    $machine = MachineDefinition::define(config: ['name' => $localId]);
+    $machine = MachineDefinition::define(config: ['id' => $localId]);
 
     expect($machine->root)->toHaveProperty('localId');
     expect($machine->root->localId)->toBe($localId);
@@ -38,7 +38,7 @@ test('a state definition has a null local id when not provided', function (): vo
 
 test('a state definition has a config', function (): void {
     $machineConfiguration = [
-        'name' => 'machine_name',
+        'id' => 'machine_name',
     ];
     $machine = MachineDefinition::define($machineConfiguration);
 
@@ -93,7 +93,7 @@ test('the state definition is null if not provided', function (): void {
 test('a state definition has an order', function (): void {
     // TODO: This test can be better written after implementing states on state definition
     $machineWithName = MachineDefinition::define(config: [
-        'name' => 'machine-name',
+        'id' => 'machine-id',
     ]);
 
     expect($machineWithName->root)->toHaveProperty('order');

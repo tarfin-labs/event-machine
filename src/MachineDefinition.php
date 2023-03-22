@@ -8,8 +8,8 @@ use SplObjectStorage;
 
 class MachineDefinition
 {
-    /** The default name for the root machine definition. */
-    public const DEFAULT_NAME = '(machine)';
+    /** The default id for the root machine definition. */
+    public const DEFAULT_ID = '(machine)';
 
     /** The default delimiter used for constructing the global id by concatenating state definition local IDs. */
     public const STATE_DELIMITER = '.';
@@ -20,14 +20,14 @@ class MachineDefinition
     public SplObjectStorage $idMap;
 
     /**
-     * @param  array|null  $config The raw configuration array used to create the machine definition.
-     * @param  string  $name The name of the machine.
-     * @param  string|null  $version The version of the machine.
-     * @param  string  $delimiter The string delimiter for serializing the path to a string.
+     * @param  array|null  $config     The raw configuration array used to create the machine definition.
+     * @param  string  $id         The id of the machine.
+     * @param  string|null  $version    The version of the machine.
+     * @param  string  $delimiter  The string delimiter for serializing the path to a string.
      */
     private function __construct(
         public ?array $config,
-        public string $name,
+        public string $id,
         public ?string $version,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
@@ -37,7 +37,7 @@ class MachineDefinition
             config: $config ?? null,
             options: [
                 'machine'  => $this,
-                'local_id' => $this->name,
+                'local_id' => $this->id,
             ]
         );
     }
@@ -54,7 +54,7 @@ class MachineDefinition
     ): self {
         return new self(
             config: $config ?? null,
-            name: $config['name'] ?? self::DEFAULT_NAME,
+            id: $config['id'] ?? self::DEFAULT_ID,
             version: $config['version'] ?? null,
             delimiter: $config['delimiter'] ?? self::STATE_DELIMITER,
         );

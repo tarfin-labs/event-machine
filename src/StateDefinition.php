@@ -72,7 +72,7 @@ class StateDefinition
 
     protected function initializeGlobalId(): string
     {
-        return $this->config['id'] ?? implode($this->machine->delimiter, array_merge([$this->machine->name], $this->path));
+        return $this->config['id'] ?? implode($this->machine->delimiter, array_merge([$this->machine->id], $this->path));
     }
 
     protected function initializeStates(): ?array
