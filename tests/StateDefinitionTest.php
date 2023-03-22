@@ -66,11 +66,25 @@ test('the parent of a state definition is null if it has no parent', function ()
 })->todo();
 
 test('a state definition has a path', function (): void {
-    // TODO: This test can be written better without using the root state definition
-    $machine = MachineDefinition::define();
+    $machineWithStates = MachineDefinition::define(config: [
+        'states' => [
+            'green'  => [],
+            'yellow' => [],
+            'red'    => [],
+        ],
+    ]);
 
-    expect($machine->root)->toHaveProperty('path');
-    expect($machine->root->path)->toBe([]);
+    expect($machineWithStates->root)->toHaveProperty('path');
+    expect($machineWithStates->root->path)->toBe([]);
+
+    expect($machineWithStates->states['green'])->toHaveProperty('path');
+    expect($machineWithStates->states['green']->path)->toBe(['green']);
+
+    expect($machineWithStates->states['yellow'])->toHaveProperty('path');
+    expect($machineWithStates->states['yellow']->path)->toBe(['yellow']);
+
+    expect($machineWithStates->states['red'])->toHaveProperty('path');
+    expect($machineWithStates->states['red']->path)->toBe(['red']);
 });
 
 test('a state definition can have a description', function (): void {
