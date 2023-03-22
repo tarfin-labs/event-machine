@@ -89,11 +89,18 @@ test('a machine definition has a root state definition', function (): void {
 });
 
 test('a machine definition has a idMap', function (): void {
-    // TODO: This test can be written better after implementing states in state definition.
-    $machine = MachineDefinition::define();
+    $machineWithStates = MachineDefinition::define(config: [
+        'states' => [
+            'green'  => [],
+            'yellow' => [],
+            'red'    => [],
+        ],
+    ]);
 
-    expect($machine)->toHaveProperty('idMap');
-    expect($machine->idMap)->toBeInstanceOf(SplObjectStorage::class);
-    expect($machine->idMap->contains($machine->root))->toBeTrue();
-    expect($machine->idMap->count())->toBe(1);
+    expect($machineWithStates)->toHaveProperty('idMap');
+    expect($machineWithStates->idMap)->toBeInstanceOf(SplObjectStorage::class);
+    expect($machineWithStates->idMap->contains($machineWithStates->root))->toBeTrue();
+    expect($machineWithStates->idMap->contains($machineWithStates->states['green']))->toBeTrue();
+    expect($machineWithStates->idMap->contains($machineWithStates->states['yellow']))->toBeTrue();
+    expect($machineWithStates->idMap->contains($machineWithStates->states['red']))->toBeTrue();
 });
