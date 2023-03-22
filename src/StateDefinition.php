@@ -52,9 +52,7 @@ class StateDefinition
         $this->machine = $options['machine'] ?? null;
         $this->localId = $options['local_id'] ?? null;
 
-        $this->path = $this->parent
-            ? array_merge($this->parent->path, [$this->localId])
-            : [];
+        $this->path     = $this->initializePath();
         $this->globalId = $this->initializeGlobalId();
 
         $this->description = $this->config['description'] ?? null;
@@ -63,6 +61,13 @@ class StateDefinition
         $this->machine->idMap->attach($this, $this->globalId);
 
         $this->states = $this->initializeStates();
+    }
+
+    protected function initializePath(): array
+    {
+        return $this->parent
+            ? array_merge($this->parent->path, [$this->localId])
+            : [];
     }
 
     protected function initializeGlobalId(): string
