@@ -89,3 +89,13 @@ test('the state definition is null if not provided', function (): void {
     expect($nullMachine->root)->toHaveProperty('description');
     expect($nullMachine->root->description)->toBeNull();
 });
+
+test('a state definition has an order', function (): void {
+    // TODO: This test can be better written after implementing states on state definition
+    $machineWithName = MachineDefinition::define(config: [
+        'name' => 'machine-name',
+    ]);
+
+    expect($machineWithName->root)->toHaveProperty('order');
+    expect($machineWithName->root->order)->toBe(0);
+});

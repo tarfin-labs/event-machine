@@ -28,6 +28,9 @@ class StateDefinition
     /** The description of the state definition. */
     public ?string $description;
 
+    /** The order this state definition appears. */
+    public int $order = -1;
+
     /**
      * Create a new state definition with the given configuration and options.
      *
@@ -53,5 +56,8 @@ class StateDefinition
         // the path, separated by the machine delimiter.
         // TODO: Extract this to a method.
         $this->globalId = $this->config['id'] ?? implode($this->machine->delimiter, array_merge([$this->machine->name], $this->path));
+
+        $this->order                           = count($this->machine->idMap);
+        $this->machine->idMap[$this->globalId] = $this;
     }
 }
