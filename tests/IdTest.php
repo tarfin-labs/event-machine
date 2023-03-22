@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\MachineDefinition;
 
-test('global id represent root state definition', function (): void {
-    // TODO: This test can be written better after implementing states in state definition.
-
-    $machineWithName = MachineDefinition::define(config: [
-        'id' => 'machine-id',
+test('id represent root state definition', function (): void {
+    $idMachine = MachineDefinition::define(config: [
+        'id' => 'some-id',
+        'states' => [
+            'idle' => [],
+        ],
     ]);
 
-    expect($machineWithName->root->id)->toBe('machine-id');
+    expect($idMachine->id)->toBe('some-id');
 });
