@@ -38,6 +38,8 @@ class StateDefinition
      */
     public ?array $states = null;
 
+    public array $transitions;
+
     /**
      * Create a new state definition with the given configuration and options.
      *
@@ -119,5 +121,52 @@ class StateDefinition
         $this->parent  = $options['parent'] ?? null;
         $this->machine = $options['machine'] ?? null;
         $this->key     = $options['key'] ?? null;
+    }
+
+    /**
+     * Initialize the transitions for the current state and its child states.
+     */
+    public function initializeTransitions(): void
+    {
+        $this->transitions = $this->formatTransitions($this);
+
+        if ($this->states !== null) {
+            foreach ($this->states as $state) {
+                $state->initializeTransitions();
+            }
+        }
+    }
+
+    /**
+     * Formats the transitions for a given state definition.
+     *
+     * This method extracts the transition configurations from the given state definition's
+     * config and creates a new instance of TransitionDefinition for each transition.
+     * The resulting array of TransitionDefinition instances is indexed by the corresponding event names.
+     *
+     * @param  StateDefinition  $stateDefinition The state definition for which to format the transitions.
+     *
+     * @return array An array of TransitionDefinition instances indexed by event names.
+     */
+    protected function formatTransitions(StateDefinition $stateDefinition): array
+    {
+        $transitions = [];
+
+        if (
+            !isset($stateDefinition->config['on']) ||
+            !is_array($stateDefinition->config['on'])
+        ) {
+            return $transitions;
+        }
+
+        foreach ($stateDefinition->config['on'] as $eventName => $transitionConfig) {
+            $transitions[$eventName] = new TransitionDefinition(
+                config: $transitionConfig,
+                source: $this,
+                event: $eventName,
+            );
+        }
+
+        return $transitions;
     }
 }

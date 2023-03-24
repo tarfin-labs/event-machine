@@ -39,8 +39,11 @@ class MachineDefinition
         public ?string $version,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
-        $this->idMap  = new SplObjectStorage();
-        $this->root   = $this->initializeRootStateDefinition($config);
+        $this->idMap = new SplObjectStorage();
+
+        $this->root = $this->initializeRootStateDefinition($config);
+        $this->root->initializeTransitions();
+
         $this->states = $this->root->states;
     }
 
