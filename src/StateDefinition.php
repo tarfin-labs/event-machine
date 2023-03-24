@@ -6,6 +6,8 @@ namespace Tarfinlabs\EventMachine;
 
 class StateDefinition
 {
+    // region Public Properties
+
     /** The root machine definition this state definition belongs to. */
     public MachineDefinition $machine;
 
@@ -52,6 +54,8 @@ class StateDefinition
      */
     public ?array $events = null;
 
+    // endregion
+
     /**
      * Create a new state definition with the given configuration and options.
      *
@@ -75,6 +79,8 @@ class StateDefinition
         $this->states = $this->initializeStates();
         $this->events = $this->initializeEvents();
     }
+
+    // region Protected Methods
 
     /**
      * Initialize the path for this state definition by appending its key to the parent's path.
@@ -226,4 +232,6 @@ class StateDefinition
         // Return the array of unique event names
         return $events === [] ? null : $events;
     }
+
+    // endregion
 }
