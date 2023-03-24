@@ -68,7 +68,7 @@ class StateDefinition
     ) {
         $this->initializeOptions($options);
 
-        $this->path = $this->initializePath();
+        $this->path = $this->buildPath();
         $this->id   = $this->buildId();
 
         $this->description = $this->config['description'] ?? null;
@@ -87,7 +87,7 @@ class StateDefinition
      *
      * @return array<string> The path for this state definition.
      */
-    protected function initializePath(): array
+    protected function buildPath(): array
     {
         return $this->parent
             ? array_merge($this->parent->path, [$this->key])
