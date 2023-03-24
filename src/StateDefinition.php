@@ -143,20 +143,6 @@ class StateDefinition
     }
 
     /**
-     * Initialize the transitions for the current state and its child states.
-     */
-    public function initializeTransitions(): void
-    {
-        $this->transitions = $this->formatTransitions($this);
-
-        if ($this->states !== null) {
-            foreach ($this->states as $state) {
-                $state->initializeTransitions();
-            }
-        }
-    }
-
-    /**
      * Formats the transitions for a given state definition.
      *
      * This method extracts the transition configurations from the given state definition's
@@ -187,6 +173,24 @@ class StateDefinition
         }
 
         return $transitions;
+    }
+
+    // endregion
+
+    // region Public Methods
+
+    /**
+     * Initialize the transitions for the current state and its child states.
+     */
+    public function initializeTransitions(): void
+    {
+        $this->transitions = $this->formatTransitions($this);
+
+        if ($this->states !== null) {
+            foreach ($this->states as $state) {
+                $state->initializeTransitions();
+            }
+        }
     }
 
     /**
