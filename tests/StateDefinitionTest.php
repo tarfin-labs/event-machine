@@ -243,14 +243,14 @@ test('a state definition can have transitions', function (): void {
 
     $greenTimerTransition = $lightMachine->states['green']->transitions['TIMER'];
     expect($greenTimerTransition)
-        ->config->toBe('yellow')
+        ->transitionConfig->toBe('yellow')
         ->event->toBe('TIMER')
         ->source->toBe($lightMachine->states['green'])
         ->target->toBe($lightMachine->states['yellow']);
 
     $yellowForbidenTransition = $lightMachine->states['yellow']->transitions['FORBIDDEN_EVENT'];
     expect($yellowForbidenTransition)
-        ->config->toMatchArray([
+        ->transitionConfig->toMatchArray([
             'target' => null,
         ])
         ->event->toBe('FORBIDDEN_EVENT')
@@ -259,7 +259,7 @@ test('a state definition can have transitions', function (): void {
 
     $redWaitPedCountdownTransition = $lightMachine->states['red']->states['wait']->transitions['PED_COUNTDOWN'];
     expect($redWaitPedCountdownTransition)
-        ->config->toBe('stop')
+        ->transitionConfig->toBe('stop')
         ->event->toBe('PED_COUNTDOWN')
         ->source->toBe($lightMachine->states['red']->states['wait'])
         ->target->toBe($lightMachine->states['red']->states['stop']);

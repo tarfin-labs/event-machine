@@ -174,7 +174,7 @@ class StateDefinition
 
         foreach ($stateDefinition->config['on'] as $eventName => $transitionConfig) {
             $transitions[$eventName] = new TransitionDefinition(
-                config: $transitionConfig,
+                transitionConfig: $transitionConfig,
                 source: $this,
                 event: $eventName,
             );

@@ -9,22 +9,22 @@ class TransitionDefinition
     public ?StateDefinition $target;
 
     public function __construct(
-        public null|string|array $config,
+        public null|string|array $transitionConfig,
         public StateDefinition $source,
         public string $event,
     ) {
-        if ($this->config === null) {
+        if ($this->transitionConfig === null) {
             $this->target = null;
         }
 
-        if (is_string($this->config)) {
-            $this->target = $this->source->parent->states[$this->config];
+        if (is_string($this->transitionConfig)) {
+            $this->target = $this->source->parent->states[$this->transitionConfig];
         }
 
-        if (is_array($this->config)) {
-            $this->target = $this->config['target'] === null
+        if (is_array($this->transitionConfig)) {
+            $this->target = $this->transitionConfig['target'] === null
                 ? null
-                : $this->source->parent->states[$this->config['target']];
+                : $this->source->parent->states[$this->transitionConfig['target']];
         }
     }
 }
