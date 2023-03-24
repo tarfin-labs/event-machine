@@ -39,16 +39,8 @@ class MachineDefinition
         public ?string $version,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
-        $this->idMap = new SplObjectStorage();
-
-        $this->root = new StateDefinition(
-            config: $config ?? null,
-            options: [
-                'machine' => $this,
-                'key'     => $this->id,
-            ]
-        );
-
+        $this->idMap  = new SplObjectStorage();
+        $this->root   = $this->initializeRootStateDefinition($config);
         $this->states = $this->root->states;
     }
 
@@ -67,6 +59,23 @@ class MachineDefinition
             id: $config['id'] ?? self::DEFAULT_ID,
             version: $config['version'] ?? null,
             delimiter: $config['delimiter'] ?? self::STATE_DELIMITER,
+        );
+    }
+
+    /**
+     * Initialize the root state definition for this machine definition.
+     *
+     *
+     * @return \Tarfinlabs\EventMachine\StateDefinition
+     */
+    protected function initializeRootStateDefinition(?array $config): StateDefinition
+    {
+        return new StateDefinition(
+            config: $config ?? null,
+            options: [
+                'machine' => $this,
+                'key'     => $this->id,
+            ]
         );
     }
 }
