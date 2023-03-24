@@ -48,7 +48,7 @@ class MachineDefinition
     ) {
         $this->idMap = new SplObjectStorage();
 
-        $this->root = $this->initializeRootStateDefinition($config);
+        $this->root = $this->createRootStateDefinition($config);
         $this->root->initializeTransitions();
 
         $this->states = $this->root->states;
@@ -79,7 +79,7 @@ class MachineDefinition
      *
      * @return \Tarfinlabs\EventMachine\StateDefinition
      */
-    protected function initializeRootStateDefinition(?array $config): StateDefinition
+    protected function createRootStateDefinition(?array $config): StateDefinition
     {
         return new StateDefinition(
             config: $config ?? null,
