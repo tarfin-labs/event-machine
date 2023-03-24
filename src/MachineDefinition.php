@@ -17,6 +17,7 @@ class MachineDefinition
     /** The root state definition for this machine definition. */
     public StateDefinition $root;
 
+    /** The map of state definitions to their ids. */
     public SplObjectStorage $idMap;
 
     /**
