@@ -77,7 +77,7 @@ class StateDefinition
         $this->machine->idMap->attach($this, $this->id);
 
         $this->states = $this->initializeStates();
-        $this->events = $this->initializeEvents();
+        $this->events = $this->collectUniqueEvents();
     }
 
     // region Protected Methods
@@ -195,7 +195,7 @@ class StateDefinition
      *
      * @return array<string>|null An array of unique event names.
      */
-    public function initializeEvents(): ?array
+    public function collectUniqueEvents(): ?array
     {
         // Initialize an empty array to store unique event names
         $events = [];
