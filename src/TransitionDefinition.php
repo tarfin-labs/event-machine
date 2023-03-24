@@ -4,10 +4,27 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine;
 
+/**
+ * Class TransitionDefinition.
+ *
+ * Represents a transition between states in the state machine.
+ */
 class TransitionDefinition
 {
+    /**
+     * The target state definition for this transition, or null if there is no target.
+     *
+     * @var ?StateDefinition
+     */
     public ?StateDefinition $target;
 
+    /**
+     * Constructs a new TransitionDefinition instance.
+     *
+     * @param  null|string|array  $transitionConfig The configuration for this transition.
+     * @param  StateDefinition  $source The source state definition for this transition.
+     * @param  string  $event The event triggering this transition.
+     */
     public function __construct(
         public null|string|array $transitionConfig,
         public StateDefinition $source,
