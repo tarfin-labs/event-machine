@@ -38,6 +38,11 @@ class StateDefinition
      */
     public ?array $states = null;
 
+    /**
+     * The transition definitions of this state definition.
+     *
+     * @var array<string, \Tarfinlabs\EventMachine\TransitionDefinition
+     */
     public array $transitions;
 
     /**
