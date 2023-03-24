@@ -69,7 +69,7 @@ class StateDefinition
         $this->initializeOptions($options);
 
         $this->path = $this->initializePath();
-        $this->id   = $this->initializeId();
+        $this->id   = $this->buildId();
 
         $this->description = $this->config['description'] ?? null;
 
@@ -100,7 +100,7 @@ class StateDefinition
      *
      * @return string The global id for this state definition.
      */
-    protected function initializeId(): string
+    protected function buildId(): string
     {
         return $this->config['id'] ?? implode($this->machine->delimiter, array_merge([$this->machine->id], $this->path));
     }
