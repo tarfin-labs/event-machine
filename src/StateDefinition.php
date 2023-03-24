@@ -218,9 +218,10 @@ class StateDefinition
         // If there are child states, process them recursively and
         // add their event names to the events array.
         if ($this->states !== null) {
+            /** @var \Tarfinlabs\EventMachine\StateDefinition $state */
             foreach ($this->states as $state) {
                 // Get the events from the child state definition.
-                $childEvents = $state->initializeEvents();
+                $childEvents = $state->collectUniqueEvents();
 
                 // Add the events from the child state to the events array, ensuring uniqueness
                 if ($childEvents !== null) {
