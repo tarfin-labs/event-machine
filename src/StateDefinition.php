@@ -76,7 +76,7 @@ class StateDefinition
         $this->order = $this->machine->idMap->count();
         $this->machine->idMap->attach($this, $this->id);
 
-        $this->states = $this->initializeStates();
+        $this->states = $this->createChildStates();
         $this->events = $this->collectUniqueEvents();
     }
 
@@ -111,7 +111,7 @@ class StateDefinition
      *
      * @return ?array<\Tarfinlabs\EventMachine\StateDefinition> An array of child state definitions or null if no child states are defined.
      */
-    protected function initializeStates(): ?array
+    protected function createChildStates(): ?array
     {
         if (!isset($this->config['states']) || !is_array($this->config['states'])) {
             return null;
