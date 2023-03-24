@@ -48,9 +48,7 @@ class StateDefinition
         public ?array $config,
         ?array $options = null,
     ) {
-        $this->parent  = $options['parent'] ?? null;
-        $this->machine = $options['machine'] ?? null;
-        $this->key     = $options['key'] ?? null;
+        $this->initializeOptions($options);
 
         $this->path = $this->initializePath();
         $this->id   = $this->initializeId();
@@ -111,5 +109,15 @@ class StateDefinition
         }
 
         return $states;
+    }
+
+    /**
+     * Initialize the options for this state definition.
+     */
+    protected function initializeOptions(?array $options): void
+    {
+        $this->parent  = $options['parent'] ?? null;
+        $this->machine = $options['machine'] ?? null;
+        $this->key     = $options['key'] ?? null;
     }
 }
