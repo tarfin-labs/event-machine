@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\StateDefinition;
 use Tarfinlabs\EventMachine\MachineDefinition;
+use Tarfinlabs\EventMachine\TransitionDefinition;
 
 test('state definition is an instance of StateDefinition', function (): void {
     $machineWithStates = MachineDefinition::define(config: [
@@ -201,8 +202,11 @@ test('a state definition can have transitions', function (): void {
             ],
             'yellow' => [
                 'on' => [
-                    'TIMER'        => 'red',
-                    'POWER_OUTAGE' => 'red',
+                    'TIMER'           => 'red',
+                    'POWER_OUTAGE'    => 'red',
+                    'FORBIDDEN_EVENT' => [
+                        'target' => null,
+                    ],
                 ],
             ],
             'red' => [

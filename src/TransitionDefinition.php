@@ -22,7 +22,9 @@ class TransitionDefinition
         }
 
         if (is_array($this->config)) {
-            $this->target = $this->source->parent->states[$this->config['target']];
+            $this->target = $this->config['target'] === null
+                ? null
+                : $this->source->parent->states[$this->config['target']];
         }
     }
 }
