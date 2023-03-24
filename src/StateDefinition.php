@@ -56,6 +56,8 @@ class StateDefinition
 
     // endregion
 
+    // region Constructor
+
     /**
      * Create a new state definition with the given configuration and options.
      *
@@ -79,6 +81,8 @@ class StateDefinition
         $this->states = $this->createChildStates();
         $this->events = $this->collectUniqueEvents();
     }
+
+    // endregion
 
     // region Protected Methods
 

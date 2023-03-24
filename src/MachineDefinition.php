@@ -8,6 +8,8 @@ use SplObjectStorage;
 
 class MachineDefinition
 {
+    // region Public Properties
+
     /** The default id for the root machine definition. */
     public const DEFAULT_ID = '(machine)';
 
@@ -34,7 +36,13 @@ class MachineDefinition
      */
     public ?array $events = null;
 
+    // endregion
+
+    // region Constructor
+
     /**
+     * Create a new machine definition with the given arguments.
+     *
      * @param  array|null  $config     The raw configuration array used to create the machine definition.
      * @param  string  $id         The id of the machine.
      * @param  string|null  $version    The version of the machine.
@@ -55,6 +63,31 @@ class MachineDefinition
         $this->events = $this->root->events;
     }
 
+    // endregion
+
+    // region Protected Methods
+
+    /**
+     * Initialize the root state definition for this machine definition.
+     *
+     *
+     * @return \Tarfinlabs\EventMachine\StateDefinition
+     */
+    protected function createRootStateDefinition(?array $config): StateDefinition
+    {
+        return new StateDefinition(
+            config: $config ?? null,
+            options: [
+                'machine' => $this,
+                'key'     => $this->id,
+            ]
+        );
+    }
+
+    // endregion
+
+    // region Static Constructors
+
     /**
      * Define a new machine with the given configuration.
      *
@@ -73,20 +106,5 @@ class MachineDefinition
         );
     }
 
-    /**
-     * Initialize the root state definition for this machine definition.
-     *
-     *
-     * @return \Tarfinlabs\EventMachine\StateDefinition
-     */
-    protected function createRootStateDefinition(?array $config): StateDefinition
-    {
-        return new StateDefinition(
-            config: $config ?? null,
-            options: [
-                'machine' => $this,
-                'key'     => $this->id,
-            ]
-        );
-    }
+    // endregion
 }

@@ -11,12 +11,18 @@ namespace Tarfinlabs\EventMachine;
  */
 class TransitionDefinition
 {
+    // region Public Properties
+
     /**
      * The target state definition for this transition, or null if there is no target.
      *
      * @var ?StateDefinition
      */
     public ?StateDefinition $target;
+
+    // endregion
+
+    // region Constructor
 
     /**
      * Constructs a new TransitionDefinition instance.
@@ -44,4 +50,6 @@ class TransitionDefinition
                 : $this->source->parent->states[$this->transitionConfig['target']];
         }
     }
+
+    // endregion
 }
