@@ -264,3 +264,99 @@ test('a state definition can have transitions', function (): void {
         ->source->toBe($lightMachine->states['red']->states['wait'])
         ->target->toBe($lightMachine->states['red']->states['stop']);
 });
+
+test('a state definition can have events', function (): void {
+    $lightMachine = MachineDefinition::define([
+        'id'      => 'light-machine',
+        'initial' => 'green',
+        'states'  => [
+            'green' => [
+                'on' => [
+                    'TIMER'           => 'yellow',
+                    'POWER_OUTAGE'    => 'red',
+                    'FORBIDDEN_EVENT' => null,
+                ],
+            ],
+            'yellow' => [
+                'on' => [
+                    'TIMER'           => 'red',
+                    'POWER_OUTAGE'    => 'red',
+                    'FORBIDDEN_EVENT' => [
+                        'target' => null,
+                    ],
+                ],
+            ],
+            'red' => [
+                'on' => [
+                    'TIMER'        => 'green',
+                    'POWER_OUTAGE' => [
+                        'target' => 'red',
+                    ],
+                ],
+                'initial' => 'walk',
+                'states'  => [
+                    'walk' => [
+                        'on' => [
+                            'PED_COUNTDOWN' => 'wait',
+                        ],
+                    ],
+                    'wait' => [
+                        'on' => [
+                            'PED_COUNTDOWN' => 'stop',
+                        ],
+                    ],
+                    'stop' => [],
+                ],
+            ],
+        ],
+    ]);
+
+    expect($lightMachine)
+        ->toHaveProperty('events')
+        ->events->toMatchArray([
+            'TIMER',
+            'POWER_OUTAGE',
+            'FORBIDDEN_EVENT',
+            'PED_COUNTDOWN',
+        ]);
+
+    expect($lightMachine->states['green'])
+        ->toHaveProperty('events')
+        ->events->toMatchArray([
+            'TIMER',
+            'POWER_OUTAGE',
+            'FORBIDDEN_EVENT',
+        ]);
+
+    expect($lightMachine->states['yellow'])
+        ->toHaveProperty('events')
+        ->events->toMatchArray([
+            'TIMER',
+            'POWER_OUTAGE',
+            'FORBIDDEN_EVENT',
+        ]);
+
+    expect($lightMachine->states['red'])
+        ->toHaveProperty('events')
+        ->events->toMatchArray([
+            'TIMER',
+            'POWER_OUTAGE',
+            'PED_COUNTDOWN',
+        ]);
+
+    expect($lightMachine->states['red']->states['walk'])
+        ->toHaveProperty('events')
+        ->events->toMatchArray([
+            'PED_COUNTDOWN',
+        ]);
+
+    expect($lightMachine->states['red']->states['wait'])
+        ->toHaveProperty('events')
+        ->events->toMatchArray([
+            'PED_COUNTDOWN',
+        ]);
+
+    expect($lightMachine->states['red']->states['stop'])
+        ->toHaveProperty('events')
+        ->events->toBeNull();
+});

@@ -41,9 +41,16 @@ class StateDefinition
     /**
      * The transition definitions of this state definition.
      *
-     * @var array<string, \Tarfinlabs\EventMachine\TransitionDefinition
+     * @var array<\Tarfinlabs\EventMachine\TransitionDefinition>
      */
     public array $transitions;
+
+    /**
+     * The events that can be accepted by this state definition.
+     *
+     * @var null|array<string>
+     */
+    public ?array $events = null;
 
     /**
      * Create a new state definition with the given configuration and options.
@@ -66,6 +73,7 @@ class StateDefinition
         $this->machine->idMap->attach($this, $this->id);
 
         $this->states = $this->initializeStates();
+        $this->events = $this->initializeEvents();
     }
 
     /**
@@ -173,5 +181,49 @@ class StateDefinition
         }
 
         return $transitions;
+    }
+
+    /**
+     * Initialize and return the events for the current state and its child states.
+     * This method ensures that each event name is unique.
+     *
+     * @return array<string>|null An array of unique event names.
+     */
+    public function initializeEvents(): ?array
+    {
+        // Initialize an empty array to store unique event names
+        $events = [];
+
+        // If there are transitions defined for the current state definition,
+        // add the event names to the events array.
+        if (isset($this->config['on']) && is_array($this->config['on'])) {
+            foreach ($this->config['on'] as $eventName => $transitionConfig) {
+                // Only add the event name if it hasn't been added yet
+                if (!in_array($eventName, $events, true)) {
+                    $events[] = $eventName;
+                }
+            }
+        }
+
+        // If there are child states, process them recursively and
+        // add their event names to the events array.
+        if ($this->states !== null) {
+            foreach ($this->states as $state) {
+                // Get the events from the child state definition.
+                $childEvents = $state->initializeEvents();
+
+                // Add the events from the child state to the events array, ensuring uniqueness
+                if ($childEvents !== null) {
+                    foreach ($childEvents as $eventName) {
+                        if (!in_array($eventName, $events, true)) {
+                            $events[] = $eventName;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Return the array of unique event names
+        return $events === [] ? null : $events;
     }
 }

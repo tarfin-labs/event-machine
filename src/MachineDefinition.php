@@ -28,6 +28,13 @@ class MachineDefinition
     public ?array $states = null;
 
     /**
+     * The events that can be accepted by this machine definition.
+     *
+     * @var null|array<string>
+     */
+    public ?array $events = null;
+
+    /**
      * @param  array|null  $config     The raw configuration array used to create the machine definition.
      * @param  string  $id         The id of the machine.
      * @param  string|null  $version    The version of the machine.
@@ -43,8 +50,10 @@ class MachineDefinition
 
         $this->root = $this->initializeRootStateDefinition($config);
         $this->root->initializeTransitions();
+        $this->root->initializeEvents();
 
         $this->states = $this->root->states;
+        $this->events = $this->root->events;
     }
 
     /**
