@@ -77,10 +77,9 @@ class StateDefinition
     ) {
         $this->initializeOptions($options);
 
-        $this->path = $this->buildPath();
-        $this->id   = $this->buildId();
-
-        $this->description = $this->config['description'] ?? null;
+        $this->path        = $this->buildPath();
+        $this->id          = $this->buildId();
+        $this->description = $this->buildDescription();
 
         $this->order = $this->machine->idMap->count();
         $this->machine->idMap->attach($this, $this->id);
@@ -133,6 +132,14 @@ class StateDefinition
     protected function buildId(): string
     {
         return $this->config['id'] ?? implode($this->machine->delimiter, array_merge([$this->machine->id], $this->path));
+    }
+
+    /**
+     * Initialize the description for this state definition.
+     */
+    protected function buildDescription(): ?string
+    {
+        return $this->config['description'] ?? null;
     }
 
     /**
