@@ -360,3 +360,30 @@ test('a state definition can have events', function (): void {
         ->toHaveProperty('events')
         ->events->toBeNull();
 });
+
+test('states can have entry actions', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'states' => [
+            'green' => [
+                'entry' => [
+                    'entryAction1',
+                    'entryAction2',
+                ],
+            ],
+            'yellow' => [
+                'entry' => [
+                    'entryAction3',
+                ],
+            ],
+            'red' => [],
+        ],
+    ]);
+
+    $greenState  = $machine->states['green'];
+    $yellowState = $machine->states['yellow'];
+    $redState    = $machine->states['red'];
+
+    expect($greenState->entry)->toBe(['entryAction1', 'entryAction2']);
+    expect($yellowState->entry)->toBe(['entryAction3']);
+    expect($redState->entry)->toBe([]);
+});

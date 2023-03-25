@@ -61,6 +61,9 @@ class StateDefinition
      */
     public ?StateDefinition $initialState = null;
 
+    /** The action(s) to be executed upon entering the state definition. */
+    public ?array $entry = [];
+
     // endregion
 
     // region Constructor
@@ -88,6 +91,8 @@ class StateDefinition
         $this->events = $this->collectUniqueEvents();
 
         $this->initialState = $this->findInitialState();
+
+        $this->entry = $this->config['entry'] ?? [];
     }
 
     // endregion
