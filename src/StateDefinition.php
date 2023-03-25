@@ -93,15 +93,19 @@ class StateDefinition
 
     protected function findInitialState(): ?StateDefinition
     {
-        if (!isset($this->config['initial'])) {
+        $initialStateKey = $this->config['initial']
+            ?? array_key_first($this->states ?? [])
+            ?? null;
+
+        if (!isset($initialStateKey)) {
             return null;
         }
 
-        if (!isset($this->states[$this->config['initial']])) {
+        if (!isset($this->states[$initialStateKey])) {
             return null;
         }
 
-        return $this->states[$this->config['initial']];
+        return $this->states[$initialStateKey];
     }
 
     // endregion
