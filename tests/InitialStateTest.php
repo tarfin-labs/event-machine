@@ -9,12 +9,12 @@ test('initial states are correctly set for both top-level machine definition and
     $machine = MachineDefinition::define(config: [
         'initial' => 'green',
         'states'  => [
-            'green'  => [
+            'green' => [
                 'initial' => 'walk',
                 'states'  => [
-                    'walk'  => [],
-                    'wait'  => [],
-                    'stop'  => [],
+                    'walk' => [],
+                    'wait' => [],
+                    'stop' => [],
                 ],
             ],
             'yellow' => [],
@@ -40,12 +40,12 @@ test('initial states are correctly set for both top-level machine definition and
 
 test('the first state definition is set as the initial state for both top-level machine definition and sub-states when not explicitly specified', function (): void {
     $machine = MachineDefinition::define(config: [
-        'states'  => [
-            'green'  => [
-                'states'  => [
-                    'walk'  => [],
-                    'wait'  => [],
-                    'stop'  => [],
+        'states' => [
+            'green' => [
+                'states' => [
+                    'walk' => [],
+                    'wait' => [],
+                    'stop' => [],
                 ],
             ],
             'yellow' => [],
