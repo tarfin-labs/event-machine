@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\StateDefinition;
 use Tarfinlabs\EventMachine\MachineDefinition;
 
-test('a machine definitin has initial state', function (): void {
+test('a machine definition has initial state', function (): void {
     $machine = MachineDefinition::define(config: [
         'initial' => 'green',
         'states'  => [
