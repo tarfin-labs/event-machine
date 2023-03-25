@@ -90,23 +90,6 @@ class StateDefinition
         $this->initialState = $this->findInitialState();
     }
 
-    protected function findInitialState(): ?StateDefinition
-    {
-        $initialStateKey = $this->config['initial']
-            ?? array_key_first($this->states ?? [])
-            ?? null;
-
-        if (!isset($initialStateKey)) {
-            return null;
-        }
-
-        if (!isset($this->states[$initialStateKey])) {
-            return null;
-        }
-
-        return $this->states[$initialStateKey];
-    }
-
     // endregion
 
     // region Protected Methods
@@ -210,6 +193,23 @@ class StateDefinition
         }
 
         return $transitions;
+    }
+
+    protected function findInitialState(): ?StateDefinition
+    {
+        $initialStateKey = $this->config['initial']
+            ?? array_key_first($this->states ?? [])
+            ?? null;
+
+        if (!isset($initialStateKey)) {
+            return null;
+        }
+
+        if (!isset($this->states[$initialStateKey])) {
+            return null;
+        }
+
+        return $this->states[$initialStateKey];
     }
 
     // endregion
