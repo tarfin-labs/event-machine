@@ -64,6 +64,9 @@ class StateDefinition
     /** The action(s) to be executed upon entering the state definition. */
     public ?array $entry = [];
 
+    /** The action(s) to be executed upon exiting the state definition. */
+    public ?array $exit = [];
+
     // endregion
 
     // region Constructor
@@ -93,6 +96,7 @@ class StateDefinition
         $this->initialState = $this->findInitialState();
 
         $this->entry = $this->config['entry'] ?? [];
+        $this->exit  = $this->config['exit'] ?? [];
     }
 
     // endregion

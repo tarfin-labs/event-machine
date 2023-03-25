@@ -387,3 +387,30 @@ test('states can have entry actions', function (): void {
     expect($yellowState->entry)->toBe(['entryAction3']);
     expect($redState->entry)->toBe([]);
 });
+
+test('states can have exit actions', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'states' => [
+            'green' => [
+                'exit' => [
+                    'exitAction1',
+                    'exitAction2',
+                ],
+            ],
+            'yellow' => [
+                'exit' => [
+                    'exitAction3',
+                ],
+            ],
+            'red' => [],
+        ],
+    ]);
+
+    $greenState  = $machine->states['green'];
+    $yellowState = $machine->states['yellow'];
+    $redState    = $machine->states['red'];
+
+    expect($greenState->exit)->toBe(['exitAction1', 'exitAction2']);
+    expect($yellowState->exit)->toBe(['exitAction3']);
+    expect($redState->exit)->toBe([]);
+});
