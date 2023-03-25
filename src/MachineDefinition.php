@@ -36,6 +36,13 @@ class MachineDefinition
      */
     public ?array $events = null;
 
+    /**
+     * The initial state definition for this machine definition.
+     *
+     * @var null|\Tarfinlabs\EventMachine\StateDefinition
+     */
+    public ?StateDefinition $initialState = null;
+
     // endregion
 
     // region Constructor
@@ -61,6 +68,8 @@ class MachineDefinition
 
         $this->states = $this->root->states;
         $this->events = $this->root->events;
+
+        $this->initialState = $this->root->initialState;
     }
 
     // endregion

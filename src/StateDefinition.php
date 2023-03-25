@@ -54,6 +54,13 @@ class StateDefinition
      */
     public ?array $events = null;
 
+    /**
+     * The initial state definition for this machine definition.
+     *
+     * @var null|\Tarfinlabs\EventMachine\StateDefinition
+     */
+    public ?StateDefinition $initialState = null;
+
     // endregion
 
     // region Constructor
@@ -80,6 +87,21 @@ class StateDefinition
 
         $this->states = $this->createChildStates();
         $this->events = $this->collectUniqueEvents();
+
+        $this->initialState = $this->findInitialState();
+    }
+
+    protected function findInitialState(): ?StateDefinition
+    {
+        if (!isset($this->config['initial'])) {
+            return null;
+        }
+
+        if (!isset($this->states[$this->config['initial']])) {
+            return null;
+        }
+
+        return $this->states[$this->config['initial']];
     }
 
     // endregion
