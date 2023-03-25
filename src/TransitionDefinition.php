@@ -13,12 +13,15 @@ class TransitionDefinition
 {
     // region Public Properties
 
-    /**
-     * The target state definition for this transition, or null if there is no target.
-     *
-     * @var ?StateDefinition
-     */
+    /** The target state definition for this transition, or null if there is no target. */
     public ?StateDefinition $target;
+
+    /**
+     * The actions to be performed when this transition is taken.
+     *
+     * @var null|array<string>
+     */
+    public ?array $actions = null;
 
     // endregion
 
@@ -48,6 +51,8 @@ class TransitionDefinition
             $this->target = $this->transitionConfig['target'] === null
                 ? null
                 : $this->source->parent->states[$this->transitionConfig['target']];
+
+            $this->actions = $this->transitionConfig['actions'] ?? null;
         }
     }
 
