@@ -361,7 +361,7 @@ test('a state definition can have events', function (): void {
         ->events->toBeNull();
 });
 
-test('states can have entry actions', function (): void {
+test('a state definition can have entry actions', function (): void {
     $machine = MachineDefinition::define(config: [
         'states' => [
             'green' => [
@@ -386,7 +386,7 @@ test('states can have entry actions', function (): void {
     expect($redState->entry)->toBe([]);
 });
 
-test('states can have exit actions', function (): void {
+test('a state definition can have exit actions', function (): void {
     $machine = MachineDefinition::define(config: [
         'states' => [
             'green' => [
@@ -411,7 +411,7 @@ test('states can have exit actions', function (): void {
     expect($redState->exit)->toBe([]);
 });
 
-test('state definitions can have meta', function (): void {
+test('a state definition can have meta', function (): void {
     $machine = MachineDefinition::define(config: [
         'states' => [
             'green' => [
