@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextDefinition;
 
-it('can set and get context definition data', function () {
+it('can set and get context definition data', function (): void {
     $context = new ContextDefinition();
 
     $context->set('key1', 'value1');
@@ -14,13 +14,13 @@ it('can set and get context definition data', function () {
     expect($context->get('key2'))->toBe('value2');
 });
 
-it('returns null for non-existent keys', function () {
+it('returns null for non-existent keys', function (): void {
     $context = new ContextDefinition();
 
     expect($context->get('non_existent_key'))->toBeNull();
 });
 
-it('can check if a key exists', function () {
+it('can check if a key exists', function (): void {
     $context = new ContextDefinition();
     $context->set('key1', 'value1');
 
@@ -28,7 +28,7 @@ it('can check if a key exists', function () {
     expect($context->has('non_existent_key'))->toBeFalse();
 });
 
-it('can remove a key from context data', function () {
+it('can remove a key from context data', function (): void {
     $context = new ContextDefinition();
 
     $context->set('key1', 'value1');
@@ -39,17 +39,17 @@ it('can remove a key from context data', function () {
     expect($context->has('key2'))->toBeTrue();
 });
 
-it('can initialize context data with an array', function () {
+it('can initialize context data with an array', function (): void {
     $initialData = ['key1' => 'value1', 'key2' => 'value2'];
-    $context = new ContextDefinition($initialData);
+    $context     = new ContextDefinition($initialData);
 
     expect($context->get('key1'))->toBe('value1');
     expect($context->get('key2'))->toBe('value2');
 });
 
-it('can convert context data to an array', function () {
+it('can convert context data to an array', function (): void {
     $initialData = ['key1' => 'value1', 'key2' => 'value2'];
-    $context = new ContextDefinition($initialData);
+    $context     = new ContextDefinition($initialData);
 
     $contextArray = $context->toArray();
 
@@ -59,7 +59,7 @@ it('can convert context data to an array', function () {
     expect($contextArray['key2'])->toBe('value2');
 });
 
-it('can handle edge cases with empty keys and values', function () {
+it('can handle edge cases with empty keys and values', function (): void {
     $context = new ContextDefinition();
 
     $context->set('', 'empty_key_value');

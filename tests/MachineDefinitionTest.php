@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\ContextDefinition;
 use Tarfinlabs\EventMachine\StateDefinition;
+use Tarfinlabs\EventMachine\ContextDefinition;
 use Tarfinlabs\EventMachine\MachineDefinition;
 
 test('a machine definition is an instance of a MachineDefinition', function (): void {
