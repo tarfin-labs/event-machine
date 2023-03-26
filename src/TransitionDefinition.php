@@ -23,9 +23,7 @@ class TransitionDefinition
      */
     public ?array $actions = null;
 
-    /**
-     * The description of the transition.
-     */
+    /** The description of the transition. */
     public ?string $description = null;
 
     // endregion
