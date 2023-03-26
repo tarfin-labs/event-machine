@@ -43,6 +43,9 @@ class MachineDefinition
      */
     public ?StateDefinition $initialState = null;
 
+    /** The context definition for this machine definition. */
+    public ContextDefinition $context;
+
     // endregion
 
     // region Constructor
@@ -70,6 +73,8 @@ class MachineDefinition
         $this->events = $this->root->events;
 
         $this->initialState = $this->root->initialState;
+
+        $this->context = new ContextDefinition(data: $this->config['context'] ?? []);
     }
 
     // endregion
