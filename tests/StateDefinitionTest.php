@@ -410,3 +410,29 @@ test('states can have exit actions', function (): void {
     expect($yellowState->exit)->toBe(['exitAction3']);
     expect($redState->exit)->toBe([]);
 });
+
+test('state definitions can have meta', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'states' => [
+            'green' => [
+                'meta' => [
+                    'foo' => 'bar',
+                ],
+            ],
+            'yellow' => [
+                'meta' => [
+                    'foo' => 'baz',
+                ],
+            ],
+            'red' => [],
+        ],
+    ]);
+
+    $greenState  = $machine->states['green'];
+    $yellowState = $machine->states['yellow'];
+    $redState    = $machine->states['red'];
+
+    expect($greenState->meta)->toBe(['foo' => 'bar']);
+    expect($yellowState->meta)->toBe(['foo' => 'baz']);
+    expect($redState->meta)->toBeNull();
+});

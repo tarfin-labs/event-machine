@@ -67,6 +67,12 @@ class StateDefinition
     /** The action(s) to be executed upon exiting the state definition. */
     public ?array $exit = [];
 
+    /**
+     * The meta data associated with this state definition,
+     * which will be returned in StateChange instances.
+     */
+    public ?array $meta = null;
+
     // endregion
 
     // region Constructor
@@ -97,6 +103,8 @@ class StateDefinition
 
         $this->initializeEntryActions();
         $this->initializeExitActions();
+
+        $this->meta = $this->config['meta'] ?? null;
     }
 
     // endregion
