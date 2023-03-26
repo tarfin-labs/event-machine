@@ -58,3 +58,24 @@ it('can convert context data to an array', function () {
     expect($contextArray['key1'])->toBe('value1');
     expect($contextArray['key2'])->toBe('value2');
 });
+
+it('can handle edge cases with empty keys and values', function () {
+    $context = new ContextDefinition();
+
+    $context->set('', 'empty_key_value');
+    $context->set('empty_value_key', '');
+
+    expect($context->get(''))->toBe('empty_key_value');
+    expect($context->get('empty_value_key'))->toBe('');
+
+    expect($context->has(''))->toBeTrue();
+    expect($context->has('empty_value_key'))->toBeTrue();
+
+    $context->remove('');
+    expect($context->has(''))->toBeFalse();
+    expect($context->has('empty_value_key'))->toBeTrue();
+
+    $contextArray = $context->toArray();
+    expect($contextArray)->toHaveCount(1);
+    expect($contextArray['empty_value_key'])->toBe('');
+});
