@@ -27,3 +27,14 @@ it('can check if a key exists', function () {
     expect($context->has('key1'))->toBeTrue();
     expect($context->has('non_existent_key'))->toBeFalse();
 });
+
+it('can remove a key from context data', function () {
+    $context = new ContextDefinition();
+
+    $context->set('key1', 'value1');
+    $context->set('key2', 'value2');
+    $context->remove('key1');
+
+    expect($context->has('key1'))->toBeFalse();
+    expect($context->has('key2'))->toBeTrue();
+});
