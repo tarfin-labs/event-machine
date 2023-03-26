@@ -23,6 +23,13 @@ class TransitionDefinition
      */
     public ?array $actions = null;
 
+    /**
+     * The description of the transition.
+     *
+     * @var string|mixed|null
+     */
+    public ?string $description = null;
+
     // endregion
 
     // region Constructor
@@ -53,6 +60,8 @@ class TransitionDefinition
                 : $this->source->parent->states[$this->transitionConfig['target']];
 
             $this->actions = $this->transitionConfig['actions'] ?? null;
+
+            $this->description = $this->transitionConfig['description'] ?? null;
         }
     }
 

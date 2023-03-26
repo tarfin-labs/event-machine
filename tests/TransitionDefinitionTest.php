@@ -26,3 +26,23 @@ test('transitions can have actions', function (): void {
 
     expect($timerTransition->actions)->toBe(['action1', 'action2']);
 });
+
+test('transitions can have decriptions', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'states' => [
+            'green' => [
+                'on' => [
+                    'TIMER' => [
+                        'target'      => 'yellow',
+                        'description' => 'The timer has expired',
+                    ],
+                ],
+            ],
+            'yellow' => [],
+        ],
+    ]);
+
+    $timerTransition = $machine->states['green']->transitions['TIMER'];
+
+    expect($timerTransition->description)->toBe('The timer has expired');
+});
