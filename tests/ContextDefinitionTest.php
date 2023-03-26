@@ -38,3 +38,11 @@ it('can remove a key from context data', function () {
     expect($context->has('key1'))->toBeFalse();
     expect($context->has('key2'))->toBeTrue();
 });
+
+it('can initialize context data with an array', function () {
+    $initialData = ['key1' => 'value1', 'key2' => 'value2'];
+    $context = new ContextDefinition($initialData);
+
+    expect($context->get('key1'))->toBe('value1');
+    expect($context->get('key2'))->toBe('value2');
+});
