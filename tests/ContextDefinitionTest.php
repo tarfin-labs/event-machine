@@ -19,3 +19,11 @@ it('returns null for non-existent keys', function () {
 
     expect($context->get('non_existent_key'))->toBeNull();
 });
+
+it('can check if a key exists', function () {
+    $context = new ContextDefinition();
+    $context->set('key1', 'value1');
+
+    expect($context->has('key1'))->toBeTrue();
+    expect($context->has('non_existent_key'))->toBeFalse();
+});
