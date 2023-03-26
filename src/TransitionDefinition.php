@@ -26,7 +26,7 @@ class TransitionDefinition
     /**
      * The description of the transition.
      *
-     * @var string|mixed|null
+     * @var string|null
      */
     public ?string $description = null;
 
