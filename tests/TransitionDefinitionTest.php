@@ -27,6 +27,26 @@ test('transitions can have actions', function (): void {
     expect($timerTransition->actions)->toBe(['action1', 'action2']);
 });
 
+test('single actions can be defined as strings instead of arrays', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'states' => [
+            'green' => [
+                'on' => [
+                    'TIMER' => [
+                        'target'  => 'yellow',
+                        'actions' => 'action1',
+                    ],
+                ],
+            ],
+            'yellow' => [],
+        ],
+    ]);
+
+    $timerTransition = $machine->states['green']->transitions['TIMER'];
+
+    expect($timerTransition->actions)->toBe(['action1']);
+});
+
 test('transitions can have decriptions', function (): void {
     $machine = MachineDefinition::define(config: [
         'states' => [

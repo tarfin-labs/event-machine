@@ -371,9 +371,7 @@ test('states can have entry actions', function (): void {
                 ],
             ],
             'yellow' => [
-                'entry' => [
-                    'entryAction3',
-                ],
+                'entry' => 'entryAction3',
             ],
             'red' => [],
         ],
@@ -398,9 +396,7 @@ test('states can have exit actions', function (): void {
                 ],
             ],
             'yellow' => [
-                'exit' => [
-                    'exitAction3',
-                ],
+                'exit' => 'exitAction3',
             ],
             'red' => [],
         ],

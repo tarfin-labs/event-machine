@@ -95,8 +95,8 @@ class StateDefinition
 
         $this->initialState = $this->findInitialState();
 
-        $this->entry = $this->config['entry'] ?? [];
-        $this->exit  = $this->config['exit'] ?? [];
+        $this->initializeEntryActions();
+        $this->initializeExitActions();
     }
 
     // endregion
@@ -219,6 +219,34 @@ class StateDefinition
         }
 
         return $this->states[$initialStateKey];
+    }
+
+    /**
+     * Initialize the entry action/s for this state definition.
+     */
+    protected function initializeEntryActions(): void
+    {
+        if (isset($this->config['entry'])) {
+            $this->entry = is_array($this->config['entry'])
+                ? $this->config['entry']
+                : [$this->config['entry']];
+        } else {
+            $this->entry = [];
+        }
+    }
+
+    /**
+     * Initialize the exit action/s for this state definition.
+     */
+    protected function initializeExitActions(): void
+    {
+        if (isset($this->config['exit'])) {
+            $this->exit = is_array($this->config['exit'])
+                ? $this->config['exit']
+                : [$this->config['exit']];
+        } else {
+            $this->exit = [];
+        }
     }
 
     // endregion
