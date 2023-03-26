@@ -46,3 +46,15 @@ it('can initialize context data with an array', function () {
     expect($context->get('key1'))->toBe('value1');
     expect($context->get('key2'))->toBe('value2');
 });
+
+it('can convert context data to an array', function () {
+    $initialData = ['key1' => 'value1', 'key2' => 'value2'];
+    $context = new ContextDefinition($initialData);
+
+    $contextArray = $context->toArray();
+
+    expect($contextArray)->toBeArray();
+    expect($contextArray)->toHaveCount(2);
+    expect($contextArray['key1'])->toBe('value1');
+    expect($contextArray['key2'])->toBe('value2');
+});
