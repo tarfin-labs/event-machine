@@ -54,6 +54,7 @@ class MachineDefinition
      * Create a new machine definition with the given arguments.
      *
      * @param  array|null  $config     The raw configuration array used to create the machine definition.
+     * @param  array|null  $behavior     The implementation of the machine behavior that defined in the machine definition.
      * @param  string  $id         The id of the machine.
      * @param  string|null  $version    The version of the machine.
      * @param  string  $delimiter  The string delimiter for serializing the path to a string.
