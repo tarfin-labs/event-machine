@@ -27,6 +27,30 @@ test('state definition has a machine reference', function (): void {
     expect($machine->root->machine)->toBe($machine);
 });
 
+test('a state definition config should reference original machine definition config', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'initial' => 'one',
+        'states'  => [
+            'one' => [
+                'initial' => 'deep',
+                'states'  => [
+                    'deep' => [],
+                ],
+            ],
+        ],
+    ]);
+
+    $oneState = $machine->states['one'];
+    expect($oneState->config)->toBe($machine->config['states']['one']);
+
+    $deepState = $machine->states['one']->states['deep'];
+    expect($deepState->config)->toBe($machine->config['states']['one']['states']['deep']);
+
+    // TODO: Consider that if these should be reactive?
+    //$deepState->config['meta'] = 'testing meta';
+    //expect($machine->config['states']['one']['states']['deep']['meta'])->toBe('testing meta');
+});
+
 test('a state definition has a key', function (): void {
     $machineWithStates = MachineDefinition::define(config: [
         'states' => [
