@@ -60,6 +60,7 @@ class MachineDefinition
      */
     private function __construct(
         public ?array $config,
+        public ?array $behavior,
         public string $id,
         public ?string $version,
         public string $delimiter = self::STATE_DELIMITER,
@@ -111,9 +112,11 @@ class MachineDefinition
      */
     public static function define(
         ?array $config = null,
+        ?array $behavior = null,
     ): self {
         return new self(
             config: $config ?? null,
+            behavior: $behavior ?? null,
             id: $config['id'] ?? self::DEFAULT_ID,
             version: $config['version'] ?? null,
             delimiter: $config['delimiter'] ?? self::STATE_DELIMITER,
