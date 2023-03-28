@@ -66,3 +66,27 @@ test('transitions can have decriptions', function (): void {
 
     expect($timerTransition->description)->toBe('The timer has expired');
 });
+
+test('the transition target can be null', function (): void {
+    $machine = MachineDefinition::define([
+        'initial' => 'active',
+        'states'  => [
+            'active' => [
+                'on' => [
+                    'INC' => [
+                        'actions' => ['increment'],
+                    ],
+                    'DEC' => [
+                        'actions' => 'decrement',
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    $incTransition = $machine->states['active']->transitions['INC'];
+    $decTransition = $machine->states['active']->transitions['DEC'];
+
+    expect($incTransition->target)->toBeNull();
+    expect($decTransition->target)->toBeNull();
+});

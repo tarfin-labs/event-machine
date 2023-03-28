@@ -51,7 +51,7 @@ class TransitionDefinition
         }
 
         if (is_array($this->transitionConfig)) {
-            $this->target = $this->transitionConfig['target'] === null
+            $this->target = !isset($this->transitionConfig['target']) || $this->transitionConfig['target'] === null
                 ? null
                 : $this->source->parent->states[$this->transitionConfig['target']];
 
