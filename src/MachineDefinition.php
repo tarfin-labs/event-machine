@@ -41,7 +41,7 @@ class MachineDefinition
      *
      * @var null|\Tarfinlabs\EventMachine\StateDefinition
      */
-    public ?StateDefinition $initialState = null;
+    public ?StateDefinition $initial = null;
 
     /** The context definition for this machine definition. */
     public ContextDefinition $context;
@@ -72,7 +72,7 @@ class MachineDefinition
         $this->states = $this->root->states;
         $this->events = $this->root->events;
 
-        $this->initialState = $this->root->initialState;
+        $this->initial = $this->root->initialState;
 
         $this->context = new ContextDefinition(data: $this->config['context'] ?? []);
     }
