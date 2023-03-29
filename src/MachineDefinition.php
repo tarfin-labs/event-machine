@@ -125,4 +125,34 @@ class MachineDefinition
     }
 
     // endregion
+
+    // region Public Methods
+
+    public function transition(?string $state, array $event): void
+    {
+        // Retrieve the current state definition from the state property
+        $currentState = $this->states[$state] ?? $this->initial;
+
+        // Find the transition definition for the event type
+        $transitionDefinition = $currentState->transitions[$event['type']] ?? null;
+
+        // If the transition definition is not found, do nothing
+        if ($transitionDefinition === null) {
+            return;
+        }
+
+        // Execute the action associated with the event type
+        if ($transitionDefinition->actions !== null) {
+            foreach ($transitionDefinition->actions as $action) {
+                $actionMethod = $this->behavior['actions'][$action] ?? null;
+                if ($actionMethod !== null) {
+                    $actionMethod($this->context, $event);
+                }
+            }
+        }
+
+        // TODO: Update the current state if the target state is defined
+    }
+
+    // endregion
 }
