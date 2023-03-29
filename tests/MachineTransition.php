@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\State;
 use Tarfinlabs\EventMachine\ContextDefinition;
 use Tarfinlabs\EventMachine\MachineDefinition;
 
-it('can assign from an event', function (): void {
+it('can transition to a next state definition', function (): void {
     $machine = MachineDefinition::define(
         config: [
             'initial' => 'active',
@@ -37,10 +38,12 @@ it('can assign from an event', function (): void {
         ],
     );
 
-    $machine->transition(state: null, event: [
+    $state = $machine->transition(state: null, event: [
         'type'  => 'INC',
         'value' => 37,
     ]);
 
+    expect($state)->toBeInstanceOf(State::class);
+    expect($state->value)->toBe(['active']);
     expect($machine->context->get('count'))->toBe(37);
 });

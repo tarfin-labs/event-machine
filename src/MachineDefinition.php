@@ -128,7 +128,7 @@ class MachineDefinition
 
     // region Public Methods
 
-    public function transition(?string $state, array $event): void
+    public function transition(?string $state, array $event): State
     {
         // Retrieve the current state definition from the state property
         $currentState = $this->states[$state] ?? $this->initial;
@@ -138,7 +138,10 @@ class MachineDefinition
 
         // If the transition definition is not found, do nothing
         if ($transitionDefinition === null) {
-            return;
+            return new State(
+                activeStateDefinition: $currentState,
+                contextData:  $this->context->toArray(),
+            );
         }
 
         // Execute the action associated with the event type
@@ -151,7 +154,10 @@ class MachineDefinition
             }
         }
 
-        // TODO: Update the current state if the target state is defined
+        return new State(
+            activeStateDefinition: $transitionDefinition->target ?? $currentState,
+            contextData:  $this->context->toArray()
+        );
     }
 
     // endregion
