@@ -63,7 +63,7 @@ it('can update context using actions defined in transition definitions', functio
     expect($machine->context->get('count'))->toBe(20);
 
     $incState = $machine->transition(state: null, event: [
-        'type'  => 'INC',
+        'type' => 'INC',
     ]);
 
     expect($incState)
@@ -72,7 +72,7 @@ it('can update context using actions defined in transition definitions', functio
     expect($machine->context->get('count'))->toBe(21);
 
     $decState = $machine->transition(state: null, event: [
-        'type'  => 'DEC',
+        'type' => 'DEC',
     ]);
 
     expect($decState)
