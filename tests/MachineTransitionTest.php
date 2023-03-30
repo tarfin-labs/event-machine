@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\State;
 use Tarfinlabs\EventMachine\MachineDefinition;
 
-it('can transition to a next state', function (): void {
+it('can transition through a sequence of states using events', function (): void {
     $machine = MachineDefinition::define(
         config: [
             'initial' => 'green',
