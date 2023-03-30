@@ -164,6 +164,10 @@ class MachineDefinition
             ? $state->activeStateDefinition
             : $this->states[$state] ?? $this->initial;
 
+        if ($state instanceof State) {
+            $this->context->applyContextData($state->contextData);
+        }
+
         // Find the transition definition for the event type
         $transitionDefinition = $currentStateDefinition->transitions[$event['type']] ?? null;
 
