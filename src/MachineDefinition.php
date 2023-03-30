@@ -81,7 +81,7 @@ class MachineDefinition
         $this->states = $this->root->states;
         $this->events = $this->root->events;
 
-        $this->initial = $this->root->initialState;
+        $this->initial = $this->root->initial;
 
         $this->context = new ContextDefinition(data: $this->config['context'] ?? []);
     }

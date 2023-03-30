@@ -26,16 +26,16 @@ test('initial states are correctly set for both top-level machine definition and
         ->toBeInstanceOf(StateDefinition::class)
         ->key->toBe('green');
 
-    expect($machine->states['green']->initialState)
+    expect($machine->states['green']->initial)
         ->toBeInstanceOf(StateDefinition::class)
         ->key->toBe('walk');
 
-    expect($machine->states['yellow']->initialState)->toBeNull();
-    expect($machine->states['red']->initialState)->toBeNull();
+    expect($machine->states['yellow']->initial)->toBeNull();
+    expect($machine->states['red']->initial)->toBeNull();
 
-    expect($machine->states['green']->states['walk']->initialState)->toBeNull();
-    expect($machine->states['green']->states['wait']->initialState)->toBeNull();
-    expect($machine->states['green']->states['stop']->initialState)->toBeNull();
+    expect($machine->states['green']->states['walk']->initial)->toBeNull();
+    expect($machine->states['green']->states['wait']->initial)->toBeNull();
+    expect($machine->states['green']->states['stop']->initial)->toBeNull();
 });
 
 test('the first state definition is set as the initial state for both top-level machine definition and sub-states when not explicitly specified', function (): void {
@@ -57,14 +57,14 @@ test('the first state definition is set as the initial state for both top-level 
         ->toBeInstanceOf(StateDefinition::class)
         ->key->toBe('green');
 
-    expect($machine->states['green']->initialState)
+    expect($machine->states['green']->initial)
         ->toBeInstanceOf(StateDefinition::class)
         ->key->toBe('walk');
 
-    expect($machine->states['yellow']->initialState)->toBeNull();
-    expect($machine->states['red']->initialState)->toBeNull();
+    expect($machine->states['yellow']->initial)->toBeNull();
+    expect($machine->states['red']->initial)->toBeNull();
 
-    expect($machine->states['green']->states['walk']->initialState)->toBeNull();
-    expect($machine->states['green']->states['wait']->initialState)->toBeNull();
-    expect($machine->states['green']->states['stop']->initialState)->toBeNull();
+    expect($machine->states['green']->states['walk']->initial)->toBeNull();
+    expect($machine->states['green']->states['wait']->initial)->toBeNull();
+    expect($machine->states['green']->states['stop']->initial)->toBeNull();
 });

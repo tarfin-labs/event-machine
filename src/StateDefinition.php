@@ -59,7 +59,7 @@ class StateDefinition
      *
      * @var null|\Tarfinlabs\EventMachine\StateDefinition
      */
-    public ?StateDefinition $initialState = null;
+    public ?StateDefinition $initial = null;
 
     /**
      * The action(s) to be executed upon entering the state definition.
@@ -109,7 +109,7 @@ class StateDefinition
         $this->states = $this->createChildStates();
         $this->events = $this->collectUniqueEvents();
 
-        $this->initialState = $this->findInitialStateDefinition();
+        $this->initial = $this->findInitialStateDefinition();
 
         $this->initializeEntryActions();
         $this->initializeExitActions();
