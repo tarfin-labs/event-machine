@@ -61,15 +61,25 @@ class StateDefinition
      */
     public ?StateDefinition $initialState = null;
 
-    /** The action(s) to be executed upon entering the state definition. */
+    /**
+     * The action(s) to be executed upon entering the state definition.
+     *
+     * @var null|array<string|callable>
+     */
     public ?array $entry = [];
 
-    /** The action(s) to be executed upon exiting the state definition. */
+    /**
+     * The action(s) to be executed upon exiting the state definition.
+     *
+     * @var null|array<string|callable>
+     */
     public ?array $exit = [];
 
     /**
      * The meta data associated with this state definition,
-     * which will be returned in StateChange instances.
+     * which will be returned in {@see \Tarfinlabs\EventMachine\State} instances.
+     *
+     * @var null|array<mixed>
      */
     public ?array $meta = null;
 
