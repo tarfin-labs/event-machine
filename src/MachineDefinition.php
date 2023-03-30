@@ -19,7 +19,11 @@ class MachineDefinition
     /** The root state definition for this machine definition. */
     public StateDefinition $root;
 
-    /** The map of state definitions to their ids. */
+    /**
+     * The map of state definitions to their ids.
+     *
+     * @var \SplObjectStorage<\Tarfinlabs\EventMachine\StateDefinition, string>
+     */
     public SplObjectStorage $idMap;
 
     /**
