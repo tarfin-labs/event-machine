@@ -53,6 +53,9 @@ class MachineDefinition
      */
     public ContextDefinition $context;
 
+    /** The initial state for this state definition. */
+    public ?State $initialState;
+
     // endregion
 
     // region Constructor
@@ -84,6 +87,8 @@ class MachineDefinition
         $this->initial = $this->root->initial;
 
         $this->context = new ContextDefinition(data: $this->config['context'] ?? []);
+
+        $this->initialState = $this->buildInitialState();
     }
 
     // endregion
@@ -104,6 +109,23 @@ class MachineDefinition
                 'machine' => $this,
                 'key'     => $this->id,
             ]
+        );
+    }
+
+    /**
+     * Build the initial state for the machine.
+     *
+     * @return ?State The initial state of the machine.
+     */
+    protected function buildInitialState(): ?State
+    {
+        if (is_null($this->initial)) {
+            return null;
+        }
+
+        return new State(
+            activeStateDefinition: $this->initial,
+            contextData: $this->context->toArray(),
         );
     }
 

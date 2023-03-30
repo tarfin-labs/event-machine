@@ -25,7 +25,10 @@ it('can transition to a next state', function (): void {
         ],
     );
 
-    expect($machine->initial->key)->toBe('green');
+    $greenState = $machine->initialState;
+    expect($greenState)
+        ->toBeInstanceOf(State::class)
+        ->and($greenState->value)->toBe(['green']);
 
     $yellowState = $machine->transition(state: null, event: ['type' => 'NEXT']);
     expect($yellowState)
