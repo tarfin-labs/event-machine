@@ -109,7 +109,7 @@ class StateDefinition
         $this->states = $this->createChildStates();
         $this->events = $this->collectUniqueEvents();
 
-        $this->initialState = $this->findInitialState();
+        $this->initialState = $this->findInitialStateDefinition();
 
         $this->initializeEntryActions();
         $this->initializeExitActions();
@@ -222,7 +222,7 @@ class StateDefinition
         return $transitions;
     }
 
-    protected function findInitialState(): ?StateDefinition
+    protected function findInitialStateDefinition(): ?StateDefinition
     {
         $initialStateKey = $this->config['initial']
             ?? array_key_first($this->states ?? [])
