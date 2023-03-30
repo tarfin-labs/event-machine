@@ -222,6 +222,12 @@ class StateDefinition
         return $transitions;
     }
 
+    /**
+     * Finds the initial `StateDefinition` based on the `initial`
+     * configuration key or the first state definition found.
+     *
+     * @return \Tarfinlabs\EventMachine\StateDefinition|null The `StateDefinition` object for the initial state or `null` if not found.
+     */
     protected function findInitialStateDefinition(): ?StateDefinition
     {
         $initialStateKey = $this->config['initial']
