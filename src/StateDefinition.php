@@ -273,6 +273,13 @@ class StateDefinition
         }
     }
 
+    public function runEntryActions(?array $event): void
+    {
+        foreach ($this->entry as $action) {
+            $this->machine->runAction($action, $event);
+        }
+    }
+
     // endregion
 
     // region Public Methods

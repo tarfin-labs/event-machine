@@ -189,6 +189,9 @@ class MachineDefinition
             }
         }
 
+        // Run entry actions on the target state definition
+        $transitionDefinition->target?->runEntryActions($event);
+
         return new State(
             activeStateDefinition: $transitionDefinition->target ?? $currentStateDefinition,
             contextData:  $this->context->toArray()
@@ -196,4 +199,13 @@ class MachineDefinition
     }
 
     // endregion
+
+    public function runAction(string $action, ?array $event = null): void
+    {
+        $actionMethod = $this->behavior['actions'][$action] ?? null;
+
+        if ($actionMethod !== null) {
+            $actionMethod($this->context, $event);
+        }
+    }
 }
