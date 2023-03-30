@@ -31,7 +31,7 @@ it('can transition to a next state definition', function (): void {
                 'incrementAction' => function (ContextDefinition $context, array $event): void {
                     $context->set('count', $context->get('count') + $event['value']);
                 },
-                'decrementAction' => function (ContextDefinition $context, array $event): array {
+                'decrementAction' => function (ContextDefinition $context, array $event): void {
                     $context->set('count', $context->get('count') - $event['value']);
                 },
             ],
