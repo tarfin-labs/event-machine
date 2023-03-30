@@ -82,6 +82,15 @@ class TransitionDefinition
 
     // endregion
 
+    // region Public Methods
+
+    /**
+     * Execute the actions associated with transition definition.
+     *
+     * If there are no actions associated with the transition definition, do nothing.
+     *
+     * @param  array|null  $event The event data or null if none is provided.
+     */
     public function runActions(?array $event = null): void
     {
         if ($this->actions === null) {
@@ -92,4 +101,6 @@ class TransitionDefinition
             $this->source->machine->runAction($action, $event);
         }
     }
+
+    // endregion
 }

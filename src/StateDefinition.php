@@ -273,13 +273,6 @@ class StateDefinition
         }
     }
 
-    public function runEntryActions(?array $event): void
-    {
-        foreach ($this->entry as $action) {
-            $this->machine->runAction($action, $event);
-        }
-    }
-
     // endregion
 
     // region Public Methods
@@ -341,6 +334,18 @@ class StateDefinition
 
         // Return the array of unique event names
         return $events === [] ? null : $events;
+    }
+
+    /**
+     * Runs the entry actions of the current state definition with the given event.
+     *
+     * @param  array|null  $event The event to be processed.
+     */
+    public function runEntryActions(?array $event): void
+    {
+        foreach ($this->entry as $action) {
+            $this->machine->runAction($action, $event);
+        }
     }
 
     // endregion

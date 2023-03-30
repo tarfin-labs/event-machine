@@ -134,9 +134,10 @@ class MachineDefinition
     // region Static Constructors
 
     /**
-     * Define a new machine with the given configuration.
+     * Define a new machine with the given configuration and behavior.
      *
      * @param  ?array  $config The raw configuration array used to create the machine.
+     * @param  array|null  $behavior An array of behavior options.
      *
      * @return self The created machine definition.
      */
@@ -157,6 +158,14 @@ class MachineDefinition
 
     // region Public Methods
 
+    /**
+     * Transition the state machine to a new state based on an event.
+     *
+     * @param  State|string|null  $state The current state or state name, or null to use the initial state.
+     * @param  array  $event The event that triggers the transition.
+     *
+     * @return State The new state after the transition.
+     */
     public function transition(null|string|State $state, array $event): State
     {
         // Retrieve the current state definition from the state property
@@ -164,11 +173,13 @@ class MachineDefinition
             ? $state->activeStateDefinition
             : $this->states[$state] ?? $this->initial;
 
+        // If this is a state instance, apply the context data to the context
         if ($state instanceof State) {
             $this->context->applyContextData($state->contextData);
         }
 
         // Find the transition definition for the event type
+        /** @var \Tarfinlabs\EventMachine\TransitionDefinition $transitionDefinition */
         $transitionDefinition = $currentStateDefinition->transitions[$event['type']] ?? null;
 
         // If the transition definition is not found, do nothing
@@ -191,8 +202,15 @@ class MachineDefinition
         );
     }
 
-    // endregion
-
+    /**
+     * Executes the transition actions associated with the event type.
+     *
+     * If there are no transition actions associated with the event type, this method returns early.
+     * Otherwise, it runs each action in the order they are defined, passing the `$event` argument to
+     * the `runAction()` method of the `StateMachine` class for execution.
+     *
+     * @param  array|null  $event  The event to run the transition actions for.
+     */
     public function runAction(string $action, ?array $event = null): void
     {
         $actionMethod = $this->behavior['actions'][$action] ?? null;
@@ -201,4 +219,6 @@ class MachineDefinition
             $actionMethod($this->context, $event);
         }
     }
+
+    // endregion
 }
