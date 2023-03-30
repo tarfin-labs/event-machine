@@ -16,45 +16,67 @@ it('can update context using actions defined in transition definitions', functio
             'states' => [
                 'active' => [
                     'on' => [
-                        'INC' => [
-                            'actions' => 'incrementAction',
-                        ],
-                        'DEC' => [
-                            'actions' => 'decrementAction',
-                        ],
+                        'ADD' => ['actions' => 'additionAction'],
+                        'SUB' => ['actions' => 'subtractionAction'],
+                        'INC' => ['actions' => 'incrementAction'],
+                        'DEC' => ['actions' => 'decrementAction'],
                     ],
                 ],
             ],
         ],
         behavior: [
             'actions' => [
-                'incrementAction' => function (ContextDefinition $context, array $event): void {
+                'additionAction' => function (ContextDefinition $context, array $event): void {
                     $context->set('count', $context->get('count') + $event['value']);
                 },
-                'decrementAction' => function (ContextDefinition $context, array $event): void {
+                'subtractionAction' => function (ContextDefinition $context, array $event): void {
                     $context->set('count', $context->get('count') - $event['value']);
+                },
+                'incrementAction' => function (ContextDefinition $context, array $event): void {
+                    $context->set('count', $context->get('count') + 1);
+                },
+                'decrementAction' => function (ContextDefinition $context, array $event): void {
+                    $context->set('count', $context->get('count') - 1);
                 },
             ],
         ],
     );
 
-    $state1 = $machine->transition(state: null, event: [
-        'type'  => 'INC',
+    $addState = $machine->transition(state: null, event: [
+        'type'  => 'ADD',
         'value' => 37,
     ]);
 
-    expect($state1)
+    expect($addState)
         ->toBeInstanceOf(State::class)
-        ->and($state1->value)->toBe(['active']);
+        ->and($addState->value)->toBe(['active']);
     expect($machine->context->get('count'))->toBe(37);
 
-    $state2 = $machine->transition(state: null, event: [
-        'type'  => 'DEC',
+    $subState = $machine->transition(state: null, event: [
+        'type'  => 'SUB',
         'value' => 17,
     ]);
 
-    expect($state2)
+    expect($subState)
         ->toBeInstanceOf(State::class)
-        ->and($state2->value)->toBe(['active']);
+        ->and($subState->value)->toBe(['active']);
+    expect($machine->context->get('count'))->toBe(20);
+
+    $incState = $machine->transition(state: null, event: [
+        'type'  => 'INC',
+    ]);
+
+    expect($incState)
+        ->toBeInstanceOf(State::class)
+        ->and($incState->value)->toBe(['active']);
+    expect($machine->context->get('count'))->toBe(21);
+
+    $decState = $machine->transition(state: null, event: [
+        'type'  => 'DEC',
+    ]);
+
+    expect($decState)
+        ->toBeInstanceOf(State::class)
+        ->and($decState->value)->toBe(['active']);
     expect($machine->context->get('count'))->toBe(20);
 });
