@@ -135,18 +135,20 @@ class MachineDefinition
 
     // region Public Methods
 
-    public function transition(?string $state, array $event): State
+    public function transition(null|string|State $state, array $event): State
     {
         // Retrieve the current state definition from the state property
-        $currentState = $this->states[$state] ?? $this->initial;
+        $currentStateDefinition = $state instanceof State
+            ? $state->activeStateDefinition
+            : $this->states[$state] ?? $this->initial;
 
         // Find the transition definition for the event type
-        $transitionDefinition = $currentState->transitions[$event['type']] ?? null;
+        $transitionDefinition = $currentStateDefinition->transitions[$event['type']] ?? null;
 
         // If the transition definition is not found, do nothing
         if ($transitionDefinition === null) {
             return new State(
-                activeStateDefinition: $currentState,
+                activeStateDefinition: $currentStateDefinition,
                 contextData:  $this->context->toArray(),
             );
         }
@@ -162,7 +164,7 @@ class MachineDefinition
         }
 
         return new State(
-            activeStateDefinition: $transitionDefinition->target ?? $currentState,
+            activeStateDefinition: $transitionDefinition->target ?? $currentStateDefinition,
             contextData:  $this->context->toArray()
         );
     }

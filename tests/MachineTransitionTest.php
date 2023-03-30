@@ -3,47 +3,37 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\State;
-use Tarfinlabs\EventMachine\ContextDefinition;
 use Tarfinlabs\EventMachine\MachineDefinition;
 
-it('can transition to a next state definition', function (): void {
+it('can transition to a next state', function (): void {
     $machine = MachineDefinition::define(
         config: [
-            'initial' => 'active',
-            'context' => [
-                'count' => 0,
-            ],
-            'states' => [
-                'active' => [
+            'initial' => 'green',
+            'states'  => [
+                'green' => [
                     'on' => [
-                        'INC' => [
-                            'actions' => 'incrementAction',
-                        ],
-                        'DEC' => [
-                            'actions' => 'decrementAction',
-                        ],
+                        'NEXT' => 'yellow',
                     ],
                 ],
-            ],
-        ],
-        behavior: [
-            'actions' => [
-                'incrementAction' => function (ContextDefinition $context, array $event): void {
-                    $context->set('count', $context->get('count') + $event['value']);
-                },
-                'decrementAction' => function (ContextDefinition $context, array $event): void {
-                    $context->set('count', $context->get('count') - $event['value']);
-                },
+                'yellow' => [
+                    'on' => [
+                        'NEXT' => 'red',
+                    ],
+                ],
+                'red' => [],
             ],
         ],
     );
 
-    $state = $machine->transition(state: null, event: [
-        'type'  => 'INC',
-        'value' => 37,
-    ]);
+    expect($machine->initial->key)->toBe('green');
 
-    expect($state)->toBeInstanceOf(State::class);
-    expect($state->value)->toBe(['active']);
-    expect($machine->context->get('count'))->toBe(37);
+    $yellowState = $machine->transition(state: null, event: ['type' => 'NEXT']);
+    expect($yellowState)
+        ->toBeInstanceOf(State::class)
+        ->and($yellowState->value)->toBe(['yellow']);
+
+    $redState = $machine->transition(state: $yellowState, event: ['type' => 'NEXT']);
+    expect($redState)
+        ->toBeInstanceOf(State::class)
+        ->and($redState->value)->toBe(['red']);
 });
