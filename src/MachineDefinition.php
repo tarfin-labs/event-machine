@@ -43,7 +43,10 @@ class MachineDefinition
      */
     public ?StateDefinition $initial = null;
 
-    /** The context definition for this machine definition. */
+    /**
+     * The context definition for this machine definition.
+     * This is the extended state.
+     */
     public ContextDefinition $context;
 
     // endregion
