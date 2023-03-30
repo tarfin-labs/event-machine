@@ -38,12 +38,23 @@ it('can update context using actions defined in transition definitions', functio
         ],
     );
 
-    $state = $machine->transition(state: null, event: [
+    $state1 = $machine->transition(state: null, event: [
         'type'  => 'INC',
         'value' => 37,
     ]);
 
-    expect($state)->toBeInstanceOf(State::class);
-    expect($state->value)->toBe(['active']);
+    expect($state1)
+        ->toBeInstanceOf(State::class)
+        ->and($state1->value)->toBe(['active']);
     expect($machine->context->get('count'))->toBe(37);
+
+    $state2 = $machine->transition(state: null, event: [
+        'type'  => 'DEC',
+        'value' => 17,
+    ]);
+
+    expect($state2)
+        ->toBeInstanceOf(State::class)
+        ->and($state2->value)->toBe(['active']);
+    expect($machine->context->get('count'))->toBe(20);
 });
