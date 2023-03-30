@@ -337,6 +337,18 @@ class StateDefinition
     }
 
     /**
+     * Runs the exit actions of the current state definition with the given event.
+     *
+     * @param  array|null  $event The event to be processed.
+     */
+    public function runExitActions(?array $event): void
+    {
+        foreach ($this->exit as $action) {
+            $this->machine->runAction($action, $event);
+        }
+    }
+
+    /**
      * Runs the entry actions of the current state definition with the given event.
      *
      * @param  array|null  $event The event to be processed.

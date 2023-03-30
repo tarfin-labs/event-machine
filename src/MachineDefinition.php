@@ -179,7 +179,7 @@ class MachineDefinition
         }
 
         // Find the transition definition for the event type
-        /** @var \Tarfinlabs\EventMachine\TransitionDefinition $transitionDefinition */
+        /** @var null|\Tarfinlabs\EventMachine\TransitionDefinition $transitionDefinition */
         $transitionDefinition = $currentStateDefinition->transitions[$event['type']] ?? null;
 
         // If the transition definition is not found, do nothing
@@ -189,6 +189,9 @@ class MachineDefinition
                 contextData:  $this->context->toArray(),
             );
         }
+
+        // Run exit actions on the source/current state definition
+        $transitionDefinition->source->runExitActions($event);
 
         // Execute the transition actions associated with the event type
         $transitionDefinition->runActions($event);
