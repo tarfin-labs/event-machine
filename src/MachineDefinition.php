@@ -179,15 +179,8 @@ class MachineDefinition
             );
         }
 
-        // Execute the action associated with the event type
-        if ($transitionDefinition->actions !== null) {
-            foreach ($transitionDefinition->actions as $action) {
-                $actionMethod = $this->behavior['actions'][$action] ?? null;
-                if ($actionMethod !== null) {
-                    $actionMethod($this->context, $event);
-                }
-            }
-        }
+        // Execute the transition actions associated with the event type
+        $transitionDefinition->runActions($event);
 
         // Run entry actions on the target state definition
         $transitionDefinition->target?->runEntryActions($event);

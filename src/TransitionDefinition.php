@@ -81,4 +81,15 @@ class TransitionDefinition
     }
 
     // endregion
+
+    public function runActions(?array $event = null): void
+    {
+        if ($this->actions === null) {
+            return;
+        }
+
+        foreach ($this->actions as $action) {
+            $this->source->machine->runAction($action, $event);
+        }
+    }
 }
