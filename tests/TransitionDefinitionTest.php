@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\MachineDefinition;
+use Tarfinlabs\EventMachine\TransitionDefinition;
 
 test('single actions can be defined as strings instead of arrays', function (): void {
     $machine = MachineDefinition::define(config: [
@@ -137,4 +138,53 @@ test('a guarded transition can have multiple specified conditions', function ():
         'guard2',
         'guard3',
     ]);
+});
+
+test('a guarded transition can have multiple if-else targets', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'states' => [
+            'green' => [
+                'on' => [
+                    'TIMER' => [
+                        [
+                            'target'     => 'yellow',
+                            'conditions' => 'guard1',
+                        ],
+                        [
+                            'target'     => 'red',
+                            'conditions' => 'guard2',
+                        ],
+                        [
+                            'target' => 'pedestrian',
+                        ],
+                    ],
+                ],
+            ],
+            'yellow'     => [],
+            'red'        => [],
+            'pedestrian' => [],
+        ],
+    ]);
+
+    $transitions = $machine->states['green']->transitions;
+    expect($transitions)
+        ->toBeArray()
+        ->toHaveCount(1)
+        ->toHaveKey('TIMER');
+
+    $guardedTimerTransitions = $transitions['TIMER'];
+
+    expect($guardedTimerTransitions)
+        ->toBeArray()
+        ->toHaveCount(3)
+        ->each->toBeInstanceOf(TransitionDefinition::class);
+
+    expect($guardedTimerTransitions[0]->target->key)->toBe('yellow');
+    expect($guardedTimerTransitions[0]->conditions)->toBe(['guard1']);
+
+    expect($guardedTimerTransitions[1]->target->key)->toBe('red');
+    expect($guardedTimerTransitions[1]->conditions)->toBe(['guard2']);
+
+    expect($guardedTimerTransitions[2]->target->key)->toBe('pedestrian');
+    expect($guardedTimerTransitions[2]->conditions)->toBeNull();
 });

@@ -212,14 +212,50 @@ class StateDefinition
         }
 
         foreach ($stateDefinition->config['on'] as $eventName => $transitionConfig) {
-            $transitions[$eventName] = new TransitionDefinition(
-                transitionConfig: $transitionConfig,
-                source: $this,
-                event: $eventName,
-            );
+            if ($this->isAMultiPathGuardedTransition($transitionConfig)) {
+                foreach ($transitionConfig as $guardedTransitionConfig) {
+                    $transitions[$eventName][] = new TransitionDefinition(
+                        transitionConfig: $guardedTransitionConfig,
+                        source: $stateDefinition,
+                        event: $eventName,
+                    );
+                }
+            } else {
+                $transitions[$eventName] = new TransitionDefinition(
+                    transitionConfig: $transitionConfig,
+                    source: $this,
+                    event: $eventName,
+                );
+            }
         }
 
         return $transitions;
+    }
+
+    /**
+     * Determines if the given transition configuration represents a multi-path guarded transition.
+     * This method checks if the provided array has numeric keys and array values, indicating
+     * that it contains multiple guarded transitions based on different conditions.
+     *
+     * @param  array  $transitionConfig The transition configuration to examine.
+     *
+     * @return bool True if the configuration represents a multi-path guarded transition, false otherwise.
+     */
+    protected function isAMultiPathGuardedTransition(array $transitionConfig): bool
+    {
+        if ($transitionConfig === []) {
+            return false;
+        }
+
+        // Iterate through the input array
+        foreach ($transitionConfig as $key => $value) {
+            // Check if the key is numeric and the value is an array
+            if (!is_int($key) || !is_array($value)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -285,6 +321,7 @@ class StateDefinition
         $this->transitions = $this->formatTransitions($this);
 
         if ($this->states !== null) {
+            /** @var \Tarfinlabs\EventMachine\StateDefinition $state */
             foreach ($this->states as $state) {
                 $state->initializeTransitions();
             }
