@@ -193,8 +193,23 @@ class MachineDefinition
         // Run exit actions on the source/current state definition
         $transitionDefinition->source->runExitActions($event);
 
-        // Execute the transition actions associated with the event type
-        $transitionDefinition->runActions($event);
+        // Check if there is a guard condition and if it is met
+        $guardConditionMet = true;
+        if (isset($transitionDefinition->conditions)) {
+            foreach ($transitionDefinition->conditions as $condition) {
+                $guard = $this->behavior['guards'][$condition] ?? null;
+                if ($guard !== null && !$guard($this->context, $event)) {
+                    $guardConditionMet = false;
+                    break;
+                }
+            }
+        }
+
+        // Run the action if the guard condition is met
+        if ($guardConditionMet === true) {
+            // Execute the transition actions associated with the transition definition
+            $transitionDefinition->runActions($event);
+        }
 
         // Run entry actions on the target state definition
         $transitionDefinition->target?->runEntryActions($event);

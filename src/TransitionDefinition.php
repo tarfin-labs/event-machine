@@ -23,6 +23,9 @@ class TransitionDefinition
      */
     public ?array $actions = null;
 
+    /** The conditions to be checked before this transition is taken. */
+    public ?array $conditions = null;
+
     /** The description of the transition. */
     public ?string $description = null;
 
@@ -75,6 +78,12 @@ class TransitionDefinition
             $this->actions = is_array($this->transitionConfig['actions'])
                 ? $this->transitionConfig['actions']
                 : [$this->transitionConfig['actions']];
+
+            if (isset($this->transitionConfig['conditions'])) {
+                $this->conditions = is_array($this->transitionConfig['conditions'])
+                    ? $this->transitionConfig['conditions']
+                    : [$this->transitionConfig['conditions']];
+            }
         } else {
             $this->actions = null;
         }
