@@ -190,17 +190,17 @@ class StateDefinition
     }
 
     /**
-     * Formats the transitions for a given state definition.
+     * Create transition definitions for a given state definition.
      *
-     * This method extracts the transition configurations from the given state definition's
-     * config and creates a new instance of TransitionDefinition for each transition.
-     * The resulting array of TransitionDefinition instances is indexed by the corresponding event names.
+     * This method processes the 'on' configuration of the state definition, creating
+     * corresponding {@see \Tarfinlabs\EventMachine\TransitionDefinition} objects for
+     * each event.
      *
-     * @param  StateDefinition  $stateDefinition The state definition for which to format the transitions.
+     * @param  StateDefinition  $stateDefinition The state definition to process.
      *
-     * @return array An array of TransitionDefinition instances indexed by event names.
+     * @return array An array of TransitionDefinition objects, keyed by event names.
      */
-    protected function formatTransitions(StateDefinition $stateDefinition): array
+    protected function createTransitionDefinitions(StateDefinition $stateDefinition): array
     {
         $transitions = [];
 
@@ -318,7 +318,7 @@ class StateDefinition
      */
     public function initializeTransitions(): void
     {
-        $this->transitions = $this->formatTransitions($this);
+        $this->transitions = $this->createTransitionDefinitions($this);
 
         if ($this->states !== null) {
             /** @var \Tarfinlabs\EventMachine\StateDefinition $state */
