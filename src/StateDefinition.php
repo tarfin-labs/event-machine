@@ -241,9 +241,9 @@ class StateDefinition
      *
      * @return bool True if the configuration represents a multi-path guarded transition, false otherwise.
      */
-    protected function isAMultiPathGuardedTransition(array $transitionConfig): bool
+    protected function isAMultiPathGuardedTransition(null|array|string $transitionConfig): bool
     {
-        if ($transitionConfig === []) {
+        if (is_null($transitionConfig) || is_string($transitionConfig) || $transitionConfig === []) {
             return false;
         }
 
