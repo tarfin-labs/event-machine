@@ -59,6 +59,7 @@ class TransitionDefinition
                 ? null
                 : $this->source->parent->states[$targetConfig];
 
+            $this->initializeConditions();
             $this->initializeActions();
 
             $this->description = $this->transitionConfig['description'] ?? null;
@@ -69,6 +70,17 @@ class TransitionDefinition
 
     // region Protected Methods
 
+    protected function initializeConditions(): void
+    {
+        if (isset($this->transitionConfig['conditions'])) {
+            $this->conditions = is_array($this->transitionConfig['conditions'])
+                ? $this->transitionConfig['conditions']
+                : [$this->transitionConfig['conditions']];
+        } else {
+            $this->conditions = null;
+        }
+    }
+
     /**
      * Initializes the action/s for this transition.
      */
@@ -78,12 +90,6 @@ class TransitionDefinition
             $this->actions = is_array($this->transitionConfig['actions'])
                 ? $this->transitionConfig['actions']
                 : [$this->transitionConfig['actions']];
-
-            if (isset($this->transitionConfig['conditions'])) {
-                $this->conditions = is_array($this->transitionConfig['conditions'])
-                    ? $this->transitionConfig['conditions']
-                    : [$this->transitionConfig['conditions']];
-            }
         } else {
             $this->actions = null;
         }

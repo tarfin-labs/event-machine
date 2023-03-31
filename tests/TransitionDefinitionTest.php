@@ -33,17 +33,18 @@ test('a guarded transition can have specified condition', function (): void {
             'green' => [
                 'on' => [
                     'TIMER' => [
-                        'actions'    => 'action1',
-                        'conditions' => 'condition1',
+                        'target'     => 'yellow',
+                        'conditions' => 'guard1',
                     ],
                 ],
             ],
+            'yellow' => [],
         ],
     ]);
 
     $timerTransition = $machine->states['green']->transitions['TIMER'];
 
-    expect($timerTransition->conditions)->toBe(['condition1']);
+    expect($timerTransition->conditions)->toBe(['guard1']);
 });
 
 test('a guarded transition can have multiple specified conditions', function (): void {
@@ -52,24 +53,25 @@ test('a guarded transition can have multiple specified conditions', function ():
             'green' => [
                 'on' => [
                     'TIMER' => [
-                        'actions'    => 'action1',
+                        'target'     => 'yellow',
                         'conditions' => [
-                            'condition1',
-                            'condition2',
-                            'condition3',
+                            'guard1',
+                            'guard2',
+                            'guard3',
                         ],
                     ],
                 ],
             ],
+            'yellow' => [],
         ],
     ]);
 
     $timerTransition = $machine->states['green']->transitions['TIMER'];
 
     expect($timerTransition->conditions)->toBe([
-        'condition1',
-        'condition2',
-        'condition3',
+        'guard1',
+        'guard2',
+        'guard3',
     ]);
 });
 
