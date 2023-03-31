@@ -52,7 +52,7 @@ it('can update context using actions defined in transition definitions', functio
         ->and($addState->value)->toBe(['active']);
     expect($machine->context->get('count'))->toBe(37);
 
-    $subState = $machine->transition(state: null, event: [
+    $subState = $machine->transition(state: $addState, event: [
         'type'  => 'SUB',
         'value' => 17,
     ]);
@@ -62,7 +62,7 @@ it('can update context using actions defined in transition definitions', functio
         ->and($subState->value)->toBe(['active']);
     expect($machine->context->get('count'))->toBe(20);
 
-    $incState = $machine->transition(state: null, event: [
+    $incState = $machine->transition(state: $subState, event: [
         'type' => 'INC',
     ]);
 
@@ -71,7 +71,7 @@ it('can update context using actions defined in transition definitions', functio
         ->and($incState->value)->toBe(['active']);
     expect($machine->context->get('count'))->toBe(21);
 
-    $decState = $machine->transition(state: null, event: [
+    $decState = $machine->transition(state: $incState, event: [
         'type' => 'DEC',
     ]);
 
