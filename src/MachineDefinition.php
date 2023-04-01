@@ -155,6 +155,7 @@ class MachineDefinition
             ? $transitionCandidates
             : [$transitionCandidates];
 
+        /** @var \Tarfinlabs\EventMachine\TransitionDefinition $transitionCandidate */
         foreach ($transitionCandidates as $transitionCandidate) {
             if (!isset($transitionCandidate->conditions)) {
                 return $transitionCandidate;
@@ -165,7 +166,7 @@ class MachineDefinition
                 $guardBehavior = $this->behavior['guards'][$condition] ?? null;
 
                 if ($guardBehavior === null) {
-                    throw new RuntimeException("Guard {$condition} behavior not found in machine behaviors.");
+                    throw new RuntimeException("Guard '{$condition}' behavior not found in machine behaviors.");
                 }
 
                 if ($guardBehavior($this->context, $event) !== true) {

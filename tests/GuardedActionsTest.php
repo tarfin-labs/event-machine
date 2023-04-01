@@ -213,3 +213,30 @@ it('should transition through multiple if-else targets based on guard conditions
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe(['pedestrian']);
 });
+
+it('throws RuntimeException for undefined guard condition', function (): void {
+    $machine = MachineDefinition::define(
+        config: [
+            'initial' => 'active',
+            'context' => [
+                'count' => 1,
+            ],
+            'states' => [
+                'active' => [
+                    'on' => [
+                        'MUT' => [
+                            'conditions' => 'isEvenGuard',
+                            'actions'    => 'multiplyByTwoAction',
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        behavior: [
+            'actions' => [],
+            'guards'  => [],
+        ],
+    );
+
+    $machine->transition(state: null, event: ['type' => 'MUT']);
+})->expectException(RuntimeException::class);
