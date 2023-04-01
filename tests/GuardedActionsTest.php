@@ -141,3 +141,75 @@ it('should not run the guarded action when the guard condition is not met', func
     // Ensure that the machine's context has not been changed.
     expect($machine->context->get('count'))->toBe(1);
 });
+
+it('should transition through multiple if-else targets based on guard conditions', function (): void {
+    $machine = MachineDefinition::define(
+        config: [
+            'initial' => 'green',
+            'context' => [
+                'value' => 1,
+            ],
+            'states' => [
+                'green' => [
+                    'on' => [
+                        'TIMER' => [
+                            [
+                                'target'     => 'yellow',
+                                'conditions' => 'isOneGuard',
+                            ],
+                            [
+                                'target'     => 'red',
+                                'conditions' => 'isTwoGuard',
+                            ],
+                            [
+                                'target' => 'pedestrian',
+                            ],
+                        ],
+                    ],
+                ],
+                'yellow'     => [],
+                'red'        => [],
+                'pedestrian' => [],
+            ],
+        ],
+        behavior: [
+            'guards' => [
+                'isOneGuard' => function (ContextDefinition $context, array $event): bool {
+                    return $context->get('value') === 1;
+                },
+                'isTwoGuard' => function (ContextDefinition $context, array $event): bool {
+                    return $context->get('value') === 2;
+                },
+            ],
+        ],
+    );
+
+    $newState = $machine->transition(state: null, event: ['type' => 'TIMER']);
+    expect($newState)
+        ->toBeInstanceOf(State::class)
+        ->and($newState->value)->toBe(['yellow']);
+
+    $newState = $machine->transition(
+        state: new State(
+            activeStateDefinition: $machine->states['green'],
+            contextData: ['value' => 2],
+        ),
+        event: ['type' => 'TIMER']
+    );
+
+    expect($newState)
+        ->toBeInstanceOf(State::class)
+        ->and($newState->value)->toBe(['red']);
+
+    $newState = $machine->transition(
+        state: new State(
+            activeStateDefinition: $machine->states['green'],
+            contextData: ['value' => 3],
+        ),
+        event: ['type' => 'TIMER']
+    );
+
+    expect($newState)
+        ->toBeInstanceOf(State::class)
+        ->and($newState->value)->toBe(['pedestrian']);
+});

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine;
 
+use RuntimeException;
 use SplObjectStorage;
 
 class MachineDefinition
@@ -129,6 +130,77 @@ class MachineDefinition
         );
     }
 
+    /**
+     * Selects the first eligible transition while evaluating guard conditions.
+     *
+     * This method iterates through the given transition candidates and
+     * checks if the guard conditions are met. If a candidate transition
+     * does not have any guard conditions, it is considered eligible.
+     * If a transition with guard conditions has all its guards evaluated
+     * to true, it is considered eligible. The method returns the first
+     * eligible transition encountered or null if none is found.
+     *
+     * @param  array|TransitionDefinition  $transitionCandidates Array of
+     *        transition candidates or a single candidate to be checked.
+     * @param  array  $event The event data used to evaluate guards.
+     *
+     * @return TransitionDefinition|null The first eligible transition or
+     *         null if no eligible transition is found.
+     */
+    protected function selectFirstEligibleTransitionEvaluatingGuards(
+        array|TransitionDefinition $transitionCandidates,
+        array $event
+    ): ?TransitionDefinition {
+        $transitionCandidates = is_array($transitionCandidates)
+            ? $transitionCandidates
+            : [$transitionCandidates];
+
+        foreach ($transitionCandidates as $transitionCandidate) {
+            if (!isset($transitionCandidate->conditions)) {
+                return $transitionCandidate;
+            }
+
+            $conditionsMet = true;
+            foreach ($transitionCandidate->conditions as $condition) {
+                $guardBehavior = $this->behavior['guards'][$condition] ?? null;
+
+                if ($guardBehavior === null) {
+                    throw new RuntimeException("Guard {$condition} behavior not found in machine behaviors.");
+                }
+
+                if ($guardBehavior($this->context, $event) !== true) {
+                    $conditionsMet = false;
+                    break;
+                }
+            }
+
+            if ($conditionsMet === true) {
+                return $transitionCandidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Builds the current state of the state machine.
+     *
+     * This method creates a new State object, populating it with
+     * the active state definition and the current context data.
+     * If no current state is provided, the initial state is used.
+     *
+     * @param  StateDefinition|null  $currentStateDefinition The current state definition, if any.
+     *
+     * @return State The constructed State object representing the current state.
+     */
+    protected function buildCurrentState(StateDefinition $currentStateDefinition = null): State
+    {
+        return new State(
+            activeStateDefinition: $currentStateDefinition ?? $this->initial,
+            contextData:  $this->context->toArray(),
+        );
+    }
+
     // endregion
 
     // region Static Constructors
@@ -182,34 +254,22 @@ class MachineDefinition
         /** @var null|\Tarfinlabs\EventMachine\TransitionDefinition $transitionDefinition */
         $transitionDefinition = $currentStateDefinition->transitions[$event['type']] ?? null;
 
+        // If the transition definition is an array, find the transition candidate
+        $transitionDefinition = $this->selectFirstEligibleTransitionEvaluatingGuards(
+            transitionCandidates: $transitionDefinition,
+            event: $event,
+        );
+
         // If the transition definition is not found, do nothing
         if ($transitionDefinition === null) {
-            return new State(
-                activeStateDefinition: $currentStateDefinition,
-                contextData:  $this->context->toArray(),
-            );
+            return $this->buildCurrentState($currentStateDefinition);
         }
 
         // Run exit actions on the source/current state definition
         $transitionDefinition->source->runExitActions($event);
 
-        // Check if there is a guard condition and if it is met
-        $guardConditionMet = true;
-        if (isset($transitionDefinition->conditions)) {
-            foreach ($transitionDefinition->conditions as $condition) {
-                $guard = $this->behavior['guards'][$condition] ?? null;
-                if ($guard !== null && !$guard($this->context, $event)) {
-                    $guardConditionMet = false;
-                    break;
-                }
-            }
-        }
-
-        // Run the action if the guard condition is met
-        if ($guardConditionMet === true) {
-            // Execute the transition actions associated with the transition definition
-            $transitionDefinition->runActions($event);
-        }
+        // Run transition actions on the transition definition
+        $transitionDefinition->runActions($event);
 
         // Run entry actions on the target state definition
         $transitionDefinition->target?->runEntryActions($event);
