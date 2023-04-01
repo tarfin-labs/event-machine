@@ -1,10 +1,16 @@
-# EventMachine
+<div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./art/event-machine-logo-dark.svg">
+  <img alt="Where Events Drive the Gears of Progress" src="./art/event-machine-logo-light.svg" height="400">
+</picture>
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/tarfin-labs/event-machine.svg?style=flat-square)](https://packagist.org/packages/tarfin-labs/event-machine)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/tarfin-labs/event-machine/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/tarfin-labs/event-machine/actions?query=workflow%3Arun-tests+branch%3Amain)
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/tarfin-labs/event-machine/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/tarfin-labs/event-machine/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/tarfin-labs/event-machine.svg?style=flat-square)](https://packagist.org/packages/tarfin-labs/event-machine)
+
+</div>
 
 EventMachine is a PHP library for creating and managing event-driven state machines. It is designed to be simple and easy to use, while providing powerful functionality for managing complex state transitions. This library is heavily influenced by XState, a popular JavaScript state machine library.
 
