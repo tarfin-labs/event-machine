@@ -57,11 +57,11 @@ $machine = MachineDefinition::define(
                         'TIMER' => [
                             [
                                 'target'     => 'yellow',
-                                'conditions' => 'isOneGuard',
+                                'guards' => 'isOneGuard',
                             ],
                             [
                                 'target'     => 'red',
-                                'conditions' => 'isTwoGuard',
+                                'guards' => 'isTwoGuard',
                             ],
                             [
                                 'target' => 'pedestrian',

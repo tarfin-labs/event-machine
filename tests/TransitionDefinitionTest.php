@@ -98,8 +98,8 @@ test('a guarded transition can have specified condition', function (): void {
             'green' => [
                 'on' => [
                     'TIMER' => [
-                        'target'     => 'yellow',
-                        'conditions' => 'guard1',
+                        'target' => 'yellow',
+                        'guards' => 'guard1',
                     ],
                 ],
             ],
@@ -118,8 +118,8 @@ test('a guarded transition can have multiple specified conditions', function ():
             'green' => [
                 'on' => [
                     'TIMER' => [
-                        'target'     => 'yellow',
-                        'conditions' => [
+                        'target' => 'yellow',
+                        'guards' => [
                             'guard1',
                             'guard2',
                             'guard3',
@@ -147,12 +147,12 @@ test('a guarded transition can have multiple if-else targets', function (): void
                 'on' => [
                     'TIMER' => [
                         [
-                            'target'     => 'yellow',
-                            'conditions' => 'guard1',
+                            'target' => 'yellow',
+                            'guards' => 'guard1',
                         ],
                         [
-                            'target'     => 'red',
-                            'conditions' => 'guard2',
+                            'target' => 'red',
+                            'guards' => 'guard2',
                         ],
                         [
                             'target' => 'pedestrian',

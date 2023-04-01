@@ -17,8 +17,8 @@ it('should run the guarded action when the guard condition is met', function ():
                 'active' => [
                     'on' => [
                         'MUT' => [
-                            'conditions' => 'isEvenGuard',
-                            'actions'    => 'multiplyByTwoAction',
+                            'guards'  => 'isEvenGuard',
+                            'actions' => 'multiplyByTwoAction',
                         ],
                         'INC' => ['actions' => 'incrementAction'],
                         'DEC' => ['actions' => 'decrementAction'],
@@ -83,8 +83,8 @@ it('should not run the guarded action when the guard condition is not met', func
                 'active' => [
                     'on' => [
                         'MUT' => [
-                            'conditions' => 'isEvenGuard',
-                            'actions'    => 'multiplyByTwoAction',
+                            'guards'  => 'isEvenGuard',
+                            'actions' => 'multiplyByTwoAction',
                         ],
                         'INC' => ['actions' => 'incrementAction'],
                         'DEC' => ['actions' => 'decrementAction'],
@@ -154,12 +154,12 @@ it('should transition through multiple if-else targets based on guard conditions
                     'on' => [
                         'TIMER' => [
                             [
-                                'target'     => 'yellow',
-                                'conditions' => 'isOneGuard',
+                                'target' => 'yellow',
+                                'guards' => 'isOneGuard',
                             ],
                             [
-                                'target'     => 'red',
-                                'conditions' => 'isTwoGuard',
+                                'target' => 'red',
+                                'guards' => 'isTwoGuard',
                             ],
                             [
                                 'target' => 'pedestrian',
@@ -225,8 +225,8 @@ it('throws RuntimeException for undefined guard condition', function (): void {
                 'active' => [
                     'on' => [
                         'MUT' => [
-                            'conditions' => 'isEvenGuard',
-                            'actions'    => 'multiplyByTwoAction',
+                            'guards'  => 'isEvenGuard',
+                            'actions' => 'multiplyByTwoAction',
                         ],
                     ],
                 ],

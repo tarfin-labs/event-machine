@@ -72,10 +72,10 @@ class TransitionDefinition
 
     protected function initializeConditions(): void
     {
-        if (isset($this->transitionConfig['conditions'])) {
-            $this->conditions = is_array($this->transitionConfig['conditions'])
-                ? $this->transitionConfig['conditions']
-                : [$this->transitionConfig['conditions']];
+        if (isset($this->transitionConfig['guards'])) {
+            $this->conditions = is_array($this->transitionConfig['guards'])
+                ? $this->transitionConfig['guards']
+                : [$this->transitionConfig['guards']];
         } else {
             $this->conditions = null;
         }
