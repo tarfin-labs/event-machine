@@ -241,15 +241,9 @@ class MachineDefinition
      */
     public function transition(null|string|State $state, array $event): State
     {
-        // Retrieve the current state definition from the state property
-        $currentStateDefinition = $state instanceof State
-            ? $state->activeStateDefinition
-            : $this->states[$state] ?? $this->initial;
+        $currentStateDefinition = $this->getCurrentStateDefinition($state);
 
-        // If this is a state instance, apply the context data to the context
-        if ($state instanceof State) {
-            $this->context->applyContextData($state->contextData);
-        }
+        $this->applyContextDataIfNeeded($state);
 
         // Find the transition definition for the event type
         /** @var null|\Tarfinlabs\EventMachine\TransitionDefinition $transitionDefinition */
@@ -300,4 +294,37 @@ class MachineDefinition
     }
 
     // endregion
+
+    /**
+     * Get the current state definition.
+     *
+     * If a `State` object is passed, return its active state definition.
+     * Otherwise, lookup the state in the `MachineDefinition` states array.
+     * If the state is not found, return the initial state.
+     *
+     * @param  string|State|null  $state The state to retrieve the definition for.
+     *
+     * @return mixed The state definition.
+     */
+    protected function getCurrentStateDefinition(string|State|null $state): mixed
+    {
+        return $state instanceof State
+            ? $state->activeStateDefinition
+            : $this->states[$state] ?? $this->initial;
+    }
+
+    /**
+     * Apply context data to the state if needed.
+     *
+     * If the given state is an instance of `State`, this method will apply the state's
+     * `contextData` to the machine's context.
+     *
+     * @param  string|State|null  $state The state or state identifier to apply the context data from.
+     */
+    protected function applyContextDataIfNeeded(string|State|null $state): void
+    {
+        if ($state instanceof State) {
+            $this->context->applyContextData($state->contextData);
+        }
+    }
 }
