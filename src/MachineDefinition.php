@@ -169,6 +169,10 @@ class MachineDefinition
                     throw new RuntimeException("Guard '{$condition}' behavior not found in machine behaviors.");
                 }
 
+                $guardBehavior = is_callable($guardBehavior)
+                    ? $guardBehavior
+                    : new $guardBehavior();
+
                 if ($guardBehavior($this->context, $event) !== true) {
                     $conditionsMet = false;
                     break;
