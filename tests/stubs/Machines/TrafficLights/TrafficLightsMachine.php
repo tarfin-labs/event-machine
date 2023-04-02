@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights;
 
-use Tarfinlabs\EventMachine\ContextDefinition;
 use Tarfinlabs\EventMachine\EventMachine;
+use Tarfinlabs\EventMachine\ContextDefinition;
 use Tarfinlabs\EventMachine\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\DecrementAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\IncrementAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\MultiplyByTwoAction;
 
 class TrafficLightsMachine extends EventMachine
 {
@@ -33,15 +36,9 @@ class TrafficLightsMachine extends EventMachine
             ],
             behavior: [
                 'actions' => [
-                    'multiplyByTwoAction' => function (ContextDefinition $context): void {
-                        $context->set('count', $context->get('count') * 2);
-                    },
-                    'incrementAction' => function (ContextDefinition $context, array $event): void {
-                        $context->set('count', $context->get('count') + 1);
-                    },
-                    'decrementAction' => function (ContextDefinition $context, array $event): void {
-                        $context->set('count', $context->get('count') - 1);
-                    },
+                    'multiplyByTwoAction' => MultiplyByTwoAction::class,
+                    'incrementAction'     => IncrementAction::class,
+                    'decrementAction'     => DecrementAction::class,
                 ],
                 'guards' => [
                     'isEvenGuard' => function (ContextDefinition $context, array $event): bool {
@@ -49,6 +46,6 @@ class TrafficLightsMachine extends EventMachine
                     },
                 ],
             ],
-        );;
+        );
     }
 }

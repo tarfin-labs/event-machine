@@ -321,9 +321,13 @@ class MachineDefinition
     {
         $actionMethod = $this->behavior['actions'][$action] ?? null;
 
-        if ($actionMethod !== null) {
-            $actionMethod($this->context, $event);
+        if ($actionMethod === null) {
+            return;
         }
+
+        is_callable($actionMethod)
+            ? $actionMethod($this->context, $event)
+            : (new $actionMethod())($this->context, $event);
     }
 
     // endregion

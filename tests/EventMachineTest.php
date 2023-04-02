@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\MachineDefinition;
 use Tarfinlabs\EventMachine\State;
+use Tarfinlabs\EventMachine\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 test('TrafficLightsMachine definition returns a MachineDefinition instance', function (): void {
