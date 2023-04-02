@@ -112,8 +112,8 @@ class TransitionDefinition
             return;
         }
 
-        foreach ($this->actions as $action) {
-            $this->source->machine->runAction($action, $event);
+        foreach ($this->actions as $actionDefinition) {
+            $this->source->machine->runAction($actionDefinition, $event);
         }
     }
 

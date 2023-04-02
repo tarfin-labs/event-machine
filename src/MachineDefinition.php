@@ -317,27 +317,58 @@ class MachineDefinition
     }
 
     /**
-     * Executes the transition actions associated with the event type.
+     * Executes the action associated with the provided action definition.
      *
-     * If there are no transition actions associated with the event type, this method returns early.
-     * Otherwise, it runs each action in the order they are defined, passing the `$event` argument to
-     * the `runAction()` method of the `StateMachine` class for execution.
+     * This method retrieves the appropriate action behavior based on the
+     * action definition, and if the action behavior is callable, it
+     * executes it using the context and event data.
      *
-     * @param  array|null  $event  The event to run the transition actions for.
+     * @param  string  $actionDefinition The action definition, either a class
+     *                                 name or an array key.
+     * @param  array|null  $event The event data (optional).
      */
-    public function runAction(string $action, ?array $event = null): void
+    public function runAction(string $actionDefinition, ?array $event = null): void
     {
-        $actionMethod = class_exists($action) && is_subclass_of($action, ActionBehavior::class)
-            ? new $action()
-            : $this->behavior['actions'][$action] ?? null;
+        // Retrieve the appropriate action behavior based on the action definition.
+        $actionBehavior = $this->getActionBehavior($actionDefinition);
 
-        if ($actionMethod === null) {
-            return;
+        // If the action behavior is callable, execute it with the context and event data.
+        if (is_callable($actionBehavior)) {
+            $actionBehavior($this->context, $event);
+        }
+    }
+
+    /**
+     * Retrieves the action behavior for the given action definition.
+     *
+     * This method checks if the action definition is an invokable
+     * ActionBehavior subclass and creates a new instance if it is.
+     * Otherwise, it looks up the action definition in the machine
+     * behavior and retrieves the corresponding behavior. If the
+     * retrieved behavior is not callable, a new instance is created.
+     *
+     * @param  string  $actionDefinition The action definition, either a class
+     *                                 name or an array key.
+     *
+     * @return callable|null The action behavior as a callable or null.
+     */
+    protected function getActionBehavior(string $actionDefinition): ?callable
+    {
+        // If the action definition is an invokable ActionBehavior, create a new instance.
+        if (class_exists($actionDefinition) && is_subclass_of($actionDefinition, ActionBehavior::class)) {
+            return new $actionDefinition();
         }
 
-        is_callable($actionMethod)
-            ? $actionMethod($this->context, $event)
-            : (new $actionMethod())($this->context, $event);
+        // If the action definition is definied in the machine behavior, retrieve it.
+        $actionBehavior = $this->behavior['actions'][$actionDefinition] ?? null;
+
+        // If the retrieved behavior is not null and not callable, create a new instance.
+        if ($actionBehavior !== null && !is_callable($actionBehavior)) {
+            return new $actionBehavior();
+        }
+
+        // Return the action behavior, either a callable or null.
+        return $actionBehavior;
     }
 
     // endregion
