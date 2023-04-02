@@ -163,7 +163,11 @@ class MachineDefinition
 
             $conditionsMet = true;
             foreach ($transitionCandidate->conditions as $condition) {
-                $guardBehavior = $this->behavior['guards'][$condition] ?? null;
+                if (class_exists($condition) && is_subclass_of($condition, GuardBehavior::class)) {
+                    $guardBehavior = new $condition();
+                } else {
+                    $guardBehavior = $this->behavior['guards'][$condition] ?? null;
+                }
 
                 if ($guardBehavior === null) {
                     throw new RuntimeException("Guard '{$condition}' behavior not found in machine behaviors.");
@@ -323,7 +327,9 @@ class MachineDefinition
      */
     public function runAction(string $action, ?array $event = null): void
     {
-        $actionMethod = $this->behavior['actions'][$action] ?? null;
+        $actionMethod = class_exists($action) && is_subclass_of($action, ActionBehavior::class)
+            ? new $action()
+            : $this->behavior['actions'][$action] ?? null;
 
         if ($actionMethod === null) {
             return;
