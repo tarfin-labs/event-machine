@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Guards\IsEvenGuar
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\DecrementAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\IncrementAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\MultiplyByTwoAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\DoNothingInsideClassAction;
 
 class TrafficLightsMachine extends EventMachine
 {
@@ -24,7 +25,11 @@ class TrafficLightsMachine extends EventMachine
                         'on' => [
                             'MUT' => [
                                 'guards'  => IsEvenGuard::class,
-                                'actions' => MultiplyByTwoAction::class,
+                                'actions' => [
+                                    MultiplyByTwoAction::class,
+                                    'doNothingAction',
+                                    'doNothingInsideClassAction',
+                                ],
                             ],
                             'INC' => [
                                 'actions' => IncrementAction::class,
@@ -34,6 +39,12 @@ class TrafficLightsMachine extends EventMachine
                             ],
                         ],
                     ],
+                ],
+            ],
+            behavior: [
+                'actions' => [
+                    'doNothingAction'            => function (): void {},
+                    'doNothingInsideClassAction' => DoNothingInsideClassAction::class,
                 ],
             ],
         );
