@@ -7,8 +7,8 @@ namespace Tarfinlabs\EventMachine\Definition;
 use SplObjectStorage;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use Tarfinlabs\EventMachine\Behavior\BehaviorType;
+use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 
 class MachineDefinition
 {
@@ -192,7 +192,7 @@ class MachineDefinition
 
             $conditionsMet = true;
             foreach ($transitionCandidate->conditions as $condition) {
-                $guardBehavior = $this->getGuardBehavior($condition);
+                $guardBehavior = $this->getInvokableBehavior(behaviorDefinition:$condition, behaviorType: BehaviorType::Guard);
 
                 if ($guardBehavior($this->context, $event) !== true) {
                     $conditionsMet = false;
@@ -290,71 +290,31 @@ class MachineDefinition
     }
 
     /**
-     * Retrieves the guard behavior for the given guard definition.
+     * Retrieve an invokable behavior instance or callable.
      *
-     * This method checks if the guard definition is an invokable
-     * GuardBehavior subclass and creates a new instance if it is.
-     * Otherwise, it looks up the guard definition in the machine
-     * behavior and retrieves the corresponding behavior. If the
-     * retrieved behavior is not callable, a new instance is created.
+     * This method checks if the given behavior definition is a valid class and a
+     * subclass of InvokableBehavior. If not, it looks up the behavior in the
+     * provided behavior type map. If the behavior is still not found, it returns
+     * null.
      *
-     * @param  string  $guardDefinition The guard definition, either a class
-     *                                 name or an array key.
+     * @param  string  $behaviorDefinition The behavior definition to look up.
+     * @param  BehaviorType  $behaviorType The type of the behavior (e.g., guard or action).
      *
-     * @return callable|null The guard behavior as a callable or null.
+     * @return callable|null The invokable behavior instance or callable, or null if not found.
      */
-    protected function getGuardBehavior(string $guardDefinition): ?callable
+    protected function getInvokableBehavior(string $behaviorDefinition, BehaviorType $behaviorType): ?callable
     {
-        // If the guard definition is an invokable GuardBehavior, create a new instance.
-        if (class_exists($guardDefinition) && is_subclass_of($guardDefinition, GuardBehavior::class)) {
-            return new $guardDefinition();
+        if (class_exists($behaviorDefinition) && is_subclass_of($behaviorDefinition, InvokableBehavior::class)) {
+            return new $behaviorDefinition();
         }
 
-        // If the guard definition is defined in the machine behavior, retrieve it.
-        $guardBehavior = $this->behavior['guards'][$guardDefinition] ?? null;
+        $invokableBehavior = $this->behavior[$behaviorType->value][$behaviorDefinition] ?? null;
 
-        // If the retrieved behavior is not null and not callable, create a new instance.
-        if ($guardBehavior !== null && !is_callable($guardBehavior)) {
-            /* @var GuardBehavior $guardBehavior */
-            return new $guardBehavior();
+        if ($invokableBehavior !== null && !is_callable($invokableBehavior)) {
+            return new $invokableBehavior();
         }
 
-        // Return the guard behavior, either a callable or null.
-        return $guardBehavior;
-    }
-
-    /**
-     * Retrieves the action behavior for the given action definition.
-     *
-     * This method checks if the action definition is an invokable
-     * ActionBehavior subclass and creates a new instance if it is.
-     * Otherwise, it looks up the action definition in the machine
-     * behavior and retrieves the corresponding behavior. If the
-     * retrieved behavior is not callable, a new instance is created.
-     *
-     * @param  string  $actionDefinition The action definition, either a class
-     *                                 name or an array key.
-     *
-     * @return callable|null The action behavior as a callable or null.
-     */
-    protected function getActionBehavior(string $actionDefinition): ?callable
-    {
-        // If the action definition is an invokable ActionBehavior, create a new instance.
-        if (class_exists($actionDefinition) && is_subclass_of($actionDefinition, ActionBehavior::class)) {
-            return new $actionDefinition();
-        }
-
-        // If the action definition is definied in the machine behavior, retrieve it.
-        $actionBehavior = $this->behavior['actions'][$actionDefinition] ?? null;
-
-        // If the retrieved behavior is not null and not callable, create a new instance.
-        if ($actionBehavior !== null && !is_callable($actionBehavior)) {
-            /* @var ActionBehavior $actionBehavior */
-            return new $actionBehavior();
-        }
-
-        // Return the action behavior, either a callable or null.
-        return $actionBehavior;
+        return $invokableBehavior;
     }
 
     // endregion
@@ -419,7 +379,7 @@ class MachineDefinition
     public function runAction(string $actionDefinition, ?array $event = null): void
     {
         // Retrieve the appropriate action behavior based on the action definition.
-        $actionBehavior = $this->getActionBehavior($actionDefinition);
+        $actionBehavior = $this->getInvokableBehavior(behaviorDefinition: $actionDefinition, behaviorType: BehaviorType::Action);
 
         // If the action behavior is callable, execute it with the context and event data.
         if (is_callable($actionBehavior)) {
