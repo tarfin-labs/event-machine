@@ -261,7 +261,7 @@ class MachineDefinition
 
         // Context defined as a class name
         /** @var ContextManager $contextManager */
-        $contextManager = $this->config['context'];
+        $contextManager = new $this->config['context'];
 
         return $contextManager;
     }
