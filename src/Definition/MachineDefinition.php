@@ -323,6 +323,35 @@ class MachineDefinition
         return $invokableBehavior;
     }
 
+    /**
+     * Initialize an EventDefinition instance from the given event.
+     *
+     * If the $event argument is already an EventDefinition instance,
+     * return it directly. Otherwise, create an EventDefinition instance
+     * by invoking the behavior for the corresponding event type. If no
+     * behavior is defined for the event type, a default EventDefinition
+     * instance is returned.
+     *
+     * @param  EventDefinition|array  $event The event to initialize.
+     * @param  StateDefinition  $stateDefinition The state definition to use.
+     *
+     * @return EventDefinition The initialized EventDefinition instance.
+     */
+    protected function initializeEvent(EventDefinition|array $event, StateDefinition $stateDefinition): EventDefinition
+    {
+        if ($event instanceof EventDefinition) {
+            return $event;
+        }
+
+        if (isset($stateDefinition->machine->behavior['events'][$event['type']])) {
+            $eventDefinitionClass = $stateDefinition->machine->behavior['events'][$event['type']];
+
+            return $eventDefinitionClass::from($event);
+        }
+
+        return EventDefinition::from($event);
+    }
+
     // endregion
 
     // region Public Methods
@@ -337,11 +366,9 @@ class MachineDefinition
      */
     public function transition(null|string|State $state, EventDefinition|array $event): State
     {
-        if (is_array($event)) {
-            $event = EventDefinition::from($event);
-        }
-
         $currentStateDefinition = $this->getCurrentStateDefinition($state);
+
+        $event = $this->initializeEvent($event, $currentStateDefinition);
 
         $this->applyContextDataIfNeeded($state);
 
