@@ -103,6 +103,8 @@ class MachineDefinition
      * Initialize the root state definition for this machine definition.
      *
      *
+     * @param  array|null  $config
+     *
      * @return \Tarfinlabs\EventMachine\Definition\StateDefinition
      */
     protected function createRootStateDefinition(?array $config): StateDefinition
@@ -297,6 +299,40 @@ class MachineDefinition
         return $guardBehavior;
     }
 
+    /**
+     * Retrieves the action behavior for the given action definition.
+     *
+     * This method checks if the action definition is an invokable
+     * ActionBehavior subclass and creates a new instance if it is.
+     * Otherwise, it looks up the action definition in the machine
+     * behavior and retrieves the corresponding behavior. If the
+     * retrieved behavior is not callable, a new instance is created.
+     *
+     * @param  string  $actionDefinition The action definition, either a class
+     *                                 name or an array key.
+     *
+     * @return callable|null The action behavior as a callable or null.
+     */
+    protected function getActionBehavior(string $actionDefinition): ?callable
+    {
+        // If the action definition is an invokable ActionBehavior, create a new instance.
+        if (class_exists($actionDefinition) && is_subclass_of($actionDefinition, ActionBehavior::class)) {
+            return new $actionDefinition();
+        }
+
+        // If the action definition is definied in the machine behavior, retrieve it.
+        $actionBehavior = $this->behavior['actions'][$actionDefinition] ?? null;
+
+        // If the retrieved behavior is not null and not callable, create a new instance.
+        if ($actionBehavior !== null && !is_callable($actionBehavior)) {
+            /* @var ActionBehavior $actionBehavior */
+            return new $actionBehavior();
+        }
+
+        // Return the action behavior, either a callable or null.
+        return $actionBehavior;
+    }
+
     // endregion
 
     // region Static Constructors
@@ -390,40 +426,6 @@ class MachineDefinition
         if (is_callable($actionBehavior)) {
             $actionBehavior($this->context, $event);
         }
-    }
-
-    /**
-     * Retrieves the action behavior for the given action definition.
-     *
-     * This method checks if the action definition is an invokable
-     * ActionBehavior subclass and creates a new instance if it is.
-     * Otherwise, it looks up the action definition in the machine
-     * behavior and retrieves the corresponding behavior. If the
-     * retrieved behavior is not callable, a new instance is created.
-     *
-     * @param  string  $actionDefinition The action definition, either a class
-     *                                 name or an array key.
-     *
-     * @return callable|null The action behavior as a callable or null.
-     */
-    protected function getActionBehavior(string $actionDefinition): ?callable
-    {
-        // If the action definition is an invokable ActionBehavior, create a new instance.
-        if (class_exists($actionDefinition) && is_subclass_of($actionDefinition, ActionBehavior::class)) {
-            return new $actionDefinition();
-        }
-
-        // If the action definition is definied in the machine behavior, retrieve it.
-        $actionBehavior = $this->behavior['actions'][$actionDefinition] ?? null;
-
-        // If the retrieved behavior is not null and not callable, create a new instance.
-        if ($actionBehavior !== null && !is_callable($actionBehavior)) {
-            /* @var ActionBehavior $actionBehavior */
-            return new $actionBehavior();
-        }
-
-        // Return the action behavior, either a callable or null.
-        return $actionBehavior;
     }
 
     // endregion
