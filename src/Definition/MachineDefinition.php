@@ -133,9 +133,9 @@ class MachineDefinition
     protected static function initializeEmptyBehavior(): array
     {
         return [
-            'events'  => [],
-            'actions' => [],
-            'guards'  => [],
+            BehaviorType::Event->value  => [],
+            BehaviorType::Action->value => [],
+            BehaviorType::Guard->value  => [],
         ];
     }
 
@@ -358,8 +358,8 @@ class MachineDefinition
             return $event;
         }
 
-        if (isset($stateDefinition->machine->behavior['events'][$event['type']])) {
-            $eventDefinitionClass = $stateDefinition->machine->behavior['events'][$event['type']];
+        if (isset($stateDefinition->machine->behavior[BehaviorType::Event->value][$event['type']])) {
+            $eventDefinitionClass = $stateDefinition->machine->behavior[BehaviorType::Event->value][$event['type']];
 
             return $eventDefinitionClass::from($event);
         }

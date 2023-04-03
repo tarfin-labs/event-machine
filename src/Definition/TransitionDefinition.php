@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
+use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
 /**
@@ -74,10 +75,10 @@ class TransitionDefinition
 
     protected function initializeConditions(): void
     {
-        if (isset($this->transitionConfig['guards'])) {
-            $this->guards = is_array($this->transitionConfig['guards'])
-                ? $this->transitionConfig['guards']
-                : [$this->transitionConfig['guards']];
+        if (isset($this->transitionConfig[BehaviorType::Guard->value])) {
+            $this->guards = is_array($this->transitionConfig[BehaviorType::Guard->value])
+                ? $this->transitionConfig[BehaviorType::Guard->value]
+                : [$this->transitionConfig[BehaviorType::Guard->value]];
         } else {
             $this->guards = null;
         }
@@ -88,10 +89,10 @@ class TransitionDefinition
      */
     protected function initializeActions(): void
     {
-        if (isset($this->transitionConfig['actions'])) {
-            $this->actions = is_array($this->transitionConfig['actions'])
-                ? $this->transitionConfig['actions']
-                : [$this->transitionConfig['actions']];
+        if (isset($this->transitionConfig[BehaviorType::Action->value])) {
+            $this->actions = is_array($this->transitionConfig[BehaviorType::Action->value])
+                ? $this->transitionConfig[BehaviorType::Action->value]
+                : [$this->transitionConfig[BehaviorType::Action->value]];
         } else {
             $this->actions = null;
         }

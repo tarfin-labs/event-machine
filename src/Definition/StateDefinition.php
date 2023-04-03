@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
+use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
 class StateDefinition
@@ -211,7 +212,7 @@ class StateDefinition
 
         foreach ($stateDefinition->config['on'] as $eventName => $transitionConfig) {
             if (is_subclass_of($eventName, EventBehavior::class)) {
-                $this->machine->behavior['events'][$eventName::getType()] = $eventName;
+                $this->machine->behavior[BehaviorType::Event->value][$eventName::getType()] = $eventName;
 
                 $eventName = $eventName::getType();
             }

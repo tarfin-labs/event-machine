@@ -8,4 +8,5 @@ enum BehaviorType: string
 {
     case Guard  = 'guards';
     case Action = 'actions';
+    case Event  = 'events';
 }
