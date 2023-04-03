@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\State;
 use Tarfinlabs\EventMachine\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachineEmbeddedBehavior;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachineInlineBehavior;
 
 test('TrafficLightsMachine definition returns a MachineDefinition instance', function (): void {
     $machine = TrafficLightsMachine::definition();
@@ -42,14 +42,14 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
     expect($machine->context->get('count'))->toBe(4);
 });
 
-test('TrafficLightsMachineEmbeddedBehavior definition returns a MachineDefinition instance', function (): void {
-    $machine = TrafficLightsMachineEmbeddedBehavior::definition();
+test('TrafficLightsMachineInlineBehavior definition returns a MachineDefinition instance', function (): void {
+    $machine = TrafficLightsMachineInlineBehavior::definition();
 
     expect($machine)->toBeInstanceOf(MachineDefinition::class);
 });
 
-test('TrafficLightsMachineEmbeddedBehavior transitions between states using EventMachine', function (): void {
-    $machine = TrafficLightsMachineEmbeddedBehavior::definition();
+test('TrafficLightsMachineInlineBehavior transitions between states using EventMachine', function (): void {
+    $machine = TrafficLightsMachineInlineBehavior::definition();
 
     $newState = $machine->transition(state: null, event: ['type' => 'MUT']);
 

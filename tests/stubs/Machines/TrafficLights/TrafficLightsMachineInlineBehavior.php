@@ -11,7 +11,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\Decrement
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\IncrementAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\MultiplyByTwoAction;
 
-class TrafficLightsMachineEmbeddedBehavior extends EventMachine
+class TrafficLightsMachineInlineBehavior extends EventMachine
 {
     public static function definition(): MachineDefinition
     {
