@@ -77,7 +77,7 @@ class StateDefinition
 
     /**
      * The meta data associated with this state definition,
-     * which will be returned in {@see \Tarfinlabs\EventMachine\State} instances.
+     * which will be returned in {@see \Tarfinlabs\EventMachine\Actor\State} instances.
      *
      * @var null|array<mixed>
      */

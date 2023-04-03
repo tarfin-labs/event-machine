@@ -6,7 +6,7 @@ namespace Tarfinlabs\EventMachine\Definition;
 
 use RuntimeException;
 use SplObjectStorage;
-use Tarfinlabs\EventMachine\State;
+use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\State;
+use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Definition\ContextDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 

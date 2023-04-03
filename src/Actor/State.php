@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tarfinlabs\EventMachine;
+namespace Tarfinlabs\EventMachine\Actor;
 
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 
