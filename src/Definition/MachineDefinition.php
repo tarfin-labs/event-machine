@@ -127,8 +127,6 @@ class MachineDefinition
     /**
      * Initialize the root state definition for this machine definition.
      *
-     *
-     *
      * @return \Tarfinlabs\EventMachine\Definition\StateDefinition
      */
     protected function createRootStateDefinition(?array $config): StateDefinition
