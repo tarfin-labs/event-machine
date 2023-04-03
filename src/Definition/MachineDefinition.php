@@ -388,7 +388,7 @@ class MachineDefinition
         $this->applyContextDataIfNeeded($state);
 
         // Find the transition definition for the event type
-        /** @var null|\Tarfinlabs\EventMachine\Definition\TransitionDefinition $transitionDefinition */
+        /** @var null|array|\Tarfinlabs\EventMachine\Definition\TransitionDefinition $transitionDefinition */
         $transitionDefinition = $currentStateDefinition->transitions[$eventBehavior->type] ?? null;
 
         // If the transition definition is an array, find the transition candidate
