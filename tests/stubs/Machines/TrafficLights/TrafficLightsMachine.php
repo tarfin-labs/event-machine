@@ -18,30 +18,22 @@ class TrafficLightsMachine extends EventMachine
         return MachineDefinition::define(
             config: [
                 'initial' => 'active',
-                'context' => [
-                    'count' => 1,
-                ],
-                'states' => [
+                'context' => TrafficLightsContext::class,
+                'states'  => [
                     'active' => [
                         'on' => [
                             'MUT' => [
-                                'guards'  => 'isEvenGuard',
-                                'actions' => 'multiplyByTwoAction',
+                                'guards'  => IsEvenGuard::class,
+                                'actions' => MultiplyByTwoAction::class,
                             ],
-                            'INC' => ['actions' => 'incrementAction'],
-                            'DEC' => ['actions' => 'decrementAction'],
+                            'INC' => [
+                                'actions' => IncrementAction::class,
+                            ],
+                            'DEC' => [
+                                'actions' => DecrementAction::class,
+                            ],
                         ],
                     ],
-                ],
-            ],
-            behavior: [
-                'actions' => [
-                    'multiplyByTwoAction' => MultiplyByTwoAction::class,
-                    'incrementAction'     => IncrementAction::class,
-                    'decrementAction'     => DecrementAction::class,
-                ],
-                'guards' => [
-                    'isEvenGuard' => IsEvenGuard::class,
                 ],
             ],
         );

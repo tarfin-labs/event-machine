@@ -91,7 +91,7 @@ class MachineDefinition
 
         $this->initial = $this->root->initial;
 
-        $this->context = new ContextManager(data: $this->config['context'] ?? []);
+        $this->context = $this->initializeContext();
 
         $this->initialState = $this->buildInitialState();
     }
@@ -245,6 +245,22 @@ class MachineDefinition
         if ($state instanceof State) {
             $this->context->applyContextData($state->contextData);
         }
+    }
+
+    protected function initializeContext(): ContextManager
+    {
+        // No context defined
+        if (!isset($this->config['context'])) {
+            return new ContextManager();
+        }
+
+        // Context defined as an array inside machine config
+        if (is_array($this->config['context'])) {
+            return new ContextManager(data: $this->config['context']);
+        }
+
+        // Context defined as a class name
+        return new $this->config['context'];
     }
 
     // endregion
