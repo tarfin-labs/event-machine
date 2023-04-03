@@ -22,5 +22,5 @@ abstract class EventMachine
      *
      * @throws RuntimeException if the method is not overridden by a subclass
      */
-    abstract public static function definition(): MachineDefinition;
+    abstract public static function build(): MachineDefinition;
 }

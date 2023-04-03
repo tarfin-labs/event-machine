@@ -7,13 +7,13 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 test('TrafficLightsMachine definition returns a MachineDefinition instance', function (): void {
-    $machine = TrafficLightsMachine::definition();
+    $machine = TrafficLightsMachine::build();
 
     expect($machine)->toBeInstanceOf(MachineDefinition::class);
 });
 
 test('TrafficLightsMachine transitions between states using EventMachine', function (): void {
-    $machine = TrafficLightsMachine::definition();
+    $machine = TrafficLightsMachine::build();
 
     $newState = $machine->transition(state: null, event: ['type' => 'MUT']);
 

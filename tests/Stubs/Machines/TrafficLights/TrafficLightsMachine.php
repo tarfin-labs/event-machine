@@ -19,7 +19,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\DoNothing
 
 class TrafficLightsMachine extends EventMachine
 {
-    public static function definition(): MachineDefinition
+    public static function build(): MachineDefinition
     {
         return MachineDefinition::define(
             config: [
