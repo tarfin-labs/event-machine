@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tarfinlabs\EventMachine;
+namespace Tarfinlabs\EventMachine\Definition;
 
 class StateDefinition
 {
@@ -43,7 +43,7 @@ class StateDefinition
     /**
      * The transition definitions of this state definition.
      *
-     * @var array<\Tarfinlabs\EventMachine\TransitionDefinition>
+     * @var array<\Tarfinlabs\EventMachine\Definition\TransitionDefinition>
      */
     public array $transitions;
 
@@ -193,7 +193,7 @@ class StateDefinition
      * Create transition definitions for a given state definition.
      *
      * This method processes the 'on' configuration of the state definition, creating
-     * corresponding {@see \Tarfinlabs\EventMachine\TransitionDefinition} objects for
+     * corresponding {@see \Tarfinlabs\EventMachine\Definition\TransitionDefinition} objects for
      * each event.
      *
      * @param  StateDefinition  $stateDefinition The state definition to process.

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\StateDefinition;
-use Tarfinlabs\EventMachine\ContextDefinition;
-use Tarfinlabs\EventMachine\MachineDefinition;
+use Tarfinlabs\EventMachine\Definition\ContextDefinition;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Definition\StateDefinition;
 
 test('a machine definition is an instance of a MachineDefinition', function (): void {
     $nullMachine = MachineDefinition::define();

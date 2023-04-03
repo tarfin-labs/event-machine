@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\MachineDefinition;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 test('root state definition has a reference to the machine definition', function (): void {
     $nullMachine = MachineDefinition::define();

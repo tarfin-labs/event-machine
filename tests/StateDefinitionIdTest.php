@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\MachineDefinition;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 it('should correctly assign machine definition id', function (): void {
     $idMachine = MachineDefinition::define(config: [

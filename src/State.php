@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine;
 
+use Tarfinlabs\EventMachine\Definition\StateDefinition;
+
 class State
 {
     public array $value;

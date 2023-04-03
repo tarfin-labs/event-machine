@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\ContextDefinition;
+use Tarfinlabs\EventMachine\Definition\ContextDefinition;
 
 it('can set and get context definition data', function (): void {
     $context = new ContextDefinition();

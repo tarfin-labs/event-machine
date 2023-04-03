@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Behavior;
 
-use Tarfinlabs\EventMachine\ContextDefinition;
+use Tarfinlabs\EventMachine\Definition\ContextDefinition;
 
 interface ActionBehavior
 {

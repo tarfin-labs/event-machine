@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Definition\ContextDefinition;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\State;
-use Tarfinlabs\EventMachine\ContextDefinition;
-use Tarfinlabs\EventMachine\MachineDefinition;
 
 it('can transition through a sequence of states using events', function (): void {
     $machine = MachineDefinition::define(

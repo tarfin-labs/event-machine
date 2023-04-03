@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Tarfinlabs\EventMachine;
+namespace Tarfinlabs\EventMachine\Definition;
 
 use RuntimeException;
 use SplObjectStorage;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
+use Tarfinlabs\EventMachine\State;
 
 class MachineDefinition
 {
@@ -25,14 +26,14 @@ class MachineDefinition
     /**
      * The map of state definitions to their ids.
      *
-     * @var \SplObjectStorage<\Tarfinlabs\EventMachine\StateDefinition, string>
+     * @var \SplObjectStorage<\Tarfinlabs\EventMachine\Definition\StateDefinition, string>
      */
     public SplObjectStorage $idMap;
 
     /**
      * The child state definitions of this state definition.
      *
-     * @var null|array<\Tarfinlabs\EventMachine\StateDefinition>
+     * @var null|array<\Tarfinlabs\EventMachine\Definition\StateDefinition>
      */
     public ?array $states = null;
 
@@ -46,7 +47,7 @@ class MachineDefinition
     /**
      * The initial state definition for this machine definition.
      *
-     * @var null|\Tarfinlabs\EventMachine\StateDefinition
+     * @var null|\Tarfinlabs\EventMachine\Definition\StateDefinition
      */
     public ?StateDefinition $initial = null;
 
@@ -102,7 +103,7 @@ class MachineDefinition
      * Initialize the root state definition for this machine definition.
      *
      *
-     * @return \Tarfinlabs\EventMachine\StateDefinition
+     * @return \Tarfinlabs\EventMachine\Definition\StateDefinition
      */
     protected function createRootStateDefinition(?array $config): StateDefinition
     {
@@ -157,7 +158,7 @@ class MachineDefinition
             ? $transitionCandidates
             : [$transitionCandidates];
 
-        /** @var \Tarfinlabs\EventMachine\TransitionDefinition $transitionCandidate */
+        /** @var \Tarfinlabs\EventMachine\Definition\TransitionDefinition $transitionCandidate */
         foreach ($transitionCandidates as $transitionCandidate) {
             if (!isset($transitionCandidate->conditions)) {
                 return $transitionCandidate;
@@ -289,7 +290,7 @@ class MachineDefinition
         $this->applyContextDataIfNeeded($state);
 
         // Find the transition definition for the event type
-        /** @var null|\Tarfinlabs\EventMachine\TransitionDefinition $transitionDefinition */
+        /** @var null|\Tarfinlabs\EventMachine\Definition\TransitionDefinition $transitionDefinition */
         $transitionDefinition = $currentStateDefinition->transitions[$event['type']] ?? null;
 
         // If the transition definition is an array, find the transition candidate

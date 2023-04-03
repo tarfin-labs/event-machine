@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tarfinlabs\EventMachine;
+namespace Tarfinlabs\EventMachine\Definition;
 
 /**
  * Class ContextDefinition.

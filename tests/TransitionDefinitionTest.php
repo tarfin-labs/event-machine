@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\MachineDefinition;
-use Tarfinlabs\EventMachine\TransitionDefinition;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
 
 test('single actions can be defined as strings instead of arrays', function (): void {
     $machine = MachineDefinition::define(config: [

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions;
 
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
-use Tarfinlabs\EventMachine\ContextDefinition;
+use Tarfinlabs\EventMachine\Definition\ContextDefinition;
 
 class IncrementAction implements ActionBehavior
 {
