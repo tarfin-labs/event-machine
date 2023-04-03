@@ -304,7 +304,7 @@ class MachineDefinition
     protected function getInvokableBehavior(string $behaviorDefinition, BehaviorType $behaviorType): ?callable
     {
         // If the guard definition is an invokable GuardBehavior, create a new instance.
-        if (class_exists($behaviorDefinition) && is_subclass_of($behaviorDefinition, InvokableBehavior::class)) {
+        if (is_subclass_of($behaviorDefinition, InvokableBehavior::class)) {
             /* @var callable $behaviorDefinition */
             return new $behaviorDefinition();
         }

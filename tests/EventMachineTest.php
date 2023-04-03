@@ -39,4 +39,19 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
 
     // Ensure that the machine's context has been changed.
     expect($machine->context->get('count'))->toBe(4);
+
+    $newState = $machine->transition(state: $newState, event: [
+        'type' => 'ADD',
+        'data' => [
+            'value' => 16,
+        ],
+    ]);
+
+    expect($newState)
+        ->toBeInstanceOf(State::class)
+        ->and($newState->value)->toBe(['active']);
+    expect($newState->contextData)->toBe(['count' => 20]);
+
+    // Ensure that the machine's context has been changed.
+    expect($machine->context->get('count'))->toBe(20);
 });

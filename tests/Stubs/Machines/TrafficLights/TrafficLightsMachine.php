@@ -7,9 +7,11 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights;
 use Tarfinlabs\EventMachine\EventMachine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Guards\IsEvenGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\AddValueEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\DecreaseEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\IncreaseEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\MultiplyEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\AddValueAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\DecrementAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\IncrementAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\MultiplyByTwoAction;
@@ -37,8 +39,11 @@ class TrafficLightsMachine extends EventMachine
                             IncreaseEvent::class => [
                                 'actions' => IncrementAction::class,
                             ],
-                            'DEC' => [
+                            'DEX' => [
                                 'actions' => DecrementAction::class,
+                            ],
+                            AddValueEvent::class => [
+                                'actions' => AddValueAction::class,
                             ],
                         ],
                     ],
@@ -47,9 +52,7 @@ class TrafficLightsMachine extends EventMachine
             behavior: [
                 'events' => [
                     'MUT' => MultiplyEvent::class,
-                    // TODO: I should be able to rename the event here
-                    // TODO: So if not defined use class's getType method
-                    'DEC' => DecreaseEvent::class,
+                    'DEX' => DecreaseEvent::class,
                 ],
                 'actions' => [
                     'doNothingAction'            => function (): void {},
