@@ -34,7 +34,7 @@ class MachineDefinition
     /**
      * The child state definitions of this state definition.
      *
-     * @var null|array<\Tarfinlabs\EventMachine\Definition\StateDefinition>
+     * @var array<\Tarfinlabs\EventMachine\Definition\StateDefinition>|null
      */
     public ?array $states = null;
 
@@ -260,7 +260,10 @@ class MachineDefinition
         }
 
         // Context defined as a class name
-        return new $this->config['context'];
+        /** @var ContextManager $contextManager */
+        $contextManager = $this->config['context'];
+
+        return $contextManager;
     }
 
     // endregion
@@ -384,6 +387,7 @@ class MachineDefinition
 
         // If the retrieved behavior is not null and not callable, create a new instance.
         if ($actionBehavior !== null && !is_callable($actionBehavior)) {
+            /** @var ActionBehavior $actionBehavior */
             return new $actionBehavior();
         }
 

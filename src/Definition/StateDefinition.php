@@ -36,7 +36,7 @@ class StateDefinition
     /**
      * The child state definitions of this state definition.
      *
-     * @var null|array<\Tarfinlabs\EventMachine\StateDefinition>
+     * @var null|array<\Tarfinlabs\EventMachine\Definition\StateDefinition>
      */
     public ?array $states = null;
 
@@ -56,8 +56,6 @@ class StateDefinition
 
     /**
      * The initial state definition for this machine definition.
-     *
-     * @var null|\Tarfinlabs\EventMachine\StateDefinition
      */
     public ?StateDefinition $initial = null;
 
@@ -156,7 +154,7 @@ class StateDefinition
      * Initialize the child state definitions for this state definition by iterating through
      * the 'states' configuration and creating new StateDefinition instances.
      *
-     * @return ?array<\Tarfinlabs\EventMachine\StateDefinition> An array of child state definitions or null if no child states are defined.
+     * @return ?array<\Tarfinlabs\EventMachine\Definition\StateDefinition> An array of child state definitions or null if no child states are defined.
      */
     protected function createChildStates(): ?array
     {
@@ -262,7 +260,7 @@ class StateDefinition
      * Finds the initial `StateDefinition` based on the `initial`
      * configuration key or the first state definition found.
      *
-     * @return \Tarfinlabs\EventMachine\StateDefinition|null The `StateDefinition` object for the initial state or `null` if not found.
+     * @return \Tarfinlabs\EventMachine\Definition\StateDefinition|null The `StateDefinition` object for the initial state or `null` if not found.
      */
     protected function findInitialStateDefinition(): ?StateDefinition
     {
@@ -321,7 +319,7 @@ class StateDefinition
         $this->transitions = $this->createTransitionDefinitions($this);
 
         if ($this->states !== null) {
-            /** @var \Tarfinlabs\EventMachine\StateDefinition $state */
+            /** @var \Tarfinlabs\EventMachine\Definition\StateDefinition $state */
             foreach ($this->states as $state) {
                 $state->initializeTransitions();
             }
@@ -353,7 +351,7 @@ class StateDefinition
         // If there are child states, process them recursively and
         // add their event names to the events array.
         if ($this->states !== null) {
-            /** @var \Tarfinlabs\EventMachine\StateDefinition $state */
+            /** @var \Tarfinlabs\EventMachine\Definition\StateDefinition $state */
             foreach ($this->states as $state) {
                 // Get the events from the child state definition.
                 $childEvents = $state->collectUniqueEvents();
