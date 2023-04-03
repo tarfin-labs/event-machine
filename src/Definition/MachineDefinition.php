@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
-use RuntimeException;
 use SplObjectStorage;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -167,19 +166,7 @@ class MachineDefinition
 
             $conditionsMet = true;
             foreach ($transitionCandidate->conditions as $condition) {
-                if (class_exists($condition) && is_subclass_of($condition, GuardBehavior::class)) {
-                    $guardBehavior = new $condition();
-                } else {
-                    $guardBehavior = $this->behavior['guards'][$condition] ?? null;
-                }
-
-                if ($guardBehavior === null) {
-                    throw new RuntimeException("Guard '{$condition}' behavior not found in machine behaviors.");
-                }
-
-                $guardBehavior = is_callable($guardBehavior)
-                    ? $guardBehavior
-                    : new $guardBehavior();
+                $guardBehavior = $this->getGuardBehavior($condition);
 
                 if ($guardBehavior($this->context, $event) !== true) {
                     $conditionsMet = false;
@@ -274,6 +261,40 @@ class MachineDefinition
         $contextManager = new $this->config['context'];
 
         return $contextManager;
+    }
+
+    /**
+     * Retrieves the guard behavior for the given guard definition.
+     *
+     * This method checks if the guard definition is an invokable
+     * GuardBehavior subclass and creates a new instance if it is.
+     * Otherwise, it looks up the guard definition in the machine
+     * behavior and retrieves the corresponding behavior. If the
+     * retrieved behavior is not callable, a new instance is created.
+     *
+     * @param  string  $guardDefinition The guard definition, either a class
+     *                                 name or an array key.
+     *
+     * @return callable|null The guard behavior as a callable or null.
+     */
+    protected function getGuardBehavior(string $guardDefinition): ?callable
+    {
+        // If the guard definition is an invokable GuardBehavior, create a new instance.
+        if (class_exists($guardDefinition) && is_subclass_of($guardDefinition, GuardBehavior::class)) {
+            return new $guardDefinition();
+        }
+
+        // If the guard definition is defined in the machine behavior, retrieve it.
+        $guardBehavior = $this->behavior['guards'][$guardDefinition] ?? null;
+
+        // If the retrieved behavior is not null and not callable, create a new instance.
+        if ($guardBehavior !== null && !is_callable($guardBehavior)) {
+            /* @var GuardBehavior $guardBehavior */
+            return new $guardBehavior();
+        }
+
+        // Return the guard behavior, either a callable or null.
+        return $guardBehavior;
     }
 
     // endregion
@@ -397,7 +418,7 @@ class MachineDefinition
 
         // If the retrieved behavior is not null and not callable, create a new instance.
         if ($actionBehavior !== null && !is_callable($actionBehavior)) {
-            /** @var ActionBehavior $actionBehavior */
+            /* @var ActionBehavior $actionBehavior */
             return new $actionBehavior();
         }
 
