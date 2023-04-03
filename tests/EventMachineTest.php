@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachineCompact;
 
 test('TrafficLightsMachine definition returns a MachineDefinition instance', function (): void {
     $machine = TrafficLightsMachine::build();
@@ -54,4 +55,10 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
 
     // Ensure that the machine's context has been changed.
     expect($machine->context->get('count'))->toBe(20);
+});
+
+test('TrafficLightsMachineCompact can be build', function (): void {
+    $machine = TrafficLightsMachineCompact::build();
+
+    expect($machine)->toBeInstanceOf(MachineDefinition::class);
 });
