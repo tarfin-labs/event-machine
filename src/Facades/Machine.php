@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Facade;
 
 /**
  * @see \Tarfinlabs\EventMachine\Machine
+ *
+ * @codeCoverageIgnore
  */
 class Machine extends Facade
 {
