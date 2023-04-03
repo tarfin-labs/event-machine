@@ -266,15 +266,7 @@ class StateDefinition
             ?? array_key_first($this->states ?? [])
             ?? null;
 
-        if (!isset($initialStateKey)) {
-            return null;
-        }
-
-        if (!isset($this->states[$initialStateKey])) {
-            return null;
-        }
-
-        return $this->states[$initialStateKey];
+        return $this->states[$initialStateKey] ?? null;
     }
 
     /**
