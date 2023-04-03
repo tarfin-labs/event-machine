@@ -359,7 +359,7 @@ class MachineDefinition
     /**
      * Transition the state machine to a new state based on an event.
      *
-     * @param  State|string|null  $state  The current state or state name, or null to use the initial state.
+     * @param  State|string|null  $state          The current state or state name, or null to use the initial state.
      * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition|array  $event  The event that triggers the transition.
      *
      * @return State The new state after the transition.
@@ -368,18 +368,25 @@ class MachineDefinition
     {
         $currentStateDefinition = $this->getCurrentStateDefinition($state);
 
-        $event = $this->initializeEvent($event, $currentStateDefinition);
+        $eventBehavior = $this->initializeEvent($event, $currentStateDefinition);
 
         $this->applyContextDataIfNeeded($state);
 
         // Find the transition definition for the event type
         /** @var null|\Tarfinlabs\EventMachine\Definition\TransitionDefinition $transitionDefinition */
-        $transitionDefinition = $currentStateDefinition->transitions[$event->type] ?? null;
+        $transitionDefinition = $currentStateDefinition->transitions[$eventBehavior->type] ?? null;
 
         // If the transition definition is an array, find the transition candidate
+        if (is_array($transitionDefinition)) {
+            $transitionDefinition = $this->selectFirstEligibleTransitionEvaluatingGuards(
+                transitionCandidates: $transitionDefinition,
+                eventDefinition: $eventBehavior,
+            );
+        }
+
         $transitionDefinition = $this->selectFirstEligibleTransitionEvaluatingGuards(
             transitionCandidates: $transitionDefinition,
-            eventDefinition: $event,
+            eventDefinition: $eventBehavior,
         );
 
         // If the transition definition is not found, do nothing
@@ -388,13 +395,13 @@ class MachineDefinition
         }
 
         // Run exit actions on the source/current state definition
-        $transitionDefinition->source->runExitActions($event);
+        $transitionDefinition->source->runExitActions($eventBehavior);
 
         // Run transition actions on the transition definition
-        $transitionDefinition->runActions($event);
+        $transitionDefinition->runActions($eventBehavior);
 
         // Run entry actions on the target state definition
-        $transitionDefinition->target?->runEntryActions($event);
+        $transitionDefinition->target?->runEntryActions($eventBehavior);
 
         return new State(
             activeStateDefinition: $transitionDefinition->target ?? $currentStateDefinition,
