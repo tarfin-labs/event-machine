@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tarfinlabs\EventMachine;
+namespace Tarfinlabs\EventMachine\Behavior;
+
+use Tarfinlabs\EventMachine\ContextDefinition;
 
 interface GuardBehavior
 {
