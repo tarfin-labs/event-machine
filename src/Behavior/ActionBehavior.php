@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Behavior;
 
-use Tarfinlabs\EventMachine\Definition\ContextDefinition;
+use Tarfinlabs\EventMachine\ContextManager;
 
 interface ActionBehavior
 {
-    public function __invoke(ContextDefinition $context, array $event): void;
+    public function __invoke(ContextManager $context, array $event): void;
 }

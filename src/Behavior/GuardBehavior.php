@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Behavior;
 
-use Tarfinlabs\EventMachine\Definition\ContextDefinition;
+use Tarfinlabs\EventMachine\ContextManager;
 
 interface GuardBehavior
 {
-    public function __invoke(ContextDefinition $context, array $event): bool;
+    public function __invoke(ContextManager $context, array $event): bool;
 }

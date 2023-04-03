@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
-use Tarfinlabs\EventMachine\Definition\ContextDefinition;
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 it('can update context using actions defined in transition definitions', function (): void {
@@ -26,16 +26,16 @@ it('can update context using actions defined in transition definitions', functio
         ],
         behavior: [
             'actions' => [
-                'additionAction' => function (ContextDefinition $context, array $event): void {
+                'additionAction' => function (ContextManager $context, array $event): void {
                     $context->set('count', $context->get('count') + $event['value']);
                 },
-                'subtractionAction' => function (ContextDefinition $context, array $event): void {
+                'subtractionAction' => function (ContextManager $context, array $event): void {
                     $context->set('count', $context->get('count') - $event['value']);
                 },
-                'incrementAction' => function (ContextDefinition $context, array $event): void {
+                'incrementAction' => function (ContextManager $context, array $event): void {
                     $context->set('count', $context->get('count') + 1);
                 },
-                'decrementAction' => function (ContextDefinition $context, array $event): void {
+                'decrementAction' => function (ContextManager $context, array $event): void {
                     $context->set('count', $context->get('count') - 1);
                 },
             ],

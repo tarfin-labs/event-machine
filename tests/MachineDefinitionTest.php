@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
-use Tarfinlabs\EventMachine\Definition\ContextDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 test('a machine definition is an instance of a MachineDefinition', function (): void {
@@ -116,6 +116,6 @@ test('a machine definition can have context', function (): void {
 
     $context = $machine->context;
 
-    expect($context)->toBeInstanceOf(ContextDefinition::class);
+    expect($context)->toBeInstanceOf(ContextManager::class);
     expect($context->get('foo'))->toBe('bar');
 });

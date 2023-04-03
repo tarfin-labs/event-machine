@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Definition;
 use RuntimeException;
 use SplObjectStorage;
 use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
@@ -52,10 +53,10 @@ class MachineDefinition
     public ?StateDefinition $initial = null;
 
     /**
-     * The context definition for this machine definition.
+     * The context manager for this machine definition.
      * This is the extended state.
      */
-    public ContextDefinition $context;
+    public ContextManager $context;
 
     /** The initial state for this state definition. */
     public ?State $initialState;
@@ -90,7 +91,7 @@ class MachineDefinition
 
         $this->initial = $this->root->initial;
 
-        $this->context = new ContextDefinition(data: $this->config['context'] ?? []);
+        $this->context = new ContextManager(data: $this->config['context'] ?? []);
 
         $this->initialState = $this->buildInitialState();
     }

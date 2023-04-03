@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
-use Tarfinlabs\EventMachine\Definition\ContextDefinition;
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 it('should run exit actions when transitioning from a state', function (): void {
@@ -23,7 +23,7 @@ it('should run exit actions when transitioning from a state', function (): void 
         ],
         behavior: [
             'actions' => [
-                'incrementAction' => function (ContextDefinition $context, array $event): void {
+                'incrementAction' => function (ContextManager $context, array $event): void {
                     $context->set('count', $context->get('count') + 1);
                 },
             ],

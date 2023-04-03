@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Tarfinlabs\EventMachine\Definition;
+namespace Tarfinlabs\EventMachine;
 
 /**
- * Class ContextDefinition.
+ * Class ContextManager.
  *
- * ContextDefinition is a class that provides a simple key-value store
+ * ContextManager is a class that provides a simple key-value store
  * for managing and manipulating context data within the event machine.
  */
-class ContextDefinition
+class ContextManager
 {
     /**
-     * Create a new ContextDefinition instance.
+     * Create a new ContextManager instance.
      *
      * @param  array  $data An optional initial array of key-value pairs.
      */

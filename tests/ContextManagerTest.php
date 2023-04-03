@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\Definition\ContextDefinition;
+use Tarfinlabs\EventMachine\ContextManager;
 
-it('can set and get context definition data', function (): void {
-    $context = new ContextDefinition();
+it('can set and get context manager data', function (): void {
+    $context = new ContextManager();
 
     $context->set(key: 'key1', value: 'value1');
     $context->set(key: 'key2', value: 'value2');
@@ -15,13 +15,13 @@ it('can set and get context definition data', function (): void {
 });
 
 it('returns null for non-existent keys', function (): void {
-    $context = new ContextDefinition();
+    $context = new ContextManager();
 
     expect($context->get(key: 'non_existent_key'))->toBeNull();
 });
 
 it('can check if a key exists', function (): void {
-    $context = new ContextDefinition();
+    $context = new ContextManager();
     $context->set(key: 'key1', value:  'value1');
 
     expect($context->has(key: 'key1'))->toBeTrue();
@@ -29,7 +29,7 @@ it('can check if a key exists', function (): void {
 });
 
 it('can remove a key from context data', function (): void {
-    $context = new ContextDefinition();
+    $context = new ContextManager();
 
     $context->set(key: 'key1', value: 'value1');
     $context->set(key: 'key2', value: 'value2');
@@ -41,7 +41,7 @@ it('can remove a key from context data', function (): void {
 
 it('can initialize context data with an array', function (): void {
     $initialData = ['key1' => 'value1', 'key2' => 'value2'];
-    $context     = new ContextDefinition($initialData);
+    $context     = new ContextManager($initialData);
 
     expect($context->get(key: 'key1'))->toBe('value1');
     expect($context->get(key: 'key2'))->toBe('value2');
@@ -49,7 +49,7 @@ it('can initialize context data with an array', function (): void {
 
 it('can convert context data to an array', function (): void {
     $initialData = ['key1' => 'value1', 'key2' => 'value2'];
-    $context     = new ContextDefinition($initialData);
+    $context     = new ContextManager($initialData);
 
     $contextArray = $context->toArray();
 
@@ -60,7 +60,7 @@ it('can convert context data to an array', function (): void {
 });
 
 it('can handle edge cases with empty keys and values', function (): void {
-    $context = new ContextDefinition();
+    $context = new ContextManager();
 
     $context->set(key: '', value: 'empty_key_value');
     $context->set(key: 'empty_value_key', value: '');

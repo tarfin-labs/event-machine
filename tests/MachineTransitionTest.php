@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
-use Tarfinlabs\EventMachine\Definition\ContextDefinition;
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 it('can transition through a sequence of states using events', function (): void {
@@ -60,7 +60,7 @@ it('should apply the given state\'s context data to the machine\'s context when 
         ],
         behavior: [
             'actions' => [
-                'incrementAction' => function (ContextDefinition $context, array $event): void {
+                'incrementAction' => function (ContextManager $context, array $event): void {
                     $context->set('count', $context->get('count') + 1);
                 },
             ],

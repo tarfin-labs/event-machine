@@ -76,10 +76,10 @@ $machine = MachineDefinition::define(
         ],
         behavior: [
             'guards' => [
-                'isOneGuard' => function (ContextDefinition $context, array $event): bool {
+                'isOneGuard' => function (ContextManager $context, array $event): bool {
                     return $context->get('value') === 1;
                 },
-                'isTwoGuard' => function (ContextDefinition $context, array $event): bool {
+                'isTwoGuard' => function (ContextManager $context, array $event): bool {
                     return $context->get('value') === 2;
                 },
             ],
