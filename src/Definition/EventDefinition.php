@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
-use Spatie\LaravelData\Data;
-use Spatie\LaravelData\Optional;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
-class EventDefinition extends Data
+class EventDefinition extends EventBehavior
 {
-    public function __construct(
-        public string $type,
-        public array|Optional $data,
-    ) {
+    public static function getType(): string
+    {
+        return '(event)';
     }
 }

@@ -34,7 +34,7 @@ class TrafficLightsMachine extends EventMachine
                                     'doNothingInsideClassAction',
                                 ],
                             ],
-                            'INC' => [
+                            IncreaseEvent::class => [
                                 'actions' => IncrementAction::class,
                             ],
                             'DEC' => [
@@ -47,7 +47,8 @@ class TrafficLightsMachine extends EventMachine
             behavior: [
                 'events' => [
                     'MUT' => MultiplyEvent::class,
-                    'INC' => IncreaseEvent::class,
+                    // TODO: I should be able to rename the event here
+                    // TODO: So if not defined use class's getType method
                     'DEC' => DecreaseEvent::class,
                 ],
                 'actions' => [

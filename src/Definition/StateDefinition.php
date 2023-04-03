@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+
 class StateDefinition
 {
     // region Public Properties
@@ -208,6 +210,12 @@ class StateDefinition
         }
 
         foreach ($stateDefinition->config['on'] as $eventName => $transitionConfig) {
+            if (is_subclass_of($eventName, EventBehavior::class)) {
+                $this->machine->behavior['events'][$eventName::getType()] = $eventName;
+
+                $eventName = $eventName::getType();
+            }
+
             if ($this->isAMultiPathGuardedTransition($transitionConfig)) {
                 foreach ($transitionConfig as $guardedTransitionConfig) {
                     $transitions[$eventName][] = new TransitionDefinition(
@@ -331,6 +339,10 @@ class StateDefinition
         // add the event names to the events array.
         if (isset($this->config['on']) && is_array($this->config['on'])) {
             foreach ($this->config['on'] as $eventName => $transitionConfig) {
+                if (is_subclass_of($eventName, EventBehavior::class)) {
+                    $eventName = $eventName::getType();
+                }
+
                 // Only add the event name if it hasn't been added yet
                 if (!in_array($eventName, $events, true)) {
                     $events[] = $eventName;
@@ -364,24 +376,24 @@ class StateDefinition
     /**
      * Runs the exit actions of the current state definition with the given event.
      *
-     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition  $eventDefinition  The event to be processed.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior  $eventBehavior  The event to be processed.
      */
-    public function runExitActions(EventDefinition $eventDefinition): void
+    public function runExitActions(EventBehavior $eventBehavior): void
     {
         foreach ($this->exit as $action) {
-            $this->machine->runAction($action, $eventDefinition);
+            $this->machine->runAction($action, $eventBehavior);
         }
     }
 
     /**
      * Runs the entry actions of the current state definition with the given event.
      *
-     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition|null  $event  The event to be processed.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior  The event to be processed.
      */
-    public function runEntryActions(?EventDefinition $event): void
+    public function runEntryActions(?EventBehavior $eventBehavior): void
     {
         foreach ($this->entry as $action) {
-            $this->machine->runAction($action, $event);
+            $this->machine->runAction($action, $eventBehavior);
         }
     }
 

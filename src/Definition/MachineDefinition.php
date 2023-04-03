@@ -8,6 +8,7 @@ use SplObjectStorage;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 
 class MachineDefinition
@@ -169,14 +170,14 @@ class MachineDefinition
      *
      * @param  array|TransitionDefinition  $transitionCandidates  Array of
      *        transition candidates or a single candidate to be checked.
-     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition  $eventDefinition       The event data used to evaluate guards.
+     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition  $eventBehavior         The event data used to evaluate guards.
      *
      * @return TransitionDefinition|null The first eligible transition or
      *         null if no eligible transition is found.
      */
     protected function selectFirstEligibleTransitionEvaluatingGuards(
         array|TransitionDefinition $transitionCandidates,
-        EventDefinition $eventDefinition
+        EventBehavior $eventBehavior
     ): ?TransitionDefinition {
         $transitionCandidates = is_array($transitionCandidates)
             ? $transitionCandidates
@@ -192,7 +193,7 @@ class MachineDefinition
             foreach ($transitionCandidate->guards as $guard) {
                 $guardBehavior = $this->getInvokableBehavior(behaviorDefinition:$guard, behaviorType: BehaviorType::Guard);
 
-                if ($guardBehavior($this->context, $eventDefinition) !== true) {
+                if ($guardBehavior($this->context, $eventBehavior) !== true) {
                     $guardsPassed = false;
                     break;
                 }
@@ -337,9 +338,9 @@ class MachineDefinition
      *
      * @return EventDefinition The initialized EventDefinition instance.
      */
-    protected function initializeEvent(EventDefinition|array $event, StateDefinition $stateDefinition): EventDefinition
+    protected function initializeEvent(EventDefinition|array $event, StateDefinition $stateDefinition): EventBehavior
     {
-        if ($event instanceof EventDefinition) {
+        if ($event instanceof EventBehavior) {
             return $event;
         }
 
@@ -380,13 +381,13 @@ class MachineDefinition
         if (is_array($transitionDefinition)) {
             $transitionDefinition = $this->selectFirstEligibleTransitionEvaluatingGuards(
                 transitionCandidates: $transitionDefinition,
-                eventDefinition: $eventBehavior,
+                eventBehavior: $eventBehavior,
             );
         }
 
         $transitionDefinition = $this->selectFirstEligibleTransitionEvaluatingGuards(
             transitionCandidates: $transitionDefinition,
-            eventDefinition: $eventBehavior,
+            eventBehavior: $eventBehavior,
         );
 
         // If the transition definition is not found, do nothing
@@ -416,18 +417,18 @@ class MachineDefinition
      * action definition, and if the action behavior is callable, it
      * executes it using the context and event data.
      *
-     * @param  string  $actionDefinition  The action definition, either a class
+     * @param  string  $actionDefinition      The action definition, either a class
      *                                                                                      name or an array key.
-     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition|null  $eventDefinition   The event data (optional).
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior         The event data (optional).
      */
-    public function runAction(string $actionDefinition, ?EventDefinition $eventDefinition = null): void
+    public function runAction(string $actionDefinition, ?EventBehavior $eventBehavior = null): void
     {
         // Retrieve the appropriate action behavior based on the action definition.
         $actionBehavior = $this->getInvokableBehavior(behaviorDefinition: $actionDefinition, behaviorType: BehaviorType::Action);
 
         // If the action behavior is callable, execute it with the context and event data.
         if (is_callable($actionBehavior)) {
-            $actionBehavior($this->context, $eventDefinition);
+            $actionBehavior($this->context, $eventBehavior);
         }
     }
 

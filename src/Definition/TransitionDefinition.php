@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+
 /**
  * Class TransitionDefinition.
  *
@@ -104,16 +106,16 @@ class TransitionDefinition
      *
      * If there are no actions associated with the transition definition, do nothing.
      *
-     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition|null  $eventDefinition  The event data or null if none is provided.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior  The event data or null if none is provided.
      */
-    public function runActions(?EventDefinition $eventDefinition = null): void
+    public function runActions(?EventBehavior $eventBehavior = null): void
     {
         if ($this->actions === null) {
             return;
         }
 
         foreach ($this->actions as $actionDefinition) {
-            $this->source->machine->runAction($actionDefinition, $eventDefinition);
+            $this->source->machine->runAction($actionDefinition, $eventBehavior);
         }
     }
 

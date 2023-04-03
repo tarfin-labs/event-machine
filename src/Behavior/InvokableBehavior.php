@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Behavior;
 
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Definition\EventDefinition;
 
 interface InvokableBehavior
 {
@@ -18,10 +17,10 @@ interface InvokableBehavior
      *
      * @param  ContextManager  $context          The context to be used during
      *                                                                        invocation.
-     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition  $eventDefinition  The event data related to the
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior  $eventBehavior  The event data related to the
      *                                                                        current behavior.
      *
      * @phpstan-ignore-next-line
      */
-    public function __invoke(ContextManager $context, EventDefinition $eventDefinition);
+    public function __invoke(ContextManager $context, EventBehavior $eventBehavior);
 }
