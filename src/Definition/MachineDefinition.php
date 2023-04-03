@@ -97,6 +97,31 @@ class MachineDefinition
 
     // endregion
 
+    // region Static Constructors
+
+    /**
+     * Define a new machine with the given configuration and behavior.
+     *
+     * @param  ?array  $config The raw configuration array used to create the machine.
+     * @param  array|null  $behavior An array of behavior options.
+     *
+     * @return self The created machine definition.
+     */
+    public static function define(
+        ?array $config = null,
+        ?array $behavior = null,
+    ): self {
+        return new self(
+            config: $config ?? null,
+            behavior: $behavior ?? null,
+            id: $config['id'] ?? self::DEFAULT_ID,
+            version: $config['version'] ?? null,
+            delimiter: $config['delimiter'] ?? self::STATE_DELIMITER,
+        );
+    }
+
+    // endregion
+
     // region Protected Methods
 
     /**
@@ -331,31 +356,6 @@ class MachineDefinition
 
         // Return the action behavior, either a callable or null.
         return $actionBehavior;
-    }
-
-    // endregion
-
-    // region Static Constructors
-
-    /**
-     * Define a new machine with the given configuration and behavior.
-     *
-     * @param  ?array  $config The raw configuration array used to create the machine.
-     * @param  array|null  $behavior An array of behavior options.
-     *
-     * @return self The created machine definition.
-     */
-    public static function define(
-        ?array $config = null,
-        ?array $behavior = null,
-    ): self {
-        return new self(
-            config: $config ?? null,
-            behavior: $behavior ?? null,
-            id: $config['id'] ?? self::DEFAULT_ID,
-            version: $config['version'] ?? null,
-            delimiter: $config['delimiter'] ?? self::STATE_DELIMITER,
-        );
     }
 
     // endregion
