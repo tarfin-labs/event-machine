@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
 
 test('state definition is an instance of StateDefinition', function (): void {

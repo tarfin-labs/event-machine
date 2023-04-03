@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\State;
 use Tarfinlabs\EventMachine\Definition\ContextDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\State;
 
 it('should run exit actions when transitioning from a state', function (): void {
     $machine = MachineDefinition::define(

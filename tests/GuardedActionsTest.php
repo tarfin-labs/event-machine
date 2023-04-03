@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\State;
 use Tarfinlabs\EventMachine\Definition\ContextDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\State;
 
 it('should run the guarded action when the guard condition is met', function (): void {
     $machine = MachineDefinition::define(

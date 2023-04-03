@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\State;
 use Tarfinlabs\EventMachine\Definition\ContextDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\State;
 
 it('can update context using actions defined in transition definitions', function (): void {
     $machine = MachineDefinition::define(

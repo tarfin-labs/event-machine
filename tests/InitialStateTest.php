@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 test('initial states are correctly set for both top-level machine definition and sub-states when explicitly specified', function (): void {
     $machine = MachineDefinition::define(config: [
