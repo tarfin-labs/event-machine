@@ -6,13 +6,13 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
-test('TrafficLightsMachineInlineBehavior definition returns a MachineDefinition instance', function (): void {
+test('TrafficLightsMachine definition returns a MachineDefinition instance', function (): void {
     $machine = TrafficLightsMachine::definition();
 
     expect($machine)->toBeInstanceOf(MachineDefinition::class);
 });
 
-test('TrafficLightsMachineInlineBehavior transitions between states using EventMachine', function (): void {
+test('TrafficLightsMachine transitions between states using EventMachine', function (): void {
     $machine = TrafficLightsMachine::definition();
 
     $newState = $machine->transition(state: null, event: ['type' => 'MUT']);
