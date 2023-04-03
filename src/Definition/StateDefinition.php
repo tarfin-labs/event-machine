@@ -54,9 +54,7 @@ class StateDefinition
      */
     public ?array $events = null;
 
-    /**
-     * The initial state definition for this machine definition.
-     */
+    /** The initial state definition for this machine definition. */
     public ?StateDefinition $initial = null;
 
     /**
