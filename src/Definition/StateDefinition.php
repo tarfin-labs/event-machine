@@ -231,9 +231,9 @@ class StateDefinition
     /**
      * Determines if the given transition configuration represents a multi-path guarded transition.
      * This method checks if the provided array has numeric keys and array values, indicating
-     * that it contains multiple guarded transitions based on different conditions.
+     * that it contains multiple guarded transitions based on different guards.
      *
-     * @param  array  $transitionConfig The transition configuration to examine.
+     * @param  array|string|null  $transitionConfig  The transition configuration to examine.
      *
      * @return bool True if the configuration represents a multi-path guarded transition, false otherwise.
      */

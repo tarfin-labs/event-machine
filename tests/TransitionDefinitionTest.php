@@ -92,7 +92,7 @@ test('transitions can have actions', function (): void {
     expect($timerTransition->actions)->toBe(['action1', 'action2']);
 });
 
-test('a guarded transition can have specified condition', function (): void {
+test('a guarded transition can have specified guards', function (): void {
     $machine = MachineDefinition::define(config: [
         'states' => [
             'green' => [
@@ -107,12 +107,13 @@ test('a guarded transition can have specified condition', function (): void {
         ],
     ]);
 
+    /** @var TransitionDefinition $timerTransition */
     $timerTransition = $machine->states['green']->transitions['TIMER'];
 
-    expect($timerTransition->conditions)->toBe(['guard1']);
+    expect($timerTransition->guards)->toBe(['guard1']);
 });
 
-test('a guarded transition can have multiple specified conditions', function (): void {
+test('a guarded transition can have multiple specified guards', function (): void {
     $machine = MachineDefinition::define(config: [
         'states' => [
             'green' => [
@@ -131,9 +132,10 @@ test('a guarded transition can have multiple specified conditions', function ():
         ],
     ]);
 
+    /** @var TransitionDefinition $timerTransition */
     $timerTransition = $machine->states['green']->transitions['TIMER'];
 
-    expect($timerTransition->conditions)->toBe([
+    expect($timerTransition->guards)->toBe([
         'guard1',
         'guard2',
         'guard3',
@@ -172,6 +174,7 @@ test('a guarded transition can have multiple if-else targets', function (): void
         ->toHaveCount(1)
         ->toHaveKey('TIMER');
 
+    /** @var TransitionDefinition $guardedTimerTransitions */
     $guardedTimerTransitions = $transitions['TIMER'];
 
     expect($guardedTimerTransitions)
@@ -180,11 +183,11 @@ test('a guarded transition can have multiple if-else targets', function (): void
         ->each->toBeInstanceOf(TransitionDefinition::class);
 
     expect($guardedTimerTransitions[0]->target->key)->toBe('yellow');
-    expect($guardedTimerTransitions[0]->conditions)->toBe(['guard1']);
+    expect($guardedTimerTransitions[0]->guards)->toBe(['guard1']);
 
     expect($guardedTimerTransitions[1]->target->key)->toBe('red');
-    expect($guardedTimerTransitions[1]->conditions)->toBe(['guard2']);
+    expect($guardedTimerTransitions[1]->guards)->toBe(['guard2']);
 
     expect($guardedTimerTransitions[2]->target->key)->toBe('pedestrian');
-    expect($guardedTimerTransitions[2]->conditions)->toBeNull();
+    expect($guardedTimerTransitions[2]->guards)->toBeNull();
 });

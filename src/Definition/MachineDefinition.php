@@ -160,12 +160,12 @@ class MachineDefinition
     }
 
     /**
-     * Selects the first eligible transition while evaluating guard conditions.
+     * Selects the first eligible transition while evaluating guards.
      *
      * This method iterates through the given transition candidates and
-     * checks if the guard conditions are met. If a candidate transition
-     * does not have any guard conditions, it is considered eligible.
-     * If a transition with guard conditions has all its guards evaluated
+     * checks if all the guards are passed. If a candidate transition
+     * does not have any guards, it is considered eligible.
+     * If a transition with guards has all its guards evaluated
      * to true, it is considered eligible. The method returns the first
      * eligible transition encountered or null if none is found.
      *
@@ -186,21 +186,21 @@ class MachineDefinition
 
         /** @var \Tarfinlabs\EventMachine\Definition\TransitionDefinition $transitionCandidate */
         foreach ($transitionCandidates as $transitionCandidate) {
-            if (!isset($transitionCandidate->conditions)) {
+            if (!isset($transitionCandidate->guards)) {
                 return $transitionCandidate;
             }
 
-            $conditionsMet = true;
-            foreach ($transitionCandidate->conditions as $condition) {
-                $guardBehavior = $this->getInvokableBehavior(behaviorDefinition:$condition, behaviorType: BehaviorType::Guard);
+            $guardsPassed = true;
+            foreach ($transitionCandidate->guards as $guard) {
+                $guardBehavior = $this->getInvokableBehavior(behaviorDefinition:$guard, behaviorType: BehaviorType::Guard);
 
                 if ($guardBehavior($this->context, $event) !== true) {
-                    $conditionsMet = false;
+                    $guardsPassed = false;
                     break;
                 }
             }
 
-            if ($conditionsMet === true) {
+            if ($guardsPassed === true) {
                 return $transitionCandidate;
             }
         }

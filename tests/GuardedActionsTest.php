@@ -6,7 +6,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
-it('should run the guarded action when the guard condition is met', function (): void {
+it('should run the guarded action when the guards are passed', function (): void {
     $machine = MachineDefinition::define(
         config: [
             'initial' => 'active',
@@ -72,7 +72,7 @@ it('should run the guarded action when the guard condition is met', function ():
     expect($machine->context->get('count'))->toBe(4);
 });
 
-it('should not run the guarded action when the guard condition is not met', function (): void {
+it('should not run the guarded action when the guards are not passed', function (): void {
     $machine = MachineDefinition::define(
         config: [
             'initial' => 'active',
@@ -135,14 +135,14 @@ it('should not run the guarded action when the guard condition is not met', func
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe(['active']);
-    // Guard condition not met, action not executed
+    // Guards is not passed, the action will not be executed
     expect($newState->contextData)->toBe(['count' => 1]);
 
     // Ensure that the machine's context has not been changed.
     expect($machine->context->get('count'))->toBe(1);
 });
 
-it('should transition through multiple if-else targets based on guard conditions', function (): void {
+it('should transition through multiple if-else targets based on guards', function (): void {
     $machine = MachineDefinition::define(
         config: [
             'initial' => 'green',

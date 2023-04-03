@@ -23,8 +23,8 @@ class TransitionDefinition
      */
     public ?array $actions = null;
 
-    /** The conditions to be checked before this transition is taken. */
-    public ?array $conditions = null;
+    /** The guards to be checked before this transition is taken. */
+    public ?array $guards = null;
 
     /** The description of the transition. */
     public ?string $description = null;
@@ -73,11 +73,11 @@ class TransitionDefinition
     protected function initializeConditions(): void
     {
         if (isset($this->transitionConfig['guards'])) {
-            $this->conditions = is_array($this->transitionConfig['guards'])
+            $this->guards = is_array($this->transitionConfig['guards'])
                 ? $this->transitionConfig['guards']
                 : [$this->transitionConfig['guards']];
         } else {
-            $this->conditions = null;
+            $this->guards = null;
         }
     }
 
