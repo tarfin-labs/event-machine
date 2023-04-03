@@ -228,15 +228,18 @@ class MachineDefinition
      * the active state definition and the current context data.
      * If no current state is provided, the initial state is used.
      *
-     * @param  StateDefinition|null  $currentStateDefinition The current state definition, if any.
+     * @param  StateDefinition|null  $currentStateDefinition  The current state definition, if any.
      *
      * @return State The constructed State object representing the current state.
      */
-    protected function buildCurrentState(StateDefinition $currentStateDefinition = null): State
-    {
+    protected function buildCurrentState(
+        ?StateDefinition $currentStateDefinition = null,
+        ?EventBehavior $eventBehavior = null,
+    ): State {
         return new State(
             activeStateDefinition: $currentStateDefinition ?? $this->initial,
             contextData:  $this->context->toArray(),
+            eventBehavior: $eventBehavior,
         );
     }
 
@@ -406,7 +409,7 @@ class MachineDefinition
 
         // If the transition definition is not found, do nothing
         if ($transitionDefinition === null) {
-            return $this->buildCurrentState($currentStateDefinition);
+            return $this->buildCurrentState($currentStateDefinition, $eventBehavior);
         }
 
         // Run exit actions on the source/current state definition
