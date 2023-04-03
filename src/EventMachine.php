@@ -23,17 +23,4 @@ abstract class EventMachine
      * @throws RuntimeException if the method is not overridden by a subclass
      */
     abstract public static function definition(): MachineDefinition;
-
-    /**
-     * Transitions the state machine from the given state based on the provided event.
-     *
-     * @param  null|string|State  $state The current state of the state machine
-     * @param  array  $event The event that triggers the transition
-     *
-     * @return State The new state after the transition
-     */
-    public static function transition(null|string|State $state, array $event): State
-    {
-        return static::definition()->transition($state, $event);
-    }
 }
