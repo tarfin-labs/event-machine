@@ -114,7 +114,7 @@ class MachineDefinition
     ): self {
         return new self(
             config: $config ?? null,
-            behavior: $behavior ?? null,
+            behavior: array_merge(self::initializeEmptyBehavior(), $behavior ?? []),
             id: $config['id'] ?? self::DEFAULT_ID,
             version: $config['version'] ?? null,
             delimiter: $config['delimiter'] ?? self::STATE_DELIMITER,
@@ -124,6 +124,20 @@ class MachineDefinition
     // endregion
 
     // region Protected Methods
+
+    /**
+     * Initializes an empty behavior array with empty events, actions and guards arrays.
+     *
+     * @return array  An empty behavior array with empty events, actions and guards arrays.
+     */
+    protected static function initializeEmptyBehavior(): array
+    {
+        return [
+            'events'  => [],
+            'actions' => [],
+            'guards'  => [],
+        ];
+    }
 
     /**
      * Initialize the root state definition for this machine definition.
