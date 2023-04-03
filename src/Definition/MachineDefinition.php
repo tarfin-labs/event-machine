@@ -247,6 +247,16 @@ class MachineDefinition
         }
     }
 
+    /**
+     * Initializes the context for the state machine.
+     *
+     * This method checks if the context is defined in the machine's
+     * configuration and creates a new `ContextManager` instance
+     * accordingly. It supports context defined as an array or a class
+     * name.
+     *
+     * @return ContextManager The initialized context manager
+     */
     protected function initializeContext(): ContextManager
     {
         // No context defined
