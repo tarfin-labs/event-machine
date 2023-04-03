@@ -60,7 +60,7 @@ it('should apply the given state\'s context data to the machine\'s context when 
         ],
         behavior: [
             'actions' => [
-                'incrementAction' => function (ContextManager $context, array $event): void {
+                'incrementAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') + 1);
                 },
             ],

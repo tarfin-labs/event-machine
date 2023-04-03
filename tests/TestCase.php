@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Tests;
 
 use Orchestra\Testbench\TestCase as Orchestra;
+use Spatie\LaravelData\LaravelDataServiceProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Tarfinlabs\EventMachine\MachineServiceProvider;
 
@@ -19,10 +20,11 @@ class TestCase extends Orchestra
 //        );
     }
 
-    protected function getPackageProviders($app)
+    protected function getPackageProviders($app): array
     {
         return [
             MachineServiceProvider::class,
+            LaravelDataServiceProvider::class,
         ];
     }
 

@@ -364,21 +364,21 @@ class StateDefinition
     /**
      * Runs the exit actions of the current state definition with the given event.
      *
-     * @param  array|null  $event The event to be processed.
+     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition  $eventDefinition  The event to be processed.
      */
-    public function runExitActions(?array $event): void
+    public function runExitActions(EventDefinition $eventDefinition): void
     {
         foreach ($this->exit as $action) {
-            $this->machine->runAction($action, $event);
+            $this->machine->runAction($action, $eventDefinition);
         }
     }
 
     /**
      * Runs the entry actions of the current state definition with the given event.
      *
-     * @param  array|null  $event The event to be processed.
+     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition|null  $event  The event to be processed.
      */
-    public function runEntryActions(?array $event): void
+    public function runEntryActions(?EventDefinition $event): void
     {
         foreach ($this->entry as $action) {
             $this->machine->runAction($action, $event);

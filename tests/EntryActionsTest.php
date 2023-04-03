@@ -26,7 +26,7 @@ it('should run entry actions when transitioning to a new state', function (): vo
         ],
         behavior: [
             'actions' => [
-                'incrementAction' => function (ContextManager $context, array $event): void {
+                'incrementAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') + 1);
                 },
             ],

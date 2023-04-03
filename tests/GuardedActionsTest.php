@@ -31,15 +31,15 @@ it('should run the guarded action when the guards are passed', function (): void
                 'multiplyByTwoAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') * 2);
                 },
-                'incrementAction' => function (ContextManager $context, array $event): void {
+                'incrementAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') + 1);
                 },
-                'decrementAction' => function (ContextManager $context, array $event): void {
+                'decrementAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') - 1);
                 },
             ],
             'guards' => [
-                'isEvenGuard' => function (ContextManager $context, array $event): bool {
+                'isEvenGuard' => function (ContextManager $context): bool {
                     return $context->get('count') % 2 === 0;
                 },
             ],
@@ -97,15 +97,15 @@ it('should not run the guarded action when the guards are not passed', function 
                 'multiplyByTwoAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') * 2);
                 },
-                'incrementAction' => function (ContextManager $context, array $event): void {
+                'incrementAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') + 1);
                 },
-                'decrementAction' => function (ContextManager $context, array $event): void {
+                'decrementAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') - 1);
                 },
             ],
             'guards' => [
-                'isEvenGuard' => function (ContextManager $context, array $event): bool {
+                'isEvenGuard' => function (ContextManager $context): bool {
                     return $context->get('count') % 2 === 0;
                 },
             ],
@@ -174,10 +174,10 @@ it('should transition through multiple if-else targets based on guards', functio
         ],
         behavior: [
             'guards' => [
-                'isOneGuard' => function (ContextManager $context, array $event): bool {
+                'isOneGuard' => function (ContextManager $context): bool {
                     return $context->get('value') === 1;
                 },
-                'isTwoGuard' => function (ContextManager $context, array $event): bool {
+                'isTwoGuard' => function (ContextManager $context): bool {
                     return $context->get('value') === 2;
                 },
             ],

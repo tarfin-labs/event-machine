@@ -167,16 +167,16 @@ class MachineDefinition
      * to true, it is considered eligible. The method returns the first
      * eligible transition encountered or null if none is found.
      *
-     * @param  array|TransitionDefinition  $transitionCandidates Array of
+     * @param  array|TransitionDefinition  $transitionCandidates  Array of
      *        transition candidates or a single candidate to be checked.
-     * @param  array  $event The event data used to evaluate guards.
+     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition  $eventDefinition       The event data used to evaluate guards.
      *
      * @return TransitionDefinition|null The first eligible transition or
      *         null if no eligible transition is found.
      */
     protected function selectFirstEligibleTransitionEvaluatingGuards(
         array|TransitionDefinition $transitionCandidates,
-        array $event
+        EventDefinition $eventDefinition
     ): ?TransitionDefinition {
         $transitionCandidates = is_array($transitionCandidates)
             ? $transitionCandidates
@@ -192,7 +192,7 @@ class MachineDefinition
             foreach ($transitionCandidate->guards as $guard) {
                 $guardBehavior = $this->getInvokableBehavior(behaviorDefinition:$guard, behaviorType: BehaviorType::Guard);
 
-                if ($guardBehavior($this->context, $event) !== true) {
+                if ($guardBehavior($this->context, $eventDefinition) !== true) {
                     $guardsPassed = false;
                     break;
                 }
@@ -330,25 +330,29 @@ class MachineDefinition
     /**
      * Transition the state machine to a new state based on an event.
      *
-     * @param  State|string|null  $state The current state or state name, or null to use the initial state.
-     * @param  array  $event The event that triggers the transition.
+     * @param  State|string|null  $state  The current state or state name, or null to use the initial state.
+     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition|array  $event  The event that triggers the transition.
      *
      * @return State The new state after the transition.
      */
-    public function transition(null|string|State $state, array $event): State
+    public function transition(null|string|State $state, EventDefinition|array $event): State
     {
+        if (is_array($event)) {
+            $event = EventDefinition::from($event);
+        }
+
         $currentStateDefinition = $this->getCurrentStateDefinition($state);
 
         $this->applyContextDataIfNeeded($state);
 
         // Find the transition definition for the event type
         /** @var null|\Tarfinlabs\EventMachine\Definition\TransitionDefinition $transitionDefinition */
-        $transitionDefinition = $currentStateDefinition->transitions[$event['type']] ?? null;
+        $transitionDefinition = $currentStateDefinition->transitions[$event->type] ?? null;
 
         // If the transition definition is an array, find the transition candidate
         $transitionDefinition = $this->selectFirstEligibleTransitionEvaluatingGuards(
             transitionCandidates: $transitionDefinition,
-            event: $event,
+            eventDefinition: $event,
         );
 
         // If the transition definition is not found, do nothing
@@ -378,18 +382,18 @@ class MachineDefinition
      * action definition, and if the action behavior is callable, it
      * executes it using the context and event data.
      *
-     * @param  string  $actionDefinition The action definition, either a class
-     *                                 name or an array key.
-     * @param  array|null  $event The event data (optional).
+     * @param  string  $actionDefinition  The action definition, either a class
+     *                                                                                      name or an array key.
+     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition|null  $eventDefinition   The event data (optional).
      */
-    public function runAction(string $actionDefinition, ?array $event = null): void
+    public function runAction(string $actionDefinition, ?EventDefinition $eventDefinition = null): void
     {
         // Retrieve the appropriate action behavior based on the action definition.
         $actionBehavior = $this->getInvokableBehavior(behaviorDefinition: $actionDefinition, behaviorType: BehaviorType::Action);
 
         // If the action behavior is callable, execute it with the context and event data.
         if (is_callable($actionBehavior)) {
-            $actionBehavior($this->context, $event);
+            $actionBehavior($this->context, $eventDefinition);
         }
     }
 

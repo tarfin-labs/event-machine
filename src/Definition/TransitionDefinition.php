@@ -104,16 +104,16 @@ class TransitionDefinition
      *
      * If there are no actions associated with the transition definition, do nothing.
      *
-     * @param  array|null  $event The event data or null if none is provided.
+     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition|null  $eventDefinition  The event data or null if none is provided.
      */
-    public function runActions(?array $event = null): void
+    public function runActions(?EventDefinition $eventDefinition = null): void
     {
         if ($this->actions === null) {
             return;
         }
 
         foreach ($this->actions as $actionDefinition) {
-            $this->source->machine->runAction($actionDefinition, $event);
+            $this->source->machine->runAction($actionDefinition, $eventDefinition);
         }
     }
 
