@@ -6,7 +6,8 @@ namespace Tarfinlabs\EventMachine\Behavior;
 
 enum BehaviorType: string
 {
-    case Guard  = 'guards';
-    case Action = 'actions';
-    case Event  = 'events';
+    case Guard   = 'guards';
+    case Action  = 'actions';
+    case Event   = 'events';
+    case Context = 'context';
 }
