@@ -132,11 +132,13 @@ class MachineDefinition
      */
     protected static function initializeEmptyBehavior(): array
     {
-        return [
-            BehaviorType::Event->value  => [],
-            BehaviorType::Action->value => [],
-            BehaviorType::Guard->value  => [],
-        ];
+        $behaviorArray = [];
+
+        foreach (BehaviorType::cases() as $behaviorType) {
+            $behaviorArray[$behaviorType->value] = [];
+        }
+
+        return $behaviorArray;
     }
 
     /**
