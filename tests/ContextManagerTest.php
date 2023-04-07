@@ -22,7 +22,7 @@ it('returns null for non-existent keys', function (): void {
 
 it('can check if a key exists', function (): void {
     $context = new ContextManager();
-    $context->set(key: 'key1', value:  'value1');
+    $context->set(key: 'key1', value: 'value1');
 
     expect($context->has(key: 'key1'))->toBeTrue();
     expect($context->has(key: 'non_existent_key'))->toBeFalse();

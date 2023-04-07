@@ -207,7 +207,7 @@ class MachineDefinition
 
             $guardsPassed = true;
             foreach ($transitionCandidate->guards as $guard) {
-                $guardBehavior = $this->getInvokableBehavior(behaviorDefinition:$guard, behaviorType: BehaviorType::Guard);
+                $guardBehavior = $this->getInvokableBehavior(behaviorDefinition: $guard, behaviorType: BehaviorType::Guard);
 
                 if ($guardBehavior($this->context, $eventBehavior) !== true) {
                     $guardsPassed = false;
@@ -240,7 +240,7 @@ class MachineDefinition
     ): State {
         return new State(
             activeStateDefinition: $currentStateDefinition ?? $this->initial,
-            contextData:  $this->context->toArray(),
+            contextData: $this->context->toArray(),
             eventBehavior: $eventBehavior,
         );
     }
@@ -425,7 +425,7 @@ class MachineDefinition
 
         return new State(
             activeStateDefinition: $transitionDefinition->target ?? $currentStateDefinition,
-            contextData:  $this->context->toArray()
+            contextData: $this->context->toArray()
         );
     }
 
