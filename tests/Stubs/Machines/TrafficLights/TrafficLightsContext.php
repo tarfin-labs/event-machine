@@ -14,4 +14,9 @@ class TrafficLightsContext extends ContextBehavior
             'count' => 1,
         ];
     }
+
+    public function isCountEven(): bool
+    {
+        return $this->get('count') % 2 === 0;
+    }
 }
