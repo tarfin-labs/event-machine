@@ -263,7 +263,7 @@ test('a state definition can have transitions', function (): void {
     expect($lightMachine->states['red']->transitions)->each->toBeInstanceOf(TransitionDefinition::class);
     expect($lightMachine->states['red']->states['walk']->transitions)->each->toBeInstanceOf(TransitionDefinition::class);
     expect($lightMachine->states['red']->states['wait']->transitions)->each->toBeInstanceOf(TransitionDefinition::class);
-    expect($lightMachine->states['red']->states['stop']->transitions)->each->toBeInstanceOf(TransitionDefinition::class);
+    expect($lightMachine->states['red']->states['stop']->transitions)->toBeNull();
 
     $greenTimerTransition = $lightMachine->states['green']->transitions['TIMER'];
     expect($greenTimerTransition)

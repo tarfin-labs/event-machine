@@ -46,9 +46,9 @@ class StateDefinition
     /**
      * The transition definitions of this state definition.
      *
-     * @var array<\Tarfinlabs\EventMachine\Definition\TransitionDefinition>
+     * @var null|array<\Tarfinlabs\EventMachine\Definition\TransitionDefinition>
      */
-    public array $transitions;
+    public ?array $transitions;
 
     /**
      * The events that can be accepted by this state definition.
@@ -199,9 +199,10 @@ class StateDefinition
      *
      * @return array An array of TransitionDefinition objects, keyed by event names.
      */
-    protected function createTransitionDefinitions(StateDefinition $stateDefinition): array
+    protected function createTransitionDefinitions(StateDefinition $stateDefinition): ?array
     {
-        $transitions = [];
+        /** @var null|array $transitions */
+        $transitions = null;
 
         if (
             !isset($stateDefinition->config['on']) ||
