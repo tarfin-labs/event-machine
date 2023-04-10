@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine;
 
+use Spatie\LaravelData\Data;
+use Spatie\LaravelData\Attributes\Validation\ArrayType;
+
 /**
  * Class ContextManager.
  *
  * ContextManager is a class that provides a simple key-value store
  * for managing and manipulating context data within the event machine.
  */
-class ContextManager
+class ContextManager extends Data
 {
     /**
      * Create a new ContextManager instance.
@@ -18,8 +21,10 @@ class ContextManager
      * @param  array  $data An optional initial array of key-value pairs.
      */
     public function __construct(
+        #[ArrayType]
         protected array $data = [],
     ) {
+        self::validate($this);
     }
 
     /**

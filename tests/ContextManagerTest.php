@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 
+it('can initialize an empty context manager', function (): void {
+    $context = new ContextManager();
+
+    expect($context)->toBeInstanceOf(ContextManager::class);
+});
+
 it('can set and get context manager data', function (): void {
     $context = new ContextManager();
 
