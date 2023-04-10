@@ -300,7 +300,7 @@ class MachineDefinition
             return new ContextManager(data: $this->config['context']);
         }
 
-        // Context defined as a class name
+        // Context defined as behavior
         /** @var ContextManager $contextManager */
         $contextManager = new $this->config['context'];
 

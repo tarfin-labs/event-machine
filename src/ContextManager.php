@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine;
 
 use Spatie\LaravelData\Data;
+use Spatie\LaravelData\Optional;
 use Spatie\LaravelData\Attributes\Validation\ArrayType;
 
 /**
@@ -18,11 +19,11 @@ class ContextManager extends Data
     /**
      * Create a new ContextManager instance.
      *
-     * @param  array  $data An optional initial array of key-value pairs.
+     * @param  \Spatie\LaravelData\Optional|array  $data  An optional initial array of key-value pairs.
      */
     public function __construct(
         #[ArrayType]
-        protected array $data = [],
+        protected Optional|array $data = [],
     ) {
         self::validate($this);
     }
