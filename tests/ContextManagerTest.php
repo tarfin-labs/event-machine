@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 it('can initialize an empty context manager', function (): void {
     $context = new ContextManager();
@@ -84,4 +85,10 @@ it('can handle edge cases with empty keys and values', function (): void {
     $contextArray = $context->toArray();
     expect($contextArray)->toHaveCount(1);
     expect($contextArray['empty_value_key'])->toBe('');
+});
+
+test('machine definition with no context', function (): void {
+    $machineDefinition = MachineDefinition::define();
+
+    expect($machineDefinition->context)->toBeInstanceOf(ContextManager::class);
 });
