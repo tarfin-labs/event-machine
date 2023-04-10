@@ -92,3 +92,17 @@ test('machine definition with no context', function (): void {
 
     expect($machineDefinition->context)->toBeInstanceOf(ContextManager::class);
 });
+
+test('machine definition with context as only data', function (): void {
+    $machineDefinition = MachineDefinition::define([
+        'context' => [
+            'key1' => 'value1',
+            'key2' => 'value2',
+        ],
+    ]);
+
+    $context = $machineDefinition->context;
+    expect($context)->toBeInstanceOf(ContextManager::class);
+    expect($context->get(key: 'key1'))->toBe('value1');
+    expect($context->get(key: 'key2'))->toBe('value2');
+});
