@@ -168,6 +168,9 @@ class MachineDefinition
             return null;
         }
 
+        // Run entry actions on the target state definition
+        $this->initial->runEntryActions();
+
         return new State(
             activeStateDefinition: $this->initial,
             contextData: $this->context->toArray(),
