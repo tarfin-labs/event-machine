@@ -170,7 +170,7 @@ class MachineDefinition
 
         return new State(
             activeStateDefinition: $this->initial,
-            contextData: $this->context->toArray(),
+            context: $this->context->toArray(),
         );
     }
 
@@ -240,7 +240,7 @@ class MachineDefinition
     ): State {
         return new State(
             activeStateDefinition: $currentStateDefinition ?? $this->initial,
-            contextData: $this->context->toArray(),
+            context: $this->context->toArray(),
             eventBehavior: $eventBehavior,
         );
     }
@@ -267,14 +267,14 @@ class MachineDefinition
      * Apply context data to the state if needed.
      *
      * If the given state is an instance of `State`, this method will apply the state's
-     * `contextData` to the machine's context.
+     * `context` to the machine's context.
      *
      * @param  string|State|null  $state The state or state identifier to apply the context data from.
      */
     protected function applyContextDataIfNeeded(string|State|null $state): void
     {
         if ($state instanceof State) {
-            $this->context->applyContextData($state->contextData);
+            $this->context->applyContextData($state->context);
         }
     }
 
@@ -290,21 +290,16 @@ class MachineDefinition
      */
     protected function initializeContext(): ContextManager
     {
-        // No context defined
-        if (!isset($this->config['context'])) {
-            return new ContextManager();
+        if (empty($this->behavior['context'])) {
+            $payload = $this->config['context'] ?? [];
+
+            return ContextManager::validateAndCreate(['data' => $payload]);
         }
 
-        // Context defined as an array inside machine config
-        if (is_array($this->config['context'])) {
-            return new ContextManager(data: $this->config['context']);
-        }
+        /** @var ContextManager $contextClass */
+        $contextClass = $this->behavior['context'];
 
-        // Context defined as behavior
-        /** @var ContextManager $contextManager */
-        $contextManager = new $this->config['context'];
-
-        return $contextManager;
+        return $contextClass::validateAndCreate($this->config['context'] ?? []);
     }
 
     /**
@@ -425,7 +420,7 @@ class MachineDefinition
 
         return new State(
             activeStateDefinition: $transitionDefinition->target ?? $currentStateDefinition,
-            contextData: $this->context->toArray()
+            context: $this->context->toArray()
         );
     }
 

@@ -23,9 +23,8 @@ class ContextManager extends Data
      */
     public function __construct(
         #[ArrayType]
-        protected Optional|array $data = [],
+        public array|Optional $data = [],
     ) {
-        self::validate($this);
     }
 
     /**
@@ -71,16 +70,6 @@ class ContextManager extends Data
     public function remove(string $key): void
     {
         unset($this->data[$key]);
-    }
-
-    /**
-     * Convert the context data to an array.
-     *
-     * @return array An array representation of the context data.
-     */
-    public function toArray(): array
-    {
-        return $this->data;
     }
 
     /**

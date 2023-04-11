@@ -4,19 +4,23 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights;
 
-use Tarfinlabs\EventMachine\Behavior\ContextBehavior;
+use Spatie\LaravelData\Optional;
+use Tarfinlabs\EventMachine\ContextManager;
+use Spatie\LaravelData\Attributes\Validation\Min;
+use Spatie\LaravelData\Attributes\Validation\IntegerType;
 
-class TrafficLightsContext extends ContextBehavior
+class TrafficLightsContext extends ContextManager
 {
-    public static function define(): array
-    {
-        return [
-            'count' => 1,
-        ];
+    public function __construct(
+        #[IntegerType]
+        #[Min(0)]
+        public int|Optional $count = 1,
+    ) {
+        parent::__construct();
     }
 
     public function isCountEven(): bool
     {
-        return $this->get('count') % 2 === 0;
+        return $this->count % 2 === 0;
     }
 }

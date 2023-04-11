@@ -13,7 +13,7 @@ class State
 
     public function __construct(
         public StateDefinition $activeStateDefinition,
-        public ?array $contextData = null,
+        public ?array $context = null,
         public ?EventBehavior $eventBehavior = null,
     ) {
         $this->value = [$this->activeStateDefinition->key];

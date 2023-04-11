@@ -12,6 +12,7 @@ class MultiplyByTwoAction implements ActionBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $eventBehavior): void
     {
-        $context->set('count', $context->get('count') * 2);
+        /* @var \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext $context */
+        $context->count *= 2;
     }
 }

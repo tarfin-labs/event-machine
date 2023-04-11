@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 
 it('can initialize an empty context manager', function (): void {
     $context = new ContextManager();
@@ -61,9 +62,9 @@ it('can convert context data to an array', function (): void {
     $contextArray = $context->toArray();
 
     expect($contextArray)->toBeArray();
-    expect($contextArray)->toHaveCount(2);
-    expect($contextArray['key1'])->toBe('value1');
-    expect($contextArray['key2'])->toBe('value2');
+    expect($contextArray['data'])->toHaveCount(2);
+    expect($contextArray['data']['key1'])->toBe('value1');
+    expect($contextArray['data']['key2'])->toBe('value2');
 });
 
 it('can handle edge cases with empty keys and values', function (): void {
@@ -84,7 +85,7 @@ it('can handle edge cases with empty keys and values', function (): void {
 
     $contextArray = $context->toArray();
     expect($contextArray)->toHaveCount(1);
-    expect($contextArray['empty_value_key'])->toBe('');
+    expect($contextArray['data']['empty_value_key'])->toBe('');
 });
 
 test('machine definition with no context', function (): void {
@@ -105,4 +106,24 @@ test('machine definition with context as only data', function (): void {
     expect($context)->toBeInstanceOf(ContextManager::class);
     expect($context->get(key: 'key1'))->toBe('value1');
     expect($context->get(key: 'key2'))->toBe('value2');
+});
+
+test('machine definition with context behavior', function (): void {
+    $machineDefinition = MachineDefinition::define(
+        config: [
+            'context' => [
+                'count' => 1,
+            ],
+        ],
+        behavior: [
+            'context' => TrafficLightsContext::class,
+        ],
+    );
+
+    /** @var TrafficLightsContext $context */
+    $context = $machineDefinition->context;
+
+    expect($context)
+        ->toBeInstanceOf(TrafficLightsContext::class)
+        ->count->toBe(1);
 });
