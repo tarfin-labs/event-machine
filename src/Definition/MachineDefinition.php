@@ -350,12 +350,12 @@ class MachineDefinition
      * behavior is defined for the event type, a default EventDefinition
      * instance is returned.
      *
-     * @param  EventDefinition|array  $event The event to initialize.
+     * @param  EventBehavior|array  $event The event to initialize.
      * @param  StateDefinition  $stateDefinition The state definition to use.
      *
      * @return EventDefinition The initialized EventDefinition instance.
      */
-    protected function initializeEvent(EventDefinition|array $event, StateDefinition $stateDefinition): EventBehavior
+    protected function initializeEvent(EventBehavior|array $event, StateDefinition $stateDefinition): EventBehavior
     {
         if ($event instanceof EventBehavior) {
             return $event;
@@ -382,7 +382,7 @@ class MachineDefinition
      *
      * @return State The new state after the transition.
      */
-    public function transition(null|string|State $state, EventDefinition|array $event): State
+    public function transition(null|string|State $state, EventBehavior|array $event): State
     {
         $currentStateDefinition = $this->getCurrentStateDefinition($state);
 
