@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
@@ -67,4 +69,33 @@ test('the first state definition is set as the initial state for both top-level 
     expect($machine->states['green']->states['walk']->initial)->toBeNull();
     expect($machine->states['green']->states['wait']->initial)->toBeNull();
     expect($machine->states['green']->states['stop']->initial)->toBeNull();
+});
+
+it('should run entry actions for building initial state', function (): void {
+    $machine = MachineDefinition::define(
+        config: [
+            'initial' => 'active',
+            'context' => [
+                'count' => 0,
+            ],
+            'states' => [
+                'active' => [
+                    'entry' => 'incrementAction',
+                ],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'incrementAction' => function (ContextManager $context): void {
+                    $context->set('count', $context->get('count') + 1);
+                },
+            ],
+        ],
+    );
+
+    expect($machine)
+        ->initialState->toBeInstanceOf(State::class)
+        ->initialState->value->toBe(['active'])
+        ->initialState->contextData->toBe(['count' => 1])
+        ->context->get('count')->toBe(1);
 });
