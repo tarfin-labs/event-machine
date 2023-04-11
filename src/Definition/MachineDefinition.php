@@ -168,7 +168,7 @@ class MachineDefinition
             return null;
         }
 
-        // Run entry actions on the target state definition
+        // Run entry actions on the initial state definition
         $this->initial->runEntryActions();
 
         return new State(
