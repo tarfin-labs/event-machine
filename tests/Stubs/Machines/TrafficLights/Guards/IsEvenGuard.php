@@ -12,6 +12,7 @@ class IsEvenGuard implements GuardBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $eventBehavior): bool
     {
-        return $context->get('count') % 2 === 0;
+        /* @var \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext $context */
+        return $context->count % 2 === 0;
     }
 }

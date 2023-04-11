@@ -23,7 +23,6 @@ class TrafficLightsMachineCompact extends EventMachine
         return MachineDefinition::define(
             config: [
                 'initial' => 'active',
-                'context' => TrafficLightsContext::class,
                 'states'  => [
                     'active' => [
                         'on' => [

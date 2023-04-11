@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights;
 
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\EventMachine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Guards\IsEvenGuard;
@@ -24,7 +26,6 @@ class TrafficLightsMachine extends EventMachine
         return MachineDefinition::define(
             config: [
                 'initial' => 'active',
-                'context' => TrafficLightsContext::class,
                 'states'  => [
                     'active' => [
                         'on' => [
@@ -33,6 +34,7 @@ class TrafficLightsMachine extends EventMachine
                                 'actions' => [
                                     MultiplyByTwoAction::class,
                                     'doNothingAction',
+                                    'doNothingAction2',
                                     'doNothingInsideClassAction',
                                 ],
                             ],
@@ -50,12 +52,14 @@ class TrafficLightsMachine extends EventMachine
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => TrafficLightsContext::class,
+                'events'  => [
                     'MUT' => MultiplyEvent::class,
                     'DEX' => DecreaseEvent::class,
                 ],
                 'actions' => [
                     'doNothingAction'            => function (): void {},
+                    'doNothingAction2'           => function (ContextManager $context, EventBehavior $eventBehavior): void {},
                     'doNothingInsideClassAction' => DoNothingInsideClassAction::class,
                 ],
             ],

@@ -21,13 +21,19 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe(['active']);
-    expect($newState->contextData)->toBe(['count' => 1]);
+    expect($newState->context)->toBe([
+        'count' => 1,
+        'data'  => [],
+    ]);
+
+    /** @var \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext $context */
+    $context = $machine->context;
 
     // Ensure that the machine's context has not been changed.
-    expect($machine->context->get('count'))->toBe(1);
+    expect($context->count)->toBe(1);
 
     $newState = $machine->transition(state: $newState, event: ['type' => 'INC']);
-    expect($newState->contextData)->toBe(['count' => 2]);
+    expect($newState->context['count'])->toBe(2);
 
     $newState = $machine->transition(state: $newState, event: [
         'type' => 'MUT',
@@ -36,10 +42,10 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe(['active']);
-    expect($newState->contextData)->toBe(['count' => 4]);
+    expect($newState->context['count'])->toBe(4);
 
     // Ensure that the machine's context has been changed.
-    expect($machine->context->get('count'))->toBe(4);
+    expect($context->count)->toBe(4);
 
     $newState = $machine->transition(state: $newState, event: [
         'type' => 'ADD',
@@ -51,10 +57,10 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe(['active']);
-    expect($newState->contextData)->toBe(['count' => 20]);
+    expect($newState->context['count'])->toBe(20);
 
     // Ensure that the machine's context has been changed.
-    expect($machine->context->get('count'))->toBe(20);
+    expect($context->count)->toBe(20);
 });
 
 test('TrafficLightsMachineCompact can be build', function (): void {

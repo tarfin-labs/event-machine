@@ -37,7 +37,7 @@ it('should run exit actions when transitioning from a state', function (): void 
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe(['active']);
-    expect($newState->contextData)->toBe(['count' => 1]);
+    expect($newState->context['data'])->toBe(['count' => 1]);
 
     // Ensure that the machine's context has been changed.
     expect($machine->context->get('count'))->toBe(1);

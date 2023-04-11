@@ -12,6 +12,7 @@ class AddValueAction implements ActionBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $eventBehavior): void
     {
-        $context->set('count', $context->get('count') + $eventBehavior->data['value']);
+        /* @var \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext $context */
+        $context->count += $eventBehavior->data['value'];
     }
 }
