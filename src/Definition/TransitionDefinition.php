@@ -107,7 +107,7 @@ class TransitionDefinition
      *
      * If there are no actions associated with the transition definition, do nothing.
      *
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior  The event data or null if none is provided.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior  The event or null if none is provided.
      */
     public function runActions(?EventBehavior $eventBehavior = null): void
     {

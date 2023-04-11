@@ -28,10 +28,10 @@ it('can update context using actions defined in transition definitions', functio
         behavior: [
             'actions' => [
                 'additionAction' => function (ContextManager $context, EventDefinition $eventDefinition): void {
-                    $context->set('count', $context->get('count') + $eventDefinition->data['value']);
+                    $context->set('count', $context->get('count') + $eventDefinition->payload['value']);
                 },
                 'subtractionAction' => function (ContextManager $context, EventDefinition $eventDefinition): void {
-                    $context->set('count', $context->get('count') - $eventDefinition->data['value']);
+                    $context->set('count', $context->get('count') - $eventDefinition->payload['value']);
                 },
                 'incrementAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') + 1);
@@ -44,8 +44,8 @@ it('can update context using actions defined in transition definitions', functio
     );
 
     $addState = $machine->transition(state: null, event: [
-        'type' => 'ADD',
-        'data' => [
+        'type'    => 'ADD',
+        'payload' => [
             'value' => 37,
         ],
     ]);
@@ -56,8 +56,8 @@ it('can update context using actions defined in transition definitions', functio
     expect($machine->context->get('count'))->toBe(37);
 
     $subState = $machine->transition(state: $addState, event: [
-        'type' => 'SUB',
-        'data' => [
+        'type'    => 'SUB',
+        'payload' => [
             'value' => 17,
         ],
     ]);

@@ -189,7 +189,7 @@ class MachineDefinition
      *
      * @param  array|TransitionDefinition  $transitionCandidates  Array of
      *        transition candidates or a single candidate to be checked.
-     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition  $eventBehavior         The event data used to evaluate guards.
+     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition  $eventBehavior         The event used to evaluate guards.
      *
      * @return TransitionDefinition|null The first eligible transition or
      *         null if no eligible transition is found.
@@ -377,8 +377,8 @@ class MachineDefinition
     /**
      * Transition the state machine to a new state based on an event.
      *
-     * @param  State|string|null  $state          The current state or state name, or null to use the initial state.
-     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition|array  $event  The event that triggers the transition.
+     * @param  State|string|null  $state  The current state or state name, or null to use the initial state.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|array  $event  The event that triggers the transition.
      *
      * @return State The new state after the transition.
      */
@@ -432,18 +432,18 @@ class MachineDefinition
      *
      * This method retrieves the appropriate action behavior based on the
      * action definition, and if the action behavior is callable, it
-     * executes it using the context and event data.
+     * executes it using the context and event payload.
      *
      * @param  string  $actionDefinition      The action definition, either a class
      *                                                                                      name or an array key.
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior         The event data (optional).
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior         The event (optional).
      */
     public function runAction(string $actionDefinition, ?EventBehavior $eventBehavior = null): void
     {
         // Retrieve the appropriate action behavior based on the action definition.
         $actionBehavior = $this->getInvokableBehavior(behaviorDefinition: $actionDefinition, behaviorType: BehaviorType::Action);
 
-        // If the action behavior is callable, execute it with the context and event data.
+        // If the action behavior is callable, execute it with the context and event payload.
         if (is_callable($actionBehavior)) {
             $actionBehavior($this->context, $eventBehavior);
         }

@@ -48,8 +48,8 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
     expect($context->count)->toBe(4);
 
     $newState = $machine->transition(state: $newState, event: [
-        'type' => 'ADD',
-        'data' => [
+        'type'    => 'ADD',
+        'payload' => [
             'value' => 16,
         ],
     ]);
