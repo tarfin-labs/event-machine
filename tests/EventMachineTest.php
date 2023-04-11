@@ -7,6 +7,7 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\IncreaseEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\AddAnotherValueEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachineCompact;
 
 test('TrafficLightsMachine definition returns a MachineDefinition instance', function (): void {
@@ -73,6 +74,16 @@ test('TrafficLightsMachine transitions between states using an IncreaseEvent imp
 
     $newState = $machine->transition(state: null, event: $increaseEvent);
     expect($newState->context['count'])->toBe(2);
+});
+
+test('TrafficLightsMachine transitions between states using an AddAnotherValueEvent implementing EventBehavior', function (): void {
+    $machine = TrafficLightsMachine::build();
+
+    $addAnotherValueEvent = new AddAnotherValueEvent(41);
+    expect($addAnotherValueEvent)->toBeInstanceOf(EventBehavior::class);
+
+    $newState = $machine->transition(state: null, event: $addAnotherValueEvent);
+    expect($newState->context['count'])->toBe(42);
 });
 
 test('TrafficLightsMachineCompact can be build', function (): void {
