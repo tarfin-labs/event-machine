@@ -294,9 +294,9 @@ class MachineDefinition
     protected function initializeContext(): ContextManager
     {
         if (empty($this->behavior['context'])) {
-            $payload = $this->config['context'] ?? [];
+            $contextConfig = $this->config['context'] ?? [];
 
-            return ContextManager::validateAndCreate(['data' => $payload]);
+            return ContextManager::validateAndCreate(['data' => $contextConfig]);
         }
 
         /** @var ContextManager $contextClass */
