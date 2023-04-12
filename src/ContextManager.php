@@ -50,6 +50,10 @@ class ContextManager extends Data
      */
     public function set(string $key, mixed $value): void
     {
+        if ($this->data instanceof Optional) {
+            return;
+        }
+
         $this->data[$key] = $value;
     }
 
@@ -86,6 +90,10 @@ class ContextManager extends Data
      */
     public function applyContextData(array $contextData): void
     {
+        if ($this->data instanceof Optional) {
+            return;
+        }
+
         $this->data = array_merge($this->data, $contextData);
     }
 
