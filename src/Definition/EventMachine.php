@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Definition;
 
 use RuntimeException;
+use Tarfinlabs\EventMachine\Behavior\MachineActor;
 
 /**
  * EventMachine is an abstract base class for creating state machines.
@@ -23,4 +24,9 @@ abstract class EventMachine
      * @throws RuntimeException if the method is not overridden by a subclass
      */
     abstract public static function build(): MachineDefinition;
+
+    public static function start(): MachineActor
+    {
+        return new MachineActor(static::build());
+    }
 }

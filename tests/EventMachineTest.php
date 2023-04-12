@@ -91,3 +91,14 @@ test('TrafficLightsMachineCompact can be build', function (): void {
 
     expect($machine)->toBeInstanceOf(MachineDefinition::class);
 });
+
+test('TrafficLightsMachine can be started', function (): void {
+    $machineActor = TrafficLightsMachine::start();
+
+    $state = $machineActor->send(['type' => 'INC']);
+
+    expect($state)
+        ->toBeInstanceOf(State::class)
+        ->and($state->value)->toBe(['active'])
+        ->and($state->context['count'])->toBe(2);
+});
