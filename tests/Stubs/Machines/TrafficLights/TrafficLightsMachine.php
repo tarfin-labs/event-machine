@@ -16,7 +16,9 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\MultiplyEv
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\AddValueAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\DecrementAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\IncrementAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\SubtactValueEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\MultiplyByTwoAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\SubtractValueAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\AddAnotherValueEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\AddAnotherValueAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\DoNothingInsideClassAction;
@@ -44,6 +46,7 @@ class TrafficLightsMachine extends EventMachine
                             'DEX'                       => ['actions' => DecrementAction::class],
                             AddValueEvent::class        => ['actions' => AddValueAction::class],
                             AddAnotherValueEvent::class => ['actions' => AddAnotherValueAction::class],
+                            SubtactValueEvent::class    => ['actions' => SubtractValueAction::class],
                         ],
                     ],
                 ],
