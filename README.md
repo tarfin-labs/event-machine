@@ -107,7 +107,8 @@ Please review [our security policy](../../security/policy) on how to report secu
 
 ## Credits
 
-- [Yunus Emre Deligöz](https://github.com/tarfin-labs)
+- [Yunus Emre Deligöz](https://github.com/deligoez)
+- [Fatih Aydın](https://github.com/aydinfatih)
 - [All Contributors](../../contributors)
 
 ## License
