@@ -138,3 +138,7 @@ test('TrafficLightsMachine transitions between states using EventMachine?', func
         'payload' => ['value' => 100],
     ]);
 })->throws(MachineContextValidationException::class);
+
+test('TrafficLightsContext throws MachineContextValidationException for invalid data', function (): void {
+    TrafficLightsContext::validateAndCreate(['count' => -1]);
+})->throws(MachineContextValidationException::class);
