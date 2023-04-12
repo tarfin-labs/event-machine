@@ -189,7 +189,7 @@ class MachineDefinition
      *
      * @param  array|TransitionDefinition  $transitionCandidates  Array of
      *        transition candidates or a single candidate to be checked.
-     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition  $eventBehavior         The event used to evaluate guards.
+     * @param  EventBehavior  $eventBehavior         The event used to evaluate guards.
      *
      * @return TransitionDefinition|null The first eligible transition or
      *         null if no eligible transition is found.
@@ -353,7 +353,7 @@ class MachineDefinition
      * @param  EventBehavior|array  $event The event to initialize.
      * @param  StateDefinition  $stateDefinition The state definition to use.
      *
-     * @return EventDefinition The initialized EventDefinition instance.
+     * @return EventBehavior The initialized EventBehavior instance.
      */
     protected function initializeEvent(EventBehavior|array $event, StateDefinition $stateDefinition): EventBehavior
     {
