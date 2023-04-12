@@ -6,7 +6,10 @@ namespace Tarfinlabs\EventMachine;
 
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Optional;
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Validation\ValidationException;
 use Spatie\LaravelData\Attributes\Validation\ArrayType;
+use Tarfinlabs\EventMachine\Exceptions\MachineContextValidationException;
 
 /**
  * Class ContextManager.
@@ -87,14 +90,22 @@ class ContextManager extends Data
     }
 
     /**
-     * Validates the current instance.
+     * Validates the current instance against its own rules.
      *
-     * This method validates the current instance by calling
-     * the static validate() method on itself.
+     * This method validates the current instance by calling the static validate() method on itself.
+     * If validation fails, it throws a MachineContextValidationException with the validator object.
+     *
+     * @throws MachineContextValidationException when validation fails.
      */
     public function selfValidate(): void
     {
-        $this::validate($this);
+        try {
+            static::validate($this);
+        } catch (ValidationException $e) {
+            throw new MachineContextValidationException($e->validator);
+        }
+    }
+
     /**
      * Validates the given payload and creates an instance from it.
      *
