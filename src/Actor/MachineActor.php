@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tarfinlabs\EventMachine\Behavior;
+namespace Tarfinlabs\EventMachine\Actor;
 
-use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 class MachineActor

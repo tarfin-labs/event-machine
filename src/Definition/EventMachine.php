@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Definition;
 
 use RuntimeException;
-use Tarfinlabs\EventMachine\Behavior\MachineActor;
+use Tarfinlabs\EventMachine\Actor\MachineActor;
 
 /**
  * EventMachine is an abstract base class for creating state machines.
