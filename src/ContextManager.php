@@ -95,5 +95,28 @@ class ContextManager extends Data
     public function selfValidate(): void
     {
         $this::validate($this);
+    /**
+     * Validates the given payload and creates an instance from it.
+     *
+     * This method first validates the given payload using the static validate() method.
+     * If the validation passes, it creates a new instance of the class using the
+     * static from() method and returns it.
+     * If validation fails, it throws a MachineContextValidationException.
+     *
+     * @param  array|Arrayable  $payload The payload to be validated and created from.
+     *
+     * @return static A new instance of the class created from the payload.
+     *
+     * @throws MachineContextValidationException When validation fails.
+     */
+    public static function validateAndCreate(array|Arrayable $payload): static
+    {
+        try {
+            static::validate($payload);
+        } catch (ValidationException $e) {
+            throw new MachineContextValidationException($e->validator);
+        }
+
+        return static::from($payload);
     }
 }
