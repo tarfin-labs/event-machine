@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\MachineContextValidationException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 it('can initialize an empty context manager', function (): void {
     $context = new ContextManager();
@@ -127,3 +129,12 @@ test('machine definition with context behavior', function (): void {
         ->toBeInstanceOf(TrafficLightsContext::class)
         ->count->toBe(1);
 });
+
+test('TrafficLightsMachine transitions between states using EventMachine?', function (): void {
+    $machine = TrafficLightsMachine::build();
+
+    $machine->transition(state: null, event: [
+        'type'    => 'SUB_VALUE',
+        'payload' => ['value' => 100],
+    ]);
+})->throws(MachineContextValidationException::class);
