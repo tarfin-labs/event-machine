@@ -445,7 +445,11 @@ class MachineDefinition
 
         // If the action behavior is callable, execute it with the context and event payload.
         if (is_callable($actionBehavior)) {
+            // Execute the action behavior.
             $actionBehavior($this->context, $eventBehavior);
+
+            // Validate the context after the action is executed.
+            $this->context->selfValidate();
         }
     }
 

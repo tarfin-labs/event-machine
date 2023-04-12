@@ -85,4 +85,15 @@ class ContextManager extends Data
     {
         $this->data = array_merge($this->data, $contextData);
     }
+
+    /**
+     * Validates the current instance.
+     *
+     * This method validates the current instance by calling
+     * the static validate() method on itself.
+     */
+    public function selfValidate(): void
+    {
+        $this::validate($this);
+    }
 }
