@@ -14,6 +14,25 @@
 
 EventMachine is a PHP library for creating and managing event-driven state machines. It is designed to be simple and easy to use, while providing powerful functionality for managing complex state transitions. This library is heavily influenced by XState, a popular JavaScript state machine library.
 
+```mermaid
+---
+title: traffic_lights_machine
+---
+stateDiagram-v2
+    [*] --> Red
+    Red --> Yellow: TIMER_RED <br/>do / wait_for_red_light
+    Yellow --> Green: TIMER_YELLOW <br/>do / wait_for_yellow_light
+    Green --> Red: TIMER_GREEN <br/>do / wait_for_green_light
+
+    Red --> PowerOff: [is_power_off]
+    Yellow --> PowerOff: [is_power_off]
+    Green --> PowerOff: [is_power_off]
+
+    Red : Red<br/>entry / turn_on_red_light<br/>exit / turn_off_red_light
+    Yellow : Yellow<br/>entry / turn_on_yellow_light<br/>exit / turn_off_yellow_light
+    Green : Green<br/>entry / turn_on_green_light<br/>exit / turn_off_green_light
+```
+
 ## Installation
 
 You can install the package via composer:
