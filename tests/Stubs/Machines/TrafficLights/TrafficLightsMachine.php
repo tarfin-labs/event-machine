@@ -40,18 +40,10 @@ class TrafficLightsMachine extends EventMachine
                                     'doNothingInsideClassAction',
                                 ],
                             ],
-                            IncreaseEvent::class => [
-                                'actions' => IncrementAction::class,
-                            ],
-                            'DEX' => [
-                                'actions' => DecrementAction::class,
-                            ],
-                            AddValueEvent::class => [
-                                'actions' => AddValueAction::class,
-                            ],
-                            AddAnotherValueEvent::class => [
-                                'actions' => AddAnotherValueAction::class,
-                            ],
+                            IncreaseEvent::class        => ['actions' => IncrementAction::class],
+                            'DEX'                       => ['actions' => DecrementAction::class],
+                            AddValueEvent::class        => ['actions' => AddValueAction::class],
+                            AddAnotherValueEvent::class => ['actions' => AddAnotherValueAction::class],
                         ],
                     ],
                 ],
