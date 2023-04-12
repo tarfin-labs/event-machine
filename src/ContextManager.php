@@ -122,7 +122,7 @@ class ContextManager extends Data
      * static from() method and returns it.
      * If validation fails, it throws a MachineContextValidationException.
      *
-     * @param  array|Arrayable  $payload The payload to be validated and created from.
+     * @param  array<mixed>|Arrayable<string, mixed>  $payload The payload to be validated and created from.
      *
      * @return static A new instance of the class created from the payload.
      *
