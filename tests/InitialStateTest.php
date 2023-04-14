@@ -93,9 +93,9 @@ it('should run entry actions for building initial state', function (): void {
         ],
     );
 
-    expect($machine)
-        ->initialState->toBeInstanceOf(State::class)
-        ->initialState->value->toBe(['active'])
-        ->context->get('count')->toBe(1)
-        ->and($machine->initialState->context['data']['count'])->toBe(1);
+    $initialState = $machine->getInitialState();
+    expect($initialState)
+        ->toBeInstanceOf(State::class)
+        ->and($initialState->value)->toBe(['active'])
+        ->and($initialState->context->get('count'))->toBe(1);
 });

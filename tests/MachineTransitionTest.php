@@ -26,7 +26,7 @@ it('can transition through a sequence of states using events', function (): void
         ],
     );
 
-    $greenState = $machine->initialState;
+    $greenState = $machine->getInitialState();
     expect($greenState)
         ->toBeInstanceOf(State::class)
         ->and($greenState->value)->toBe(['green']);
@@ -67,8 +67,8 @@ it('should apply the given state\'s context data to the machine\'s context when 
         ],
     );
 
-    $initialState          = $machine->initialState;
-    $initialState->context = ['count' => 5];
+    $initialState = $machine->getInitialState();
+    $initialState->context->set('count', 5);
 
     $newState = $machine->transition(state: $initialState, event: [
         'type' => 'INC',
@@ -77,9 +77,5 @@ it('should apply the given state\'s context data to the machine\'s context when 
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe(['active']);
-    expect($newState->context['data'])->toBe(['count' => 6, 'someValue' => 'abc']);
-
-    // Ensure that the machine's context has been changed.
-    expect($machine->context->get('count'))->toBe(6);
-    expect($machine->context->get('someValue'))->toBe('abc');
+    expect($newState->context->data)->toBe(['count' => 6, 'someValue' => 'abc']);
 });

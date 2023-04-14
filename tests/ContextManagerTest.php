@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineContextValidationException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
@@ -88,46 +87,6 @@ it('can handle edge cases with empty keys and values', function (): void {
     $contextArray = $context->toArray();
     expect($contextArray)->toHaveCount(1);
     expect($contextArray['data']['empty_value_key'])->toBe('');
-});
-
-test('machine definition with no context', function (): void {
-    $machineDefinition = MachineDefinition::define();
-
-    expect($machineDefinition->context)->toBeInstanceOf(ContextManager::class);
-});
-
-test('machine definition with context as only data', function (): void {
-    $machineDefinition = MachineDefinition::define([
-        'context' => [
-            'key1' => 'value1',
-            'key2' => 'value2',
-        ],
-    ]);
-
-    $context = $machineDefinition->context;
-    expect($context)->toBeInstanceOf(ContextManager::class);
-    expect($context->get(key: 'key1'))->toBe('value1');
-    expect($context->get(key: 'key2'))->toBe('value2');
-});
-
-test('machine definition with context behavior', function (): void {
-    $machineDefinition = MachineDefinition::define(
-        config: [
-            'context' => [
-                'count' => 1,
-            ],
-        ],
-        behavior: [
-            'context' => TrafficLightsContext::class,
-        ],
-    );
-
-    /** @var TrafficLightsContext $context */
-    $context = $machineDefinition->context;
-
-    expect($context)
-        ->toBeInstanceOf(TrafficLightsContext::class)
-        ->count->toBe(1);
 });
 
 test('TrafficLightsMachine transitions between states using EventMachine?', function (): void {

@@ -39,9 +39,6 @@ it('should run entry actions when transitioning to a new state', function (): vo
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['active']);
-    expect($newState->context['data'])->toBe(['count' => 1]);
-
-    // Ensure that the machine's context has been changed.
-    expect($machine->context->get('count'))->toBe(1);
+        ->and($newState->value)->toBe(['active'])
+        ->and($newState->context->data)->toBe(['count' => 1]);
 });

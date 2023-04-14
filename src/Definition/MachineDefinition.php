@@ -52,15 +52,6 @@ class MachineDefinition
      */
     public ?StateDefinition $initial = null;
 
-    /**
-     * The context manager for this machine definition.
-     * This is the extended state.
-     */
-    public ContextManager $context;
-
-    /** The initial state for this state definition. */
-    public ?State $initialState;
-
     // endregion
 
     // region Constructor
@@ -90,10 +81,6 @@ class MachineDefinition
         $this->events = $this->root->events;
 
         $this->initial = $this->root->initial;
-
-        $this->context = $this->initializeContext();
-
-        $this->initialState = $this->buildInitialState();
     }
 
     // endregion
@@ -162,18 +149,20 @@ class MachineDefinition
      *
      * @return ?State The initial state of the machine.
      */
-    protected function buildInitialState(): ?State
+    public function getInitialState(): ?State
     {
         if (is_null($this->initial)) {
             return null;
         }
 
+        $context = new ContextManager($this->config['context'] ?? []);
+
         // Run entry actions on the initial state definition
-        $this->initial->runEntryActions();
+        $this->initial->runEntryActions(context: $context);
 
         return new State(
             activeStateDefinition: $this->initial,
-            context: $this->context->toArray(),
+            context: $context,
         );
     }
 
@@ -196,7 +185,8 @@ class MachineDefinition
      */
     protected function selectFirstEligibleTransitionEvaluatingGuards(
         array|TransitionDefinition $transitionCandidates,
-        EventBehavior $eventBehavior
+        EventBehavior $eventBehavior,
+        ContextManager $context,
     ): ?TransitionDefinition {
         $transitionCandidates = is_array($transitionCandidates)
             ? $transitionCandidates
@@ -212,7 +202,7 @@ class MachineDefinition
             foreach ($transitionCandidate->guards as $guard) {
                 $guardBehavior = $this->getInvokableBehavior(behaviorDefinition: $guard, behaviorType: BehaviorType::Guard);
 
-                if ($guardBehavior($this->context, $eventBehavior) !== true) {
+                if ($guardBehavior($context, $eventBehavior) !== true) {
                     $guardsPassed = false;
                     break;
                 }
@@ -238,12 +228,13 @@ class MachineDefinition
      * @return State The constructed State object representing the current state.
      */
     protected function buildCurrentState(
+        ContextManager $context,
         ?StateDefinition $currentStateDefinition = null,
         ?EventBehavior $eventBehavior = null,
     ): State {
         return new State(
             activeStateDefinition: $currentStateDefinition ?? $this->initial,
-            context: $this->context->toArray(),
+            context: $context,
             eventBehavior: $eventBehavior,
         );
     }
@@ -267,21 +258,6 @@ class MachineDefinition
     }
 
     /**
-     * Apply context data to the state if needed.
-     *
-     * If the given state is an instance of `State`, this method will apply the state's
-     * `context` to the machine's context.
-     *
-     * @param  string|State|null  $state The state or state identifier to apply the context data from.
-     */
-    protected function applyContextDataIfNeeded(string|State|null $state): void
-    {
-        if ($state instanceof State) {
-            $this->context->applyContextData($state->context);
-        }
-    }
-
-    /**
      * Initializes the context for the state machine.
      *
      * This method checks if the context is defined in the machine's
@@ -291,8 +267,12 @@ class MachineDefinition
      *
      * @return ContextManager The initialized context manager
      */
-    protected function initializeContext(): ContextManager
+    public function initializeContextFromState(?State $state = null): ContextManager
     {
+        if (!is_null($state)) {
+            return $state->context;
+        }
+
         if (empty($this->behavior['context'])) {
             $contextConfig = $this->config['context'] ?? [];
 
@@ -384,11 +364,11 @@ class MachineDefinition
      */
     public function transition(null|string|State $state, EventBehavior|array $event): State
     {
+        $context = $state?->context ?? $this->initializeContextFromState($state);
+
         $currentStateDefinition = $this->getCurrentStateDefinition($state);
 
         $eventBehavior = $this->initializeEvent($event, $currentStateDefinition);
-
-        $this->applyContextDataIfNeeded($state);
 
         // Find the transition definition for the event type
         /** @var null|array|\Tarfinlabs\EventMachine\Definition\TransitionDefinition $transitionDefinition */
@@ -399,31 +379,33 @@ class MachineDefinition
             $transitionDefinition = $this->selectFirstEligibleTransitionEvaluatingGuards(
                 transitionCandidates: $transitionDefinition,
                 eventBehavior: $eventBehavior,
+                context: $context,
             );
         }
 
         $transitionDefinition = $this->selectFirstEligibleTransitionEvaluatingGuards(
             transitionCandidates: $transitionDefinition,
             eventBehavior: $eventBehavior,
+            context: $context,
         );
 
         // If the transition definition is not found, do nothing
         if ($transitionDefinition === null) {
-            return $this->buildCurrentState($currentStateDefinition, $eventBehavior);
+            return $this->buildCurrentState($context, $currentStateDefinition, $eventBehavior);
         }
 
         // Run exit actions on the source/current state definition
-        $transitionDefinition->source->runExitActions($eventBehavior);
+        $transitionDefinition->source->runExitActions($context, $eventBehavior);
 
         // Run transition actions on the transition definition
-        $transitionDefinition->runActions($eventBehavior);
+        $transitionDefinition->runActions($context, $eventBehavior);
 
         // Run entry actions on the target state definition
-        $transitionDefinition->target?->runEntryActions($eventBehavior);
+        $transitionDefinition->target?->runEntryActions($context, $eventBehavior);
 
         return new State(
             activeStateDefinition: $transitionDefinition->target ?? $currentStateDefinition,
-            context: $this->context->toArray()
+            context: $context
         );
     }
 
@@ -435,21 +417,25 @@ class MachineDefinition
      * executes it using the context and event payload.
      *
      * @param  string  $actionDefinition      The action definition, either a class
+     * @param  \Tarfinlabs\EventMachine\ContextManager  $context
      *                                                                                      name or an array key.
      * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior         The event (optional).
      */
-    public function runAction(string $actionDefinition, ?EventBehavior $eventBehavior = null): void
-    {
+    public function runAction(
+        string $actionDefinition,
+        ContextManager $context,
+        ?EventBehavior $eventBehavior = null
+    ): void {
         // Retrieve the appropriate action behavior based on the action definition.
         $actionBehavior = $this->getInvokableBehavior(behaviorDefinition: $actionDefinition, behaviorType: BehaviorType::Action);
 
         // If the action behavior is callable, execute it with the context and event payload.
         if (is_callable($actionBehavior)) {
             // Execute the action behavior.
-            $actionBehavior($this->context, $eventBehavior);
+            $actionBehavior($context, $eventBehavior);
 
             // Validate the context after the action is executed.
-            $this->context->selfValidate();
+            $context->selfValidate();
         }
     }
 

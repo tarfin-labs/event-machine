@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
@@ -380,10 +381,10 @@ class StateDefinition
      *
      * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior  $eventBehavior  The event to be processed.
      */
-    public function runExitActions(EventBehavior $eventBehavior): void
+    public function runExitActions(ContextManager $context, EventBehavior $eventBehavior): void
     {
         foreach ($this->exit as $action) {
-            $this->machine->runAction($action, $eventBehavior);
+            $this->machine->runAction($action, $context, $eventBehavior);
         }
     }
 
@@ -392,10 +393,10 @@ class StateDefinition
      *
      * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior  The event to be processed.
      */
-    public function runEntryActions(?EventBehavior $eventBehavior = null): void
+    public function runEntryActions(ContextManager $context, ?EventBehavior $eventBehavior = null): void
     {
         foreach ($this->entry as $action) {
-            $this->machine->runAction($action, $eventBehavior);
+            $this->machine->runAction($action, $context, $eventBehavior);
         }
     }
 

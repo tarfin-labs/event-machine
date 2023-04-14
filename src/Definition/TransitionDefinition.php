@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
@@ -109,14 +110,14 @@ class TransitionDefinition
      *
      * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior  The event or null if none is provided.
      */
-    public function runActions(?EventBehavior $eventBehavior = null): void
+    public function runActions(ContextManager $context, ?EventBehavior $eventBehavior = null): void
     {
         if ($this->actions === null) {
             return;
         }
 
         foreach ($this->actions as $actionDefinition) {
-            $this->source->machine->runAction($actionDefinition, $eventBehavior);
+            $this->source->machine->runAction($actionDefinition, $context, $eventBehavior);
         }
     }
 

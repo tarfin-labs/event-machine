@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
@@ -114,8 +113,8 @@ test('a machine definition can have context', function (): void {
         ],
     ]);
 
-    $context = $machine->context;
+    $context = $machine->config['context'];
 
-    expect($context)->toBeInstanceOf(ContextManager::class);
-    expect($context->get('foo'))->toBe('bar');
+    expect($context)->toBeArray();
+    expect($context['foo'])->toBe('bar');
 });
