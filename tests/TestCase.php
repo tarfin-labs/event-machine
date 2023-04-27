@@ -15,9 +15,9 @@ class TestCase extends Orchestra
     {
         parent::setUp();
 
-//        Factory::guessFactoryNamesUsing(
-//            fn (string $modelName) => 'Tarfinlabs\\EventMachine\\Database\\Factories\\'.class_basename($modelName).'Factory'
-//        );
+        //        Factory::guessFactoryNamesUsing(
+        //            fn (string $modelName) => 'Tarfinlabs\\EventMachine\\Database\\Factories\\'.class_basename($modelName).'Factory'
+        //        );
     }
 
     protected function getPackageProviders($app): array
