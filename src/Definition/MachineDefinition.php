@@ -357,12 +357,12 @@ class MachineDefinition
     /**
      * Transition the state machine to a new state based on an event.
      *
-     * @param  State|string|null  $state  The current state or state name, or null to use the initial state.
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|array  $event  The event that triggers the transition.
+     * @param State|null $state The current state or state name, or null to use the initial state.
+     * @param EventBehavior|array $event The event that triggers the transition.
      *
      * @return State The new state after the transition.
      */
-    public function transition(null|string|State $state, EventBehavior|array $event): State
+    public function transition(null|State $state, EventBehavior|array $event): State
     {
         $context = $state?->context ?? $this->initializeContextFromState($state);
 
@@ -419,7 +419,7 @@ class MachineDefinition
      * @param  string  $actionDefinition      The action definition, either a class
      * @param  \Tarfinlabs\EventMachine\ContextManager  $context
      *                                                                                      name or an array key.
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior         The event (optional).
+     * @param EventBehavior|null  $eventBehavior         The event (optional).
      */
     public function runAction(
         string $actionDefinition,
