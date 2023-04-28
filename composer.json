@@ -1,6 +1,6 @@
 {
     "name": "tarfin-labs/event-machine",
-    "description": "This is my package event-machine",
+    "description": "An event-driven state machine library for PHP, providing an expressive language to define and manage application states, enabling developers to create complex workflows with ease and maintainability.",
     "keywords": [
         "tarfin-labs",
         "laravel",
