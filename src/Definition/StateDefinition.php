@@ -196,7 +196,7 @@ class StateDefinition
      * corresponding {@see \Tarfinlabs\EventMachine\Definition\TransitionDefinition} objects for
      * each event.
      *
-     * @param StateDefinition $stateDefinition The state definition to process.
+     * @param  StateDefinition  $stateDefinition The state definition to process.
      *
      * @return array|null An array of TransitionDefinition objects, keyed by event names.
      */

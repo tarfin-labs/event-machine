@@ -17,6 +17,8 @@ class TransitionDefinition
 {
     // region Public Properties
 
+    public TransitionType $type;
+
     /** The target state definition for this transition, or null if there is no target. */
     public ?StateDefinition $target;
 
@@ -49,6 +51,10 @@ class TransitionDefinition
         public StateDefinition $source,
         public string $event,
     ) {
+        $this->type = $this->event === '@always'
+            ? TransitionType::Always
+            : TransitionType::Normal;
+
         if ($this->transitionConfig === null) {
             $this->target = null;
         }

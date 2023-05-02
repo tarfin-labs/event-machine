@@ -403,10 +403,22 @@ class MachineDefinition
         // Run entry actions on the target state definition
         $transitionDefinition->target?->runEntryActions($context, $eventBehavior);
 
-        return new State(
+        $newState = new State(
             activeStateDefinition: $transitionDefinition->target ?? $currentStateDefinition,
             context: $context
         );
+
+        if ($this->states[$newState->activeStateDefinition->key]->transitions !== null) {
+            // Check if the new state has any @always transitions
+            /** @var TransitionDefinition $transition */
+            foreach ($this->states[$newState->activeStateDefinition->key]->transitions as $transition) {
+                if ($transition->type === TransitionType::Always) {
+                    return $this->transition($newState, ['type' => TransitionType::Always->value]);
+                }
+            }
+        }
+
+        return $newState;
     }
 
     /**
