@@ -24,6 +24,8 @@ class MachineActor
         public MachineDefinition $definition,
         ?State $state = null,
     ) {
+        $this->state = $state ?? $this->definition->getInitialState();
+
         $this->context = $this->definition->initializeContextFromState($state);
     }
 

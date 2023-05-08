@@ -151,19 +151,31 @@ class MachineDefinition
      */
     public function getInitialState(): ?State
     {
+        $initialStateDefinition = $this->root->findInitialStateDefinition();
+
         if (is_null($this->initial)) {
             return null;
         }
 
-        $context = new ContextManager($this->config['context'] ?? []);
+        $context = $this->initializeContextFromState();
 
         // Run entry actions on the initial state definition
         $this->initial->runEntryActions(context: $context);
 
-        return new State(
+        $initialState = new State(
             activeStateDefinition: $this->initial,
             context: $context,
         );
+
+        if ($initialStateDefinition->transitions !== null) {
+            foreach ($initialStateDefinition->transitions as $transition) {
+                if ($transition->type === TransitionType::Always) {
+                    return $this->transition(state: $initialState, event: ['type' => TransitionType::Always->value]);
+                }
+            }
+        }
+
+        return $initialState;
     }
 
     /**
@@ -364,6 +376,10 @@ class MachineDefinition
      */
     public function transition(null|State $state, EventBehavior|array $event): State
     {
+        if ($state === null) {
+            $state = $this->getInitialState();
+        }
+
         $context = $state?->context ?? $this->initializeContextFromState($state);
 
         $currentStateDefinition = $this->getCurrentStateDefinition($state);
@@ -413,7 +429,7 @@ class MachineDefinition
             /** @var TransitionDefinition $transition */
             foreach ($this->states[$newState->activeStateDefinition->key]->transitions as $transition) {
                 if ($transition->type === TransitionType::Always) {
-                    return $this->transition($newState, ['type' => TransitionType::Always->value]);
+                    return $this->transition(state: $newState, event: ['type' => TransitionType::Always->value]);
                 }
             }
         }

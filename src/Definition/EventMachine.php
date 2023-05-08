@@ -28,6 +28,9 @@ abstract class EventMachine
 
     public static function start(?State $state = null): MachineActor
     {
-        return new MachineActor(static::build(), $state);
+        return new MachineActor(
+            definition: static::build(),
+            state: $state
+        );
     }
 }
