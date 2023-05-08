@@ -24,7 +24,7 @@ test('initial states are correctly set for both top-level machine definition and
         ],
     ]);
 
-    expect($machine->initial)
+    expect($machine->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
         ->key->toBe('green');
 
@@ -55,7 +55,7 @@ test('the first state definition is set as the initial state for both top-level 
         ],
     ]);
 
-    expect($machine->initial)
+    expect($machine->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
         ->key->toBe('green');
 

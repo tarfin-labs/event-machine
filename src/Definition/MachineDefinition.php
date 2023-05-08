@@ -50,7 +50,7 @@ class MachineDefinition
      *
      * @var null|\Tarfinlabs\EventMachine\Definition\StateDefinition
      */
-    public ?StateDefinition $initial = null;
+    public ?StateDefinition $initialStateDefinition = null;
 
     // endregion
 
@@ -80,7 +80,7 @@ class MachineDefinition
         $this->states = $this->root->states;
         $this->events = $this->root->events;
 
-        $this->initial = $this->root->initial;
+        $this->initialStateDefinition = $this->root->initial;
     }
 
     // endregion
@@ -153,17 +153,17 @@ class MachineDefinition
     {
         $initialStateDefinition = $this->root->findInitialStateDefinition();
 
-        if (is_null($this->initial)) {
+        if (is_null($this->initialStateDefinition)) {
             return null;
         }
 
         $context = $this->initializeContextFromState();
 
         // Run entry actions on the initial state definition
-        $this->initial->runEntryActions(context: $context);
+        $this->initialStateDefinition->runEntryActions(context: $context);
 
         $initialState = new State(
-            activeStateDefinition: $this->initial,
+            activeStateDefinition: $this->initialStateDefinition,
             context: $context,
         );
 
@@ -245,7 +245,7 @@ class MachineDefinition
         ?EventBehavior $eventBehavior = null,
     ): State {
         return new State(
-            activeStateDefinition: $currentStateDefinition ?? $this->initial,
+            activeStateDefinition: $currentStateDefinition ?? $this->initialStateDefinition,
             context: $context,
             eventBehavior: $eventBehavior,
         );
@@ -266,7 +266,7 @@ class MachineDefinition
     {
         return $state instanceof State
             ? $state->activeStateDefinition
-            : $this->states[$state] ?? $this->initial;
+            : $this->states[$state] ?? $this->initialStateDefinition;
     }
 
     /**
