@@ -27,7 +27,7 @@ class MachineDefinition
     /**
      * The map of state definitions to their ids.
      *
-     * @var \SplObjectStorage<StateDefinition, string>
+     * @var SplObjectStorage<StateDefinition, string>
      */
     public SplObjectStorage $idMap;
 
@@ -45,9 +45,7 @@ class MachineDefinition
      */
     public ?array $events = null;
 
-    /**
-     * The initial state definition for this machine definition.
-     */
+    /** The initial state definition for this machine definition. */
     public ?StateDefinition $initialStateDefinition = null;
 
     // endregion
@@ -200,7 +198,7 @@ class MachineDefinition
             ? $transitionCandidates
             : [$transitionCandidates];
 
-        /** @var \Tarfinlabs\EventMachine\Definition\TransitionDefinition $transitionCandidate */
+        /** @var TransitionDefinition $transitionCandidate */
         foreach ($transitionCandidates as $transitionCandidate) {
             if (!isset($transitionCandidate->guards)) {
                 return $transitionCandidate;
@@ -383,7 +381,7 @@ class MachineDefinition
         $eventBehavior = $this->initializeEvent($event, $currentStateDefinition);
 
         // Find the transition definition for the event type
-        /** @var null|array|\Tarfinlabs\EventMachine\Definition\TransitionDefinition $transitionDefinition */
+        /** @var null|array|TransitionDefinition $transitionDefinition */
         $transitionDefinition = $currentStateDefinition->transitions[$eventBehavior->type] ?? null;
 
         $transitionDefinition = $this->selectFirstEligibleTransitionEvaluatingGuards(
@@ -432,7 +430,7 @@ class MachineDefinition
      * executes it using the context and event payload.
      *
      * @param  string  $actionDefinition      The action definition, either a class
-     * @param  \Tarfinlabs\EventMachine\ContextManager  $context
+     * @param  ContextManager  $context
      *                                                                                      name or an array key.
      * @param  EventBehavior|null  $eventBehavior         The event (optional).
      */
