@@ -25,7 +25,7 @@ it('should correctly assign state definition id', function (): void {
         ],
     ]);
 
-    expect($idMachine->states['idle']->id)->toBe('idle-id');
+    expect($idMachine->stateDefinitions['idle']->id)->toBe('idle-id');
 });
 
 it('should use the key as the id if no id is provided', function (): void {
@@ -36,5 +36,5 @@ it('should use the key as the id if no id is provided', function (): void {
         ],
     ]);
 
-    expect($noStateDefinitionIdMachine->states['idle']->id)->toBe('some-id.idle');
+    expect($noStateDefinitionIdMachine->stateDefinitions['idle']->id)->toBe('some-id.idle');
 });

@@ -27,16 +27,16 @@ class MachineDefinition
     /**
      * The map of state definitions to their ids.
      *
-     * @var \SplObjectStorage<\Tarfinlabs\EventMachine\Definition\StateDefinition, string>
+     * @var \SplObjectStorage<StateDefinition, string>
      */
     public SplObjectStorage $idMap;
 
     /**
      * The child state definitions of this state definition.
      *
-     * @var array<\Tarfinlabs\EventMachine\Definition\StateDefinition>|null
+     * @var array<StateDefinition>|null
      */
-    public ?array $states = null;
+    public ?array $stateDefinitions = null;
 
     /**
      * The events that can be accepted by this machine definition.
@@ -47,8 +47,6 @@ class MachineDefinition
 
     /**
      * The initial state definition for this machine definition.
-     *
-     * @var null|\Tarfinlabs\EventMachine\Definition\StateDefinition
      */
     public ?StateDefinition $initialStateDefinition = null;
 
@@ -77,8 +75,8 @@ class MachineDefinition
         $this->root = $this->createRootStateDefinition($config);
         $this->root->initializeTransitions();
 
-        $this->states = $this->root->states;
-        $this->events = $this->root->events;
+        $this->stateDefinitions = $this->root->states;
+        $this->events           = $this->root->events;
 
         $this->initialStateDefinition = $this->root->initial;
     }
@@ -130,8 +128,6 @@ class MachineDefinition
 
     /**
      * Initialize the root state definition for this machine definition.
-     *
-     * @return \Tarfinlabs\EventMachine\Definition\StateDefinition
      */
     protected function createRootStateDefinition(?array $config): StateDefinition
     {
@@ -266,7 +262,7 @@ class MachineDefinition
     {
         return $state instanceof State
             ? $state->activeStateDefinition
-            : $this->states[$state] ?? $this->initialStateDefinition;
+            : $this->stateDefinitions[$state] ?? $this->initialStateDefinition;
     }
 
     /**
@@ -415,10 +411,10 @@ class MachineDefinition
             context: $context
         );
 
-        if ($this->states[$newState->activeStateDefinition->key]->transitions !== null) {
+        if ($this->stateDefinitions[$newState->activeStateDefinition->key]->transitions !== null) {
             // Check if the new state has any @always transitions
             /** @var TransitionDefinition $transition */
-            foreach ($this->states[$newState->activeStateDefinition->key]->transitions as $transition) {
+            foreach ($this->stateDefinitions[$newState->activeStateDefinition->key]->transitions as $transition) {
                 if ($transition->type === TransitionType::Always) {
                     return $this->transition(state: $newState, event: ['type' => TransitionType::Always->value]);
                 }

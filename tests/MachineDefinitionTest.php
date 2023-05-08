@@ -100,9 +100,9 @@ test('a machine definition has a idMap', function (): void {
     expect($machineWithStates)->toHaveProperty('idMap');
     expect($machineWithStates->idMap)->toBeInstanceOf(SplObjectStorage::class);
     expect($machineWithStates->idMap->contains($machineWithStates->root))->toBeTrue();
-    expect($machineWithStates->idMap->contains($machineWithStates->states['green']))->toBeTrue();
-    expect($machineWithStates->idMap->contains($machineWithStates->states['yellow']))->toBeTrue();
-    expect($machineWithStates->idMap->contains($machineWithStates->states['red']))->toBeTrue();
+    expect($machineWithStates->idMap->contains($machineWithStates->stateDefinitions['green']))->toBeTrue();
+    expect($machineWithStates->idMap->contains($machineWithStates->stateDefinitions['yellow']))->toBeTrue();
+    expect($machineWithStates->idMap->contains($machineWithStates->stateDefinitions['red']))->toBeTrue();
 });
 
 test('a machine definition can have context', function (): void {

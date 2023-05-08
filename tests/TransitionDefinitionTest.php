@@ -20,7 +20,7 @@ test('single actions can be defined as strings instead of arrays', function (): 
         ],
     ]);
 
-    $timerTransition = $machine->states['green']->transitions['TIMER'];
+    $timerTransition = $machine->stateDefinitions['green']->transitions['TIMER'];
 
     expect($timerTransition->actions)->toBe(['action1']);
 });
@@ -40,7 +40,7 @@ test('transitions can have decriptions', function (): void {
         ],
     ]);
 
-    $timerTransition = $machine->states['green']->transitions['TIMER'];
+    $timerTransition = $machine->stateDefinitions['green']->transitions['TIMER'];
 
     expect($timerTransition->description)->toBe('The timer has expired');
 });
@@ -62,8 +62,8 @@ test('the transition target can be null', function (): void {
         ],
     ]);
 
-    $incTransition = $machine->states['active']->transitions['INC'];
-    $decTransition = $machine->states['active']->transitions['DEC'];
+    $incTransition = $machine->stateDefinitions['active']->transitions['INC'];
+    $decTransition = $machine->stateDefinitions['active']->transitions['DEC'];
 
     expect($incTransition->target)->toBeNull();
     expect($decTransition->target)->toBeNull();
@@ -87,7 +87,7 @@ test('transitions can have actions', function (): void {
         ],
     ]);
 
-    $timerTransition = $machine->states['green']->transitions['TIMER'];
+    $timerTransition = $machine->stateDefinitions['green']->transitions['TIMER'];
 
     expect($timerTransition->actions)->toBe(['action1', 'action2']);
 });
@@ -108,7 +108,7 @@ test('a guarded transition can have specified guards', function (): void {
     ]);
 
     /** @var TransitionDefinition $timerTransition */
-    $timerTransition = $machine->states['green']->transitions['TIMER'];
+    $timerTransition = $machine->stateDefinitions['green']->transitions['TIMER'];
 
     expect($timerTransition->guards)->toBe(['guard1']);
 });
@@ -133,7 +133,7 @@ test('a guarded transition can have multiple specified guards', function (): voi
     ]);
 
     /** @var TransitionDefinition $timerTransition */
-    $timerTransition = $machine->states['green']->transitions['TIMER'];
+    $timerTransition = $machine->stateDefinitions['green']->transitions['TIMER'];
 
     expect($timerTransition->guards)->toBe([
         'guard1',
@@ -168,7 +168,7 @@ test('a guarded transition can have multiple if-else targets', function (): void
         ],
     ]);
 
-    $transitions = $machine->states['green']->transitions;
+    $transitions = $machine->stateDefinitions['green']->transitions;
     expect($transitions)
         ->toBeArray()
         ->toHaveCount(1)

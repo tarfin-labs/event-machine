@@ -16,7 +16,7 @@ test('state definition is an instance of StateDefinition', function (): void {
     ]);
 
     expect($machineWithStates->root)->toBeInstanceOf(StateDefinition::class);
-    expect($machineWithStates->states)->each->toBeInstanceOf(StateDefinition::class);
+    expect($machineWithStates->stateDefinitions)->each->toBeInstanceOf(StateDefinition::class);
 });
 
 test('state definition has a machine reference', function (): void {
@@ -40,10 +40,10 @@ test('a state definition config should reference original machine definition con
         ],
     ]);
 
-    $oneState = $machine->states['one'];
+    $oneState = $machine->stateDefinitions['one'];
     expect($oneState->config)->toBe($machine->config['states']['one']);
 
-    $deepState = $machine->states['one']->states['deep'];
+    $deepState = $machine->stateDefinitions['one']->states['deep'];
     expect($deepState->config)->toBe($machine->config['states']['one']['states']['deep']);
 
     // TODO: Consider that if these should be reactive?
@@ -63,14 +63,14 @@ test('a state definition has a key', function (): void {
     expect($machineWithStates->root)->toHaveProperty('key');
     expect($machineWithStates->root->key)->toBe(MachineDefinition::DEFAULT_ID);
 
-    expect($machineWithStates->states['green'])->toHaveProperty('key');
-    expect($machineWithStates->states['green']->key)->toBe('green');
+    expect($machineWithStates->stateDefinitions['green'])->toHaveProperty('key');
+    expect($machineWithStates->stateDefinitions['green']->key)->toBe('green');
 
-    expect($machineWithStates->states['yellow'])->toHaveProperty('key');
-    expect($machineWithStates->states['yellow']->key)->toBe('yellow');
+    expect($machineWithStates->stateDefinitions['yellow'])->toHaveProperty('key');
+    expect($machineWithStates->stateDefinitions['yellow']->key)->toBe('yellow');
 
-    expect($machineWithStates->states['red'])->toHaveProperty('key');
-    expect($machineWithStates->states['red']->key)->toBe('red');
+    expect($machineWithStates->stateDefinitions['red'])->toHaveProperty('key');
+    expect($machineWithStates->stateDefinitions['red']->key)->toBe('red');
 });
 
 test('a state definition has a config', function (): void {
@@ -99,14 +99,14 @@ test('a state definition has a parent state definition', function (): void {
         ],
     ]);
 
-    expect($machineWithStates->states['green'])->toHaveProperty('parent');
-    expect($machineWithStates->states['green']->parent)->toBe($machineWithStates->root);
+    expect($machineWithStates->stateDefinitions['green'])->toHaveProperty('parent');
+    expect($machineWithStates->stateDefinitions['green']->parent)->toBe($machineWithStates->root);
 
-    expect($machineWithStates->states['yellow'])->toHaveProperty('parent');
-    expect($machineWithStates->states['yellow']->parent)->toBe($machineWithStates->root);
+    expect($machineWithStates->stateDefinitions['yellow'])->toHaveProperty('parent');
+    expect($machineWithStates->stateDefinitions['yellow']->parent)->toBe($machineWithStates->root);
 
-    expect($machineWithStates->states['red'])->toHaveProperty('parent');
-    expect($machineWithStates->states['red']->parent)->toBe($machineWithStates->root);
+    expect($machineWithStates->stateDefinitions['red'])->toHaveProperty('parent');
+    expect($machineWithStates->stateDefinitions['red']->parent)->toBe($machineWithStates->root);
 });
 
 test('the parent of a state definition is null if it has no parent', function (): void {
@@ -133,14 +133,14 @@ test('a state definition has a path', function (): void {
     expect($machineWithStates->root)->toHaveProperty('path');
     expect($machineWithStates->root->path)->toBe([]);
 
-    expect($machineWithStates->states['green'])->toHaveProperty('path');
-    expect($machineWithStates->states['green']->path)->toBe(['green']);
+    expect($machineWithStates->stateDefinitions['green'])->toHaveProperty('path');
+    expect($machineWithStates->stateDefinitions['green']->path)->toBe(['green']);
 
-    expect($machineWithStates->states['yellow'])->toHaveProperty('path');
-    expect($machineWithStates->states['yellow']->path)->toBe(['yellow']);
+    expect($machineWithStates->stateDefinitions['yellow'])->toHaveProperty('path');
+    expect($machineWithStates->stateDefinitions['yellow']->path)->toBe(['yellow']);
 
-    expect($machineWithStates->states['red'])->toHaveProperty('path');
-    expect($machineWithStates->states['red']->path)->toBe(['red']);
+    expect($machineWithStates->stateDefinitions['red'])->toHaveProperty('path');
+    expect($machineWithStates->stateDefinitions['red']->path)->toBe(['red']);
 });
 
 test('a state definition can have a description', function (): void {
@@ -172,14 +172,14 @@ test('a state definition has an order', function (): void {
     expect($machineWithStates->root)->toHaveProperty('order');
     expect($machineWithStates->root->order)->toBe(0);
 
-    expect($machineWithStates->states['green'])->toHaveProperty('order');
-    expect($machineWithStates->states['green']->order)->toBe(1);
+    expect($machineWithStates->stateDefinitions['green'])->toHaveProperty('order');
+    expect($machineWithStates->stateDefinitions['green']->order)->toBe(1);
 
-    expect($machineWithStates->states['yellow'])->toHaveProperty('order');
-    expect($machineWithStates->states['yellow']->order)->toBe(2);
+    expect($machineWithStates->stateDefinitions['yellow'])->toHaveProperty('order');
+    expect($machineWithStates->stateDefinitions['yellow']->order)->toBe(2);
 
-    expect($machineWithStates->states['red'])->toHaveProperty('order');
-    expect($machineWithStates->states['red']->order)->toBe(3);
+    expect($machineWithStates->stateDefinitions['red'])->toHaveProperty('order');
+    expect($machineWithStates->stateDefinitions['red']->order)->toBe(3);
 });
 
 test('a state definition has states', function (): void {
@@ -191,7 +191,7 @@ test('a state definition has states', function (): void {
         ],
     ]);
 
-    expect($machineWithStates->states)
+    expect($machineWithStates->stateDefinitions)
         ->toBeArray()
         ->toHaveKeys(['green', 'yellow', 'red'])
         ->each->toBeInstanceOf(StateDefinition::class);
@@ -206,7 +206,7 @@ test('a state config can be null', function (): void {
         ],
     ]);
 
-    expect($machineWithStates->states)
+    expect($machineWithStates->stateDefinitions)
         ->toBeArray()
         ->toHaveKeys(['green', 'yellow', 'red'])
         ->each->toBeInstanceOf(StateDefinition::class);
@@ -258,35 +258,35 @@ test('a state definition can have transitions', function (): void {
         ],
     ]);
 
-    expect($lightMachine->states['green']->transitions)->each->toBeInstanceOf(TransitionDefinition::class);
-    expect($lightMachine->states['yellow']->transitions)->each->toBeInstanceOf(TransitionDefinition::class);
-    expect($lightMachine->states['red']->transitions)->each->toBeInstanceOf(TransitionDefinition::class);
-    expect($lightMachine->states['red']->states['walk']->transitions)->each->toBeInstanceOf(TransitionDefinition::class);
-    expect($lightMachine->states['red']->states['wait']->transitions)->each->toBeInstanceOf(TransitionDefinition::class);
-    expect($lightMachine->states['red']->states['stop']->transitions)->toBeNull();
+    expect($lightMachine->stateDefinitions['green']->transitions)->each->toBeInstanceOf(TransitionDefinition::class);
+    expect($lightMachine->stateDefinitions['yellow']->transitions)->each->toBeInstanceOf(TransitionDefinition::class);
+    expect($lightMachine->stateDefinitions['red']->transitions)->each->toBeInstanceOf(TransitionDefinition::class);
+    expect($lightMachine->stateDefinitions['red']->states['walk']->transitions)->each->toBeInstanceOf(TransitionDefinition::class);
+    expect($lightMachine->stateDefinitions['red']->states['wait']->transitions)->each->toBeInstanceOf(TransitionDefinition::class);
+    expect($lightMachine->stateDefinitions['red']->states['stop']->transitions)->toBeNull();
 
-    $greenTimerTransition = $lightMachine->states['green']->transitions['TIMER'];
+    $greenTimerTransition = $lightMachine->stateDefinitions['green']->transitions['TIMER'];
     expect($greenTimerTransition)
         ->transitionConfig->toBe('yellow')
         ->event->toBe('TIMER')
-        ->source->toBe($lightMachine->states['green'])
-        ->target->toBe($lightMachine->states['yellow']);
+        ->source->toBe($lightMachine->stateDefinitions['green'])
+        ->target->toBe($lightMachine->stateDefinitions['yellow']);
 
-    $yellowForbidenTransition = $lightMachine->states['yellow']->transitions['FORBIDDEN_EVENT'];
+    $yellowForbidenTransition = $lightMachine->stateDefinitions['yellow']->transitions['FORBIDDEN_EVENT'];
     expect($yellowForbidenTransition)
         ->transitionConfig->toMatchArray([
             'target' => null,
         ])
         ->event->toBe('FORBIDDEN_EVENT')
-        ->source->toBe($lightMachine->states['yellow'])
+        ->source->toBe($lightMachine->stateDefinitions['yellow'])
         ->target->toBeNull();
 
-    $redWaitPedCountdownTransition = $lightMachine->states['red']->states['wait']->transitions['PED_COUNTDOWN'];
+    $redWaitPedCountdownTransition = $lightMachine->stateDefinitions['red']->states['wait']->transitions['PED_COUNTDOWN'];
     expect($redWaitPedCountdownTransition)
         ->transitionConfig->toBe('stop')
         ->event->toBe('PED_COUNTDOWN')
-        ->source->toBe($lightMachine->states['red']->states['wait'])
-        ->target->toBe($lightMachine->states['red']->states['stop']);
+        ->source->toBe($lightMachine->stateDefinitions['red']->states['wait'])
+        ->target->toBe($lightMachine->stateDefinitions['red']->states['stop']);
 });
 
 test('a state definition can have events', function (): void {
@@ -344,7 +344,7 @@ test('a state definition can have events', function (): void {
             'PED_COUNTDOWN',
         ]);
 
-    expect($lightMachine->states['green'])
+    expect($lightMachine->stateDefinitions['green'])
         ->toHaveProperty('events')
         ->events->toMatchArray([
             'TIMER',
@@ -352,7 +352,7 @@ test('a state definition can have events', function (): void {
             'FORBIDDEN_EVENT',
         ]);
 
-    expect($lightMachine->states['yellow'])
+    expect($lightMachine->stateDefinitions['yellow'])
         ->toHaveProperty('events')
         ->events->toMatchArray([
             'TIMER',
@@ -360,7 +360,7 @@ test('a state definition can have events', function (): void {
             'FORBIDDEN_EVENT',
         ]);
 
-    expect($lightMachine->states['red'])
+    expect($lightMachine->stateDefinitions['red'])
         ->toHaveProperty('events')
         ->events->toMatchArray([
             'TIMER',
@@ -368,19 +368,19 @@ test('a state definition can have events', function (): void {
             'PED_COUNTDOWN',
         ]);
 
-    expect($lightMachine->states['red']->states['walk'])
+    expect($lightMachine->stateDefinitions['red']->states['walk'])
         ->toHaveProperty('events')
         ->events->toMatchArray([
             'PED_COUNTDOWN',
         ]);
 
-    expect($lightMachine->states['red']->states['wait'])
+    expect($lightMachine->stateDefinitions['red']->states['wait'])
         ->toHaveProperty('events')
         ->events->toMatchArray([
             'PED_COUNTDOWN',
         ]);
 
-    expect($lightMachine->states['red']->states['stop'])
+    expect($lightMachine->stateDefinitions['red']->states['stop'])
         ->toHaveProperty('events')
         ->events->toBeNull();
 });
@@ -401,9 +401,9 @@ test('a state definition can have entry actions', function (): void {
         ],
     ]);
 
-    $greenState  = $machine->states['green'];
-    $yellowState = $machine->states['yellow'];
-    $redState    = $machine->states['red'];
+    $greenState  = $machine->stateDefinitions['green'];
+    $yellowState = $machine->stateDefinitions['yellow'];
+    $redState    = $machine->stateDefinitions['red'];
 
     expect($greenState->entry)->toBe(['entryAction1', 'entryAction2']);
     expect($yellowState->entry)->toBe(['entryAction3']);
@@ -426,9 +426,9 @@ test('a state definition can have exit actions', function (): void {
         ],
     ]);
 
-    $greenState  = $machine->states['green'];
-    $yellowState = $machine->states['yellow'];
-    $redState    = $machine->states['red'];
+    $greenState  = $machine->stateDefinitions['green'];
+    $yellowState = $machine->stateDefinitions['yellow'];
+    $redState    = $machine->stateDefinitions['red'];
 
     expect($greenState->exit)->toBe(['exitAction1', 'exitAction2']);
     expect($yellowState->exit)->toBe(['exitAction3']);
@@ -452,9 +452,9 @@ test('a state definition can have meta', function (): void {
         ],
     ]);
 
-    $greenState  = $machine->states['green'];
-    $yellowState = $machine->states['yellow'];
-    $redState    = $machine->states['red'];
+    $greenState  = $machine->stateDefinitions['green'];
+    $yellowState = $machine->stateDefinitions['yellow'];
+    $redState    = $machine->stateDefinitions['red'];
 
     expect($greenState->meta)->toBe(['foo' => 'bar']);
     expect($yellowState->meta)->toBe(['foo' => 'baz']);
