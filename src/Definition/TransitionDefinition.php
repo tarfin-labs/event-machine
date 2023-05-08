@@ -51,9 +51,10 @@ class TransitionDefinition
         public StateDefinition $source,
         public string $event,
     ) {
-        $this->type = $this->event === '@always'
-            ? TransitionType::Always
-            : TransitionType::Normal;
+        $this->type = match ($this->event) {
+            TransitionType::Always->value => TransitionType::Always,
+            default                       => TransitionType::Normal,
+        };
 
         if ($this->transitionConfig === null) {
             $this->target = null;
