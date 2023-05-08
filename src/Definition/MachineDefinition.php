@@ -390,15 +390,6 @@ class MachineDefinition
         /** @var null|array|\Tarfinlabs\EventMachine\Definition\TransitionDefinition $transitionDefinition */
         $transitionDefinition = $currentStateDefinition->transitions[$eventBehavior->type] ?? null;
 
-        // If the transition definition is an array, find the transition candidate
-        if (is_array($transitionDefinition)) {
-            $transitionDefinition = $this->selectFirstEligibleTransitionEvaluatingGuards(
-                transitionCandidates: $transitionDefinition,
-                eventBehavior: $eventBehavior,
-                context: $context,
-            );
-        }
-
         $transitionDefinition = $this->selectFirstEligibleTransitionEvaluatingGuards(
             transitionCandidates: $transitionDefinition,
             eventBehavior: $eventBehavior,
