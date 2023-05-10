@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 class MachineDefinition
 {
@@ -173,56 +174,6 @@ class MachineDefinition
     }
 
     /**
-     * Selects the first eligible transition while evaluating guards.
-     *
-     * This method iterates through the given transition candidates and
-     * checks if all the guards are passed. If a candidate transition
-     * does not have any guards, it is considered eligible.
-     * If a transition with guards has all its guards evaluated
-     * to true, it is considered eligible. The method returns the first
-     * eligible transition encountered or null if none is found.
-     *
-     * @param  array|TransitionDefinition  $transitionCandidates  Array of
-     *        transition candidates or a single candidate to be checked.
-     * @param  EventBehavior  $eventBehavior         The event used to evaluate guards.
-     *
-     * @return TransitionDefinition|null The first eligible transition or
-     *         null if no eligible transition is found.
-     */
-    protected function selectFirstEligibleTransitionEvaluatingGuards(
-        array|TransitionDefinition $transitionCandidates,
-        EventBehavior $eventBehavior,
-        ContextManager $context,
-    ): ?TransitionDefinition {
-        $transitionCandidates = is_array($transitionCandidates)
-            ? $transitionCandidates
-            : [$transitionCandidates];
-
-        /** @var TransitionDefinition $transitionCandidate */
-        foreach ($transitionCandidates as $transitionCandidate) {
-            if (!isset($transitionCandidate->guards)) {
-                return $transitionCandidate;
-            }
-
-            $guardsPassed = true;
-            foreach ($transitionCandidate->guards as $guard) {
-                $guardBehavior = $this->getInvokableBehavior(behaviorDefinition: $guard, behaviorType: BehaviorType::Guard);
-
-                if ($guardBehavior($context, $eventBehavior) !== true) {
-                    $guardsPassed = false;
-                    break;
-                }
-            }
-
-            if ($guardsPassed === true) {
-                return $transitionCandidate;
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * Builds the current state of the state machine.
      *
      * This method creates a new State object, populating it with
@@ -303,8 +254,10 @@ class MachineDefinition
      * @param  BehaviorType  $behaviorType The type of the behavior (e.g., guard or action).
      *
      * @return callable|null The invokable behavior instance or callable, or null if not found.
+     *
+     * @throws BehaviorNotFoundException
      */
-    protected function getInvokableBehavior(string $behaviorDefinition, BehaviorType $behaviorType): ?callable
+    public function getInvokableBehavior(string $behaviorDefinition, BehaviorType $behaviorType): ?callable
     {
         // If the guard definition is an invokable GuardBehavior, create a new instance.
         if (is_subclass_of($behaviorDefinition, InvokableBehavior::class)) {
@@ -321,6 +274,10 @@ class MachineDefinition
             $invokableInstance = new $invokableBehavior();
 
             return $invokableInstance;
+        }
+
+        if ($invokableBehavior === null) {
+            throw BehaviorNotFoundException::build($behaviorDefinition);
         }
 
         // Return the guard behavior, either a callable or null.
@@ -384,28 +341,27 @@ class MachineDefinition
         /** @var null|array|TransitionDefinition $transitionDefinition */
         $transitionDefinition = $currentStateDefinition->transitions[$eventBehavior->type] ?? null;
 
-        $transitionDefinition = $this->selectFirstEligibleTransitionEvaluatingGuards(
-            transitionCandidates: $transitionDefinition,
+        $transitionBranch = $transitionDefinition->getFirstValidTransitionBranch(
             eventBehavior: $eventBehavior,
             context: $context,
         );
 
-        // If the transition definition is not found, do nothing
-        if ($transitionDefinition === null) {
+        // If the transition branch is not found, do nothing
+        if ($transitionBranch === null) {
             return $this->buildCurrentState($context, $currentStateDefinition, $eventBehavior);
         }
 
         // Run exit actions on the source/current state definition
-        $transitionDefinition->source->runExitActions($context, $eventBehavior);
+        $transitionBranch->transitionDefinition->source->runExitActions($context, $eventBehavior);
 
         // Run transition actions on the transition definition
-        $transitionDefinition->runActions($context, $eventBehavior);
+        $transitionBranch->runActions($context, $eventBehavior);
 
         // Run entry actions on the target state definition
-        $transitionDefinition->target?->runEntryActions($context, $eventBehavior);
+        $transitionBranch->target?->runEntryActions($context, $eventBehavior);
 
         $newState = new State(
-            activeStateDefinition: $transitionDefinition->target ?? $currentStateDefinition,
+            activeStateDefinition: $transitionBranch->target ?? $currentStateDefinition,
             context: $context
         );
 

@@ -19,18 +19,8 @@ class TransitionDefinition
 
     public TransitionType $type;
 
-    /** The target state definition for this transition, or null if there is no target. */
-    public ?StateDefinition $target;
-
-    /**
-     * The actions to be performed when this transition is taken.
-     *
-     * @var null|array<string>
-     */
-    public ?array $actions = null;
-
-    /** The guards to be checked before this transition is taken. */
-    public ?array $guards = null;
+    /** The transition branches for this transition, or null if there is no target. */
+    public ?array $branches = null;
 
     /** The description of the transition. */
     public ?string $description = null;
@@ -56,24 +46,27 @@ class TransitionDefinition
             default                       => TransitionType::Normal,
         };
 
+        $this->description = $this->transitionConfig['description'] ?? null;
+
         if ($this->transitionConfig === null) {
-            $this->target = null;
+            return;
         }
 
         if (is_string($this->transitionConfig)) {
-            $this->target = $this->source->parent->states[$this->transitionConfig];
+            $this->branches[] = new TransitionBranch(
+                transitionBranchConfig: $this->transitionConfig,
+                transitionDefinition: $this
+            );
+
+            return;
         }
 
-        if (is_array($this->transitionConfig)) {
-            $targetConfig = $this->transitionConfig['target'] ?? null;
-            $this->target = $targetConfig === null
-                ? null
-                : $this->source->parent->states[$targetConfig];
+        if ($this->isAMultiPathGuardedTransition($this->transitionConfig) === false) {
+            $this->transitionConfig = [$this->transitionConfig];
+        }
 
-            $this->initializeConditions();
-            $this->initializeActions();
-
-            $this->description = $this->transitionConfig['description'] ?? null;
+        foreach ($this->transitionConfig as $config) {
+            $this->branches[] = new TransitionBranch($config, $this);
         }
     }
 
@@ -81,29 +74,30 @@ class TransitionDefinition
 
     // region Protected Methods
 
-    protected function initializeConditions(): void
-    {
-        if (isset($this->transitionConfig[BehaviorType::Guard->value])) {
-            $this->guards = is_array($this->transitionConfig[BehaviorType::Guard->value])
-                ? $this->transitionConfig[BehaviorType::Guard->value]
-                : [$this->transitionConfig[BehaviorType::Guard->value]];
-        } else {
-            $this->guards = null;
-        }
-    }
-
     /**
-     * Initializes the action/s for this transition.
+     * Determines if the given transition configuration represents a multi-path guarded transition.
+     * This method checks if the provided array has numeric keys and array values, indicating
+     * that it contains multiple guarded transitions based on different guards.
+     *
+     * @param  array|string|null  $transitionConfig  The transition configuration to examine.
+     *
+     * @return bool True if the configuration represents a multi-path guarded transition, false otherwise.
      */
-    protected function initializeActions(): void
+    protected function isAMultiPathGuardedTransition(null|array|string $transitionConfig): bool
     {
-        if (isset($this->transitionConfig[BehaviorType::Action->value])) {
-            $this->actions = is_array($this->transitionConfig[BehaviorType::Action->value])
-                ? $this->transitionConfig[BehaviorType::Action->value]
-                : [$this->transitionConfig[BehaviorType::Action->value]];
-        } else {
-            $this->actions = null;
+        if (is_null($transitionConfig) || is_string($transitionConfig) || $transitionConfig === []) {
+            return false;
         }
+
+        // Iterate through the input array
+        foreach ($transitionConfig as $key => $value) {
+            // Check if the key is numeric and the value is an array
+            if (!is_int($key) || !is_array($value)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // endregion
@@ -111,21 +105,49 @@ class TransitionDefinition
     // region Public Methods
 
     /**
-     * Execute the actions associated with transition definition.
+     * Selects the first eligible transition while evaluating guards.
      *
-     * If there are no actions associated with the transition definition, do nothing.
+     * This method iterates through the given transition candidates and
+     * checks if all the guards are passed. If a candidate transition
+     * does not have any guards, it is considered eligible.
+     * If a transition with guards has all its guards evaluated
+     * to true, it is considered eligible. The method returns the first
+     * eligible transition encountered or null if none is found.
      *
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior  The event or null if none is provided.
+     * @param  EventBehavior  $eventBehavior         The event used to evaluate guards.
+     *
+     * @return TransitionDefinition|null The first eligible transition or
+     *         null if no eligible transition is found.
      */
-    public function runActions(ContextManager $context, ?EventBehavior $eventBehavior = null): void
-    {
-        if ($this->actions === null) {
-            return;
+    public function getFirstValidTransitionBranch(
+        EventBehavior $eventBehavior,
+        ContextManager $context,
+    ): ?TransitionBranch {
+        /* @var TransitionBranch $branch */
+        foreach ($this->branches as $branch) {
+            if (!isset($branch->guards)) {
+                return $branch;
+            }
+
+            $guardsPassed = true;
+            foreach ($branch->guards as $guard) {
+                $guardBehavior = $this->source->machine->getInvokableBehavior(
+                    behaviorDefinition: $guard,
+                    behaviorType: BehaviorType::Guard
+                );
+
+                if ($guardBehavior($context, $eventBehavior) !== true) {
+                    $guardsPassed = false;
+                    break;
+                }
+            }
+
+            if ($guardsPassed === true) {
+                return $branch;
+            }
         }
 
-        foreach ($this->actions as $actionDefinition) {
-            $this->source->machine->runAction($actionDefinition, $context, $eventBehavior);
-        }
+        return null;
     }
 
     // endregion

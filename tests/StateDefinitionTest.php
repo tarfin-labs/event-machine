@@ -269,24 +269,23 @@ test('a state definition can have transitions', function (): void {
     expect($greenTimerTransition)
         ->transitionConfig->toBe('yellow')
         ->event->toBe('TIMER')
-        ->source->toBe($lightMachine->stateDefinitions['green'])
-        ->target->toBe($lightMachine->stateDefinitions['yellow']);
+        ->source->toBe($lightMachine->stateDefinitions['green']);
+
+    expect($greenTimerTransition->branches[0]->target)->toBe($lightMachine->stateDefinitions['yellow']);
 
     $yellowForbidenTransition = $lightMachine->stateDefinitions['yellow']->transitions['FORBIDDEN_EVENT'];
     expect($yellowForbidenTransition)
-        ->transitionConfig->toMatchArray([
-            'target' => null,
-        ])
         ->event->toBe('FORBIDDEN_EVENT')
-        ->source->toBe($lightMachine->stateDefinitions['yellow'])
-        ->target->toBeNull();
+        ->source->toBe($lightMachine->stateDefinitions['yellow']);
+    expect($yellowForbidenTransition->branches[0]->target)->toBe($lightMachine->stateDefinitions['yellow']);
 
     $redWaitPedCountdownTransition = $lightMachine->stateDefinitions['red']->states['wait']->transitions['PED_COUNTDOWN'];
     expect($redWaitPedCountdownTransition)
         ->transitionConfig->toBe('stop')
         ->event->toBe('PED_COUNTDOWN')
-        ->source->toBe($lightMachine->stateDefinitions['red']->states['wait'])
-        ->target->toBe($lightMachine->stateDefinitions['red']->states['stop']);
+        ->source->toBe($lightMachine->stateDefinitions['red']->states['wait']);
+
+    expect($redWaitPedCountdownTransition->branches[0]->target)->toBe($lightMachine->stateDefinitions['red']->states['stop']);
 });
 
 test('a state definition can have events', function (): void {

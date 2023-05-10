@@ -219,50 +219,30 @@ class StateDefinition
                 $eventName = $eventName::getType();
             }
 
-            if ($this->isAMultiPathGuardedTransition($transitionConfig)) {
-                foreach ($transitionConfig as $guardedTransitionConfig) {
-                    $transitions[$eventName][] = new TransitionDefinition(
-                        transitionConfig: $guardedTransitionConfig,
-                        source: $stateDefinition,
-                        event: $eventName,
-                    );
-                }
-            } else {
-                $transitions[$eventName] = new TransitionDefinition(
-                    transitionConfig: $transitionConfig,
-                    source: $this,
-                    event: $eventName,
-                );
-            }
+            $transitions[$eventName] = new TransitionDefinition(
+                transitionConfig: $transitionConfig,
+                source: $this,
+                event: $eventName,
+            );
+
+            //            if ($this->isAMultiPathGuardedTransition($transitionConfig)) {
+            //                foreach ($transitionConfig as $guardedTransitionConfig) {
+            //                    $transitions[$eventName][] = new TransitionDefinition(
+            //                        transitionConfig: $guardedTransitionConfig,
+            //                        source: $stateDefinition,
+            //                        event: $eventName,
+            //                    );
+            //                }
+            //            } else {
+            //                $transitions[$eventName] = new TransitionDefinition(
+            //                    transitionConfig: $transitionConfig,
+            //                    source: $this,
+            //                    event: $eventName,
+            //                );
+            //            }
         }
 
         return $transitions;
-    }
-
-    /**
-     * Determines if the given transition configuration represents a multi-path guarded transition.
-     * This method checks if the provided array has numeric keys and array values, indicating
-     * that it contains multiple guarded transitions based on different guards.
-     *
-     * @param  array|string|null  $transitionConfig  The transition configuration to examine.
-     *
-     * @return bool True if the configuration represents a multi-path guarded transition, false otherwise.
-     */
-    protected function isAMultiPathGuardedTransition(null|array|string $transitionConfig): bool
-    {
-        if (is_null($transitionConfig) || is_string($transitionConfig) || $transitionConfig === []) {
-            return false;
-        }
-
-        // Iterate through the input array
-        foreach ($transitionConfig as $key => $value) {
-            // Check if the key is numeric and the value is an array
-            if (!is_int($key) || !is_array($value)) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     /**
