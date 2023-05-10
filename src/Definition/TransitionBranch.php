@@ -45,7 +45,7 @@ class TransitionBranch
                 ->transitionDefinition
                 ->source
                 ->parent
-                ->states[$this->transitionBranchConfig];
+                ->stateDefinitions[$this->transitionBranchConfig];
 
             return;
         }
@@ -53,7 +53,7 @@ class TransitionBranch
         if (is_array($this->transitionBranchConfig)) {
             $this->target = !isset($this->transitionBranchConfig['target'])
                 ? $this->transitionDefinition->source
-                : $this->transitionDefinition->source->parent->states[$this->transitionBranchConfig['target']];
+                : $this->transitionDefinition->source->parent->stateDefinitions[$this->transitionBranchConfig['target']];
 
             $this->initializeConditions();
             $this->initializeActions();

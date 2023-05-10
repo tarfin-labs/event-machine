@@ -74,7 +74,7 @@ class MachineDefinition
         $this->root = $this->createRootStateDefinition($config);
         $this->root->initializeTransitions();
 
-        $this->stateDefinitions = $this->root->states;
+        $this->stateDefinitions = $this->root->stateDefinitions;
         $this->events           = $this->root->events;
 
         $this->initialStateDefinition = $this->root->initial;

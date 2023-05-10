@@ -42,7 +42,7 @@ class StateDefinition
      *
      * @var null|array<StateDefinition>
      */
-    public ?array $states = null;
+    public ?array $stateDefinitions = null;
 
     /**
      * The transition definitions of this state definition.
@@ -106,8 +106,8 @@ class StateDefinition
         $this->order = $this->machine->idMap->count();
         $this->machine->idMap->attach($this, $this->id);
 
-        $this->states = $this->createChildStates();
-        $this->events = $this->collectUniqueEvents();
+        $this->stateDefinitions = $this->createChildStates();
+        $this->events           = $this->collectUniqueEvents();
 
         $this->initial = $this->findInitialStateDefinition();
 
@@ -254,10 +254,10 @@ class StateDefinition
     public function findInitialStateDefinition(): ?StateDefinition
     {
         $initialStateKey = $this->config['initial']
-            ?? array_key_first($this->states ?? [])
+            ?? array_key_first($this->stateDefinitions ?? [])
             ?? null;
 
-        return $this->states[$initialStateKey] ?? null;
+        return $this->stateDefinitions[$initialStateKey] ?? null;
     }
 
     /**
@@ -299,9 +299,9 @@ class StateDefinition
     {
         $this->transitions = $this->createTransitionDefinitions($this);
 
-        if ($this->states !== null) {
+        if ($this->stateDefinitions !== null) {
             /** @var StateDefinition $state */
-            foreach ($this->states as $state) {
+            foreach ($this->stateDefinitions as $state) {
                 $state->initializeTransitions();
             }
         }
@@ -335,9 +335,9 @@ class StateDefinition
 
         // If there are child states, process them recursively and
         // add their event names to the events array.
-        if ($this->states !== null) {
+        if ($this->stateDefinitions !== null) {
             /** @var StateDefinition $state */
-            foreach ($this->states as $state) {
+            foreach ($this->stateDefinitions as $state) {
                 // Get the events from the child state definition.
                 $childEvents = $state->collectUniqueEvents();
 
