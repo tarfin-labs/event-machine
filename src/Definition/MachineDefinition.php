@@ -162,8 +162,8 @@ class MachineDefinition
             context: $context,
         );
 
-        if ($initialStateDefinition->transitions !== null) {
-            foreach ($initialStateDefinition->transitions as $transition) {
+        if ($initialStateDefinition->transitionDefinitions !== null) {
+            foreach ($initialStateDefinition->transitionDefinitions as $transition) {
                 if ($transition->type === TransitionType::Always) {
                     return $this->transition(state: $initialState, event: ['type' => TransitionType::Always->value]);
                 }
@@ -339,7 +339,7 @@ class MachineDefinition
 
         // Find the transition definition for the event type
         /** @var null|array|TransitionDefinition $transitionDefinition */
-        $transitionDefinition = $currentStateDefinition->transitions[$eventBehavior->type] ?? null;
+        $transitionDefinition = $currentStateDefinition->transitionDefinitions[$eventBehavior->type] ?? null;
 
         $transitionBranch = $transitionDefinition->getFirstValidTransitionBranch(
             eventBehavior: $eventBehavior,
@@ -365,10 +365,10 @@ class MachineDefinition
             context: $context
         );
 
-        if ($this->stateDefinitions[$newState->activeStateDefinition->key]->transitions !== null) {
+        if ($this->stateDefinitions[$newState->activeStateDefinition->key]->transitionDefinitions !== null) {
             // Check if the new state has any @always transitions
             /** @var TransitionDefinition $transition */
-            foreach ($this->stateDefinitions[$newState->activeStateDefinition->key]->transitions as $transition) {
+            foreach ($this->stateDefinitions[$newState->activeStateDefinition->key]->transitionDefinitions as $transition) {
                 if ($transition->type === TransitionType::Always) {
                     return $this->transition(state: $newState, event: ['type' => TransitionType::Always->value]);
                 }

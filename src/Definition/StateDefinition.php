@@ -49,7 +49,7 @@ class StateDefinition
      *
      * @var null|array<\Tarfinlabs\EventMachine\Definition\TransitionDefinition>
      */
-    public ?array $transitions;
+    public ?array $transitionDefinitions;
 
     /**
      * The events that can be accepted by this state definition.
@@ -281,7 +281,7 @@ class StateDefinition
      */
     public function initializeTransitions(): void
     {
-        $this->transitions = $this->createTransitionDefinitions($this);
+        $this->transitionDefinitions = $this->createTransitionDefinitions($this);
 
         if ($this->stateDefinitions !== null) {
             /** @var StateDefinition $state */
