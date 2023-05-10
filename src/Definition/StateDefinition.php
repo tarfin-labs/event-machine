@@ -59,7 +59,7 @@ class StateDefinition
     public ?array $events = null;
 
     /** The initial state definition for this machine definition. */
-    public ?StateDefinition $initial = null;
+    public ?StateDefinition $initialStateDefinition = null;
 
     /**
      * The action(s) to be executed upon entering the state definition.
@@ -109,7 +109,7 @@ class StateDefinition
         $this->stateDefinitions = $this->createChildStateDefinitions();
         $this->events           = $this->collectUniqueEvents();
 
-        $this->initial = $this->findInitialStateDefinition();
+        $this->initialStateDefinition = $this->findInitialStateDefinition();
 
         $this->initializeEntryActions();
         $this->initializeExitActions();

@@ -28,16 +28,16 @@ test('initial states are correctly set for both top-level machine definition and
         ->toBeInstanceOf(StateDefinition::class)
         ->key->toBe('green');
 
-    expect($machine->stateDefinitions['green']->initial)
+    expect($machine->stateDefinitions['green']->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
         ->key->toBe('walk');
 
-    expect($machine->stateDefinitions['yellow']->initial)->toBeNull();
-    expect($machine->stateDefinitions['red']->initial)->toBeNull();
+    expect($machine->stateDefinitions['yellow']->initialStateDefinition)->toBeNull();
+    expect($machine->stateDefinitions['red']->initialStateDefinition)->toBeNull();
 
-    expect($machine->stateDefinitions['green']->stateDefinitions['walk']->initial)->toBeNull();
-    expect($machine->stateDefinitions['green']->stateDefinitions['wait']->initial)->toBeNull();
-    expect($machine->stateDefinitions['green']->stateDefinitions['stop']->initial)->toBeNull();
+    expect($machine->stateDefinitions['green']->stateDefinitions['walk']->initialStateDefinition)->toBeNull();
+    expect($machine->stateDefinitions['green']->stateDefinitions['wait']->initialStateDefinition)->toBeNull();
+    expect($machine->stateDefinitions['green']->stateDefinitions['stop']->initialStateDefinition)->toBeNull();
 });
 
 test('the first state definition is set as the initial state for both top-level machine definition and sub-states when not explicitly specified', function (): void {
@@ -59,16 +59,16 @@ test('the first state definition is set as the initial state for both top-level 
         ->toBeInstanceOf(StateDefinition::class)
         ->key->toBe('green');
 
-    expect($machine->stateDefinitions['green']->initial)
+    expect($machine->stateDefinitions['green']->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
         ->key->toBe('walk');
 
-    expect($machine->stateDefinitions['yellow']->initial)->toBeNull();
-    expect($machine->stateDefinitions['red']->initial)->toBeNull();
+    expect($machine->stateDefinitions['yellow']->initialStateDefinition)->toBeNull();
+    expect($machine->stateDefinitions['red']->initialStateDefinition)->toBeNull();
 
-    expect($machine->stateDefinitions['green']->stateDefinitions['walk']->initial)->toBeNull();
-    expect($machine->stateDefinitions['green']->stateDefinitions['wait']->initial)->toBeNull();
-    expect($machine->stateDefinitions['green']->stateDefinitions['stop']->initial)->toBeNull();
+    expect($machine->stateDefinitions['green']->stateDefinitions['walk']->initialStateDefinition)->toBeNull();
+    expect($machine->stateDefinitions['green']->stateDefinitions['wait']->initialStateDefinition)->toBeNull();
+    expect($machine->stateDefinitions['green']->stateDefinitions['stop']->initialStateDefinition)->toBeNull();
 });
 
 it('should run entry actions for building initial state', function (): void {

@@ -77,7 +77,7 @@ class MachineDefinition
         $this->stateDefinitions = $this->root->stateDefinitions;
         $this->events           = $this->root->events;
 
-        $this->initialStateDefinition = $this->root->initial;
+        $this->initialStateDefinition = $this->root->initialStateDefinition;
     }
 
     // endregion
