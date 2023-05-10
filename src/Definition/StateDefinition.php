@@ -106,7 +106,7 @@ class StateDefinition
         $this->order = $this->machine->idMap->count();
         $this->machine->idMap->attach($this, $this->id);
 
-        $this->stateDefinitions = $this->createChildStates();
+        $this->stateDefinitions = $this->createChildStateDefinitions();
         $this->events           = $this->collectUniqueEvents();
 
         $this->initial = $this->findInitialStateDefinition();
@@ -158,7 +158,7 @@ class StateDefinition
      *
      * @return ?array<StateDefinition> An array of child state definitions or null if no child states are defined.
      */
-    protected function createChildStates(): ?array
+    protected function createChildStateDefinitions(): ?array
     {
         if (!isset($this->config['states']) || !is_array($this->config['states'])) {
             return null;
