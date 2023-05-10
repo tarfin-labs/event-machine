@@ -201,3 +201,36 @@ it('should transition through multiple if-else targets based on guards', functio
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe(['pedestrian']);
 });
+
+it('should prevent infinite loops when no guards evaluate to true for @always transitions', function (): void {
+    $machine = MachineDefinition::define(
+        config: [
+            'initial' => 'green',
+            'states'  => [
+                'green' => [
+                    'on' => [
+                        'EVENT' => 'yellow',
+                    ],
+                ],
+                'yellow' => [
+                    'on' => [
+                        '@always' => [
+                            'target' => 'red',
+                            'guards' => 'guard1',
+                        ],
+                    ],
+                ],
+                'red' => [],
+            ],
+        ],
+        behavior: [
+            'guards' => [
+                'guard1' => fn (): bool => false,
+            ],
+        ],
+    );
+
+    $newState = $machine->transition(state: null, event: ['type' => 'EVENT']);
+
+    expect($newState->value)->toBe(['yellow']);
+});
