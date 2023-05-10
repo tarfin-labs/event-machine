@@ -224,22 +224,6 @@ class StateDefinition
                 source: $this,
                 event: $eventName,
             );
-
-            //            if ($this->isAMultiPathGuardedTransition($transitionConfig)) {
-            //                foreach ($transitionConfig as $guardedTransitionConfig) {
-            //                    $transitions[$eventName][] = new TransitionDefinition(
-            //                        transitionConfig: $guardedTransitionConfig,
-            //                        source: $stateDefinition,
-            //                        event: $eventName,
-            //                    );
-            //                }
-            //            } else {
-            //                $transitions[$eventName] = new TransitionDefinition(
-            //                    transitionConfig: $transitionConfig,
-            //                    source: $this,
-            //                    event: $eventName,
-            //                );
-            //            }
         }
 
         return $transitions;
