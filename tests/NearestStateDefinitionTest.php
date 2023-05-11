@@ -31,3 +31,35 @@ it('throws exception if multiple state definitions found', function (): void {
 
     $machine->getNearestStateDefinitionByString(state: 'e');
 })->expectException(AmbiguousStateDefinitionsException::class);
+
+test('search root states by string', function (): void {
+    $machineName = 'machine';
+    $delimiter   = '.';
+
+    $machine = MachineDefinition::define(config: [
+        'initial'   => 'green',
+        'id'        => $machineName,
+        'delimiter' => $delimiter,
+        'states'    => [
+            'green'  => [],
+            'yellow' => [],
+            'red'    => [],
+        ],
+    ]);
+
+    $greenStateDefinition  = $machine->stateDefinitions['green'];
+    $yellowStateDefinition = $machine->stateDefinitions['yellow'];
+    $redStateDefinition    = $machine->stateDefinitions['red'];
+
+    expect($greenStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: 'green'));
+    expect($yellowStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: 'yellow'));
+    expect($redStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: 'red'));
+
+    expect($greenStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $delimiter.'green'));
+    expect($yellowStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $delimiter.'yellow'));
+    expect($redStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $delimiter.'red'));
+
+    expect($greenStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $machineName.$delimiter.'green'));
+    expect($yellowStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $machineName.$delimiter.'yellow'));
+    expect($redStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $machineName.$delimiter.'red'));
+});
