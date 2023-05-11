@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\AmbiguousStateDefinitionsException;
+
 test('search nothing', function (): void {
     $machine = MachineDefinition::define(config: [
         'initial' => 'green',
@@ -62,4 +64,29 @@ test('search root states by string', function (): void {
     expect($greenStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $machineName.$delimiter.'green'));
     expect($yellowStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $machineName.$delimiter.'yellow'));
     expect($redStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $machineName.$delimiter.'red'));
+});
+
+test('search unique child states by string', function (): void {
+    $machineName = 'machine';
+    $delimiter   = '.';
+
+    $machine = MachineDefinition::define(config: [
+        'initial'   => 'green',
+        'id'        => $machineName,
+        'delimiter' => $delimiter,
+        'states'    => [
+            'green' => [
+                'states' => [
+                    'uniqueSubState' => [],
+                ],
+            ],
+            'yellow' => [],
+            'red'    => [],
+        ],
+    ]);
+
+    $uniqueSubStateDefinition = $machine->stateDefinitions['green']->stateDefinitions['uniqueSubState'];
+    $foundStateDefinition     = $machine->getNearestStateDefinitionByString(state: 'green'.$delimiter.'uniqueSubState');
+
+    expect($uniqueSubStateDefinition)->toBe($foundStateDefinition);
 });
