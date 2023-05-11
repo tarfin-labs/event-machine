@@ -90,3 +90,29 @@ test('search unique child states by string', function (): void {
 
     expect($uniqueSubStateDefinition)->toBe($foundStateDefinition);
 });
+
+test('search ambiguous child states by string', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'initial' => 'green',
+        'id'      => 'machine',
+        'states'  => [
+            'green' => [
+                'states' => [
+                    'green' => [],
+                ],
+            ],
+        ],
+    ]);
+
+    expect(fn () => $machine->getNearestStateDefinitionByString(state: 'green'))
+        ->toThrow(AmbiguousStateDefinitionsException::class);
+
+    $rootGreenStateDefinition = $machine->stateDefinitions['green'];
+
+    $childGreenStateDefinition = $machine->getNearestStateDefinitionByString(
+        state: 'green',
+        searchingFromStateDefinition: $rootGreenStateDefinition
+    );
+
+    expect($childGreenStateDefinition)->toBe($rootGreenStateDefinition->stateDefinitions['green']);
+});

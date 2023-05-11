@@ -318,8 +318,16 @@ class MachineDefinition
         string|State|null $state,
         ?StateDefinition $searchingFromStateDefinition = null,
     ): ?StateDefinition {
-        $stateDefinitions = array_filter($this->idMap, function ($key) use ($state) {
-            return str_contains($key, $state) !== false;
+        $stateToSearch = $searchingFromStateDefinition === null ? $this->id : $searchingFromStateDefinition->id;
+        $stateToSearch .= $this->delimiter.$state;
+        $stateToSearch = preg_replace(
+            pattern: '/'.preg_quote($this->delimiter, '/').'{2,}/',
+            replacement: $this->delimiter,
+            subject: $stateToSearch
+        );
+
+        $stateDefinitions = array_filter($this->idMap, function ($key) use ($stateToSearch) {
+            return str_contains($key, $stateToSearch) !== false;
         }, ARRAY_FILTER_USE_KEY);
 
         $numberOfFoundStateDefinitions = count($stateDefinitions);
