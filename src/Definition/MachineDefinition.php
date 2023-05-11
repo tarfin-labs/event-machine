@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
-use SplObjectStorage;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
@@ -28,9 +27,9 @@ class MachineDefinition
     /**
      * The map of state definitions to their ids.
      *
-     * @var SplObjectStorage<StateDefinition, string>
+     * @var array<StateDefinition>
      */
-    public SplObjectStorage $idMap;
+    public array $idMap = [];
 
     /**
      * The child state definitions of this state definition.
@@ -69,8 +68,6 @@ class MachineDefinition
         public ?string $version,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
-        $this->idMap = new SplObjectStorage();
-
         $this->root = $this->createRootStateDefinition($config);
         $this->root->initializeTransitions();
 
