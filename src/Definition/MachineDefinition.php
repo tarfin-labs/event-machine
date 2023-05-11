@@ -310,6 +310,12 @@ class MachineDefinition
         return EventDefinition::from($event);
     }
 
+    public function getNearestStateDefinitionByString(
+        string|State|null $state,
+    ): ?StateDefinition {
+        return null;
+    }
+
     // endregion
 
     // region Public Methods
