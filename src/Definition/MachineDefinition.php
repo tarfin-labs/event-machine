@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\AmbiguousStateDefinitionsException;
 
 class MachineDefinition
 {
@@ -310,9 +311,25 @@ class MachineDefinition
         return EventDefinition::from($event);
     }
 
+    /**
+     * @throws AmbiguousStateDefinitionsException
+     */
     public function getNearestStateDefinitionByString(
         string|State|null $state,
+        ?StateDefinition $searchingFromStateDefinition = null,
     ): ?StateDefinition {
+        $stateDefinitions = array_filter($this->idMap, function ($key) use ($state) {
+            return str_contains($key, $state) !== false;
+        }, ARRAY_FILTER_USE_KEY);
+
+        $numberOfFoundStateDefinitions = count($stateDefinitions);
+
+        if ($numberOfFoundStateDefinitions > 1) {
+            throw AmbiguousStateDefinitionsException::build(state: $state, states: $stateDefinitions);
+        } else {
+            return array_shift($stateDefinitions);
+        }
+
         return null;
     }
 
