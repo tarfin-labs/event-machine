@@ -17,6 +17,6 @@ class State
         public ContextManager $context,
         public ?EventBehavior $eventBehavior = null,
     ) {
-        $this->value = [$this->activeStateDefinition->key];
+        $this->value = [$this->activeStateDefinition->id];
     }
 }
