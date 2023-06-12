@@ -36,6 +36,6 @@ it('should run exit actions when transitioning from a state', function (): void 
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['active'])
+        ->and($newState->value)->toBe(['(machine).active'])
         ->and($newState->context->data)->toBe(['count' => 1]);
 });

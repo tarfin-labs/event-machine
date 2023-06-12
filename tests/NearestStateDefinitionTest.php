@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Exceptions\AmbiguousStateDefinitionsException;
 
 test('search nothing', function (): void {
     $machine = MachineDefinition::define(config: [
@@ -16,23 +15,12 @@ test('search nothing', function (): void {
         ],
     ]);
 
-    $foundStateDefinition = $machine->getNearestStateDefinitionByString(state: null);
-    expect($foundStateDefinition)->toBe(null);
+    expect($machine->getNearestStateDefinitionByString(state: ''))->toBe(null);
+    expect($machine->getNearestStateDefinitionByString(state: 'g'))->toBe(null);
+    expect($machine->getNearestStateDefinitionByString(state: 'gr'))->toBe(null);
+    expect($machine->getNearestStateDefinitionByString(state: 'gre'))->toBe(null);
+    expect($machine->getNearestStateDefinitionByString(state: 'gree'))->toBe(null);
 });
-
-it('throws exception if multiple state definitions found', function (): void {
-    $machine = MachineDefinition::define(config: [
-        'initial' => 'green',
-        'id'      => 'machine',
-        'states'  => [
-            'green'  => [],
-            'yellow' => [],
-            'red'    => [],
-        ],
-    ]);
-
-    $machine->getNearestStateDefinitionByString(state: 'e');
-})->expectException(AmbiguousStateDefinitionsException::class);
 
 test('search root states by string', function (): void {
     $machineName = 'machine';
@@ -56,14 +44,6 @@ test('search root states by string', function (): void {
     expect($greenStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: 'green'));
     expect($yellowStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: 'yellow'));
     expect($redStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: 'red'));
-
-    expect($greenStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $delimiter.'green'));
-    expect($yellowStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $delimiter.'yellow'));
-    expect($redStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $delimiter.'red'));
-
-    expect($greenStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $machineName.$delimiter.'green'));
-    expect($yellowStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $machineName.$delimiter.'yellow'));
-    expect($redStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: $machineName.$delimiter.'red'));
 });
 
 test('search unique child states by string', function (): void {
@@ -78,6 +58,7 @@ test('search unique child states by string', function (): void {
             'green' => [
                 'states' => [
                     'uniqueSubState' => [],
+                    'green'          => [],
                 ],
             ],
             'yellow' => [],
@@ -89,30 +70,9 @@ test('search unique child states by string', function (): void {
     $foundStateDefinition     = $machine->getNearestStateDefinitionByString(state: 'green'.$delimiter.'uniqueSubState');
 
     expect($uniqueSubStateDefinition)->toBe($foundStateDefinition);
-});
 
-test('search ambiguous child states by string', function (): void {
-    $machine = MachineDefinition::define(config: [
-        'initial' => 'green',
-        'id'      => 'machine',
-        'states'  => [
-            'green' => [
-                'states' => [
-                    'green' => [],
-                ],
-            ],
-        ],
-    ]);
+    $subGreenStateDefinition = $machine->stateDefinitions['green']->stateDefinitions['green'];
+    $foundStateDefinition    = $machine->getNearestStateDefinitionByString(state: 'green'.$delimiter.'green');
 
-    expect(fn () => $machine->getNearestStateDefinitionByString(state: 'green'))
-        ->toThrow(AmbiguousStateDefinitionsException::class);
-
-    $rootGreenStateDefinition = $machine->stateDefinitions['green'];
-
-    $childGreenStateDefinition = $machine->getNearestStateDefinitionByString(
-        state: 'green',
-        searchingFromStateDefinition: $rootGreenStateDefinition
-    );
-
-    expect($childGreenStateDefinition)->toBe($rootGreenStateDefinition->stateDefinitions['green']);
+    expect($subGreenStateDefinition)->toBe($foundStateDefinition);
 });

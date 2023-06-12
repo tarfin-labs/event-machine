@@ -24,7 +24,7 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['active'])
+        ->and($newState->value)->toBe(['(machine).active'])
         ->and($newState->context->count)->toBe(1);
 
     /** @var \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext $newState */
@@ -39,7 +39,7 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['active'])
+        ->and($newState->value)->toBe(['(machine).active'])
         ->and($newState->context->count)->toBe(4);
 
     /** @var \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext $newState */
@@ -52,7 +52,7 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['active'])
+        ->and($newState->value)->toBe(['(machine).active'])
         ->and($newState->context->count)->toBe(20);
 });
 
@@ -92,6 +92,6 @@ test('TrafficLightsMachine can be started', function (): void {
 
     expect($state)
         ->toBeInstanceOf(State::class)
-        ->and($state->value)->toBe(['active'])
+        ->and($state->value)->toBe(['(machine).active'])
         ->and($state->context->count)->toBe(2);
 });

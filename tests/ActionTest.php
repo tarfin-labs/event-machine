@@ -52,7 +52,7 @@ it('can update context using actions defined in transition definitions', functio
 
     expect($addState)
         ->toBeInstanceOf(State::class)
-        ->and($addState->value)->toBe(['active']);
+        ->and($addState->value)->toBe(['(machine).active']);
 
     $subState = $machine->transition(state: $addState, event: [
         'type'    => 'SUB',
@@ -63,7 +63,7 @@ it('can update context using actions defined in transition definitions', functio
 
     expect($subState)
         ->toBeInstanceOf(State::class)
-        ->and($subState->value)->toBe(['active'])
+        ->and($subState->value)->toBe(['(machine).active'])
         ->and($subState->context->get('count'))->toBe(20);
 
     $incState = $machine->transition(state: $subState, event: [
@@ -72,7 +72,7 @@ it('can update context using actions defined in transition definitions', functio
 
     expect($incState)
         ->toBeInstanceOf(State::class)
-        ->and($incState->value)->toBe(['active'])
+        ->and($incState->value)->toBe(['(machine).active'])
         ->and($incState->context->get('count'))->toBe(21);
 
     $decState = $machine->transition(state: $incState, event: [
@@ -81,6 +81,6 @@ it('can update context using actions defined in transition definitions', functio
 
     expect($decState)
         ->toBeInstanceOf(State::class)
-        ->and($decState->value)->toBe(['active'])
+        ->and($decState->value)->toBe(['(machine).active'])
         ->and($decState->context->get('count'))->toBe(20);
 });

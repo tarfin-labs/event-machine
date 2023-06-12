@@ -231,25 +231,34 @@ test('a state definition can have transitions', function (): void {
                     'FORBIDDEN_EVENT' => [
                         'target' => null,
                     ],
+                    'FORBIDDEN_EVENT_WITH_ACTIONS' => [
+                        'target' => null,
+                        'guards' => [
+                            'guardSomething1',
+                            'guardSomething2',
+                        ],
+                        'actions' => [
+                            'doSomething1',
+                            'doSomething2',
+                        ],
+                    ],
                 ],
             ],
             'red' => [
-                'on' => [
-                    'TIMER'        => 'green',
-                    'POWER_OUTAGE' => [
-                        'target' => 'red',
-                    ],
-                ],
                 'initial' => 'walk',
-                'states'  => [
+                'on'      => [
+                    'TIMER'        => 'green',
+                    'POWER_OUTAGE' => ['target' => 'red'],
+                ],
+                'states' => [
                     'walk' => [
                         'on' => [
-                            'PED_COUNTDOWN' => 'wait',
+                            'PED_COUNTDOWN' => 'red.wait',
                         ],
                     ],
                     'wait' => [
                         'on' => [
-                            'PED_COUNTDOWN' => 'stop',
+                            'PED_COUNTDOWN' => 'red.stop',
                         ],
                     ],
                     'stop' => [],
@@ -277,11 +286,11 @@ test('a state definition can have transitions', function (): void {
     expect($yellowForbidenTransition)
         ->event->toBe('FORBIDDEN_EVENT')
         ->source->toBe($lightMachine->stateDefinitions['yellow']);
-    expect($yellowForbidenTransition->branches[0]->target)->toBe($lightMachine->stateDefinitions['yellow']);
+    expect($yellowForbidenTransition->branches[0]->target)->toBe(null);
 
     $redWaitPedCountdownTransition = $lightMachine->stateDefinitions['red']->stateDefinitions['wait']->transitionDefinitions['PED_COUNTDOWN'];
     expect($redWaitPedCountdownTransition)
-        ->transitionConfig->toBe('stop')
+        ->transitionConfig->toBe('red.stop')
         ->event->toBe('PED_COUNTDOWN')
         ->source->toBe($lightMachine->stateDefinitions['red']->stateDefinitions['wait']);
 

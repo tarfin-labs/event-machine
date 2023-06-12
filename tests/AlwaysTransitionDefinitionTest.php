@@ -29,7 +29,7 @@ test('always transitions', function (): void {
         event: ['type' => 'EVENT']
     );
 
-    expect($newState->value)->toBe(['stateC']);
+    expect($newState->value)->toBe(['(machine).stateC']);
 });
 
 test('always transitions with initial jump', function (): void {
@@ -47,13 +47,13 @@ test('always transitions with initial jump', function (): void {
 
     $newState = $machine->getInitialState();
 
-    expect($newState->value)->toBe(['stateC']);
+    expect($newState->value)->toBe(['(machine).stateC']);
 });
 
 test('always transitions with initial machine jump', function (): void {
     $machineActor = AbcMachine::start();
 
-    expect($machineActor->state->value)->toBe(['stateC']);
+    expect($machineActor->state->value)->toBe(['(machine).stateC']);
 });
 
 test('always guarded transitions', function (): void {
@@ -116,5 +116,5 @@ test('always guarded transitions', function (): void {
         event: ['type' => 'EVENT']
     );
 
-    expect($newState->value)->toBe(['stateC']);
+    expect($newState->value)->toBe(['(machine).stateC']);
 });

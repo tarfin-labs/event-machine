@@ -50,7 +50,7 @@ it('should run the guarded action when the guards are passed', function (): void
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['active'])
+        ->and($newState->value)->toBe(['(machine).active'])
         ->and($newState->context->data)->toBe(['count' => 1]);
 
     $newState = $machine->transition(state: $newState, event: ['type' => 'INC']);
@@ -62,7 +62,7 @@ it('should run the guarded action when the guards are passed', function (): void
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['active'])
+        ->and($newState->value)->toBe(['(machine).active'])
         ->and($newState->context->data)->toBe(['count' => 4]);
 });
 
@@ -110,7 +110,7 @@ it('should not run the guarded action when the guards are not passed', function 
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['active'])
+        ->and($newState->value)->toBe(['(machine).active'])
         ->and($newState->context->data)->toBe(['count' => 1]);
 
     $newState = $machine->transition(state: $newState, event: ['type' => 'INC']);
@@ -125,7 +125,7 @@ it('should not run the guarded action when the guards are not passed', function 
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['active']);
+        ->and($newState->value)->toBe(['(machine).active']);
     // Guards is not passed, the action will not be executed
     expect($newState->context->data)->toBe(['count' => 1]);
 });
@@ -175,7 +175,7 @@ it('should transition through multiple if-else targets based on guards', functio
     $newState = $machine->transition(state: null, event: ['type' => 'TIMER']);
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['yellow']);
+        ->and($newState->value)->toBe(['(machine).yellow']);
 
     $newState = $machine->transition(
         state: new State(
@@ -187,7 +187,7 @@ it('should transition through multiple if-else targets based on guards', functio
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['red']);
+        ->and($newState->value)->toBe(['(machine).red']);
 
     $newState = $machine->transition(
         state: new State(
@@ -199,7 +199,7 @@ it('should transition through multiple if-else targets based on guards', functio
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['pedestrian']);
+        ->and($newState->value)->toBe(['(machine).pedestrian']);
 });
 
 it('should prevent infinite loops when no guards evaluate to true for @always transitions', function (): void {
@@ -232,5 +232,5 @@ it('should prevent infinite loops when no guards evaluate to true for @always tr
 
     $newState = $machine->transition(state: null, event: ['type' => 'EVENT']);
 
-    expect($newState->value)->toBe(['yellow']);
+    expect($newState->value)->toBe(['(machine).yellow']);
 });

@@ -65,8 +65,8 @@ test('the transition target can be null', function (): void {
     $incTransition = $machine->stateDefinitions['active']->transitionDefinitions['INC'];
     $decTransition = $machine->stateDefinitions['active']->transitionDefinitions['DEC'];
 
-    expect($incTransition->branches[0]->target->key)->toBe('active');
-    expect($decTransition->branches[0]->target->key)->toBe('active');
+    expect($incTransition->branches[0]->target)->toBe(null);
+    expect($decTransition->branches[0]->target)->toBe(null);
 });
 
 test('transitions can have actions', function (): void {
