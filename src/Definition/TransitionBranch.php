@@ -37,23 +37,23 @@ class TransitionBranch
         public TransitionDefinition $transitionDefinition,
     ) {
         if ($this->transitionBranchConfig === null) {
-            $this->target = $this->transitionDefinition->source;
+            $this->target = null;
         }
 
         if (is_string($this->transitionBranchConfig)) {
             $this->target = $this
                 ->transitionDefinition
                 ->source
-                ->parent
-                ->stateDefinitions[$this->transitionBranchConfig];
+                ->machine
+                ->getNearestStateDefinitionByString($this->transitionBranchConfig);
 
             return;
         }
 
         if (is_array($this->transitionBranchConfig)) {
-            $this->target = !isset($this->transitionBranchConfig['target'])
-                ? $this->transitionDefinition->source
-                : $this->transitionDefinition->source->parent->stateDefinitions[$this->transitionBranchConfig['target']];
+            $this->target = (!isset($this->transitionBranchConfig['target']) || $this->transitionBranchConfig['target'] === null
+                    ? null
+                    : $this->transitionDefinition->source->parent->stateDefinitions[$this->transitionBranchConfig['target']]);
 
             $this->initializeConditions();
             $this->initializeActions();
