@@ -10,7 +10,6 @@ use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
-use Tarfinlabs\EventMachine\Exceptions\AmbiguousStateDefinitionsException;
 
 class MachineDefinition
 {
@@ -311,34 +310,15 @@ class MachineDefinition
         return EventDefinition::from($event);
     }
 
-    /**
-     * @throws AmbiguousStateDefinitionsException
-     */
-    public function getNearestStateDefinitionByString(
-        string|State|null $state,
-        ?StateDefinition $searchingFromStateDefinition = null,
-    ): ?StateDefinition {
-        $stateToSearch = $searchingFromStateDefinition === null ? $this->id : $searchingFromStateDefinition->id;
-        $stateToSearch .= $this->delimiter.$state;
-        $stateToSearch = preg_replace(
-            pattern: '/'.preg_quote($this->delimiter, '/').'{2,}/',
-            replacement: $this->delimiter,
-            subject: $stateToSearch
-        );
-
-        $stateDefinitions = array_filter($this->idMap, function ($key) use ($stateToSearch) {
-            return str_contains($key, $stateToSearch) !== false;
-        }, ARRAY_FILTER_USE_KEY);
-
-        $numberOfFoundStateDefinitions = count($stateDefinitions);
-
-        if ($numberOfFoundStateDefinitions > 1) {
-            throw AmbiguousStateDefinitionsException::build(state: $state, states: $stateDefinitions);
-        } else {
-            return array_shift($stateDefinitions);
+    public function getNearestStateDefinitionByString(string $state): ?StateDefinition
+    {
+        if (empty($state)) {
+            return null;
         }
 
-        return null;
+        $state = $this->id.$this->delimiter.$state;
+
+        return $this->idMap[$state] ?? null;
     }
 
     // endregion
@@ -393,7 +373,7 @@ class MachineDefinition
             context: $context
         );
 
-        if ($this->stateDefinitions[$newState->activeStateDefinition->key]->transitionDefinitions !== null) {
+        if ($this->idMap[$newState->activeStateDefinition->id]->transitionDefinitions !== null) {
             // Check if the new state has any @always transitions
             /** @var TransitionDefinition $transition */
             foreach ($this->stateDefinitions[$newState->activeStateDefinition->key]->transitionDefinitions as $transition) {
