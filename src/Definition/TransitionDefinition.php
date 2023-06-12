@@ -49,6 +49,11 @@ class TransitionDefinition
         $this->description = $this->transitionConfig['description'] ?? null;
 
         if ($this->transitionConfig === null) {
+            $this->branches[] = new TransitionBranch(
+                transitionBranchConfig: $this->transitionConfig,
+                transitionDefinition: $this
+            );
+
             return;
         }
 
