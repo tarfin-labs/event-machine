@@ -241,7 +241,7 @@ class StateDefinition
             ?? array_key_first($this->stateDefinitions ?? [])
             ?? null;
 
-        return $this->stateDefinitions[$initialStateKey] ?? null;
+        return $this->machine->idMap[$this->machine->id.$this->machine->delimiter.$initialStateKey] ?? null;
     }
 
     /**

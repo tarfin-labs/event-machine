@@ -99,3 +99,24 @@ it('should run entry actions for building initial state', function (): void {
         ->and($initialState->value)->toBe(['(machine).active'])
         ->and($initialState->context->get('count'))->toBe(1);
 });
+
+test('initial state can be a child state', function (): void {
+    $machine = MachineDefinition::define([
+        'initial' => 'green.walk',
+        'states'  => [
+            'green' => [
+                'states' => [
+                    'walk' => [],
+                    'wait' => [],
+                    'stop' => [],
+                ],
+            ],
+            'yellow' => [],
+            'red'    => [],
+        ],
+    ]);
+
+    expect($machine->initialStateDefinition)
+        ->toBeInstanceOf(StateDefinition::class)
+        ->id->toBe('(machine).green.walk');
+});
