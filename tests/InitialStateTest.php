@@ -26,11 +26,11 @@ test('initial states are correctly set for both top-level machine definition and
 
     expect($machine->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
-        ->key->toBe('green');
+        ->id->toBe('(machine).green.walk');
 
     expect($machine->stateDefinitions['green']->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
-        ->key->toBe('walk');
+        ->id->toBe('(machine).green.walk');
 
     expect($machine->stateDefinitions['yellow']->initialStateDefinition)->toBeNull();
     expect($machine->stateDefinitions['red']->initialStateDefinition)->toBeNull();
@@ -40,7 +40,7 @@ test('initial states are correctly set for both top-level machine definition and
     expect($machine->stateDefinitions['green']->stateDefinitions['stop']->initialStateDefinition)->toBeNull();
 });
 
-test('the first state definition is set as the initial state for both top-level machine definition and sub-states when not explicitly specified', function (): void {
+test('first state auto-set as initial for machine and sub-states when not specified', function (): void {
     $machine = MachineDefinition::define(config: [
         'states' => [
             'green' => [
@@ -57,11 +57,11 @@ test('the first state definition is set as the initial state for both top-level 
 
     expect($machine->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
-        ->key->toBe('green');
+        ->id->toBe('(machine).green.walk');
 
     expect($machine->stateDefinitions['green']->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
-        ->key->toBe('walk');
+        ->id->toBe('(machine).green.walk');
 
     expect($machine->stateDefinitions['yellow']->initialStateDefinition)->toBeNull();
     expect($machine->stateDefinitions['red']->initialStateDefinition)->toBeNull();

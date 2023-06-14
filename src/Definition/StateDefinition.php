@@ -241,7 +241,21 @@ class StateDefinition
             ?? array_key_first($this->stateDefinitions ?? [])
             ?? null;
 
-        return $this->machine->idMap[$this->machine->id.$this->machine->delimiter.$initialStateKey] ?? null;
+        if ($initialStateKey === null) {
+            return null;
+        }
+
+        $initialStateKey = $this->id.$this->machine->delimiter.$initialStateKey;
+
+        $initialStateDefinition = $this->machine->idMap[$initialStateKey] ?? null;
+
+        if ($initialStateDefinition === null) {
+            return null;
+        }
+
+        return is_array($initialStateDefinition->stateDefinitions) && count($initialStateDefinition->stateDefinitions) > 0
+            ? $initialStateDefinition->findInitialStateDefinition()
+            : $initialStateDefinition;
     }
 
     /**
