@@ -19,9 +19,4 @@ abstract class EventBehavior extends Data
     }
 
     abstract public static function getType(): string;
-
-    public static function define(): ?array
-    {
-        return null;
-    }
 }
