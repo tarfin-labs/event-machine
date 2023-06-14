@@ -302,9 +302,10 @@ class MachineDefinition
         }
 
         if (isset($stateDefinition->machine->behavior[BehaviorType::Event->value][$event['type']])) {
+            /** @var EventBehavior $eventDefinitionClass */
             $eventDefinitionClass = $stateDefinition->machine->behavior[BehaviorType::Event->value][$event['type']];
 
-            return $eventDefinitionClass::from($event);
+            return $eventDefinitionClass::validateAndCreate($event);
         }
 
         return EventDefinition::from($event);
