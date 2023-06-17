@@ -155,8 +155,8 @@ class MachineDefinition
         $this->initialStateDefinition->runEntryActions(context: $context);
 
         $initialState = new State(
-            activeStateDefinition: $this->initialStateDefinition,
             context: $context,
+            activeStateDefinition: $this->initialStateDefinition,
         );
 
         if ($initialStateDefinition->transitionDefinitions !== null) {
@@ -186,8 +186,8 @@ class MachineDefinition
         ?StateDefinition $currentStateDefinition = null,
     ): State {
         return new State(
-            activeStateDefinition: $currentStateDefinition ?? $this->initialStateDefinition,
             context: $context,
+            activeStateDefinition: $currentStateDefinition ?? $this->initialStateDefinition,
         );
     }
 
@@ -368,8 +368,8 @@ class MachineDefinition
         $transitionBranch->target?->runEntryActions($context, $eventBehavior);
 
         $newState = new State(
-            activeStateDefinition: $transitionBranch->target ?? $currentStateDefinition,
-            context: $context
+            context: $context,
+            activeStateDefinition: $transitionBranch->target ?? $currentStateDefinition
         );
 
         if ($this->idMap[$newState->activeStateDefinition->id]->transitionDefinitions !== null) {

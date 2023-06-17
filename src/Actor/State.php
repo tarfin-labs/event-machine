@@ -12,8 +12,8 @@ class State
     public array $value;
 
     public function __construct(
-        public StateDefinition $activeStateDefinition,
         public ContextManager $context,
+        public ?StateDefinition $activeStateDefinition,
     ) {
         $this->value = [$this->activeStateDefinition->id];
     }
