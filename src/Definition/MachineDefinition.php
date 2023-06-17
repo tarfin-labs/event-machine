@@ -184,12 +184,10 @@ class MachineDefinition
     protected function buildCurrentState(
         ContextManager $context,
         ?StateDefinition $currentStateDefinition = null,
-        ?EventBehavior $eventBehavior = null,
     ): State {
         return new State(
             activeStateDefinition: $currentStateDefinition ?? $this->initialStateDefinition,
             context: $context,
-            eventBehavior: $eventBehavior,
         );
     }
 
