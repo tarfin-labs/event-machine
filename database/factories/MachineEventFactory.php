@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @template TModel of MachineEvent
- *
  */
 class MachineEventFactory extends Factory
 {
