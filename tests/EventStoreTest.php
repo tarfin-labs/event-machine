@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 it('stores events', function (): void {
     $machine = MachineDefinition::define(config: [
+        'id'      => 'traffic_light',
         'initial' => 'green',
         'states'  => [
             'green' => [

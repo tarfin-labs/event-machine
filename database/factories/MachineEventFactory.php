@@ -25,6 +25,9 @@ class MachineEventFactory extends Factory
                 separator: '_',
                 array: $this->faker->words($this->faker->numberBetween(1, 3))
             ).'_machine',
+            'machine_value' => [
+                $this->faker->word().'_state',
+            ],
             'type' => mb_strtoupper(
                 implode(
                     separator: '_',

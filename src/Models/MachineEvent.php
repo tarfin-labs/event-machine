@@ -26,6 +26,7 @@ class MachineEvent extends Model
         'version',
         // Machine ID Related Attributes
         'machine_id',
+        'machine_value',
         'root_event_id',
         // Machine Data Related Attributes
         'context',
@@ -36,6 +37,7 @@ class MachineEvent extends Model
         'sequence_number' => 'integer',
         'created_at'      => 'datetime',
         'machine_id'      => 'string',
+        'machine_value'   => 'json',
         'root_event_id'   => 'string',
         'type'            => 'string',
         'payload'         => 'json',
