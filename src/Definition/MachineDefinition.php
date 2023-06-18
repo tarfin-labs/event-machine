@@ -154,9 +154,9 @@ class MachineDefinition
         // Run entry actions on the initial state definition
         $this->initialStateDefinition->runEntryActions(context: $context);
 
-        $initialState = new State(
-            activeStateDefinition: $this->initialStateDefinition,
+        $initialState = $this->buildCurrentState(
             context: $context,
+            currentStateDefinition: $this->initialStateDefinition,
         );
 
         if ($initialStateDefinition->transitionDefinitions !== null) {
@@ -187,8 +187,8 @@ class MachineDefinition
         ?EventBehavior $eventBehavior = null,
     ): State {
         return new State(
-            activeStateDefinition: $currentStateDefinition ?? $this->initialStateDefinition,
             context: $context,
+            activeStateDefinition: $currentStateDefinition ?? $this->initialStateDefinition,
             eventBehavior: $eventBehavior,
         );
     }
@@ -357,7 +357,9 @@ class MachineDefinition
 
         // If the transition branch is not found, do nothing
         if ($transitionBranch === null) {
-            return $this->buildCurrentState($context, $currentStateDefinition, $eventBehavior);
+            return $state
+                ->setCurrentStateDefinition($currentStateDefinition)
+                ->setEventBehavior($eventBehavior);
         }
 
         // Run exit actions on the source/current state definition
@@ -369,17 +371,19 @@ class MachineDefinition
         // Run entry actions on the target state definition
         $transitionBranch->target?->runEntryActions($context, $eventBehavior);
 
-        $newState = new State(
-            activeStateDefinition: $transitionBranch->target ?? $currentStateDefinition,
-            context: $context
-        );
+        $newState = $state
+            ->setCurrentStateDefinition($transitionBranch->target ?? $currentStateDefinition)
+            ->setEventBehavior($eventBehavior);
 
         if ($this->idMap[$newState->activeStateDefinition->id]->transitionDefinitions !== null) {
             // Check if the new state has any @always transitions
             /** @var TransitionDefinition $transition */
             foreach ($this->stateDefinitions[$newState->activeStateDefinition->key]->transitionDefinitions as $transition) {
                 if ($transition->type === TransitionType::Always) {
-                    return $this->transition(state: $newState, event: ['type' => TransitionType::Always->value]);
+                    return $this->transition(
+                        state: $newState,
+                        event: ['type' => TransitionType::Always->value]
+                    );
                 }
             }
         }

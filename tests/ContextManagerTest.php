@@ -89,7 +89,7 @@ it('can handle edge cases with empty keys and values', function (): void {
     expect($contextArray['data']['empty_value_key'])->toBe('');
 });
 
-test('TrafficLightsMachine transitions between states using EventMachine?', function (): void {
+test('TrafficLightsMachine transitions between states using EventMachine', function (): void {
     $machineDefinition = TrafficLightsMachine::build();
 
     $machineDefinition->transition(state: null, event: [

@@ -32,9 +32,7 @@ class TestCase extends Orchestra
     {
         config()->set('database.default', 'testing');
 
-        /*
-        $migration = include __DIR__.'/../database/migrations/create_event-machine_table.php.stub';
+        $migration = include __DIR__.'/../database/migrations/create_machine_table.php.stub';
         $migration->up();
-        */
     }
 }
