@@ -162,7 +162,12 @@ class MachineDefinition
         if ($initialStateDefinition->transitionDefinitions !== null) {
             foreach ($initialStateDefinition->transitionDefinitions as $transition) {
                 if ($transition->type === TransitionType::Always) {
-                    return $this->transition(state: $initialState, event: ['type' => TransitionType::Always->value]);
+                    return $this->transition(
+                        state: $initialState,
+                        event: [
+                            'type' => TransitionType::Always->value,
+                        ]
+                    );
                 }
             }
         }
@@ -382,7 +387,9 @@ class MachineDefinition
                 if ($transition->type === TransitionType::Always) {
                     return $this->transition(
                         state: $newState,
-                        event: ['type' => TransitionType::Always->value]
+                        event: [
+                            'type' => TransitionType::Always->value,
+                        ]
                     );
                 }
             }
