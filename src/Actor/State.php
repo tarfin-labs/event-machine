@@ -8,7 +8,9 @@ use Symfony\Component\Uid\Ulid;
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Definition\SourceType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 
 class State
@@ -41,6 +43,11 @@ class State
         $this->updateValueFromState();
 
         return $this;
+    }
+
+    public function setInternalEventBehavior(string $type): self
+    {
+        return $this->setEventBehavior(new EventDefinition(type: $type, source: SourceType::INTERNAL));
     }
 
     public function setEventBehavior(EventBehavior $eventBehavior): self
