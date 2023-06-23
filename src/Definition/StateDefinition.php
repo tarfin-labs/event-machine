@@ -372,7 +372,7 @@ class StateDefinition
      *
      * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior  The event to be processed.
      */
-    public function runEntryActions(ContextManager $context, ?EventBehavior $eventBehavior = null): void
+    public function runEntryActions(ContextManager $context, State $state, ?EventBehavior $eventBehavior = null): void
     {
         foreach ($this->entry as $action) {
             $this->machine->runAction($action, $context, $eventBehavior);

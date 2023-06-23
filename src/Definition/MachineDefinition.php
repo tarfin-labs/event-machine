@@ -159,6 +159,9 @@ class MachineDefinition
             currentStateDefinition: $this->initialStateDefinition,
         );
 
+        // Run entry actions on the initial state definition
+        $this->initialStateDefinition->runEntryActions(context: $context, state: $initialState);
+
         if ($initialStateDefinition->transitionDefinitions !== null) {
             foreach ($initialStateDefinition->transitionDefinitions as $transition) {
                 if ($transition->type === TransitionType::Always) {
@@ -369,7 +372,7 @@ class MachineDefinition
         $transitionBranch->runActions($context, $eventBehavior);
 
         // Run entry actions on the target state definition
-        $transitionBranch->target?->runEntryActions($context, $eventBehavior);
+        $transitionBranch->target?->runEntryActions($context, $state, $eventBehavior);
 
         $newState = $state
             ->setCurrentStateDefinition($transitionBranch->target ?? $currentStateDefinition)
