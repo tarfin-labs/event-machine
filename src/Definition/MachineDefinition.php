@@ -355,6 +355,7 @@ class MachineDefinition
         $transitionBranch = $transitionDefinition->getFirstValidTransitionBranch(
             eventBehavior: $eventBehavior,
             context: $context,
+            state: $state
         );
 
         // If the transition branch is not found, do nothing
