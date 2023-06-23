@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Definition;
 
 use Tarfinlabs\EventMachine\Actor\State;
-use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
@@ -360,10 +359,10 @@ class StateDefinition
      *
      * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior  $eventBehavior  The event to be processed.
      */
-    public function runExitActions(ContextManager $context, State $state, EventBehavior $eventBehavior): void
+    public function runExitActions(State $state, EventBehavior $eventBehavior): void
     {
         foreach ($this->exit as $action) {
-            $this->machine->runAction($action, $context, $state, $eventBehavior);
+            $this->machine->runAction($action, $state, $eventBehavior);
         }
     }
 
