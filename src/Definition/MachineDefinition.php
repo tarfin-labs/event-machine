@@ -402,7 +402,6 @@ class MachineDefinition
      * executes it using the context and event payload.
      *
      * @param  string  $actionDefinition      The action definition, either a class
-     * @param  State  $state
      * @param  EventBehavior|null  $eventBehavior         The event (optional).
      */
     public function runAction(
