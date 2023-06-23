@@ -348,6 +348,9 @@ class MachineDefinition
 
         $eventBehavior = $this->initializeEvent($event, $currentStateDefinition);
 
+        // Set event behavior
+        $state->setEventBehavior($eventBehavior);
+
         // Find the transition definition for the event type
         /** @var null|array|TransitionDefinition $transitionDefinition */
         $transitionDefinition = $currentStateDefinition->transitionDefinitions[$eventBehavior->type] ?? null;
@@ -361,8 +364,7 @@ class MachineDefinition
         // If the transition branch is not found, do nothing
         if ($transitionBranch === null) {
             return $state
-                ->setCurrentStateDefinition($currentStateDefinition)
-                ->setEventBehavior($eventBehavior);
+                ->setCurrentStateDefinition($currentStateDefinition);
         }
 
         // Run exit actions on the source/current state definition
@@ -375,8 +377,7 @@ class MachineDefinition
         $transitionBranch->target?->runEntryActions($context, $state, $eventBehavior);
 
         $newState = $state
-            ->setCurrentStateDefinition($transitionBranch->target ?? $currentStateDefinition)
-            ->setEventBehavior($eventBehavior);
+            ->setCurrentStateDefinition($transitionBranch->target ?? $currentStateDefinition);
 
         if ($this->idMap[$newState->activeStateDefinition->id]->transitionDefinitions !== null) {
             // Check if the new state has any @always transitions
