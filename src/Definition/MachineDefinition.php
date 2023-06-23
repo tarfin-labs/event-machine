@@ -416,11 +416,15 @@ class MachineDefinition
 
         // If the action behavior is callable, execute it with the context and event payload.
         if (is_callable($actionBehavior)) {
+            $state->setInternalEventBehavior("action.{$actionDefinition}.initial");
+
             // Execute the action behavior.
             $actionBehavior($context, $eventBehavior);
 
             // Validate the context after the action is executed.
             $context->selfValidate();
+
+            $state->setInternalEventBehavior("action.{$actionDefinition}.done");
         }
     }
 
