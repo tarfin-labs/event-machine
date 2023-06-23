@@ -403,13 +403,11 @@ class MachineDefinition
      * executes it using the context and event payload.
      *
      * @param  string  $actionDefinition      The action definition, either a class
-     * @param  ContextManager  $context
-     *                                                                                      name or an array key.
+     * @param  State  $state
      * @param  EventBehavior|null  $eventBehavior         The event (optional).
      */
     public function runAction(
         string $actionDefinition,
-        ContextManager $context,
         State $state,
         ?EventBehavior $eventBehavior = null
     ): void {
@@ -421,10 +419,10 @@ class MachineDefinition
             $state->setInternalEventBehavior("action.{$actionDefinition}.initial");
 
             // Execute the action behavior.
-            $actionBehavior($context, $eventBehavior);
+            $actionBehavior($state->context, $eventBehavior);
 
             // Validate the context after the action is executed.
-            $context->selfValidate();
+            $state->context->selfValidate();
 
             $state->setInternalEventBehavior("action.{$actionDefinition}.done");
         }
