@@ -66,6 +66,7 @@ class State
                 $this->activeStateDefinition->id,
             ],
             'root_event_id' => $count === 1 ? $id : $this->history[0]->id,
+            'source'        => $eventBehavior->source->value,
             'type'          => $eventBehavior->type,
             'payload'       => $eventBehavior->payload,
             'version'       => $eventBehavior->version,

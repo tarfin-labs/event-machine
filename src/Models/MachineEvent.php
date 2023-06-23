@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Tarfinlabs\EventMachine\Definition\SourceType;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Tarfinlabs\EventMachine\Database\Factories\MachineEventFactory;
@@ -21,6 +22,7 @@ class MachineEvent extends Model
         'sequence_number',
         'created_at',
         // Event Related Attributes
+        'source',
         'type',
         'payload',
         'version',
@@ -39,6 +41,7 @@ class MachineEvent extends Model
         'machine_id'      => 'string',
         'machine_value'   => 'json',
         'root_event_id'   => 'string',
+        'source'          => SourceType::class,
         'type'            => 'string',
         'payload'         => 'json',
         'version'         => 'integer',
