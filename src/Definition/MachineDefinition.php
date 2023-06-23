@@ -151,9 +151,6 @@ class MachineDefinition
 
         $context = $this->initializeContextFromState();
 
-        // Run entry actions on the initial state definition
-        $this->initialStateDefinition->runEntryActions(context: $context);
-
         $initialState = $this->buildCurrentState(
             context: $context,
             currentStateDefinition: $this->initialStateDefinition,
