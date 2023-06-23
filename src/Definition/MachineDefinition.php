@@ -357,7 +357,6 @@ class MachineDefinition
 
         $transitionBranch = $transitionDefinition->getFirstValidTransitionBranch(
             eventBehavior: $eventBehavior,
-            context: $context,
             state: $state
         );
 
