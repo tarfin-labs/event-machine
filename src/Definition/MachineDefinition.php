@@ -159,7 +159,7 @@ class MachineDefinition
         $initialState->setInternalEventBehavior('machine.initial');
 
         // Run entry actions on the initial state definition
-        $this->initialStateDefinition->runEntryActions(context: $context, state: $initialState);
+        $this->initialStateDefinition->runEntryActions(state: $initialState);
 
         if ($initialStateDefinition->transitionDefinitions !== null) {
             foreach ($initialStateDefinition->transitionDefinitions as $transition) {
@@ -374,7 +374,7 @@ class MachineDefinition
         $transitionBranch->runActions($context, $state, $eventBehavior);
 
         // Run entry actions on the target state definition
-        $transitionBranch->target?->runEntryActions($context, $state, $eventBehavior);
+        $transitionBranch->target?->runEntryActions($state, $eventBehavior);
 
         $newState = $state
             ->setCurrentStateDefinition($transitionBranch->target ?? $currentStateDefinition);
