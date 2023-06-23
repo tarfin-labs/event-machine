@@ -363,7 +363,7 @@ class StateDefinition
     public function runExitActions(ContextManager $context, State $state, EventBehavior $eventBehavior): void
     {
         foreach ($this->exit as $action) {
-            $this->machine->runAction($action, $context, $eventBehavior);
+            $this->machine->runAction($action, $context, $state, $eventBehavior);
         }
     }
 
@@ -375,7 +375,7 @@ class StateDefinition
     public function runEntryActions(ContextManager $context, State $state, ?EventBehavior $eventBehavior = null): void
     {
         foreach ($this->entry as $action) {
-            $this->machine->runAction($action, $context, $eventBehavior);
+            $this->machine->runAction($action, $context, $state, $eventBehavior);
         }
     }
 

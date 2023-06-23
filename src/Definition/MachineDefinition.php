@@ -406,6 +406,7 @@ class MachineDefinition
     public function runAction(
         string $actionDefinition,
         ContextManager $context,
+        State $state,
         ?EventBehavior $eventBehavior = null
     ): void {
         // Retrieve the appropriate action behavior based on the action definition.

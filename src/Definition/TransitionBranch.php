@@ -102,7 +102,7 @@ class TransitionBranch
         }
 
         foreach ($this->actions as $actionDefinition) {
-            $this->transitionDefinition->source->machine->runAction($actionDefinition, $context, $eventBehavior);
+            $this->transitionDefinition->source->machine->runAction($actionDefinition, $context, $state, $eventBehavior);
         }
     }
 
