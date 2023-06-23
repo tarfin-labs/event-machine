@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Definition;
 
 use Tarfinlabs\EventMachine\Actor\State;
-use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
@@ -127,7 +126,6 @@ class TransitionDefinition
      */
     public function getFirstValidTransitionBranch(
         EventBehavior $eventBehavior,
-        ContextManager $context,
         State $state
     ): ?TransitionBranch {
         /* @var TransitionBranch $branch */
@@ -144,7 +142,7 @@ class TransitionDefinition
                 );
 
                 $state->setInternalEventBehavior("guard.{$guard}.initial");
-                if ($guardBehavior($context, $eventBehavior) !== true) {
+                if ($guardBehavior($state->context, $eventBehavior) !== true) {
                     $state->setInternalEventBehavior("guard.{$guard}.fail");
                     $guardsPassed = false;
                     break;
