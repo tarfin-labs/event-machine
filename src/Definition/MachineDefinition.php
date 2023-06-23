@@ -366,7 +366,7 @@ class MachineDefinition
         $transitionBranch->transitionDefinition->source->runExitActions($context, $state, $eventBehavior);
 
         // Run transition actions on the transition definition
-        $transitionBranch->runActions($context, $eventBehavior);
+        $transitionBranch->runActions($context, $state, $eventBehavior);
 
         // Run entry actions on the target state definition
         $transitionBranch->target?->runEntryActions($context, $state, $eventBehavior);
