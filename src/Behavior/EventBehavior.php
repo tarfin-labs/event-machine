@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Behavior;
 
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Optional;
+use Tarfinlabs\EventMachine\Definition\SourceType;
 
 abstract class EventBehavior extends Data
 {
@@ -13,6 +14,7 @@ abstract class EventBehavior extends Data
         public null|string|Optional $type = null,
         public null|array|Optional $payload = null,
         public int|Optional $version = 1,
+        public SourceType|Optional $source = SourceType::EXTERNAL,
     ) {
         if ($this->type === null) {
             $this->type = static::getType();
