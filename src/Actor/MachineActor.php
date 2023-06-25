@@ -31,6 +31,8 @@ class MachineActor
 
     public function send(EventBehavior|array $event): State
     {
-        return $this->definition->transition($this->state, $event);
+        $this->state = $this->definition->transition($this->state, $event);
+
+        return $this->state;
     }
 }
