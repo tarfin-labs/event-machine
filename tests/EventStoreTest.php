@@ -118,7 +118,7 @@ it('stores internal guard events', function (): void {
         ->toEqual([
             'machine.init',
             'MUT',
-            'guard.isEvenGuard.initial',
-            'guard.isEvenGuard.fail',
+            'machine.guard.isEvenGuard.init',
+            'machine.guard.isEvenGuard.fail',
         ]);
 });

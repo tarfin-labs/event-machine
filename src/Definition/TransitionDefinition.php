@@ -144,14 +144,26 @@ class TransitionDefinition
                     behaviorType: BehaviorType::Guard
                 );
 
-                $state->setInternalEventBehavior("guard.{$guardDefinition}.initial");
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::GUARD_INIT,
+                    placeholder: $guardDefinition
+                );
+
                 if ($guardBehavior($state->context, $eventBehavior) !== true) {
-                    $state->setInternalEventBehavior("guard.{$guardDefinition}.fail");
                     $guardsPassed = false;
+
+                    $state->setInternalEventBehavior(
+                        type: InternalEvent::GUARD_FAIL,
+                        placeholder: $guardDefinition
+                    );
 
                     break;
                 }
-                $state->setInternalEventBehavior("guard.{$guardDefinition}.done");
+
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::GUARD_PASS,
+                    placeholder: $guardDefinition
+                );
             }
 
             if ($guardsPassed === true) {
