@@ -138,19 +138,20 @@ class TransitionDefinition
             }
 
             $guardsPassed = true;
-            foreach ($branch->guards as $guard) {
+            foreach ($branch->guards as $guardDefinition) {
                 $guardBehavior = $this->source->machine->getInvokableBehavior(
-                    behaviorDefinition: $guard,
+                    behaviorDefinition: $guardDefinition,
                     behaviorType: BehaviorType::Guard
                 );
 
-                $state->setInternalEventBehavior("guard.{$guard}.initial");
+                $state->setInternalEventBehavior("guard.{$guardDefinition}.initial");
                 if ($guardBehavior($state->context, $eventBehavior) !== true) {
-                    $state->setInternalEventBehavior("guard.{$guard}.fail");
+                    $state->setInternalEventBehavior("guard.{$guardDefinition}.fail");
                     $guardsPassed = false;
+
                     break;
                 }
-                $state->setInternalEventBehavior("guard.{$guard}.done");
+                $state->setInternalEventBehavior("guard.{$guardDefinition}.done");
             }
 
             if ($guardsPassed === true) {
