@@ -372,12 +372,11 @@ class MachineDefinition
 
         // If the transition branch is not found, do nothing
         if ($transitionBranch === null) {
-            return $state
-                ->setCurrentStateDefinition($currentStateDefinition);
+            return $state->setCurrentStateDefinition($currentStateDefinition);
         }
 
         // Run exit actions on the source/current state definition
-        $transitionBranch->transitionDefinition->source->runExitActions($state, $eventBehavior);
+        $transitionBranch->transitionDefinition->source->runExitActions($state);
 
         // Run transition actions on the transition definition
         $transitionBranch->runActions($state, $eventBehavior);

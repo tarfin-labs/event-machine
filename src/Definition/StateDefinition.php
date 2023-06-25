@@ -356,13 +356,11 @@ class StateDefinition
 
     /**
      * Runs the exit actions of the current state definition with the given event.
-     *
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior  $eventBehavior  The event to be processed.
      */
-    public function runExitActions(State $state, EventBehavior $eventBehavior): void
+    public function runExitActions(State $state): void
     {
         foreach ($this->exit as $action) {
-            $this->machine->runAction($action, $state, $eventBehavior);
+            $this->machine->runAction($action, $state, $state->currentEventBehavior);
         }
     }
 
