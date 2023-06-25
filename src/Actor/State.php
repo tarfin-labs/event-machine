@@ -21,7 +21,7 @@ class State
 
     public function __construct(
         public ContextManager $context,
-        public ?StateDefinition $activeStateDefinition,
+        public ?StateDefinition $currentStateDefinition,
         public ?EventBehavior $eventBehavior = null,
     ) {
         $this->history = collect();
@@ -35,12 +35,12 @@ class State
 
     protected function updateMachineValueFromState(): void
     {
-        $this->value = [$this->activeStateDefinition->id];
+        $this->value = [$this->currentStateDefinition->id];
     }
 
     public function setCurrentStateDefinition(StateDefinition $stateDefinition): self
     {
-        $this->activeStateDefinition = $stateDefinition;
+        $this->currentStateDefinition = $stateDefinition;
         $this->updateMachineValueFromState();
 
         return $this;
@@ -73,9 +73,9 @@ class State
             'id'              => $id,
             'sequence_number' => $count,
             'created_at'      => now(),
-            'machine_id'      => $this->activeStateDefinition->machine->id,
+            'machine_id'      => $this->currentStateDefinition->machine->id,
             'machine_value'   => [
-                $this->activeStateDefinition->id,
+                $this->currentStateDefinition->id,
             ],
             'root_event_id' => $count === 1 ? $id : $this->history[0]->id,
             'source'        => $eventBehavior->source,
@@ -83,7 +83,7 @@ class State
             'payload'       => $eventBehavior->payload,
             'version'       => $eventBehavior->version,
             'context'       => $this->context->data,
-            'meta'          => $this->activeStateDefinition->meta,
+            'meta'          => $this->currentStateDefinition->meta,
         ]));
 
         return $this;

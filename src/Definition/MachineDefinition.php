@@ -196,7 +196,7 @@ class MachineDefinition
     ): State {
         return new State(
             context: $context,
-            activeStateDefinition: $currentStateDefinition ?? $this->initialStateDefinition,
+            currentStateDefinition: $currentStateDefinition ?? $this->initialStateDefinition,
             eventBehavior: $eventBehavior,
         );
     }
@@ -215,7 +215,7 @@ class MachineDefinition
     protected function getCurrentStateDefinition(string|State|null $state): mixed
     {
         return $state instanceof State
-            ? $state->activeStateDefinition
+            ? $state->currentStateDefinition
             : $this->stateDefinitions[$state] ?? $this->initialStateDefinition;
     }
 
@@ -384,10 +384,10 @@ class MachineDefinition
         $newState = $state
             ->setCurrentStateDefinition($transitionBranch->target ?? $currentStateDefinition);
 
-        if ($this->idMap[$newState->activeStateDefinition->id]->transitionDefinitions !== null) {
+        if ($this->idMap[$newState->currentStateDefinition->id]->transitionDefinitions !== null) {
             // Check if the new state has any @always transitions
             /** @var TransitionDefinition $transition */
-            foreach ($this->stateDefinitions[$newState->activeStateDefinition->key]->transitionDefinitions as $transition) {
+            foreach ($this->stateDefinitions[$newState->currentStateDefinition->key]->transitionDefinitions as $transition) {
                 if ($transition->type === TransitionType::Always) {
                     return $this->transition(
                         state: $newState,

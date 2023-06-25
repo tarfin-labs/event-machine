@@ -180,7 +180,7 @@ it('should transition through multiple if-else targets based on guards', functio
     $newState = $machine->transition(
         state: new State(
             context: new ContextManager(['value' => 2]),
-            activeStateDefinition: $machine->stateDefinitions['green'],
+            currentStateDefinition: $machine->stateDefinitions['green'],
         ),
         event: ['type' => 'TIMER']
     );
@@ -192,7 +192,7 @@ it('should transition through multiple if-else targets based on guards', functio
     $newState = $machine->transition(
         state: new State(
             context: new ContextManager(['value' => 3]),
-            activeStateDefinition: $machine->stateDefinitions['green'],
+            currentStateDefinition: $machine->stateDefinitions['green'],
         ),
         event: ['type' => 'TIMER']
     );
