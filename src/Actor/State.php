@@ -50,10 +50,12 @@ class State
         InternalEvent $type,
         ?string $placeholder = null,
     ): self {
+        $type = ($placeholder === null)
+            ? $type->value
+            : sprintf($type->value, $placeholder);
+
         $eventDefinition = new EventDefinition(
-            type: $placeholder === null
-                ? $type->value
-                : sprintf($type->value, $placeholder),
+            type: $type,
             source: SourceType::INTERNAL
         );
 
@@ -76,7 +78,7 @@ class State
                 $this->activeStateDefinition->id,
             ],
             'root_event_id' => $count === 1 ? $id : $this->history[0]->id,
-            'source'        => $eventBehavior->source->value,
+            'source'        => $eventBehavior->source,
             'type'          => $eventBehavior->type,
             'payload'       => $eventBehavior->payload,
             'version'       => $eventBehavior->version,
