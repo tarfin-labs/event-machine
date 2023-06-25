@@ -197,7 +197,7 @@ class MachineDefinition
         return new State(
             context: $context,
             currentStateDefinition: $currentStateDefinition ?? $this->initialStateDefinition,
-            eventBehavior: $eventBehavior,
+            currentEventBehavior: $eventBehavior,
         );
     }
 
@@ -355,7 +355,7 @@ class MachineDefinition
         $eventBehavior = $this->initializeEvent($event, $currentStateDefinition);
 
         // Set event behavior
-        $state->setEventBehavior($eventBehavior);
+        $state->setCurrentEventBehavior($eventBehavior);
 
         // Find the transition definition for the event type
         /** @var null|array|TransitionDefinition $transitionDefinition */

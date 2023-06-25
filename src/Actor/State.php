@@ -22,14 +22,14 @@ class State
     public function __construct(
         public ContextManager $context,
         public ?StateDefinition $currentStateDefinition,
-        public ?EventBehavior $eventBehavior = null,
+        public ?EventBehavior $currentEventBehavior = null,
     ) {
         $this->history = collect();
 
         $this->updateMachineValueFromState();
 
-        if ($this->eventBehavior !== null) {
-            $this->history[] = $this->eventBehavior;
+        if ($this->currentEventBehavior !== null) {
+            $this->history[] = $this->currentEventBehavior;
         }
     }
 
@@ -59,12 +59,12 @@ class State
             source: SourceType::INTERNAL
         );
 
-        return $this->setEventBehavior($eventDefinition);
+        return $this->setCurrentEventBehavior($eventDefinition);
     }
 
-    public function setEventBehavior(EventBehavior $eventBehavior): self
+    public function setCurrentEventBehavior(EventBehavior $currentEventBehavior): self
     {
-        $this->eventBehavior = $eventBehavior;
+        $this->currentEventBehavior = $currentEventBehavior;
 
         $id    = Ulid::generate();
         $count = count($this->history) + 1;
@@ -78,10 +78,10 @@ class State
                 $this->currentStateDefinition->id,
             ],
             'root_event_id' => $count === 1 ? $id : $this->history[0]->id,
-            'source'        => $eventBehavior->source,
-            'type'          => $eventBehavior->type,
-            'payload'       => $eventBehavior->payload,
-            'version'       => $eventBehavior->version,
+            'source'        => $currentEventBehavior->source,
+            'type'          => $currentEventBehavior->type,
+            'payload'       => $currentEventBehavior->payload,
+            'version'       => $currentEventBehavior->version,
             'context'       => $this->context->data,
             'meta'          => $this->currentStateDefinition->meta,
         ]));
