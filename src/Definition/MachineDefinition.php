@@ -156,6 +156,7 @@ class MachineDefinition
             currentStateDefinition: $this->initialStateDefinition,
         );
 
+        // Record the internal machine init event.
         $initialState->setInternalEventBehavior(type: InternalEvent::MACHINE_INIT);
 
         // Run entry actions on the initial state definition
@@ -416,6 +417,7 @@ class MachineDefinition
 
         // If the action behavior is callable, execute it with the context and event payload.
         if (is_callable($actionBehavior)) {
+            // Record the internal action init event.
             $state->setInternalEventBehavior(
                 type: InternalEvent::ACTION_INIT,
                 placeholder: $actionDefinition
@@ -427,6 +429,7 @@ class MachineDefinition
             // Validate the context after the action is executed.
             $state->context->selfValidate();
 
+            // Record the internal action done event.
             $state->setInternalEventBehavior(
                 type: InternalEvent::ACTION_DONE,
                 placeholder: $actionDefinition

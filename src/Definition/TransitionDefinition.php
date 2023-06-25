@@ -144,6 +144,7 @@ class TransitionDefinition
                     behaviorType: BehaviorType::Guard
                 );
 
+                // Record the internal guard init event.
                 $state->setInternalEventBehavior(
                     type: InternalEvent::GUARD_INIT,
                     placeholder: $guardDefinition
@@ -152,6 +153,7 @@ class TransitionDefinition
                 if ($guardBehavior($state->context, $eventBehavior) !== true) {
                     $guardsPassed = false;
 
+                    // Record the internal guard fail event.
                     $state->setInternalEventBehavior(
                         type: InternalEvent::GUARD_FAIL,
                         placeholder: $guardDefinition
@@ -160,6 +162,7 @@ class TransitionDefinition
                     break;
                 }
 
+                // Record the internal guard pass event.
                 $state->setInternalEventBehavior(
                     type: InternalEvent::GUARD_PASS,
                     placeholder: $guardDefinition
