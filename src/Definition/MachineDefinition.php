@@ -290,28 +290,33 @@ class MachineDefinition
     }
 
     /**
-     * Initialize an EventDefinition instance from the given event.
+     * Initialize an EventDefinition instance from the given event and state.
      *
      * If the $event argument is already an EventDefinition instance,
      * return it directly. Otherwise, create an EventDefinition instance
-     * by invoking the behavior for the corresponding event type. If no
-     * behavior is defined for the event type, a default EventDefinition
-     * instance is returned.
+     * by invoking the behavior for the corresponding event type in the given
+     * state. If no behavior is defined for the event type, a default
+     * EventDefinition instance is returned.
      *
      * @param  EventBehavior|array  $event The event to initialize.
-     * @param  StateDefinition  $stateDefinition The state definition to use.
+     * @param  State  $state The state in which the event is occurring.
      *
      * @return EventBehavior The initialized EventBehavior instance.
      */
-    protected function initializeEvent(EventBehavior|array $event, StateDefinition $stateDefinition): EventBehavior
-    {
+    protected function initializeEvent(
+        EventBehavior|array $event,
+        State $state
+    ): EventBehavior {
         if ($event instanceof EventBehavior) {
             return $event;
         }
 
-        if (isset($stateDefinition->machine->behavior[BehaviorType::Event->value][$event['type']])) {
+        if (isset($state->currentStateDefinition->machine->behavior[BehaviorType::Event->value][$event['type']])) {
             /** @var EventBehavior $eventDefinitionClass */
-            $eventDefinitionClass = $stateDefinition->machine->behavior[BehaviorType::Event->value][$event['type']];
+            $eventDefinitionClass = $state
+                ->currentStateDefinition
+                ->machine
+                ->behavior[BehaviorType::Event->value][$event['type']];
 
             return $eventDefinitionClass::validateAndCreate($event);
         }
@@ -351,7 +356,7 @@ class MachineDefinition
 
         $currentStateDefinition = $this->getCurrentStateDefinition($state);
 
-        $eventBehavior = $this->initializeEvent($event, $currentStateDefinition);
+        $eventBehavior = $this->initializeEvent($event, $state);
 
         // Set event behavior
         $state->setCurrentEventBehavior($eventBehavior);
