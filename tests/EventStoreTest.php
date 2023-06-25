@@ -6,7 +6,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
-it('stores events', function (): void {
+it('stores external events', function (): void {
     $machine = MachineDefinition::define(config: [
         'id'      => 'traffic_light',
         'initial' => 'green',
@@ -36,7 +36,7 @@ it('stores events', function (): void {
     expect($newState->history)->toHaveCount(3);
 });
 
-it('stores action events', function (): void {
+it('stores internal action events', function (): void {
     $machine = MachineDefinition::define(
         config: [
             'initial' => 'active',
@@ -46,7 +46,9 @@ it('stores action events', function (): void {
             'states' => [
                 'active' => [
                     'on' => [
-                        'ADD' => ['actions' => 'additionAction'],
+                        'ADD' => [
+                            'actions' => 'additionAction',
+                        ],
                     ],
                 ],
             ],
@@ -69,10 +71,15 @@ it('stores action events', function (): void {
 
     expect($newState->history->pluck('type')->toArray())
         ->toHaveCount(4)
-        ->toEqual(['machine.initial', 'ADD', 'action.additionAction.initial', 'action.additionAction.done']);
+        ->toEqual([
+            'machine.initial',
+            'ADD',
+            'action.additionAction.initial',
+            'action.additionAction.done',
+        ]);
 });
 
-it('stores guard events', function (): void {
+it('stores internal guard events', function (): void {
     $machine = MachineDefinition::define(
         config: [
             'initial' => 'active',
@@ -108,5 +115,10 @@ it('stores guard events', function (): void {
 
     expect($newState->history->pluck('type')->toArray())
         ->toHaveCount(4)
-        ->toEqual(['machine.initial', 'MUT', 'guard.isEvenGuard.initial', 'guard.isEvenGuard.fail']);
+        ->toEqual([
+            'machine.initial',
+            'MUT',
+            'guard.isEvenGuard.initial',
+            'guard.isEvenGuard.fail',
+        ]);
 });
