@@ -26,14 +26,14 @@ class State
     ) {
         $this->history = collect();
 
-        $this->updateValueFromState();
+        $this->updateMachineValueFromState();
 
         if ($this->eventBehavior !== null) {
             $this->history[] = $this->eventBehavior;
         }
     }
 
-    protected function updateValueFromState(): void
+    protected function updateMachineValueFromState(): void
     {
         $this->value = [$this->activeStateDefinition->id];
     }
@@ -41,7 +41,7 @@ class State
     public function setCurrentStateDefinition(StateDefinition $stateDefinition): self
     {
         $this->activeStateDefinition = $stateDefinition;
-        $this->updateValueFromState();
+        $this->updateMachineValueFromState();
 
         return $this;
     }
