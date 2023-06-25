@@ -341,14 +341,13 @@ class MachineDefinition
      * @param  EventBehavior|array  $event The event that triggers the transition.
      *
      * @return State The new state after the transition.
+     *
+     * @throws BehaviorNotFoundException
      */
     public function transition(null|State $state, EventBehavior|array $event): State
     {
-        if ($state === null) {
-            $state = $this->getInitialState();
-        }
-
-        $context = $state?->context ?? $this->initializeContextFromState($state);
+        // If the state is not passed, use the initial state
+        $state ??= $this->getInitialState();
 
         $currentStateDefinition = $this->getCurrentStateDefinition($state);
 
