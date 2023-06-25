@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
-use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 /**
  * Class TransitionDefinition.
@@ -119,14 +120,16 @@ class TransitionDefinition
      * to true, it is considered eligible. The method returns the first
      * eligible transition encountered or null if none is found.
      *
-     * @param  EventBehavior  $eventBehavior         The event used to evaluate guards.
+     * @param  EventBehavior  $eventBehavior The event used to evaluate guards.
      *
      * @return TransitionDefinition|null The first eligible transition or
      *         null if no eligible transition is found.
+     *
+     * @throws BehaviorNotFoundException
      */
     public function getFirstValidTransitionBranch(
         EventBehavior $eventBehavior,
-        ContextManager $context,
+        State $state
     ): ?TransitionBranch {
         /* @var TransitionBranch $branch */
         foreach ($this->branches as $branch) {
@@ -135,16 +138,35 @@ class TransitionDefinition
             }
 
             $guardsPassed = true;
-            foreach ($branch->guards as $guard) {
+            foreach ($branch->guards as $guardDefinition) {
                 $guardBehavior = $this->source->machine->getInvokableBehavior(
-                    behaviorDefinition: $guard,
+                    behaviorDefinition: $guardDefinition,
                     behaviorType: BehaviorType::Guard
                 );
 
-                if ($guardBehavior($context, $eventBehavior) !== true) {
+                // Record the internal guard init event.
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::GUARD_INIT,
+                    placeholder: $guardDefinition
+                );
+
+                if ($guardBehavior($state->context, $eventBehavior) !== true) {
                     $guardsPassed = false;
+
+                    // Record the internal guard fail event.
+                    $state->setInternalEventBehavior(
+                        type: InternalEvent::GUARD_FAIL,
+                        placeholder: $guardDefinition
+                    );
+
                     break;
                 }
+
+                // Record the internal guard pass event.
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::GUARD_PASS,
+                    placeholder: $guardDefinition
+                );
             }
 
             if ($guardsPassed === true) {

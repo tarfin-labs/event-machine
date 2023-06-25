@@ -151,13 +151,16 @@ class MachineDefinition
 
         $context = $this->initializeContextFromState();
 
-        // Run entry actions on the initial state definition
-        $this->initialStateDefinition->runEntryActions(context: $context);
-
         $initialState = $this->buildCurrentState(
             context: $context,
             currentStateDefinition: $this->initialStateDefinition,
         );
+
+        // Record the internal machine init event.
+        $initialState->setInternalEventBehavior(type: InternalEvent::MACHINE_INIT);
+
+        // Run entry actions on the initial state definition
+        $this->initialStateDefinition->runEntryActions(state: $initialState);
 
         if ($initialStateDefinition->transitionDefinitions !== null) {
             foreach ($initialStateDefinition->transitionDefinitions as $transition) {
@@ -351,34 +354,35 @@ class MachineDefinition
 
         $eventBehavior = $this->initializeEvent($event, $currentStateDefinition);
 
+        // Set event behavior
+        $state->setEventBehavior($eventBehavior);
+
         // Find the transition definition for the event type
         /** @var null|array|TransitionDefinition $transitionDefinition */
         $transitionDefinition = $currentStateDefinition->transitionDefinitions[$eventBehavior->type] ?? null;
 
         $transitionBranch = $transitionDefinition->getFirstValidTransitionBranch(
             eventBehavior: $eventBehavior,
-            context: $context,
+            state: $state
         );
 
         // If the transition branch is not found, do nothing
         if ($transitionBranch === null) {
             return $state
-                ->setCurrentStateDefinition($currentStateDefinition)
-                ->setEventBehavior($eventBehavior);
+                ->setCurrentStateDefinition($currentStateDefinition);
         }
 
         // Run exit actions on the source/current state definition
-        $transitionBranch->transitionDefinition->source->runExitActions($context, $eventBehavior);
+        $transitionBranch->transitionDefinition->source->runExitActions($state, $eventBehavior);
 
         // Run transition actions on the transition definition
-        $transitionBranch->runActions($context, $eventBehavior);
+        $transitionBranch->runActions($state, $eventBehavior);
 
         // Run entry actions on the target state definition
-        $transitionBranch->target?->runEntryActions($context, $eventBehavior);
+        $transitionBranch->target?->runEntryActions($state, $eventBehavior);
 
         $newState = $state
-            ->setCurrentStateDefinition($transitionBranch->target ?? $currentStateDefinition)
-            ->setEventBehavior($eventBehavior);
+            ->setCurrentStateDefinition($transitionBranch->target ?? $currentStateDefinition);
 
         if ($this->idMap[$newState->activeStateDefinition->id]->transitionDefinitions !== null) {
             // Check if the new state has any @always transitions
@@ -405,14 +409,14 @@ class MachineDefinition
      * action definition, and if the action behavior is callable, it
      * executes it using the context and event payload.
      *
-     * @param  string  $actionDefinition      The action definition, either a class
-     * @param  ContextManager  $context
-     *                                                                                      name or an array key.
-     * @param  EventBehavior|null  $eventBehavior         The event (optional).
+     * @param  string  $actionDefinition The action definition, either a class
+     * @param  EventBehavior|null  $eventBehavior The event (optional).
+     *
+     * @throws BehaviorNotFoundException
      */
     public function runAction(
         string $actionDefinition,
-        ContextManager $context,
+        State $state,
         ?EventBehavior $eventBehavior = null
     ): void {
         // Retrieve the appropriate action behavior based on the action definition.
@@ -420,11 +424,23 @@ class MachineDefinition
 
         // If the action behavior is callable, execute it with the context and event payload.
         if (is_callable($actionBehavior)) {
+            // Record the internal action init event.
+            $state->setInternalEventBehavior(
+                type: InternalEvent::ACTION_INIT,
+                placeholder: $actionDefinition
+            );
+
             // Execute the action behavior.
-            $actionBehavior($context, $eventBehavior);
+            $actionBehavior($state->context, $eventBehavior);
 
             // Validate the context after the action is executed.
-            $context->selfValidate();
+            $state->context->selfValidate();
+
+            // Record the internal action done event.
+            $state->setInternalEventBehavior(
+                type: InternalEvent::ACTION_DONE,
+                placeholder: $actionDefinition
+            );
         }
     }
 

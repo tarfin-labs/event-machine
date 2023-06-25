@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
-use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
@@ -92,7 +92,7 @@ class TransitionBranch
      * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior  The event or null if none is provided.
      */
     public function runActions(
-        ContextManager $context,
+        State $state,
         ?EventBehavior $eventBehavior = null
     ): void {
         if ($this->actions === null) {
@@ -100,7 +100,7 @@ class TransitionBranch
         }
 
         foreach ($this->actions as $actionDefinition) {
-            $this->transitionDefinition->source->machine->runAction($actionDefinition, $context, $eventBehavior);
+            $this->transitionDefinition->source->machine->runAction($actionDefinition, $state, $eventBehavior);
         }
     }
 
