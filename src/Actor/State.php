@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Definition\SourceType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Definition\InternalEvent;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 
@@ -45,9 +46,9 @@ class State
         return $this;
     }
 
-    public function setInternalEventBehavior(string $type): self
+    public function setInternalEventBehavior(InternalEvent $type): self
     {
-        return $this->setEventBehavior(new EventDefinition(type: $type, source: SourceType::INTERNAL));
+        return $this->setEventBehavior(new EventDefinition(type: $type->value, source: SourceType::INTERNAL));
     }
 
     public function setEventBehavior(EventBehavior $eventBehavior): self

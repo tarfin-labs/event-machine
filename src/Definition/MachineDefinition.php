@@ -156,7 +156,7 @@ class MachineDefinition
             currentStateDefinition: $this->initialStateDefinition,
         );
 
-        $initialState->setInternalEventBehavior('machine.initial');
+        $initialState->setInternalEventBehavior(type: InternalEvent::MACHINE_INIT);
 
         // Run entry actions on the initial state definition
         $this->initialStateDefinition->runEntryActions(state: $initialState);

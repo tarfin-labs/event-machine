@@ -72,7 +72,7 @@ it('stores internal action events', function (): void {
     expect($newState->history->pluck('type')->toArray())
         ->toHaveCount(4)
         ->toEqual([
-            'machine.initial',
+            'machine.init',
             'ADD',
             'action.additionAction.initial',
             'action.additionAction.done',
@@ -116,7 +116,7 @@ it('stores internal guard events', function (): void {
     expect($newState->history->pluck('type')->toArray())
         ->toHaveCount(4)
         ->toEqual([
-            'machine.initial',
+            'machine.init',
             'MUT',
             'guard.isEvenGuard.initial',
             'guard.isEvenGuard.fail',
