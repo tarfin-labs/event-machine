@@ -74,8 +74,8 @@ it('stores internal action events', function (): void {
         ->toEqual([
             'machine.init',
             'ADD',
-            'action.additionAction.initial',
-            'action.additionAction.done',
+            'machine.action.additionAction.init',
+            'machine.action.additionAction.done',
         ]);
 });
 

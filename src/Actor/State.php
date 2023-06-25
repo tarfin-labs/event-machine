@@ -46,9 +46,18 @@ class State
         return $this;
     }
 
-    public function setInternalEventBehavior(InternalEvent $type): self
-    {
-        return $this->setEventBehavior(new EventDefinition(type: $type->value, source: SourceType::INTERNAL));
+    public function setInternalEventBehavior(
+        InternalEvent $type,
+        ?string $placeholder = null,
+    ): self {
+        $eventDefinition = new EventDefinition(
+            type: $placeholder === null
+                ? $type->value
+                : sprintf($type->value, $placeholder),
+            source: SourceType::INTERNAL
+        );
+
+        return $this->setEventBehavior($eventDefinition);
     }
 
     public function setEventBehavior(EventBehavior $eventBehavior): self

@@ -401,8 +401,10 @@ class MachineDefinition
      * action definition, and if the action behavior is callable, it
      * executes it using the context and event payload.
      *
-     * @param  string  $actionDefinition      The action definition, either a class
-     * @param  EventBehavior|null  $eventBehavior         The event (optional).
+     * @param  string  $actionDefinition The action definition, either a class
+     * @param  EventBehavior|null  $eventBehavior The event (optional).
+     *
+     * @throws BehaviorNotFoundException
      */
     public function runAction(
         string $actionDefinition,
@@ -414,7 +416,10 @@ class MachineDefinition
 
         // If the action behavior is callable, execute it with the context and event payload.
         if (is_callable($actionBehavior)) {
-            $state->setInternalEventBehavior("action.{$actionDefinition}.initial");
+            $state->setInternalEventBehavior(
+                type: InternalEvent::ACTION_INIT,
+                placeholder: $actionDefinition
+            );
 
             // Execute the action behavior.
             $actionBehavior($state->context, $eventBehavior);
@@ -422,7 +427,10 @@ class MachineDefinition
             // Validate the context after the action is executed.
             $state->context->selfValidate();
 
-            $state->setInternalEventBehavior("action.{$actionDefinition}.done");
+            $state->setInternalEventBehavior(
+                type: InternalEvent::ACTION_DONE,
+                placeholder: $actionDefinition
+            );
         }
     }
 
