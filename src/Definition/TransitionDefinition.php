@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Definition;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 /**
  * Class TransitionDefinition.
@@ -119,10 +120,12 @@ class TransitionDefinition
      * to true, it is considered eligible. The method returns the first
      * eligible transition encountered or null if none is found.
      *
-     * @param  EventBehavior  $eventBehavior         The event used to evaluate guards.
+     * @param  EventBehavior  $eventBehavior The event used to evaluate guards.
      *
      * @return TransitionDefinition|null The first eligible transition or
      *         null if no eligible transition is found.
+     *
+     * @throws BehaviorNotFoundException
      */
     public function getFirstValidTransitionBranch(
         EventBehavior $eventBehavior,
