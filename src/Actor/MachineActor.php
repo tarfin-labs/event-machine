@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Actor;
 
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 class MachineActor
 {
@@ -20,6 +21,9 @@ class MachineActor
         $this->state = $state ?? $this->definition->getInitialState();
     }
 
+    /**
+     * @throws BehaviorNotFoundException
+     */
     public function send(EventBehavior|array $event): State
     {
         $this->state = $this->definition->transition($this->state, $event);

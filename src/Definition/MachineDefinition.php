@@ -140,6 +140,8 @@ class MachineDefinition
      * Build the initial state for the machine.
      *
      * @return ?State The initial state of the machine.
+     *
+     * @throws BehaviorNotFoundException
      */
     public function getInitialState(): ?State
     {
@@ -324,6 +326,13 @@ class MachineDefinition
         return EventDefinition::from($event);
     }
 
+    /**
+     * Retrieves the nearest `StateDefinition` by string.
+     *
+     * @param  string  $state The state string.
+     *
+     * @return StateDefinition|null The nearest StateDefinition or null if it is not found.
+     */
     public function getNearestStateDefinitionByString(string $state): ?StateDefinition
     {
         if (empty($state)) {
@@ -423,7 +432,10 @@ class MachineDefinition
         ?EventBehavior $eventBehavior = null
     ): void {
         // Retrieve the appropriate action behavior based on the action definition.
-        $actionBehavior = $this->getInvokableBehavior(behaviorDefinition: $actionDefinition, behaviorType: BehaviorType::Action);
+        $actionBehavior = $this->getInvokableBehavior(
+            behaviorDefinition: $actionDefinition,
+            behaviorType: BehaviorType::Action
+        );
 
         // If the action behavior is callable, execute it with the context and event payload.
         if (is_callable($actionBehavior)) {

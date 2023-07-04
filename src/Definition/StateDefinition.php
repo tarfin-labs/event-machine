@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Definition;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 class StateDefinition
 {
@@ -356,23 +357,35 @@ class StateDefinition
 
     /**
      * Runs the exit actions of the current state definition with the given event.
+     *
+     * @throws BehaviorNotFoundException
      */
     public function runExitActions(State $state): void
     {
         foreach ($this->exit as $action) {
-            $this->machine->runAction($action, $state, $state->currentEventBehavior);
+            $this->machine->runAction(
+                actionDefinition: $action,
+                state: $state,
+                eventBehavior: $state->currentEventBehavior
+            );
         }
     }
 
     /**
      * Runs the entry actions of the current state definition with the given event.
      *
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior  The event to be processed.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior The event to be processed.
+     *
+     * @throws BehaviorNotFoundException
      */
     public function runEntryActions(State $state, ?EventBehavior $eventBehavior = null): void
     {
         foreach ($this->entry as $action) {
-            $this->machine->runAction($action, $state, $eventBehavior);
+            $this->machine->runAction(
+                actionDefinition: $action,
+                state: $state,
+                eventBehavior: $eventBehavior
+            );
         }
     }
 
