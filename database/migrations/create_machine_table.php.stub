@@ -18,10 +18,10 @@ return new class extends Migration
 
             $table->string('source');
             $table->string('type');
-            $table->json('payload');
+            $table->json('payload')->nullable();
             $table->unsignedInteger('version');
 
-            $table->json('context');
+            $table->json('context')->nullable();
             $table->json('meta')->nullable();
         });
     }
