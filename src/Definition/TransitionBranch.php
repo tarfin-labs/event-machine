@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Definition;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 class TransitionBranch
 {
@@ -89,7 +90,9 @@ class TransitionBranch
      *
      * If there are no actions associated with the transition definition, do nothing.
      *
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior  The event or null if none is provided.
+     * @param  EventBehavior|null  $eventBehavior The event or null if none is provided.
+     *
+     * @throws BehaviorNotFoundException
      */
     public function runActions(
         State $state,

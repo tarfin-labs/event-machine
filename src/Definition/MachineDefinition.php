@@ -140,6 +140,8 @@ class MachineDefinition
      * Build the initial state for the machine.
      *
      * @return ?State The initial state of the machine.
+     *
+     * @throws BehaviorNotFoundException
      */
     public function getInitialState(): ?State
     {
@@ -196,8 +198,8 @@ class MachineDefinition
     ): State {
         return new State(
             context: $context,
-            activeStateDefinition: $currentStateDefinition ?? $this->initialStateDefinition,
-            eventBehavior: $eventBehavior,
+            currentStateDefinition: $currentStateDefinition ?? $this->initialStateDefinition,
+            currentEventBehavior: $eventBehavior,
         );
     }
 
@@ -215,7 +217,7 @@ class MachineDefinition
     protected function getCurrentStateDefinition(string|State|null $state): mixed
     {
         return $state instanceof State
-            ? $state->activeStateDefinition
+            ? $state->currentStateDefinition
             : $this->stateDefinitions[$state] ?? $this->initialStateDefinition;
     }
 
@@ -290,28 +292,33 @@ class MachineDefinition
     }
 
     /**
-     * Initialize an EventDefinition instance from the given event.
+     * Initialize an EventDefinition instance from the given event and state.
      *
      * If the $event argument is already an EventDefinition instance,
      * return it directly. Otherwise, create an EventDefinition instance
-     * by invoking the behavior for the corresponding event type. If no
-     * behavior is defined for the event type, a default EventDefinition
-     * instance is returned.
+     * by invoking the behavior for the corresponding event type in the given
+     * state. If no behavior is defined for the event type, a default
+     * EventDefinition instance is returned.
      *
      * @param  EventBehavior|array  $event The event to initialize.
-     * @param  StateDefinition  $stateDefinition The state definition to use.
+     * @param  State  $state The state in which the event is occurring.
      *
      * @return EventBehavior The initialized EventBehavior instance.
      */
-    protected function initializeEvent(EventBehavior|array $event, StateDefinition $stateDefinition): EventBehavior
-    {
+    protected function initializeEvent(
+        EventBehavior|array $event,
+        State $state
+    ): EventBehavior {
         if ($event instanceof EventBehavior) {
             return $event;
         }
 
-        if (isset($stateDefinition->machine->behavior[BehaviorType::Event->value][$event['type']])) {
+        if (isset($state->currentStateDefinition->machine->behavior[BehaviorType::Event->value][$event['type']])) {
             /** @var EventBehavior $eventDefinitionClass */
-            $eventDefinitionClass = $stateDefinition->machine->behavior[BehaviorType::Event->value][$event['type']];
+            $eventDefinitionClass = $state
+                ->currentStateDefinition
+                ->machine
+                ->behavior[BehaviorType::Event->value][$event['type']];
 
             return $eventDefinitionClass::validateAndCreate($event);
         }
@@ -319,6 +326,13 @@ class MachineDefinition
         return EventDefinition::from($event);
     }
 
+    /**
+     * Retrieves the nearest `StateDefinition` by string.
+     *
+     * @param  string  $state The state string.
+     *
+     * @return StateDefinition|null The nearest StateDefinition or null if it is not found.
+     */
     public function getNearestStateDefinitionByString(string $state): ?StateDefinition
     {
         if (empty($state)) {
@@ -341,21 +355,20 @@ class MachineDefinition
      * @param  EventBehavior|array  $event The event that triggers the transition.
      *
      * @return State The new state after the transition.
+     *
+     * @throws BehaviorNotFoundException
      */
     public function transition(null|State $state, EventBehavior|array $event): State
     {
-        if ($state === null) {
-            $state = $this->getInitialState();
-        }
-
-        $context = $state?->context ?? $this->initializeContextFromState($state);
+        // If the state is not passed, use the initial state
+        $state ??= $this->getInitialState();
 
         $currentStateDefinition = $this->getCurrentStateDefinition($state);
 
-        $eventBehavior = $this->initializeEvent($event, $currentStateDefinition);
+        $eventBehavior = $this->initializeEvent($event, $state);
 
         // Set event behavior
-        $state->setEventBehavior($eventBehavior);
+        $state->setCurrentEventBehavior($eventBehavior);
 
         // Find the transition definition for the event type
         /** @var null|array|TransitionDefinition $transitionDefinition */
@@ -368,12 +381,11 @@ class MachineDefinition
 
         // If the transition branch is not found, do nothing
         if ($transitionBranch === null) {
-            return $state
-                ->setCurrentStateDefinition($currentStateDefinition);
+            return $state->setCurrentStateDefinition($currentStateDefinition);
         }
 
         // Run exit actions on the source/current state definition
-        $transitionBranch->transitionDefinition->source->runExitActions($state, $eventBehavior);
+        $transitionBranch->transitionDefinition->source->runExitActions($state);
 
         // Run transition actions on the transition definition
         $transitionBranch->runActions($state, $eventBehavior);
@@ -384,10 +396,10 @@ class MachineDefinition
         $newState = $state
             ->setCurrentStateDefinition($transitionBranch->target ?? $currentStateDefinition);
 
-        if ($this->idMap[$newState->activeStateDefinition->id]->transitionDefinitions !== null) {
+        if ($this->idMap[$newState->currentStateDefinition->id]->transitionDefinitions !== null) {
             // Check if the new state has any @always transitions
             /** @var TransitionDefinition $transition */
-            foreach ($this->stateDefinitions[$newState->activeStateDefinition->key]->transitionDefinitions as $transition) {
+            foreach ($this->stateDefinitions[$newState->currentStateDefinition->key]->transitionDefinitions as $transition) {
                 if ($transition->type === TransitionType::Always) {
                     return $this->transition(
                         state: $newState,
@@ -420,7 +432,10 @@ class MachineDefinition
         ?EventBehavior $eventBehavior = null
     ): void {
         // Retrieve the appropriate action behavior based on the action definition.
-        $actionBehavior = $this->getInvokableBehavior(behaviorDefinition: $actionDefinition, behaviorType: BehaviorType::Action);
+        $actionBehavior = $this->getInvokableBehavior(
+            behaviorDefinition: $actionDefinition,
+            behaviorType: BehaviorType::Action
+        );
 
         // If the action behavior is callable, execute it with the context and event payload.
         if (is_callable($actionBehavior)) {
