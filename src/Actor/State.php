@@ -75,16 +75,14 @@ class State
             'sequence_number' => $count,
             'created_at'      => now(),
             'machine_id'      => $this->currentStateDefinition->machine->id,
-            'machine_value'   => [
-                $this->currentStateDefinition->id,
-            ],
-            'root_event_id' => $count === 1 ? $id : $this->history[0]->id,
-            'source'        => $currentEventBehavior->source,
-            'type'          => $currentEventBehavior->type,
-            'payload'       => $currentEventBehavior->payload,
-            'version'       => $currentEventBehavior->version,
-            'context'       => $this->context->data,
-            'meta'          => $this->currentStateDefinition->meta,
+            'machine_value'   => [$this->currentStateDefinition->id],
+            'root_event_id'   => $count === 1 ? $id : $this->history[0]->id,
+            'source'          => $currentEventBehavior->source,
+            'type'            => $currentEventBehavior->type,
+            'payload'         => $currentEventBehavior->payload,
+            'version'         => $currentEventBehavior->version,
+            'context'         => $this->context->data,
+            'meta'            => $this->currentStateDefinition->meta,
         ]));
 
         return $this;
