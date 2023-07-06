@@ -81,7 +81,7 @@ class State
             'type'            => $currentEventBehavior->type,
             'payload'         => $currentEventBehavior->payload,
             'version'         => $currentEventBehavior->version,
-            'context'         => $this->context->data,
+            'context'         => $this->context->toArray(),
             'meta'            => $this->currentStateDefinition->meta,
         ]));
 
