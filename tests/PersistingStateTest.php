@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Definition\EventDefinition;
+use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 it('can persist the machine state', function (): void {
@@ -37,7 +39,17 @@ it('can restore the persisted state', function (): void {
 
     $rootEventId = $machineActor->state->history->first()->root_event_id;
 
-    $restoredMachine = TrafficLightsMachine::start($rootEventId);
+    $restoredMachineState = TrafficLightsMachine::start($rootEventId)->state;
 
-    expect($restoredMachine->state->value)->toEqual($state->value);
+    expect($restoredMachineState->value)->toEqual($state->value);
+    expect($restoredMachineState->context->toArray())->toEqual($state->context->toArray());
+
+    expect($restoredMachineState->currentStateDefinition)
+        ->toBeInstanceOf(StateDefinition::class)
+        ->id->toBe($state->currentStateDefinition->id);
+
+    expect($restoredMachineState->currentEventBehavior)
+        ->toBeInstanceOf(EventDefinition::class)
+        ->and($restoredMachineState->currentEventBehavior->toArray())
+        ->toBe($state->currentEventBehavior->toArray());
 });
