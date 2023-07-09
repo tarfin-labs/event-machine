@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Exceptions;
 
-class BehaviorNotFoundException extends \Exception
+use Exception;
+
+class BehaviorNotFoundException extends Exception
 {
     public static function build(string $behaviorType): self
     {

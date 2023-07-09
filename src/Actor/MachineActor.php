@@ -4,9 +4,15 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Actor;
 
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Behavior\BehaviorType;
+use Tarfinlabs\EventMachine\Definition\SourceType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Definition\EventDefinition;
+use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 class MachineActor
@@ -15,14 +21,17 @@ class MachineActor
     public ?State $state = null;
 
     /**
-     * @throws BehaviorNotFoundException
+     * @throws BehaviorNotFoundException|RestoringStateException
      */
     public function __construct(
         public MachineDefinition $definition,
-        ?State $state = null,
+        State|string|null $state = null,
     ) {
-        // If no state is provided, use the initial state of the machine.
-        $this->state = $state ?? $this->definition->getInitialState();
+        $this->state = match (true) {
+            $state === null         => $this->definition->getInitialState(),
+            $state instanceof State => $state,
+            is_string($state)       => $this->restoreStateFromRootEventId($state),
+        };
     }
 
     /**
@@ -38,16 +47,114 @@ class MachineActor
     public function persist(): ?State
     {
         MachineEvent::insert(
-            $this->state->history->map(function (MachineEvent $machineEvent) {
-                return array_merge($machineEvent->toArray(), [
-                    'machine_value' => json_encode($machineEvent->machine_value, JSON_THROW_ON_ERROR),
-                    'payload'       => json_encode($machineEvent->payload, JSON_THROW_ON_ERROR),
-                    'context'       => json_encode($machineEvent->context, JSON_THROW_ON_ERROR),
-                    'meta'          => json_encode($machineEvent->meta, JSON_THROW_ON_ERROR),
-                ]);
-            })->toArray()
+            $this->state->history->map(fn (MachineEvent $machineEvent) => array_merge($machineEvent->toArray(), [
+                'machine_value' => json_encode($machineEvent->machine_value, JSON_THROW_ON_ERROR),
+                'payload'       => json_encode($machineEvent->payload, JSON_THROW_ON_ERROR),
+                'context'       => json_encode($machineEvent->context, JSON_THROW_ON_ERROR),
+                'meta'          => json_encode($machineEvent->meta, JSON_THROW_ON_ERROR),
+            ]))->toArray()
         );
 
         return $this->state;
     }
+
+    // region Restoring State
+
+    /**
+     * Restores the state of the machine from the given root event identifier.
+     *
+     * @param  string  $key The root event identifier to restore state from.
+     *
+     * @return State The restored state of the machine.
+     *
+     * @throws RestoringStateException If machine state is not found.
+     */
+    public function restoreStateFromRootEventId(string $key): State
+    {
+        $machineEvents = MachineEvent::query()
+            ->where('root_event_id', $key)
+            ->oldest('sequence_number')
+            ->get();
+
+        if ($machineEvents->isEmpty()) {
+            throw RestoringStateException::build('Machine state not found.');
+        }
+
+        $lastMachineEvent = $machineEvents->last();
+
+        return new State(
+            context: $this->restoreContext($lastMachineEvent->context),
+            currentStateDefinition: $this->restoreCurrentStateDefinition($lastMachineEvent->machine_value),
+            currentEventBehavior: $this->restoreCurrentEventBehavior($lastMachineEvent),
+            history: $machineEvents,
+        );
+    }
+
+    /**
+     * Restores the context using the persisted context data.
+     *
+     * @param  array  $persistedContext The persisted context data.
+     *
+     * @return ContextManager The restored context manager instance.
+     */
+    protected function restoreContext(array $persistedContext): ContextManager
+    {
+        if (!empty($this->definition->behavior['context'])) {
+            /** @var ContextManager $contextClass */
+            $contextClass = $this->definition->behavior['context'];
+
+            return $contextClass::validateAndCreate($persistedContext);
+        }
+
+        return ContextManager::validateAndCreate(['data' => $persistedContext]);
+    }
+
+    /**
+     * Restores the current state definition based on the given machine value.
+     *
+     * @param  array  $machineValue The machine value containing the ID of the state definition
+     *
+     * @return StateDefinition The restored current state definition
+     */
+    protected function restoreCurrentStateDefinition(array $machineValue): StateDefinition
+    {
+        return $this->definition->idMap[$machineValue[0]];
+    }
+
+    /**
+     * Restores the current event behavior based on the given MachineEvent.
+     *
+     * @param  MachineEvent  $machineEvent The MachineEvent object representing the event.
+     *
+     * @return EventDefinition The restored EventDefinition object.
+     */
+    protected function restoreCurrentEventBehavior(MachineEvent $machineEvent): EventDefinition
+    {
+        if ($machineEvent->source === SourceType::INTERNAL) {
+            return EventDefinition::from([
+                'type'    => $machineEvent->type,
+                'payload' => $machineEvent->payload,
+                'version' => $machineEvent->version,
+                'source'  => SourceType::INTERNAL,
+            ]);
+        }
+
+        if (isset($this->definition->behavior[BehaviorType::Event->value][$machineEvent->type])) {
+            /** @var EventBehavior $eventDefinitionClass */
+            $eventDefinitionClass = $this
+                ->definition
+                ->behavior[BehaviorType::Event->value][$machineEvent->type];
+
+            return $eventDefinitionClass::validateAndCreate($machineEvent->payload);
+        }
+
+        return EventDefinition::from([
+            'type'    => $machineEvent->type,
+            'payload' => $machineEvent->payload,
+            'version' => $machineEvent->version,
+            'source'  => SourceType::EXTERNAL,
+        ]);
+    }
+
+    // endregion
 }

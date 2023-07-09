@@ -18,20 +18,16 @@ use Tarfinlabs\EventMachine\Definition\StateDefinition;
 class State
 {
     public array $value;
-    public Collection $history;
 
     public function __construct(
         public ContextManager $context,
         public ?StateDefinition $currentStateDefinition,
         public ?EventBehavior $currentEventBehavior = null,
+        public ?Collection $history = null,
     ) {
-        $this->history = collect();
+        $this->history ??= (new MachineEvent())->newCollection();
 
         $this->updateMachineValueFromState();
-
-        if ($this->currentEventBehavior !== null) {
-            $this->history[] = $this->currentEventBehavior;
-        }
     }
 
     protected function updateMachineValueFromState(): void
@@ -81,7 +77,7 @@ class State
             'type'            => $currentEventBehavior->type,
             'payload'         => $currentEventBehavior->payload,
             'version'         => $currentEventBehavior->version,
-            'context'         => $this->context->data,
+            'context'         => $this->context->toArray(),
             'meta'            => $this->currentStateDefinition->meta,
         ]));
 

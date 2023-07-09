@@ -80,24 +80,6 @@ class ContextManager extends Data
     }
 
     /**
-     * Apply and merge the given context data with the existing context data.
-     *
-     * This method merges the given context data array with the existing
-     * context data array. The existing data will be overwritten by the
-     * new data if there are any conflicts.
-     *
-     * @param  array  $contextData The context data array to merge.
-     */
-    public function applyContextData(array $contextData): void
-    {
-        if ($this->data instanceof Optional) {
-            return;
-        }
-
-        $this->data = array_merge($this->data, $contextData);
-    }
-
-    /**
      * Validates the current instance against its own rules.
      *
      * This method validates the current instance by calling the static validate() method on itself.
