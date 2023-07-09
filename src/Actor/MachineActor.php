@@ -70,9 +70,11 @@ class MachineActor
             throw RestoringStateException::build('Machine state not found.');
         }
 
+        $lastMachineEvent = $machineEvents->last();
+
         $this->state = new State(
-            context: $this->restoreContext($machineEvents->last()->context),
-            currentStateDefinition: 1,
+            context: $this->restoreContext($lastMachineEvent->context),
+            currentStateDefinition: $this->restoreCurrentStateDefinition($lastMachineEvent->machine_value),
             currentEventBehavior: 1,
             history: 1
         );
@@ -97,6 +99,18 @@ class MachineActor
         }
 
         return ContextManager::validateAndCreate(['data' => $persistedContext]);
+    }
+
+    /**
+     * Restores the current state definition based on the given machine value.
+     *
+     * @param  array  $machineValue The machine value containing the ID of the state definition
+     *
+     * @return StateDefinition The restored current state definition
+     */
+    protected function restoreCurrentStateDefinition(array $machineValue): StateDefinition
+    {
+        return $this->definition->idMap[$machineValue[0]];
     }
 
     // endregion
