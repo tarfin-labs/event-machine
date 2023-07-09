@@ -21,8 +21,11 @@ class MachineActor
         public MachineDefinition $definition,
         State|string|null $state = null,
     ) {
-        // If no state is provided, use the initial state of the machine.
-        $this->state = $state ?? $this->definition->getInitialState();
+        $this->state = match (true) {
+            $state === null         => $this->definition->getInitialState(),
+            $state instanceof State => $state,
+            is_string($state)       => $this->restoreStateFromRootEventId($state),
+        };
     }
 
     /**
@@ -48,4 +51,16 @@ class MachineActor
 
         return $this->state;
     }
+
+    // region Restoring State
+
+    /**
+     * @throws RestoringStateException
+     */
+    public function restoreStateFromRootEventId(string $key): State
+    {
+
+    }
+
+    // endregion
 }
