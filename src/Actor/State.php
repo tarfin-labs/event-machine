@@ -28,10 +28,6 @@ class State
         $this->history ??= (new MachineEvent())->newCollection();
 
         $this->updateMachineValueFromState();
-
-        if ($this->currentEventBehavior !== null) {
-            $this->history[] = $this->currentEventBehavior;
-        }
     }
 
     protected function updateMachineValueFromState(): void
