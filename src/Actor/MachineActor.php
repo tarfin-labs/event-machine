@@ -61,7 +61,13 @@ class MachineActor
     // region Restoring State
 
     /**
-     * @throws RestoringStateException
+     * Restores the state of the machine from the given root event identifier.
+     *
+     * @param  string  $key The root event identifier to restore state from.
+     *
+     * @return State The restored state of the machine.
+     *
+     * @throws RestoringStateException If machine state is not found.
      */
     public function restoreStateFromRootEventId(string $key): State
     {
