@@ -40,15 +40,15 @@ class MachineEvent extends Model
         'id',
         'sequence_number',
         'created_at',
+        // Machine ID Related Attributes
+        'machine_id',
+        'machine_value',
+        'root_event_id',
         // Event Related Attributes
         'source',
         'type',
         'payload',
         'version',
-        // Machine ID Related Attributes
-        'machine_id',
-        'machine_value',
-        'root_event_id',
         // Machine Data Related Attributes
         'context',
         'meta',
@@ -58,14 +58,14 @@ class MachineEvent extends Model
         'sequence_number' => 'integer',
         'created_at'      => 'datetime',
         'machine_id'      => 'string',
-        'machine_value'   => 'json',
+        'machine_value'   => 'array',
         'root_event_id'   => 'string',
         'source'          => SourceType::class,
         'type'            => 'string',
-        'payload'         => 'json',
+        'payload'         => 'array',
         'version'         => 'integer',
-        'context'         => 'json',
-        'meta'            => 'json',
+        'context'         => 'array',
+        'meta'            => 'array',
     ];
 
     protected static function newFactory(): MachineEventFactory
