@@ -233,20 +233,23 @@ class MachineDefinition
      */
     public function initializeContextFromState(?State $state = null): ContextManager
     {
+        // If a state is provided, use its context
         if (!is_null($state)) {
             return $state->context;
         }
 
-        if (empty($this->behavior['context'])) {
-            $contextConfig = $this->config['context'] ?? [];
+        // If a context class is provided, use it to create the context
+        if (!empty($this->behavior['context'])) {
+            /** @var ContextManager $contextClass */
+            $contextClass = $this->behavior['context'];
 
-            return ContextManager::validateAndCreate(['data' => $contextConfig]);
+            return $contextClass::validateAndCreate($this->config['context'] ?? []);
         }
 
-        /** @var ContextManager $contextClass */
-        $contextClass = $this->behavior['context'];
+        // Otherwise, use the context defined in the machine config
+        $contextConfig = $this->config['context'] ?? [];
 
-        return $contextClass::validateAndCreate($this->config['context'] ?? []);
+        return ContextManager::validateAndCreate(['data' => $contextConfig]);
     }
 
     /**
