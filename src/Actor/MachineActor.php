@@ -38,14 +38,12 @@ class MachineActor
     public function persist(): ?State
     {
         MachineEvent::insert(
-            $this->state->history->map(function (MachineEvent $machineEvent) {
-                return array_merge($machineEvent->toArray(), [
-                    'machine_value' => json_encode($machineEvent->machine_value, JSON_THROW_ON_ERROR),
-                    'payload'       => json_encode($machineEvent->payload, JSON_THROW_ON_ERROR),
-                    'context'       => json_encode($machineEvent->context, JSON_THROW_ON_ERROR),
-                    'meta'          => json_encode($machineEvent->meta, JSON_THROW_ON_ERROR),
-                ]);
-            })->toArray()
+            $this->state->history->map(fn (MachineEvent $machineEvent) => array_merge($machineEvent->toArray(), [
+                'machine_value' => json_encode($machineEvent->machine_value, JSON_THROW_ON_ERROR),
+                'payload'       => json_encode($machineEvent->payload, JSON_THROW_ON_ERROR),
+                'context'       => json_encode($machineEvent->context, JSON_THROW_ON_ERROR),
+                'meta'          => json_encode($machineEvent->meta, JSON_THROW_ON_ERROR),
+            ]))->toArray()
         );
 
         return $this->state;
