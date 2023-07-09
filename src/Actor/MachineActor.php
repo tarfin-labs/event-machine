@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Actor;
 
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 class MachineActor
@@ -15,7 +17,7 @@ class MachineActor
     public ?State $state = null;
 
     /**
-     * @throws BehaviorNotFoundException
+     * @throws BehaviorNotFoundException|RestoringStateException
      */
     public function __construct(
         public MachineDefinition $definition,
@@ -59,7 +61,35 @@ class MachineActor
      */
     public function restoreStateFromRootEventId(string $key): State
     {
+        $machineEvents = MachineEvent::query()
+            ->where('root_event_id', $key)
+            ->oldest('sequence_number')
+            ->get();
 
+        if ($machineEvents->isEmpty()) {
+            throw RestoringStateException::build('Machine state not found.');
+        }
+
+        $this->state = new State(
+            context: $this->restoreContext($machineEvents->last()->context),
+            currentStateDefinition: 1,
+            currentEventBehavior: 1,
+            history: 1
+        );
+
+        return $this->state;
+    }
+
+    protected function restoreContext(array $persistedContext): ContextManager
+    {
+        if (!empty($this->definition->behavior['context'])) {
+            /** @var ContextManager $contextClass */
+            $contextClass = $this->definition->behavior['context'];
+
+            return $contextClass::validateAndCreate($persistedContext);
+        }
+
+        return ContextManager::validateAndCreate(['data' => $persistedContext]);
     }
 
     // endregion
