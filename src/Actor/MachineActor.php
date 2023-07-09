@@ -6,7 +6,11 @@ namespace Tarfinlabs\EventMachine\Actor;
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Behavior\BehaviorType;
+use Tarfinlabs\EventMachine\Definition\SourceType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Definition\EventDefinition;
+use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
@@ -75,8 +79,8 @@ class MachineActor
         $this->state = new State(
             context: $this->restoreContext($lastMachineEvent->context),
             currentStateDefinition: $this->restoreCurrentStateDefinition($lastMachineEvent->machine_value),
-            currentEventBehavior: 1,
-            history: 1
+            currentEventBehavior: $this->restoreCurrentEventBehavior($lastMachineEvent),
+            history: (new MachineEvent())->newCollection(),
         );
 
         return $this->state;
@@ -111,6 +115,41 @@ class MachineActor
     protected function restoreCurrentStateDefinition(array $machineValue): StateDefinition
     {
         return $this->definition->idMap[$machineValue[0]];
+    }
+
+    /**
+     * Restores the current event behavior based on the given MachineEvent.
+     *
+     * @param  MachineEvent  $machineEvent The MachineEvent object representing the event.
+     *
+     * @return EventDefinition The restored EventDefinition object.
+     */
+    protected function restoreCurrentEventBehavior(MachineEvent $machineEvent): EventDefinition
+    {
+        if ($machineEvent->source === SourceType::INTERNAL) {
+            return EventDefinition::from([
+                'type'    => $machineEvent->type,
+                'payload' => $machineEvent->payload,
+                'version' => $machineEvent->version,
+                'source'  => SourceType::INTERNAL,
+            ]);
+        }
+
+        if (isset($this->definition->behavior[BehaviorType::Event->value][$machineEvent->type])) {
+            /** @var EventBehavior $eventDefinitionClass */
+            $eventDefinitionClass = $this
+                ->definition
+                ->behavior[BehaviorType::Event->value][$machineEvent->type];
+
+            return $eventDefinitionClass::validateAndCreate($machineEvent->payload);
+        }
+
+        return EventDefinition::from([
+            'type'    => $machineEvent->type,
+            'payload' => $machineEvent->payload,
+            'version' => $machineEvent->version,
+            'source'  => SourceType::EXTERNAL,
+        ]);
     }
 
     // endregion

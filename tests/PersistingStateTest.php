@@ -33,9 +33,11 @@ it('can restore the persisted state', function (): void {
 
     $machineActor->persist();
 
+    $state = $machineActor->state;
+
     $rootEventId = $machineActor->state->history->first()->root_event_id;
 
-    $anotherMachineActor = TrafficLightsMachine::start($rootEventId);
+    $restoredMachine = TrafficLightsMachine::start($rootEventId);
 
-    expect($anotherMachineActor->state->context->data->count)->toBe(3);
+    expect($restoredMachine->state->value)->toEqual($state->value);
 });
