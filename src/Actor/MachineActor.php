@@ -82,14 +82,12 @@ class MachineActor
 
         $lastMachineEvent = $machineEvents->last();
 
-        $this->state = new State(
+        return new State(
             context: $this->restoreContext($lastMachineEvent->context),
             currentStateDefinition: $this->restoreCurrentStateDefinition($lastMachineEvent->machine_value),
             currentEventBehavior: $this->restoreCurrentEventBehavior($lastMachineEvent),
-            history: (new MachineEvent())->newCollection(),
+            history: $machineEvents,
         );
-
-        return $this->state;
     }
 
     /**

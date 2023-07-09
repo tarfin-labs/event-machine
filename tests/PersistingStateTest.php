@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
+use Illuminate\Database\Eloquent\Collection;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
@@ -52,4 +53,11 @@ it('can restore the persisted state', function (): void {
         ->toBeInstanceOf(EventDefinition::class)
         ->and($restoredMachineState->currentEventBehavior->toArray())
         ->toBe($state->currentEventBehavior->toArray());
+
+    expect($restoredMachineState->history)
+        ->toBeInstanceOf(Collection::class)
+        ->each->toBeInstanceOf(MachineEvent::class);
+
+    expect($restoredMachineState->history->toArray())
+        ->toBe($state->history->toArray());
 });
