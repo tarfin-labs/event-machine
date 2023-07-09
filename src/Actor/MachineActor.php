@@ -19,7 +19,7 @@ class MachineActor
      */
     public function __construct(
         public MachineDefinition $definition,
-        ?State $state = null,
+        State|string|null $state = null,
     ) {
         // If no state is provided, use the initial state of the machine.
         $this->state = $state ?? $this->definition->getInitialState();
