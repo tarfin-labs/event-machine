@@ -25,7 +25,7 @@ class State
         public ?EventBehavior $currentEventBehavior = null,
         public ?Collection $history = null,
     ) {
-        $this->history = collect();
+        $this->history ??= (new MachineEvent())->newCollection();
 
         $this->updateMachineValueFromState();
 
