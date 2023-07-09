@@ -18,12 +18,12 @@ use Tarfinlabs\EventMachine\Definition\StateDefinition;
 class State
 {
     public array $value;
-    public Collection $history;
 
     public function __construct(
         public ContextManager $context,
         public ?StateDefinition $currentStateDefinition,
         public ?EventBehavior $currentEventBehavior = null,
+        public ?Collection $history = null,
     ) {
         $this->history = collect();
 
