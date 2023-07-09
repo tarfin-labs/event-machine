@@ -233,7 +233,7 @@ class MachineDefinition
      */
     public function initializeContextFromState(?State $state = null): ContextManager
     {
-        // If a state is provided, use its context
+        // If a state is provided, use it's context
         if (!is_null($state)) {
             return $state->context;
         }

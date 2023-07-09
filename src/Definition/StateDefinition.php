@@ -104,7 +104,8 @@ class StateDefinition
         $this->id          = $this->buildId();
         $this->description = $this->buildDescription();
 
-        $this->order                     = count($this->machine->idMap);
+        $this->order = count($this->machine->idMap);
+
         $this->machine->idMap[$this->id] = $this;
 
         $this->stateDefinitions = $this->createChildStateDefinitions();
