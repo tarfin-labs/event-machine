@@ -80,6 +80,13 @@ class MachineActor
         return $this->state;
     }
 
+    /**
+     * Restores the context using the persisted context data.
+     *
+     * @param  array  $persistedContext The persisted context data.
+     *
+     * @return ContextManager The restored context manager instance.
+     */
     protected function restoreContext(array $persistedContext): ContextManager
     {
         if (!empty($this->definition->behavior['context'])) {
