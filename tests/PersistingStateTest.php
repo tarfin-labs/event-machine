@@ -61,3 +61,16 @@ it('can restore the persisted state', function (): void {
     expect($restoredMachineState->history->toArray())
         ->toBe($state->history->toArray());
 });
+
+it('can auto persist after an event', function (): void {
+    $machineActor = TrafficLightsMachine::start();
+
+    $machineActor->send(['type' => 'INC'], shouldPersist: true);
+
+    $eventIds = $machineActor->state->history
+        ->pluck('id')
+        ->map(fn ($key) => ['id' => $key])
+        ->toArray();
+
+    expect($eventIds)->each->toBeInDatabase(MachineEvent::class);
+});
