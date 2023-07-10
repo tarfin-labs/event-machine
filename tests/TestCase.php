@@ -11,15 +11,6 @@ use Tarfinlabs\EventMachine\MachineServiceProvider;
 
 class TestCase extends Orchestra
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        //        Factory::guessFactoryNamesUsing(
-        //            fn (string $modelName) => 'Tarfinlabs\\EventMachine\\Database\\Factories\\'.class_basename($modelName).'Factory'
-        //        );
-    }
-
     protected function getPackageProviders($app): array
     {
         return [
