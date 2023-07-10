@@ -37,22 +37,29 @@ class MachineActor
     /**
      * @throws BehaviorNotFoundException
      */
-    public function send(EventBehavior|array $event): State
-    {
+    public function send(
+        EventBehavior|array $event,
+        bool $shouldPersist = true
+    ): State {
         $this->state = $this->definition->transition($this->state, $event);
+
+        if ($shouldPersist === true) {
+            $this->persist();
+        }
 
         return $this->state;
     }
 
     public function persist(): ?State
     {
-        MachineEvent::insert(
-            $this->state->history->map(fn (MachineEvent $machineEvent) => array_merge($machineEvent->toArray(), [
+        MachineEvent::upsert(
+            values: $this->state->history->map(fn (MachineEvent $machineEvent) => array_merge($machineEvent->toArray(), [
                 'machine_value' => json_encode($machineEvent->machine_value, JSON_THROW_ON_ERROR),
                 'payload'       => json_encode($machineEvent->payload, JSON_THROW_ON_ERROR),
                 'context'       => json_encode($machineEvent->context, JSON_THROW_ON_ERROR),
                 'meta'          => json_encode($machineEvent->meta, JSON_THROW_ON_ERROR),
-            ]))->toArray()
+            ]))->toArray(),
+            uniqueBy: ['id']
         );
 
         return $this->state;
