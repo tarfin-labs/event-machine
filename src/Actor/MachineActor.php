@@ -37,9 +37,15 @@ class MachineActor
     /**
      * @throws BehaviorNotFoundException
      */
-    public function send(EventBehavior|array $event): State
-    {
+    public function send(
+        EventBehavior|array $event,
+        bool $shouldPersist = true
+    ): State {
         $this->state = $this->definition->transition($this->state, $event);
+
+        if ($shouldPersist === true) {
+            $this->persist();
+        }
 
         return $this->state;
     }
