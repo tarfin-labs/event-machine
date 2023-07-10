@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Casts;
 
 use Illuminate\Database\Eloquent\Model;
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Actor\MachineActor;
-use Tarfinlabs\EventMachine\Definition\EventMachine;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
@@ -27,10 +27,17 @@ class MachineCast implements CastsAttributes
      */
     public function get(Model $model, string $key, mixed $value, array $attributes): MachineActor
     {
-        /** @var EventMachine $machineClass */
-        $machineClass = $model->getCasts()[$key];
+        /** @var MachineActor $machineClass */
+        [$machineClass, $contextKey] = explode(':', $model->getCasts()[$key]);
 
-        return $machineClass::start($value);
+        $machineActor = $machineClass::start($value);
+
+        match (true) {
+            get_class($machineActor->state->context) === ContextManager::class   => $machineActor->state->context->set($contextKey, $model),
+            is_subclass_of($machineActor->state->context, ContextManager::class) => $machineActor->state->context->$contextKey = $model,
+        };
+
+        return $machineActor;
     }
 
     /**
