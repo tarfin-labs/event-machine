@@ -14,8 +14,8 @@ trait HasMachines
         static::creating(function (Model $model): void {
             foreach ($model->getCasts() as $attribute => $cast) {
                 if (
-                    is_subclass_of($cast, EventMachine::class) &&
-                    !isset($model->attributes[$attribute])
+                    !isset($model->attributes[$attribute]) &&
+                    is_subclass_of(explode(':', $cast)[0], EventMachine::class)
                 ) {
                     $machine = $model->$attribute;
 
