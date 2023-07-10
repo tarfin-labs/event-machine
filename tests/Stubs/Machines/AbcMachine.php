@@ -13,7 +13,11 @@ class AbcMachine extends EventMachine
     {
         return MachineDefinition::define(config: [
             'initial' => 'stateB',
-            'states'  => [
+            'context' => [
+                'modelA' => null,
+                'value'  => 4,
+            ],
+            'states' => [
                 'stateA' => [
                     'on' => [
                         'EVENT' => 'stateB',
