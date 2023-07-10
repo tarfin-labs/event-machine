@@ -16,3 +16,16 @@ it('can access Laravel model from a machine context', function (): void {
 
     expect($modelA->abc_mre->state->context->get('modelA'))->toBe($modelA);
 });
+
+it('can access Laravel model from a machine context behavior', function (): void {
+    /** @var ModelA $a */
+    $modelA = ModelA::create([
+        'value' => 'some value',
+    ]);
+
+    $modelA->traffic_mre->persist();
+
+    $modelA->traffic_mre->send(['type' => 'INC']);
+
+    expect($modelA->traffic_mre->state->context->modelA)->toBe($modelA);
+});
