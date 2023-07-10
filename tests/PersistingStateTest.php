@@ -12,9 +12,9 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMach
 it('can persist the machine state', function (): void {
     $machineActor = TrafficLightsMachine::start();
 
-    $machineActor->send(['type' => 'INC']);
-    $machineActor->send(['type' => 'INC']);
-    $machineActor->send(['type' => 'INC']);
+    $machineActor->send(['type' => 'INC'], shouldPersist: false);
+    $machineActor->send(['type' => 'INC'], shouldPersist: false);
+    $machineActor->send(['type' => 'INC'], shouldPersist: false);
 
     $state = $machineActor->persist();
 
@@ -30,9 +30,9 @@ it('can persist the machine state', function (): void {
 it('can restore the persisted state', function (): void {
     $machineActor = TrafficLightsMachine::start();
 
-    $machineActor->send(['type' => 'INC']);
-    $machineActor->send(['type' => 'INC']);
-    $machineActor->send(['type' => 'INC']);
+    $machineActor->send(['type' => 'INC'], shouldPersist: false);
+    $machineActor->send(['type' => 'INC'], shouldPersist: false);
+    $machineActor->send(['type' => 'INC'], shouldPersist: false);
 
     $machineActor->persist();
 
