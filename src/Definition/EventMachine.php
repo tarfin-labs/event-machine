@@ -6,7 +6,9 @@ namespace Tarfinlabs\EventMachine\Definition;
 
 use RuntimeException;
 use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\Casts\MachineCast;
 use Tarfinlabs\EventMachine\Actor\MachineActor;
+use Illuminate\Contracts\Database\Eloquent\Castable;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
@@ -15,7 +17,7 @@ use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
  * Subclasses should override the definition method to provide a specific
  * MachineDefinition.
  */
-abstract class EventMachine
+abstract class EventMachine implements Castable
 {
     /**
      * Provides the MachineDefinition for the current state machine.
@@ -43,5 +45,15 @@ abstract class EventMachine
             definition: static::build(),
             state: $state
         );
+    }
+
+    /**
+     * Get the name of the caster class to use when casting from / to this cast target.
+     *
+     * @param  array<mixed>  $arguments
+     */
+    public static function castUsing(array $arguments): string
+    {
+        return MachineCast::class;
     }
 }
