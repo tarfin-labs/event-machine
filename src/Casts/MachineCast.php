@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Casts;
 
 use Illuminate\Database\Eloquent\Model;
-use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Actor\MachineActor;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
@@ -32,10 +31,7 @@ class MachineCast implements CastsAttributes
 
         $machineActor = $machineClass::start($value);
 
-        match (true) {
-            get_class($machineActor->state->context) === ContextManager::class   => $machineActor->state->context->set($contextKey, $model),
-            is_subclass_of($machineActor->state->context, ContextManager::class) => $machineActor->state->context->$contextKey = $model,
-        };
+        $machineActor->state->context->set($contextKey, $model);
 
         return $machineActor;
     }
