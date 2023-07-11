@@ -33,7 +33,7 @@ it('should run entry actions when transitioning to a new state', function (): vo
         ],
     );
 
-    $newState = $machine->transition(state: null, event: [
+    $newState = $machine->transition(event: [
         'type' => 'ACTIVATE',
     ]);
 

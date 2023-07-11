@@ -25,8 +25,7 @@ test('always transitions', function (): void {
     ]);
 
     $newState = $machine->transition(
-        state: null,
-        event: ['type' => 'EVENT']
+        event: ['type' => 'EVENT'],
     );
 
     expect($newState->value)->toBe(['(machine).stateC']);
@@ -112,7 +111,6 @@ test('always guarded transitions', function (): void {
     );
 
     $newState = $machine->transition(
-        state: null,
         event: ['type' => 'EVENT']
     );
 

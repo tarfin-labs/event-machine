@@ -41,7 +41,7 @@ class MachineActor
         EventBehavior|array $event,
         bool $shouldPersist = true
     ): State {
-        $this->state = $this->definition->transition($this->state, $event);
+        $this->state = $this->definition->transition($event, $this->state);
 
         if ($shouldPersist === true) {
             $this->persist();
