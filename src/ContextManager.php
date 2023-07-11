@@ -78,7 +78,10 @@ class ContextManager extends Data
      */
     public function has(string $key): bool
     {
-        return isset($this->data[$key]);
+        return match (true) {
+            get_class($this) === __CLASS__   => isset($this->data[$key]),
+            is_subclass_of($this, __CLASS__) => property_exists($this, $key),
+        };
     }
 
     /**
