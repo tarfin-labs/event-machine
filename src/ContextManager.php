@@ -39,7 +39,10 @@ class ContextManager extends Data
      */
     public function get(string $key): mixed
     {
-        return $this->data[$key] ?? null;
+        return match (true) {
+            get_class($this) === __CLASS__   => $this->data[$key] ?? null,
+            is_subclass_of($this, __CLASS__) => $this->$key,
+        };
     }
 
     /**
