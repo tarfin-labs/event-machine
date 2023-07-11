@@ -19,6 +19,6 @@ class MachineServiceProvider extends PackageServiceProvider
         $package
             ->name('event-machine')
             ->hasConfigFile('machine')
-            ->hasMigration('create_machine_table');
+            ->hasMigration('create_machine_events_table');
     }
 }
