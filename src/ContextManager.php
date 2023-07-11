@@ -46,10 +46,16 @@ class ContextManager extends Data
     }
 
     /**
-     * Set a value in the context with the given key.
+     * Sets a value for a given key.
      *
-     * @param  string  $key The key to associate with the value.
-     * @param  mixed  $value The value to store in the context.
+     * This method is used to set a value for a given key in the data array.
+     * If the current class is the same as the class of the object, the
+     * value is set in the data array. If the current class is a
+     * subclass of the class of the object, the value is set as
+     * a property of the object.
+     *
+     * @param  string  $key The key for which to set the value.
+     * @param  mixed  $value The value to set for the given key.
      */
     public function set(string $key, mixed $value): void
     {
