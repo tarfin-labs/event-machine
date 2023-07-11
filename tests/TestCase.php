@@ -30,8 +30,8 @@ class TestCase extends Orchestra
         Schema::create('model_a_s', function (Blueprint $table): void {
             $table->id();
             $table->string('value')->nullable();
-            $table->string('abc_mre')->nullable();
-            $table->string('traffic_mre')->nullable();
+            $table->ulid('abc_mre')->nullable();
+            $table->ulid('traffic_mre')->nullable();
             $table->timestamps();
         });
     }
