@@ -39,14 +39,23 @@ class ContextManager extends Data
      */
     public function get(string $key): mixed
     {
-        return $this->data[$key] ?? null;
+        return match (true) {
+            get_class($this) === __CLASS__   => $this->data[$key] ?? null,
+            is_subclass_of($this, __CLASS__) => $this->$key,
+        };
     }
 
     /**
-     * Set a value in the context with the given key.
+     * Sets a value for a given key.
      *
-     * @param  string  $key The key to associate with the value.
-     * @param  mixed  $value The value to store in the context.
+     * This method is used to set a value for a given key in the data array.
+     * If the current class is the same as the class of the object, the
+     * value is set in the data array. If the current class is a
+     * subclass of the class of the object, the value is set as
+     * a property of the object.
+     *
+     * @param  string  $key The key for which to set the value.
+     * @param  mixed  $value The value to set for the given key.
      */
     public function set(string $key, mixed $value): void
     {
@@ -54,7 +63,10 @@ class ContextManager extends Data
             return;
         }
 
-        $this->data[$key] = $value;
+        match (true) {
+            get_class($this) === __CLASS__   => $this->data[$key] = $value,
+            is_subclass_of($this, __CLASS__) => $this->$key       = $value,
+        };
     }
 
     /**
@@ -66,7 +78,10 @@ class ContextManager extends Data
      */
     public function has(string $key): bool
     {
-        return isset($this->data[$key]);
+        return match (true) {
+            get_class($this) === __CLASS__   => isset($this->data[$key]),
+            is_subclass_of($this, __CLASS__) => property_exists($this, $key),
+        };
     }
 
     /**
