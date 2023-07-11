@@ -57,7 +57,10 @@ class ContextManager extends Data
             return;
         }
 
-        $this->data[$key] = $value;
+        match (true) {
+            get_class($this) === __CLASS__   => $this->data[$key] = $value,
+            is_subclass_of($this, __CLASS__) => $this->$key       = $value,
+        };
     }
 
     /**
