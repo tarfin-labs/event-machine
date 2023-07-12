@@ -14,6 +14,7 @@ use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 
 class MachineActor
 {
@@ -39,12 +40,27 @@ class MachineActor
      */
     public function send(
         EventBehavior|array $event,
-        bool $shouldPersist = true
+        bool $shouldPersist = true,
+        bool $shouldThrowOnGuardFail = false,
     ): State {
         $this->state = $this->definition->transition($event, $this->state);
 
         if ($shouldPersist === true) {
             $this->persist();
+        }
+
+        if ($shouldThrowOnGuardFail === true) {
+            $failedGuard = $this
+                ->state
+                ->history
+                ->filter(fn ($item) => preg_match('/machine\.guard\..*\.fail/', $item['type']))
+                ->first();
+
+            if ($failedGuard !== null) {
+                throw MachineValidationException::withMessages([
+                    $failedGuard->type => $failedGuard->payload[$failedGuard->type],
+                ]);
+            }
         }
 
         return $this->state;

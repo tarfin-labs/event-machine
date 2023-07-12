@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 it('should run the guarded action when the guards are passed', function (): void {
     $machine = MachineDefinition::define(
@@ -233,4 +236,19 @@ it('should prevent infinite loops when no guards evaluate to true for @always tr
     $newState = $machine->transition(event: ['type' => 'EVENT']);
 
     expect($newState->value)->toBe(['(machine).yellow']);
+});
+
+it('can throw MachineValidationException and persist history', function (): void {
+    $machineActor = TrafficLightsMachine::start();
+
+    expect(
+        fn () => $machineActor->send(
+            event: ['type' => 'MUT'],
+            shouldPersist: true,
+            shouldThrowOnGuardFail: true,
+        )
+    )->toThrow(MachineValidationException::class);
+
+    expect(['id' => $machineActor->state->history->last()->id])
+        ->toBeInDatabase(table: MachineEvent::class);
 });
