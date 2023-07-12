@@ -150,7 +150,7 @@ class TransitionDefinition
                     placeholder: $guardDefinition
                 );
 
-                if ($guardBehavior($state->context, $eventBehavior) !== true) {
+                if ($guardBehavior($state->context, $eventBehavior) === false) {
                     $guardsPassed = false;
 
                     // Record the internal guard fail event.
