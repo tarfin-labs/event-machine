@@ -26,7 +26,7 @@ class MachineActor
      */
     public function __construct(
         public MachineDefinition $definition,
-        State|string|null $state = null,
+        State|string $state = null,
     ) {
         $this->state = match (true) {
             $state === null         => $this->definition->getInitialState(),

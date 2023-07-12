@@ -39,7 +39,7 @@ abstract class EventMachine implements Castable
      *
      * @throws BehaviorNotFoundException|RestoringStateException
      */
-    public static function start(State|string|null $state = null): MachineActor
+    public static function start(State|string $state = null): MachineActor
     {
         return new MachineActor(
             definition: static::build(),

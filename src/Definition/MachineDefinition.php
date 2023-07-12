@@ -90,8 +90,8 @@ class MachineDefinition
      * @return self The created machine definition.
      */
     public static function define(
-        ?array $config = null,
-        ?array $behavior = null,
+        array $config = null,
+        array $behavior = null,
     ): self {
         return new self(
             config: $config ?? null,
@@ -193,8 +193,8 @@ class MachineDefinition
      */
     protected function buildCurrentState(
         ContextManager $context,
-        ?StateDefinition $currentStateDefinition = null,
-        ?EventBehavior $eventBehavior = null,
+        StateDefinition $currentStateDefinition = null,
+        EventBehavior $eventBehavior = null,
     ): State {
         return new State(
             context: $context,
@@ -231,7 +231,7 @@ class MachineDefinition
      *
      * @return ContextManager The initialized context manager
      */
-    public function initializeContextFromState(?State $state = null): ContextManager
+    public function initializeContextFromState(State $state = null): ContextManager
     {
         // If a state is provided, use it's context
         if (!is_null($state)) {
@@ -363,7 +363,7 @@ class MachineDefinition
      */
     public function transition(
         EventBehavior|array $event,
-        ?State $state = null
+        State $state = null
     ): State {
         // If the state is not passed, use the initial state
         $state ??= $this->getInitialState();
@@ -434,7 +434,7 @@ class MachineDefinition
     public function runAction(
         string $actionDefinition,
         State $state,
-        ?EventBehavior $eventBehavior = null
+        EventBehavior $eventBehavior = null
     ): void {
         // Retrieve the appropriate action behavior based on the action definition.
         $actionBehavior = $this->getInvokableBehavior(

@@ -45,8 +45,8 @@ class State
 
     public function setInternalEventBehavior(
         InternalEvent $type,
-        ?string $placeholder = null,
-        ?array $payload = null,
+        string $placeholder = null,
+        array $payload = null,
     ): self {
         $type = ($placeholder === null)
             ? $type->value
