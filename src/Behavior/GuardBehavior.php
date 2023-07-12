@@ -6,7 +6,9 @@ namespace Tarfinlabs\EventMachine\Behavior;
 
 use Tarfinlabs\EventMachine\ContextManager;
 
-interface GuardBehavior extends InvokableBehavior
+abstract class GuardBehavior implements InvokableBehavior
 {
-    public function __invoke(ContextManager $context, EventBehavior $eventBehavior): bool;
+    public ?string $errorMessage = null;
+
+    abstract public function __invoke(ContextManager $context, EventBehavior $eventBehavior): bool;
 }
