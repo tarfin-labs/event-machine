@@ -46,6 +46,7 @@ class State
     public function setInternalEventBehavior(
         InternalEvent $type,
         ?string $placeholder = null,
+        ?array $payload = null,
     ): self {
         $type = ($placeholder === null)
             ? $type->value
@@ -53,7 +54,8 @@ class State
 
         $eventDefinition = new EventDefinition(
             type: $type,
-            source: SourceType::INTERNAL
+            payload: $payload,
+            source: SourceType::INTERNAL,
         );
 
         return $this->setCurrentEventBehavior($eventDefinition);
