@@ -92,7 +92,7 @@ it('can handle edge cases with empty keys and values', function (): void {
 test('TrafficLightsMachine transitions between states using EventMachine', function (): void {
     $machineDefinition = TrafficLightsMachine::build();
 
-    $machineDefinition->transition(state: null, event: [
+    $machineDefinition->transition(event: [
         'type'    => 'SUB_VALUE',
         'payload' => ['value' => 100],
     ]);

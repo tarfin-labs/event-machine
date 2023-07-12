@@ -25,13 +25,13 @@ it('stores external events', function (): void {
         ],
     ]);
 
-    $newState = $machine->transition(state: null, event: [
+    $newState = $machine->transition(event: [
         'type' => 'GREEN_TIMER',
     ]);
 
-    $newState = $machine->transition(state: $newState, event: [
+    $newState = $machine->transition(event: [
         'type' => 'RED_TIMER',
-    ]);
+    ], state: $newState);
 
     expect($newState->history)->toHaveCount(3);
 });
@@ -62,7 +62,7 @@ it('stores internal action events', function (): void {
         ]
     );
 
-    $newState = $machine->transition(state: null, event: [
+    $newState = $machine->transition(event: [
         'type'    => 'ADD',
         'payload' => [
             'value' => 37,
@@ -111,7 +111,7 @@ it('stores internal guard events', function (): void {
         ],
     );
 
-    $newState = $machine->transition(state: null, event: ['type' => 'MUT']);
+    $newState = $machine->transition(event: ['type' => 'MUT']);
 
     expect($newState->history->pluck('type')->toArray())
         ->toHaveCount(4)

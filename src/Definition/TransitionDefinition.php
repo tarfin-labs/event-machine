@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
+use Illuminate\Support\Str;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 /**
@@ -150,13 +152,21 @@ class TransitionDefinition
                     placeholder: $guardDefinition
                 );
 
-                if ($guardBehavior($state->context, $eventBehavior) !== true) {
+                if ($guardBehavior($state->context, $eventBehavior) === false) {
                     $guardsPassed = false;
+
+                    $errorMessage = $guardBehavior instanceof GuardBehavior
+                        ? $guardBehavior->errorMessage
+                        : null;
+                    $errorKey = $guardBehavior instanceof GuardBehavior
+                        ? sprintf(InternalEvent::GUARD_FAIL->value, Str::of($guardBehavior::class)->classBasename()->camel())
+                        : null;
 
                     // Record the internal guard fail event.
                     $state->setInternalEventBehavior(
                         type: InternalEvent::GUARD_FAIL,
-                        placeholder: $guardDefinition
+                        placeholder: $guardDefinition,
+                        payload: [$errorKey => $errorMessage]
                     );
 
                     break;

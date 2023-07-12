@@ -30,7 +30,7 @@ it('should run exit actions when transitioning from a state', function (): void 
         ],
     );
 
-    $newState = $machine->transition(state: null, event: [
+    $newState = $machine->transition(event: [
         'type' => 'ACTIVATE',
     ]);
 

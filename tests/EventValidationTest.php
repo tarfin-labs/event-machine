@@ -38,7 +38,7 @@ test('an event payload can be validated', function (): void {
 
     $randomEventValue = random_int(1, 10);
 
-    $newState = $machine->transition(state: null, event: [
+    $newState = $machine->transition(event: [
         'type'    => 'VALIDATED_EVENT',
         'payload' => [
             'attribute' => $randomEventValue,

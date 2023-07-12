@@ -168,10 +168,10 @@ class MachineDefinition
             foreach ($initialStateDefinition->transitionDefinitions as $transition) {
                 if ($transition->type === TransitionType::Always) {
                     return $this->transition(
-                        state: $initialState,
                         event: [
                             'type' => TransitionType::Always->value,
-                        ]
+                        ],
+                        state: $initialState
                     );
                 }
             }
@@ -354,15 +354,17 @@ class MachineDefinition
     /**
      * Transition the state machine to a new state based on an event.
      *
-     * @param  State|null  $state The current state or state name, or null to use the initial state.
      * @param  EventBehavior|array  $event The event that triggers the transition.
+     * @param  State|null  $state The current state or state name, or null to use the initial state.
      *
      * @return State The new state after the transition.
      *
      * @throws BehaviorNotFoundException
      */
-    public function transition(null|State $state, EventBehavior|array $event): State
-    {
+    public function transition(
+        EventBehavior|array $event,
+        ?State $state = null
+    ): State {
         // If the state is not passed, use the initial state
         $state ??= $this->getInitialState();
 
@@ -405,10 +407,10 @@ class MachineDefinition
             foreach ($this->stateDefinitions[$newState->currentStateDefinition->key]->transitionDefinitions as $transition) {
                 if ($transition->type === TransitionType::Always) {
                     return $this->transition(
-                        state: $newState,
                         event: [
                             'type' => TransitionType::Always->value,
-                        ]
+                        ],
+                        state: $newState
                     );
                 }
             }

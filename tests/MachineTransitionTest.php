@@ -31,12 +31,12 @@ it('can transition through a sequence of states using events', function (): void
         ->toBeInstanceOf(State::class)
         ->and($greenState->value)->toBe(['(machine).green']);
 
-    $yellowState = $machine->transition(state: null, event: ['type' => 'NEXT']);
+    $yellowState = $machine->transition(event: ['type' => 'NEXT']);
     expect($yellowState)
         ->toBeInstanceOf(State::class)
         ->and($yellowState->value)->toBe(['(machine).yellow']);
 
-    $redState = $machine->transition(state: $yellowState, event: ['type' => 'NEXT']);
+    $redState = $machine->transition(event: ['type' => 'NEXT'], state: $yellowState);
     expect($redState)
         ->toBeInstanceOf(State::class)
         ->and($redState->value)->toBe(['(machine).red']);
@@ -70,9 +70,9 @@ it('should apply the given state\'s context data to the machine\'s context when 
     $initialState = $machine->getInitialState();
     $initialState->context->set('count', 5);
 
-    $newState = $machine->transition(state: $initialState, event: [
+    $newState = $machine->transition(event: [
         'type' => 'INC',
-    ]);
+    ], state: $initialState);
 
     expect($newState)
         ->toBeInstanceOf(State::class)

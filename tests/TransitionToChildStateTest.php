@@ -20,7 +20,7 @@ it('can transition to a child state', function (): void {
         ],
     ]);
 
-    $newState = $machine->transition(state: null, event: [
+    $newState = $machine->transition(event: [
         'type' => 'EVENT',
     ]);
 
@@ -44,7 +44,7 @@ it('can transition from a child state', function (): void {
         ],
     ]);
 
-    $newState = $machine->transition(state: null, event: [
+    $newState = $machine->transition(event: [
         'type' => 'EVENT',
     ]);
 
