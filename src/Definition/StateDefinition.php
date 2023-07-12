@@ -96,7 +96,7 @@ class StateDefinition
      */
     public function __construct(
         public ?array $config,
-        ?array $options = null,
+        array $options = null,
     ) {
         $this->initializeOptions($options);
 
@@ -379,7 +379,7 @@ class StateDefinition
      *
      * @throws BehaviorNotFoundException
      */
-    public function runEntryActions(State $state, ?EventBehavior $eventBehavior = null): void
+    public function runEntryActions(State $state, EventBehavior $eventBehavior = null): void
     {
         foreach ($this->entry as $action) {
             $this->machine->runAction(
