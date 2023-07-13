@@ -7,8 +7,18 @@ namespace Tarfinlabs\EventMachine\Traits;
 use Illuminate\Database\Eloquent\Model;
 use Tarfinlabs\EventMachine\Definition\EventMachine;
 
+/**
+ * Trait HasMachines.
+ *
+ * This trait provides functionality for initializing
+ * machines before creating a model instance.
+ */
 trait HasMachines
 {
+    /**
+     * Boot method for ensuring that machines have been
+     * initialized before creating a model instance.
+     */
     protected static function bootHasMachines(): void
     {
         static::creating(function (Model $model): void {
@@ -26,6 +36,11 @@ trait HasMachines
         });
     }
 
+    /**
+     * Determines whether the machine should be initialized.
+     *
+     * @return bool Returns true if the machine should be initialized, false otherwise.
+     */
     public function shouldInitializeMachine(): bool
     {
         return true;
