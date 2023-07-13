@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Exceptions\MachineContextValidationException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
@@ -101,3 +102,16 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
 test('TrafficLightsContext throws MachineContextValidationException for invalid data', function (): void {
     TrafficLightsContext::validateAndCreate(['count' => -1]);
 })->throws(MachineContextValidationException::class);
+
+it('has magic methods', function (): void {
+    $machine = AbcMachine::start();
+
+    $machine->state->context->set('key', 'value1');
+    expect($machine->state->context->key)->toBe('value1');
+
+    $machine->state->context->key = 'value2';
+    expect($machine->state->context->key)->toBe('value2');
+
+    expect(isset($machine->state->context->key))->toBe(true);
+    expect(isset($machine->state->context->not_existing_key))->toBe(false);
+});
