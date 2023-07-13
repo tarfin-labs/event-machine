@@ -70,6 +70,7 @@ class MachineActor
     {
         MachineEvent::upsert(
             values: $this->state->history->map(fn (MachineEvent $machineEvent) => array_merge($machineEvent->toArray(), [
+                'created_at'    => $machineEvent->created_at->toDateTimeString(),
                 'machine_value' => json_encode($machineEvent->machine_value, JSON_THROW_ON_ERROR),
                 'payload'       => json_encode($machineEvent->payload, JSON_THROW_ON_ERROR),
                 'context'       => json_encode($machineEvent->context, JSON_THROW_ON_ERROR),

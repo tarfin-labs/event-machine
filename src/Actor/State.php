@@ -71,7 +71,7 @@ class State
         $this->history->push(new MachineEvent([
             'id'              => $id,
             'sequence_number' => $count,
-            'created_at'      => now()->toDateTime(),
+            'created_at'      => now(),
             'machine_id'      => $this->currentStateDefinition->machine->id,
             'machine_value'   => [$this->currentStateDefinition->id],
             'root_event_id'   => $count === 1 ? $id : $this->history[0]->id,
