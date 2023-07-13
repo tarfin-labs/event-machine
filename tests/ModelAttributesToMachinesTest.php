@@ -6,7 +6,6 @@ use Tarfinlabs\EventMachine\Actor\MachineActor;
 use Tarfinlabs\EventMachine\Tests\Stubs\Models\ModelA;
 
 it('can persist the machine state', function (): void {
-
     /** @var ModelA $a */
     $modelA = ModelA::create([
         'value' => 'some value',

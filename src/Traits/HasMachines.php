@@ -24,4 +24,9 @@ trait HasMachines
             }
         });
     }
+
+    public function shouldInitializeMachine(): bool
+    {
+        return true;
+    }
 }

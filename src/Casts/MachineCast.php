@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Casts;
 
 use Illuminate\Database\Eloquent\Model;
 use Tarfinlabs\EventMachine\Actor\MachineActor;
+use Tarfinlabs\EventMachine\Traits\HasMachines;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
@@ -24,8 +25,19 @@ class MachineCast implements CastsAttributes
      * @throws BehaviorNotFoundException
      * @throws RestoringStateException
      */
-    public function get(Model $model, string $key, mixed $value, array $attributes): MachineActor
-    {
+    public function get(
+        Model $model,
+        string $key,
+        mixed $value,
+        array $attributes
+    ): ?MachineActor {
+        if (
+            in_array(HasMachines::class, class_uses($model), true) &&
+            $model->shouldInitializeMachine() === false
+        ) {
+            return null;
+        }
+
         /** @var MachineActor $machineClass */
         [$machineClass, $contextKey] = explode(':', $model->getCasts()[$key]);
 
