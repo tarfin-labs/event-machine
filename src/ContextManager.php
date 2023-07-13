@@ -70,18 +70,35 @@ class ContextManager extends Data
     }
 
     /**
-     * Check if the context contains the given key.
+     * Determines if a key-value pair exists and optionally checks its type.
      *
-     *@param  string  $key The key to check for existence.
+     * This method checks if the context contains the given key and, if a type is
+     * specified, whether the value associated with that key is of the given type.
+     * If no type is specified, only existence is checked. If the key does not
+     * exist, or if the type does not match, the method returns false.
      *
-     *@return bool True if the key exists in the context, false otherwise.
+     * @param  string  $key  The key to check for existence.
+     * @param  string|null  $type  The type to check for the value. If null,
+     * only existence is checked.
+     *
+     * @return bool  True if the key exists and (if a type is specified)
+     * its value is of the given type. False otherwise.
      */
-    public function has(string $key): bool
+    public function has(string $key, string $type = null): bool
     {
-        return match (true) {
+        $hasKey = match (true) {
             get_class($this) === __CLASS__   => isset($this->data[$key]),
             is_subclass_of($this, __CLASS__) => property_exists($this, $key),
         };
+
+        if (!$hasKey || $type === null) {
+            return $hasKey;
+        }
+
+        $value     = $this->get($key);
+        $valueType = is_object($value) ? get_class($value) : gettype($value);
+
+        return $valueType === $type;
     }
 
     /**
