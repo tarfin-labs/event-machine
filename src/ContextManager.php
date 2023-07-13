@@ -135,4 +135,23 @@ class ContextManager extends Data
 
         return static::from($payload);
     }
+
+    // region Magic Setup
+
+    public function __set(string $name, $value): void
+    {
+        $this->set($name, $value);
+    }
+
+    public function __get(string $name): mixed
+    {
+        return $this->get($name);
+    }
+
+    public function __isset(string $name): bool
+    {
+        return $this->has($name);
+    }
+
+    // endregion
 }
