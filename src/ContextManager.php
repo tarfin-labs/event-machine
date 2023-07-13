@@ -57,16 +57,18 @@ class ContextManager extends Data
      * @param  string  $key The key for which to set the value.
      * @param  mixed  $value The value to set for the given key.
      */
-    public function set(string $key, mixed $value): void
+    public function set(string $key, mixed $value): mixed
     {
         if ($this->data instanceof Optional) {
-            return;
+            return null;
         }
 
         match (true) {
             get_class($this) === __CLASS__   => $this->data[$key] = $value,
             is_subclass_of($this, __CLASS__) => $this->$key       = $value,
         };
+
+        return $value;
     }
 
     /**

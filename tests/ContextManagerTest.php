@@ -18,11 +18,20 @@ it('can initialize an empty context manager', function (): void {
 it('can set and get context manager data', function (): void {
     $context = new ContextManager();
 
-    $context->set(key: 'key1', value: 'value1');
-    $context->set(key: 'key2', value: 'value2');
+    $key1   = 'key1';
+    $value1 = 'value1';
 
-    expect($context->get(key: 'key1'))->toBe('value1');
-    expect($context->get(key: 'key2'))->toBe('value2');
+    $key2   = 'key2';
+    $value2 = 'value2';
+
+    $return1 = $context->set(key: $key1, value: $value1);
+    $return2 = $context->set(key: $key2, value: $value2);
+
+    expect($context->get(key: $key1))->toBe($value1);
+    expect($return1)->toBe($value1);
+
+    expect($context->get(key: $key2))->toBe($value2);
+    expect($return2)->toBe($value2);
 });
 
 it('returns null for non-existent keys', function (): void {
