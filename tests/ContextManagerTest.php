@@ -117,7 +117,7 @@ it('has magic methods', function (): void {
     expect(isset($machine->state->context->not_existing_key))->toBe(false);
 });
 
-test('abc', function (): void {
+it('can check existence by its type', function (): void {
     $machine = AbcMachine::start();
 
     $machine->state->context->set('stringKey', 'stringValue');
