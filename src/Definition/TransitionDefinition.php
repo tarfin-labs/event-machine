@@ -141,6 +141,9 @@ class TransitionDefinition
 
             $guardsPassed = true;
             foreach ($branch->guards as $guardDefinition) {
+                [$guardDefinition, $guardArguments] = array_pad(explode(':', $guardDefinition, 2), 2, null);
+                $guardArguments                     = $guardArguments === null ? [] : explode(',', $guardArguments);
+
                 $guardBehavior = $this->source->machine->getInvokableBehavior(
                     behaviorDefinition: $guardDefinition,
                     behaviorType: BehaviorType::Guard
@@ -152,7 +155,7 @@ class TransitionDefinition
                     placeholder: $guardDefinition
                 );
 
-                if ($guardBehavior($state->context, $eventBehavior) === false) {
+                if ($guardBehavior($state->context, $eventBehavior, $guardArguments) === false) {
                     $guardsPassed = false;
 
                     $errorMessage = $guardBehavior instanceof GuardBehavior
