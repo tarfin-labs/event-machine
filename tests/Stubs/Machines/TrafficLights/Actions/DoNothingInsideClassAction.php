@@ -10,7 +10,7 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
 class DoNothingInsideClassAction implements ActionBehavior
 {
-    public function __invoke(ContextManager $context, EventBehavior $eventBehavior): void
+    public function __invoke(ContextManager $context, EventBehavior $eventBehavior, array $arguments = null): void
     {
         // Do nothing.
     }

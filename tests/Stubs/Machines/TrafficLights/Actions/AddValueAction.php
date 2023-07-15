@@ -10,7 +10,7 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
 class AddValueAction implements ActionBehavior
 {
-    public function __invoke(ContextManager $context, EventBehavior $eventBehavior): void
+    public function __invoke(ContextManager $context, EventBehavior $eventBehavior, array $arguments = null): void
     {
         /* @var \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext $context */
         $context->count += $eventBehavior->payload['value'];
