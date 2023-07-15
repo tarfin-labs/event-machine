@@ -26,6 +26,9 @@ class TransitionBranch
     /** The guards to be checked before this transition branch is taken. */
     public ?array $guards = null;
 
+    /** The description of the transition branch. */
+    public ?string $description = null;
+
     // endregion
 
     // region Constructor
@@ -55,6 +58,8 @@ class TransitionBranch
             $this->target = (!isset($this->transitionBranchConfig['target']) || $this->transitionBranchConfig['target'] === null
                     ? null
                     : $this->transitionDefinition->source->parent->stateDefinitions[$this->transitionBranchConfig['target']]);
+
+            $this->description = $this->transitionBranchConfig['description'] ?? null;
 
             $this->initializeConditions();
             $this->initializeActions();
