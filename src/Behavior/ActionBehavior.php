@@ -8,5 +8,9 @@ use Tarfinlabs\EventMachine\ContextManager;
 
 interface ActionBehavior extends InvokableBehavior
 {
-    public function __invoke(ContextManager $context, EventBehavior $eventBehavior): void;
+    public function __invoke(
+        ContextManager $context,
+        EventBehavior $eventBehavior,
+        array $arguments = null,
+    ): void;
 }
