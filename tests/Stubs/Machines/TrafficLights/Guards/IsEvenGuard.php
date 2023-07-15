@@ -13,7 +13,7 @@ class IsEvenGuard extends GuardBehavior
 {
     public ?string $errorMessage = 'Count is not even';
 
-    public function __invoke(TrafficLightsContext|ContextManager $context, EventBehavior $eventBehavior): bool
+    public function __invoke(TrafficLightsContext|ContextManager $context, EventBehavior $eventBehavior, array $arguments = null): bool
     {
         return $context->count % 2 === 0;
     }

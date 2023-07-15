@@ -436,6 +436,9 @@ class MachineDefinition
         State $state,
         EventBehavior $eventBehavior = null
     ): void {
+        [$actionDefinition, $actionArguments] = array_pad(explode(':', $actionDefinition, 2), 2, null);
+        $actionArguments                      = $actionArguments === null ? [] : explode(',', $actionArguments);
+
         // Retrieve the appropriate action behavior based on the action definition.
         $actionBehavior = $this->getInvokableBehavior(
             behaviorDefinition: $actionDefinition,
@@ -451,7 +454,7 @@ class MachineDefinition
             );
 
             // Execute the action behavior.
-            $actionBehavior($state->context, $eventBehavior);
+            $actionBehavior($state->context, $eventBehavior, $actionArguments);
 
             // Validate the context after the action is executed.
             $state->context->selfValidate();

@@ -7,13 +7,11 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 
 class AddAnotherValueAction implements ActionBehavior
 {
-    /* @var \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext $context */
-    /* @var \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\AddAnotherValueEvent $eventBehavior */
-
-    public function __invoke(ContextManager $context, EventBehavior $eventBehavior): void
+    public function __invoke(ContextManager|TrafficLightsContext $context, EventBehavior $eventBehavior, array $arguments = null): void
     {
         $context->count += $eventBehavior->value;
     }

@@ -10,5 +10,9 @@ abstract class GuardBehavior implements InvokableBehavior
 {
     public ?string $errorMessage = null;
 
-    abstract public function __invoke(ContextManager $context, EventBehavior $eventBehavior): bool;
+    abstract public function __invoke(
+        ContextManager $context,
+        EventBehavior $eventBehavior,
+        array $arguments = null,
+    ): bool;
 }
