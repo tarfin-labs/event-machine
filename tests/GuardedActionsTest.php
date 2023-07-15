@@ -145,8 +145,9 @@ it('should transition through multiple if-else targets based on guards', functio
                     'on' => [
                         'TIMER' => [
                             [
-                                'target' => 'yellow',
-                                'guards' => 'isOneGuard',
+                                'target'      => 'yellow',
+                                'guards'      => 'isOneGuard',
+                                'description' => 'sample description',
                             ],
                             [
                                 'target' => 'red',
@@ -203,6 +204,9 @@ it('should transition through multiple if-else targets based on guards', functio
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe(['(machine).pedestrian']);
+
+    expect($machine->stateDefinitions['green']->transitionDefinitions['TIMER']->branches[0]->description)
+        ->toBe('sample description');
 });
 
 it('should prevent infinite loops when no guards evaluate to true for @always transitions', function (): void {
