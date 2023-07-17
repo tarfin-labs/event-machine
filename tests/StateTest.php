@@ -26,4 +26,9 @@ test('state value can be matched', function (): void {
 
     expect($initialState->matches('stateA'))->toBe(true);
     expect($initialState->matches('machine.stateA'))->toBe(true);
+
+    $newState = $machine->transition(event: ['type' => 'EVENT']);
+
+    expect($newState->matches('stateB.subStateOfB'))->toBe(true);
+    expect($newState->matches('machine.stateB.subStateOfB'))->toBe(true);
 });
