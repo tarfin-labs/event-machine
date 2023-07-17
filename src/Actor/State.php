@@ -85,4 +85,15 @@ class State
 
         return $this;
     }
+
+    public function matches(string $value): bool
+    {
+        $machineId = $this->currentStateDefinition->machine->id;
+
+        if (!str_starts_with($value, $machineId)) {
+            $value = $machineId.'.'.$value;
+        }
+
+        return $this->value[0] === $value;
+    }
 }
