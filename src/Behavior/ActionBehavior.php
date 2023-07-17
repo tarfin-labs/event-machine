@@ -12,5 +12,5 @@ interface ActionBehavior extends InvokableBehavior
         ContextManager $context,
         EventBehavior $eventBehavior,
         array $arguments = null,
-    ): void;
+    );
 }
