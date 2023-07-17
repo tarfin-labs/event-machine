@@ -85,4 +85,22 @@ class State
 
         return $this;
     }
+
+    /**
+     * Checks if the given value matches the current state's value.
+     *
+     * @param  string  $value The value to be checked.
+     *
+     * @return bool Returns true if the value matches the current state's value; otherwise, returns false.
+     */
+    public function matches(string $value): bool
+    {
+        $machineId = $this->currentStateDefinition->machine->id;
+
+        if (!str_starts_with($value, $machineId)) {
+            $value = $machineId.'.'.$value;
+        }
+
+        return $this->value[0] === $value;
+    }
 }
