@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
@@ -83,4 +85,33 @@ it('can update context using actions defined in transition definitions', functio
         ->toBeInstanceOf(State::class)
         ->and($decState->value)->toBe(['(machine).active'])
         ->and($decState->context->get('count'))->toBe(20);
+});
+
+test('actions can return', function (): void {
+    // 1. Arrange
+    $value = random_int(10, 20);
+
+    $multipleWithItselfAction = new class implements ActionBehavior {
+        public function __invoke(
+            ContextManager $context,
+            EventBehavior $eventBehavior,
+            array $arguments = null
+        ): int {
+            return $eventBehavior->payload['value'] * $eventBehavior->payload['value'];
+        }
+    };
+
+    // 2. Act
+    $result = $multipleWithItselfAction(
+        context: new ContextManager(),
+        eventBehavior: EventDefinition::from([
+            'type'    => 'ADD',
+            'payload' => [
+                'value' => $value,
+            ],
+        ]),
+    );
+
+    // 3. Assert
+    expect($result)->toBe($value * $value);
 });
