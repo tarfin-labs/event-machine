@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
+use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
@@ -45,6 +46,9 @@ class MachineDefinition
      */
     public ?array $events = null;
 
+    /** Represents a queue for storing events that raised during the execution of the transition. */
+    public Collection $eventQueue;
+
     /** The initial state definition for this machine definition. */
     public ?StateDefinition $initialStateDefinition = null;
 
@@ -73,6 +77,8 @@ class MachineDefinition
 
         $this->stateDefinitions = $this->root->stateDefinitions;
         $this->events           = $this->root->events;
+
+        $this->eventQueue = new Collection();
 
         $this->initialStateDefinition = $this->root->initialStateDefinition;
     }
@@ -162,7 +168,10 @@ class MachineDefinition
         $initialState->setInternalEventBehavior(type: InternalEvent::MACHINE_INIT);
 
         // Run entry actions on the initial state definition
-        $this->initialStateDefinition->runEntryActions(state: $initialState);
+        $this->initialStateDefinition->runEntryActions(
+            state: $initialState,
+            eventBehavior: $initialState->currentEventBehavior,
+        );
 
         if ($initialStateDefinition->transitionDefinitions !== null) {
             foreach ($initialStateDefinition->transitionDefinitions as $transition) {
@@ -175,6 +184,14 @@ class MachineDefinition
                     );
                 }
             }
+        }
+
+        if ($this->eventQueue->isNotEmpty()) {
+            $firstEvent = $this->eventQueue->shift();
+
+            $eventBehavior = $this->initializeEvent($firstEvent, $initialState);
+
+            return $this->transition($eventBehavior, $initialState);
         }
 
         return $initialState;
@@ -272,7 +289,7 @@ class MachineDefinition
         // If the guard definition is an invokable GuardBehavior, create a new instance.
         if (is_subclass_of($behaviorDefinition, InvokableBehavior::class)) {
             /* @var callable $behaviorDefinition */
-            return new $behaviorDefinition();
+            return new $behaviorDefinition($this->eventQueue);
         }
 
         // If the guard definition is defined in the machine behavior, retrieve it.
@@ -281,7 +298,7 @@ class MachineDefinition
         // If the retrieved behavior is not null and not callable, create a new instance.
         if ($invokableBehavior !== null && !is_callable($invokableBehavior)) {
             /** @var InvokableBehavior $invokableInstance */
-            $invokableInstance = new $invokableBehavior();
+            $invokableInstance = new $invokableBehavior($this->eventQueue);
 
             return $invokableInstance;
         }
@@ -290,7 +307,6 @@ class MachineDefinition
             throw BehaviorNotFoundException::build($behaviorDefinition);
         }
 
-        // Return the guard behavior, either a callable or null.
         return $invokableBehavior;
     }
 
@@ -401,8 +417,8 @@ class MachineDefinition
         $newState = $state
             ->setCurrentStateDefinition($transitionBranch->target ?? $currentStateDefinition);
 
+        // Check if the new state has any @always transitions
         if ($this->idMap[$newState->currentStateDefinition->id]->transitionDefinitions !== null) {
-            // Check if the new state has any @always transitions
             /** @var TransitionDefinition $transition */
             foreach ($this->stateDefinitions[$newState->currentStateDefinition->key]->transitionDefinitions as $transition) {
                 if ($transition->type === TransitionType::Always) {
@@ -414,6 +430,14 @@ class MachineDefinition
                     );
                 }
             }
+        }
+
+        if ($this->eventQueue->isNotEmpty()) {
+            $firstEvent = $this->eventQueue->shift();
+
+            $eventBehavior = $this->initializeEvent($firstEvent, $newState);
+
+            return $this->transition($eventBehavior, $newState);
         }
 
         return $newState;

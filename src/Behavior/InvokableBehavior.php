@@ -4,10 +4,20 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Behavior;
 
+use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Definition\EventDefinition;
 
-interface InvokableBehavior
+abstract class InvokableBehavior
 {
+    public function __construct(
+        protected ?Collection $eventQueue = null
+    ) {
+        if ($this->eventQueue === null) {
+            $this->eventQueue = new Collection();
+        }
+    }
+
     /**
      * Executes the behavior with the given context and event.
      *
@@ -23,9 +33,19 @@ interface InvokableBehavior
      *
      * @phpstan-ignore-next-line
      */
-    public function __invoke(
+    abstract public function __invoke(
         ContextManager $context,
         EventBehavior $eventBehavior,
         array $arguments = null,
     );
+
+    /**
+     * Raises an event by adding it to the event queue.
+     *
+     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition|array  $eventDefinition The event definition object to be raised.
+     */
+    public function raise(EventDefinition|array $eventDefinition): void
+    {
+        $this->eventQueue->push($eventDefinition);
+    }
 }

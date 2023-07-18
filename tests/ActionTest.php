@@ -91,7 +91,7 @@ test('actions can return', function (): void {
     // 1. Arrange
     $value = random_int(10, 20);
 
-    $multipleWithItselfAction = new class implements ActionBehavior {
+    $multipleWithItselfAction = new class extends ActionBehavior {
         public function __invoke(
             ContextManager $context,
             EventBehavior $eventBehavior,
