@@ -6,9 +6,9 @@ namespace Tarfinlabs\EventMachine\Behavior;
 
 use Tarfinlabs\EventMachine\ContextManager;
 
-interface ActionBehavior extends InvokableBehavior
+abstract class ActionBehavior extends InvokableBehavior
 {
-    public function __invoke(
+    abstract public function __invoke(
         ContextManager $context,
         EventBehavior $eventBehavior,
         array $arguments = null,

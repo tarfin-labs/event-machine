@@ -6,7 +6,7 @@ namespace Tarfinlabs\EventMachine\Behavior;
 
 use Tarfinlabs\EventMachine\ContextManager;
 
-abstract class GuardBehavior implements InvokableBehavior
+abstract class GuardBehavior extends InvokableBehavior
 {
     public ?string $errorMessage = null;
 
