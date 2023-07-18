@@ -33,7 +33,7 @@ it('stores external events', function (): void {
         'type' => 'RED_TIMER',
     ], state: $newState);
 
-    expect($newState->history)->toHaveCount(3);
+    expect($newState->history)->toHaveCount(5);
 });
 
 it('stores internal action events', function (): void {
@@ -70,12 +70,13 @@ it('stores internal action events', function (): void {
     ]);
 
     expect($newState->history->pluck('type')->toArray())
-        ->toHaveCount(4)
+        ->toHaveCount(5)
         ->toEqual([
             'machine.init',
             'ADD',
             'machine.action.additionAction.init',
             'machine.action.additionAction.done',
+            'machine.state.active.init',
         ]);
 });
 
