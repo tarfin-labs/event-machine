@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Actor;
 
+use JsonSerializable;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
@@ -16,7 +17,7 @@ use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 
-class MachineActor
+class MachineActor implements JsonSerializable
 {
     /** The current state of the machine actor. */
     public ?State $state = null;
@@ -181,4 +182,9 @@ class MachineActor
     }
 
     // endregion
+
+    public function jsonSerialize(): mixed
+    {
+        return $this->state->history->first()->root_event_id;
+    }
 }
