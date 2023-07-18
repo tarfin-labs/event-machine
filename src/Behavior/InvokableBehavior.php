@@ -6,7 +6,7 @@ namespace Tarfinlabs\EventMachine\Behavior;
 
 use Tarfinlabs\EventMachine\ContextManager;
 
-interface InvokableBehavior
+abstract class InvokableBehavior
 {
     /**
      * Executes the behavior with the given context and event.
