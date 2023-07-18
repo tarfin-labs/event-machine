@@ -414,11 +414,11 @@ class MachineDefinition
         // Find Target initial state
         $targetStateDefinition = $transitionBranch->target?->findInitialStateDefinition() ?? $transitionBranch->target;
 
-        // Run entry actions on the target state definition
-        $targetStateDefinition?->runEntryActions($state, $eventBehavior);
-
         $newState = $state
             ->setCurrentStateDefinition($targetStateDefinition ?? $currentStateDefinition);
+
+        // Run entry actions on the target state definition
+        $targetStateDefinition?->runEntryActions($newState, $eventBehavior);
 
         // Check if the new state has any @always transitions
         if ($this->idMap[$newState->currentStateDefinition->id]->transitionDefinitions !== null) {
