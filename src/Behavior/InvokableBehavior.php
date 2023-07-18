@@ -6,7 +6,6 @@ namespace Tarfinlabs\EventMachine\Behavior;
 
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Definition\EventDefinition;
 
 abstract class InvokableBehavior
 {
@@ -42,10 +41,10 @@ abstract class InvokableBehavior
     /**
      * Raises an event by adding it to the event queue.
      *
-     * @param  \Tarfinlabs\EventMachine\Definition\EventDefinition|array  $eventDefinition The event definition object to be raised.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|array  $eventBehavior The event definition object to be raised.
      */
-    public function raise(EventDefinition|array $eventDefinition): void
+    public function raise(EventBehavior|array $eventBehavior): void
     {
-        $this->eventQueue->push($eventDefinition);
+        $this->eventQueue->push($eventBehavior);
     }
 }
