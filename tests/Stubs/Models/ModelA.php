@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Models;
 use Illuminate\Database\Eloquent\Model;
 use Tarfinlabs\EventMachine\Actor\MachineActor;
 use Tarfinlabs\EventMachine\Traits\HasMachines;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
@@ -20,6 +21,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMach
 class ModelA extends Model
 {
     use HasMachines;
+    use HasFactory;
 
     protected $fillable = [
         'value',
