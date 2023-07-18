@@ -423,7 +423,7 @@ class MachineDefinition
         // Check if the new state has any @always transitions
         if ($this->idMap[$newState->currentStateDefinition->id]->transitionDefinitions !== null) {
             /** @var TransitionDefinition $transition */
-            foreach ($this->stateDefinitions[$newState->currentStateDefinition->key]->transitionDefinitions as $transition) {
+            foreach ($this->idMap[$newState->currentStateDefinition->id]->transitionDefinitions as $transition) {
                 if ($transition->type === TransitionType::Always) {
                     return $this->transition(
                         event: [
