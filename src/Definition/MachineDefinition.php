@@ -417,6 +417,12 @@ class MachineDefinition
         $newState = $state
             ->setCurrentStateDefinition($targetStateDefinition ?? $currentStateDefinition);
 
+        // Record the internal action state init event.
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_INIT,
+            placeholder: $newState->currentStateDefinition->key
+        );
+
         // Run entry actions on the target state definition
         $targetStateDefinition?->runEntryActions($newState, $eventBehavior);
 
