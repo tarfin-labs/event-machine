@@ -479,25 +479,47 @@ class MachineDefinition
         );
 
         // If the action behavior is callable, execute it with the context and event payload.
-        if (is_callable($actionBehavior)) {
-            // Record the internal action init event.
-            $state->setInternalEventBehavior(
-                type: InternalEvent::ACTION_INIT,
-                placeholder: $actionDefinition
-            );
-
-            // Execute the action behavior.
-            $actionBehavior($state->context, $eventBehavior, $actionArguments);
-
-            // Validate the context after the action is executed.
-            $state->context->selfValidate();
-
-            // Record the internal action done event.
-            $state->setInternalEventBehavior(
-                type: InternalEvent::ACTION_DONE,
-                placeholder: $actionDefinition
-            );
+        if (!is_callable($actionBehavior)) {
+            return;
         }
+
+        // Record the internal action init event.
+        $state->setInternalEventBehavior(
+            type: InternalEvent::ACTION_INIT,
+            placeholder: $actionDefinition
+        );
+
+        // Get the number of events in the queue before the action is executed.
+        $numberOfEventsInQueue = $this->eventQueue->count();
+
+        // Execute the action behavior.
+        $actionBehavior($state->context, $eventBehavior, $actionArguments);
+
+        // Get the number of events in the queue after the action is executed.
+        $newNumberOfEventsInQueue = $this->eventQueue->count();
+
+        // If the number of events in the queue has changed, get the new events to create history.
+        if ($numberOfEventsInQueue !== $newNumberOfEventsInQueue) {
+            // Get new events from the queue
+            $newEvents = $this->eventQueue->slice($numberOfEventsInQueue, $newNumberOfEventsInQueue);
+
+            foreach ($newEvents as $newEvent) {
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::ACTION_EVENT_RAISED,
+                    placeholder: $actionDefinition,
+                    payload: is_array($newEvent) ? $newEvent : $newEvent->toArray()
+                );
+            }
+        }
+
+        // Validate the context after the action is executed.
+        $state->context->selfValidate();
+
+        // Record the internal action done event.
+        $state->setInternalEventBehavior(
+            type: InternalEvent::ACTION_DONE,
+            placeholder: $actionDefinition
+        );
     }
 
     // endregion
