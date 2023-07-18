@@ -43,7 +43,7 @@ it('should run entry actions when transitioning to a new state', function (): vo
         ->and($newState->context->data)->toBe(['count' => 1]);
 });
 
-it('should run entry actions when transitioning to a new state, which is sub-state', function (): void {
+it('should run entry actions when transitioning to a substate', function (): void {
     $machine = MachineDefinition::define(
         config: [
             'initial' => 'inactive',
