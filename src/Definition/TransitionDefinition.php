@@ -158,7 +158,7 @@ class TransitionDefinition
                     placeholder: $guardDefinition
                 );
 
-                $hasMissingContext = $this->hasMissingContext($guardBehavior, $state->context);
+                $hasMissingContext = self::hasMissingContext($guardBehavior, $state->context);
                 if ($hasMissingContext !== null) {
                     throw MissingMachineContextException::build($hasMissingContext);
                 }
@@ -198,6 +198,10 @@ class TransitionDefinition
         return null;
     }
 
+    // endregion
+
+    // region Static Methods
+
     /**
      * Checks if the machine context has any required context attribute.
      *
@@ -207,7 +211,7 @@ class TransitionDefinition
      * @return string|null The key of the first missing context attribute,
      * or null if all the required context attributes is present.
      */
-    protected function hasMissingContext(?callable $guardBehavior, ContextManager $context): ?string
+    protected static function hasMissingContext(?callable $guardBehavior, ContextManager $context): ?string
     {
         // Check if the guard behavior has the 'requiredContext' property
         if (!property_exists($guardBehavior, 'requiredContext')) {
