@@ -211,7 +211,7 @@ class TransitionDefinition
      * @return string|null The key of the first missing context attribute,
      * or null if all the required context attributes is present.
      */
-    protected static function hasMissingContext(?callable $guardBehavior, ContextManager $context): ?string
+    public static function hasMissingContext(?callable $guardBehavior, ContextManager $context): ?string
     {
         // Check if the guard behavior has the 'requiredContext' property
         if (!property_exists($guardBehavior, 'requiredContext')) {
