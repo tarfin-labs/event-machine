@@ -55,9 +55,12 @@ class TransitionBranch
         }
 
         if (is_array($this->transitionBranchConfig)) {
-            $this->target = (!isset($this->transitionBranchConfig['target']) || $this->transitionBranchConfig['target'] === null
+            $this->target = (!isset($this->transitionBranchConfig['target']) || $this->transitionBranchConfig['target'] === null)
                     ? null
-                    : $this->transitionDefinition->source->parent->stateDefinitions[$this->transitionBranchConfig['target']]);
+                    : $this->transitionDefinition
+                        ->source
+                        ->machine
+                        ->getNearestStateDefinitionByString($this->transitionBranchConfig['target']);
 
             $this->description = $this->transitionBranchConfig['description'] ?? null;
 
