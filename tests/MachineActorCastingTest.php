@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\XyzMachine;
 
-test('MachineActor can be cast to json', function (): void {
+test('MachineActor can be cast to JSON', function (): void {
     $machine = XyzMachine::start();
 
     expect(json_encode($machine, JSON_THROW_ON_ERROR))

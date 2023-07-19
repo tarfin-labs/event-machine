@@ -184,7 +184,12 @@ class MachineActor implements JsonSerializable, Stringable
 
     // endregion
 
-    public function jsonSerialize(): mixed
+    /**
+     * Returns the JSON serialized representation of the object.
+     *
+     * @return mixed The JSON serialized representation of the object.
+     */
+    public function jsonSerialize(): string
     {
         return $this->state->history->first()->root_event_id;
     }
