@@ -6,10 +6,12 @@ namespace Tarfinlabs\EventMachine\Definition;
 
 use Illuminate\Support\Str;
 use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
 /**
  * Class TransitionDefinition.
@@ -108,6 +110,41 @@ class TransitionDefinition
         return true;
     }
 
+    /**
+     * Checks if the machine context has any required context attribute.
+     *
+     * @param  callable|null  $guardBehavior The guard behavior to check.
+     * @param  ContextManager  $context The context manager to check against.
+     *
+     * @return string|null The key of the first missing context attribute,
+     * or null if all the required context attributes is present.
+     */
+    private function hasMissingContext(?callable $guardBehavior, ContextManager $context): ?string
+    {
+        // Check if the guard behavior has the 'requiredContext' property
+        if (!property_exists($guardBehavior, 'requiredContext')) {
+            return null;
+        }
+
+        // Check if the requiredContext property is an empty array
+        if (empty($guardBehavior->requiredContext)) {
+            return null;
+        }
+
+        // Iterate through the required context attributes
+        /** @var GuardBehavior $guardBehavior */
+        foreach ($guardBehavior->requiredContext as $key => $type) {
+            // Check if the context manager has the required context attribute
+            if (!$context->has($key, $type)) {
+                // Return the key of the missing context attribute
+                return $key;
+            }
+        }
+
+        // Return null if all the required context attributes are present
+        return null;
+    }
+
     // endregion
 
     // region Public Methods
@@ -128,6 +165,7 @@ class TransitionDefinition
      *         null if no eligible transition is found.
      *
      * @throws BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function getFirstValidTransitionBranch(
         EventBehavior $eventBehavior,
@@ -154,6 +192,11 @@ class TransitionDefinition
                     type: InternalEvent::GUARD_INIT,
                     placeholder: $guardDefinition
                 );
+
+                $hasMissingContext = $this->hasMissingContext($guardBehavior, $state->context);
+                if ($hasMissingContext !== null) {
+                    throw MissingMachineContextException::build($hasMissingContext);
+                }
 
                 if ($guardBehavior($state->context, $eventBehavior, $guardArguments) === false) {
                     $guardsPassed = false;
