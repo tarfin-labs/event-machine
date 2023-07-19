@@ -10,3 +10,10 @@ test('MachineActor can be cast to json', function (): void {
     expect(json_encode($machine, JSON_THROW_ON_ERROR))
         ->toBe('"'.$machine->state->history->first()->root_event_id.'"');
 });
+
+test('MachineActor can be cast to string', function (): void {
+    $machine = XyzMachine::start();
+
+    expect((string) $machine)
+        ->toBe($machine->state->history->first()->root_event_id);
+});
