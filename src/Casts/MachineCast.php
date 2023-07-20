@@ -56,6 +56,10 @@ class MachineCast implements CastsAttributes
      */
     public function set(Model $model, string $key, mixed $value, array $attributes): string
     {
+        if (is_string($value)) {
+            return $value;
+        }
+
         return $value->state->history->first()->root_event_id;
     }
 }
