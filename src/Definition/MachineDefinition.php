@@ -417,7 +417,12 @@ class MachineDefinition
 
         // If the target state definition is not found, throw an exception
         if ($targetStateDefinition === null) {
-            throw NoStateDefinitionFoundException::build($currentStateDefinition->id, $transitionBranch->transitionBranchConfig['target']);
+            throw NoStateDefinitionFoundException::build(
+                from: $currentStateDefinition->id,
+                to: is_string($transitionBranch->transitionBranchConfig)
+                    ? $transitionBranch->transitionBranchConfig
+                    : $transitionBranch->transitionBranchConfig['target']
+            );
         }
 
         // Run exit actions on the source/current state definition
