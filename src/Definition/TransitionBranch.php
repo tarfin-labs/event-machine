@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\NoStateDefinitionFoundException;
 
 class TransitionBranch
 {
@@ -45,22 +46,47 @@ class TransitionBranch
         }
 
         if (is_string($this->transitionBranchConfig)) {
-            $this->target = $this
+            $targetStateDefinition = $this
                 ->transitionDefinition
                 ->source
                 ->machine
                 ->getNearestStateDefinitionByString($this->transitionBranchConfig);
 
+            // If the target state definition is not found, throw an exception
+            if ($targetStateDefinition === null) {
+                throw NoStateDefinitionFoundException::build(
+                    from: $this->transitionDefinition->source->id,
+                    to: $this->transitionBranchConfig,
+                    eventType: $this->transitionDefinition->event,
+                );
+            }
+
+            $this->target = $targetStateDefinition;
+
             return;
         }
 
         if (is_array($this->transitionBranchConfig)) {
-            $this->target = (!isset($this->transitionBranchConfig['target']) || $this->transitionBranchConfig['target'] === null)
-                    ? null
-                    : $this->transitionDefinition
-                        ->source
-                        ->machine
-                        ->getNearestStateDefinitionByString($this->transitionBranchConfig['target']);
+            if (empty($this->target)) {
+                $this->target = null;
+            }
+
+            if (isset($this->transitionBranchConfig['target'])) {
+                $targetStateDefinition = $this->transitionDefinition
+                    ->source
+                    ->machine
+                    ->getNearestStateDefinitionByString($this->transitionBranchConfig['target']);
+
+                if ($targetStateDefinition === null) {
+                    throw NoStateDefinitionFoundException::build(
+                        from: $this->transitionDefinition->source->id,
+                        to: $this->transitionBranchConfig['target'],
+                        eventType: $this->transitionDefinition->event,
+                    );
+                }
+
+                $this->target = $targetStateDefinition;
+            }
 
             $this->description = $this->transitionBranchConfig['description'] ?? null;
 

@@ -15,11 +15,11 @@ test('search nothing', function (): void {
         ],
     ]);
 
-    expect($machine->getNearestStateDefinitionByString(state: ''))->toBe(null);
-    expect($machine->getNearestStateDefinitionByString(state: 'g'))->toBe(null);
-    expect($machine->getNearestStateDefinitionByString(state: 'gr'))->toBe(null);
-    expect($machine->getNearestStateDefinitionByString(state: 'gre'))->toBe(null);
-    expect($machine->getNearestStateDefinitionByString(state: 'gree'))->toBe(null);
+    expect($machine->getNearestStateDefinitionByString(stateDefinitionId: ''))->toBe(null);
+    expect($machine->getNearestStateDefinitionByString(stateDefinitionId: 'g'))->toBe(null);
+    expect($machine->getNearestStateDefinitionByString(stateDefinitionId: 'gr'))->toBe(null);
+    expect($machine->getNearestStateDefinitionByString(stateDefinitionId: 'gre'))->toBe(null);
+    expect($machine->getNearestStateDefinitionByString(stateDefinitionId: 'gree'))->toBe(null);
 });
 
 test('search root states by string', function (): void {
@@ -41,9 +41,9 @@ test('search root states by string', function (): void {
     $yellowStateDefinition = $machine->stateDefinitions['yellow'];
     $redStateDefinition    = $machine->stateDefinitions['red'];
 
-    expect($greenStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: 'green'));
-    expect($yellowStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: 'yellow'));
-    expect($redStateDefinition)->toBe($machine->getNearestStateDefinitionByString(state: 'red'));
+    expect($greenStateDefinition)->toBe($machine->getNearestStateDefinitionByString(stateDefinitionId: 'green'));
+    expect($yellowStateDefinition)->toBe($machine->getNearestStateDefinitionByString(stateDefinitionId: 'yellow'));
+    expect($redStateDefinition)->toBe($machine->getNearestStateDefinitionByString(stateDefinitionId: 'red'));
 });
 
 test('search unique child states by string', function (): void {
@@ -67,12 +67,12 @@ test('search unique child states by string', function (): void {
     ]);
 
     $uniqueSubStateDefinition = $machine->stateDefinitions['green']->stateDefinitions['uniqueSubState'];
-    $foundStateDefinition     = $machine->getNearestStateDefinitionByString(state: 'green'.$delimiter.'uniqueSubState');
+    $foundStateDefinition     = $machine->getNearestStateDefinitionByString(stateDefinitionId: 'green'.$delimiter.'uniqueSubState');
 
     expect($uniqueSubStateDefinition)->toBe($foundStateDefinition);
 
     $subGreenStateDefinition = $machine->stateDefinitions['green']->stateDefinitions['green'];
-    $foundStateDefinition    = $machine->getNearestStateDefinitionByString(state: 'green'.$delimiter.'green');
+    $foundStateDefinition    = $machine->getNearestStateDefinitionByString(stateDefinitionId: 'green'.$delimiter.'green');
 
     expect($subGreenStateDefinition)->toBe($foundStateDefinition);
 });

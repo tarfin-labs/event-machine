@@ -11,6 +11,7 @@ use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
 class MachineDefinition
 {
@@ -348,19 +349,19 @@ class MachineDefinition
     /**
      * Retrieves the nearest `StateDefinition` by string.
      *
-     * @param  string  $state The state string.
+     * @param  string  $stateDefinitionId The state string.
      *
      * @return StateDefinition|null The nearest StateDefinition or null if it is not found.
      */
-    public function getNearestStateDefinitionByString(string $state): ?StateDefinition
+    public function getNearestStateDefinitionByString(string $stateDefinitionId): ?StateDefinition
     {
-        if (empty($state)) {
+        if (empty($stateDefinitionId)) {
             return null;
         }
 
-        $state = $this->id.$this->delimiter.$state;
+        $stateDefinitionId = $this->id.$this->delimiter.$stateDefinitionId;
 
-        return $this->idMap[$state] ?? null;
+        return $this->idMap[$stateDefinitionId] ?? null;
     }
 
     // endregion
@@ -395,6 +396,11 @@ class MachineDefinition
         /** @var null|array|TransitionDefinition $transitionDefinition */
         $transitionDefinition = $currentStateDefinition->transitionDefinitions[$eventBehavior->type] ?? null;
 
+        // If the transition definition is not found, throw an exception
+        if ($transitionDefinition === null) {
+            throw NoTransitionDefinitionFoundException::build($eventBehavior->type, $currentStateDefinition->id);
+        }
+
         $transitionBranch = $transitionDefinition->getFirstValidTransitionBranch(
             eventBehavior: $eventBehavior,
             state: $state
@@ -405,14 +411,14 @@ class MachineDefinition
             return $state->setCurrentStateDefinition($currentStateDefinition);
         }
 
+        // Find Target initial state
+        $targetStateDefinition = $transitionBranch->target?->findInitialStateDefinition() ?? $transitionBranch->target;
+
         // Run exit actions on the source/current state definition
         $transitionBranch->transitionDefinition->source->runExitActions($state);
 
         // Run transition actions on the transition definition
         $transitionBranch->runActions($state, $eventBehavior);
-
-        // Find Target initial state
-        $targetStateDefinition = $transitionBranch->target?->findInitialStateDefinition() ?? $transitionBranch->target;
 
         $newState = $state
             ->setCurrentStateDefinition($targetStateDefinition ?? $currentStateDefinition);
