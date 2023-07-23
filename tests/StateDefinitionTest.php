@@ -329,12 +329,12 @@ test('a state definition can have events', function (): void {
                 'states'  => [
                     'walk' => [
                         'on' => [
-                            'PED_COUNTDOWN' => 'wait',
+                            'PED_COUNTDOWN' => 'red.wait',
                         ],
                     ],
                     'wait' => [
                         'on' => [
-                            'PED_COUNTDOWN' => 'stop',
+                            'PED_COUNTDOWN' => 'red.stop',
                         ],
                     ],
                     'stop' => [],
