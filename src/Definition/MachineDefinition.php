@@ -414,17 +414,6 @@ class MachineDefinition
         // Find Target initial state
         $targetStateDefinition = $transitionBranch->target?->findInitialStateDefinition() ?? $transitionBranch->target;
 
-        // If the target state definition is not found, throw an exception
-        if ($targetStateDefinition === null) {
-            throw NoStateDefinitionFoundException::build(
-                from: $currentStateDefinition->id,
-                to: is_string($transitionBranch->transitionBranchConfig)
-                    ? $transitionBranch->transitionBranchConfig
-                    : $transitionBranch->transitionBranchConfig['target'],
-                eventType: $eventBehavior->type,
-            );
-        }
-
         // Run exit actions on the source/current state definition
         $transitionBranch->transitionDefinition->source->runExitActions($state);
 
