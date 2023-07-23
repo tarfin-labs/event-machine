@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
+use Tarfinlabs\EventMachine\Exceptions\NoStateDefinitionFoundException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
 test('single actions can be defined as strings instead of arrays', function (): void {
@@ -99,7 +100,7 @@ it('throws NoTransitionDefinitionFoundException for unknown events', function ()
             'green' => [
                 'on' => [
                     'TIMER' => [
-                        'target' => 'no-yellow',
+                        'target' => 'yellow',
                     ],
                 ],
             ],
@@ -111,6 +112,27 @@ it('throws NoTransitionDefinitionFoundException for unknown events', function ()
         ->toThrow(
             exception: NoTransitionDefinitionFoundException::class,
             exceptionMessage: "No transition definition found for the event type 'TIMERX' in the current state definition '(machine).green'. Make sure that a transition is defined for this event type in the current state definition.",
+        );
+});
+
+it('throws NoStateDefinitionFoundException for unknown states', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'states' => [
+            'green' => [
+                'on' => [
+                    'TIMER' => [
+                        'target' => 'no-yellow',
+                    ],
+                ],
+            ],
+            'yellow' => [],
+        ],
+    ]);
+
+    expect(fn () => $machine->transition(event: ['type' => 'TIMER']))
+        ->toThrow(
+            exception: NoStateDefinitionFoundException::class,
+            exceptionMessage: "No state definition found from '(machine).green' to 'no-yellow'. Make sure that a transition is defined for this event type in the current state definition.",
         );
 });
 

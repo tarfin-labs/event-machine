@@ -11,6 +11,7 @@ use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\NoStateDefinitionFoundException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
 class MachineDefinition
@@ -411,14 +412,19 @@ class MachineDefinition
             return $state->setCurrentStateDefinition($currentStateDefinition);
         }
 
+        // Find Target initial state
+        $targetStateDefinition = $transitionBranch->target?->findInitialStateDefinition() ?? $transitionBranch->target;
+
+        // If the target state definition is not found, throw an exception
+        if ($targetStateDefinition === null) {
+            throw NoStateDefinitionFoundException::build($currentStateDefinition->id, $transitionBranch->transitionBranchConfig['target']);
+        }
+
         // Run exit actions on the source/current state definition
         $transitionBranch->transitionDefinition->source->runExitActions($state);
 
         // Run transition actions on the transition definition
         $transitionBranch->runActions($state, $eventBehavior);
-
-        // Find Target initial state
-        $targetStateDefinition = $transitionBranch->target?->findInitialStateDefinition() ?? $transitionBranch->target;
 
         $newState = $state
             ->setCurrentStateDefinition($targetStateDefinition ?? $currentStateDefinition);
