@@ -20,10 +20,13 @@ class NoStateDefinitionFoundException extends RuntimeException
      *
      * @return self The newly created instance of self.
      */
-    public static function build(string $from, string $to): self
-    {
-        return new self(message: "No state definition found from '{$from}' to '{$to}'. ".
-            'Make sure that a transition is defined for this event type in the current state definition.'
+    public static function build(
+        string $from,
+        string $to,
+        string $eventType,
+    ): self {
+        return new self(message: "No transition defined in the event machine from state '{$from}' to state '{$to}' for the event type '{$eventType}'. ".
+            'Please ensure that a transition for this event type is defined in the current state definition.'
         );
     }
 }

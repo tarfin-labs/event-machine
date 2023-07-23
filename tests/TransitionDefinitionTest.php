@@ -133,13 +133,13 @@ it('throws NoStateDefinitionFoundException for unknown states', function (): voi
     expect(fn () => $machine->transition(event: ['type' => 'TIMER']))
         ->toThrow(
             exception: NoStateDefinitionFoundException::class,
-            exceptionMessage: "No state definition found from '(machine).green' to 'no-yellow'. Make sure that a transition is defined for this event type in the current state definition.",
+            exceptionMessage: "No transition defined in the event machine from state '(machine).green' to state 'no-yellow' for the event type 'TIMER'. Please ensure that a transition for this event type is defined in the current state definition.",
         );
 
     expect(fn () => $machine->transition(event: ['type' => 'TIMER2']))
         ->toThrow(
             exception: NoStateDefinitionFoundException::class,
-            exceptionMessage: "No state definition found from '(machine).green' to 'no-yellow'. Make sure that a transition is defined for this event type in the current state definition.",
+            exceptionMessage: "No transition defined in the event machine from state '(machine).green' to state 'no-yellow' for the event type 'TIMER2'. Please ensure that a transition for this event type is defined in the current state definition.",
         );
 });
 

@@ -421,7 +421,8 @@ class MachineDefinition
                 from: $currentStateDefinition->id,
                 to: is_string($transitionBranch->transitionBranchConfig)
                     ? $transitionBranch->transitionBranchConfig
-                    : $transitionBranch->transitionBranchConfig['target']
+                    : $transitionBranch->transitionBranchConfig['target'],
+                eventType: $eventBehavior->type,
             );
         }
 
