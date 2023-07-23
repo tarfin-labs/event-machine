@@ -11,7 +11,6 @@ use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
-use Tarfinlabs\EventMachine\Exceptions\NoStateDefinitionFoundException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
 class MachineDefinition
@@ -350,19 +349,19 @@ class MachineDefinition
     /**
      * Retrieves the nearest `StateDefinition` by string.
      *
-     * @param  string  $state The state string.
+     * @param  string  $stateDefinitionId The state string.
      *
      * @return StateDefinition|null The nearest StateDefinition or null if it is not found.
      */
-    public function getNearestStateDefinitionByString(string $state): ?StateDefinition
+    public function getNearestStateDefinitionByString(string $stateDefinitionId): ?StateDefinition
     {
-        if (empty($state)) {
+        if (empty($stateDefinitionId)) {
             return null;
         }
 
-        $state = $this->id.$this->delimiter.$state;
+        $stateDefinitionId = $this->id.$this->delimiter.$stateDefinitionId;
 
-        return $this->idMap[$state] ?? null;
+        return $this->idMap[$stateDefinitionId] ?? null;
     }
 
     // endregion
