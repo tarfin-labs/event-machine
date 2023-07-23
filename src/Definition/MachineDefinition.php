@@ -11,6 +11,7 @@ use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
 class MachineDefinition
 {
@@ -394,6 +395,11 @@ class MachineDefinition
         // Find the transition definition for the event type
         /** @var null|array|TransitionDefinition $transitionDefinition */
         $transitionDefinition = $currentStateDefinition->transitionDefinitions[$eventBehavior->type] ?? null;
+
+        // If the transition definition is not found, throw an exception
+        if ($transitionDefinition === null) {
+            throw NoTransitionDefinitionFoundException::build($eventBehavior->type, $currentStateDefinition->id);
+        }
 
         $transitionBranch = $transitionDefinition->getFirstValidTransitionBranch(
             eventBehavior: $eventBehavior,
