@@ -12,7 +12,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsCont
 class IsOddGuard extends GuardBehavior
 {
     public array $requiredContext = [
-        'value' => 'integer',
+        'count' => 'integer',
     ];
     public ?string $errorMessage = 'Count is not odd';
 
@@ -21,6 +21,6 @@ class IsOddGuard extends GuardBehavior
         EventBehavior $eventBehavior,
         array $arguments = null
     ): bool {
-        return $context->value % 2 === 1;
+        return $context->count % 2 === 1;
     }
 }

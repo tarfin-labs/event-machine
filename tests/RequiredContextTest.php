@@ -11,6 +11,6 @@ test('context values can be required for guards', function (): void {
     expect(fn () => $machine->send(event: ['type' => 'EVENT']))
         ->toThrow(
             exception: MissingMachineContextException::class,
-            exceptionMessage: '`value` is missing in context.',
+            exceptionMessage: '`count` is missing in context.',
         );
 });
