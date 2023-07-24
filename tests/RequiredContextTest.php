@@ -6,10 +6,14 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsOddGuard;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
-test('context values can be required for guards', function (): void {
+test('context values can be required for guards (Contex as arrays)', function (): void {
     $machineDefinition = MachineDefinition::define(config: [
-        'context' => [],
-        'states'  => [
+        'context' => [
+            'counts' => [
+                'oddCount' => null,
+            ],
+        ],
+        'states' => [
             'stateA' => [
                 'on' => [
                     'EVENT' => [
@@ -25,6 +29,6 @@ test('context values can be required for guards', function (): void {
     expect(fn () => $machineDefinition->transition(event: ['type' => 'EVENT']))
         ->toThrow(
             exception: MissingMachineContextException::class,
-            exceptionMessage: '`count` is missing in context.',
+            exceptionMessage: '`counts.oddCount` is missing in context.',
         );
 });

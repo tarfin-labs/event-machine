@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine;
 
+use Illuminate\Support\Arr;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Optional;
 use Illuminate\Contracts\Support\Arrayable;
@@ -89,7 +90,7 @@ class ContextManager extends Data
     public function has(string $key, string $type = null): bool
     {
         $hasKey = match (true) {
-            get_class($this) === __CLASS__   => isset($this->data[$key]),
+            get_class($this) === __CLASS__   => Arr::has($this->data, $key),
             is_subclass_of($this, __CLASS__) => property_exists($this, $key),
         };
 
