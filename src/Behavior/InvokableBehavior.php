@@ -9,6 +9,8 @@ use Tarfinlabs\EventMachine\ContextManager;
 
 abstract class InvokableBehavior
 {
+    public array $requiredContext = [];
+
     public function __construct(
         protected ?Collection $eventQueue = null
     ) {
