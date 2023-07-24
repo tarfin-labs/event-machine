@@ -11,6 +11,7 @@ use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
 class MachineDefinition
@@ -469,6 +470,7 @@ class MachineDefinition
      * @param  EventBehavior|null  $eventBehavior The event (optional).
      *
      * @throws BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function runAction(
         string $actionDefinition,
@@ -494,6 +496,11 @@ class MachineDefinition
             type: InternalEvent::ACTION_INIT,
             placeholder: $actionDefinition
         );
+
+        $hasMissingContext = TransitionDefinition::hasMissingContext($actionBehavior, $state->context);
+        if ($hasMissingContext !== null) {
+            throw MissingMachineContextException::build($hasMissingContext);
+        }
 
         // Get the number of events in the queue before the action is executed.
         $numberOfEventsInQueue = $this->eventQueue->count();
