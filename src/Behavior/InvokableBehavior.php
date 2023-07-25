@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Behavior;
 
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
 abstract class InvokableBehavior
 {
@@ -48,5 +49,58 @@ abstract class InvokableBehavior
     public function raise(EventBehavior|array $eventBehavior): void
     {
         $this->eventQueue->push($eventBehavior);
+    }
+
+    /**
+     * Checks if the given context has any missing attributes.
+     *
+     * This method checks if the required context attributes specified in the
+     * "$requiredContext" property are present in the given context. It returns
+     * the key of the first missing attribute if any, otherwise it returns null.
+     *
+     * @param  ContextManager  $context The context to be checked.
+     *
+     * @return string|null  The key of the first missing attribute, or null if all
+     *                      required attributes are present.
+     */
+    public function hasMissingContext(ContextManager $context): ?string
+    {
+        // Check if the requiredContext property is an empty array
+        if (empty($this->requiredContext)) {
+            return null;
+        }
+
+        // Iterate through the required context attributes
+        /* @var GuardBehavior $guardBehavior */
+        foreach ($this->requiredContext as $key => $type) {
+            // Check if the context manager has the required context attribute
+            if (!$context->has($key, $type)) {
+                // Return the key of the missing context attribute
+                return $key;
+            }
+        }
+
+        // Return null if all the required context attributes are present
+        return null;
+    }
+
+    /**
+     * Validates the required context for the behavior.
+     *
+     * This method checks if all the required context properties are present
+     * in the given ContextManager instance. If any required context property is missing,
+     * it throws a MissingMachineContextException.
+     *
+     * @param  ContextManager  $context The context to be validated.
+     *
+     * @throws MissingMachineContextException If any required context property is missing.
+     */
+    public function validateRequiredContext(ContextManager $context): void
+    {
+        $missingContext = $this->hasMissingContext($context);
+
+        if ($missingContext !== null) {
+            throw MissingMachineContextException::build($missingContext);
+        }
     }
 }
