@@ -11,7 +11,6 @@ use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
-use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
 class MachineDefinition
@@ -499,9 +498,8 @@ class MachineDefinition
             placeholder: $actionDefinition
         );
 
-        $hasMissingContext = TransitionDefinition::hasMissingContext($actionBehavior, $state->context);
-        if ($hasMissingContext !== null) {
-            throw MissingMachineContextException::build($hasMissingContext);
+        if ($actionBehavior instanceof InvokableBehavior) {
+            $actionBehavior->validateRequiredContext($state->context);
         }
 
         // Get the number of events in the queue before the action is executed.

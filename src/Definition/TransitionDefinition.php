@@ -156,9 +156,8 @@ class TransitionDefinition
                     placeholder: $guardDefinition
                 );
 
-                $hasMissingContext = self::hasMissingContext($guardBehavior, $state->context);
-                if ($hasMissingContext !== null) {
-                    throw MissingMachineContextException::build($hasMissingContext);
+                if ($guardBehavior instanceof GuardBehavior) {
+                    $guardBehavior->validateRequiredContext($state->context);
                 }
 
                 if ($guardBehavior($state->context, $eventBehavior, $guardArguments) === false) {
