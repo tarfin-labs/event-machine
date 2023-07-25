@@ -83,4 +83,24 @@ abstract class InvokableBehavior
         // Return null if all the required context attributes are present
         return null;
     }
+
+    /**
+     * Validates the required context for the behavior.
+     *
+     * This method checks if all the required context properties are present
+     * in the given ContextManager instance. If any required context property is missing,
+     * it throws a MissingMachineContextException.
+     *
+     * @param  ContextManager  $context The context to be validated.
+     *
+     * @throws MissingMachineContextException If any required context property is missing.
+     */
+    public function validateRequiredContext(ContextManager $context): void
+    {
+        $missingContext = $this->hasMissingContext($context);
+
+        if ($missingContext !== null) {
+            throw MissingMachineContextException::build($missingContext);
+        }
+    }
 }
