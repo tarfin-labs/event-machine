@@ -6,8 +6,10 @@ namespace Tarfinlabs\EventMachine\Behavior;
 
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Optional;
+use Illuminate\Validation\ValidationException;
 use Tarfinlabs\EventMachine\Definition\SourceType;
 use Spatie\LaravelData\Attributes\WithoutValidation;
+use Tarfinlabs\EventMachine\Exceptions\MachineEventValidationException;
 
 abstract class EventBehavior extends Data
 {
@@ -25,4 +27,18 @@ abstract class EventBehavior extends Data
     }
 
     abstract public static function getType(): string;
+
+    /**
+     * Validates the current event behavior.
+     *
+     * @throws MachineEventValidationException if validation fails.
+     */
+    public function selfValidate(): void
+    {
+        try {
+            static::validate($this);
+        } catch (ValidationException $e) {
+            throw new MachineEventValidationException($e->validator);
+        }
+    }
 }
