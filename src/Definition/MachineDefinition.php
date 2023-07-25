@@ -388,7 +388,9 @@ class MachineDefinition
 
         $currentStateDefinition = $this->getCurrentStateDefinition($state);
 
+        // Initialize the event and validate it
         $eventBehavior = $this->initializeEvent($event, $state);
+        $eventBehavior->selfValidate();
 
         // Set event behavior
         $state->setCurrentEventBehavior($eventBehavior);
