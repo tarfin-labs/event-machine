@@ -56,7 +56,7 @@ class MachineActor implements JsonSerializable, Stringable
                 ->state
                 ->history
                 ->filter(fn ($item) => preg_match('/machine\.guard\..*\.fail/', $item['type']))
-                ->first();
+                ->last();
 
             if ($failedGuard !== null) {
                 throw MachineValidationException::withMessages([
