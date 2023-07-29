@@ -38,7 +38,14 @@ class MachineActor implements JsonSerializable, Stringable
     }
 
     /**
-     * @throws BehaviorNotFoundException
+     * Sends an event to the machine actor.
+     *
+     * @param  EventBehavior|array  $event The event to be sent.
+     * @param  bool  $shouldPersist Whether to persist the state change.
+     *
+     * @return State The new state of the object after the transition.
+     *
+     * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
      */
     public function send(
         EventBehavior|array $event,
