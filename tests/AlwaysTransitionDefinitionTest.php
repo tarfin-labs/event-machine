@@ -79,7 +79,7 @@ test('always guarded transitions', function (): void {
                                 'guards' => 'isEvenGuard',
                             ],
                             [
-                                'target' => 'stateC',
+                                'target' => 'stateD',
                             ],
                         ],
                     ],
@@ -114,5 +114,5 @@ test('always guarded transitions', function (): void {
         event: ['type' => 'EVENT']
     );
 
-    expect($newState->value)->toBe(['(machine).stateC']);
+    expect($newState->value)->toBe(['(machine).stateD']);
 });
