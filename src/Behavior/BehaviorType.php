@@ -10,5 +10,4 @@ enum BehaviorType: string
     case Action  = 'actions';
     case Event   = 'events';
     case Context = 'context';
-    case Actor   = 'actors';
 }
