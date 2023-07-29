@@ -176,10 +176,10 @@ class MachineDefinition
 
         if ($initialStateDefinition->transitionDefinitions !== null) {
             foreach ($initialStateDefinition->transitionDefinitions as $transition) {
-                if ($transition->type === TransitionType::Always) {
+                if ($transition->isAlways === true) {
                     return $this->transition(
                         event: [
-                            'type' => TransitionType::Always->value,
+                            'type' => TransitionProperty::Always->value,
                         ],
                         state: $initialState
                     );
@@ -438,10 +438,10 @@ class MachineDefinition
         if ($this->idMap[$newState->currentStateDefinition->id]->transitionDefinitions !== null) {
             /** @var TransitionDefinition $transition */
             foreach ($this->idMap[$newState->currentStateDefinition->id]->transitionDefinitions as $transition) {
-                if ($transition->type === TransitionType::Always) {
+                if ($transition->isAlways === true) {
                     return $this->transition(
                         event: [
-                            'type' => TransitionType::Always->value,
+                            'type' => TransitionProperty::Always->value,
                         ],
                         state: $newState
                     );
