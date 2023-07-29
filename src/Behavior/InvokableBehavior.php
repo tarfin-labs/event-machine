@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Behavior;
 
+use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
@@ -102,5 +103,22 @@ abstract class InvokableBehavior
         if ($missingContext !== null) {
             throw MissingMachineContextException::build($missingContext);
         }
+    }
+
+    /**
+     * Get the type of the current InvokableBehavior.
+     *
+     * This method returns the type of the InvokableBehavior as a string.
+     * The type is determined by converting the FQCN of the
+     * InvokableBehavior to base class name as camel case.
+     *
+     * @return string The type of the behavior.
+     */
+    public static function getType(): string
+    {
+        return Str::of(static::class)
+            ->classBasename()
+            ->camel()
+            ->toString();
     }
 }

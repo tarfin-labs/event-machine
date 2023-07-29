@@ -90,7 +90,7 @@ class TransitionBranch
 
             $this->description = $this->transitionBranchConfig['description'] ?? null;
 
-            $this->initializeConditions();
+            $this->initializeGuards();
             $this->initializeActions();
         }
     }
@@ -98,12 +98,17 @@ class TransitionBranch
     /**
      * Initializes the guard/s for this transition.
      */
-    protected function initializeConditions(): void
+    protected function initializeGuards(): void
     {
         if (isset($this->transitionBranchConfig[BehaviorType::Guard->value])) {
             $this->guards = is_array($this->transitionBranchConfig[BehaviorType::Guard->value])
                 ? $this->transitionBranchConfig[BehaviorType::Guard->value]
                 : [$this->transitionBranchConfig[BehaviorType::Guard->value]];
+
+            $this->initializeInlineBehaviors(
+                inlineBehaviors: $this->guards,
+                behaviorType: BehaviorType::Guard
+            );
         }
     }
 
@@ -116,6 +121,30 @@ class TransitionBranch
             $this->actions = is_array($this->transitionBranchConfig[BehaviorType::Action->value])
                 ? $this->transitionBranchConfig[BehaviorType::Action->value]
                 : [$this->transitionBranchConfig[BehaviorType::Action->value]];
+
+            $this->initializeInlineBehaviors(
+                inlineBehaviors: $this->actions,
+                behaviorType: BehaviorType::Action
+            );
+        }
+    }
+
+    /**
+     * Adds inline behavior definitions to machine's behavior.
+     *
+     * @param  array  $inlineBehaviors An array of inline behaviors.
+     * @param  BehaviorType  $behaviorType The type of behavior.
+     */
+    protected function initializeInlineBehaviors(array $inlineBehaviors, BehaviorType $behaviorType): void
+    {
+        foreach ($inlineBehaviors as $behavior) {
+            if (is_subclass_of($behavior, class: $behaviorType->getBehaviorClass())) {
+                $this
+                    ->transitionDefinition
+                    ->source
+                    ->machine
+                    ->behavior[$behaviorType->value][$behavior::getType()] = $behavior;
+            }
         }
     }
 

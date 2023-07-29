@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
-use Illuminate\Support\Str;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 /**
@@ -20,13 +20,17 @@ class TransitionDefinition
 {
     // region Public Properties
 
-    public TransitionType $type;
-
     /** The transition branches for this transition, or null if there is no target. */
     public ?array $branches = null;
 
     /** The description of the transition. */
     public ?string $description = null;
+
+    /** Indicates whether the transition is guarded or not. */
+    public bool $isGuarded = false;
+
+    /** This variable determines whether the condition is always false. */
+    public bool $isAlways = false;
 
     // endregion
 
@@ -44,10 +48,9 @@ class TransitionDefinition
         public StateDefinition $source,
         public string $event,
     ) {
-        $this->type = match ($this->event) {
-            TransitionType::Always->value => TransitionType::Always,
-            default                       => TransitionType::Normal,
-        };
+        if ($this->event === TransitionProperty::Always->value) {
+            $this->isAlways = true;
+        }
 
         $this->description = $this->transitionConfig['description'] ?? null;
 
@@ -72,6 +75,9 @@ class TransitionDefinition
         if ($this->isAMultiPathGuardedTransition($this->transitionConfig) === false) {
             $this->transitionConfig = [$this->transitionConfig];
         }
+
+        // If the transition has multiple branches, it is a guarded transition
+        $this->isGuarded = true;
 
         foreach ($this->transitionConfig as $config) {
             $this->branches[] = new TransitionBranch($config, $this);
@@ -163,11 +169,11 @@ class TransitionDefinition
                 if ($guardBehavior($state->context, $eventBehavior, $guardArguments) === false) {
                     $guardsPassed = false;
 
-                    $errorMessage = $guardBehavior instanceof GuardBehavior
+                    $errorMessage = $guardBehavior instanceof ValidationGuardBehavior
                         ? $guardBehavior->errorMessage
                         : null;
                     $errorKey = $guardBehavior instanceof GuardBehavior
-                        ? sprintf(InternalEvent::GUARD_FAIL->value, Str::of($guardBehavior::class)->classBasename()->camel())
+                        ? sprintf(InternalEvent::GUARD_FAIL->value, $guardBehavior::getType())
                         : null;
 
                     // Record the internal guard fail event.

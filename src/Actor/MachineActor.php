@@ -14,6 +14,7 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
@@ -38,12 +39,18 @@ class MachineActor implements JsonSerializable, Stringable
     }
 
     /**
-     * @throws BehaviorNotFoundException
+     * Sends an event to the machine actor.
+     *
+     * @param  EventBehavior|array  $event The event to be sent.
+     * @param  bool  $shouldPersist Whether to persist the state change.
+     *
+     * @return State The new state of the object after the transition.
+     *
+     * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
      */
     public function send(
         EventBehavior|array $event,
         bool $shouldPersist = true,
-        bool $shouldThrowOnGuardFail = false,
     ): State {
         $this->state = $this->definition->transition($event, $this->state);
 
@@ -51,19 +58,7 @@ class MachineActor implements JsonSerializable, Stringable
             $this->persist();
         }
 
-        if ($shouldThrowOnGuardFail === true) {
-            $failedGuard = $this
-                ->state
-                ->history
-                ->filter(fn ($item) => preg_match('/machine\.guard\..*\.fail/', $item['type']))
-                ->last();
-
-            if ($failedGuard !== null) {
-                throw MachineValidationException::withMessages([
-                    $failedGuard->type => $failedGuard->payload[$failedGuard->type],
-                ]);
-            }
-        }
+        $this->handleValidationGuards();
 
         return $this->state;
     }
@@ -202,5 +197,33 @@ class MachineActor implements JsonSerializable, Stringable
     public function __toString(): string
     {
         return $this->state->history->first()->root_event_id ?? '';
+    }
+
+    /**
+     * Handles validation guards and throws an exception if any of them fail.
+     *
+     * @throws MachineValidationException Thrown if any of the validation guards fail.
+     */
+    protected function handleValidationGuards(): void
+    {
+        $failedGuardEvents = $this
+            ->state
+            ->history
+            ->filter(fn ($item) => preg_match('/machine\.guard\..*\.fail/', $item['type']));
+
+        if ($failedGuardEvents->isNotEmpty()) {
+            $errorsWithMessage = [];
+
+            foreach ($failedGuardEvents as $failedGuardEvent) {
+                $failedGuardType  = explode('.', $failedGuardEvent->type)[2];
+                $failedGuardClass = $this->definition->behavior[BehaviorType::Guard->value][$failedGuardType];
+
+                if (is_subclass_of($failedGuardClass, ValidationGuardBehavior::class)) {
+                    $errorsWithMessage[$failedGuardEvent->type] = $failedGuardEvent->payload[$failedGuardEvent->type];
+                }
+            }
+
+            throw MachineValidationException::withMessages($errorsWithMessage);
+        }
     }
 }
