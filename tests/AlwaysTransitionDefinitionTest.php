@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Definition\TransitionProperty;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 
 test('always transitions', function (): void {
@@ -109,6 +110,13 @@ test('always guarded transitions', function (): void {
             ],
         ],
     );
+
+    expect(
+        $machine->stateDefinitions['stateB']
+            ->transitionDefinitions[TransitionProperty::Always->value]
+            ->isGuarded
+    )
+        ->toBeTrue();
 
     $newState = $machine->transition(
         event: ['type' => 'EVENT']
