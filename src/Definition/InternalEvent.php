@@ -16,10 +16,10 @@ enum InternalEvent: string
     case ACTION_FINISH = '{+}.action.{?}.finish';
 
     case GUARD_START = '{+}.guard.{?}.start';
+    case GUARD_PASS  = '{+}.guard.{?}.pass';
+    case GUARD_FAIL  = '{+}.guard.{?}.fail';
 
     case EVENT_RAISED = '{+}.event.{?}.raised';
-    case GUARD_FAIL   = '{+}.guard.{?}.fail';
-    case GUARD_PASS   = '{+}.guard.{?}.pass';
 
     /**
      * Generate an internal event name based on the machine ID and an optional placeholder.
