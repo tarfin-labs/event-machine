@@ -170,7 +170,7 @@ class MachineDefinition
 
         // Record the internal initial state init event.
         $initialState->setInternalEventBehavior(
-            type: InternalEvent::STATE_INIT,
+            type: InternalEvent::STATE_ENTER,
             placeholder: $initialState->currentStateDefinition->key
         );
 
@@ -433,7 +433,7 @@ class MachineDefinition
 
         // Record the internal action state init event.
         $state->setInternalEventBehavior(
-            type: InternalEvent::STATE_INIT,
+            type: InternalEvent::STATE_ENTER,
             placeholder: $newState->currentStateDefinition->key
         );
 
