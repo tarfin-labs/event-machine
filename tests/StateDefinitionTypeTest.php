@@ -19,3 +19,16 @@ test('a state definition can be defined as final', function (): void {
 
     expect($yellowState->type)->toBe(StateDefinitionType::FINAL);
 });
+
+test('a state definition can be atomic', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'initial' => 'yellow',
+        'states'  => [
+            'yellow' => [],
+        ],
+    ]);
+
+    $yellowState = $machine->stateDefinitions['yellow'];
+
+    expect($yellowState->type)->toBe(StateDefinitionType::ATOMIC);
+});

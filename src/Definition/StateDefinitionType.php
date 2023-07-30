@@ -6,5 +6,5 @@ namespace Tarfinlabs\EventMachine\Definition;
 
 enum StateDefinitionType: string
 {
-    case FINAL = 'final';
+    case ATOMIC   = 'atomic';
 }

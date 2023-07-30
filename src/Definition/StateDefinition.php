@@ -304,7 +304,11 @@ class StateDefinition
             // TODO: Handle that final states can't have transitions. That must be checked after transition initizalizations
 
             return StateDefinitionType::FINAL;
+        }
 
+        if ($this->stateDefinitions === null) {
+            return StateDefinitionType::ATOMIC;
+        }
     }
 
     // endregion
