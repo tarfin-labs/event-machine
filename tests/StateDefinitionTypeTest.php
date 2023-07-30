@@ -87,5 +87,5 @@ test('a final state definition can not have transitions', function (): void {
     ]);
 })->throws(
     exception: InvalidFinalStateDefinitionException::class,
-    exceptionMessage: 'Final state `machine.yellow` can not have transitions.'
+    exceptionMessage: 'The final state `machine.yellow` should not have transitions. Check your state machine configuration to ensure events are not dispatched when in a final state.'
 );

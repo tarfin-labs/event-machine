@@ -17,6 +17,8 @@ class InvalidFinalStateDefinitionException extends LogicException
 
     public static function noTransitions(string $stateDefinition): self
     {
-        return new self("Final state `{$stateDefinition}` can not have transitions.");
+        return new self(message: "The final state `{$stateDefinition}` should not have transitions. ".
+            'Check your state machine configuration to ensure events are not dispatched when in a final state.'
+        );
     }
 }
