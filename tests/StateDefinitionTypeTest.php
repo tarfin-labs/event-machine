@@ -67,7 +67,7 @@ test('a final state definition can not have child states', function (): void {
     ]);
 })->throws(
     exception: InvalidFinalStateDefinitionException::class,
-    exceptionMessage: 'Final state `machine.yellow` can not have child states.'
+    exceptionMessage: 'The final state `machine.yellow` should not have child states. Please revise your state machine definitions to ensure that final states are correctly configured without child states.'
 );
 
 test('a final state definition can not have transitions', function (): void {
