@@ -53,7 +53,7 @@ it('should run the guarded action when the guards are passed', function (): void
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['(machine).active'])
+        ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
         ->and($newState->context->data)->toBe(['count' => 1]);
 
     $newState = $machine->transition(event: ['type' => 'INC'], state: $newState);
@@ -65,7 +65,7 @@ it('should run the guarded action when the guards are passed', function (): void
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['(machine).active'])
+        ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
         ->and($newState->context->data)->toBe(['count' => 4]);
 });
 
@@ -113,7 +113,7 @@ it('should not run the guarded action when the guards are not passed', function 
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['(machine).active'])
+        ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
         ->and($newState->context->data)->toBe(['count' => 1]);
 
     $newState = $machine->transition(event: ['type' => 'INC'], state: $newState);
@@ -128,7 +128,7 @@ it('should not run the guarded action when the guards are not passed', function 
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['(machine).active']);
+        ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active']);
     // Guards is not passed, the action will not be executed
     expect($newState->context->data)->toBe(['count' => 1]);
 });
@@ -179,7 +179,7 @@ it('should transition through multiple if-else targets based on guards', functio
     $newState = $machine->transition(event: ['type' => 'TIMER']);
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['(machine).yellow']);
+        ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'yellow']);
 
     $newState = $machine->transition(
         event: ['type' => 'TIMER'],
@@ -191,7 +191,7 @@ it('should transition through multiple if-else targets based on guards', functio
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['(machine).red']);
+        ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'red']);
 
     $newState = $machine->transition(
         event: ['type' => 'TIMER'],
@@ -203,7 +203,7 @@ it('should transition through multiple if-else targets based on guards', functio
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['(machine).pedestrian']);
+        ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'pedestrian']);
 
     expect($machine->stateDefinitions['green']->transitionDefinitions['TIMER']->branches[0]->description)
         ->toBe('sample description');
@@ -239,7 +239,7 @@ it('should prevent infinite loops when no guards evaluate to true for @always tr
 
     $newState = $machine->transition(event: ['type' => 'EVENT']);
 
-    expect($newState->value)->toBe(['(machine).yellow']);
+    expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'yellow']);
 });
 
 it('can throw MachineValidationException and persist history', function (): void {

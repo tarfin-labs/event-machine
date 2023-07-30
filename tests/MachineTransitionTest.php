@@ -29,17 +29,17 @@ it('can transition through a sequence of states using events', function (): void
     $greenState = $machine->getInitialState();
     expect($greenState)
         ->toBeInstanceOf(State::class)
-        ->and($greenState->value)->toBe(['(machine).green']);
+        ->and($greenState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'green']);
 
     $yellowState = $machine->transition(event: ['type' => 'NEXT']);
     expect($yellowState)
         ->toBeInstanceOf(State::class)
-        ->and($yellowState->value)->toBe(['(machine).yellow']);
+        ->and($yellowState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'yellow']);
 
     $redState = $machine->transition(event: ['type' => 'NEXT'], state: $yellowState);
     expect($redState)
         ->toBeInstanceOf(State::class)
-        ->and($redState->value)->toBe(['(machine).red']);
+        ->and($redState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'red']);
 });
 
 it('should apply the given state\'s context data to the machine\'s context when transitioning', function (): void {
@@ -76,6 +76,6 @@ it('should apply the given state\'s context data to the machine\'s context when 
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['(machine).active']);
+        ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active']);
     expect($newState->context->data)->toBe(['count' => 6, 'someValue' => 'abc']);
 });

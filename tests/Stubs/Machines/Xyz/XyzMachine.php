@@ -16,6 +16,7 @@ class XyzMachine extends EventMachine
     {
         return MachineDefinition::define(
             config: [
+                'id'      => 'xyz',
                 'context' => [
                     'value' => '',
                 ],
