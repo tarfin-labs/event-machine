@@ -388,9 +388,10 @@ class StateDefinition
     /**
      * Runs the entry actions of the current state definition with the given event.
      *
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior The event to be processed.
+     * @param \Tarfinlabs\EventMachine\Behavior\EventBehavior|null $eventBehavior The event to be processed.
      *
-     * @throws BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function runEntryActions(State $state, EventBehavior $eventBehavior = null): void
     {
