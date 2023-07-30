@@ -500,7 +500,7 @@ class MachineDefinition
 
         // Record the internal action init event.
         $state->setInternalEventBehavior(
-            type: InternalEvent::ACTION_INIT,
+            type: InternalEvent::ACTION_START,
             placeholder: $actionDefinition
         );
 

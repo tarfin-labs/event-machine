@@ -75,7 +75,7 @@ it('stores internal action events', function (): void {
             'machine.start',
             'machine.state.active.enter',
             'ADD',
-            'machine.action.additionAction.init',
+            'machine.action.additionAction.start',
             'machine.action.additionAction.done',
             'machine.state.active.enter',
         ]);

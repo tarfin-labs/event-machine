@@ -12,7 +12,7 @@ enum InternalEvent: string
 
     case STATE_ENTER = '{+}.state.{?}.enter';
 
-    case ACTION_INIT         = '{+}.action.{?}.init';
+    case ACTION_START        = '{+}.action.{?}.start';
     case ACTION_EVENT_RAISED = '{+}.action.{?}.event_raised';
     case ACTION_DONE         = '{+}.action.{?}.done';
     case GUARD_INIT          = '{+}.guard.{?}.init';
