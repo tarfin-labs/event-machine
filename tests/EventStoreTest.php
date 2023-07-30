@@ -39,10 +39,12 @@ it('stores external events', function (): void {
             'traffic_light.state.green.enter',
             'GREEN_TIMER',
             'traffic_light.state.green.exit.start',
+            'traffic_light.state.green.exit.finish',
             'traffic_light.state.green.exit',
             'traffic_light.state.yellow.enter',
             'RED_TIMER',
             'traffic_light.state.yellow.exit.start',
+            'traffic_light.state.yellow.exit.finish',
             'traffic_light.state.yellow.exit',
             'traffic_light.state.red.enter',
         ]);
@@ -51,6 +53,7 @@ it('stores external events', function (): void {
 it('stores internal action events', function (): void {
     $machine = MachineDefinition::define(
         config: [
+            'id'      => 'events',
             'initial' => 'active',
             'context' => [
                 'count' => 0,
@@ -83,14 +86,15 @@ it('stores internal action events', function (): void {
 
     expect($newState->history->pluck('type')->toArray())
         ->toEqual([
-            'machine.start',
-            'machine.state.active.enter',
+            'events.start',
+            'events.state.active.enter',
             'ADD',
-            'machine.state.active.exit.start',
-            'machine.action.additionAction.start',
-            'machine.action.additionAction.finish',
-            'machine.state.active.exit',
-            'machine.state.active.enter',
+            'events.state.active.exit.start',
+            'events.state.active.exit.finish',
+            'events.action.additionAction.start',
+            'events.action.additionAction.finish',
+            'events.state.active.exit',
+            'events.state.active.enter',
         ]);
 });
 

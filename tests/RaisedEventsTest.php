@@ -17,6 +17,7 @@ test('actions can raise events', function (): void {
         'xyz.action.!x.finish',
         '@x',
         'xyz.state.#a.exit.start',
+        'xyz.state.#a.exit.finish',
         'xyz.state.#a.exit',
         'xyz.state.#x.enter',
         'xyz.action.!y.start',
@@ -24,6 +25,7 @@ test('actions can raise events', function (): void {
         'xyz.action.!y.finish',
         '@y',
         'xyz.state.#x.exit.start',
+        'xyz.state.#x.exit.finish',
         'xyz.state.#x.exit',
         'xyz.state.#y.enter',
         'xyz.action.!z.start',
@@ -31,6 +33,7 @@ test('actions can raise events', function (): void {
         'xyz.action.!z.finish',
         '@z',
         'xyz.state.#y.exit.start',
+        'xyz.state.#y.exit.finish',
         'xyz.state.#y.exit',
         'xyz.state.#z.enter',
     ]);
