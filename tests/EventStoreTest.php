@@ -34,14 +34,15 @@ it('stores external events', function (): void {
     ], state: $newState);
 
     expect($newState->history->pluck('type')->toArray())
-        ->toHaveCount(8)
         ->toEqual([
             'traffic_light.start',
             'traffic_light.state.green.enter',
             'GREEN_TIMER',
+            'traffic_light.state.green.exit.start',
             'traffic_light.state.green.exit',
             'traffic_light.state.yellow.enter',
             'RED_TIMER',
+            'traffic_light.state.yellow.exit.start',
             'traffic_light.state.yellow.exit',
             'traffic_light.state.red.enter',
         ]);
@@ -81,11 +82,11 @@ it('stores internal action events', function (): void {
     ]);
 
     expect($newState->history->pluck('type')->toArray())
-        ->toHaveCount(7)
         ->toEqual([
             'machine.start',
             'machine.state.active.enter',
             'ADD',
+            'machine.state.active.exit.start',
             'machine.action.additionAction.start',
             'machine.action.additionAction.finish',
             'machine.state.active.exit',
