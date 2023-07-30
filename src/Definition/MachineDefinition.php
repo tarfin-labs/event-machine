@@ -425,7 +425,12 @@ class MachineDefinition
 
         // If no valid transition branch is found, return the current state
         if ($transitionBranch === null) {
-            // TODO: Abort
+            // Record transition abort event
+            $state->setInternalEventBehavior(
+                type: InternalEvent::TRANSITION_FAIL,
+                placeholder: "{$state->currentStateDefinition->key}.{$eventBehavior->type}"
+            );
+
             return $state->setCurrentStateDefinition($currentStateDefinition);
         }
 
