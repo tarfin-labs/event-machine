@@ -111,7 +111,7 @@ it('throws NoTransitionDefinitionFoundException for unknown events', function ()
     expect(fn () => $machine->transition(event: ['type' => 'TIMERX']))
         ->toThrow(
             exception: NoTransitionDefinitionFoundException::class,
-            exceptionMessage: "No transition definition found for the event type 'TIMERX' in the current state definition '(machine).green'. Make sure that a transition is defined for this event type in the current state definition.",
+            exceptionMessage: "No transition definition found for the event type 'TIMERX' in the current state definition 'machine.green'. Make sure that a transition is defined for this event type in the current state definition.",
         );
 });
 
@@ -130,7 +130,7 @@ it('throws NoStateDefinitionFoundException for unknown states - I', function ():
     ]);
 })->throws(
     exception: NoStateDefinitionFoundException::class,
-    exceptionMessage: "No transition defined in the event machine from state '(machine).green' to state 'no-yellow' for the event type 'TIMER'. Please ensure that a transition for this event type is defined in the current state definition."
+    exceptionMessage: "No transition defined in the event machine from state 'machine.green' to state 'no-yellow' for the event type 'TIMER'. Please ensure that a transition for this event type is defined in the current state definition."
 );
 
 it('throws NoStateDefinitionFoundException for unknown states - II', function (): void {
@@ -146,7 +146,7 @@ it('throws NoStateDefinitionFoundException for unknown states - II', function ()
     ]);
 })->throws(
     exception: NoStateDefinitionFoundException::class,
-    exceptionMessage: "No transition defined in the event machine from state '(machine).green' to state 'no-yellow' for the event type 'TIMER'. Please ensure that a transition for this event type is defined in the current state definition."
+    exceptionMessage: "No transition defined in the event machine from state 'machine.green' to state 'no-yellow' for the event type 'TIMER'. Please ensure that a transition for this event type is defined in the current state definition."
 );
 
 test('a guarded transition can have specified guards', function (): void {

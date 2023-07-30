@@ -24,7 +24,7 @@ it('can transition to a child state', function (): void {
         'type' => 'EVENT',
     ]);
 
-    expect($newState->value)->toBe(['(machine).stateB.subStateOfB']);
+    expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'stateB.subStateOfB']);
 });
 
 it('can transition to a child state, targets as arrays', function (): void {
@@ -49,7 +49,7 @@ it('can transition to a child state, targets as arrays', function (): void {
         'type' => 'EVENT',
     ]);
 
-    expect($newState->value)->toBe(['(machine).stateB.subStateOfB']);
+    expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'stateB.subStateOfB']);
 });
 
 it('can transition from a child state', function (): void {
@@ -73,7 +73,7 @@ it('can transition from a child state', function (): void {
         'type' => 'EVENT',
     ]);
 
-    expect($newState->value)->toBe(['(machine).stateA']);
+    expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'stateA']);
 });
 
 it('can transition from a child state, targets as arrays', function (): void {
@@ -99,5 +99,5 @@ it('can transition from a child state, targets as arrays', function (): void {
         'type' => 'EVENT',
     ]);
 
-    expect($newState->value)->toBe(['(machine).stateA']);
+    expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'stateA']);
 });

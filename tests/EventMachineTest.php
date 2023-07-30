@@ -26,7 +26,7 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['(machine).active'])
+        ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
         ->and($newState->context->count)->toBe(1);
 
     $newState = $machine->transition(event: ['type' => 'INC'], state: $newState);
@@ -39,7 +39,7 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['(machine).active'])
+        ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
         ->and($newState->context->count)->toBe(4);
 
     $newState = $machine->transition(event: [
@@ -51,7 +51,7 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
 
     expect($newState)
         ->toBeInstanceOf(State::class)
-        ->and($newState->value)->toBe(['(machine).active'])
+        ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
         ->and($newState->context->count)->toBe(20);
 });
 
@@ -88,7 +88,7 @@ test('TrafficLightsMachine can be started', function (): void {
 
     expect($state)
         ->toBeInstanceOf(State::class)
-        ->and($state->value)->toBe(['(machine).active'])
+        ->and($state->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
         ->and($state->context->count)->toBe(2);
 
     expect(['machine_value' => json_encode($state->value), 'type' => sprintf(InternalEvent::STATE_INIT->value, Str::of($state->currentStateDefinition->key)->classBasename()->camel())])

@@ -26,11 +26,11 @@ test('initial states are correctly set for both top-level machine definition and
 
     expect($machine->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
-        ->id->toBe('(machine).green.walk');
+        ->id->toBe(MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'green.walk');
 
     expect($machine->stateDefinitions['green']->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
-        ->id->toBe('(machine).green.walk');
+        ->id->toBe(MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'green.walk');
 
     expect($machine->stateDefinitions['yellow']->initialStateDefinition)->toBeNull();
     expect($machine->stateDefinitions['red']->initialStateDefinition)->toBeNull();
@@ -57,11 +57,11 @@ test('first state auto-set as initial for machine and sub-states when not specif
 
     expect($machine->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
-        ->id->toBe('(machine).green.walk');
+        ->id->toBe(MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'green.walk');
 
     expect($machine->stateDefinitions['green']->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
-        ->id->toBe('(machine).green.walk');
+        ->id->toBe(MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'green.walk');
 
     expect($machine->stateDefinitions['yellow']->initialStateDefinition)->toBeNull();
     expect($machine->stateDefinitions['red']->initialStateDefinition)->toBeNull();
@@ -96,7 +96,7 @@ it('should run entry actions for building initial state', function (): void {
     $initialState = $machine->getInitialState();
     expect($initialState)
         ->toBeInstanceOf(State::class)
-        ->and($initialState->value)->toBe(['(machine).active'])
+        ->and($initialState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
         ->and($initialState->context->get('count'))->toBe(1);
 });
 
@@ -118,5 +118,5 @@ test('initial state can be a child state', function (): void {
 
     expect($machine->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
-        ->id->toBe('(machine).green.walk');
+        ->id->toBe(MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'green.walk');
 });

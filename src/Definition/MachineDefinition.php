@@ -18,7 +18,7 @@ class MachineDefinition
     // region Public Properties
 
     /** The default id for the root machine definition. */
-    public const DEFAULT_ID = '(machine)';
+    public const DEFAULT_ID = 'machine';
 
     /** The default delimiter used for constructing the global id by concatenating state definition local IDs. */
     public const STATE_DELIMITER = '.';
