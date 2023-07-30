@@ -40,6 +40,7 @@ it('stores external events', function (): void {
             'traffic_light.state.green.entry.start',
             'traffic_light.state.green.entry.finish',
             'GREEN_TIMER',
+            'traffic_light.transition.green.GREENTIMER.start',
             'traffic_light.state.green.exit.start',
             'traffic_light.state.green.exit.finish',
             'traffic_light.state.green.exit',
@@ -47,6 +48,7 @@ it('stores external events', function (): void {
             'traffic_light.state.yellow.entry.start',
             'traffic_light.state.yellow.entry.finish',
             'RED_TIMER',
+            'traffic_light.transition.yellow.REDTIMER.start',
             'traffic_light.state.yellow.exit.start',
             'traffic_light.state.yellow.exit.finish',
             'traffic_light.state.yellow.exit',
@@ -97,6 +99,7 @@ it('stores internal action events', function (): void {
             'm.state.active.entry.start',
             'm.state.active.entry.finish',
             'ADD',
+            'm.transition.active.ADD.start',
             'm.state.active.exit.start',
             'm.state.active.exit.finish',
             'm.action.additionAction.start',
@@ -109,7 +112,7 @@ it('stores internal action events', function (): void {
 it('stores internal guard events', function (): void {
     $machine = MachineDefinition::define(
         config: [
-            'id'      => 'internal',
+            'id'      => 'in',
             'initial' => 'active',
             'context' => [
                 'count' => 1,
@@ -143,12 +146,13 @@ it('stores internal guard events', function (): void {
 
     expect($newState->history->pluck('type')->toArray())
         ->toEqual([
-            'internal.start',
-            'internal.state.active.enter',
-            'internal.state.active.entry.start',
-            'internal.state.active.entry.finish',
+            'in.start',
+            'in.state.active.enter',
+            'in.state.active.entry.start',
+            'in.state.active.entry.finish',
             'MUT',
-            'internal.guard.isEvenGuard.start',
-            'internal.guard.isEvenGuard.fail',
+            'in.transition.active.MUT.start',
+            'in.guard.isEvenGuard.start',
+            'in.guard.isEvenGuard.fail',
         ]);
 });
