@@ -309,6 +309,8 @@ class StateDefinition
         if ($this->stateDefinitions === null) {
             return StateDefinitionType::ATOMIC;
         }
+
+        return StateDefinitionType::COMPOUND;
     }
 
     // endregion

@@ -32,3 +32,21 @@ test('a state definition can be atomic', function (): void {
 
     expect($yellowState->type)->toBe(StateDefinitionType::ATOMIC);
 });
+
+test('a state definition can be compound', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'initial' => 'yellow',
+        'states'  => [
+            'yellow' => [
+                'states' => [
+                    'a' => [],
+                    'b' => [],
+                ],
+            ],
+        ],
+    ]);
+
+    $yellowState = $machine->stateDefinitions['yellow'];
+
+    expect($yellowState->type)->toBe(StateDefinitionType::COMPOUND);
+});
