@@ -7,8 +7,10 @@ namespace Tarfinlabs\EventMachine\Definition;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\NoStateDefinitionFoundException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidGuardedTransitionException;
 
 class TransitionBranch
 {
@@ -36,6 +38,8 @@ class TransitionBranch
 
     /**
      * Constructs a new TransitionBranch instance.
+     *
+     * @throws \Tarfinlabs\EventMachine\Exceptions\InvalidGuardedTransitionException
      */
     public function __construct(
         public null|string|array $transitionBranchConfig,
@@ -97,6 +101,8 @@ class TransitionBranch
 
     /**
      * Initializes the guard/s for this transition.
+     *
+     * @throws \Tarfinlabs\EventMachine\Exceptions\InvalidGuardedTransitionException
      */
     protected function initializeGuards(): void
     {
@@ -109,6 +115,27 @@ class TransitionBranch
                 inlineBehaviors: $this->guards,
                 behaviorType: BehaviorType::Guard
             );
+
+            if ($this->transitionDefinition->isGuarded === false) {
+                return;
+            }
+
+            foreach ($this->guards as $guard) {
+                if (str_contains($guard, ':')) {
+                    $guard = explode(':', $guard)[0];
+                }
+
+                if (!class_exists($guard)) {
+                    $guard = $this->transitionDefinition->source->machine->behavior[BehaviorType::Guard->value][$guard] ?? null;
+                }
+
+                if (is_subclass_of($guard, ValidationGuardBehavior::class)) {
+                    throw InvalidGuardedTransitionException::build(
+                        event: $this->transitionDefinition->event,
+                        stateDefinition: $this->transitionDefinition->source->id,
+                    );
+                }
+            }
         }
     }
 

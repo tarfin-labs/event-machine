@@ -6,14 +6,15 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Guards;
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 
-class IsOddGuard extends GuardBehavior
+class IsValidatedOddGuard extends ValidationGuardBehavior
 {
     public array $requiredContext = [
         'counts.oddCount' => 'integer',
     ];
+    public ?string $errorMessage = 'Count is not odd';
 
     public function __invoke(
         TrafficLightsContext|ContextManager $context,

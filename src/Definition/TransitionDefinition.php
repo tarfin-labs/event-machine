@@ -42,6 +42,8 @@ class TransitionDefinition
      * @param  null|string|array  $transitionConfig The configuration for this transition.
      * @param  StateDefinition  $source The source state definition for this transition.
      * @param  string  $event The event triggering this transition.
+     *
+     * @throws \Tarfinlabs\EventMachine\Exceptions\InvalidGuardedTransitionException
      */
     public function __construct(
         public null|string|array $transitionConfig,
@@ -77,7 +79,9 @@ class TransitionDefinition
         }
 
         // If the transition has multiple branches, it is a guarded transition
-        $this->isGuarded = true;
+        if (count($this->transitionConfig) > 1) {
+            $this->isGuarded = true;
+        }
 
         foreach ($this->transitionConfig as $config) {
             $this->branches[] = new TransitionBranch($config, $this);
