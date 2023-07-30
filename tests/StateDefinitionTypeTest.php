@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinitionType;
+use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 
 test('a state definition can be atomic', function (): void {
     $machine = MachineDefinition::define(config: [
@@ -50,3 +51,21 @@ test('a state definition can be defined as final', function (): void {
 
     expect($yellowState->type)->toBe(StateDefinitionType::FINAL);
 });
+
+test('a final state definition can not have child states', function (): void {
+    MachineDefinition::define(config: [
+        'initial' => 'yellow',
+        'states'  => [
+            'yellow' => [
+                'type'   => 'final',
+                'states' => [
+                    'a' => [],
+                    'b' => [],
+                ],
+            ],
+        ],
+    ]);
+})->throws(
+    exception: InvalidFinalStateDefinitionException::class,
+    exceptionMessage: 'Final state `machine.yellow` can not have child states.'
+);

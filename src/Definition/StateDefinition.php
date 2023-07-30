@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 
 class StateDefinition
 {
@@ -300,7 +301,9 @@ class StateDefinition
     public function getStateDefinitionType(): StateDefinitionType
     {
         if (!empty($this->config['type']) && $this->config['type'] === 'final') {
-            // TODO: Handle that final states can't have child states
+            if ($this->stateDefinitions !== null) {
+                throw InvalidFinalStateDefinitionException::noChildStates($this->id);
+            }
             // TODO: Handle that final states can't have transitions. That must be checked after transition initizalizations
 
             return StateDefinitionType::FINAL;
