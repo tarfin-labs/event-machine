@@ -536,7 +536,7 @@ class MachineDefinition
 
         // Record the internal action done event.
         $state->setInternalEventBehavior(
-            type: InternalEvent::ACTION_DONE,
+            type: InternalEvent::ACTION_FINISH,
             placeholder: $actionDefinition
         );
     }
