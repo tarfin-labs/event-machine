@@ -425,6 +425,7 @@ class MachineDefinition
 
         // If no valid transition branch is found, return the current state
         if ($transitionBranch === null) {
+            // TODO: Abort
             return $state->setCurrentStateDefinition($currentStateDefinition);
         }
 
@@ -433,6 +434,13 @@ class MachineDefinition
 
         // Execute actions associated with the transition
         $transitionBranch->runActions($state, $eventBehavior);
+
+        // Record transition start event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::TRANSITION_FINISH,
+            placeholder: "{$state->currentStateDefinition->key}.{$eventBehavior->type}"
+        );
+
         // Execute exit actions for the current state definition
         $transitionBranch->transitionDefinition->source->runExitActions($state);
 
