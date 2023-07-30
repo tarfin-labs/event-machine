@@ -10,17 +10,17 @@ enum InternalEvent: string
 {
     case MACHINE_START = '{machine}.start';
 
-    case STATE_ENTER = '{machine}.state.{?}.enter';
-    case STATE_EXIT  = '{machine}.state.{?}.exit';
+    case STATE_ENTER = '{machine}.state.{placeholder}.enter';
+    case STATE_EXIT  = '{machine}.state.{placeholder}.exit';
 
-    case ACTION_START  = '{machine}.action.{?}.start';
-    case ACTION_FINISH = '{machine}.action.{?}.finish';
+    case ACTION_START  = '{machine}.action.{placeholder}.start';
+    case ACTION_FINISH = '{machine}.action.{placeholder}.finish';
 
-    case GUARD_START = '{machine}.guard.{?}.start';
-    case GUARD_PASS  = '{machine}.guard.{?}.pass';
-    case GUARD_FAIL  = '{machine}.guard.{?}.fail';
+    case GUARD_START = '{machine}.guard.{placeholder}.start';
+    case GUARD_PASS  = '{machine}.guard.{placeholder}.pass';
+    case GUARD_FAIL  = '{machine}.guard.{placeholder}.fail';
 
-    case EVENT_RAISED = '{machine}.event.{?}.raised';
+    case EVENT_RAISED = '{machine}.event.{placeholder}.raised';
 
     /**
      * Generate an internal event name based on the machine ID and an optional placeholder.
@@ -33,8 +33,8 @@ enum InternalEvent: string
     public function generateInternalEventName(string $machineId, string $placeholder = null): string
     {
         return Str::swap([
-            '{machine}' => $machineId,
-            '{?}'       => Str::of($placeholder)->classBasename()->camel(),
+            '{machine}'     => $machineId,
+            '{placeholder}' => Str::of($placeholder)->classBasename()->camel(),
         ], $this->value);
     }
 }
