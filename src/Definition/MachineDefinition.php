@@ -431,11 +431,10 @@ class MachineDefinition
         // If a target state definition is defined, find its initial state definition
         $targetStateDefinition = $transitionBranch->target?->findInitialStateDefinition() ?? $transitionBranch->target;
 
-        // Execute exit actions for the current state definition
-        $transitionBranch->transitionDefinition->source->runExitActions($state);
-
         // Execute actions associated with the transition
         $transitionBranch->runActions($state, $eventBehavior);
+        // Execute exit actions for the current state definition
+        $transitionBranch->transitionDefinition->source->runExitActions($state);
 
         // Record state exit event
         $state->setInternalEventBehavior(
