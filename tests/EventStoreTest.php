@@ -122,7 +122,7 @@ it('stores internal guard events', function (): void {
             'internal.start',
             'internal.state.active.enter',
             'MUT',
-            'internal.guard.isEvenGuard.init',
+            'internal.guard.isEvenGuard.start',
             'internal.guard.isEvenGuard.fail',
         ]);
 });
