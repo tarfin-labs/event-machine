@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Str;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
@@ -91,6 +90,9 @@ test('TrafficLightsMachine can be started', function (): void {
         ->and($state->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
         ->and($state->context->count)->toBe(2);
 
-    expect(['machine_value' => json_encode($state->value), 'type' => sprintf(InternalEvent::STATE_INIT->value, Str::of($state->currentStateDefinition->key)->classBasename()->camel())])
+    expect([
+        'machine_value' => json_encode($state->value, JSON_THROW_ON_ERROR),
+        'type'          => InternalEvent::STATE_INIT->generateInternalEventName($machineActor->definition->id, $state->currentStateDefinition->key),
+    ])
         ->toBeInDatabase(MachineEvent::class);
 });
