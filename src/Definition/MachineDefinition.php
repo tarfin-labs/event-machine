@@ -377,12 +377,13 @@ class MachineDefinition
     /**
      * Transition the state machine to a new state based on an event.
      *
-     * @param  EventBehavior|array  $event The event that triggers the transition.
-     * @param  State|null  $state The current state or state name, or null to use the initial state.
+     * @param EventBehavior|array $event The event that triggers the transition.
+     * @param State|null $state The current state or state name, or null to use the initial state.
      *
      * @return State The new state after the transition.
      *
-     * @throws BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function transition(
         EventBehavior|array $event,
