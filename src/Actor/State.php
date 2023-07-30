@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Actor;
 
-use Illuminate\Support\Str;
 use Symfony\Component\Uid\Ulid;
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -48,12 +47,11 @@ class State
         string $placeholder = null,
         array $payload = null,
     ): self {
-        $type = ($placeholder === null)
-            ? $type->value
-            : sprintf($type->value, Str::of($placeholder)->classBasename()->camel());
-
         $eventDefinition = new EventDefinition(
-            type: $type,
+            type: $type->generateInternalEventName(
+                machineId: $this->currentStateDefinition->machine->id,
+                placeholder: $placeholder
+            ),
             payload: $payload,
             source: SourceType::INTERNAL,
         );
