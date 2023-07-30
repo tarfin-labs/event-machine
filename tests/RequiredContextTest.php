@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsOddGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\IsOddAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsValidatedOddGuard;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
 test('context values can be required for guards and actions', function (): void {
@@ -19,7 +19,7 @@ test('context values can be required for guards and actions', function (): void 
                 'on' => [
                     'EVENT' => [
                         'target' => 'stateB',
-                        'guards' => IsOddGuard::class,
+                        'guards' => IsValidatedOddGuard::class,
                     ],
                     'EVENT2' => [
                         'target'  => 'stateB',
