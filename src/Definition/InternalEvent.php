@@ -17,7 +17,8 @@ enum InternalEvent: string
     case STATE_EXIT_FINISH  = '{machine}.state.{placeholder}.exit.finish';
     case STATE_EXIT         = '{machine}.state.{placeholder}.exit';
 
-    case TRANSITION_START = '{machine}.transition.{placeholder}.start';
+    case TRANSITION_START  = '{machine}.transition.{placeholder}.start';
+    case TRANSITION_FINISH = '{machine}.transition.{placeholder}.finish';
 
     case ACTION_START  = '{machine}.action.{placeholder}.start';
     case ACTION_FINISH = '{machine}.action.{placeholder}.finish';
