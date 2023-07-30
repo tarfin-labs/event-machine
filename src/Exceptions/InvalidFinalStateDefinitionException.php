@@ -8,7 +8,7 @@ use LogicException;
 
 class InvalidFinalStateDefinitionException extends LogicException
 {
-    public static function childStates(string $stateDefinition): self
+    public static function noChildStates(string $stateDefinition): self
     {
         return new self("Final state `{$stateDefinition}` can not have child states.");
     }
