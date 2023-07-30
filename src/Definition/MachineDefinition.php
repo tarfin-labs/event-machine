@@ -524,9 +524,8 @@ class MachineDefinition
 
             foreach ($newEvents as $newEvent) {
                 $state->setInternalEventBehavior(
-                    type: InternalEvent::ACTION_EVENT_RAISED,
-                    placeholder: $actionDefinition,
-                    payload: is_array($newEvent) ? $newEvent : $newEvent->toArray()
+                    type: InternalEvent::EVENT_RAISED,
+                    placeholder: $newEvent['type'],
                 );
             }
         }
