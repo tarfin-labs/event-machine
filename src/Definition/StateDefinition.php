@@ -112,6 +112,7 @@ class StateDefinition
         $this->machine->idMap[$this->id] = $this;
 
         $this->stateDefinitions = $this->createChildStateDefinitions();
+        $this->type             = $this->getStateDefinitionType();
         $this->events           = $this->collectUniqueEvents();
 
         $this->initialStateDefinition = $this->findInitialStateDefinition();
@@ -289,6 +290,21 @@ class StateDefinition
         } else {
             $this->exit = [];
         }
+    }
+
+    /**
+     * Get the type of the state definition.
+     *
+     * @return StateDefinitionType The type of the state definition.
+     */
+    public function getStateDefinitionType(): StateDefinitionType
+    {
+        if (!empty($this->config['type']) && $this->config['type'] === 'final') {
+            // TODO: Handle that final states can't have child states
+            // TODO: Handle that final states can't have transitions. That must be checked after transition initizalizations
+
+            return StateDefinitionType::FINAL;
+
     }
 
     // endregion
