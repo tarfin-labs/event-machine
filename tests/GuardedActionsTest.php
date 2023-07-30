@@ -7,6 +7,8 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
+use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsValidatedOddGuard;
+use Tarfinlabs\EventMachine\Exceptions\InvalidGuardedTransitionException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 it('should run the guarded action when the guards are passed', function (): void {
@@ -251,3 +253,36 @@ it('can throw MachineValidationException and persist history', function (): void
     expect(['id' => $machineActor->state->history->last()->id])
         ->toBeInDatabase(table: MachineEvent::class);
 });
+
+it('throws an exception when a validation guard is used inside a guarded transition', function (): void {
+    $machine = MachineDefinition::define(
+        config: [
+            'initial' => 'green',
+            'context' => [
+                'counts' => [
+                    'oddCount' => 0,
+                ],
+            ],
+            'states' => [
+                'green' => [
+                    'on' => [
+                        'TIMER' => [
+                            [
+                                'target' => 'yellow',
+                                'guards' => IsValidatedOddGuard::class,
+                            ],
+                            [
+                                'target' => 'pedestrian',
+                            ],
+                        ],
+                    ],
+                ],
+                'yellow'     => [],
+                'pedestrian' => [],
+            ],
+        ],
+    );
+})->throws(
+    exception: InvalidGuardedTransitionException::class,
+    exceptionMessage: "Validation Guard Behavior is not allowed inside guarded transitions. Error occurred during event 'TIMER' in state definition 'machine.green'."
+);
