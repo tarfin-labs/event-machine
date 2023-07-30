@@ -7,7 +7,6 @@ namespace Tarfinlabs\EventMachine\Definition;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 
 class StateDefinition
@@ -386,10 +385,17 @@ class StateDefinition
     /**
      * Runs the exit actions of the current state definition with the given event.
      *
-     * @throws BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function runExitActions(State $state): void
     {
+        // Record state exit start event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_EXIT_START,
+            placeholder: $state->currentStateDefinition->key
+        );
+
         foreach ($this->exit as $action) {
             $this->machine->runAction(
                 actionDefinition: $action,
@@ -397,6 +403,12 @@ class StateDefinition
                 eventBehavior: $state->currentEventBehavior
             );
         }
+
+        // Record state exit finish event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_EXIT_FINISH,
+            placeholder: $state->currentStateDefinition->key
+        );
     }
 
     /**
@@ -404,10 +416,17 @@ class StateDefinition
      *
      * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior The event to be processed.
      *
-     * @throws BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function runEntryActions(State $state, EventBehavior $eventBehavior = null): void
     {
+        // Record state entry start event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_ENTRY_START,
+            placeholder: $state->currentStateDefinition->key
+        );
+
         foreach ($this->entry as $action) {
             $this->machine->runAction(
                 actionDefinition: $action,
@@ -415,6 +434,12 @@ class StateDefinition
                 eventBehavior: $eventBehavior
             );
         }
+
+        // Record state entry start event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_ENTRY_FINISH,
+            placeholder: $state->currentStateDefinition->key
+        );
     }
 
     // endregion

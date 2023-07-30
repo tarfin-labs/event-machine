@@ -16,7 +16,6 @@ use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
-use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 
 class MachineActor implements JsonSerializable, Stringable
@@ -25,7 +24,8 @@ class MachineActor implements JsonSerializable, Stringable
     public ?State $state = null;
 
     /**
-     * @throws BehaviorNotFoundException|RestoringStateException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\RestoringStateException
      */
     public function __construct(
         public MachineDefinition $definition,

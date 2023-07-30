@@ -33,12 +33,37 @@ it('stores external events', function (): void {
         'type' => 'RED_TIMER',
     ], state: $newState);
 
-    expect($newState->history)->toHaveCount(6);
+    expect($newState->history->pluck('type')->toArray())
+        ->toEqual([
+            'traffic_light.start',
+            'traffic_light.state.green.enter',
+            'traffic_light.state.green.entry.start',
+            'traffic_light.state.green.entry.finish',
+            'GREEN_TIMER',
+            'traffic_light.transition.green.GREENTIMER.start',
+            'traffic_light.transition.green.GREENTIMER.finish',
+            'traffic_light.state.green.exit.start',
+            'traffic_light.state.green.exit.finish',
+            'traffic_light.state.green.exit',
+            'traffic_light.state.yellow.enter',
+            'traffic_light.state.yellow.entry.start',
+            'traffic_light.state.yellow.entry.finish',
+            'RED_TIMER',
+            'traffic_light.transition.yellow.REDTIMER.start',
+            'traffic_light.transition.yellow.REDTIMER.finish',
+            'traffic_light.state.yellow.exit.start',
+            'traffic_light.state.yellow.exit.finish',
+            'traffic_light.state.yellow.exit',
+            'traffic_light.state.red.enter',
+            'traffic_light.state.red.entry.start',
+            'traffic_light.state.red.entry.finish',
+        ]);
 });
 
 it('stores internal action events', function (): void {
     $machine = MachineDefinition::define(
         config: [
+            'id'      => 'm',
             'initial' => 'active',
             'context' => [
                 'count' => 0,
@@ -70,20 +95,27 @@ it('stores internal action events', function (): void {
     ]);
 
     expect($newState->history->pluck('type')->toArray())
-        ->toHaveCount(6)
         ->toEqual([
-            'machine.init',
-            'machine.state.active.init',
+            'm.start',
+            'm.state.active.enter',
+            'm.state.active.entry.start',
+            'm.state.active.entry.finish',
             'ADD',
-            'machine.action.additionAction.init',
-            'machine.action.additionAction.done',
-            'machine.state.active.init',
+            'm.transition.active.ADD.start',
+            'm.action.additionAction.start',
+            'm.action.additionAction.finish',
+            'm.transition.active.ADD.finish',
+            'm.state.active.exit.start',
+            'm.state.active.exit.finish',
+            'm.state.active.exit',
+            'm.state.active.enter',
         ]);
 });
 
 it('stores internal guard events', function (): void {
     $machine = MachineDefinition::define(
         config: [
+            'id'      => 'in',
             'initial' => 'active',
             'context' => [
                 'count' => 1,
@@ -116,12 +148,15 @@ it('stores internal guard events', function (): void {
     $newState = $machine->transition(event: ['type' => 'MUT']);
 
     expect($newState->history->pluck('type')->toArray())
-        ->toHaveCount(5)
         ->toEqual([
-            'machine.init',
-            'machine.state.active.init',
+            'in.start',
+            'in.state.active.enter',
+            'in.state.active.entry.start',
+            'in.state.active.entry.finish',
             'MUT',
-            'machine.guard.isEvenGuard.init',
-            'machine.guard.isEvenGuard.fail',
+            'in.transition.active.MUT.start',
+            'in.guard.isEvenGuard.start',
+            'in.guard.isEvenGuard.fail',
+            'in.transition.active.MUT.fail',
         ]);
 });

@@ -162,7 +162,7 @@ class TransitionDefinition
 
                 // Record the internal guard init event.
                 $state->setInternalEventBehavior(
-                    type: InternalEvent::GUARD_INIT,
+                    type: InternalEvent::GUARD_START,
                     placeholder: $guardDefinition
                 );
 

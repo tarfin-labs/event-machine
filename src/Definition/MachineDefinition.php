@@ -152,6 +152,7 @@ class MachineDefinition
      * @return ?State The initial state of the machine.
      *
      * @throws BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function getInitialState(): ?State
     {
@@ -169,11 +170,11 @@ class MachineDefinition
         );
 
         // Record the internal machine init event.
-        $initialState->setInternalEventBehavior(type: InternalEvent::MACHINE_INIT);
+        $initialState->setInternalEventBehavior(type: InternalEvent::MACHINE_START);
 
         // Record the internal initial state init event.
         $initialState->setInternalEventBehavior(
-            type: InternalEvent::STATE_INIT,
+            type: InternalEvent::STATE_ENTER,
             placeholder: $initialState->currentStateDefinition->key
         );
 
@@ -202,6 +203,14 @@ class MachineDefinition
             $eventBehavior = $this->initializeEvent($firstEvent, $initialState);
 
             return $this->transition($eventBehavior, $initialState);
+        }
+
+        // Record the machine finish event if the initial state is a final state.
+        if ($initialState->currentStateDefinition->type === StateDefinitionType::FINAL) {
+            $initialState->setInternalEventBehavior(
+                type: InternalEvent::MACHINE_FINISH,
+                placeholder: $initialState->currentStateDefinition->key
+            );
         }
 
         return $initialState;
@@ -412,7 +421,7 @@ class MachineDefinition
         EventBehavior|array $event,
         State $state = null
     ): State {
-        // If the state is not passed, use the initial state
+        // Use the initial state if no state is provided
         $state ??= $this->getInitialState();
 
         $currentStateDefinition = $this->getCurrentStateDefinition($state);
@@ -421,54 +430,82 @@ class MachineDefinition
         $eventBehavior = $this->initializeEvent($event, $state);
         $eventBehavior->selfValidate();
 
-        // Set event behavior
         $state->setCurrentEventBehavior($eventBehavior);
 
-        // Find the transition definition for the event type
-        /** @var null|array|TransitionDefinition $transitionDefinition */
+        /**
+         * Get the transition definition for the current event type.
+         *
+         * @var null|array|TransitionDefinition $transitionDefinition
+         */
         $transitionDefinition = $currentStateDefinition->transitionDefinitions[$eventBehavior->type] ?? null;
 
-        // If the transition definition is not found, throw an exception
+        // Throw exception if no transition definition is found for the event type
         if ($transitionDefinition === null) {
             throw NoTransitionDefinitionFoundException::build($eventBehavior->type, $currentStateDefinition->id);
         }
+
+        // Record transition start event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::TRANSITION_START,
+            placeholder: "{$state->currentStateDefinition->key}.{$eventBehavior->type}"
+        );
 
         $transitionBranch = $transitionDefinition->getFirstValidTransitionBranch(
             eventBehavior: $eventBehavior,
             state: $state
         );
 
-        // If the transition branch is not found, do nothing
+        // If no valid transition branch is found, return the current state
         if ($transitionBranch === null) {
+            // Record transition abort event
+            $state->setInternalEventBehavior(
+                type: InternalEvent::TRANSITION_FAIL,
+                placeholder: "{$state->currentStateDefinition->key}.{$eventBehavior->type}"
+            );
+
             return $state->setCurrentStateDefinition($currentStateDefinition);
         }
 
-        // Find Target initial state
+        // If a target state definition is defined, find its initial state definition
         $targetStateDefinition = $transitionBranch->target?->findInitialStateDefinition() ?? $transitionBranch->target;
 
-        // Run exit actions on the source/current state definition
-        $transitionBranch->transitionDefinition->source->runExitActions($state);
-
-        // Run transition actions on the transition definition
+        // Execute actions associated with the transition
         $transitionBranch->runActions($state, $eventBehavior);
 
+        // Record transition start finish
+        $state->setInternalEventBehavior(
+            type: InternalEvent::TRANSITION_FINISH,
+            placeholder: "{$state->currentStateDefinition->key}.{$eventBehavior->type}"
+        );
+
+        // Execute exit actions for the current state definition
+        $transitionBranch->transitionDefinition->source->runExitActions($state);
+
+        // Record state exit event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_EXIT,
+            placeholder: $state->currentStateDefinition->key
+        );
+
+        // Set the new state, or keep the current state if no target state definition is defined
         $newState = $state
             ->setCurrentStateDefinition($targetStateDefinition ?? $currentStateDefinition);
 
-        // Record the internal action state init event.
+        // Record state enter event
         $state->setInternalEventBehavior(
-            type: InternalEvent::STATE_INIT,
+            type: InternalEvent::STATE_ENTER,
             placeholder: $newState->currentStateDefinition->key
         );
 
-        // Run entry actions on the target state definition
+        // Execute entry actions for the new state definition
         $targetStateDefinition?->runEntryActions($newState, $eventBehavior);
 
-        // Check if the new state has any @always transitions
+        // Check if the new state has any transitions that are always taken
         if ($this->idMap[$newState->currentStateDefinition->id]->transitionDefinitions !== null) {
             /** @var TransitionDefinition $transition */
             foreach ($this->idMap[$newState->currentStateDefinition->id]->transitionDefinitions as $transition) {
                 if ($transition->isAlways === true) {
+                    // If an always-taken transition is found, perform the transition
                     return $this->transition(
                         event: [
                             'type' => TransitionProperty::Always->value,
@@ -479,12 +516,21 @@ class MachineDefinition
             }
         }
 
+        // If there are events in the queue, process the first event
         if ($this->eventQueue->isNotEmpty()) {
             $firstEvent = $this->eventQueue->shift();
 
             $eventBehavior = $this->initializeEvent($firstEvent, $newState);
 
             return $this->transition($eventBehavior, $newState);
+        }
+
+        // Record the machine finish event if the initial state is a final state.
+        if ($state->currentStateDefinition->type === StateDefinitionType::FINAL) {
+            $state->setInternalEventBehavior(
+                type: InternalEvent::MACHINE_FINISH,
+                placeholder: $state->currentStateDefinition->key
+            );
         }
 
         return $newState;
@@ -524,7 +570,7 @@ class MachineDefinition
 
         // Record the internal action init event.
         $state->setInternalEventBehavior(
-            type: InternalEvent::ACTION_INIT,
+            type: InternalEvent::ACTION_START,
             placeholder: $actionDefinition
         );
 
@@ -548,9 +594,8 @@ class MachineDefinition
 
             foreach ($newEvents as $newEvent) {
                 $state->setInternalEventBehavior(
-                    type: InternalEvent::ACTION_EVENT_RAISED,
-                    placeholder: $actionDefinition,
-                    payload: is_array($newEvent) ? $newEvent : $newEvent->toArray()
+                    type: InternalEvent::EVENT_RAISED,
+                    placeholder: $newEvent['type'],
                 );
             }
         }
@@ -560,7 +605,7 @@ class MachineDefinition
 
         // Record the internal action done event.
         $state->setInternalEventBehavior(
-            type: InternalEvent::ACTION_DONE,
+            type: InternalEvent::ACTION_FINISH,
             placeholder: $actionDefinition
         );
     }
