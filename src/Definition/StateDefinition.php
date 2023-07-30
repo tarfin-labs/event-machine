@@ -359,7 +359,8 @@ class StateDefinition
     /**
      * Runs the exit actions of the current state definition with the given event.
      *
-     * @throws BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function runExitActions(State $state): void
     {
