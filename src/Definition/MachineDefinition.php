@@ -412,7 +412,7 @@ class MachineDefinition
             throw NoTransitionDefinitionFoundException::build($eventBehavior->type, $currentStateDefinition->id);
         }
 
-        // Record state entry start event
+        // Record transition start event
         $state->setInternalEventBehavior(
             type: InternalEvent::TRANSITION_START,
             placeholder: "{$state->currentStateDefinition->key}.{$eventBehavior->type}"
