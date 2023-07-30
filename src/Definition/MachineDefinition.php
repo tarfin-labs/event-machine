@@ -152,6 +152,7 @@ class MachineDefinition
      * @return ?State The initial state of the machine.
      *
      * @throws BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function getInitialState(): ?State
     {
@@ -522,6 +523,14 @@ class MachineDefinition
             $eventBehavior = $this->initializeEvent($firstEvent, $newState);
 
             return $this->transition($eventBehavior, $newState);
+        }
+
+        // Record the machine finish event if the initial state is a final state.
+        if ($state->currentStateDefinition->type === StateDefinitionType::FINAL) {
+            $state->setInternalEventBehavior(
+                type: InternalEvent::MACHINE_FINISH,
+                placeholder: $state->currentStateDefinition->key
+            );
         }
 
         return $newState;

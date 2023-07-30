@@ -111,3 +111,42 @@ test('an initial state of type final triggers machine finish event', function ()
             'dummy.finish',
         ]);
 });
+
+test('a state of type final triggers machine finish event', function (): void {
+    $machine = new MachineActor(MachineDefinition::define(config: [
+        'id'      => 'dummy',
+        'initial' => 'yellow',
+        'states'  => [
+            'yellow' => [
+                'on' => [
+                    'EVENT' => [
+                        'target' => 'red',
+                    ],
+                ],
+            ],
+            'red' => [
+                'type' => 'final',
+            ],
+        ],
+    ]));
+
+    $state = $machine->send(['type' => 'EVENT']);
+
+    expect($state->history->pluck('type')->toArray())
+        ->toEqual([
+            'dummy.start',
+            'dummy.state.yellow.enter',
+            'dummy.state.yellow.entry.start',
+            'dummy.state.yellow.entry.finish',
+            'EVENT',
+            'dummy.transition.yellow.EVENT.start',
+            'dummy.transition.yellow.EVENT.finish',
+            'dummy.state.yellow.exit.start',
+            'dummy.state.yellow.exit.finish',
+            'dummy.state.yellow.exit',
+            'dummy.state.red.enter',
+            'dummy.state.red.entry.start',
+            'dummy.state.red.entry.finish',
+            'dummy.finish',
+        ]);
+});
