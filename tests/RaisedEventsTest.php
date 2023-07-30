@@ -11,21 +11,21 @@ test('actions can raise events', function (): void {
     expect($machine->state->context->value)->toBe('xyz');
     expect($machine->state->history->pluck('type')->toArray())->toBe([
         'xyz.start',
-        'xyz.state.#a.init',
+        'xyz.state.#a.enter',
         'xyz.action.!x.init',
         'xyz.action.!x.event_raised',
         'xyz.action.!x.done',
         '@x',
-        'xyz.state.#x.init',
+        'xyz.state.#x.enter',
         'xyz.action.!y.init',
         'xyz.action.!y.event_raised',
         'xyz.action.!y.done',
         '@y',
-        'xyz.state.#y.init',
+        'xyz.state.#y.enter',
         'xyz.action.!z.init',
         'xyz.action.!z.event_raised',
         'xyz.action.!z.done',
         '@z',
-        'xyz.state.#z.init',
+        'xyz.state.#z.enter',
     ]);
 });

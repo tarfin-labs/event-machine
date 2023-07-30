@@ -73,11 +73,11 @@ it('stores internal action events', function (): void {
         ->toHaveCount(6)
         ->toEqual([
             'machine.start',
-            'machine.state.active.init',
+            'machine.state.active.enter',
             'ADD',
             'machine.action.additionAction.init',
             'machine.action.additionAction.done',
-            'machine.state.active.init',
+            'machine.state.active.enter',
         ]);
 });
 
@@ -120,7 +120,7 @@ it('stores internal guard events', function (): void {
         ->toHaveCount(5)
         ->toEqual([
             'internal.start',
-            'internal.state.active.init',
+            'internal.state.active.enter',
             'MUT',
             'internal.guard.isEvenGuard.init',
             'internal.guard.isEvenGuard.fail',

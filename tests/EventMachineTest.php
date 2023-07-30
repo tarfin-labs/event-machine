@@ -92,7 +92,7 @@ test('TrafficLightsMachine can be started', function (): void {
 
     expect([
         'machine_value' => json_encode($state->value, JSON_THROW_ON_ERROR),
-        'type'          => InternalEvent::STATE_INIT->generateInternalEventName($machineActor->definition->id, $state->currentStateDefinition->key),
+        'type'          => InternalEvent::STATE_ENTER->generateInternalEventName($machineActor->definition->id, $state->currentStateDefinition->key),
     ])
         ->toBeInDatabase(MachineEvent::class);
 });
