@@ -407,6 +407,12 @@ class StateDefinition
                 eventBehavior: $eventBehavior
             );
         }
+
+        // Record state entry start event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_ENTRY_FINISH,
+            placeholder: $state->currentStateDefinition->key
+        );
     }
 
     // endregion
