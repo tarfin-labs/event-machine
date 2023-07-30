@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 enum InternalEvent: string
 {
-    case MACHINE_INIT        = '{+}.init';
+    case MACHINE_START       = '{+}.start';
     case STATE_INIT          = '{+}.state.{?}.init';
     case ACTION_INIT         = '{+}.action.{?}.init';
     case ACTION_EVENT_RAISED = '{+}.action.{?}.event_raised';

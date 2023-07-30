@@ -72,7 +72,7 @@ it('stores internal action events', function (): void {
     expect($newState->history->pluck('type')->toArray())
         ->toHaveCount(6)
         ->toEqual([
-            'machine.init',
+            'machine.start',
             'machine.state.active.init',
             'ADD',
             'machine.action.additionAction.init',
@@ -84,6 +84,7 @@ it('stores internal action events', function (): void {
 it('stores internal guard events', function (): void {
     $machine = MachineDefinition::define(
         config: [
+            'id'      => 'internal',
             'initial' => 'active',
             'context' => [
                 'count' => 1,
@@ -118,10 +119,10 @@ it('stores internal guard events', function (): void {
     expect($newState->history->pluck('type')->toArray())
         ->toHaveCount(5)
         ->toEqual([
-            'machine.init',
-            'machine.state.active.init',
+            'internal.start',
+            'internal.state.active.init',
             'MUT',
-            'machine.guard.isEvenGuard.init',
-            'machine.guard.isEvenGuard.fail',
+            'internal.guard.isEvenGuard.init',
+            'internal.guard.isEvenGuard.fail',
         ]);
 });

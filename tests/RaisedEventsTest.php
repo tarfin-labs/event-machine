@@ -10,7 +10,7 @@ test('actions can raise events', function (): void {
     expect($machine->state->matches('#z'))->toBeTrue();
     expect($machine->state->context->value)->toBe('xyz');
     expect($machine->state->history->pluck('type')->toArray())->toBe([
-        'xyz.init',
+        'xyz.start',
         'xyz.state.#a.init',
         'xyz.action.!x.init',
         'xyz.action.!x.event_raised',

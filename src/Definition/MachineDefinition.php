@@ -166,7 +166,7 @@ class MachineDefinition
         );
 
         // Record the internal machine init event.
-        $initialState->setInternalEventBehavior(type: InternalEvent::MACHINE_INIT);
+        $initialState->setInternalEventBehavior(type: InternalEvent::MACHINE_START);
 
         // Record the internal initial state init event.
         $initialState->setInternalEventBehavior(
