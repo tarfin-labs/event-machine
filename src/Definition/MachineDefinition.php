@@ -428,10 +428,16 @@ class MachineDefinition
         // Run transition actions on the transition definition
         $transitionBranch->runActions($state, $eventBehavior);
 
+        // Record the internal action state enter event.
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_EXIT,
+            placeholder: $state->currentStateDefinition->key
+        );
+
         $newState = $state
             ->setCurrentStateDefinition($targetStateDefinition ?? $currentStateDefinition);
 
-        // Record the internal action state init event.
+        // Record the internal action state enter event.
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_ENTER,
             placeholder: $newState->currentStateDefinition->key

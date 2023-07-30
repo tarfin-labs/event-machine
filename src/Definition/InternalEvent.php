@@ -11,6 +11,7 @@ enum InternalEvent: string
     case MACHINE_START = '{+}.start';
 
     case STATE_ENTER = '{+}.state.{?}.enter';
+    case STATE_EXIT  = '{+}.state.{?}.exit';
 
     case ACTION_START  = '{+}.action.{?}.start';
     case ACTION_FINISH = '{+}.action.{?}.finish';
