@@ -10,11 +10,12 @@ enum InternalEvent: string
 {
     case MACHINE_START = '{machine}.start';
 
-    case STATE_ENTER       = '{machine}.state.{placeholder}.enter';
-    case STATE_ENTRY_START = '{machine}.state.{placeholder}.entry.start';
-    case STATE_EXIT_START  = '{machine}.state.{placeholder}.exit.start';
-    case STATE_EXIT_FINISH = '{machine}.state.{placeholder}.exit.finish';
-    case STATE_EXIT        = '{machine}.state.{placeholder}.exit';
+    case STATE_ENTER        = '{machine}.state.{placeholder}.enter';
+    case STATE_ENTRY_START  = '{machine}.state.{placeholder}.entry.start';
+    case STATE_ENTRY_FINISH = '{machine}.state.{placeholder}.entry.finish';
+    case STATE_EXIT_START   = '{machine}.state.{placeholder}.exit.start';
+    case STATE_EXIT_FINISH  = '{machine}.state.{placeholder}.exit.finish';
+    case STATE_EXIT         = '{machine}.state.{placeholder}.exit';
 
     case ACTION_START  = '{machine}.action.{placeholder}.start';
     case ACTION_FINISH = '{machine}.action.{placeholder}.finish';
