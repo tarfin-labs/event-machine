@@ -7,7 +7,6 @@ namespace Tarfinlabs\EventMachine\Definition;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 class StateDefinition
 {
@@ -388,13 +387,19 @@ class StateDefinition
     /**
      * Runs the entry actions of the current state definition with the given event.
      *
-     * @param \Tarfinlabs\EventMachine\Behavior\EventBehavior|null $eventBehavior The event to be processed.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior The event to be processed.
      *
      * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
      * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function runEntryActions(State $state, EventBehavior $eventBehavior = null): void
     {
+        // Record state entry start event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_ENTRY_START,
+            placeholder: $state->currentStateDefinition->key
+        );
+
         foreach ($this->entry as $action) {
             $this->machine->runAction(
                 actionDefinition: $action,
