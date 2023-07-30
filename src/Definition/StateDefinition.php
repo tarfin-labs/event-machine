@@ -45,6 +45,9 @@ class StateDefinition
      */
     public ?array $stateDefinitions = null;
 
+    /** The type of this state definition. */
+    public StateDefinitionType $type;
+
     /**
      * The transition definitions of this state definition.
      *
