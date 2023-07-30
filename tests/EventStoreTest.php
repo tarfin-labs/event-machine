@@ -100,10 +100,10 @@ it('stores internal action events', function (): void {
             'm.state.active.entry.finish',
             'ADD',
             'm.transition.active.ADD.start',
-            'm.state.active.exit.start',
-            'm.state.active.exit.finish',
             'm.action.additionAction.start',
             'm.action.additionAction.finish',
+            'm.state.active.exit.start',
+            'm.state.active.exit.finish',
             'm.state.active.exit',
             'm.state.active.enter',
         ]);
