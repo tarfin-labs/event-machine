@@ -377,8 +377,8 @@ class MachineDefinition
     /**
      * Transition the state machine to a new state based on an event.
      *
-     * @param EventBehavior|array $event The event that triggers the transition.
-     * @param State|null $state The current state or state name, or null to use the initial state.
+     * @param  EventBehavior|array  $event The event that triggers the transition.
+     * @param  State|null  $state The current state or state name, or null to use the initial state.
      *
      * @return State The new state after the transition.
      *
@@ -411,6 +411,12 @@ class MachineDefinition
         if ($transitionDefinition === null) {
             throw NoTransitionDefinitionFoundException::build($eventBehavior->type, $currentStateDefinition->id);
         }
+
+        // Record state entry start event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::TRANSITION_START,
+            placeholder: "{$state->currentStateDefinition->key}.{$eventBehavior->type}"
+        );
 
         $transitionBranch = $transitionDefinition->getFirstValidTransitionBranch(
             eventBehavior: $eventBehavior,
