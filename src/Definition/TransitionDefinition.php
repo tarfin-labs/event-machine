@@ -169,18 +169,22 @@ class TransitionDefinition
                 if ($guardBehavior($state->context, $eventBehavior, $guardArguments) === false) {
                     $guardsPassed = false;
 
-                    $errorMessage = $guardBehavior instanceof ValidationGuardBehavior
-                        ? $guardBehavior->errorMessage
-                        : null;
-                    $errorKey = $guardBehavior instanceof GuardBehavior
-                        ? sprintf(InternalEvent::GUARD_FAIL->value, $guardBehavior::getType())
-                        : null;
+                    $payload = null;
+                    if ($guardBehavior instanceof ValidationGuardBehavior) {
+                        $errorMessage = $guardBehavior->errorMessage;
+                        $errorKey     = InternalEvent::GUARD_FAIL->generateInternalEventName(
+                            machineId: $this->source->machine->id,
+                            placeholder: $guardBehavior::getType()
+                        );
+
+                        $payload = [$errorKey => $errorMessage];
+                    }
 
                     // Record the internal guard fail event.
                     $state->setInternalEventBehavior(
                         type: InternalEvent::GUARD_FAIL,
                         placeholder: $guardDefinition,
-                        payload: [$errorKey => $errorMessage]
+                        payload: $payload
                     );
 
                     break;
