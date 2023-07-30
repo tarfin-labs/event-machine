@@ -382,7 +382,8 @@ class MachineDefinition
      *
      * @return State The new state after the transition.
      *
-     * @throws BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
+     * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function transition(
         EventBehavior|array $event,
