@@ -8,7 +8,8 @@ use Illuminate\Support\Str;
 
 enum InternalEvent: string
 {
-    case MACHINE_START = '{machine}.start';
+    case MACHINE_START  = '{machine}.start';
+    case MACHINE_FINISH = '{machine}.finish';
 
     case STATE_ENTER        = '{machine}.state.{placeholder}.enter';
     case STATE_ENTRY_START  = '{machine}.state.{placeholder}.entry.start';
