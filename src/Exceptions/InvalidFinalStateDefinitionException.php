@@ -12,4 +12,9 @@ class InvalidFinalStateDefinitionException extends LogicException
     {
         return new self("Final state `{$stateDefinition}` can not have child states.");
     }
+
+    public static function noTransitions(string $stateDefinition): self
+    {
+        return new self("Final state `{$stateDefinition}` can not have transitions.");
+    }
 }
