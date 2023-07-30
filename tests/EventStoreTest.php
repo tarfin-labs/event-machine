@@ -157,5 +157,6 @@ it('stores internal guard events', function (): void {
             'in.transition.active.MUT.start',
             'in.guard.isEvenGuard.start',
             'in.guard.isEvenGuard.fail',
+            'in.transition.active.MUT.fail',
         ]);
 });
