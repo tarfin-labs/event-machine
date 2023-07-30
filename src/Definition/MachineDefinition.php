@@ -204,6 +204,14 @@ class MachineDefinition
             return $this->transition($eventBehavior, $initialState);
         }
 
+        // Record the machine finish event if the initial state is a final state.
+        if ($initialState->currentStateDefinition->type === StateDefinitionType::FINAL) {
+            $initialState->setInternalEventBehavior(
+                type: InternalEvent::MACHINE_FINISH,
+                placeholder: $initialState->currentStateDefinition->key
+            );
+        }
+
         return $initialState;
     }
 

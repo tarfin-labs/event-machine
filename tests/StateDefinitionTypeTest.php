@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Actor\MachineActor;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinitionType;
 use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
@@ -89,3 +90,24 @@ test('a final state definition can not have transitions', function (): void {
     exception: InvalidFinalStateDefinitionException::class,
     exceptionMessage: 'The final state `machine.yellow` should not have transitions. Check your state machine configuration to ensure events are not dispatched when in a final state.'
 );
+
+test('an initial state of type final triggers machine finish event', function (): void {
+    $machine = new MachineActor(MachineDefinition::define(config: [
+        'id'      => 'dummy',
+        'initial' => 'yellow',
+        'states'  => [
+            'yellow' => [
+                'type' => 'final',
+            ],
+        ],
+    ]));
+
+    expect($machine->state->history->pluck('type')->toArray())
+        ->toEqual([
+            'dummy.start',
+            'dummy.state.yellow.enter',
+            'dummy.state.yellow.entry.start',
+            'dummy.state.yellow.entry.finish',
+            'dummy.finish',
+        ]);
+});
