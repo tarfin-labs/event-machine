@@ -168,6 +168,12 @@ class MachineDefinition
         // Record the internal machine init event.
         $initialState->setInternalEventBehavior(type: InternalEvent::MACHINE_INIT);
 
+        // Record the internal initial state init event.
+        $initialState->setInternalEventBehavior(
+            type: InternalEvent::STATE_INIT,
+            placeholder: $initialState->currentStateDefinition->key
+        );
+
         // Run entry actions on the initial state definition
         $this->initialStateDefinition->runEntryActions(
             state: $initialState,

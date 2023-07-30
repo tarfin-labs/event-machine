@@ -33,7 +33,7 @@ it('stores external events', function (): void {
         'type' => 'RED_TIMER',
     ], state: $newState);
 
-    expect($newState->history)->toHaveCount(5);
+    expect($newState->history)->toHaveCount(6);
 });
 
 it('stores internal action events', function (): void {
@@ -70,9 +70,10 @@ it('stores internal action events', function (): void {
     ]);
 
     expect($newState->history->pluck('type')->toArray())
-        ->toHaveCount(5)
+        ->toHaveCount(6)
         ->toEqual([
             'machine.init',
+            'machine.state.active.init',
             'ADD',
             'machine.action.additionAction.init',
             'machine.action.additionAction.done',
@@ -115,9 +116,10 @@ it('stores internal guard events', function (): void {
     $newState = $machine->transition(event: ['type' => 'MUT']);
 
     expect($newState->history->pluck('type')->toArray())
-        ->toHaveCount(4)
+        ->toHaveCount(5)
         ->toEqual([
             'machine.init',
+            'machine.state.active.init',
             'MUT',
             'machine.guard.isEvenGuard.init',
             'machine.guard.isEvenGuard.fail',
