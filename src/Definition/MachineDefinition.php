@@ -435,7 +435,7 @@ class MachineDefinition
         // Execute actions associated with the transition
         $transitionBranch->runActions($state, $eventBehavior);
 
-        // Record transition start event
+        // Record transition start finish
         $state->setInternalEventBehavior(
             type: InternalEvent::TRANSITION_FINISH,
             placeholder: "{$state->currentStateDefinition->key}.{$eventBehavior->type}"
