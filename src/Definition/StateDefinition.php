@@ -304,7 +304,6 @@ class StateDefinition
             if ($this->stateDefinitions !== null) {
                 throw InvalidFinalStateDefinitionException::noChildStates($this->id);
             }
-            // TODO: Handle that final states can't have transitions. That must be checked after transition initizalizations
 
             return StateDefinitionType::FINAL;
         }

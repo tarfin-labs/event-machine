@@ -69,3 +69,23 @@ test('a final state definition can not have child states', function (): void {
     exception: InvalidFinalStateDefinitionException::class,
     exceptionMessage: 'Final state `machine.yellow` can not have child states.'
 );
+
+test('a final state definition can not have transitions', function (): void {
+    MachineDefinition::define(config: [
+        'initial' => 'yellow',
+        'states'  => [
+            'yellow' => [
+                'type' => 'final',
+                'on'   => [
+                    'EVENT' => [
+                        'target' => 'red',
+                    ],
+                ],
+            ],
+            'red' => [],
+        ],
+    ]);
+})->throws(
+    exception: InvalidFinalStateDefinitionException::class,
+    exceptionMessage: 'Final state `machine.yellow` can not have transitions.'
+);

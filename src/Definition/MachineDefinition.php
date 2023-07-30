@@ -11,6 +11,7 @@ use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
 class MachineDefinition
@@ -78,6 +79,8 @@ class MachineDefinition
 
         $this->stateDefinitions = $this->root->stateDefinitions;
         $this->events           = $this->root->events;
+
+        $this->checkFinalStatesForTransitions();
 
         $this->eventQueue = new Collection();
 
@@ -368,6 +371,26 @@ class MachineDefinition
         $stateDefinitionId = $this->id.$this->delimiter.$stateDefinitionId;
 
         return $this->idMap[$stateDefinitionId] ?? null;
+    }
+
+    /**
+     * Check final states for invalid transition definitions.
+     *
+     * Iterates through the state definitions in the `idMap` property and checks if any of the final states
+     * have transition definitions. If a final state has transition definitions, it throws an `InvalidFinalStateDefinitionException`.
+     *
+     * @throws InvalidFinalStateDefinitionException If a final state has transition definitions.
+     */
+    public function checkFinalStatesForTransitions(): void
+    {
+        foreach ($this->idMap as $stateDefinition) {
+            if (
+                $stateDefinition->type === StateDefinitionType::FINAL &&
+                $stateDefinition->transitionDefinitions !== null
+            ) {
+                throw InvalidFinalStateDefinitionException::noTransitions($stateDefinition->id);
+            }
+        }
     }
 
     // endregion
