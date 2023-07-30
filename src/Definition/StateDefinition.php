@@ -377,6 +377,12 @@ class StateDefinition
                 eventBehavior: $state->currentEventBehavior
             );
         }
+
+        // Record state exit start event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_EXIT_FINISH,
+            placeholder: $state->currentStateDefinition->key
+        );
     }
 
     /**
