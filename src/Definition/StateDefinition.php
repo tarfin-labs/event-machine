@@ -364,6 +364,12 @@ class StateDefinition
      */
     public function runExitActions(State $state): void
     {
+        // Record state exit start event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_EXIT_START,
+            placeholder: $state->currentStateDefinition->key
+        );
+
         foreach ($this->exit as $action) {
             $this->machine->runAction(
                 actionDefinition: $action,
