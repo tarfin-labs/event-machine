@@ -12,6 +12,7 @@ test('actions can raise events', function (): void {
     expect($machine->state->history->pluck('type')->toArray())->toBe([
         'xyz.start',
         'xyz.state.#a.enter',
+        'xyz.state.#a.entry.start',
         'xyz.action.!x.start',
         'xyz.event.@x.raised',
         'xyz.action.!x.finish',
@@ -20,6 +21,7 @@ test('actions can raise events', function (): void {
         'xyz.state.#a.exit.finish',
         'xyz.state.#a.exit',
         'xyz.state.#x.enter',
+        'xyz.state.#x.entry.start',
         'xyz.action.!y.start',
         'xyz.event.@y.raised',
         'xyz.action.!y.finish',
@@ -28,6 +30,7 @@ test('actions can raise events', function (): void {
         'xyz.state.#x.exit.finish',
         'xyz.state.#x.exit',
         'xyz.state.#y.enter',
+        'xyz.state.#y.entry.start',
         'xyz.action.!z.start',
         'xyz.event.@z.raised',
         'xyz.action.!z.finish',
@@ -36,5 +39,6 @@ test('actions can raise events', function (): void {
         'xyz.state.#y.exit.finish',
         'xyz.state.#y.exit',
         'xyz.state.#z.enter',
+        'xyz.state.#z.entry.start',
     ]);
 });
