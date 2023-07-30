@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Definition;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 
 class StateDefinition
 {
@@ -43,6 +44,9 @@ class StateDefinition
      * @var null|array<StateDefinition>
      */
     public ?array $stateDefinitions = null;
+
+    /** The type of this state definition. */
+    public StateDefinitionType $type;
 
     /**
      * The transition definitions of this state definition.
@@ -108,6 +112,7 @@ class StateDefinition
         $this->machine->idMap[$this->id] = $this;
 
         $this->stateDefinitions = $this->createChildStateDefinitions();
+        $this->type             = $this->getStateDefinitionType();
         $this->events           = $this->collectUniqueEvents();
 
         $this->initialStateDefinition = $this->findInitialStateDefinition();
@@ -285,6 +290,28 @@ class StateDefinition
         } else {
             $this->exit = [];
         }
+    }
+
+    /**
+     * Get the type of the state definition.
+     *
+     * @return StateDefinitionType The type of the state definition.
+     */
+    public function getStateDefinitionType(): StateDefinitionType
+    {
+        if (!empty($this->config['type']) && $this->config['type'] === 'final') {
+            if ($this->stateDefinitions !== null) {
+                throw InvalidFinalStateDefinitionException::noChildStates($this->id);
+            }
+
+            return StateDefinitionType::FINAL;
+        }
+
+        if ($this->stateDefinitions === null) {
+            return StateDefinitionType::ATOMIC;
+        }
+
+        return StateDefinitionType::COMPOUND;
     }
 
     // endregion
