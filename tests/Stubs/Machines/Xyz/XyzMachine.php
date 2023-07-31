@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz;
 
 use Tarfinlabs\EventMachine\Definition\EventMachine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\Events\YEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\Actions\XAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\Actions\YAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\Actions\ZAction;
@@ -31,7 +32,7 @@ class XyzMachine extends EventMachine
                     '#x' => [
                         'entry' => '!y',
                         'on'    => [
-                            '@y' => '#y',
+                            YEvent::class => '#y',
                         ],
                     ],
                     '#y' => [
