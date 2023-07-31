@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Exceptions;
 
-use Exception;
+use RuntimeException;
 
-class MissingMachineContextException extends Exception
+class MissingMachineContextException extends RuntimeException
 {
     public static function build(string $key): self
     {
