@@ -65,8 +65,8 @@ class ContextManager extends Data
         }
 
         match (true) {
-            get_class($this) === __CLASS__   => $this->data[$key] = $value,
-            is_subclass_of($this, __CLASS__) => $this->$key       = $value,
+            get_class($this) === self::class   => $this->data[$key] = $value,
+            is_subclass_of($this, self::class) => $this->$key       = $value,
         };
 
         return $value;
