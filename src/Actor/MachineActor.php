@@ -18,6 +18,12 @@ use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 
+/**
+ * Class MachineActor.
+ *
+ * This class represents a machine actor that implements the JsonSerializable and Stringable interfaces.
+ * It is responsible for managing the state of the machine and handling events sent to it.
+ */
 class MachineActor implements JsonSerializable, Stringable
 {
     /** The current state of the machine actor. */
