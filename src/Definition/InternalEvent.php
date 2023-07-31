@@ -6,6 +6,11 @@ namespace Tarfinlabs\EventMachine\Definition;
 
 use Illuminate\Support\Str;
 
+/**
+ * Class InternalEvent.
+ *
+ * An enum class representing internal event names.
+ */
 enum InternalEvent: string
 {
     case MACHINE_START  = '{machine}.start';
