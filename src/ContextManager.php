@@ -41,8 +41,8 @@ class ContextManager extends Data
     public function get(string $key): mixed
     {
         return match (true) {
-            get_class($this) === static::class   => Arr::get($this->data, $key),
-            is_subclass_of($this, static::class) => $this->$key,
+            get_class($this) === self::class   => Arr::get($this->data, $key),
+            is_subclass_of($this, self::class) => $this->$key,
         };
     }
 
