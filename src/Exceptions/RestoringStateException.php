@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Exceptions;
 
-use Exception;
+use RuntimeException;
 
-class RestoringStateException extends Exception
+class RestoringStateException extends RuntimeException
 {
     public static function build(string $errorMessage): self
     {
