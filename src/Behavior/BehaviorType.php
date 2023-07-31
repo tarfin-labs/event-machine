@@ -6,6 +6,11 @@ namespace Tarfinlabs\EventMachine\Behavior;
 
 use Tarfinlabs\EventMachine\ContextManager;
 
+/**
+ * Class BehaviorType.
+ *
+ * The BehaviorType class represents an enumerated type for different types of behaviors.
+ */
 enum BehaviorType: string
 {
     case Guard   = 'guards';
