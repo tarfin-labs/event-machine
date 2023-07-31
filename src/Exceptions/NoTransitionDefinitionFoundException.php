@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Exceptions;
 
-use RuntimeException;
+use LogicException;
 
 /**
  * Class NoTransitionDefinitionFoundException.
@@ -12,7 +12,7 @@ use RuntimeException;
  * This exception is thrown when a transition definition cannot be found
  * for a given event type in the current state definition.
  */
-class NoTransitionDefinitionFoundException extends RuntimeException
+class NoTransitionDefinitionFoundException extends LogicException
 {
     /**
      * Builds an instance of self.

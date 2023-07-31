@@ -150,9 +150,6 @@ class MachineDefinition
      * Build the initial state for the machine.
      *
      * @return ?State The initial state of the machine.
-     *
-     * @throws BehaviorNotFoundException
-     * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function getInitialState(): ?State
     {
@@ -300,8 +297,6 @@ class MachineDefinition
      * @param  BehaviorType  $behaviorType The type of the behavior (e.g., guard or action).
      *
      * @return callable|null The invokable behavior instance or callable, or null if not found.
-     *
-     * @throws BehaviorNotFoundException
      */
     public function getInvokableBehavior(string $behaviorDefinition, BehaviorType $behaviorType): ?callable
     {
@@ -387,8 +382,6 @@ class MachineDefinition
      *
      * Iterates through the state definitions in the `idMap` property and checks if any of the final states
      * have transition definitions. If a final state has transition definitions, it throws an `InvalidFinalStateDefinitionException`.
-     *
-     * @throws InvalidFinalStateDefinitionException If a final state has transition definitions.
      */
     public function checkFinalStatesForTransitions(): void
     {
@@ -413,9 +406,6 @@ class MachineDefinition
      * @param  State|null  $state The current state or state name, or null to use the initial state.
      *
      * @return State The new state after the transition.
-     *
-     * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
-     * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function transition(
         EventBehavior|array $event,
@@ -545,9 +535,6 @@ class MachineDefinition
      *
      * @param  string  $actionDefinition The action definition, either a class
      * @param  EventBehavior|null  $eventBehavior The event (optional).
-     *
-     * @throws BehaviorNotFoundException
-     * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function runAction(
         string $actionDefinition,

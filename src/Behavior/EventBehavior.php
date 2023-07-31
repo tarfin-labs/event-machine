@@ -11,8 +11,23 @@ use Tarfinlabs\EventMachine\Definition\SourceType;
 use Spatie\LaravelData\Attributes\WithoutValidation;
 use Tarfinlabs\EventMachine\Exceptions\MachineEventValidationException;
 
+/**
+ * Class EventBehavior.
+ *
+ * Represents the behavior of an event.
+ */
 abstract class EventBehavior extends Data
 {
+    /**
+     * Creates a new instance of the class.
+     *
+     * @param  null|string|Optional  $type The type of the object. Default is null.
+     * @param  null|array|Optional  $payload The payload to be associated with the object. Default is null.
+     * @param  int|Optional  $version The version number of the object. Default is 1.
+     * @param  SourceType  $source The source type of the object. Default is SourceType::EXTERNAL.
+     *
+     * @return void
+     */
     public function __construct(
         public null|string|Optional $type = null,
         public null|array|Optional $payload = null,
@@ -26,12 +41,15 @@ abstract class EventBehavior extends Data
         }
     }
 
+    /**
+     * Gets the type of the object.
+     *
+     * @return string The type of the object.
+     */
     abstract public static function getType(): string;
 
     /**
      * Validates the current event behavior.
-     *
-     * @throws MachineEventValidationException if validation fails.
      */
     public function selfValidate(): void
     {

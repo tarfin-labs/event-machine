@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
-use RuntimeException;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Casts\MachineCast;
 use Tarfinlabs\EventMachine\Actor\MachineActor;
 use Illuminate\Contracts\Database\Eloquent\Castable;
-use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
-use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 /**
  * EventMachine is an abstract base class for creating state machines.
@@ -25,8 +22,6 @@ abstract class EventMachine implements Castable
      * MachineDefinition.
      *
      * @return MachineDefinition The state machine's definition
-     *
-     * @throws RuntimeException if the method is not overridden by a subclass
      */
     abstract public static function build(): MachineDefinition;
 
@@ -36,8 +31,6 @@ abstract class EventMachine implements Castable
      * @param  State|string|null  $state The starting state of the machine (optional).
      *
      * @return MachineActor The instance of the machine actor.
-     *
-     * @throws BehaviorNotFoundException|RestoringStateException
      */
     public static function start(State|string $state = null): MachineActor
     {

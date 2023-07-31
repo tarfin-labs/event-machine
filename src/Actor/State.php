@@ -14,10 +14,28 @@ use Tarfinlabs\EventMachine\Definition\InternalEvent;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 
+/**
+ * Class State.
+ *
+ * Represents a state in an event machine.
+ */
 class State
 {
+    /**
+     * Represents the value of the state.
+     *
+     * @var array<string> The value to be stored.
+     */
     public array $value;
 
+    /**
+     * Constructs a new instance of the class.
+     *
+     * @param  ContextManager  $context The context manager instance.
+     * @param  StateDefinition|null  $currentStateDefinition The current state definition, or null if not set.
+     * @param  EventBehavior|null  $currentEventBehavior The current event behavior, or null if not set.
+     * @param  Collection|null  $history The history collection, or null if not set.
+     */
     public function __construct(
         public ContextManager $context,
         public ?StateDefinition $currentStateDefinition,
@@ -29,11 +47,21 @@ class State
         $this->updateMachineValueFromState();
     }
 
+    /**
+     * Updates the machine value from the current state definition.
+     */
     protected function updateMachineValueFromState(): void
     {
         $this->value = [$this->currentStateDefinition->id];
     }
 
+    /**
+     * Sets the current state definition for the machine.
+     *
+     * @param  StateDefinition  $stateDefinition The state definition to set.
+     *
+     * @return self The current object instance.
+     */
     public function setCurrentStateDefinition(StateDefinition $stateDefinition): self
     {
         $this->currentStateDefinition = $stateDefinition;
@@ -42,6 +70,15 @@ class State
         return $this;
     }
 
+    /**
+     * Sets the internal event behavior for the machine.
+     *
+     * @param  InternalEvent  $type The internal event type.
+     * @param  string|null  $placeholder The optional placeholder parameter.
+     * @param  array|null  $payload The optional payload array.
+     *
+     * @return self The current object instance.
+     */
     public function setInternalEventBehavior(
         InternalEvent $type,
         string $placeholder = null,
@@ -59,6 +96,13 @@ class State
         return $this->setCurrentEventBehavior($eventDefinition);
     }
 
+    /**
+     * Sets the current event behavior for the machine.
+     *
+     * @param  EventBehavior  $currentEventBehavior The event behavior to set.
+     *
+     * @return self The current object instance.
+     */
     public function setCurrentEventBehavior(EventBehavior $currentEventBehavior): self
     {
         $this->currentEventBehavior = $currentEventBehavior;

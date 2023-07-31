@@ -18,14 +18,22 @@ use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 
+/**
+ * Class MachineActor.
+ *
+ * This class represents a machine actor that implements the JsonSerializable and Stringable interfaces.
+ * It is responsible for managing the state of the machine and handling events sent to it.
+ */
 class MachineActor implements JsonSerializable, Stringable
 {
     /** The current state of the machine actor. */
     public ?State $state = null;
 
     /**
-     * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
-     * @throws \Tarfinlabs\EventMachine\Exceptions\RestoringStateException
+     * Constructs a new instance of the class.
+     *
+     * @param  MachineDefinition  $definition The machine definition.
+     * @param  State|string|null  $state The initial state or the root event ID to restore state from. Default is null.
      */
     public function __construct(
         public MachineDefinition $definition,
@@ -45,8 +53,6 @@ class MachineActor implements JsonSerializable, Stringable
      * @param  bool  $shouldPersist Whether to persist the state change.
      *
      * @return State The new state of the object after the transition.
-     *
-     * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
      */
     public function send(
         EventBehavior|array $event,
@@ -63,6 +69,11 @@ class MachineActor implements JsonSerializable, Stringable
         return $this->state;
     }
 
+    /**
+     * Persists the history of machine events to the database.
+     *
+     * @return State|null The updated state object after persisting the events.
+     */
     public function persist(): ?State
     {
         MachineEvent::upsert(
@@ -87,8 +98,6 @@ class MachineActor implements JsonSerializable, Stringable
      * @param  string  $key The root event identifier to restore state from.
      *
      * @return State The restored state of the machine.
-     *
-     * @throws RestoringStateException If machine state is not found.
      */
     public function restoreStateFromRootEventId(string $key): State
     {
@@ -147,9 +156,9 @@ class MachineActor implements JsonSerializable, Stringable
      *
      * @param  MachineEvent  $machineEvent The MachineEvent object representing the event.
      *
-     * @return EventDefinition The restored EventDefinition object.
+     * @return EventBehavior The restored EventBehavior object.
      */
-    protected function restoreCurrentEventBehavior(MachineEvent $machineEvent): EventDefinition
+    protected function restoreCurrentEventBehavior(MachineEvent $machineEvent): EventBehavior
     {
         if ($machineEvent->source === SourceType::INTERNAL) {
             return EventDefinition::from([
@@ -201,8 +210,6 @@ class MachineActor implements JsonSerializable, Stringable
 
     /**
      * Handles validation guards and throws an exception if any of them fail.
-     *
-     * @throws MachineValidationException Thrown if any of the validation guards fail.
      */
     protected function handleValidationGuards(): void
     {

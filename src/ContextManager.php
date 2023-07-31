@@ -119,8 +119,6 @@ class ContextManager extends Data
      *
      * This method validates the current instance by calling the static validate() method on itself.
      * If validation fails, it throws a MachineContextValidationException with the validator object.
-     *
-     * @throws MachineContextValidationException when validation fails.
      */
     public function selfValidate(): void
     {
@@ -142,8 +140,6 @@ class ContextManager extends Data
      * @param  array<mixed>|Arrayable<string, mixed>  $payload The payload to be validated and created from.
      *
      * @return static A new instance of the class created from the payload.
-     *
-     * @throws MachineContextValidationException When validation fails.
      */
     public static function validateAndCreate(array|Arrayable $payload): static
     {
@@ -158,16 +154,36 @@ class ContextManager extends Data
 
     // region Magic Setup
 
+    /**
+     * Set a value in the context by its name.
+     *
+     * @param  string  $name The name of the value to set.
+     * @param  mixed  $value The value to set.
+     */
     public function __set(string $name, $value): void
     {
         $this->set($name, $value);
     }
 
+    /**
+     * Magic method to dynamically retrieve a value from the context by its key.
+     *
+     * @param  string  $name The key of the value to retrieve.
+     *
+     * @return mixed The value associated with the given key, or null if the key does not exist.
+     */
     public function __get(string $name): mixed
     {
         return $this->get($name);
     }
 
+    /**
+     * Checks if a property is set on the object.
+     *
+     * @param  string  $name The name of the property to check.
+     *
+     * @return bool True if the property exists and is set, false otherwise.
+     */
     public function __isset(string $name): bool
     {
         return $this->has($name);
