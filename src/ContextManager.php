@@ -90,8 +90,8 @@ class ContextManager extends Data
     public function has(string $key, string $type = null): bool
     {
         $hasKey = match (true) {
-            get_class($this) === static::class => Arr::has($this->data, $key),
-            is_subclass_of($this, __CLASS__)   => property_exists($this, $key),
+            get_class($this) === self::class   => Arr::has($this->data, $key),
+            is_subclass_of($this, self::class) => property_exists($this, $key),
         };
 
         if (!$hasKey || $type === null) {
