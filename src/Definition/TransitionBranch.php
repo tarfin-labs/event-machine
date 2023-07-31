@@ -8,10 +8,15 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
-use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\NoStateDefinitionFoundException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidGuardedTransitionException;
 
+/**
+ * Class TransitionBranch.
+ *
+ * This class represents a transition branch in an event machine.
+ * It defines the target state, actions, guards, and description for the branch.
+ */
 class TransitionBranch
 {
     // region Public Properties
@@ -38,8 +43,6 @@ class TransitionBranch
 
     /**
      * Constructs a new TransitionBranch instance.
-     *
-     * @throws \Tarfinlabs\EventMachine\Exceptions\InvalidGuardedTransitionException
      */
     public function __construct(
         public null|string|array $transitionBranchConfig,
@@ -101,8 +104,6 @@ class TransitionBranch
 
     /**
      * Initializes the guard/s for this transition.
-     *
-     * @throws \Tarfinlabs\EventMachine\Exceptions\InvalidGuardedTransitionException
      */
     protected function initializeGuards(): void
     {
@@ -181,8 +182,6 @@ class TransitionBranch
      * If there are no actions associated with the transition definition, do nothing.
      *
      * @param  EventBehavior|null  $eventBehavior The event or null if none is provided.
-     *
-     * @throws BehaviorNotFoundException
      */
     public function runActions(
         State $state,
