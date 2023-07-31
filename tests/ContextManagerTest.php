@@ -34,6 +34,20 @@ it('can set and get context manager data', function (): void {
     expect($return2)->toBe($value2);
 });
 
+it('can set and get context manager data for context class', function (): void {
+    $context = TrafficLightsContext::from([
+        'count' => 1,
+    ]);
+
+    $key   = 'count';
+    $value = 6;
+
+    $return = $context->set(key: $key, value: $value);
+
+    expect($context->get(key: $key))->toBe($value);
+    expect($return)->toBe($value);
+});
+
 it('returns null for non-existent keys', function (): void {
     $context = new ContextManager();
 
@@ -46,6 +60,15 @@ it('can check if a key exists', function (): void {
 
     expect($context->has(key: 'key1'))->toBeTrue();
     expect($context->has(key: 'non_existent_key'))->toBeFalse();
+});
+
+it('can check if a key exists for context class', function (): void {
+    $context = TrafficLightsContext::from([
+        'count' => 1,
+    ]);
+
+    expect($context->has(key: 'count'))->toBeTrue();
+    expect($context->has(key: 'asd'))->toBeFalse();
 });
 
 it('can remove a key from context data', function (): void {
