@@ -147,9 +147,9 @@ class MachineActor implements JsonSerializable, Stringable
      *
      * @param  MachineEvent  $machineEvent The MachineEvent object representing the event.
      *
-     * @return EventDefinition The restored EventDefinition object.
+     * @return EventBehavior The restored EventBehavior object.
      */
-    protected function restoreCurrentEventBehavior(MachineEvent $machineEvent): EventDefinition
+    protected function restoreCurrentEventBehavior(MachineEvent $machineEvent): EventBehavior
     {
         if ($machineEvent->source === SourceType::INTERNAL) {
             return EventDefinition::from([
