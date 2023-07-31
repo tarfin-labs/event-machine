@@ -595,7 +595,7 @@ class MachineDefinition
             foreach ($newEvents as $newEvent) {
                 $state->setInternalEventBehavior(
                     type: InternalEvent::EVENT_RAISED,
-                    placeholder: $newEvent['type'],
+                    placeholder: is_array($newEvent) ? $newEvent['type'] : $newEvent->type,
                 );
             }
         }
