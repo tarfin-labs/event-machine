@@ -9,10 +9,24 @@ use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
+/**
+ * The abstract class InvokableBehavior defines the common behavior
+ * for classes that can be invoked directly. It provides methods for
+ * executing the behavior, raising events, checking and validating
+ * required context attributes, and getting the type of the behavior.
+ */
 abstract class InvokableBehavior
 {
+    /** @var array<string> An array containing the required context and the type of the context for the code to execute correctly. */
     public array $requiredContext = [];
 
+    /**
+     * Constructs a new instance of the class.
+     *
+     * @param  Collection|null  $eventQueue The event queue collection. Default is null.
+     *
+     * @return void
+     */
     public function __construct(
         protected ?Collection $eventQueue = null
     ) {
@@ -33,8 +47,6 @@ abstract class InvokableBehavior
      * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior  $eventBehavior The event related to the
      *                                                                        current behavior.
      * @param  array|null  $arguments The arguments to be passed to the behavior.
-     *
-     * @phpstan-ignore-next-line
      */
     abstract public function __invoke(
         ContextManager $context,
@@ -93,8 +105,6 @@ abstract class InvokableBehavior
      * it throws a MissingMachineContextException.
      *
      * @param  ContextManager  $context The context to be validated.
-     *
-     * @throws MissingMachineContextException If any required context property is missing.
      */
     public function validateRequiredContext(ContextManager $context): void
     {
