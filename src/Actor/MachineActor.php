@@ -24,8 +24,10 @@ class MachineActor implements JsonSerializable, Stringable
     public ?State $state = null;
 
     /**
-     * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
-     * @throws \Tarfinlabs\EventMachine\Exceptions\RestoringStateException
+     * Constructs a new instance of the class.
+     *
+     * @param  MachineDefinition  $definition The machine definition.
+     * @param  State|string|null  $state The initial state or the root event ID to restore state from. Default is null.
      */
     public function __construct(
         public MachineDefinition $definition,
@@ -45,8 +47,6 @@ class MachineActor implements JsonSerializable, Stringable
      * @param  bool  $shouldPersist Whether to persist the state change.
      *
      * @return State The new state of the object after the transition.
-     *
-     * @throws \Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException
      */
     public function send(
         EventBehavior|array $event,
@@ -63,6 +63,11 @@ class MachineActor implements JsonSerializable, Stringable
         return $this->state;
     }
 
+    /**
+     * Persists the history of machine events to the database.
+     *
+     * @return State|null The updated state object after persisting the events.
+     */
     public function persist(): ?State
     {
         MachineEvent::upsert(
@@ -87,8 +92,6 @@ class MachineActor implements JsonSerializable, Stringable
      * @param  string  $key The root event identifier to restore state from.
      *
      * @return State The restored state of the machine.
-     *
-     * @throws RestoringStateException If machine state is not found.
      */
     public function restoreStateFromRootEventId(string $key): State
     {
@@ -201,8 +204,6 @@ class MachineActor implements JsonSerializable, Stringable
 
     /**
      * Handles validation guards and throws an exception if any of them fail.
-     *
-     * @throws MachineValidationException Thrown if any of the validation guards fail.
      */
     protected function handleValidationGuards(): void
     {
