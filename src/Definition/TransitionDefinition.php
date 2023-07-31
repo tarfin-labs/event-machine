@@ -9,7 +9,6 @@ use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
-use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 /**
  * Class TransitionDefinition.
@@ -42,8 +41,6 @@ class TransitionDefinition
      * @param  null|string|array  $transitionConfig The configuration for this transition.
      * @param  StateDefinition  $source The source state definition for this transition.
      * @param  string  $event The event triggering this transition.
-     *
-     * @throws \Tarfinlabs\EventMachine\Exceptions\InvalidGuardedTransitionException
      */
     public function __construct(
         public null|string|array $transitionConfig,
@@ -136,9 +133,6 @@ class TransitionDefinition
      *
      * @return TransitionDefinition|null The first eligible transition or
      *         null if no eligible transition is found.
-     *
-     * @throws BehaviorNotFoundException
-     * @throws \Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException
      */
     public function getFirstValidTransitionBranch(
         EventBehavior $eventBehavior,
