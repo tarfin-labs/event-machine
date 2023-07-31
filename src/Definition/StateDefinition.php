@@ -205,6 +205,8 @@ class StateDefinition
      * @param  StateDefinition  $stateDefinition The state definition to process.
      *
      * @return array|null An array of TransitionDefinition objects, keyed by event names.
+     *
+     * @throws \Tarfinlabs\EventMachine\Exceptions\InvalidGuardedTransitionException
      */
     protected function createTransitionDefinitions(StateDefinition $stateDefinition): ?array
     {

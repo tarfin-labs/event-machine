@@ -118,7 +118,6 @@ abstract class InvokableBehavior
     {
         return Str::of(static::class)
             ->classBasename()
-            ->camel()
             ->toString();
     }
 }
