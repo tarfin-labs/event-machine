@@ -68,6 +68,11 @@ class MachineEvent extends Model
         'meta'            => 'array',
     ];
 
+    /**
+     * Create a new instance of MachineEventFactory.
+     *
+     * @return MachineEventFactory The newly created MachineEventFactory instance.
+     */
     protected static function newFactory(): MachineEventFactory
     {
         return MachineEventFactory::new();
