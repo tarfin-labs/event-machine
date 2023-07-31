@@ -14,6 +14,11 @@ use Tarfinlabs\EventMachine\Definition\InternalEvent;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 
+/**
+ * Class State.
+ *
+ * Represents a state in an event machine.
+ */
 class State
 {
     /**
