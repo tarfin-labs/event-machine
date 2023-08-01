@@ -7,73 +7,112 @@ namespace Tarfinlabs\EventMachine\Actor;
 use Stringable;
 use JsonSerializable;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Casts\MachineCast;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Behavior\BehaviorType;
 use Tarfinlabs\EventMachine\Definition\SourceType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Illuminate\Contracts\Database\Eloquent\Castable;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
+use Tarfinlabs\EventMachine\Exceptions\MachineDefinitionNotFoundException;
 
-/**
- * Class MachineActor.
- *
- * This class represents a machine actor that implements the JsonSerializable and Stringable interfaces.
- * It is responsible for managing the state of the machine and handling events sent to it.
- */
-class MachineActor implements JsonSerializable, Stringable
+class Machine implements Castable, JsonSerializable, Stringable
 {
-    /** The current state of the machine actor. */
-    public ?State $state = null;
+    // region Fields
 
-    /**
-     * Constructs a new instance of the class.
-     *
-     * @param  MachineDefinition  $definition The machine definition.
-     * @param  State|string|null  $state The initial state or the root event ID to restore state from. Default is null.
-     */
-    public function __construct(
-        public MachineDefinition $definition,
-        State|string $state = null,
+    public ?MachineDefinition $definition = null;
+    public ?State $state                  = null;
+
+    // endregion
+
+    // region Constructors
+
+    protected function __construct(
+        MachineDefinition $definition,
     ) {
+        $this->definition = $definition;
+    }
+
+    public static function withDefinition(MachineDefinition $definition): self
+    {
+        return new self($definition);
+    }
+
+    // endregion
+
+    // region Machine Definition
+
+    public static function definition(): ?MachineDefinition
+    {
+        return null;
+    }
+
+    // endregion
+
+    // region Event Handling
+
+    public static function create(
+        ?MachineDefinition $definition = null,
+        null|State|string $state = null,
+    ): self {
+        if ($definition === null) {
+            $definition = static::definition();
+
+            if ($definition === null) {
+                throw MachineDefinitionNotFoundException::build();
+            }
+        }
+
+        $machine = new self($definition);
+
+        $machine->state = match (true) {
+            $state === null         => $machine->definition->getInitialState(),
+            $state instanceof State => $state,
+            is_string($state)       => $machine->restoreStateFromRootEventId($state),
+        };
+
+        return $machine;
+    }
+
+    public function start(null|State|string $state = null): self
+    {
         $this->state = match (true) {
             $state === null         => $this->definition->getInitialState(),
             $state instanceof State => $state,
             is_string($state)       => $this->restoreStateFromRootEventId($state),
         };
+
+        return $this;
     }
 
-    /**
-     * Sends an event to the machine actor.
-     *
-     * @param  EventBehavior|array  $event The event to be sent.
-     * @param  bool  $shouldPersist Whether to persist the state change.
-     *
-     * @return State The new state of the object after the transition.
-     */
     public function send(
         EventBehavior|array $event,
         bool $shouldPersist = true,
     ): State {
+        $lastPreviousEventNumber = $this->state !== null
+            ? $this->state->history->last()->sequence_number
+            : 0;
+
         $this->state = $this->definition->transition($event, $this->state);
 
         if ($shouldPersist === true) {
             $this->persist();
         }
 
-        $this->handleValidationGuards();
+        $this->handleValidationGuards($lastPreviousEventNumber);
 
         return $this->state;
     }
 
-    /**
-     * Persists the history of machine events to the database.
-     *
-     * @return State|null The updated state object after persisting the events.
-     */
+    // endregion
+
+    // region Recording State
+
     public function persist(): ?State
     {
         MachineEvent::upsert(
@@ -89,6 +128,8 @@ class MachineActor implements JsonSerializable, Stringable
 
         return $this->state;
     }
+
+    // endregion
 
     // region Restoring State
 
@@ -188,6 +229,51 @@ class MachineActor implements JsonSerializable, Stringable
 
     // endregion
 
+    // region Protected Methods
+
+    /**
+     * Handles validation guards and throws an exception if any of them fail.
+     */
+    protected function handleValidationGuards(int $lastPreviousEventNumber): void
+    {
+        $machineId = $this->state->currentStateDefinition->machine->id;
+
+        $failedGuardEvents = $this
+            ->state
+            ->history
+            ->filter(fn (MachineEvent $machineEvent) => $machineEvent->sequence_number > $lastPreviousEventNumber)
+            ->filter(fn (MachineEvent $machineEvent) => preg_match("/{$machineId}\.guard\..*\.fail/", $machineEvent->type));
+
+        if ($failedGuardEvents->isNotEmpty()) {
+            $errorsWithMessage = [];
+
+            foreach ($failedGuardEvents as $failedGuardEvent) {
+                $failedGuardType  = explode('.', $failedGuardEvent->type)[2];
+                $failedGuardClass = $this->definition->behavior[BehaviorType::Guard->value][$failedGuardType];
+
+                if (is_subclass_of($failedGuardClass, ValidationGuardBehavior::class)) {
+                    $errorsWithMessage[$failedGuardEvent->type] = $failedGuardEvent->payload[$failedGuardEvent->type];
+                }
+            }
+
+            throw MachineValidationException::withMessages($errorsWithMessage);
+        }
+    }
+
+    // endregion
+
+    // region Inteface Implementations
+
+    /**
+     * Get the name of the caster class to use when casting from / to this cast target.
+     *
+     * @param  array<mixed>  $arguments
+     */
+    public static function castUsing(array $arguments): string
+    {
+        return MachineCast::class;
+    }
+
     /**
      * Returns the JSON serialized representation of the object.
      *
@@ -208,29 +294,5 @@ class MachineActor implements JsonSerializable, Stringable
         return $this->state->history->first()->root_event_id ?? '';
     }
 
-    /**
-     * Handles validation guards and throws an exception if any of them fail.
-     */
-    protected function handleValidationGuards(): void
-    {
-        $failedGuardEvents = $this
-            ->state
-            ->history
-            ->filter(fn ($item) => preg_match('/machine\.guard\..*\.fail/', $item['type']));
-
-        if ($failedGuardEvents->isNotEmpty()) {
-            $errorsWithMessage = [];
-
-            foreach ($failedGuardEvents as $failedGuardEvent) {
-                $failedGuardType  = explode('.', $failedGuardEvent->type)[2];
-                $failedGuardClass = $this->definition->behavior[BehaviorType::Guard->value][$failedGuardType];
-
-                if (is_subclass_of($failedGuardClass, ValidationGuardBehavior::class)) {
-                    $errorsWithMessage[$failedGuardEvent->type] = $failedGuardEvent->payload[$failedGuardEvent->type];
-                }
-            }
-
-            throw MachineValidationException::withMessages($errorsWithMessage);
-        }
-    }
+    // endregion
 }
