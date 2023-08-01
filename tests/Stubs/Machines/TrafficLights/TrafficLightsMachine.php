@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights;
 
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Definition\EventMachine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Guards\IsEvenGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\AddValueEvent;
@@ -23,9 +23,9 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\AddAnother
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\AddAnotherValueAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\DoNothingInsideClassAction;
 
-class TrafficLightsMachine extends EventMachine
+class TrafficLightsMachine extends Machine
 {
-    public static function build(): MachineDefinition
+    public static function definition(): MachineDefinition
     {
         return MachineDefinition::define(
             config: [

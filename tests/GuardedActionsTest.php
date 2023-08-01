@@ -245,12 +245,14 @@ it('should prevent infinite loops when no guards evaluate to true for @always tr
 });
 
 it('can throw MachineValidationException and persist history', function (): void {
-    $machineActor = TrafficLightsMachine::start();
+    $machine = TrafficLightsMachine::create();
 
-    expect(fn () => $machineActor->send(event: ['type' => 'MUT']))
+    $machine->send(event: ['type' => 'INC']);
+
+    expect(fn () => $machine->send(event: ['type' => 'MUT']))
         ->toThrow(MachineValidationException::class, 'Count is not even');
 
-    expect(['id' => $machineActor->state->history->last()->id])
+    expect(['id' => $machine->state->history->last()->id])
         ->toBeInDatabase(table: MachineEvent::class);
 });
 

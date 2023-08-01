@@ -8,8 +8,8 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsCont
 it('can be computed context methods defined', function (): void {
     $context = new TrafficLightsContext(Optional::create(), Optional::create());
 
-    expect($context->count)->toBe(1);
-    expect($context->isCountEven())->toBeFalse();
+    expect($context->count)->toBe(0);
+    expect($context->isCountEven())->toBeTrue();
 
     $context->count = 2;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\Actor\MachineActor;
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinitionType;
 use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
@@ -92,7 +92,7 @@ test('a final state definition can not have transitions', function (): void {
 );
 
 test('an initial state of type final triggers machine finish event', function (): void {
-    $machine = new MachineActor(MachineDefinition::define(config: [
+    $machine = Machine::create(definition: MachineDefinition::define(config: [
         'id'      => 'dummy',
         'initial' => 'yellow',
         'states'  => [
@@ -113,7 +113,7 @@ test('an initial state of type final triggers machine finish event', function ()
 });
 
 test('a state of type final triggers machine finish event', function (): void {
-    $machine = new MachineActor(MachineDefinition::define(config: [
+    $machine = Machine::withDefinition(MachineDefinition::define(config: [
         'id'      => 'dummy',
         'initial' => 'yellow',
         'states'  => [

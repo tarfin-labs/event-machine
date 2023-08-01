@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Casts;
 
 use Illuminate\Database\Eloquent\Model;
-use Tarfinlabs\EventMachine\Actor\MachineActor;
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Traits\HasMachines;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
@@ -30,7 +30,7 @@ class MachineCast implements CastsAttributes
         string $key,
         mixed $value,
         array $attributes
-    ): ?MachineActor {
+    ): ?Machine {
         if (
             in_array(HasMachines::class, class_uses($model), true) &&
             $model->shouldInitializeMachine() === false
@@ -38,14 +38,14 @@ class MachineCast implements CastsAttributes
             return null;
         }
 
-        /** @var MachineActor $machineClass */
+        /** @var \Tarfinlabs\EventMachine\Actor\Machine $machineClass */
         [$machineClass, $contextKey] = explode(':', $model->getCasts()[$key]);
 
-        $machineActor = $machineClass::start($value);
+        $machine = $machineClass::create(state: $value);
 
-        $machineActor->state->context->set($contextKey, $model);
+        $machine->state->context->set($contextKey, $model);
 
-        return $machineActor;
+        return $machine;
     }
 
     /**

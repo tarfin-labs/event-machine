@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines;
 
-use Tarfinlabs\EventMachine\Definition\EventMachine;
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
-class AbcMachine extends EventMachine
+class AbcMachine extends Machine
 {
-    public static function build(): MachineDefinition
+    public static function definition(): MachineDefinition
     {
         return MachineDefinition::define(config: [
             'initial' => 'stateB',
