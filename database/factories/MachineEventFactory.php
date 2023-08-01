@@ -9,6 +9,11 @@ use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
+ * Class MachineEventFactory.
+ *
+ * The MachineEventFactory class is responsible for generating machine event data for testing purposes.
+ * It extends the Factory class and uses the MachineEvent model.
+ *
  * @template TModel of MachineEvent
  */
 class MachineEventFactory extends Factory
