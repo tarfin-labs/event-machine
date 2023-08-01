@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsTimerValidValidationGuard;
 
-test('???', function (): void {
+test('machine validation exception from a past event is not rethrown during a subsequent successful transition', function (): void {
     $machine = Machine::withDefinition(MachineDefinition::define(config: [
         'initial' => 'green',
         'states'  => [
@@ -27,7 +28,7 @@ test('???', function (): void {
         'payload' => [
             'value' => 1,
         ],
-    ]))->toThrowValidationException();
+    ]))->toThrow(MachineValidationException::class);
 
     expect($machine->state->history->pluck('type')->toArray())->toBe([
         'machine.start',
@@ -41,12 +42,12 @@ test('???', function (): void {
         'machine.transition.green.TIMER.fail',
     ]);
 
-    $machine->send([
+    expect(fn () => $machine->send([
         'type'    => 'TIMER',
         'payload' => [
             'value' => 3,
         ],
-    ]);
+    ]))->not()->toThrow(MachineValidationException::class);
 
     expect($machine->state->history->pluck('type')->toArray())->toBe([
         'machine.start',
