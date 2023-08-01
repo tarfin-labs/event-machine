@@ -218,7 +218,7 @@ class MachineActor implements JsonSerializable, Stringable
         $failedGuardEvents = $this
             ->state
             ->history
-            ->filter(fn ($item) => preg_match("/{$machineId}\.guard\..*\.fail/", $item['type']));
+            ->filter(fn (MachineEvent $machineEvent) => preg_match("/{$machineId}\.guard\..*\.fail/", $machineEvent->type));
 
         if ($failedGuardEvents->isNotEmpty()) {
             $errorsWithMessage = [];
