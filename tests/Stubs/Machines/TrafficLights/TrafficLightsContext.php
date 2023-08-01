@@ -24,7 +24,7 @@ class TrafficLightsContext extends ContextManager
         parent::__construct();
 
         if ($this->count instanceof Optional) {
-            $this->count = 1;
+            $this->count = 0;
         }
     }
 

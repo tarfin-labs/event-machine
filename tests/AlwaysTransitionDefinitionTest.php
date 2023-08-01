@@ -51,9 +51,9 @@ test('always transitions with initial jump', function (): void {
 });
 
 test('always transitions with initial machine jump', function (): void {
-    $machineActor = AbcMachine::start();
+    $machine = AbcMachine::create();
 
-    expect($machineActor->state->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'stateC']);
+    expect($machine->state->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'stateC']);
 });
 
 test('always guarded transitions', function (): void {

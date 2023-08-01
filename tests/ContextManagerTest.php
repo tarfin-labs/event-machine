@@ -124,7 +124,7 @@ it('can handle edge cases with empty keys and values', function (): void {
 });
 
 test('TrafficLightsMachine transitions between states using EventMachine', function (): void {
-    $machineDefinition = TrafficLightsMachine::build();
+    $machineDefinition = TrafficLightsMachine::definition();
 
     $machineDefinition->transition(event: [
         'type'    => 'SUB_VALUE',
@@ -137,7 +137,7 @@ test('TrafficLightsContext throws MachineContextValidationException for invalid 
 })->throws(MachineContextValidationException::class);
 
 it('has magic methods', function (): void {
-    $machine = AbcMachine::start();
+    $machine = AbcMachine::create();
 
     $machine->state->context->set('key', 'value1');
     expect($machine->state->context->key)->toBe('value1');
@@ -150,7 +150,7 @@ it('has magic methods', function (): void {
 });
 
 it('can check existence by its type', function (): void {
-    $machine = AbcMachine::start();
+    $machine = AbcMachine::create();
 
     $machine->state->context->set('stringKey', 'stringValue');
     expect($machine->state->context->has(key: 'stringKey', type: 'string'))->toBe(true);

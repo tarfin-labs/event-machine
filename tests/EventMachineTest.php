@@ -13,40 +13,39 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\AddAnother
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachineCompact;
 
 test('TrafficLightsMachine definition returns a MachineDefinition instance', function (): void {
-    $machine = TrafficLightsMachine::build();
+    $machineDefinition = TrafficLightsMachine::definition();
 
-    expect($machine)->toBeInstanceOf(MachineDefinition::class);
+    expect($machineDefinition)->toBeInstanceOf(MachineDefinition::class);
 });
 
-test('TrafficLightsMachine transitions between states using EventMachine', function (): void {
-    $machine = TrafficLightsMachine::build();
+test('TrafficLightsMachine transitions between states using Machine', function (): void {
+    $machine = TrafficLightsMachine::create();
 
-    $newState = $machine->transition(event: ['type' => 'MUT']);
+    $newState = $machine->send(event: ['type' => 'MUT']);
 
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
-        ->and($newState->context->count)->toBe(1);
+        ->and($newState->context->count)->toBe(0);
 
-    $newState = $machine->transition(event: ['type' => 'INC'], state: $newState);
+    $newState = $machine->send(event: ['type' => 'INC']);
+    $newState = $machine->send(event: ['type' => 'INC']);
 
     expect($newState->context->count)->toBe(2);
 
-    $newState = $machine->transition(event: [
-        'type' => 'MUT',
-    ], state: $newState);
+    $newState = $machine->send(event: ['type' => 'MUT']);
 
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
         ->and($newState->context->count)->toBe(4);
 
-    $newState = $machine->transition(event: [
+    $newState = $machine->send(event: [
         'type'    => 'ADD',
         'payload' => [
             'value' => 16,
         ],
-    ], state: $newState);
+    ]);
 
     expect($newState)
         ->toBeInstanceOf(State::class)
@@ -55,44 +54,44 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
 });
 
 test('TrafficLightsMachine transitions between states using an IncreaseEvent implementing EventBehavior', function (): void {
-    $machine = TrafficLightsMachine::build();
+    $machineDefinition = TrafficLightsMachine::definition();
 
     $increaseEvent = new IncreaseEvent();
     expect($increaseEvent)->toBeInstanceOf(EventBehavior::class);
 
-    $newState = $machine->transition(event: $increaseEvent);
-    expect($newState->context->count)->toBe(2);
+    $newState = $machineDefinition->transition(event: $increaseEvent);
+    expect($newState->context->count)->toBe(1);
 });
 
 test('TrafficLightsMachine transitions between states using an AddAnotherValueEvent implementing EventBehavior', function (): void {
-    $machine = TrafficLightsMachine::build();
+    $machineDefinition = TrafficLightsMachine::definition();
 
     $addAnotherValueEvent = new AddAnotherValueEvent(41);
     expect($addAnotherValueEvent)->toBeInstanceOf(EventBehavior::class);
 
-    $newState = $machine->transition(event: $addAnotherValueEvent);
-    expect($newState->context->count)->toBe(42);
+    $newState = $machineDefinition->transition(event: $addAnotherValueEvent);
+    expect($newState->context->count)->toBe(41);
 });
 
 test('TrafficLightsMachineCompact can be build', function (): void {
-    $machine = TrafficLightsMachineCompact::build();
+    $machineDefinition = TrafficLightsMachineCompact::definition();
 
-    expect($machine)->toBeInstanceOf(MachineDefinition::class);
+    expect($machineDefinition)->toBeInstanceOf(MachineDefinition::class);
 });
 
 test('TrafficLightsMachine can be started', function (): void {
-    $machineActor = TrafficLightsMachine::start();
+    $machine = TrafficLightsMachine::create();
 
-    $state = $machineActor->send(['type' => 'INC']);
+    $state = $machine->send(['type' => 'INC']);
 
     expect($state)
         ->toBeInstanceOf(State::class)
         ->and($state->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
-        ->and($state->context->count)->toBe(2);
+        ->and($state->context->count)->toBe(1);
 
     expect([
         'machine_value' => json_encode($state->value, JSON_THROW_ON_ERROR),
-        'type'          => InternalEvent::STATE_ENTER->generateInternalEventName($machineActor->definition->id, $state->currentStateDefinition->key),
+        'type'          => InternalEvent::STATE_ENTER->generateInternalEventName($machine->definition->id, $state->currentStateDefinition->key),
     ])
         ->toBeInDatabase(MachineEvent::class);
 });

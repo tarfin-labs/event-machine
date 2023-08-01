@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Tarfinlabs\EventMachine\Actor\MachineActor;
 use Tarfinlabs\EventMachine\Traits\HasMachines;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
@@ -15,8 +14,8 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMach
  * Class ModelA.
  *
  * @property string $value
- * @property MachineActor $abc_mre
- * @property MachineActor $traffic_mre
+ * @property \Tarfinlabs\EventMachine\Actor\Machine $abc_mre
+ * @property \Tarfinlabs\EventMachine\Actor\Machine $traffic_mre
  */
 class ModelA extends Model
 {

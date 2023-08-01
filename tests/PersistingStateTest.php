@@ -10,15 +10,15 @@ use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 it('can persist the machine state', function (): void {
-    $machineActor = TrafficLightsMachine::start();
+    $machine = TrafficLightsMachine::create();
 
-    $machineActor->send(['type' => 'INC'], shouldPersist: false);
-    $machineActor->send(['type' => 'INC'], shouldPersist: false);
-    $machineActor->send(['type' => 'INC'], shouldPersist: false);
+    $machine->send(['type' => 'INC'], shouldPersist: false);
+    $machine->send(['type' => 'INC'], shouldPersist: false);
+    $machine->send(['type' => 'INC'], shouldPersist: false);
 
-    $state = $machineActor->persist();
+    $state = $machine->persist();
 
-    $eventIds = $machineActor->state->history
+    $eventIds = $machine->state->history
         ->pluck('id')
         ->map(fn ($key) => ['id' => $key])
         ->toArray();
@@ -28,19 +28,19 @@ it('can persist the machine state', function (): void {
 });
 
 it('can restore the persisted state', function (): void {
-    $machineActor = TrafficLightsMachine::start();
+    $machine = TrafficLightsMachine::create();
 
-    $machineActor->send(['type' => 'INC'], shouldPersist: false);
-    $machineActor->send(['type' => 'INC'], shouldPersist: false);
-    $machineActor->send(['type' => 'INC'], shouldPersist: false);
+    $machine->send(['type' => 'INC'], shouldPersist: false);
+    $machine->send(['type' => 'INC'], shouldPersist: false);
+    $machine->send(['type' => 'INC'], shouldPersist: false);
 
-    $machineActor->persist();
+    $machine->persist();
 
-    $state = $machineActor->state;
+    $state = $machine->state;
 
-    $rootEventId = $machineActor->state->history->first()->root_event_id;
+    $rootEventId = $machine->state->history->first()->root_event_id;
 
-    $restoredMachineState = TrafficLightsMachine::start($rootEventId)->state;
+    $restoredMachineState = TrafficLightsMachine::create(state: $rootEventId)->state;
 
     expect($restoredMachineState->value)->toEqual($state->value);
     expect($restoredMachineState->context->toArray())->toEqual($state->context->toArray());
@@ -63,11 +63,11 @@ it('can restore the persisted state', function (): void {
 });
 
 it('can auto persist after an event', function (): void {
-    $machineActor = TrafficLightsMachine::start();
+    $machine = TrafficLightsMachine::create();
 
-    $machineActor->send(['type' => 'INC'], shouldPersist: true);
+    $machine->send(['type' => 'INC'], shouldPersist: true);
 
-    $eventIds = $machineActor->state->history
+    $eventIds = $machine->state->history
         ->pluck('id')
         ->map(fn ($key) => ['id' => $key])
         ->toArray();

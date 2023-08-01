@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Actor\MachineActor;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
@@ -46,8 +46,7 @@ it('should run entry actions when transitioning to a new state', function (): vo
 });
 
 it('should run entry actions when transitioning to a substate', function (): void {
-
-    $machine = MachineDefinition::define(
+    $machine = Machine::withDefinition(MachineDefinition::define(
         config: [
             'initial' => 'inactive',
             'context' => [
@@ -76,11 +75,9 @@ it('should run entry actions when transitioning to a substate', function (): voi
                 },
             ],
         ],
-    );
+    ));
 
-    $actor = new MachineActor(definition: $machine);
-
-    $newState = $actor->send(event: [
+    $newState = $machine->send(event: [
         'type' => 'ACTIVATE',
     ]);
 
@@ -90,5 +87,4 @@ it('should run entry actions when transitioning to a substate', function (): voi
         ->and($newState->context->data)->toBe(['count' => 1])
         ->and(['machine_value' => json_encode([$newState->currentStateDefinition->id], JSON_THROW_ON_ERROR)])
         ->toBeInDatabase(MachineEvent::class);
-
 });
