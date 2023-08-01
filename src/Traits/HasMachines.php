@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Traits;
 
 use Illuminate\Database\Eloquent\Model;
-use Tarfinlabs\EventMachine\Definition\EventMachine;
+use Tarfinlabs\EventMachine\Actor\Machine;
 
 /**
  * Trait HasMachines.
@@ -25,7 +25,7 @@ trait HasMachines
             foreach ($model->getCasts() as $attribute => $cast) {
                 if (
                     !isset($model->attributes[$attribute]) &&
-                    is_subclass_of(explode(':', $cast)[0], EventMachine::class) &&
+                    is_subclass_of(explode(':', $cast)[0], Machine::class) &&
                     $model->shouldInitializeMachine()
                 ) {
                     $machine = $model->$attribute;
