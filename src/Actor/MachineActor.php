@@ -213,10 +213,12 @@ class MachineActor implements JsonSerializable, Stringable
      */
     protected function handleValidationGuards(): void
     {
+        $machineId = $this->state->currentStateDefinition->machine->id;
+
         $failedGuardEvents = $this
             ->state
             ->history
-            ->filter(fn ($item) => preg_match('/machine\.guard\..*\.fail/', $item['type']));
+            ->filter(fn ($item) => preg_match("/{$machineId}\.guard\..*\.fail/", $item['type']));
 
         if ($failedGuardEvents->isNotEmpty()) {
             $errorsWithMessage = [];
