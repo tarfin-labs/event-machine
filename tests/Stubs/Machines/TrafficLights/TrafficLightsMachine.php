@@ -30,6 +30,7 @@ class TrafficLightsMachine extends Machine
         return MachineDefinition::define(
             config: [
                 'initial' => 'active',
+                'context' => TrafficLightsContext::class,
                 'states'  => [
                     'active' => [
                         'on' => [
@@ -52,8 +53,7 @@ class TrafficLightsMachine extends Machine
                 ],
             ],
             behavior: [
-                'context' => TrafficLightsContext::class,
-                'events'  => [
+                'events' => [
                     'MUT' => MultiplyEvent::class,
                     'DEX' => DecreaseEvent::class,
                 ],
