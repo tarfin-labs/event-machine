@@ -14,7 +14,7 @@ class IsEvenGuard extends ValidationGuardBehavior
     public ?string $errorMessage = 'Count is not even';
 
     public function __invoke(
-        TrafficLightsContext|ContextManager $context,
+        ContextManager|TrafficLightsContext $context,
         EventBehavior $eventBehavior,
         array $arguments = null
     ): bool {

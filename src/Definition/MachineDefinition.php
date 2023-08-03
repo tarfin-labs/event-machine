@@ -85,6 +85,8 @@ class MachineDefinition
         $this->eventQueue = new Collection();
 
         $this->initialStateDefinition = $this->root->initialStateDefinition;
+
+        $this->setupContextManager();
     }
 
     // endregion
@@ -283,6 +285,21 @@ class MachineDefinition
         $contextConfig = $this->config['context'] ?? [];
 
         return ContextManager::validateAndCreate(['data' => $contextConfig]);
+    }
+
+    /**
+     * Set up the context manager.
+     *
+     * If a context manager class is specified in the configuration,
+     * assign it to the `$behavior['context']` property and clear the `$config['context']` array.
+     */
+    public function setupContextManager(): void
+    {
+        if (isset($this->config['context']) && is_subclass_of($this->config['context'], ContextManager::class)) {
+            $this->behavior['context'] = $this->config['context'];
+
+            $this->config['context'] = [];
+        }
     }
 
     /**
