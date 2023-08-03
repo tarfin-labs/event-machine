@@ -332,18 +332,19 @@ class Machine implements Castable, JsonSerializable, Stringable
             ->state
             ->history
             ->filter(fn (MachineEvent $machineEvent) => $machineEvent->sequence_number > $lastPreviousEventNumber)
-            ->filter(fn (MachineEvent $machineEvent) => preg_match("/{$machineId}\.guard\..*\.fail/", $machineEvent->type));
+            ->filter(fn (MachineEvent $machineEvent) => preg_match("/{$machineId}\.guard\..*\.fail/", $machineEvent->type))
+            ->filter(function (MachineEvent $machineEvent) {
+                $failedGuardType  = explode('.', $machineEvent->type)[2];
+                $failedGuardClass = $this->definition->behavior[BehaviorType::Guard->value][$failedGuardType];
+
+                return is_subclass_of($failedGuardClass, ValidationGuardBehavior::class);
+            });
 
         if ($failedGuardEvents->isNotEmpty()) {
             $errorsWithMessage = [];
 
             foreach ($failedGuardEvents as $failedGuardEvent) {
-                $failedGuardType  = explode('.', $failedGuardEvent->type)[2];
-                $failedGuardClass = $this->definition->behavior[BehaviorType::Guard->value][$failedGuardType];
-
-                if (is_subclass_of($failedGuardClass, ValidationGuardBehavior::class)) {
-                    $errorsWithMessage[$failedGuardEvent->type] = $failedGuardEvent->payload[$failedGuardEvent->type];
-                }
+                $errorsWithMessage[$failedGuardEvent->type] = $failedGuardEvent->payload[$failedGuardEvent->type];
             }
 
             throw MachineValidationException::withMessages($errorsWithMessage);
