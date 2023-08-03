@@ -7,11 +7,12 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 
 class DecrementAction extends ActionBehavior
 {
     public function __invoke(
-        ContextManager $context,
+        ContextManager|TrafficLightsContext $context,
         EventBehavior $eventBehavior,
         array $arguments = null
     ): void {
