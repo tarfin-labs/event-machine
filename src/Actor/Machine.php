@@ -219,7 +219,7 @@ class Machine implements Castable, JsonSerializable, Stringable
             ->get();
 
         if ($machineEvents->isEmpty()) {
-            throw RestoringStateException::build('Machine state not found.');
+            throw RestoringStateException::build('Machine state is not found.');
         }
 
         $lastMachineEvent = $machineEvents->last();
