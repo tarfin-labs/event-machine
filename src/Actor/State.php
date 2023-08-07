@@ -7,10 +7,10 @@ namespace Tarfinlabs\EventMachine\Actor;
 use Symfony\Component\Uid\Ulid;
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Definition\SourceType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Definition\InternalEvent;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 

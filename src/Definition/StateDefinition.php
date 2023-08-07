@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Definition;
 
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
+use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 
