@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Definition\TransitionProperty;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 
 test('always transitions', function (): void {
