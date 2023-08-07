@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Actor;
 
-use Symfony\Component\Uid\Ulid;
 use Illuminate\Support\Collection;
-use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Enums\InternalEvent;
-use Tarfinlabs\EventMachine\Models\MachineEvent;
-use Tarfinlabs\EventMachine\Definition\SourceType;
+use Symfony\Component\Uid\Ulid;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
+use Tarfinlabs\EventMachine\Enums\InternalEvent;
+use Tarfinlabs\EventMachine\Enums\SourceType;
+use Tarfinlabs\EventMachine\Models\MachineEvent;
 
 /**
  * Class State.

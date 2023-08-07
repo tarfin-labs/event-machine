@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tarfinlabs\EventMachine\Definition;
+namespace Tarfinlabs\EventMachine\Enums;
 
 /**
  * Enum class representing the possible event source types.

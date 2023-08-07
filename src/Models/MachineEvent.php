@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Models;
 
-use Illuminate\Support\Carbon;
-use Illuminate\Database\Eloquent\Model;
-use Tarfinlabs\EventMachine\Definition\SourceType;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Tarfinlabs\EventMachine\Database\Factories\MachineEventFactory;
+use Tarfinlabs\EventMachine\Enums\SourceType;
 
 /**
  * Class MachineEvent.

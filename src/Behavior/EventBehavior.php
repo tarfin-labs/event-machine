@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Behavior;
 
+use Illuminate\Validation\ValidationException;
+use Spatie\LaravelData\Attributes\WithoutValidation;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Optional;
-use Illuminate\Validation\ValidationException;
-use Tarfinlabs\EventMachine\Definition\SourceType;
-use Spatie\LaravelData\Attributes\WithoutValidation;
+use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Exceptions\MachineEventValidationException;
 
 /**
