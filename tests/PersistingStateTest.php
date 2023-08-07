@@ -24,7 +24,10 @@ it('can persist the machine state', function (): void {
         ->toArray();
 
     expect($state)->toBeInstanceOf(State::class);
-    expect($eventIds)->each->toBeInDatabase(MachineEvent::class);
+
+    foreach ($eventIds as $eventId) {
+        $this->assertDatabaseHas(MachineEvent::class, $eventId);
+    }
 });
 
 it('can restore the persisted state', function (): void {
@@ -72,5 +75,7 @@ it('can auto persist after an event', function (): void {
         ->map(fn ($key) => ['id' => $key])
         ->toArray();
 
-    expect($eventIds)->each->toBeInDatabase(MachineEvent::class);
+    foreach ($eventIds as $eventId) {
+        $this->assertDatabaseHas(MachineEvent::class, $eventId);
+    }
 });

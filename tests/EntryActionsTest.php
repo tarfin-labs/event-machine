@@ -84,7 +84,9 @@ it('should run entry actions when transitioning to a substate', function (): voi
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active.idle'])
-        ->and($newState->context->data)->toBe(['count' => 1])
-        ->and(['machine_value' => json_encode([$newState->currentStateDefinition->id], JSON_THROW_ON_ERROR)])
-        ->toBeInDatabase(MachineEvent::class);
+        ->and($newState->context->data)->toBe(['count' => 1]);
+
+    $this->assertDatabaseHas(MachineEvent::class, [
+        'machine_value' => json_encode([$newState->currentStateDefinition->id], JSON_THROW_ON_ERROR),
+    ]);
 });

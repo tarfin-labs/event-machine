@@ -252,8 +252,9 @@ it('can throw MachineValidationException and persist history', function (): void
     expect(fn () => $machine->send(event: ['type' => 'MUT']))
         ->toThrow(MachineValidationException::class, 'Count is not even');
 
-    expect(['id' => $machine->state->history->last()->id])
-        ->toBeInDatabase(table: MachineEvent::class);
+    $this->assertDatabaseHas(MachineEvent::class, [
+        'id' => $machine->state->history->last()->id,
+    ]);
 });
 
 it('throws an exception when a validation guard is used inside a guarded transition', function (): void {

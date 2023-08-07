@@ -22,12 +22,11 @@ it('can persist the machine state', function (): void {
     expect($modelA->abc_mre)->toBeInstanceOf(Machine::class);
     expect($modelA->traffic_mre)->toBeInstanceOf(Machine::class);
 
-    expect(['abc_mre' => $modelA->abc_mre->state->history->first()->root_event_id])
-        ->toBeInDatabase(ModelA::class);
-    //    $this->assertDatabaseHas(ModelA::class, [
-    //        'abc_mre' => $modelA->abc_mre->state->history->first()->root_event_id,
-    //    ]);
+    $this->assertDatabaseHas(ModelA::class, [
+        'abc_mre' => $modelA->abc_mre->state->history->first()->root_event_id,
+    ]);
 
-    expect(['traffic_mre' => $modelA->traffic_mre->state->history->first()->root_event_id])
-        ->toBeInDatabase(ModelA::class);
+    $this->assertDatabaseHas(ModelA::class, [
+        'traffic_mre' => $modelA->traffic_mre->state->history->first()->root_event_id,
+    ]);
 });

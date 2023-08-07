@@ -89,9 +89,8 @@ test('TrafficLightsMachine can be started', function (): void {
         ->and($state->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
         ->and($state->context->count)->toBe(1);
 
-    expect([
+    $this->assertDatabaseHas(MachineEvent::class, [
         'machine_value' => json_encode($state->value, JSON_THROW_ON_ERROR),
         'type'          => InternalEvent::STATE_ENTER->generateInternalEventName($machine->definition->id, $state->currentStateDefinition->key),
-    ])
-        ->toBeInDatabase(MachineEvent::class);
+    ]);
 });
