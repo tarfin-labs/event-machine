@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Actor;
 
-use Illuminate\Contracts\Database\Eloquent\Castable;
-use JsonSerializable;
 use Stringable;
-use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
-use Tarfinlabs\EventMachine\Casts\MachineCast;
+use JsonSerializable;
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Definition\EventDefinition;
-use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Definition\StateDefinition;
-use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\SourceType;
-use Tarfinlabs\EventMachine\Exceptions\MachineDefinitionNotFoundException;
-use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
-use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
+use Tarfinlabs\EventMachine\Casts\MachineCast;
+use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Illuminate\Contracts\Database\Eloquent\Castable;
+use Tarfinlabs\EventMachine\Definition\EventDefinition;
+use Tarfinlabs\EventMachine\Definition\StateDefinition;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
+use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
+use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
+use Tarfinlabs\EventMachine\Exceptions\MachineDefinitionNotFoundException;
 
 class Machine implements Castable, JsonSerializable, Stringable
 {

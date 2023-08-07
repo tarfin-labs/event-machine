@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Enums;
 
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
-use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
 /**
  * Class BehaviorType.
