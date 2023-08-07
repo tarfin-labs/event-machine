@@ -64,14 +64,16 @@ class Machine implements Castable, JsonSerializable, Stringable
     /**
      * Retrieves the machine definition.
      *
-     * This method returns the machine's definition. By default, it returns `null`,
-     * but subclasses may override this method to provide a specific definition.
+     * This method retrieves the machine definition. If the definition is not
+     * found, it throws a `MachineDefinitionNotFoundException`.
      *
-     * @return ?MachineDefinition The machine's definition or `null`.
+     * @return MachineDefinition|null The machine definition, or null if not found.
+     *
+     * @throws MachineDefinitionNotFoundException If the machine definition is not found.
      */
     public static function definition(): ?MachineDefinition
     {
-        return null;
+        throw MachineDefinitionNotFoundException::build();
     }
 
     // endregion
@@ -94,15 +96,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         MachineDefinition $definition = null,
         State|string $state = null,
     ): self {
-        if ($definition === null) {
-            $definition = static::definition();
-
-            if ($definition === null) {
-                throw MachineDefinitionNotFoundException::build();
-            }
-        }
-
-        $machine = new self($definition);
+        $machine = new self(definition: $definition ?? static::definition());
 
         $machine->start($state);
 
