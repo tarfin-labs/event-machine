@@ -104,11 +104,7 @@ class Machine implements Castable, JsonSerializable, Stringable
 
         $machine = new self($definition);
 
-        $machine->state = match (true) {
-            $state === null         => $machine->definition->getInitialState(),
-            $state instanceof State => $state,
-            is_string($state)       => $machine->restoreStateFromRootEventId($state),
-        };
+        $machine->start($state);
 
         return $machine;
     }
