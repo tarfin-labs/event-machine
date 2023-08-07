@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 
 class StateDefinition

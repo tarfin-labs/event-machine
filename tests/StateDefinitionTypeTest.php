@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Definition\StateDefinitionType;
 use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 
 test('a state definition can be atomic', function (): void {

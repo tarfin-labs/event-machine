@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tarfinlabs\EventMachine\Definition;
+namespace Tarfinlabs\EventMachine\Enums;
 
 /**
  * Class StateDefinitionType.
