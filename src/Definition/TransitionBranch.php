@@ -7,9 +7,7 @@ namespace Tarfinlabs\EventMachine\Definition;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\NoStateDefinitionFoundException;
-use Tarfinlabs\EventMachine\Exceptions\InvalidGuardedTransitionException;
 
 /**
  * Class TransitionBranch.
@@ -128,13 +126,6 @@ class TransitionBranch
 
                 if (!class_exists($guard)) {
                     $guard = $this->transitionDefinition->source->machine->behavior[BehaviorType::Guard->value][$guard] ?? null;
-                }
-
-                if (is_subclass_of($guard, ValidationGuardBehavior::class)) {
-                    throw InvalidGuardedTransitionException::build(
-                        event: $this->transitionDefinition->event,
-                        stateDefinition: $this->transitionDefinition->source->id,
-                    );
                 }
             }
         }
