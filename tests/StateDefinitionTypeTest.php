@@ -92,23 +92,23 @@ test('a final state definition can not have transitions', function (): void {
 );
 
 test('an initial state of type final triggers machine finish event', function (): void {
-    $machine = Machine::create(definition: MachineDefinition::define(config: [
-        'id'      => 'dummy',
+    $machine = Machine::create(definition: [
+        'id'      => 'mac',
         'initial' => 'yellow',
         'states'  => [
             'yellow' => [
                 'type' => 'final',
             ],
         ],
-    ]));
+    ]);
 
     expect($machine->state->history->pluck('type')->toArray())
         ->toEqual([
-            'dummy.start',
-            'dummy.state.yellow.enter',
-            'dummy.state.yellow.entry.start',
-            'dummy.state.yellow.entry.finish',
-            'dummy.finish',
+            'mac.start',
+            'mac.state.yellow.enter',
+            'mac.state.yellow.entry.start',
+            'mac.state.yellow.entry.finish',
+            'mac.finish',
         ]);
 });
 

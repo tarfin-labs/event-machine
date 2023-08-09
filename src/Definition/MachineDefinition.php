@@ -415,6 +415,50 @@ class MachineDefinition
         }
     }
 
+    /**
+     * Find the transition definition based on the current state definition and event behavior.
+     *
+     * If the transition definition for the given event type is found in the current state definition,
+     * return it. If the current state definition has a parent, recursively search for the transition
+     * definition in the parent state definition. If no transition definition is found and the current
+     * state definition is not the initial state, throw an exception.
+     *
+     * @param  \Tarfinlabs\EventMachine\Definition\StateDefinition  $currentStateDefinition The current state definition.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior  $eventBehavior The event behavior.
+     * @param  string|null  $firstStateDefinitionId The ID of the first state definition encountered during recursion.
+     *
+     * @return \Tarfinlabs\EventMachine\Definition\TransitionDefinition|null  The found transition definition, or null if none is found.
+     *
+     * @throws \Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException  If no transition definition is found for the event type.
+     */
+    protected function findTransitionDefinition(
+        StateDefinition $currentStateDefinition,
+        EventBehavior $eventBehavior,
+        string $firstStateDefinitionId = null,
+    ): ?TransitionDefinition {
+        $transitionDefinition = $currentStateDefinition->transitionDefinitions[$eventBehavior->type] ?? null;
+
+        // If no transition definition is found, and the current state definition has a parent,
+        // recursively search for the transition definition in the parent state definition.
+        if (
+            $transitionDefinition === null &&
+            $currentStateDefinition->order !== 0
+        ) {
+            return $this->findTransitionDefinition(
+                currentStateDefinition: $currentStateDefinition->parent,
+                eventBehavior: $eventBehavior,
+                firstStateDefinitionId: $currentStateDefinition->id
+            );
+        }
+
+        // Throw exception if no transition definition is found for the event type
+        if ($transitionDefinition === null) {
+            throw NoTransitionDefinitionFoundException::build($eventBehavior->type, $firstStateDefinitionId);
+        }
+
+        return $transitionDefinition;
+    }
+
     // endregion
 
     // region Public Methods
@@ -447,12 +491,7 @@ class MachineDefinition
          *
          * @var null|array|TransitionDefinition $transitionDefinition
          */
-        $transitionDefinition = $currentStateDefinition->transitionDefinitions[$eventBehavior->type] ?? null;
-
-        // Throw exception if no transition definition is found for the event type
-        if ($transitionDefinition === null) {
-            throw NoTransitionDefinitionFoundException::build($eventBehavior->type, $currentStateDefinition->id);
-        }
+        $transitionDefinition = $this->findTransitionDefinition($currentStateDefinition, $eventBehavior);
 
         // Record transition start event
         $state->setInternalEventBehavior(

@@ -24,7 +24,7 @@ class NoTransitionDefinitionFoundException extends LogicException
      */
     public static function build(string $eventType, string $stateDefinitionId): self
     {
-        return new self(message: "No transition definition found for the event type '{$eventType}' in the current state definition '{$stateDefinitionId}'. ".
+        return new self(message: "No transition definition found for the event type '{$eventType}' in the current ('{$stateDefinitionId}') or parent state definitions. ".
             'Make sure that a transition is defined for this event type in the current state definition.'
         );
     }
