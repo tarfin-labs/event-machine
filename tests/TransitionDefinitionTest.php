@@ -111,7 +111,7 @@ it('throws NoTransitionDefinitionFoundException for unknown events', function ()
     expect(fn () => $machine->transition(event: ['type' => 'TIMERX']))
         ->toThrow(
             exception: NoTransitionDefinitionFoundException::class,
-            exceptionMessage: "No transition definition found for the event type 'TIMERX' in the current state definition 'machine.green'. Make sure that a transition is defined for this event type in the current state definition.",
+            exceptionMessage: "No transition definition found for the event type 'TIMERX' in the current ('machine.green') or parent state definitions. Make sure that a transition is defined for this event type in the current state definition.",
         );
 });
 
