@@ -93,9 +93,13 @@ class Machine implements Castable, JsonSerializable, Stringable
      * @return self The newly created and initialized machine instance.
      */
     public static function create(
-        MachineDefinition $definition = null,
+        MachineDefinition|array $definition = null,
         State|string $state = null,
     ): self {
+        if (is_array($definition)) {
+            $definition = MachineDefinition::define($definition);
+        }
+
         $machine = new self(definition: $definition ?? static::definition());
 
         $machine->start($state);
