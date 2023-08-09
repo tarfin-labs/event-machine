@@ -114,20 +114,6 @@ class TransitionBranch
                 inlineBehaviors: $this->guards,
                 behaviorType: BehaviorType::Guard
             );
-
-            if ($this->transitionDefinition->isGuarded === false) {
-                return;
-            }
-
-            foreach ($this->guards as $guard) {
-                if (str_contains($guard, ':')) {
-                    $guard = explode(':', $guard)[0];
-                }
-
-                if (!class_exists($guard)) {
-                    $guard = $this->transitionDefinition->source->machine->behavior[BehaviorType::Guard->value][$guard] ?? null;
-                }
-            }
         }
     }
 
