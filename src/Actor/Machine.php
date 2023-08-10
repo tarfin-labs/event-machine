@@ -13,6 +13,7 @@ use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Illuminate\Contracts\Database\Eloquent\Castable;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -405,4 +406,15 @@ class Machine implements Castable, JsonSerializable, Stringable
     }
 
     // endregion
+
+    public function result(): mixed
+    {
+        if ($this->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
+            $resultBehavior = $this->state->currentStateDefinition->config['result'];
+
+            return $resultBehavior($this->state->context, $this->state->currentEventBehavior);
+        }
+
+        return null;
+    }
 }
