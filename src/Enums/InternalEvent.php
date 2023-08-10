@@ -47,7 +47,7 @@ enum InternalEvent: string
     public function generateInternalEventName(string $machineId, string $placeholder = null): string
     {
         if ($placeholder !== null && class_exists($placeholder)) {
-            $placeholder = Str::of($placeholder)->classBasename();
+            $placeholder = Str::of($placeholder)->classBasename()->toString();
         }
 
         return Str::swap([
