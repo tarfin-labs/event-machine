@@ -49,6 +49,7 @@
         "phpstan": "vendor/bin/phpstan analyse --configuration=phpstan.neon.dist",
         "test": "@pest",
         "pest": "vendor/bin/pest --colors=always --order-by=random --configuration=phpunit.xml.dist",
+        "type": "vendor/bin/pest --type-coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
         "pestpr": "vendor/bin/pest --profile --colors=always --order-by=random --configuration=phpunit.xml.dist",
         "pestpa": "vendor/bin/pest --parallel --colors=always --order-by=random --configuration=phpunit.xml.dist",
         "pestco": "vendor/bin/pest --coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
