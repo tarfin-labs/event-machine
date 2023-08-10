@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Carbon;
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
@@ -51,6 +54,37 @@ test('a state definition can be defined as final', function (): void {
     $yellowState = $machine->stateDefinitions['yellow'];
 
     expect($yellowState->type)->toBe(StateDefinitionType::FINAL);
+});
+
+test('a machine can have outputs on final states - I', function (): void {
+    $now = now();
+    Carbon::setTestNow($now);
+
+    $machine = Machine::create([
+        'initial' => 'idle',
+        'states'  => [
+            'idle' => [
+                'on' => [
+                    '@yellow' => 'yellow',
+                    '@green'  => 'green',
+                ],
+            ],
+            'yellow' => [
+                'type'   => 'final',
+                'result' => function (ContextManager $context, EventBehavior $event): Carbon {
+                    return now();
+                },
+            ],
+            'green' => [],
+        ],
+    ]);
+
+    $machine->send('@yellow');
+
+    /** @var \Illuminate\Support\Carbon $result */
+    $result = $machine->result();
+
+    expect($result->toDateTimeString())->toBe($now->toDateTimeString());
 });
 
 test('a final state definition can not have child states', function (): void {
