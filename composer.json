@@ -50,7 +50,7 @@
         "test": "@pest",
         "pest": "vendor/bin/pest --colors=always --order-by=random --configuration=phpunit.xml.dist",
         "type": "vendor/bin/pest --type-coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
-        "pestpr": "vendor/bin/pest --profile --colors=always --order-by=random --configuration=phpunit.xml.dist",
+        "profile": "vendor/bin/pest --profile --colors=always --order-by=random --configuration=phpunit.xml.dist",
         "pestpa": "vendor/bin/pest --parallel --colors=always --order-by=random --configuration=phpunit.xml.dist",
         "pestco": "vendor/bin/pest --coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
         "pestcp": "vendor/bin/pest --parallel --coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
