@@ -45,6 +45,7 @@ test('always transitions with initial jump', function (): void {
         ],
     ]);
 
+    /** @var \Tarfinlabs\EventMachine\Actor\State $newState */
     $newState = $machine->getInitialState();
 
     expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'stateC']);

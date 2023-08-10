@@ -93,6 +93,7 @@ it('should run entry actions for building initial state', function (): void {
         ],
     );
 
+    /** @var State $initialState */
     $initialState = $machine->getInitialState();
     expect($initialState)
         ->toBeInstanceOf(State::class)
