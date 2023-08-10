@@ -35,6 +35,15 @@ class Machine implements Castable, JsonSerializable, Stringable
 
     // region Constructors
 
+    /**
+     * Constructor for the given class.
+     *
+     * This method is used to initialize an instance of the class.
+     * It takes a `MachineDefinition` object as a parameter and
+     * assigns it to the `$definition` property of the instance.
+     *
+     * @param  MachineDefinition  $definition The machine definition object.
+     */
     protected function __construct(
         MachineDefinition $definition,
     ) {
@@ -87,7 +96,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * provided definition and state. If the definition is `null`, it attempts
      * to retrieve the definition using the `definition()` method.
      *
-     * @param  \Tarfinlabs\EventMachine\Definition\MachineDefinition|null  $definition The definition to initialize the machine with.
+     * @param  \Tarfinlabs\EventMachine\Definition\MachineDefinition|array|null  $definition The definition to initialize the machine with.
      * @param  \Tarfinlabs\EventMachine\Actor\State|string|null  $state The initial state of the machine.
      *
      * @return self The newly created and initialized machine instance.
