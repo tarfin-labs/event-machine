@@ -138,7 +138,15 @@ class MachineDefinition
     }
 
     /**
-     * Initialize the root state definition for this machine definition.
+     * Create the root state definition.
+     *
+     * Creates and returns a new instance of `StateDefinition` with the given configuration.
+     * If no configuration is provided, the configuration will be set to null.
+     * The $options parameter is set with the current `Machine` and machine id.
+     *
+     * @param  array|null  $config The configuration for the root state definition.
+     *
+     * @return StateDefinition The created root state definition.
      */
     protected function createRootStateDefinition(?array $config): StateDefinition
     {

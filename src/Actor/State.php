@@ -48,7 +48,7 @@ class State
     }
 
     /**
-     * Updates the machine value from the current state definition.
+     * Updates the machine value based on the current state definition.
      */
     protected function updateMachineValueFromState(): void
     {

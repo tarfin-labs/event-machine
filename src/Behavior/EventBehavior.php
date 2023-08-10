@@ -49,7 +49,9 @@ abstract class EventBehavior extends Data
     abstract public static function getType(): string;
 
     /**
-     * Validates the current event behavior.
+     * Validates the object by calling the static validate() method and handles any validation exceptions.
+     *
+     * @throws MachineEventValidationException If the object fails validation.
      */
     public function selfValidate(): void
     {

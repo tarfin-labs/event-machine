@@ -14,6 +14,13 @@ use Tarfinlabs\EventMachine\ContextManager;
  */
 abstract class ActionBehavior extends InvokableBehavior
 {
+    /**
+     * Invokes the method with the given parameters.
+     *
+     * @param  ContextManager  $context Provides access to the context in which the method is being invoked.
+     * @param  EventBehavior  $eventBehavior The event behavior associated with the method invocation.
+     * @param  array|null  $arguments Optional parameters to be passed to the method.
+     */
     abstract public function __invoke(
         ContextManager $context,
         EventBehavior $eventBehavior,
