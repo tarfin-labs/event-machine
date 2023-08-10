@@ -136,18 +136,23 @@ class Machine implements Castable, JsonSerializable, Stringable
      * updates the machine's state and handles validation guards. If the event
      * should be persisted, it calls the `persist()` method.
      *
-     * @param  EventBehavior|array  $event The event to send to the machine.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|array|string  $event The event to send to the machine.
      * @param  bool  $shouldPersist Whether to persist the state change.
      *
      * @return State The updated state of the machine.
      */
     public function send(
-        EventBehavior|array $event,
+        EventBehavior|array|string $event,
         bool $shouldPersist = true,
     ): State {
         $lastPreviousEventNumber = $this->state !== null
             ? $this->state->history->last()->sequence_number
             : 0;
+
+        // If the event is a string, we assume it's the event type.
+        if (is_string($event)) {
+            $event = ['type' => $event];
+        }
 
         $this->state = $this->definition->transition($event, $this->state);
 
