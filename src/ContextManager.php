@@ -160,7 +160,7 @@ class ContextManager extends Data
      * @param  string  $name The name of the value to set.
      * @param  mixed  $value The value to set.
      */
-    public function __set(string $name, $value): void
+    public function __set(string $name, mixed $value): void
     {
         $this->set($name, $value);
     }
