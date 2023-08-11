@@ -409,7 +409,7 @@ class StateDefinition
         // Record state exit start event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_EXIT_START,
-            placeholder: $state->currentStateDefinition->key
+            placeholder: implode('.', $state->currentStateDefinition->path)
         );
 
         foreach ($this->exit as $action) {
@@ -423,7 +423,7 @@ class StateDefinition
         // Record state exit finish event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_EXIT_FINISH,
-            placeholder: $state->currentStateDefinition->key
+            placeholder: implode('.', $state->currentStateDefinition->path)
         );
     }
 
@@ -437,7 +437,7 @@ class StateDefinition
         // Record state entry start event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_ENTRY_START,
-            placeholder: $state->currentStateDefinition->key
+            placeholder: implode('.', $state->currentStateDefinition->path)
         );
 
         foreach ($this->entry as $action) {
@@ -451,7 +451,7 @@ class StateDefinition
         // Record state entry start event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_ENTRY_FINISH,
-            placeholder: $state->currentStateDefinition->key
+            placeholder: implode('.', $state->currentStateDefinition->path)
         );
     }
 
