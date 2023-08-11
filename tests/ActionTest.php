@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
@@ -87,11 +87,11 @@ it('can update context using actions defined in transition definitions', functio
         ->and($decState->context->get('count'))->toBe(20);
 });
 
-test('actions can return', function (): void {
+test('result actions can return', function (): void {
     // 1. Arrange
     $value = random_int(10, 20);
 
-    $multipleWithItselfAction = new class extends ActionBehavior {
+    $multipleWithItselfAction = new class extends ResultBehavior {
         public function __invoke(
             ContextManager $context,
             EventBehavior $eventBehavior,
