@@ -412,6 +412,10 @@ class Machine implements Castable, JsonSerializable, Stringable
         if ($this->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
             $resultBehavior = $this->state->currentStateDefinition->config['result'];
 
+            if (!is_callable($resultBehavior)) {
+                $resultBehavior = new $resultBehavior();
+            }
+
             return $resultBehavior($this->state->context, $this->state->currentEventBehavior);
         }
 
