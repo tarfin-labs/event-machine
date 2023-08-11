@@ -34,6 +34,9 @@ class StateDefinition
      */
     public array $path;
 
+    /** The string route from the root machine definition to this state definition. */
+    public string $route;
+
     /** The description of the state definition. */
     public ?string $description;
 
@@ -106,6 +109,7 @@ class StateDefinition
         $this->initializeOptions($options);
 
         $this->path        = $this->buildPath();
+        $this->route       = $this->buildRoute();
         $this->id          = $this->buildId();
         $this->description = $this->buildDescription();
 
@@ -144,6 +148,16 @@ class StateDefinition
         return $this->parent
             ? array_merge($this->parent->path, [$this->key])
             : [];
+    }
+
+    /**
+     * Build the route by concatenating the path elements with the delimiter.
+     *
+     * @return string The built route as a string.
+     */
+    protected function buildRoute(): string
+    {
+        return implode($this->machine->delimiter, $this->path);
     }
 
     /**
@@ -409,7 +423,7 @@ class StateDefinition
         // Record state exit start event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_EXIT_START,
-            placeholder: $state->currentStateDefinition->key
+            placeholder: $state->currentStateDefinition->route,
         );
 
         foreach ($this->exit as $action) {
@@ -423,7 +437,7 @@ class StateDefinition
         // Record state exit finish event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_EXIT_FINISH,
-            placeholder: $state->currentStateDefinition->key
+            placeholder: $state->currentStateDefinition->route,
         );
     }
 
@@ -437,7 +451,7 @@ class StateDefinition
         // Record state entry start event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_ENTRY_START,
-            placeholder: $state->currentStateDefinition->key
+            placeholder: $state->currentStateDefinition->route,
         );
 
         foreach ($this->entry as $action) {
@@ -451,7 +465,7 @@ class StateDefinition
         // Record state entry start event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_ENTRY_FINISH,
-            placeholder: $state->currentStateDefinition->key
+            placeholder: $state->currentStateDefinition->route,
         );
     }
 
