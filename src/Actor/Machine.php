@@ -434,11 +434,19 @@ class Machine implements Castable, JsonSerializable, Stringable
 
         $resultBehavior = $behaviorDefinition[$id];
         if (!is_callable($resultBehavior)) {
+            // If the result behavior contains a colon, it means that it has a parameter.
+            if (str_contains($resultBehavior, ':')) {
+                [$resultBehavior, $arguments] = explode(':', $resultBehavior);
+            }
+
             $resultBehavior = new $resultBehavior();
         }
 
         /* @var \Tarfinlabs\EventMachine\Behavior\ResultBehavior $resultBehavior */
-        return $resultBehavior($this->state->context, $this->state->currentEventBehavior
+        return $resultBehavior(
+            $this->state->context,
+            $this->state->currentEventBehavior,
+            $arguments ?? null,
         );
     }
 }
