@@ -407,16 +407,30 @@ class Machine implements Castable, JsonSerializable, Stringable
 
     // endregion
 
+    /**
+     * Retrieves the result of the state machine.
+     *
+     * This method returns the result of the state machine execution.
+     *
+     * If the current state is a final state and a result behavior is
+     * defined for that state, it applies the result behavior and
+     * returns the result. Otherwise, it returns null.
+     *
+     * @return mixed The result of the state machine.
+     */
     public function result(): mixed
     {
         if ($this->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
-            $resultBehavior = $this->state->currentStateDefinition->config['result'];
+            $id = $this->state->currentStateDefinition->id;
+            if (isset($this->definition->behavior[BehaviorType::Result->value][$id])) {
+                $resultBehavior = $this->definition->behavior[BehaviorType::Result->value][$id];
 
-            if (!is_callable($resultBehavior)) {
-                $resultBehavior = new $resultBehavior();
+                if (!is_callable($resultBehavior)) {
+                    $resultBehavior = new $resultBehavior();
+                }
+
+                return $resultBehavior($this->state->context, $this->state->currentEventBehavior);
             }
-
-            return $resultBehavior($this->state->context, $this->state->currentEventBehavior);
         }
 
         return null;
