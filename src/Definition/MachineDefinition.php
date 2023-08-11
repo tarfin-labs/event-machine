@@ -185,7 +185,7 @@ class MachineDefinition
         // Record the internal initial state init event.
         $initialState->setInternalEventBehavior(
             type: InternalEvent::STATE_ENTER,
-            placeholder: implode('.', $initialState->currentStateDefinition->path)
+            placeholder: $initialState->currentStateDefinition->route,
         );
 
         // Run entry actions on the initial state definition
@@ -219,7 +219,7 @@ class MachineDefinition
         if ($initialState->currentStateDefinition->type === StateDefinitionType::FINAL) {
             $initialState->setInternalEventBehavior(
                 type: InternalEvent::MACHINE_FINISH,
-                placeholder: implode('.', $initialState->currentStateDefinition->path)
+                placeholder: $initialState->currentStateDefinition->route
             );
         }
 
@@ -504,7 +504,7 @@ class MachineDefinition
         // Record transition start event
         $state->setInternalEventBehavior(
             type: InternalEvent::TRANSITION_START,
-            placeholder: implode('.', $state->currentStateDefinition->path).'.'.$eventBehavior->type
+            placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
         );
 
         $transitionBranch = $transitionDefinition->getFirstValidTransitionBranch(
@@ -517,7 +517,7 @@ class MachineDefinition
             // Record transition abort event
             $state->setInternalEventBehavior(
                 type: InternalEvent::TRANSITION_FAIL,
-                placeholder: implode('.', $state->currentStateDefinition->path).'.'.$eventBehavior->type
+                placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
             );
 
             return $state->setCurrentStateDefinition($currentStateDefinition);
@@ -532,7 +532,7 @@ class MachineDefinition
         // Record transition start finish
         $state->setInternalEventBehavior(
             type: InternalEvent::TRANSITION_FINISH,
-            placeholder: implode('.', $state->currentStateDefinition->path).'.'.$eventBehavior->type
+            placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
         );
 
         // Execute exit actions for the current state definition
@@ -541,7 +541,7 @@ class MachineDefinition
         // Record state exit event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_EXIT,
-            placeholder: implode('.', $state->currentStateDefinition->path)
+            placeholder: $state->currentStateDefinition->route,
         );
 
         // Set the new state, or keep the current state if no target state definition is defined
@@ -551,7 +551,7 @@ class MachineDefinition
         // Record state enter event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_ENTER,
-            placeholder: implode('.', $state->currentStateDefinition->path)
+            placeholder: $state->currentStateDefinition->route,
         );
 
         // Execute entry actions for the new state definition
@@ -586,7 +586,7 @@ class MachineDefinition
         if ($state->currentStateDefinition->type === StateDefinitionType::FINAL) {
             $state->setInternalEventBehavior(
                 type: InternalEvent::MACHINE_FINISH,
-                placeholder: implode('.', $state->currentStateDefinition->path)
+                placeholder: $state->currentStateDefinition->route,
             );
         }
 
