@@ -13,6 +13,7 @@ use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Illuminate\Contracts\Database\Eloquent\Castable;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -405,4 +406,47 @@ class Machine implements Castable, JsonSerializable, Stringable
     }
 
     // endregion
+
+    /**
+     * Retrieves the result of the state machine.
+     *
+     * This method returns the result of the state machine execution.
+     *
+     * If the current state is a final state and a result behavior is
+     * defined for that state, it applies the result behavior and
+     * returns the result. Otherwise, it returns null.
+     *
+     * @return mixed The result of the state machine.
+     */
+    public function result(): mixed
+    {
+        $currentStateDefinition = $this->state->currentStateDefinition;
+        $behaviorDefinition     = $this->definition->behavior[BehaviorType::Result->value];
+
+        if ($currentStateDefinition->type !== StateDefinitionType::FINAL) {
+            return null;
+        }
+
+        $id = $currentStateDefinition->id;
+        if (!isset($behaviorDefinition[$id])) {
+            return null;
+        }
+
+        $resultBehavior = $behaviorDefinition[$id];
+        if (!is_callable($resultBehavior)) {
+            // If the result behavior contains a colon, it means that it has a parameter.
+            if (str_contains($resultBehavior, ':')) {
+                [$resultBehavior, $arguments] = explode(':', $resultBehavior);
+            }
+
+            $resultBehavior = new $resultBehavior();
+        }
+
+        /* @var \Tarfinlabs\EventMachine\Behavior\ResultBehavior $resultBehavior */
+        return $resultBehavior(
+            $this->state->context,
+            $this->state->currentEventBehavior,
+            $arguments ?? null,
+        );
+    }
 }

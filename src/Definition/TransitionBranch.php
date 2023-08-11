@@ -148,7 +148,8 @@ class TransitionBranch
                 $behavior = explode(':', $behavior)[0];
             }
 
-            // If the behavior is class of a known behavior type (e.g. Guard, Action, etc.), add it to the machine's behavior too.
+            // If the behavior is class of a known behavior type (e.g., Guard, Action, etc.),
+            // add it to the machine's behavior too.
             if (is_subclass_of($behavior, class: $behaviorType->getBehaviorClass())) {
                 $this
                     ->transitionDefinition
