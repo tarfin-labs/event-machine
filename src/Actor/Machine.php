@@ -438,9 +438,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         }
 
         /* @var \Tarfinlabs\EventMachine\Behavior\ResultBehavior $resultBehavior */
-        return $resultBehavior(
-            context: $this->state->context,
-            eventBehavior: $this->state->currentEventBehavior
+        return $resultBehavior($this->state->context, $this->state->currentEventBehavior
         );
     }
 }
