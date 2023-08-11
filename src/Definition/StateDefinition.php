@@ -115,7 +115,12 @@ class StateDefinition
 
         $this->stateDefinitions = $this->createChildStateDefinitions();
         $this->type             = $this->getStateDefinitionType();
-        $this->events           = $this->collectUniqueEvents();
+
+        if ($this->type === StateDefinitionType::FINAL) {
+            $this->initializeResults();
+        }
+
+        $this->events = $this->collectUniqueEvents();
 
         $this->initialStateDefinition = $this->findInitialStateDefinition();
 
@@ -195,6 +200,18 @@ class StateDefinition
         $this->parent  = $options['parent'] ?? null;
         $this->machine = $options['machine'] ?? null;
         $this->key     = $options['key'] ?? null;
+    }
+
+    /**
+     * Initialize the results for the current state.
+     *
+     * If a result is set in the configuration, it will be assigned to the machine's behavior.
+     */
+    protected function initializeResults(): void
+    {
+        if (isset($this->config['result'])) {
+            $this->machine->behavior[BehaviorType::Result->value][$this->id] = $this->config['result'];
+        }
     }
 
     /**
