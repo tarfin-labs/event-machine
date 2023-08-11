@@ -34,6 +34,9 @@ class StateDefinition
      */
     public array $path;
 
+    /** The string route from the root machine definition to this state definition. */
+    public string $route;
+
     /** The description of the state definition. */
     public ?string $description;
 
@@ -106,6 +109,7 @@ class StateDefinition
         $this->initializeOptions($options);
 
         $this->path        = $this->buildPath();
+        $this->route       = $this->buildRoute();
         $this->id          = $this->buildId();
         $this->description = $this->buildDescription();
 
@@ -144,6 +148,16 @@ class StateDefinition
         return $this->parent
             ? array_merge($this->parent->path, [$this->key])
             : [];
+    }
+
+    /**
+     * Build the route by concatenating the path elements with the delimiter.
+     *
+     * @return array The built route as an array.
+     */
+    protected function buildRoute(): array
+    {
+        return implode($this->machine->delimiter, $this->path);
     }
 
     /**
