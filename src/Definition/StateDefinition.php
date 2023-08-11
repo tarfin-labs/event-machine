@@ -97,7 +97,7 @@ class StateDefinition
      * Create a new state definition with the given configuration and options.
      *
      * @param  ?array  $config The raw configuration array used to create the state definition.
-     * @param  ?array  $options The options array for configuring the state definition.
+     * @param  ?array  $options The `options` array for configuring the state definition.
      */
     public function __construct(
         public ?array $config,
