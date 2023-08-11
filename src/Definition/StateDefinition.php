@@ -153,9 +153,9 @@ class StateDefinition
     /**
      * Build the route by concatenating the path elements with the delimiter.
      *
-     * @return array The built route as an array.
+     * @return string The built route as a string.
      */
-    protected function buildRoute(): array
+    protected function buildRoute(): string
     {
         return implode($this->machine->delimiter, $this->path);
     }
