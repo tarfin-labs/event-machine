@@ -420,19 +420,27 @@ class Machine implements Castable, JsonSerializable, Stringable
      */
     public function result(): mixed
     {
-        if ($this->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
-            $id = $this->state->currentStateDefinition->id;
-            if (isset($this->definition->behavior[BehaviorType::Result->value][$id])) {
-                $resultBehavior = $this->definition->behavior[BehaviorType::Result->value][$id];
+        $currentStateDefinition = $this->state->currentStateDefinition;
+        $behaviorDefinition     = $this->definition->behavior[BehaviorType::Result->value];
 
-                if (!is_callable($resultBehavior)) {
-                    $resultBehavior = new $resultBehavior();
-                }
-
-                return $resultBehavior($this->state->context, $this->state->currentEventBehavior);
-            }
+        if ($currentStateDefinition->type !== StateDefinitionType::FINAL) {
+            return null;
         }
 
-        return null;
+        $id = $currentStateDefinition->id;
+        if (!isset($behaviorDefinition[$id])) {
+            return null;
+        }
+
+        $resultBehavior = $behaviorDefinition[$id];
+        if (!is_callable($resultBehavior)) {
+            $resultBehavior = new $resultBehavior();
+        }
+
+        /* @var \Tarfinlabs\EventMachine\Behavior\ResultBehavior $resultBehavior */
+        return $resultBehavior(
+            context: $this->state->context,
+            eventBehavior: $this->state->currentEventBehavior
+        );
     }
 }
