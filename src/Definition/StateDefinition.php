@@ -276,23 +276,26 @@ class StateDefinition
      */
     public function findInitialStateDefinition(): ?StateDefinition
     {
-        $initialStateKey = $this->config['initial']
+        $initialStateDefinitionKey = $this->config['initial']
             ?? array_key_first($this->stateDefinitions ?? [])
             ?? null;
 
-        if ($initialStateKey === null) {
+        if ($initialStateDefinitionKey === null) {
             return null;
         }
 
-        $initialStateKey = $this->id.$this->machine->delimiter.$initialStateKey;
+        $initialStateDefinitionKey = $this->id.$this->machine->delimiter.$initialStateDefinitionKey;
 
-        $initialStateDefinition = $this->machine->idMap[$initialStateKey] ?? null;
+        $initialStateDefinition = $this->machine->idMap[$initialStateDefinitionKey] ?? null;
 
         if ($initialStateDefinition === null) {
             return null;
         }
 
-        return is_array($initialStateDefinition->stateDefinitions) && count($initialStateDefinition->stateDefinitions) > 0
+        return (
+            is_array($initialStateDefinition->stateDefinitions) &&
+            count($initialStateDefinition->stateDefinitions) > 0
+        )
             ? $initialStateDefinition->findInitialStateDefinition()
             : $initialStateDefinition;
     }
