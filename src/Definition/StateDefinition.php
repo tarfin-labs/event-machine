@@ -276,22 +276,30 @@ class StateDefinition
      */
     public function findInitialStateDefinition(): ?StateDefinition
     {
+        // Try to find the initial state definition key in the configuration.
+        // If not found, try to find the first state definition key.
         $initialStateDefinitionKey = $this->config['initial']
             ?? array_key_first($this->stateDefinitions ?? [])
             ?? null;
 
+        // If there is no initial state definition key, then this root state definition is the initial state.
         if ($initialStateDefinitionKey === null) {
-            return null;
+            return $this->order === 0 ? $this : null;
         }
 
+        // The initial state definition key is built by concatenating the root state definition id
         $initialStateDefinitionKey = $this->id.$this->machine->delimiter.$initialStateDefinitionKey;
 
+        // Try to find the initial state definition in the machine's id map.
+        /** @var \Tarfinlabs\EventMachine\Definition\StateDefinition $initialStateDefinition */
         $initialStateDefinition = $this->machine->idMap[$initialStateDefinitionKey] ?? null;
 
         if ($initialStateDefinition === null) {
             return null;
         }
 
+        // If the initial state definition has child state definitions,
+        // then try to find it recursively from child state definitions.
         return (
             is_array($initialStateDefinition->stateDefinitions) &&
             count($initialStateDefinition->stateDefinitions) > 0
