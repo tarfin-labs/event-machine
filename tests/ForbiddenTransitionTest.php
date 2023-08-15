@@ -7,26 +7,28 @@ use Tarfinlabs\EventMachine\ContextManager;
 
 test('Top-level event transition can switch from a deeply nested state to another top-level state', function (): void {
     $machine = Machine::create([
-        'id'      => 'm',
-        'initial' => 'a.b.c.d',
-        'states'  => [
-            'a' => [
-                'on' => [
-                    '@event' => 'x',
-                ],
-                'states' => [
-                    'b' => [
-                        'states' => [
-                            'c' => [
-                                'states' => [
-                                    'd' => [],
+        'config' => [
+            'id'      => 'm',
+            'initial' => 'a.b.c.d',
+            'states'  => [
+                'a' => [
+                    'on' => [
+                        '@event' => 'x',
+                    ],
+                    'states' => [
+                        'b' => [
+                            'states' => [
+                                'c' => [
+                                    'states' => [
+                                        'd' => [],
+                                    ],
                                 ],
                             ],
                         ],
                     ],
                 ],
+                'x' => [],
             ],
-            'x' => [],
         ],
     ]);
 
@@ -58,21 +60,23 @@ test('Top-level event transition can switch from a deeply nested state to anothe
 
 test('Forbidded Transition: Nested state can override top-level event transition defined in parent state', function (): void {
     $machine = Machine::create([
-        'id'      => 'm',
-        'initial' => 'a.b.c.d',
-        'states'  => [
-            'a' => [
-                'on' => [
-                    '@event' => 'x',
-                ],
-                'states' => [
-                    'b' => [
-                        'states' => [
-                            'c' => [
-                                'states' => [
-                                    'd' => [
-                                        'on' => [
-                                            '@event' => null,
+        'config' => [
+            'id'      => 'm',
+            'initial' => 'a.b.c.d',
+            'states'  => [
+                'a' => [
+                    'on' => [
+                        '@event' => 'x',
+                    ],
+                    'states' => [
+                        'b' => [
+                            'states' => [
+                                'c' => [
+                                    'states' => [
+                                        'd' => [
+                                            'on' => [
+                                                '@event' => null,
+                                            ],
                                         ],
                                     ],
                                 ],
@@ -80,8 +84,8 @@ test('Forbidded Transition: Nested state can override top-level event transition
                         ],
                     ],
                 ],
+                'x' => [],
             ],
-            'x' => [],
         ],
     ]);
 
@@ -96,7 +100,7 @@ test('Forbidded Transition: Nested state can override top-level event transition
 
 test('Top-Level Transitions', function (): void {
     $machine = Machine::create([
-        [
+        'config' => [
             'context' => [
                 'value' => 0,
             ],
@@ -106,7 +110,7 @@ test('Top-Level Transitions', function (): void {
                 ],
             ],
         ],
-        [
+        'behavior' => [
             'actions' => [
                 'increaseValue' => function (ContextManager $context): void {
                     $context->value++;
