@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\ContextManager;
 
 test('Top-level event transition can switch from a deeply nested state to another top-level state', function (): void {
     $machine = Machine::create([
@@ -91,4 +92,30 @@ test('Forbidded Transition: Nested state can override top-level event transition
     $machine->send(['type' => '@event']);
 
     expect($machine->state->value)->toBe(['m.a.b.c.d']);
+});
+
+test('Top-Level Transitions', function (): void {
+    $machine = Machine::create([
+        [
+            'context' => [
+                'value' => 0,
+            ],
+            'on' => [
+                '@event' => [
+                    'actions' => 'increaseValue',
+                ],
+            ],
+        ],
+        [
+            'actions' => [
+                'increaseValue' => function (ContextManager $context): void {
+                    $context->value++;
+                },
+            ],
+        ],
+    ]);
+
+    $machine->send(event: '@event');
+
+    expect($machine->state->context->value)->toBe(1);
 });
