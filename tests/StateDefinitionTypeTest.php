@@ -62,23 +62,25 @@ test('a machine can have outputs on final states', function (string $eventType):
     Carbon::setTestNow($now);
 
     $machine = Machine::create([
-        'initial' => 'idle',
-        'states'  => [
-            'idle' => [
-                'on' => [
-                    '@yellow' => 'yellow',
-                    '@green'  => 'green',
+        'config' => [
+            'initial' => 'idle',
+            'states'  => [
+                'idle' => [
+                    'on' => [
+                        '@yellow' => 'yellow',
+                        '@green'  => 'green',
+                    ],
                 ],
-            ],
-            'yellow' => [
-                'type'   => 'final',
-                'result' => function (ContextManager $context, EventBehavior $event): Carbon {
-                    return now();
-                },
-            ],
-            'green' => [
-                'type'   => 'final',
-                'result' => GreenResult::class,
+                'yellow' => [
+                    'type'   => 'final',
+                    'result' => function (ContextManager $context, EventBehavior $event): Carbon {
+                        return now();
+                    },
+                ],
+                'green' => [
+                    'type'   => 'final',
+                    'result' => GreenResult::class,
+                ],
             ],
         ],
     ]);
@@ -134,11 +136,13 @@ test('a final state definition can not have transitions', function (): void {
 
 test('an initial state of type final triggers machine finish event', function (): void {
     $machine = Machine::create(definition: [
-        'id'      => 'mac',
-        'initial' => 'yellow',
-        'states'  => [
-            'yellow' => [
-                'type' => 'final',
+        'config' => [
+            'id'      => 'mac',
+            'initial' => 'yellow',
+            'states'  => [
+                'yellow' => [
+                    'type' => 'final',
+                ],
             ],
         ],
     ]);
