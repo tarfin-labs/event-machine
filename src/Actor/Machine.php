@@ -108,8 +108,8 @@ class Machine implements Castable, JsonSerializable, Stringable
     ): self {
         if (is_array($definition)) {
             $definition = MachineDefinition::define(
-                config: $definition[0],
-                behavior: $definition[1],
+                config: $definition[0] ?? null,
+                behavior: $definition[1] ?? null,
             );
         }
 
