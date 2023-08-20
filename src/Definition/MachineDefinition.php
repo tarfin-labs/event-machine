@@ -122,9 +122,9 @@ class MachineDefinition
     // region Protected Methods
 
     /**
-     * Initializes an empty behavior array with empty events, actions and guards arrays.
+     * Initializes an empty behavior array with empty events, actions and guard arrays.
      *
-     * @return array  An empty behavior array with empty events, actions and guards arrays.
+     * @return array  An empty behavior array with empty events, actions and guard arrays.
      */
     protected static function initializeEmptyBehavior(): array
     {
@@ -194,7 +194,7 @@ class MachineDefinition
             eventBehavior: $initialState->currentEventBehavior,
         );
 
-        if ($initialStateDefinition->transitionDefinitions !== null) {
+        if ($initialStateDefinition?->transitionDefinitions !== null) {
             foreach ($initialStateDefinition->transitionDefinitions as $transition) {
                 if ($transition->isAlways === true) {
                     return $this->transition(

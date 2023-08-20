@@ -190,6 +190,7 @@ class ContextManager extends Data
     }
 
     // endregion
+
     public function getMorphClass(): string
     {
         return self::class;
