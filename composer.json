@@ -24,14 +24,12 @@
     "require-dev": {
         "infection/infection": "^0.26.19",
         "laravel/pint": "^1.0",
+        "nunomaduro/larastan": "^2.0",
         "orchestra/testbench": "^8.0",
         "pestphp/pest": "^2.12",
         "pestphp/pest-plugin-arch": "^2.0",
         "pestphp/pest-plugin-laravel": "^2.0",
-        "pestphp/pest-plugin-type-coverage": "^2.0",
-        "phpstan/extension-installer": "^1.1",
-        "phpstan/phpstan-deprecation-rules": "^1.0",
-        "phpstan/phpstan-phpunit": "^1.0"
+        "pestphp/pest-plugin-type-coverage": "^2.0"
     },
     "autoload": {
         "psr-4": {
@@ -46,7 +44,7 @@
     },
     "scripts": {
         "post-autoload-dump": "@php ./vendor/bin/testbench package:discover --ansi",
-        "phpstan": "vendor/bin/phpstan analyse --configuration=phpstan.neon.dist",
+        "larastan": "vendor/bin/phpstan analyse --configuration=phpstan.neon.dist",
         "pest": "vendor/bin/pest --colors=always --order-by=random --configuration=phpunit.xml.dist",
         "test": "@pest",
         "testp": "vendor/bin/pest --parallel --colors=always --order-by=random --configuration=phpunit.xml.dist",
@@ -63,7 +61,6 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
-            "phpstan/extension-installer": true,
             "infection/extension-installer": true
         }
     },
