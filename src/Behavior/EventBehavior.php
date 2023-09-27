@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Behavior;
 
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Optional;
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Illuminate\Validation\ValidationException;
 use Spatie\LaravelData\Attributes\WithoutValidation;
@@ -18,11 +19,15 @@ use Tarfinlabs\EventMachine\Exceptions\MachineEventValidationException;
  */
 abstract class EventBehavior extends Data
 {
+    /** Actor performing the event. */
+    private mixed $actor = null;
+
     /**
      * Creates a new instance of the class.
      *
      * @param  null|string|Optional  $type The type of the object. Default is null.
      * @param  null|array|Optional  $payload The payload to be associated with the object. Default is null.
+     * @param  mixed  $actor Actor performing the event. Default is null.
      * @param  int|Optional  $version The version number of the object. Default is 1.
      * @param  SourceType  $source The source type of the object. Default is SourceType::EXTERNAL.
      *
@@ -31,6 +36,8 @@ abstract class EventBehavior extends Data
     public function __construct(
         public null|string|Optional $type = null,
         public null|array|Optional $payload = null,
+        #[WithoutValidation]
+        mixed $actor = null,
         public int|Optional $version = 1,
 
         #[WithoutValidation]
@@ -39,6 +46,8 @@ abstract class EventBehavior extends Data
         if ($this->type === null) {
             $this->type = static::getType();
         }
+
+        $this->actor = $actor;
     }
 
     /**
@@ -60,5 +69,10 @@ abstract class EventBehavior extends Data
         } catch (ValidationException $e) {
             throw new MachineEventValidationException($e->validator);
         }
+    }
+
+    public function actor(ContextManager $context): mixed
+    {
+        return $this->actor;
     }
 }

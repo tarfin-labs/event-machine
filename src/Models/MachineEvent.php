@@ -31,8 +31,8 @@ use Tarfinlabs\EventMachine\Database\Factories\MachineEventFactory;
  */
 class MachineEvent extends Model
 {
-    use HasUlids;
     use HasFactory;
+    use HasUlids;
 
     public $timestamps  = false;
     protected $fillable = [

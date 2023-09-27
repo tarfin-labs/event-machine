@@ -19,8 +19,8 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMach
  */
 class ModelA extends Model
 {
-    use HasMachines;
     use HasFactory;
+    use HasMachines;
 
     protected $fillable = [
         'value',

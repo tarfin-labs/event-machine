@@ -199,7 +199,8 @@ class MachineDefinition
                 if ($transition->isAlways === true) {
                     return $this->transition(
                         event: [
-                            'type' => TransitionProperty::Always->value,
+                            'type'  => TransitionProperty::Always->value,
+                            'actor' => $initialState->currentEventBehavior->actor($context),
                         ],
                         state: $initialState
                     );
@@ -565,7 +566,8 @@ class MachineDefinition
                     // If an always-taken transition is found, perform the transition
                     return $this->transition(
                         event: [
-                            'type' => TransitionProperty::Always->value,
+                            'type'  => TransitionProperty::Always->value,
+                            'actor' => $eventBehavior->actor($newState->context),
                         ],
                         state: $newState
                     );
