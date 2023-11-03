@@ -36,6 +36,28 @@ trait HasMachines
         });
     }
 
+    public function getAttribute($key)
+    {
+        $attribute = parent::getAttribute($key);
+
+        if (
+            property_exists($this, 'machines') &&
+            array_key_exists($key, $this->machines) &&
+            $this->shouldInitializeMachine()
+        ) {
+            /** @var \Tarfinlabs\EventMachine\Actor\Machine $machineClass */
+            [$machineClass, $contextKey] = explode(':', $this->machines[$key]);
+
+            $machine = $machineClass::create(state: $attribute);
+
+            $machine->state->context->set($contextKey, $this);
+
+            return $machine;
+        }
+
+        return $attribute;
+    }
+
     /**
      * Determines whether the machine should be initialized.
      *
