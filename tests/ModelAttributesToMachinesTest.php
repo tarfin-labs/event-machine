@@ -11,8 +11,6 @@ it('can persist the machine state', function (): void {
         'value' => 'some value',
     ]);
 
-    $modelA->abc_mre->persist();
-
     $modelA->traffic_mre->send(['type' => 'INC'], shouldPersist: false);
     $modelA->traffic_mre->send(['type' => 'INC'], shouldPersist: false);
     $modelA->traffic_mre->send(['type' => 'INC'], shouldPersist: false);
@@ -23,7 +21,7 @@ it('can persist the machine state', function (): void {
     expect($modelA->traffic_mre)->toBeInstanceOf(Machine::class);
 
     $this->assertDatabaseHas(ModelA::class, [
-        'abc_mre' => $modelA->abc_mre->state->history->first()->root_event_id,
+        'abc_mre' => null,
     ]);
 
     $this->assertDatabaseHas(ModelA::class, [

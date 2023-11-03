@@ -27,9 +27,11 @@ class ModelA extends Model
         'abc_mre',
         'traffic_mre',
     ];
+    protected array $machines = [
+        'abc_mre' => AbcMachine::class.':modelA',
+    ];
     protected $casts = [
         'value'       => 'string',
-        'abc_mre'     => AbcMachine::class.':modelA',
         'traffic_mre' => TrafficLightsMachine::class.':modelA',
     ];
 }
