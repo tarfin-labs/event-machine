@@ -9,15 +9,15 @@ return new class extends Migration
     public function up(): void {
         Schema::create('machine_events', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->unsignedInteger('sequence_number');
-            $table->dateTime('created_at');
+            $table->unsignedInteger('sequence_number')->index();
+            $table->dateTime('created_at')->index();
 
-            $table->string('machine_id');
-            $table->json('machine_value');
-            $table->ulid('root_event_id')->nullable();
+            $table->string('machine_id')->index();
+            $table->json('machine_value')->index();
+            $table->ulid('root_event_id')->nullable()->index();
 
-            $table->string('source');
-            $table->string('type');
+            $table->string('source')->index();
+            $table->string('type')->index();
             $table->json('payload')->nullable();
             $table->unsignedInteger('version');
 
