@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Log;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 test('state value can be matched', function (): void {
     $machine = MachineDefinition::define(config: [
@@ -31,4 +33,12 @@ test('state value can be matched', function (): void {
 
     expect($newState->matches('stateB.subStateOfB'))->toBe(true);
     expect($newState->matches('machine.stateB.subStateOfB'))->toBe(true);
+});
+
+test('Logs if log writing is turned on', function (): void {
+    $machine = TrafficLightsMachine::create();
+
+    Log::shouldReceive('debug')->times(4);
+
+    $machine->send(event: ['type' => 'MUT']);
 });
