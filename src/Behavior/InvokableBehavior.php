@@ -20,6 +20,9 @@ abstract class InvokableBehavior
     /** @var array<string> An array containing the required context and the type of the context for the code to execute correctly. */
     public array $requiredContext = [];
 
+    /** @var bool Write log in console */
+    public bool $writeLog = false;
+
     /**
      * Constructs a new instance of the class.
      *
