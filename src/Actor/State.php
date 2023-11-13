@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Actor;
 
 use Symfony\Component\Uid\Ulid;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
@@ -83,6 +84,7 @@ class State
         InternalEvent $type,
         string $placeholder = null,
         array $payload = null,
+        bool $writeLog = false,
     ): self {
         $eventDefinition = new EventDefinition(
             type: $type->generateInternalEventName(
@@ -93,7 +95,7 @@ class State
             source: SourceType::INTERNAL,
         );
 
-        return $this->setCurrentEventBehavior($eventDefinition);
+        return $this->setCurrentEventBehavior(currentEventBehavior: $eventDefinition, writeLog: $writeLog);
     }
 
     /**
@@ -103,12 +105,14 @@ class State
      *
      * @return self The current object instance.
      */
-    public function setCurrentEventBehavior(EventBehavior $currentEventBehavior): self
+    public function setCurrentEventBehavior(EventBehavior $currentEventBehavior, bool $writeLog = false): self
     {
         $this->currentEventBehavior = $currentEventBehavior;
 
         $id    = Ulid::generate();
         $count = count($this->history) + 1;
+
+        $rootEventId = $this->history->first()->id ?? $id;
 
         $this->history->push(
             new MachineEvent([
@@ -117,7 +121,7 @@ class State
                 'created_at'      => now(),
                 'machine_id'      => $this->currentStateDefinition->machine->id,
                 'machine_value'   => [$this->currentStateDefinition->id],
-                'root_event_id'   => $this->history->first()->id ?? $id,
+                'root_event_id'   => $rootEventId,
                 'source'          => $currentEventBehavior->source,
                 'type'            => $currentEventBehavior->type,
                 'payload'         => $currentEventBehavior->payload,
@@ -126,6 +130,10 @@ class State
                 'meta'            => $this->currentStateDefinition->meta,
             ])
         );
+
+        if ($writeLog === true) {
+            Log::debug("[{$rootEventId}] {$currentEventBehavior->type}");
+        }
 
         return $this;
     }

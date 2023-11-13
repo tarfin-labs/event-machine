@@ -619,6 +619,8 @@ class MachineDefinition
             behaviorType: BehaviorType::Action
         );
 
+        $writeLog = $actionBehavior?->writeLog ?? false;
+
         // If the action behavior is callable, execute it with the context and event payload.
         if (!is_callable($actionBehavior)) {
             return;
@@ -627,7 +629,8 @@ class MachineDefinition
         // Record the internal action init event.
         $state->setInternalEventBehavior(
             type: InternalEvent::ACTION_START,
-            placeholder: $actionDefinition
+            placeholder: $actionDefinition,
+            writeLog: $writeLog,
         );
 
         if ($actionBehavior instanceof InvokableBehavior) {
@@ -662,7 +665,8 @@ class MachineDefinition
         // Record the internal action done event.
         $state->setInternalEventBehavior(
             type: InternalEvent::ACTION_FINISH,
-            placeholder: $actionDefinition
+            placeholder: $actionDefinition,
+            writeLog: $writeLog,
         );
     }
 
