@@ -21,7 +21,7 @@ abstract class InvokableBehavior
     public array $requiredContext = [];
 
     /** @var bool Write log in console */
-    public bool $writeLog = false;
+    public bool $shouldLog = false;
 
     /**
      * Constructs a new instance of the class.

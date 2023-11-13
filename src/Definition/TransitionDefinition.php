@@ -156,13 +156,13 @@ class TransitionDefinition
                     behaviorType: BehaviorType::Guard
                 );
 
-                $writeLog = $guardBehavior?->writeLog ?? false;
+                $shouldLog = $guardBehavior?->shouldLog ?? false;
 
                 // Record the internal guard init event.
                 $state->setInternalEventBehavior(
                     type: InternalEvent::GUARD_START,
                     placeholder: $guardDefinition,
-                    writeLog: $writeLog,
+                    shouldLog: $shouldLog,
                 );
 
                 if ($guardBehavior instanceof GuardBehavior) {
@@ -188,7 +188,7 @@ class TransitionDefinition
                         type: InternalEvent::GUARD_FAIL,
                         placeholder: $guardDefinition,
                         payload: $payload,
-                        writeLog: $writeLog,
+                        shouldLog: $shouldLog,
                     );
 
                     break;
@@ -198,7 +198,7 @@ class TransitionDefinition
                 $state->setInternalEventBehavior(
                     type: InternalEvent::GUARD_PASS,
                     placeholder: $guardDefinition,
-                    writeLog: $writeLog,
+                    shouldLog: $shouldLog,
                 );
             }
 

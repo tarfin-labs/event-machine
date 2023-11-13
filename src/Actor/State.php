@@ -84,7 +84,7 @@ class State
         InternalEvent $type,
         string $placeholder = null,
         array $payload = null,
-        bool $writeLog = false,
+        bool $shouldLog = false,
     ): self {
         $eventDefinition = new EventDefinition(
             type: $type->generateInternalEventName(
@@ -95,7 +95,7 @@ class State
             source: SourceType::INTERNAL,
         );
 
-        return $this->setCurrentEventBehavior(currentEventBehavior: $eventDefinition, writeLog: $writeLog);
+        return $this->setCurrentEventBehavior(currentEventBehavior: $eventDefinition, shouldLog: $shouldLog);
     }
 
     /**
@@ -105,7 +105,7 @@ class State
      *
      * @return self The current object instance.
      */
-    public function setCurrentEventBehavior(EventBehavior $currentEventBehavior, bool $writeLog = false): self
+    public function setCurrentEventBehavior(EventBehavior $currentEventBehavior, bool $shouldLog = false): self
     {
         $this->currentEventBehavior = $currentEventBehavior;
 
@@ -131,7 +131,7 @@ class State
             ])
         );
 
-        if ($writeLog === true) {
+        if ($shouldLog === true) {
             Log::debug("[{$rootEventId}] {$currentEventBehavior->type}");
         }
 

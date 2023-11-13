@@ -11,7 +11,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsCont
 
 class MultiplyByTwoAction extends ActionBehavior
 {
-    public bool $writeLog = true;
+    public bool $shouldLog = true;
 
     public function __invoke(ContextManager|TrafficLightsContext $context, EventBehavior $eventBehavior, array $arguments = null): void
     {

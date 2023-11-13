@@ -12,7 +12,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsCont
 class IsEvenGuard extends ValidationGuardBehavior
 {
     public ?string $errorMessage = 'Count is not even';
-    public bool $writeLog        = true;
+    public bool $shouldLog       = true;
 
     public function __invoke(
         ContextManager|TrafficLightsContext $context,
