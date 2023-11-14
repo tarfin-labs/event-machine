@@ -22,7 +22,7 @@ abstract class EventBehavior extends Data
     /** Actor performing the event. */
     private mixed $actor = null;
 
-    public bool $isTransactional = false;
+    public bool $isTransactional = true;
 
     /**
      * Creates a new instance of the class.
