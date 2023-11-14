@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Tests\Stubs\Models\ModelA;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Events\SEvent;
 
 it('can transition through a sequence of states using events', function (): void {
     $machine = MachineDefinition::define(
@@ -78,4 +81,29 @@ it('should apply the given state\'s context data to the machine\'s context when 
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active']);
     expect($newState->context->data)->toBe(['count' => 6, 'someValue' => 'abc']);
+});
+
+it('If the event is not transactional, its data is persistent', function (): void {
+    $machine = AsdMachine::create();
+
+    expect(fn () => $machine->send(new SEvent()))
+        ->toThrow(new Exception('error'));
+
+    $models = ModelA::all();
+
+    expect($models)
+        ->toHaveCount(1)
+        ->first()->value->toBe('new value');
+});
+
+it('If the event is transactional, it rollbacks the data', function (): void {
+    $machine = AsdMachine::create();
+
+    expect(fn () => $machine->send(new SEvent(isTransactional: true)))
+        ->toThrow(new Exception('error'));
+
+    $models = ModelA::all();
+
+    expect($models)
+        ->toHaveCount(0);
 });
