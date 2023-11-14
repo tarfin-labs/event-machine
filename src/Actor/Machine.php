@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Actor;
 
+use Exception;
 use Stringable;
 use JsonSerializable;
+use Illuminate\Support\Facades\DB;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Casts\MachineCast;
@@ -153,6 +155,8 @@ class Machine implements Castable, JsonSerializable, Stringable
      * @param  bool  $shouldPersist Whether to persist the state change.
      *
      * @return State The updated state of the machine.
+     *
+     * @throws Exception
      */
     public function send(
         EventBehavior|array|string $event,
@@ -167,7 +171,10 @@ class Machine implements Castable, JsonSerializable, Stringable
             $event = ['type' => $event];
         }
 
-        $this->state = $this->definition->transition($event, $this->state);
+        $this->state = match (true) {
+            $event->isTransactional ?? false => DB::transaction(fn () => $this->definition->transition($event, $this->state)),
+            default                          => $this->definition->transition($event, $this->state)
+        };
 
         if ($shouldPersist === true) {
             $this->persist();

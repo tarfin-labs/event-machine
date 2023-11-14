@@ -22,6 +22,8 @@ abstract class EventBehavior extends Data
     /** Actor performing the event. */
     private mixed $actor = null;
 
+    public bool $isTransactional = false;
+
     /**
      * Creates a new instance of the class.
      *
@@ -37,6 +39,8 @@ abstract class EventBehavior extends Data
         public null|string|Optional $type = null,
         public null|array|Optional $payload = null,
         #[WithoutValidation]
+        bool $isTransactional = null,
+        #[WithoutValidation]
         mixed $actor = null,
         public int|Optional $version = 1,
 
@@ -45,6 +49,10 @@ abstract class EventBehavior extends Data
     ) {
         if ($this->type === null) {
             $this->type = static::getType();
+        }
+
+        if ($isTransactional !== null) {
+            $this->isTransactional = $isTransactional;
         }
 
         $this->actor = $actor;
