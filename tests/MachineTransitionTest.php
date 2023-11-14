@@ -86,7 +86,7 @@ it('should apply the given state\'s context data to the machine\'s context when 
 it('If the event is not transactional, its data is persistent', function (): void {
     $machine = AsdMachine::create();
 
-    expect(fn () => $machine->send(new SEvent()))
+    expect(fn () => $machine->send(new SEvent(isTransactional: false)))
         ->toThrow(new Exception('error'));
 
     $models = ModelA::all();
@@ -99,7 +99,7 @@ it('If the event is not transactional, its data is persistent', function (): voi
 it('If the event is transactional, it rollbacks the data', function (): void {
     $machine = AsdMachine::create();
 
-    expect(fn () => $machine->send(new SEvent(isTransactional: true)))
+    expect(fn () => $machine->send(new SEvent()))
         ->toThrow(new Exception('error'));
 
     $models = ModelA::all();
