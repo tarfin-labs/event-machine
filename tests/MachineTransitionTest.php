@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Cache;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Tests\Stubs\Models\ModelA;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\AsdMachinejobJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Events\EEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Events\SEvent;
@@ -99,7 +99,7 @@ it('If the event is not transactional, its data is persistent', function (): voi
         ->first()->value->toBe('new value');
 });
 
-it('If the event is transactional, it rollbacks the data', function (): void {
+it('If the event is transactional, it rolls back the data', function (): void {
     $machine = AsdMachine::create();
 
     expect(fn () => $machine->send(new SEvent()))
@@ -111,11 +111,21 @@ it('If the event is transactional, it rollbacks the data', function (): void {
         ->toHaveCount(0);
 });
 
-it('x', function (): void {
+it('If the machine is already running, it will throw exception', function (): void {
     $machine = AsdMachine::create();
+    $machine->persist();
 
-    AsdMachinejobJob::dispatchSync($machine);
+    $rootEventId = $machine->state->history->first()->root_event_id;
 
-    expect(fn () => $machine->send(new EEvent()))
-        ->toThrow(MachineAlreadyRunningException::build($machine->state->history->first()->root_event_id));
-});
+    Cache::shouldReceive('lock')
+        ->once()
+        ->with($rootEventId, 60)
+        ->andReturnSelf();
+
+    Cache::shouldReceive('get')
+        ->once()
+        ->withAnyArgs()
+        ->andReturn(false);
+
+    $machine->send(new EEvent());
+})->throws(MachineAlreadyRunningException::class);

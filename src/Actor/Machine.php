@@ -8,6 +8,7 @@ use Exception;
 use Stringable;
 use JsonSerializable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Casts\MachineCast;
@@ -164,7 +165,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         bool $shouldPersist = true,
     ): State {
         if ($this->state !== null) {
-            $lock = cache()->lock(name: $this->state->history->first()->root_event_id, seconds: 60);
+            $lock = Cache::lock($this->state->history->first()->root_event_id, 60);
         }
 
         if (!($lock?->get() ?? true)) {
