@@ -1,13 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Actions;
 
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
-use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Tests\Stubs\Models\ModelA;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
-class SleepAction  extends ActionBehavior
+class SleepAction extends ActionBehavior
 {
     /**
      * @throws \Exception
@@ -16,5 +17,4 @@ class SleepAction  extends ActionBehavior
     {
         sleep(1);
     }
-
 }

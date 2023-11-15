@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Events;
 
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
@@ -11,4 +13,3 @@ class EEvent extends EventBehavior
         return 'E_EVENT';
     }
 }
-

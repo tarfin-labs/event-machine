@@ -163,8 +163,8 @@ class Machine implements Castable, JsonSerializable, Stringable
         EventBehavior|array|string $event,
         bool $shouldPersist = true,
     ): State {
-        if($this->state !== null) {
-            $lock = cache()->lock(name:  $this->state->history->first()->root_event_id, seconds: 60);
+        if ($this->state !== null) {
+            $lock = cache()->lock(name: $this->state->history->first()->root_event_id, seconds: 60);
         }
 
         if (!($lock?->get() ?? true)) {

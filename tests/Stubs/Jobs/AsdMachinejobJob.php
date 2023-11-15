@@ -1,14 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Jobs;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Queue\InteractsWithQueue;
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
-use Tarfinlabs\EventMachine\Actor\Machine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Events\EEvent;
 
 class AsdMachinejobJob implements ShouldQueue
