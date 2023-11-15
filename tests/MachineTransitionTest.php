@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
+use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\AsdMachinejobJob;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Events\EEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Models\ModelA;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Events\SEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Threads\AsyncOperation;
 
 it('can transition through a sequence of states using events', function (): void {
     $machine = MachineDefinition::define(
@@ -106,4 +110,13 @@ it('If the event is transactional, it rollbacks the data', function (): void {
 
     expect($models)
         ->toHaveCount(0);
+});
+
+it('x', function () {
+    $machine = AsdMachine::create();
+
+    AsdMachinejobJob::dispatchSync($machine);
+
+    expect(fn () => $machine->send(new EEvent()))
+        ->toThrow(MachineAlreadyRunningException::build($machine->state->history->first()->root_event_id));
 });

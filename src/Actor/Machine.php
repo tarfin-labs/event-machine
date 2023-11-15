@@ -22,6 +22,7 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
+use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
 use Tarfinlabs\EventMachine\Exceptions\MachineDefinitionNotFoundException;
 
 class Machine implements Castable, JsonSerializable, Stringable
@@ -162,6 +163,14 @@ class Machine implements Castable, JsonSerializable, Stringable
         EventBehavior|array|string $event,
         bool $shouldPersist = true,
     ): State {
+        if($this->state !== null) {
+            $lock = cache()->lock(name:  $this->state->history->first()->root_event_id, seconds: 60);
+        }
+
+        if (!($lock?->get() ?? true)) {
+            throw MachineAlreadyRunningException::build($this->state->history->first()->root_event_id);
+        }
+
         $lastPreviousEventNumber = $this->state !== null
             ? $this->state->history->last()->sequence_number
             : 0;
@@ -181,6 +190,8 @@ class Machine implements Castable, JsonSerializable, Stringable
         }
 
         $this->handleValidationGuards($lastPreviousEventNumber);
+
+        $lock?->release();
 
         return $this->state;
     }
