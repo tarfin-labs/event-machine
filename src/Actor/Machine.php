@@ -165,34 +165,40 @@ class Machine implements Castable, JsonSerializable, Stringable
         bool $shouldPersist = true,
     ): State {
         if ($this->state !== null) {
-            $lock = Cache::lock($this->state->history->first()->root_event_id, 60);
+            $lock = Cache::lock('machine-id:'.$this->state->history->first()->root_event_id, 60);
         }
 
-        if (!($lock?->get() ?? true)) {
+        if (isset($lock) && !$lock->get()) {
             throw MachineAlreadyRunningException::build($this->state->history->first()->root_event_id);
         }
 
-        $lastPreviousEventNumber = $this->state !== null
-            ? $this->state->history->last()->sequence_number
-            : 0;
+        try {
+            $lastPreviousEventNumber = $this->state !== null
+                ? $this->state->history->last()->sequence_number
+                : 0;
 
-        // If the event is a string, we assume it's the event type.
-        if (is_string($event)) {
-            $event = ['type' => $event];
+            // If the event is a string, we assume it's the event type.
+            if (is_string($event)) {
+                $event = ['type' => $event];
+            }
+
+            $this->state = match (true) {
+                $event->isTransactional ?? false => DB::transaction(fn () => $this->definition->transition($event, $this->state)),
+                default                          => $this->definition->transition($event, $this->state)
+            };
+
+            if ($shouldPersist === true) {
+                $this->persist();
+            }
+
+            $this->handleValidationGuards($lastPreviousEventNumber);
+        } catch (Exception $exception) {
+            throw $exception;
+        } finally {
+            if (isset($lock)) {
+                $lock->release();
+            }
         }
-
-        $this->state = match (true) {
-            $event->isTransactional ?? false => DB::transaction(fn () => $this->definition->transition($event, $this->state)),
-            default                          => $this->definition->transition($event, $this->state)
-        };
-
-        if ($shouldPersist === true) {
-            $this->persist();
-        }
-
-        $this->handleValidationGuards($lastPreviousEventNumber);
-
-        $lock?->release();
 
         return $this->state;
     }
