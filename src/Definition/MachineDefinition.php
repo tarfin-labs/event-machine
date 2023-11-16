@@ -75,6 +75,7 @@ class MachineDefinition
         public ?array $behavior,
         public string $id,
         public ?string $version,
+        public ?array $scenarios,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
         $this->root = $this->createRootStateDefinition($config);
@@ -107,12 +108,14 @@ class MachineDefinition
     public static function define(
         array $config = null,
         array $behavior = null,
+        array $scenarios = null,
     ): self {
         return new self(
             config: $config ?? null,
             behavior: array_merge(self::initializeEmptyBehavior(), $behavior ?? []),
             id: $config['id'] ?? self::DEFAULT_ID,
             version: $config['version'] ?? null,
+            scenarios: $scenarios,
             delimiter: $config['delimiter'] ?? self::STATE_DELIMITER,
         );
     }
