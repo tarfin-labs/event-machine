@@ -83,4 +83,9 @@ abstract class EventBehavior extends Data
     {
         return $this->actor;
     }
+
+    public function getScenario(): mixed
+    {
+        return $this->payload['scenario'] ?? null;
+    }
 }

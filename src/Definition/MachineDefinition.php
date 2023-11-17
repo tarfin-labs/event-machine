@@ -57,6 +57,8 @@ class MachineDefinition
     /** The initial state definition for this machine definition. */
     public ?StateDefinition $initialStateDefinition = null;
 
+    public bool $scenarioEnabled = false;
+
     // endregion
 
     // region Constructor
@@ -78,7 +80,14 @@ class MachineDefinition
         public ?array $scenarios,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
+        $this->scenarioEnabled = isset($this->config['scenario_enabled']) && $this->config['scenario_enabled'] === true;
+
         $this->root = $this->createRootStateDefinition($config);
+
+        if ($this->scenarioEnabled) {
+            $this->createScenarioStateDefinitions();
+        }
+
         $this->root->initializeTransitions();
 
         $this->stateDefinitions = $this->root->stateDefinitions;
@@ -163,14 +172,40 @@ class MachineDefinition
     }
 
     /**
+     * Create the root state definition.
+     *
+     * Creates and returns a new instance of `StateDefinition` with the given configuration.
+     * If no configuration is provided, the configuration will be set to null.
+     * The $options parameter is set with the current `Machine` and machine id.
+     *
+     *
+     * @return StateDefinition The created root state definition.
+     */
+    protected function createScenarioStateDefinitions(): void
+    {
+        if (!empty($this->scenarios)) {
+            foreach ($this->scenarios as $name => $states) {
+                foreach ($states as $stateName => $state) {
+                    new StateDefinition(
+                        config: ['id' => $name.self::STATE_DELIMITER.$this->id, 'states' => $state],
+                        options: [
+                            'machine' => $this,
+                            'key'     => $stateName,
+                        ]
+                    );
+                }
+
+            }
+        }
+    }
+
+    /**
      * Build the initial state for the machine.
      *
      * @return ?State The initial state of the machine.
      */
-    public function getInitialState(): ?State
+    public function getInitialState(EventBehavior|array $event = null): ?State
     {
-        $initialStateDefinition = $this->root->findInitialStateDefinition();
-
         if (is_null($this->initialStateDefinition)) {
             return null;
         }
@@ -181,6 +216,20 @@ class MachineDefinition
             context: $context,
             currentStateDefinition: $this->initialStateDefinition,
         );
+
+        if ($event !== null && $this->scenarioEnabled === true) {
+            // Initialize the event and validate it
+            $eventBehavior = $this->initializeEvent($event, $initialState);
+
+            if ($eventBehavior->getScenario() !== null) {
+                $initialState->context->set('scenario', $eventBehavior->getScenario());
+            }
+        }
+
+        if ($initialState->context->has('scenario') !== null && $scenarioState = $this->getScenarioState(state: $initialState, eventBehavior: $eventBehavior ?? null)) {
+            $initialState                 = $scenarioState;
+            $this->initialStateDefinition = $initialState->currentStateDefinition;
+        }
 
         // Record the internal machine init event.
         $initialState->setInternalEventBehavior(type: InternalEvent::MACHINE_START);
@@ -197,8 +246,8 @@ class MachineDefinition
             eventBehavior: $initialState->currentEventBehavior,
         );
 
-        if ($initialStateDefinition?->transitionDefinitions !== null) {
-            foreach ($initialStateDefinition->transitionDefinitions as $transition) {
+        if ($this->initialStateDefinition?->transitionDefinitions !== null) {
+            foreach ($this->initialStateDefinition->transitionDefinitions as $transition) {
                 if ($transition->isAlways === true) {
                     return $this->transition(
                         event: [
@@ -228,6 +277,24 @@ class MachineDefinition
         }
 
         return $initialState;
+    }
+
+    public function getScenarioState(State $state, EventBehavior $eventBehavior = null): ?State
+    {
+        if ($this->scenarioEnabled === false) {
+            return null;
+        }
+
+        $scenarioStateKey = $state->context->get('scenario').self::STATE_DELIMITER.$state->currentStateDefinition->id;
+        if ($state->context->get('scenario') !== null && isset($this->idMap[$scenarioStateKey])) {
+            return $this->buildCurrentState(
+                context: $state->context,
+                currentStateDefinition: $this->idMap[$scenarioStateKey],
+                eventBehavior: $eventBehavior
+            );
+        }
+
+        return null;
     }
 
     /**
@@ -488,7 +555,7 @@ class MachineDefinition
         State $state = null
     ): State {
         // Use the initial state if no state is provided
-        $state ??= $this->getInitialState();
+        $state ??= $this->getInitialState(event: $event);
 
         $currentStateDefinition = $this->getCurrentStateDefinition($state);
 
@@ -551,6 +618,11 @@ class MachineDefinition
         // Set the new state, or keep the current state if no target state definition is defined
         $newState = $state
             ->setCurrentStateDefinition($targetStateDefinition ?? $currentStateDefinition);
+
+        // Get scenario state if exists
+        if ($scenarioState = $this->getScenarioState(state: $newState, eventBehavior: $eventBehavior)) {
+            $newState = $scenarioState;
+        }
 
         // Record state enter event
         $state->setInternalEventBehavior(
