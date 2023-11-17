@@ -13,11 +13,11 @@ class ScenarioMachine extends Machine
     {
         return MachineDefinition::define(
             config: [
-                'initial' => 'stateA',
+                'initial'          => 'stateA',
                 'scenario_enabled' => true,
-                'context' => [
+                'context'          => [
                     'modelA' => null,
-                    'value' => 4,
+                    'value'  => 4,
                 ],
                 'states' => [
                     'stateA' => [
@@ -40,7 +40,7 @@ class ScenarioMachine extends Machine
                             'EVENT_B' => 'stateC',
                         ],
                     ],
-                ]
+                ],
             ]
         );
     }
