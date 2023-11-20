@@ -14,18 +14,18 @@ class ScenarioMachine extends Machine
     {
         return MachineDefinition::define(
             config: [
-                'initial' => 'stateA',
+                'initial'          => 'stateA',
                 'scenario_enabled' => true,
-                'context' => [
+                'context'          => [
                     'count' => 1,
                 ],
                 'states' => [
                     'stateA' => [
                         'on' => [
                             'EVENT_B' => [
-                                'target' => 'stateB',
-                                'actions' => 'incrementAction'
-                            ]
+                                'target'  => 'stateB',
+                                'actions' => 'incrementAction',
+                            ],
                         ],
                     ],
                     'stateB' => [
@@ -51,9 +51,9 @@ class ScenarioMachine extends Machine
                     'stateA' => [
                         'on' => [
                             'EVENT_B' => [
-                                'target' => 'stateC',
-                                'actions' => 'decrementAction'
-                            ]
+                                'target'  => 'stateC',
+                                'actions' => 'decrementAction',
+                            ],
                         ],
                     ],
                 ],
