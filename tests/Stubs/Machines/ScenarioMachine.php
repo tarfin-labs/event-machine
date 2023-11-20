@@ -33,7 +33,15 @@ class ScenarioMachine extends Machine
                             'EVENT_C' => 'stateC',
                         ],
                     ],
-                    'stateC' => [],
+                    'stateC' => [
+                        'on' => [
+                            'EVENT_D' => [
+                                'target'  => 'stateD',
+                                'actions' => 'incrementAction',
+                            ],
+                        ],
+                    ],
+                    'stateD' => [],
                 ],
             ],
             behavior: [
@@ -52,6 +60,14 @@ class ScenarioMachine extends Machine
                         'on' => [
                             'EVENT_B' => [
                                 'target'  => 'stateC',
+                                'actions' => 'decrementAction',
+                            ],
+                        ],
+                    ],
+                    'stateC' => [
+                        'on' => [
+                            'EVENT_D' => [
+                                'target'  => 'stateA',
                                 'actions' => 'decrementAction',
                             ],
                         ],
