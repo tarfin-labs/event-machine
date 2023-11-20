@@ -83,4 +83,14 @@ abstract class EventBehavior extends Data
     {
         return $this->actor;
     }
+
+    /**
+     * Retrieves the scenario value from the payload.
+     *
+     * @return string|null The scenario value if available, otherwise null.
+     */
+    public function getScenario(): ?string
+    {
+        return $this->payload['scenario'] ?? null;
+    }
 }
