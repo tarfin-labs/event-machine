@@ -58,7 +58,7 @@ class MachineDefinition
     public ?StateDefinition $initialStateDefinition = null;
 
     /** Indicates whether the scenario is enabled. */
-    public bool $scenarioEnabled = false;
+    public bool $scenariosEnabled = false;
 
     // endregion
 
@@ -81,12 +81,12 @@ class MachineDefinition
         public ?array $scenarios,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
-        $this->scenarioEnabled = isset($this->config['scenario_enabled']) && $this->config['scenario_enabled'] === true;
+        $this->scenariosEnabled = isset($this->config['scenarios_enabled']) && $this->config['scenarios_enabled'] === true;
 
         $this->root = $this->createRootStateDefinition($config);
 
         // Checks if the scenario is enabled, and if true, creates scenario state definitions.
-        if ($this->scenarioEnabled) {
+        if ($this->scenariosEnabled) {
             $this->createScenarioStateDefinitions();
         }
 
@@ -277,7 +277,7 @@ class MachineDefinition
      */
     public function getScenarioStateIfAvailable(State $state, EventBehavior|array $eventBehavior = null): ?State
     {
-        if ($this->scenarioEnabled === false) {
+        if ($this->scenariosEnabled === false) {
             return $state;
         }
 
