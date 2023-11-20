@@ -65,6 +65,9 @@ class MachineWithScenarios extends Machine
                         ],
                     ],
                     'stateC' => [
+                        'entry' => [
+                            'decrementAction',
+                        ],
                         'on' => [
                             'EVENT_D' => [
                                 'target'  => 'stateA',
