@@ -8,15 +8,15 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
-class ScenarioMachine extends Machine
+class MachineWithScenarios extends Machine
 {
     public static function definition(): MachineDefinition
     {
         return MachineDefinition::define(
             config: [
-                'initial'          => 'stateA',
-                'scenario_enabled' => true,
-                'context'          => [
+                'initial'           => 'stateA',
+                'scenarios_enabled' => true,
+                'context'           => [
                     'count' => 1,
                 ],
                 'states' => [

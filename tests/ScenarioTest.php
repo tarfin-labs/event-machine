@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\MachineWithScenarios;
 
-it('the scenario runs if the scenario is active', function (): void {
-    $machine = ScenarioMachine::create();
+it('scenarios run if scenarios enabled', function (): void {
+    $machine = MachineWithScenarios::create();
 
     $state = $machine->send(['type' => 'EVENT_B', 'payload' => ['scenario' => 'test']]);
 
