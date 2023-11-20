@@ -57,9 +57,7 @@ class MachineDefinition
     /** The initial state definition for this machine definition. */
     public ?StateDefinition $initialStateDefinition = null;
 
-    /**
-     * Indicates whether the scenario is enabled.
-     */
+    /** Indicates whether the scenario is enabled. */
     public bool $scenarioEnabled = false;
 
     // endregion
@@ -186,7 +184,7 @@ class MachineDefinition
         if (!empty($this->scenarios)) {
             foreach ($this->scenarios as $name => $scenarios) {
                 $parentStateDefinition = reset($this->idMap);
-                $state = new StateDefinition(
+                $state                 = new StateDefinition(
                     config: ['states' => $scenarios],
                     options: [
                         'parent'  => $parentStateDefinition,
@@ -282,7 +280,6 @@ class MachineDefinition
                 $state->context->set('scenario', $eventBehavior->getScenario());
             }
         }
-
 
         $scenarioStateKey = str_replace($this->id, $this->id.$this->delimiter.$state->context->get('scenario'), $state->currentStateDefinition->id);
         if ($state->context->has('scenario') && isset($this->idMap[$scenarioStateKey])) {

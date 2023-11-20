@@ -89,7 +89,7 @@ abstract class EventBehavior extends Data
      *
      * @return string|null The scenario value if available, otherwise null.
      */
-    public function getScenario(): string|null
+    public function getScenario(): ?string
     {
         return $this->payload['scenario'] ?? null;
     }
