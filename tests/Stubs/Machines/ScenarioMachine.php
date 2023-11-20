@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 class ScenarioMachine extends Machine
@@ -13,16 +14,18 @@ class ScenarioMachine extends Machine
     {
         return MachineDefinition::define(
             config: [
-                'initial'          => 'stateA',
+                'initial' => 'stateA',
                 'scenario_enabled' => true,
-                'context'          => [
-                    'modelA' => null,
-                    'value'  => 4,
+                'context' => [
+                    'count' => 1,
                 ],
                 'states' => [
                     'stateA' => [
                         'on' => [
-                            'EVENT_B' => 'stateB',
+                            'EVENT_B' => [
+                                'target' => 'stateB',
+                                'actions' => 'incrementAction'
+                            ]
                         ],
                     ],
                     'stateB' => [
@@ -33,11 +36,24 @@ class ScenarioMachine extends Machine
                     'stateC' => [],
                 ],
             ],
+            behavior: [
+                'actions' => [
+                    'incrementAction' => function (ContextManager $context): void {
+                        $context->set('count', $context->get('count') + 1);
+                    },
+                    'decrementAction' => function (ContextManager $context): void {
+                        $context->set('count', $context->get('count') - 1);
+                    },
+                ],
+            ],
             scenarios: [
                 'test' => [
                     'stateA' => [
                         'on' => [
-                            'EVENT_B' => 'stateC',
+                            'EVENT_B' => [
+                                'target' => 'stateC',
+                                'actions' => 'decrementAction'
+                            ]
                         ],
                     ],
                 ],
