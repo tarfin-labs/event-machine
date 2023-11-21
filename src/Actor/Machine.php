@@ -8,6 +8,7 @@ use Exception;
 use Stringable;
 use JsonSerializable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Casts\MachineCast;
@@ -22,6 +23,7 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
+use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
 use Tarfinlabs\EventMachine\Exceptions\MachineDefinitionNotFoundException;
 
 class Machine implements Castable, JsonSerializable, Stringable
@@ -162,25 +164,41 @@ class Machine implements Castable, JsonSerializable, Stringable
         EventBehavior|array|string $event,
         bool $shouldPersist = true,
     ): State {
-        $lastPreviousEventNumber = $this->state !== null
-            ? $this->state->history->last()->sequence_number
-            : 0;
-
-        // If the event is a string, we assume it's the event type.
-        if (is_string($event)) {
-            $event = ['type' => $event];
+        if ($this->state !== null) {
+            $lock = Cache::lock('machine-id:'.$this->state->history->first()->root_event_id, 60);
         }
 
-        $this->state = match (true) {
-            $event->isTransactional ?? false => DB::transaction(fn () => $this->definition->transition($event, $this->state)),
-            default                          => $this->definition->transition($event, $this->state)
-        };
-
-        if ($shouldPersist === true) {
-            $this->persist();
+        if (isset($lock) && !$lock->get()) {
+            throw MachineAlreadyRunningException::build($this->state->history->first()->root_event_id);
         }
 
-        $this->handleValidationGuards($lastPreviousEventNumber);
+        try {
+            $lastPreviousEventNumber = $this->state !== null
+                ? $this->state->history->last()->sequence_number
+                : 0;
+
+            // If the event is a string, we assume it's the event type.
+            if (is_string($event)) {
+                $event = ['type' => $event];
+            }
+
+            $this->state = match (true) {
+                $event->isTransactional ?? false => DB::transaction(fn () => $this->definition->transition($event, $this->state)),
+                default                          => $this->definition->transition($event, $this->state)
+            };
+
+            if ($shouldPersist === true) {
+                $this->persist();
+            }
+
+            $this->handleValidationGuards($lastPreviousEventNumber);
+        } catch (Exception $exception) {
+            throw $exception;
+        } finally {
+            if (isset($lock)) {
+                $lock->release();
+            }
+        }
 
         return $this->state;
     }

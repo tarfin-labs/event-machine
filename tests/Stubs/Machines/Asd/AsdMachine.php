@@ -6,10 +6,12 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Events\EEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Events\SEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Actions\AAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Actions\DAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Actions\SAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Actions\SleepAction;
 
 class AsdMachine extends Machine
 {
@@ -24,6 +26,9 @@ class AsdMachine extends Machine
                             'target'  => 'stateS',
                             'actions' => [AAction::class],
                         ],
+                        EEvent::class => [
+                            'actions' => [SleepAction::class],
+                        ],
                     ],
                 ],
                 'stateS' => [
@@ -37,6 +42,7 @@ class AsdMachine extends Machine
                 'stateD' => [
                     'entry' => [DAction::class],
                 ],
+                'stateE' => [],
             ],
         ]);
     }
