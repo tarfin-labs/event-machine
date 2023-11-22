@@ -91,6 +91,6 @@ abstract class EventBehavior extends Data
      */
     public function getScenario(): ?string
     {
-        return $this->payload['scenario'] ?? null;
+        return $this->payload['scenarioType'] ?? null;
     }
 }

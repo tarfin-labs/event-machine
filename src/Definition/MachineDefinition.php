@@ -285,12 +285,12 @@ class MachineDefinition
             // Initialize the event and validate it
             $eventBehavior = $this->initializeEvent($eventBehavior, $state);
             if ($eventBehavior->getScenario() !== null) {
-                $state->context->set('scenario', $eventBehavior->getScenario());
+                $state->context->set('scenarioType', $eventBehavior->getScenario());
             }
         }
 
-        $scenarioStateKey = str_replace($this->id, $this->id.$this->delimiter.$state->context->get('scenario'), $state->currentStateDefinition->id);
-        if ($state->context->has('scenario') && isset($this->idMap[$scenarioStateKey])) {
+        $scenarioStateKey = str_replace($this->id, $this->id.$this->delimiter.$state->context->get('scenarioType'), $state->currentStateDefinition->id);
+        if ($state->context->has('scenarioType') && isset($this->idMap[$scenarioStateKey])) {
             return $this->buildCurrentState(
                 context: $state->context,
                 currentStateDefinition: $this->idMap[$scenarioStateKey],
