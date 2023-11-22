@@ -115,7 +115,7 @@ it('If the machine is already running, it will throw exception', function (): vo
     $machine = AsdMachine::create();
     $machine->persist();
 
-    $rootEventId = 'machine-id:'.$machine->state->history->first()->root_event_id;
+    $rootEventId = 'mre:'.$machine->state->history->first()->root_event_id;
 
     Cache::shouldReceive('lock')
         ->once()

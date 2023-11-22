@@ -165,7 +165,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         bool $shouldPersist = true,
     ): State {
         if ($this->state !== null) {
-            $lock = Cache::lock('machine-id:'.$this->state->history->first()->root_event_id, 60);
+            $lock = Cache::lock('mre:'.$this->state->history->first()->root_event_id, 60);
         }
 
         if (isset($lock) && !$lock->get()) {
