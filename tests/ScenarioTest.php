@@ -9,7 +9,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\MachineWithScenarios;
 it('scenarios run if scenarios enabled', function (): void {
     $machine = MachineWithScenarios::create();
 
-    $state = $machine->send(['type' => 'EVENT_B', 'payload' => ['scenario' => 'test']]);
+    $state = $machine->send(['type' => 'EVENT_B', 'payload' => ['scenarioType' => 'test']]);
 
     expect($state)
         ->toBeInstanceOf(State::class)
