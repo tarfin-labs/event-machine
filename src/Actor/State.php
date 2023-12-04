@@ -8,6 +8,7 @@ use Symfony\Component\Uid\Ulid;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
@@ -41,9 +42,9 @@ class State
         public ContextManager $context,
         public ?StateDefinition $currentStateDefinition,
         public ?EventBehavior $currentEventBehavior = null,
-        public ?Collection $history = null,
+        public ?EventCollection $history = null,
     ) {
-        $this->history ??= (new MachineEvent())->newCollection();
+        $this->history ??= new EventCollection();
 
         $this->updateMachineValueFromState();
     }
