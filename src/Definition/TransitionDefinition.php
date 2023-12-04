@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
+use ReflectionFunction;
+use ReflectionUnionType;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
+use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 
 /**
@@ -135,6 +138,8 @@ class TransitionDefinition
      *
      * @return TransitionDefinition|null The first eligible transition or
      *         null if no eligible transition is found.
+     *
+     * @throws \ReflectionException
      */
     public function getFirstValidTransitionBranch(
         EventBehavior $eventBehavior,
@@ -169,7 +174,37 @@ class TransitionDefinition
                     $guardBehavior->validateRequiredContext($state->context);
                 }
 
-                if ($guardBehavior($state->context, $eventBehavior, $guardArguments) === false) {
+                $guardBehaviorParameters = [];
+
+                $reflectionFunction = $guardBehavior instanceof InvokableBehavior
+                    ? new ReflectionFunction($guardBehavior->definition())
+                    : new ReflectionFunction($guardBehavior);
+
+                foreach ($reflectionFunction->getParameters() as $parameter) {
+                    $parameterType = $parameter->getType();
+
+                    $typeName = $parameterType instanceof ReflectionUnionType
+                        ? $parameterType->getTypes()[0]->getName()
+                        : $parameterType->getName();
+
+                    $value = match (true) {
+                        is_a($state->context, $typeName) => $state->context,    // ContextManager
+                        is_a($eventBehavior, $typeName)  => $eventBehavior,     // EventBehavior
+                        is_a($state, $typeName)          => $state,             // State
+                        is_a($state->history, $typeName) => $state->history,    // EventCollection
+                        $typeName === 'array'            => $guardArguments,   // Behavior Arguments
+                        default                          => null,
+                    };
+
+                    $guardBehaviorParameters[] = $value;
+                }
+
+                $guardResult = ($guardBehavior instanceof InvokableBehavior
+                    ? $guardBehavior->definition()
+                    : $guardBehavior
+                )(...$guardBehaviorParameters);
+
+                if ($guardResult === false) {
                     $guardsPassed = false;
 
                     $payload = null;
