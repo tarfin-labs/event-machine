@@ -29,11 +29,11 @@ it('can update context using actions defined in transition definitions', functio
         ],
         behavior: [
             'actions' => [
-                'additionAction' => function (ContextManager $context, EventDefinition $eventDefinition): void {
-                    $context->set('count', $context->get('count') + $eventDefinition->payload['value']);
+                'additionAction' => function (ContextManager $context, EventBehavior $eventBehavior): void {
+                    $context->set('count', $context->get('count') + $eventBehavior->payload['value']);
                 },
-                'subtractionAction' => function (ContextManager $context, EventDefinition $eventDefinition): void {
-                    $context->set('count', $context->get('count') - $eventDefinition->payload['value']);
+                'subtractionAction' => function (ContextManager $context, EventBehavior $eventBehavior): void {
+                    $context->set('count', $context->get('count') - $eventBehavior->payload['value']);
                 },
                 'incrementAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') + 1);
