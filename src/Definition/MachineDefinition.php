@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
+use ReflectionFunction;
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -686,8 +687,9 @@ class MachineDefinition
      * action definition, and if the action behavior is callable, it
      * executes it using the context and event payload.
      *
-     * @param  string  $actionDefinition The action definition, either a class
-     * @param  EventBehavior|null  $eventBehavior The event (optional).
+     * @param string $actionDefinition The action definition, either a class
+     * @param EventBehavior|null $eventBehavior The event (optional).
+     * @throws \ReflectionException
      */
     public function runAction(
         string $actionDefinition,
@@ -724,8 +726,18 @@ class MachineDefinition
         // Get the number of events in the queue before the action is executed.
         $numberOfEventsInQueue = $this->eventQueue->count();
 
+        $actionBehaviorParameters = [];
+        /** @var \ReflectionParameter $parameter */
+        foreach ((new ReflectionFunction($actionBehavior))->getParameters() as $parameter) {
+            $value = match ($parameter->getType()->getName()) {
+                ContextManager::class => $state->context,
+                default               => null,
+            };
+            $actionBehaviorParameters[$parameter->getName()] = $value;
+        }
+
         // Execute the action behavior.
-        $actionBehavior($state->context, $eventBehavior, $actionArguments);
+        $actionBehavior(...$actionBehaviorParameters);
 
         // Get the number of events in the queue after the action is executed.
         $newNumberOfEventsInQueue = $this->eventQueue->count();
