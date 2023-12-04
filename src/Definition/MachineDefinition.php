@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
-use ReflectionMethod;
 use ReflectionFunction;
 use ReflectionUnionType;
 use Illuminate\Support\Collection;
@@ -732,7 +731,7 @@ class MachineDefinition
         $actionBehaviorParameters = [];
 
         $reflectionFunction = $actionBehavior instanceof InvokableBehavior
-            ? new ReflectionMethod($actionBehavior, '__invoke')
+            ? new ReflectionFunction($actionBehavior->definition())
             : new ReflectionFunction($actionBehavior);
 
         foreach ($reflectionFunction->getParameters() as $parameter) {
@@ -755,7 +754,10 @@ class MachineDefinition
         }
 
         // Execute the action behavior.
-        $actionBehavior(...$actionBehaviorParameters);
+        ($actionBehavior instanceof InvokableBehavior
+            ? $actionBehavior->definition()
+            : $actionBehavior
+        )(...$actionBehaviorParameters);
 
         // Get the number of events in the queue after the action is executed.
         $newNumberOfEventsInQueue = $this->eventQueue->count();
