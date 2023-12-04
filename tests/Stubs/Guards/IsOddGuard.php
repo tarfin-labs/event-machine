@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Guards;
 
-use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Closure;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 
@@ -15,11 +14,10 @@ class IsOddGuard extends GuardBehavior
         'counts.oddCount' => 'integer',
     ];
 
-    public function __invoke(
-        TrafficLightsContext|ContextManager $context,
-        EventBehavior $eventBehavior,
-        array $arguments = null
-    ): bool {
-        return $context->count % 2 === 1;
+    public function definition(): Closure
+    {
+        return function (TrafficLightsContext $context) {
+            return $context->count % 2 === 1;
+        };
     }
 }
