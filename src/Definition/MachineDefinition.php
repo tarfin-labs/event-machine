@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
+use ReflectionMethod;
 use ReflectionFunction;
+use ReflectionUnionType;
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -729,8 +731,17 @@ class MachineDefinition
         $numberOfEventsInQueue = $this->eventQueue->count();
 
         $actionBehaviorParameters = [];
-        foreach ((new ReflectionFunction($actionBehavior))->getParameters() as $parameter) {
-            $value = match ($parameter->getType()->getName()) {
+
+        $reflectionFunction = $actionBehavior instanceof InvokableBehavior
+            ? new ReflectionMethod($actionBehavior, '__invoke')
+            : new ReflectionFunction($actionBehavior);
+
+        foreach ($reflectionFunction->getParameters() as $parameter) {
+            $parameterTypeName = $parameter->getType() instanceof ReflectionUnionType
+                ? $parameter->getType()->getTypes()[0]->getName()
+                : $parameter->getType()->getName();
+
+            $value = match ($parameterTypeName) {
                 ContextManager::class  => $state->context,
                 EventBehavior::class   => $eventBehavior,
                 State::class           => $state,
