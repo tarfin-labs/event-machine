@@ -687,9 +687,8 @@ class MachineDefinition
      * action definition, and if the action behavior is callable, it
      * executes it using the context and event payload.
      *
-     * @param string $actionDefinition The action definition, either a class
-     * @param EventBehavior|null $eventBehavior The event (optional).
-     * @throws \ReflectionException
+     * @param  string  $actionDefinition The action definition, either a class
+     * @param  EventBehavior|null  $eventBehavior The event (optional).
      */
     public function runAction(
         string $actionDefinition,
@@ -731,6 +730,7 @@ class MachineDefinition
         foreach ((new ReflectionFunction($actionBehavior))->getParameters() as $parameter) {
             $value = match ($parameter->getType()->getName()) {
                 ContextManager::class => $state->context,
+                EventBehavior::class  => $eventBehavior,
                 default               => null,
             };
             $actionBehaviorParameters[$parameter->getName()] = $value;

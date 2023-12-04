@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
-it('it can inject ContextManager', function (): void {
+it('it can inject requested parameters', function (): void {
     $machine = Machine::create(MachineDefinition::define(
         config: [
             'initial' => 'ready',
@@ -20,8 +21,12 @@ it('it can inject ContextManager', function (): void {
         ],
         behavior: [
             'actions' => [
-                'contextAction' => function (ContextManager $c): void {
+                'contextAction' => function (
+                    ContextManager $c,
+                    EventBehavior $e,
+                ): void {
                     expect($c)->toBeInstanceOf(ContextManager::class);
+                    expect($e)->toBeInstanceOf(EventBehavior::class);
                 },
             ],
         ],
