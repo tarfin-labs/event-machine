@@ -10,6 +10,9 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 it('it can inject requested parameters', function (): void {
     $machine = Machine::create(MachineDefinition::define(
         config: [
+            'context' => [
+                'value' => 1,
+            ],
             'initial' => 'ready',
             'states'  => [
                 'ready' => [
@@ -26,6 +29,8 @@ it('it can inject requested parameters', function (): void {
                     EventBehavior $e,
                 ): void {
                     expect($c)->toBeInstanceOf(ContextManager::class);
+                    expect($c->value)->toBe(1);
+
                     expect($e)->toBeInstanceOf(EventBehavior::class);
                 },
             ],
