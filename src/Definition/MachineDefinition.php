@@ -747,6 +747,7 @@ class MachineDefinition
                 is_a($eventBehavior, $typeName)  => $eventBehavior,     // EventBehavior
                 is_a($state, $typeName)          => $state,             // State
                 is_a($state->history, $typeName) => $state->history,    // EventCollection
+                $typeName === 'array'            => $actionArguments,   // Behavior Arguments
                 default                          => null,
             };
 
