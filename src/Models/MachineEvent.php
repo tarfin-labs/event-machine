@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Models;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -76,5 +77,21 @@ class MachineEvent extends Model
     protected static function newFactory(): MachineEventFactory
     {
         return MachineEventFactory::new();
+    }
+
+    /**
+     * Create a new collection of models.
+     *
+     * This method overrides the default Eloquent collection with a custom
+     * EventCollection. This allows for additional methods to be available
+     * on the collection of MachineEvent models.
+     *
+     * @param  array  $models An array of MachineEvent models.
+     *
+     * @return EventCollection A new instance of EventCollection.
+     */
+    public function newCollection(array $models = []): EventCollection
+    {
+        return new EventCollection($models);
     }
 }
