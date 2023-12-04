@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions;
 
-use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Closure;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 
@@ -13,9 +12,10 @@ class MultiplyByTwoAction extends ActionBehavior
 {
     public bool $shouldLog = true;
 
-    public function __invoke(ContextManager|TrafficLightsContext $context, EventBehavior $eventBehavior, array $arguments = null): void
+    public function definition(): Closure
     {
-        /* @var \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext $context */
-        $context->count *= 2;
+        return function (TrafficLightsContext $context): void {
+            $context->count *= 2;
+        };
     }
 }

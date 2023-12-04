@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions;
 
-use Tarfinlabs\EventMachine\ContextManager;
+use Closure;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 
 class AddValueAction extends ActionBehavior
 {
-    public function __invoke(ContextManager|TrafficLightsContext $context, EventBehavior $eventBehavior, array $arguments = null): void
+    public function definition(): Closure
     {
-        /* @var \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext $context */
-        $context->count += $eventBehavior->payload['value'];
+        return function (
+            TrafficLightsContext $context,
+            EventBehavior $eventBehavior
+        ): void {
+            $context->count += $eventBehavior->payload['value'];
+        };
     }
 }

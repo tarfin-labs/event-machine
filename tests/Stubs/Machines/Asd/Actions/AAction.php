@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Actions;
 
-use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Closure;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Tests\Stubs\Models\ModelA;
 
 class AAction extends ActionBehavior
 {
-    public function __invoke(ContextManager $context, EventBehavior $eventBehavior, array $arguments = null): void
+    public function definition(): Closure
     {
-        ModelA::create([
-            'value' => 'lorem ipsum dolor',
-        ]);
+        return function (): void {
+            ModelA::create([
+                'value' => 'lorem ipsum dolor',
+            ]);
+        };
     }
 }
