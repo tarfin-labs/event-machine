@@ -8,6 +8,7 @@ use ReflectionFunction;
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
@@ -689,6 +690,8 @@ class MachineDefinition
      *
      * @param  string  $actionDefinition The action definition, either a class
      * @param  EventBehavior|null  $eventBehavior The event (optional).
+     *
+     * @throws \ReflectionException
      */
     public function runAction(
         string $actionDefinition,
@@ -726,13 +729,13 @@ class MachineDefinition
         $numberOfEventsInQueue = $this->eventQueue->count();
 
         $actionBehaviorParameters = [];
-        /** @var \ReflectionParameter $parameter */
         foreach ((new ReflectionFunction($actionBehavior))->getParameters() as $parameter) {
             $value = match ($parameter->getType()->getName()) {
-                ContextManager::class => $state->context,
-                EventBehavior::class  => $eventBehavior,
-                State::class          => $state,
-                default               => null,
+                ContextManager::class  => $state->context,
+                EventBehavior::class   => $eventBehavior,
+                State::class           => $state,
+                EventCollection::class => $state->history,
+                default                => null,
             };
             $actionBehaviorParameters[$parameter->getName()] = $value;
         }
