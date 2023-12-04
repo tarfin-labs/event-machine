@@ -32,6 +32,7 @@ it('it can inject requested parameters', function (): void {
                     expect($c->value)->toBe(1);
 
                     expect($e)->toBeInstanceOf(EventBehavior::class);
+                    expect($e->type)->toBe('CTX');
                 },
             ],
         ],
