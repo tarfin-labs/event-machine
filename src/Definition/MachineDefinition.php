@@ -750,7 +750,7 @@ class MachineDefinition
                 default                          => null,
             };
 
-            $actionBehaviorParameters[$parameter->getName()] = $value;
+            $actionBehaviorParameters[] = $value;
         }
 
         // Execute the action behavior.
