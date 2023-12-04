@@ -731,6 +731,7 @@ class MachineDefinition
             $value = match ($parameter->getType()->getName()) {
                 ContextManager::class => $state->context,
                 EventBehavior::class  => $eventBehavior,
+                State::class          => $state,
                 default               => null,
             };
             $actionBehaviorParameters[$parameter->getName()] = $value;

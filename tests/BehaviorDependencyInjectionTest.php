@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
@@ -27,12 +28,16 @@ it('it can inject requested parameters', function (): void {
                 'contextAction' => function (
                     ContextManager $c,
                     EventBehavior $e,
+                    State $s,
                 ): void {
                     expect($c)->toBeInstanceOf(ContextManager::class);
                     expect($c->value)->toBe(1);
 
                     expect($e)->toBeInstanceOf(EventBehavior::class);
                     expect($e->type)->toBe('CTX');
+
+                    expect($s)->toBeInstanceOf(State::class);
+                    expect($s->value)->toBe(['machine.ready']);
                 },
             ],
         ],
