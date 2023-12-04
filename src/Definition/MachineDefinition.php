@@ -10,7 +10,6 @@ use ReflectionUnionType;
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
@@ -737,17 +736,20 @@ class MachineDefinition
             : new ReflectionFunction($actionBehavior);
 
         foreach ($reflectionFunction->getParameters() as $parameter) {
-            $parameterTypeName = $parameter->getType() instanceof ReflectionUnionType
-                ? $parameter->getType()->getTypes()[0]->getName()
-                : $parameter->getType()->getName();
+            $parameterType = $parameter->getType();
 
-            $value = match ($parameterTypeName) {
-                ContextManager::class  => $state->context,
-                EventBehavior::class   => $eventBehavior,
-                State::class           => $state,
-                EventCollection::class => $state->history,
-                default                => null,
+            $typeName = $parameterType instanceof ReflectionUnionType
+                ? $parameterType->getTypes()[0]->getName()
+                : $parameterType->getName();
+
+            $value = match (true) {
+                is_a($state->context, $typeName) => $state->context,    // ContextManager
+                is_a($eventBehavior, $typeName)  => $eventBehavior,     // EventBehavior
+                is_a($state, $typeName)          => $state,             // State
+                is_a($state->history, $typeName) => $state->history,    // EventCollection
+                default                          => null,
             };
+
             $actionBehaviorParameters[$parameter->getName()] = $value;
         }
 
