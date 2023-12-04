@@ -25,8 +25,8 @@ test('an action can have multiple arguments', function (): void {
         ],
         behavior: [
             'actions' => [
-                'additionAction' => function (ContextManager $context, EventDefinition $eventDefinition, array $arguments = null): void {
-                    $context->count += array_sum($arguments);
+                'additionAction' => function (ContextManager $ctx, EventDefinition $ed, array $arguments = null): void {
+                    $ctx->count += array_sum($arguments);
                 },
             ],
         ],
