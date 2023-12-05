@@ -625,7 +625,7 @@ class MachineDefinition
 
         // Get scenario state if exists
         $newState = $this->getScenarioStateIfAvailable(state: $newState, eventBehavior: $eventBehavior);
-        if ($state->currentStateDefinition->id !== $newState->currentStateDefinition->id) {
+        if ($targetStateDefinition !== null && $targetStateDefinition?->id !== $newState->currentStateDefinition->id) {
             $targetStateDefinition = $newState->currentStateDefinition;
         }
 
