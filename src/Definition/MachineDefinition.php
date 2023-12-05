@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
-use ReflectionMethod;
-use ReflectionFunction;
-use ReflectionUnionType;
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -729,33 +726,16 @@ class MachineDefinition
         // Get the number of events in the queue before the action is executed.
         $numberOfEventsInQueue = $this->eventQueue->count();
 
-        $actionBehaviorParameters = [];
+        // Inject action behavior parameters
+        $actionBehaviorParemeters = InvokableBehavior::injectInvokableBehaviorParameters(
+            actionBehavior: $actionBehavior,
+            state: $state,
+            eventBehavior: $eventBehavior,
+            actionArguments: $actionArguments
+        );
 
-        $actionBehaviorReflection = $actionBehavior instanceof InvokableBehavior
-            ? new ReflectionMethod($actionBehavior, '__invoke')
-            : new ReflectionFunction($actionBehavior);
-
-        foreach ($actionBehaviorReflection->getParameters() as $parameter) {
-            $parameterType = $parameter->getType();
-
-            $typeName = $parameterType instanceof ReflectionUnionType
-                ? $parameterType->getTypes()[0]->getName()
-                : $parameterType->getName();
-
-            $value = match (true) {
-                is_a($state->context, $typeName) => $state->context,    // ContextManager
-                is_a($eventBehavior, $typeName)  => $eventBehavior,     // EventBehavior
-                is_a($state, $typeName)          => $state,             // State
-                is_a($state->history, $typeName) => $state->history,    // EventCollection
-                $typeName === 'array'            => $actionArguments,   // Behavior Arguments
-                default                          => null,
-            };
-
-            $actionBehaviorParameters[] = $value;
-        }
-
-        // Execute the action behavior.
-        ($actionBehavior)(...$actionBehaviorParameters);
+        // Execute the action behavior
+        ($actionBehavior)(...$actionBehaviorParemeters);
 
         // Get the number of events in the queue after the action is executed.
         $newNumberOfEventsInQueue = $this->eventQueue->count();

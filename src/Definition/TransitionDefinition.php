@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
-use ReflectionMethod;
-use ReflectionFunction;
-use ReflectionUnionType;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
@@ -175,31 +172,15 @@ class TransitionDefinition
                     $guardBehavior->validateRequiredContext($state->context);
                 }
 
-                $guardBehaviorParameters = [];
+                // Inject guard behavior parameters
+                $guardBehaviorParameters = InvokableBehavior::injectInvokableBehaviorParameters(
+                    actionBehavior: $guardBehavior,
+                    state: $state,
+                    eventBehavior: $eventBehavior,
+                    actionArguments: $guardArguments,
+                );
 
-                $guardBehaviorReflection = $guardBehavior instanceof InvokableBehavior
-                    ? new ReflectionMethod($guardBehavior, '__invoke')
-                    : new ReflectionFunction($guardBehavior);
-
-                foreach ($guardBehaviorReflection->getParameters() as $parameter) {
-                    $parameterType = $parameter->getType();
-
-                    $typeName = $parameterType instanceof ReflectionUnionType
-                        ? $parameterType->getTypes()[0]->getName()
-                        : $parameterType->getName();
-
-                    $value = match (true) {
-                        is_a($state->context, $typeName) => $state->context,    // ContextManager
-                        is_a($eventBehavior, $typeName)  => $eventBehavior,     // EventBehavior
-                        is_a($state, $typeName)          => $state,             // State
-                        is_a($state->history, $typeName) => $state->history,    // EventCollection
-                        $typeName === 'array'            => $guardArguments,    // Behavior Arguments
-                        default                          => null,
-                    };
-
-                    $guardBehaviorParameters[] = $value;
-                }
-
+                // Execute the guard behavior
                 $guardResult = ($guardBehavior)(...$guardBehaviorParameters);
 
                 if ($guardResult === false) {
