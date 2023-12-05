@@ -4,19 +4,16 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\Actions;
 
-use Closure;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\Events\YEvent;
 
 class YAction extends ActionBehavior
 {
-    public function definition(): Closure
+    public function __invoke(ContextManager $context): void
     {
-        return function (ContextManager $context): void {
-            $context->value .= 'y';
+        $context->value .= 'y';
 
-            $this->raise(new YEvent());
-        };
+        $this->raise(new YEvent());
     }
 }

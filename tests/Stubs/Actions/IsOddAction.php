@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Actions;
 
-use Closure;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
@@ -14,10 +13,8 @@ class IsOddAction extends ActionBehavior
         'counts.oddCount' => 'integer',
     ];
 
-    public function definition(): Closure
+    public function __invoke(ContextManager $context): void
     {
-        return function (ContextManager $context): void {
-            $context->set('counts.oddCount', 1);
-        };
+        $context->set('counts.oddCount', 1);
     }
 }

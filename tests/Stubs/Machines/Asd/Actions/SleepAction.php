@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Actions;
 
-use Closure;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
 class SleepAction extends ActionBehavior
 {
-    public function definition(): Closure
+    public function __invoke(): void
     {
-        return function (): void {
-            sleep(1);
-        };
+        sleep(1);
     }
 }
