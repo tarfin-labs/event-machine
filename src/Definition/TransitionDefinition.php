@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
+use ReflectionMethod;
 use ReflectionFunction;
 use ReflectionUnionType;
 use Tarfinlabs\EventMachine\Actor\State;
@@ -176,11 +177,11 @@ class TransitionDefinition
 
                 $guardBehaviorParameters = [];
 
-                $reflectionFunction = $guardBehavior instanceof InvokableBehavior
-                    ? new ReflectionFunction($guardBehavior->definition())
+                $guardBehaviorReflection = $guardBehavior instanceof InvokableBehavior
+                    ? new ReflectionMethod($guardBehavior, '__invoke')
                     : new ReflectionFunction($guardBehavior);
 
-                foreach ($reflectionFunction->getParameters() as $parameter) {
+                foreach ($guardBehaviorReflection->getParameters() as $parameter) {
                     $parameterType = $parameter->getType();
 
                     $typeName = $parameterType instanceof ReflectionUnionType
@@ -192,17 +193,14 @@ class TransitionDefinition
                         is_a($eventBehavior, $typeName)  => $eventBehavior,     // EventBehavior
                         is_a($state, $typeName)          => $state,             // State
                         is_a($state->history, $typeName) => $state->history,    // EventCollection
-                        $typeName === 'array'            => $guardArguments,   // Behavior Arguments
+                        $typeName === 'array'            => $guardArguments,    // Behavior Arguments
                         default                          => null,
                     };
 
                     $guardBehaviorParameters[] = $value;
                 }
 
-                $guardResult = ($guardBehavior instanceof InvokableBehavior
-                    ? $guardBehavior->definition()
-                    : $guardBehavior
-                )(...$guardBehaviorParameters);
+                $guardResult = ($guardBehavior)(...$guardBehaviorParameters);
 
                 if ($guardResult === false) {
                     $guardsPassed = false;
