@@ -12,14 +12,4 @@ namespace Tarfinlabs\EventMachine\Behavior;
  */
 abstract class GuardBehavior extends InvokableBehavior
 {
-    /**
-     * Invokes the method.
-     *
-     *
-     * @return bool Returns true if the method invocation was successful, false otherwise.
-     */
-    public function __invoke(): bool
-    {
-        return parent::__invoke();
-    }
 }

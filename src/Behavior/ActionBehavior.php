@@ -12,11 +12,4 @@ namespace Tarfinlabs\EventMachine\Behavior;
  */
 abstract class ActionBehavior extends InvokableBehavior
 {
-    /**
-     * Invokes the method with the given parameters.
-     */
-    public function __invoke(): void
-    {
-        parent::__invoke();
-    }
 }

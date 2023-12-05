@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Behavior;
 
-use Closure;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -31,28 +30,11 @@ abstract class InvokableBehavior
      *
      * @return void
      */
-    public function __construct(
-        protected ?Collection $eventQueue = null
-    ) {
+    public function __construct(protected ?Collection $eventQueue = null)
+    {
         if ($this->eventQueue === null) {
             $this->eventQueue = new Collection();
         }
-    }
-
-    abstract public function definition(): Closure;
-
-    /**
-     * Executes the behavior with the given context and event.
-     *
-     * This method defines the contract for implementing behaviors
-     * within classes. The behavior should be directly invokable by
-     * passing in a ContextManager instance and an array of event payload.
-     */
-    public function __invoke()
-    {
-        $closure = $this->definition();
-
-        return $closure();
     }
 
     /**
