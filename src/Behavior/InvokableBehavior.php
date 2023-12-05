@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Behavior;
 
 use ReflectionMethod;
 use ReflectionFunction;
+use ReflectionUnionType;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\Actor\State;
@@ -141,7 +142,7 @@ abstract class InvokableBehavior
     ): array {
         $invocableBehaviorParameters = [];
 
-        $invocableBehaviorReflection = $actionBehavior instanceof InvokableBehavior
+        $invocableBehaviorReflection = $actionBehavior instanceof self
             ? new ReflectionMethod($actionBehavior, '__invoke')
             : new ReflectionFunction($actionBehavior);
 
