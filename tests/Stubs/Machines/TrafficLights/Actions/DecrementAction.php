@@ -14,7 +14,7 @@ class DecrementAction extends ActionBehavior
     public function __invoke(
         ContextManager|TrafficLightsContext $context,
         EventBehavior $eventBehavior,
-        array $arguments = null
+        ?array $arguments = null
     ): void {
         /* @var \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext $context */
         $context->count--;

@@ -14,7 +14,7 @@ class GreenResult extends ResultBehavior
     public function __invoke(
         ContextManager $context,
         EventBehavior $eventBehavior,
-        array $arguments = null
+        ?array $arguments = null
     ): Carbon {
         return now();
     }

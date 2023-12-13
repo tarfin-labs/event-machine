@@ -13,7 +13,7 @@ class ZAction extends ActionBehavior
     public function __invoke(
         ContextManager $context,
         EventBehavior $eventBehavior,
-        array $arguments = null
+        ?array $arguments = null
     ): void {
         $context->value .= 'z';
 

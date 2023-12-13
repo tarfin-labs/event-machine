@@ -13,7 +13,7 @@ class MultiplyByTwoAction extends ActionBehavior
 {
     public bool $shouldLog = true;
 
-    public function __invoke(ContextManager|TrafficLightsContext $context, EventBehavior $eventBehavior, array $arguments = null): void
+    public function __invoke(ContextManager|TrafficLightsContext $context, EventBehavior $eventBehavior, ?array $arguments = null): void
     {
         /* @var \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext $context */
         $context->count *= 2;

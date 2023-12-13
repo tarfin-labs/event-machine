@@ -13,7 +13,7 @@ class SleepAction extends ActionBehavior
     /**
      * @throws \Exception
      */
-    public function __invoke(ContextManager $context, EventBehavior $eventBehavior, array $arguments = null): void
+    public function __invoke(ContextManager $context, EventBehavior $eventBehavior, ?array $arguments = null): void
     {
         sleep(1);
     }

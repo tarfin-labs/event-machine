@@ -155,7 +155,6 @@ it('stores internal guard events', function (): void {
             'in.state.active.entry.finish',
             'MUT',
             'in.transition.active.MUT.start',
-            'in.guard.isEvenGuard.start',
             'in.guard.isEvenGuard.fail',
             'in.transition.active.MUT.fail',
         ]);

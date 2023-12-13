@@ -11,7 +11,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Qwerty\Events\TEvent;
 
 class TAction extends ActionBehavior
 {
-    public function __invoke(ContextManager $context, EventBehavior $eventBehavior, array $arguments = null): void
+    public function __invoke(ContextManager $context, EventBehavior $eventBehavior, ?array $arguments = null): void
     {
         $this->raise(new TEvent(actor: $eventBehavior->actor($context)));
     }
