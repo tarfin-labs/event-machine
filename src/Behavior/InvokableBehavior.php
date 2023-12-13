@@ -54,7 +54,7 @@ abstract class InvokableBehavior
     abstract public function __invoke(
         ContextManager $context,
         EventBehavior $eventBehavior,
-        array $arguments = null,
+        ?array $arguments = null,
     );
 
     /**

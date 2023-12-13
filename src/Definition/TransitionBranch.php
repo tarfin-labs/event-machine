@@ -169,7 +169,7 @@ class TransitionBranch
      */
     public function runActions(
         State $state,
-        EventBehavior $eventBehavior = null
+        ?EventBehavior $eventBehavior = null
     ): void {
         if ($this->actions === null) {
             return;

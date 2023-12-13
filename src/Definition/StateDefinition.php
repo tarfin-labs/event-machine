@@ -104,7 +104,7 @@ class StateDefinition
      */
     public function __construct(
         public ?array $config,
-        array $options = null,
+        ?array $options = null,
     ) {
         $this->initializeOptions($options);
 
@@ -457,7 +457,7 @@ class StateDefinition
      *
      * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior The event to be processed.
      */
-    public function runEntryActions(State $state, EventBehavior $eventBehavior = null): void
+    public function runEntryActions(State $state, ?EventBehavior $eventBehavior = null): void
     {
         // Record state entry start event
         $state->setInternalEventBehavior(

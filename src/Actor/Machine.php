@@ -107,8 +107,8 @@ class Machine implements Castable, JsonSerializable, Stringable
      * @return self The newly created and initialized machine instance.
      */
     public static function create(
-        MachineDefinition|array $definition = null,
-        State|string $state = null,
+        MachineDefinition|array|null $definition = null,
+        State|string|null $state = null,
     ): self {
         if (is_array($definition)) {
             $definition = MachineDefinition::define(
@@ -135,7 +135,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      *
      * @return self The started machine instance.
      */
-    public function start(State|string $state = null): self
+    public function start(State|string|null $state = null): self
     {
         $this->state = match (true) {
             $state === null         => $this->definition->getInitialState(),

@@ -11,7 +11,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Models\ModelA;
 
 class AAction extends ActionBehavior
 {
-    public function __invoke(ContextManager $context, EventBehavior $eventBehavior, array $arguments = null): void
+    public function __invoke(ContextManager $context, EventBehavior $eventBehavior, ?array $arguments = null): void
     {
         ModelA::create([
             'value' => 'lorem ipsum dolor',

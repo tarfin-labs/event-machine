@@ -11,7 +11,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsCont
 
 class AddValueAction extends ActionBehavior
 {
-    public function __invoke(ContextManager|TrafficLightsContext $context, EventBehavior $eventBehavior, array $arguments = null): void
+    public function __invoke(ContextManager|TrafficLightsContext $context, EventBehavior $eventBehavior, ?array $arguments = null): void
     {
         /* @var \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext $context */
         $context->count += $eventBehavior->payload['value'];

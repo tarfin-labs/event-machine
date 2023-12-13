@@ -95,7 +95,7 @@ test('result actions can return', function (): void {
         public function __invoke(
             ContextManager $context,
             EventBehavior $eventBehavior,
-            array $arguments = null
+            ?array $arguments = null
         ): int {
             return $eventBehavior->payload['value'] * $eventBehavior->payload['value'];
         }

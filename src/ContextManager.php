@@ -87,7 +87,7 @@ class ContextManager extends Data
      * @return bool  True if the key exists and (if a type is specified)
      * its value is of the given type. False otherwise.
      */
-    public function has(string $key, string $type = null): bool
+    public function has(string $key, ?string $type = null): bool
     {
         $hasKey = match (true) {
             get_class($this) === self::class   => Arr::has($this->data, $key),

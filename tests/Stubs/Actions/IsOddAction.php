@@ -14,7 +14,7 @@ class IsOddAction extends ActionBehavior
         'counts.oddCount' => 'integer',
     ];
 
-    public function __invoke(ContextManager $context, EventBehavior $eventBehavior, array $arguments = null): void
+    public function __invoke(ContextManager $context, EventBehavior $eventBehavior, ?array $arguments = null): void
     {
         $context->set('counts.oddCount', 1);
     }

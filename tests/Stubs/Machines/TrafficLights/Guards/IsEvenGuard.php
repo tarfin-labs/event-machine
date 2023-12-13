@@ -17,7 +17,7 @@ class IsEvenGuard extends ValidationGuardBehavior
     public function __invoke(
         ContextManager|TrafficLightsContext $context,
         EventBehavior $eventBehavior,
-        array $arguments = null
+        ?array $arguments = null
     ): bool {
         return $context->count % 2 === 0;
     }

@@ -29,8 +29,8 @@ enum InternalEvent: string
 
     case ACTION_START  = '{machine}.action.{placeholder}.start';
     case ACTION_FINISH = '{machine}.action.{placeholder}.finish';
-    case GUARD_PASS  = '{machine}.guard.{placeholder}.pass';
-    case GUARD_FAIL  = '{machine}.guard.{placeholder}.fail';
+    case GUARD_PASS    = '{machine}.guard.{placeholder}.pass';
+    case GUARD_FAIL    = '{machine}.guard.{placeholder}.fail';
 
     case EVENT_RAISED = '{machine}.event.{placeholder}.raised';
 
@@ -42,7 +42,7 @@ enum InternalEvent: string
      *
      * @return string The generated internal event name.
      */
-    public function generateInternalEventName(string $machineId, string $placeholder = null): string
+    public function generateInternalEventName(string $machineId, ?string $placeholder = null): string
     {
         if ($placeholder !== null && class_exists($placeholder)) {
             $placeholder = Str::of($placeholder)->classBasename()->toString();

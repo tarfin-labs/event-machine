@@ -19,7 +19,7 @@ class IsValidatedOddGuard extends ValidationGuardBehavior
     public function __invoke(
         TrafficLightsContext|ContextManager $context,
         EventBehavior $eventBehavior,
-        array $arguments = null
+        ?array $arguments = null
     ): bool {
         return $context->count % 2 === 1;
     }

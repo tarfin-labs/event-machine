@@ -12,7 +12,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\AddAnother
 
 class AddAnotherValueAction extends ActionBehavior
 {
-    public function __invoke(ContextManager|TrafficLightsContext $context, EventBehavior|AddAnotherValueEvent $eventBehavior, array $arguments = null): void
+    public function __invoke(ContextManager|TrafficLightsContext $context, EventBehavior|AddAnotherValueEvent $eventBehavior, ?array $arguments = null): void
     {
         $context->count += $eventBehavior->value;
     }

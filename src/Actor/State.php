@@ -82,8 +82,8 @@ class State
      */
     public function setInternalEventBehavior(
         InternalEvent $type,
-        string $placeholder = null,
-        array $payload = null,
+        ?string $placeholder = null,
+        ?array $payload = null,
         bool $shouldLog = false,
     ): self {
         $eventDefinition = new EventDefinition(
