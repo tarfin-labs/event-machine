@@ -29,8 +29,6 @@ enum InternalEvent: string
 
     case ACTION_START  = '{machine}.action.{placeholder}.start';
     case ACTION_FINISH = '{machine}.action.{placeholder}.finish';
-
-    case GUARD_START = '{machine}.guard.{placeholder}.start';
     case GUARD_PASS  = '{machine}.guard.{placeholder}.pass';
     case GUARD_FAIL  = '{machine}.guard.{placeholder}.fail';
 
