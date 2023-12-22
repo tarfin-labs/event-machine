@@ -477,4 +477,29 @@ class Machine implements Castable, JsonSerializable, Stringable
             $arguments ?? null,
         );
     }
+
+    // region Private Methods
+    /**
+     * Compares two arrays recursively and returns the difference.
+     */
+    private function arrayRecursiveDiff(array $array1, array $array2): array
+    {
+        $difference = [];
+        foreach ($array1 as $key => $value) {
+            if (is_array($value)) {
+                if (!isset($array2[$key]) || !is_array($array2[$key])) {
+                    $difference[$key] = $value;
+                } else {
+                    $new_diff = $this->arrayRecursiveDiff($value, $array2[$key]);
+                    if (!empty($new_diff)) {
+                        $difference[$key] = $new_diff;
+                    }
+                }
+            } elseif (!array_key_exists($key, $array2) || $array2[$key] !== $value) {
+                $difference[$key] = $value;
+            }
+        }
+
+        return $difference;
+    }
 }
