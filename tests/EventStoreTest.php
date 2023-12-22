@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -158,4 +159,67 @@ it('stores internal guard events', function (): void {
             'in.guard.isEvenGuard.fail',
             'in.transition.active.MUT.fail',
         ]);
+});
+
+it('stores incremental context', function (): void {
+    $machine = Machine::create([
+        'config' => [
+            'id'      => 'traffic_light',
+            'initial' => 'green',
+            'context' => [
+                'count' => 1,
+                'value' => 'test',
+            ],
+            'states' => [
+                'green' => [
+                    'on' => [
+                        'GREEN_TIMER' => [
+                            'target'  => 'yellow',
+                            'actions' => 'changeCount',
+                        ],
+                    ],
+                ],
+                'yellow' => [
+                    'on' => [
+                        'RED_TIMER' => [
+                            'target'  => 'red',
+                            'actions' => 'changeValue',
+                        ],
+                    ],
+                ],
+                'red' => [],
+            ],
+        ],
+        'behavior' => [
+            'actions' => [
+                'changeCount' => function (ContextManager $context): void {
+                    $context->set('count', $context->get('count') + 1);
+                },
+                'changeValue' => function (ContextManager $context): void {
+                    $context->set('value', 'retry');
+                },
+            ],
+        ],
+    ]);
+
+    $machine->send(event: [
+        'type' => 'GREEN_TIMER',
+    ]);
+
+    $newState = $machine->send(event: [
+        'type' => 'RED_TIMER',
+    ]);
+
+    expect($newState->history)
+        ->whereNotIn('type', [
+            'traffic_light.start',
+            'traffic_light.action.changeCount.finish',
+            'traffic_light.action.changeValue.finish',
+            'traffic_light.state.red.entry.finish',
+        ])->each(fn ($event) => $event->context->toEqual([]))
+        ->first()->context->toEqual(['data' => ['count' => 1, 'value' => 'test']])
+        ->where('type', 'traffic_light.action.changeCount.finish')->first()->context->toEqual(['data' => ['count' => 2]])
+        ->where('type', 'traffic_light.action.changeValue.finish')->first()->context->toEqual(['data' => ['value' => 'retry']])
+        ->last()->context->toEqual(['data' => ['count' => 2, 'value' => 'retry']]);
+
 });
