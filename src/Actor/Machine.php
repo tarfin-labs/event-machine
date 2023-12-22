@@ -502,4 +502,23 @@ class Machine implements Castable, JsonSerializable, Stringable
 
         return $difference;
     }
+
+    /**
+     * Merges two arrays recursively.
+     */
+    protected function arrayRecursiveMerge(array $array1, array $array2): array
+    {
+        $merged = $array1;
+
+        foreach ($array2 as $key => &$value) {
+            if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
+                $merged[$key] = $this->arrayRecursiveMerge($merged[$key], $value);
+            } else {
+                $merged[$key] = $value;
+            }
+        }
+
+        return $merged;
+    }
+    // endregion
 }
