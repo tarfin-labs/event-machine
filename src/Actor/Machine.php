@@ -217,14 +217,37 @@ class Machine implements Castable, JsonSerializable, Stringable
      */
     public function persist(): ?State
     {
+        // Retrieve the previous context from the definition's config, or set it to an empty array if not set.
+        $incrementalContext = $this->definition->initializeContextFromState()->toArray();
+
+        // Get the last event from the state's history.
+        $lastHistoryEvent = $this->state->history->last();
+
         MachineEvent::upsert(
-            values: $this->state->history->map(fn (MachineEvent $machineEvent) => array_merge($machineEvent->toArray(), [
-                'created_at'    => $machineEvent->created_at->toDateTimeString(),
-                'machine_value' => json_encode($machineEvent->machine_value, JSON_THROW_ON_ERROR),
-                'payload'       => json_encode($machineEvent->payload, JSON_THROW_ON_ERROR),
-                'context'       => json_encode($machineEvent->context, JSON_THROW_ON_ERROR),
-                'meta'          => json_encode($machineEvent->meta, JSON_THROW_ON_ERROR),
-            ]))->toArray(),
+            values: $this->state->history->map(function (MachineEvent $machineEvent, int $index) use (&$incrementalContext, $lastHistoryEvent) {
+                // Get the context of the current machine event.
+                $changes = $machineEvent->context;
+
+                // If the current machine event is not the last one, compare its context with the incremental context and get the differences.
+                if ($machineEvent->id !== $lastHistoryEvent->id && $index > 0) {
+                    $changes = $this->arrayRecursiveDiff($changes, $incrementalContext);
+                }
+
+                // If there are changes, update the incremental context to the current event's context.
+                if (!empty($changes)) {
+                    $incrementalContext = $this->arrayRecursiveMerge($incrementalContext, $machineEvent->context);
+                }
+
+                $machineEvent->context = $changes;
+
+                return array_merge($machineEvent->toArray(), [
+                    'created_at'    => $machineEvent->created_at->toDateTimeString(),
+                    'machine_value' => json_encode($machineEvent->machine_value, JSON_THROW_ON_ERROR),
+                    'payload'       => json_encode($machineEvent->payload, JSON_THROW_ON_ERROR),
+                    'context'       => json_encode($machineEvent->context, JSON_THROW_ON_ERROR),
+                    'meta'          => json_encode($machineEvent->meta, JSON_THROW_ON_ERROR),
+                ]);
+            })->toArray(),
             uniqueBy: ['id']
         );
 
@@ -477,4 +500,48 @@ class Machine implements Castable, JsonSerializable, Stringable
             $arguments ?? null,
         );
     }
+
+    // region Private Methods
+    /**
+     * Compares two arrays recursively and returns the difference.
+     */
+    private function arrayRecursiveDiff(array $array1, array $array2): array
+    {
+        $difference = [];
+        foreach ($array1 as $key => $value) {
+            if (is_array($value)) {
+                if (!isset($array2[$key]) || !is_array($array2[$key])) {
+                    $difference[$key] = $value;
+                } else {
+                    $new_diff = $this->arrayRecursiveDiff($value, $array2[$key]);
+                    if (!empty($new_diff)) {
+                        $difference[$key] = $new_diff;
+                    }
+                }
+            } elseif (!array_key_exists($key, $array2) || $array2[$key] !== $value) {
+                $difference[$key] = $value;
+            }
+        }
+
+        return $difference;
+    }
+
+    /**
+     * Merges two arrays recursively.
+     */
+    protected function arrayRecursiveMerge(array $array1, array $array2): array
+    {
+        $merged = $array1;
+
+        foreach ($array2 as $key => &$value) {
+            if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
+                $merged[$key] = $this->arrayRecursiveMerge($merged[$key], $value);
+            } else {
+                $merged[$key] = $value;
+            }
+        }
+
+        return $merged;
+    }
+    // endregion
 }
