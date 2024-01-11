@@ -92,17 +92,15 @@ test('result actions can return', function (): void {
     $value = random_int(10, 20);
 
     $multipleWithItselfAction = new class extends ResultBehavior {
-        public function definition(): Closure
+        public function __invoke(EventBehavior $event): int
         {
-            return function (EventBehavior $eventBehavior): int {
-                return $eventBehavior->payload['value'] * $eventBehavior->payload['value'];
-            };
+            return $event->payload['value'] * $event->payload['value'];
         }
     };
 
     // 2. Act
-    $result = $multipleWithItselfAction->definition()(
-        eventBehavior: EventDefinition::from([
+    $result = $multipleWithItselfAction(
+        EventDefinition::from([
             'type'    => 'ADD',
             'payload' => [
                 'value' => $value,
