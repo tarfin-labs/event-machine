@@ -137,8 +137,8 @@ abstract class InvokableBehavior
     public static function injectInvokableBehaviorParameters(
         callable $actionBehavior,
         State $state,
-        EventBehavior $eventBehavior = null,
-        array $actionArguments = null,
+        ?EventBehavior $eventBehavior = null,
+        ?array $actionArguments = null,
     ): array {
         $invocableBehaviorParameters = [];
 
