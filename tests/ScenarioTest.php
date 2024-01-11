@@ -14,12 +14,14 @@ it('scenarios run if scenarios enabled', function (): void {
     expect($state)
         ->toBeInstanceOf(State::class)
         ->and($state->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'test.stateC'])
-        ->and($state->context->count)->toBe(-1);
+        ->and($state->context->count)->toBe(-2)
+        ->and($state->history)->toHaveCount(19);
 
     $state = $machine->send('EVENT_D');
 
     expect($state)
         ->toBeInstanceOf(State::class)
         ->and($state->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'test.stateA'])
-        ->and($state->context->count)->toBe(-2);
+        ->and($state->context->count)->toBe(-3)
+        ->and($state->history)->toHaveCount(30);
 });

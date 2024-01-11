@@ -161,13 +161,6 @@ class TransitionDefinition
 
                 $shouldLog = $guardBehavior?->shouldLog ?? false;
 
-                // Record the internal guard init event.
-                $state->setInternalEventBehavior(
-                    type: InternalEvent::GUARD_START,
-                    placeholder: $guardDefinition,
-                    shouldLog: $shouldLog,
-                );
-
                 if ($guardBehavior instanceof GuardBehavior) {
                     $guardBehavior->validateRequiredContext($state->context);
                 }

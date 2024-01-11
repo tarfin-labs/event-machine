@@ -117,9 +117,9 @@ class MachineDefinition
      * @return self The created machine definition.
      */
     public static function define(
-        array $config = null,
-        array $behavior = null,
-        array $scenarios = null,
+        ?array $config = null,
+        ?array $behavior = null,
+        ?array $scenarios = null,
     ): self {
         return new self(
             config: $config ?? null,
@@ -203,7 +203,7 @@ class MachineDefinition
      *
      * @return ?State The initial state of the machine.
      */
-    public function getInitialState(EventBehavior|array $event = null): ?State
+    public function getInitialState(EventBehavior|array|null $event = null): ?State
     {
         if (is_null($this->initialStateDefinition)) {
             return null;
@@ -275,7 +275,7 @@ class MachineDefinition
      *
      * @return State|null The scenario state if scenario is enabled and found, otherwise returns the current state.
      */
-    public function getScenarioStateIfAvailable(State $state, EventBehavior|array $eventBehavior = null): ?State
+    public function getScenarioStateIfAvailable(State $state, EventBehavior|array|null $eventBehavior = null): ?State
     {
         if ($this->scenariosEnabled === false) {
             return $state;
@@ -291,11 +291,7 @@ class MachineDefinition
 
         $scenarioStateKey = str_replace($this->id, $this->id.$this->delimiter.$state->context->get('scenarioType'), $state->currentStateDefinition->id);
         if ($state->context->has('scenarioType') && isset($this->idMap[$scenarioStateKey])) {
-            return $this->buildCurrentState(
-                context: $state->context,
-                currentStateDefinition: $this->idMap[$scenarioStateKey],
-                eventBehavior: $eventBehavior
-            );
+            return $state->setCurrentStateDefinition(stateDefinition: $this->idMap[$scenarioStateKey]);
         }
 
         return $state;
@@ -314,8 +310,8 @@ class MachineDefinition
      */
     protected function buildCurrentState(
         ContextManager $context,
-        StateDefinition $currentStateDefinition = null,
-        EventBehavior $eventBehavior = null,
+        ?StateDefinition $currentStateDefinition = null,
+        ?EventBehavior $eventBehavior = null,
     ): State {
         return new State(
             context: $context,
@@ -352,7 +348,7 @@ class MachineDefinition
      *
      * @return ContextManager The initialized context manager
      */
-    public function initializeContextFromState(State $state = null): ContextManager
+    public function initializeContextFromState(?State $state = null): ContextManager
     {
         // If a state is provided, use it's context
         if (!is_null($state)) {
@@ -517,7 +513,7 @@ class MachineDefinition
     protected function findTransitionDefinition(
         StateDefinition $currentStateDefinition,
         EventBehavior $eventBehavior,
-        string $firstStateDefinitionId = null,
+        ?string $firstStateDefinitionId = null,
     ): ?TransitionDefinition {
         $transitionDefinition = $currentStateDefinition->transitionDefinitions[$eventBehavior->type] ?? null;
 
@@ -556,7 +552,7 @@ class MachineDefinition
      */
     public function transition(
         EventBehavior|array $event,
-        State $state = null
+        ?State $state = null
     ): State {
         if ($state !== null) {
             $state = $this->getScenarioStateIfAvailable(state: $state, eventBehavior: $event);
@@ -629,7 +625,7 @@ class MachineDefinition
 
         // Get scenario state if exists
         $newState = $this->getScenarioStateIfAvailable(state: $newState, eventBehavior: $eventBehavior);
-        if ($state->currentStateDefinition->id !== $newState->currentStateDefinition->id) {
+        if ($targetStateDefinition !== null && $targetStateDefinition?->id !== $newState->currentStateDefinition->id) {
             $targetStateDefinition = $newState->currentStateDefinition;
         }
 
@@ -694,7 +690,7 @@ class MachineDefinition
     public function runAction(
         string $actionDefinition,
         State $state,
-        EventBehavior $eventBehavior = null
+        ?EventBehavior $eventBehavior = null
     ): void {
         [$actionDefinition, $actionArguments] = array_pad(explode(':', $actionDefinition, 2), 2, null);
         $actionArguments                      = $actionArguments === null ? [] : explode(',', $actionArguments);
