@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
+use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 
 /**
@@ -135,6 +136,8 @@ class TransitionDefinition
      *
      * @return TransitionDefinition|null The first eligible transition or
      *         null if no eligible transition is found.
+     *
+     * @throws \ReflectionException
      */
     public function getFirstValidTransitionBranch(
         EventBehavior $eventBehavior,
@@ -162,7 +165,18 @@ class TransitionDefinition
                     $guardBehavior->validateRequiredContext($state->context);
                 }
 
-                if ($guardBehavior($state->context, $eventBehavior, $guardArguments) === false) {
+                // Inject guard behavior parameters
+                $guardBehaviorParameters = InvokableBehavior::injectInvokableBehaviorParameters(
+                    actionBehavior: $guardBehavior,
+                    state: $state,
+                    eventBehavior: $eventBehavior,
+                    actionArguments: $guardArguments,
+                );
+
+                // Execute the guard behavior
+                $guardResult = ($guardBehavior)(...$guardBehaviorParameters);
+
+                if ($guardResult === false) {
                     $guardsPassed = false;
 
                     $payload = null;

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Behavior;
 
-use Tarfinlabs\EventMachine\ContextManager;
-
 /**
  * Class GuardBehavior.
  *
@@ -14,18 +12,4 @@ use Tarfinlabs\EventMachine\ContextManager;
  */
 abstract class GuardBehavior extends InvokableBehavior
 {
-    /**
-     * Invokes the method.
-     *
-     * @param  ContextManager  $context The context manager.
-     * @param  EventBehavior  $eventBehavior The event behavior.
-     * @param  array|null  $arguments The optional arguments for the method.
-     *
-     * @return bool Returns true if the method is invoked successfully, false otherwise.
-     */
-    abstract public function __invoke(
-        ContextManager $context,
-        EventBehavior $eventBehavior,
-        ?array $arguments = null,
-    ): bool;
 }

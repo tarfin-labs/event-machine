@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Definition\EventDefinition;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 it('stores external events', function (): void {
@@ -81,8 +81,8 @@ it('stores internal action events', function (): void {
         ],
         behavior: [
             'actions' => [
-                'additionAction' => function (ContextManager $context, EventDefinition $eventDefinition): void {
-                    $context->set('count', $context->get('count') + $eventDefinition->payload['value']);
+                'additionAction' => function (ContextManager $context, EventBehavior $eventBehavior): void {
+                    $context->set('count', $context->get('count') + $eventBehavior->payload['value']);
                 },
             ],
         ]

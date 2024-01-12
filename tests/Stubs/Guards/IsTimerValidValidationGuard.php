@@ -13,7 +13,7 @@ class IsTimerValidValidationGuard extends ValidationGuardBehavior
     public function __invoke(
         ContextManager $context,
         EventBehavior $eventBehavior,
-        ?array $arguments = null
+        ?array $arguments = null,
     ): bool {
         $value  = $eventBehavior->payload['value'];
         $result = $value > (int) $arguments[0];

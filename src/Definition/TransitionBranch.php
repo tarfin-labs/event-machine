@@ -166,6 +166,8 @@ class TransitionBranch
      * If there are no actions associated with the transition definition, do nothing.
      *
      * @param  EventBehavior|null  $eventBehavior The event or null if none is provided.
+     *
+     * @throws \ReflectionException
      */
     public function runActions(
         State $state,

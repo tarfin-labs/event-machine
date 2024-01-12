@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Behavior;
 
+use ReflectionMethod;
+use ReflectionFunction;
+use ReflectionUnionType;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
+use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
@@ -30,32 +34,12 @@ abstract class InvokableBehavior
      *
      * @return void
      */
-    public function __construct(
-        protected ?Collection $eventQueue = null
-    ) {
+    public function __construct(protected ?Collection $eventQueue = null)
+    {
         if ($this->eventQueue === null) {
             $this->eventQueue = new Collection();
         }
     }
-
-    /**
-     * Executes the behavior with the given context and event.
-     *
-     * This method defines the contract for implementing behaviors
-     * within classes. The behavior should be directly invokable by
-     * passing in a ContextManager instance and an array of event payload.
-     *
-     * @param  ContextManager  $context The context to be used during
-     *                                                                        invocation.
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior  $eventBehavior The event related to the
-     *                                                                        current behavior.
-     * @param  array|null  $arguments The arguments to be passed to the behavior.
-     */
-    abstract public function __invoke(
-        ContextManager $context,
-        EventBehavior $eventBehavior,
-        ?array $arguments = null,
-    );
 
     /**
      * Raises an event by adding it to the event queue.
@@ -132,5 +116,55 @@ abstract class InvokableBehavior
         return Str::of(static::class)
             ->classBasename()
             ->toString();
+    }
+
+    /**
+     * Injects invokable behavior parameters.
+     *
+     * Retrieves the parameters of the given invokable behavior and injects the corresponding values
+     * based on the provided state, event behavior, and action arguments.
+     * The injected values are added to an array and returned.
+     *
+     * @param  callable  $actionBehavior The invokable behavior to inject parameters for.
+     * @param  State  $state The state object used for parameter matching.
+     * @param  EventBehavior|null  $eventBehavior The event behavior used for parameter matching. (Optional)
+     * @param  array|null  $actionArguments The action arguments used for parameter matching. (Optional)
+     *
+     * @return array        The injected invokable behavior parameters.
+     *
+     * @throws \ReflectionException
+     */
+    public static function injectInvokableBehaviorParameters(
+        callable $actionBehavior,
+        State $state,
+        ?EventBehavior $eventBehavior = null,
+        ?array $actionArguments = null,
+    ): array {
+        $invocableBehaviorParameters = [];
+
+        $invocableBehaviorReflection = $actionBehavior instanceof self
+            ? new ReflectionMethod($actionBehavior, '__invoke')
+            : new ReflectionFunction($actionBehavior);
+
+        foreach ($invocableBehaviorReflection->getParameters() as $parameter) {
+            $parameterType = $parameter->getType();
+
+            $typeName = $parameterType instanceof ReflectionUnionType
+                ? $parameterType->getTypes()[0]->getName()
+                : $parameterType->getName();
+
+            $value = match (true) {
+                is_a($state->context, $typeName) => $state->context,    // ContextManager
+                is_a($eventBehavior, $typeName)  => $eventBehavior,     // EventBehavior
+                is_a($state, $typeName)          => $state,             // State
+                is_a($state->history, $typeName) => $state->history,    // EventCollection
+                $typeName === 'array'            => $actionArguments,   // Behavior Arguments
+                default                          => null,
+            };
+
+            $invocableBehaviorParameters[] = $value;
+        }
+
+        return $invocableBehaviorParameters;
     }
 }

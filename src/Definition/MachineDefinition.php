@@ -684,6 +684,8 @@ class MachineDefinition
      *
      * @param  string  $actionDefinition The action definition, either a class
      * @param  EventBehavior|null  $eventBehavior The event (optional).
+     *
+     * @throws \ReflectionException
      */
     public function runAction(
         string $actionDefinition,
@@ -720,8 +722,16 @@ class MachineDefinition
         // Get the number of events in the queue before the action is executed.
         $numberOfEventsInQueue = $this->eventQueue->count();
 
-        // Execute the action behavior.
-        $actionBehavior($state->context, $eventBehavior, $actionArguments);
+        // Inject action behavior parameters
+        $actionBehaviorParemeters = InvokableBehavior::injectInvokableBehaviorParameters(
+            actionBehavior: $actionBehavior,
+            state: $state,
+            eventBehavior: $eventBehavior,
+            actionArguments: $actionArguments
+        );
+
+        // Execute the action behavior
+        ($actionBehavior)(...$actionBehaviorParemeters);
 
         // Get the number of events in the queue after the action is executed.
         $newNumberOfEventsInQueue = $this->eventQueue->count();
