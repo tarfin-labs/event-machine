@@ -24,7 +24,7 @@
     "require-dev": {
         "infection/infection": "^0.26.19",
         "laravel/pint": "^1.0",
-        "nunomaduro/larastan": "^2.0",
+        "larastan/larastan": "^2.0",
         "orchestra/testbench": "^8.0",
         "pestphp/pest": "^2.12",
         "pestphp/pest-plugin-arch": "^2.0",
