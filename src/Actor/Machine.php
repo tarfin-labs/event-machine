@@ -162,7 +162,6 @@ class Machine implements Castable, JsonSerializable, Stringable
      */
     public function send(
         EventBehavior|array|string $event,
-        bool $shouldPersist = true,
     ): State {
         if ($this->state !== null) {
             $lock = Cache::lock('mre:'.$this->state->history->first()->root_event_id, 60);
@@ -187,7 +186,7 @@ class Machine implements Castable, JsonSerializable, Stringable
                 default                          => $this->definition->transition($event, $this->state)
             };
 
-            if ($shouldPersist === true) {
+            if ($this->definition->shouldPersist) {
                 $this->persist();
             }
 

@@ -60,6 +60,9 @@ class MachineDefinition
     /** Indicates whether the scenario is enabled. */
     public bool $scenariosEnabled = false;
 
+    /** machine-based variable that determines whether to persist the state change. */
+    public bool $shouldPersist = true;
+
     // endregion
 
     // region Constructor
@@ -82,6 +85,8 @@ class MachineDefinition
         public string $delimiter = self::STATE_DELIMITER,
     ) {
         $this->scenariosEnabled = isset($this->config['scenarios_enabled']) && $this->config['scenarios_enabled'] === true;
+
+        $this->shouldPersist = $this->config['should_persist'] ?? $this->shouldPersist;
 
         $this->root = $this->createRootStateDefinition($config);
 
