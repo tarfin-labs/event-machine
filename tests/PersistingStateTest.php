@@ -2,28 +2,25 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\Actor\State;
 use Illuminate\Database\Eloquent\Collection;
+use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Yns\YnsMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 it('can persist the machine state', function (): void {
     $machine = TrafficLightsMachine::create();
 
-    $machine->send(['type' => 'INC'], shouldPersist: false);
-    $machine->send(['type' => 'INC'], shouldPersist: false);
-    $machine->send(['type' => 'INC'], shouldPersist: false);
-
-    $state = $machine->persist();
+    $machine->send(['type' => 'INC']);
+    $machine->send(['type' => 'INC']);
+    $machine->send(['type' => 'INC']);
 
     $eventIds = $machine->state->history
         ->pluck('id')
         ->map(fn ($key) => ['id' => $key])
         ->toArray();
-
-    expect($state)->toBeInstanceOf(State::class);
 
     foreach ($eventIds as $eventId) {
         $this->assertDatabaseHas(MachineEvent::class, $eventId);
@@ -33,11 +30,9 @@ it('can persist the machine state', function (): void {
 it('can restore the persisted state', function (): void {
     $machine = TrafficLightsMachine::create();
 
-    $machine->send(['type' => 'INC'], shouldPersist: false);
-    $machine->send(['type' => 'INC'], shouldPersist: false);
-    $machine->send(['type' => 'INC'], shouldPersist: false);
-
-    $machine->persist();
+    $machine->send(['type' => 'INC']);
+    $machine->send(['type' => 'INC']);
+    $machine->send(['type' => 'INC']);
 
     $state = $machine->state;
 
@@ -68,7 +63,7 @@ it('can restore the persisted state', function (): void {
 it('can auto persist after an event', function (): void {
     $machine = TrafficLightsMachine::create();
 
-    $machine->send(['type' => 'INC'], shouldPersist: true);
+    $machine->send(['type' => 'INC']);
 
     $eventIds = $machine->state->history
         ->pluck('id')
@@ -77,5 +72,20 @@ it('can auto persist after an event', function (): void {
 
     foreach ($eventIds as $eventId) {
         $this->assertDatabaseHas(MachineEvent::class, $eventId);
+    }
+});
+
+it('should not persist the machine state', function (): void {
+    $machine = YnsMachine::create();
+
+    $machine->send(['type' => 'S_EVENT']);
+
+    $eventIds = $machine->state->history
+        ->pluck('id')
+        ->map(fn ($key) => ['id' => $key])
+        ->toArray();
+
+    foreach ($eventIds as $eventId) {
+        $this->assertDatabaseMissing(MachineEvent::class, $eventId);
     }
 });
