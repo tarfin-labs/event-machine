@@ -47,7 +47,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * It takes a `MachineDefinition` object as a parameter and
      * assigns it to the `$definition` property of the instance.
      *
-     * @param  MachineDefinition  $definition The machine definition object.
+     * @param  MachineDefinition  $definition  The machine definition object.
      */
     protected function __construct(
         MachineDefinition $definition,
@@ -62,7 +62,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * `MachineDefinition`. It returns a new instance of the `Machine` class,
      * encapsulating the provided definition.
      *
-     * @param  MachineDefinition  $definition The definition to initialize the machine with.
+     * @param  MachineDefinition  $definition  The definition to initialize the machine with.
      *
      * @return self The newly created machine instance.
      */
@@ -101,8 +101,8 @@ class Machine implements Castable, JsonSerializable, Stringable
      * provided definition and state. If the definition is `null`, it attempts
      * to retrieve the definition using the `definition()` method.
      *
-     * @param  \Tarfinlabs\EventMachine\Definition\MachineDefinition|array|null  $definition The definition to initialize the machine with.
-     * @param  \Tarfinlabs\EventMachine\Actor\State|string|null  $state The initial state of the machine.
+     * @param  \Tarfinlabs\EventMachine\Definition\MachineDefinition|array|null  $definition  The definition to initialize the machine with.
+     * @param  \Tarfinlabs\EventMachine\Actor\State|string|null  $state  The initial state of the machine.
      *
      * @return self The newly created and initialized machine instance.
      */
@@ -131,7 +131,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * it uses the machine's initial state. If a string is provided, it restores
      * the state using the `restoreStateFromRootEventId()` method.
      *
-     * @param  \Tarfinlabs\EventMachine\Actor\State|string|null  $state The initial state or root event identifier.
+     * @param  \Tarfinlabs\EventMachine\Actor\State|string|null  $state  The initial state or root event identifier.
      *
      * @return self The started machine instance.
      */
@@ -153,8 +153,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * updates the machine's state and handles validation guards. If the event
      * should be persisted, it calls the `persist()` method.
      *
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|array|string  $event The event to send to the machine.
-     * @param  bool  $shouldPersist Whether to persist the state change.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|array|string  $event  The event to send to the machine.
      *
      * @return State The updated state of the machine.
      *
@@ -264,7 +263,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * identifier. It reconstructs the state of the machine from the queried
      * events and returns the restored state.
      *
-     * @param  string  $key The root event identifier to restore state from.
+     * @param  string  $key  The root event identifier to restore state from.
      *
      * @return State The restored state of the machine.
      *
@@ -298,7 +297,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * context data. It utilizes the behavior configuration of the machine's
      * definition or defaults to the `ContextManager` class.
      *
-     * @param  array  $persistedContext The persisted context data.
+     * @param  array  $persistedContext  The persisted context data.
      *
      * @return ContextManager The restored context manager instance.
      */
@@ -320,7 +319,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * This method retrieves the current state definition from the machine's
      * definition ID map using the provided machine value.
      *
-     * @param  array  $machineValue The machine value containing the ID of the state definition.
+     * @param  array  $machineValue  The machine value containing the ID of the state definition.
      *
      * @return StateDefinition The restored current state definition.
      */
@@ -336,7 +335,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * MachineEvent. It determines the source type and constructs the EventBehavior
      * object accordingly.
      *
-     * @param  MachineEvent  $machineEvent The MachineEvent object representing the event.
+     * @param  MachineEvent  $machineEvent  The MachineEvent object representing the event.
      *
      * @return EventBehavior The restored EventBehavior object.
      */
@@ -379,7 +378,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * failures. If any guard fails, it constructs and throws a
      * `MachineValidationException` with detailed error messages.
      *
-     * @param  int  $lastPreviousEventNumber The last previous event sequence number.
+     * @param  int  $lastPreviousEventNumber  The last previous event sequence number.
      *
      * @throws MachineValidationException If any validation guards fail.
      */

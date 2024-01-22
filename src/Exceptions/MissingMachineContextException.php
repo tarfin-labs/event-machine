@@ -17,7 +17,7 @@ class MissingMachineContextException extends RuntimeException
     /**
      * Builds and returns a new instance of the class.
      *
-     * @param  string  $key The missing key in context.
+     * @param  string  $key  The missing key in context.
      *
      * @return self A new instance of the class with the missing key in context.
      */

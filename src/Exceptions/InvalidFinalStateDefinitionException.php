@@ -14,7 +14,7 @@ class InvalidFinalStateDefinitionException extends LogicException
     /**
      * Creates an instance of the class with an error message indicating that the specified final state should not have child states.
      *
-     * @param  string  $stateDefinition The definition of the final state.
+     * @param  string  $stateDefinition  The definition of the final state.
      *
      * @return self The instance of the class with the error message.
      */
@@ -28,7 +28,7 @@ class InvalidFinalStateDefinitionException extends LogicException
     /**
      * Creates an instance of the class with an error message indicating that the specified final state should not have transitions.
      *
-     * @param  string  $stateDefinition The definition of the final state.
+     * @param  string  $stateDefinition  The definition of the final state.
      *
      * @return self The instance of the class with the error message.
      */

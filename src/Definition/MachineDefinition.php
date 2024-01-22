@@ -70,10 +70,10 @@ class MachineDefinition
     /**
      * Create a new machine definition with the given arguments.
      *
-     * @param  array|null  $config     The raw configuration array used to create the machine definition.
-     * @param  array|null  $behavior     The implementation of the machine behavior that defined in the machine definition.
-     * @param  string  $id         The id of the machine.
-     * @param  string|null  $version    The version of the machine.
+     * @param  array|null  $config  The raw configuration array used to create the machine definition.
+     * @param  array|null  $behavior  The implementation of the machine behavior that defined in the machine definition.
+     * @param  string  $id  The id of the machine.
+     * @param  string|null  $version  The version of the machine.
      * @param  string  $delimiter  The string delimiter for serializing the path to a string.
      */
     private function __construct(
@@ -116,8 +116,8 @@ class MachineDefinition
     /**
      * Define a new machine with the given configuration and behavior.
      *
-     * @param  ?array  $config The raw configuration array used to create the machine.
-     * @param  array|null  $behavior An array of behavior options.
+     * @param  ?array  $config  The raw configuration array used to create the machine.
+     * @param  array|null  $behavior  An array of behavior options.
      *
      * @return self The created machine definition.
      */
@@ -143,7 +143,7 @@ class MachineDefinition
     /**
      * Initializes an empty behavior array with empty events, actions and guard arrays.
      *
-     * @return array  An empty behavior array with empty events, actions and guard arrays.
+     * @return array An empty behavior array with empty events, actions and guard arrays.
      */
     protected static function initializeEmptyBehavior(): array
     {
@@ -163,7 +163,7 @@ class MachineDefinition
      * If no configuration is provided, the configuration will be set to null.
      * The $options parameter is set with the current `Machine` and machine id.
      *
-     * @param  array|null  $config The configuration for the root state definition.
+     * @param  array|null  $config  The configuration for the root state definition.
      *
      * @return StateDefinition The created root state definition.
      */
@@ -275,8 +275,8 @@ class MachineDefinition
     /**
      * Retrieves the scenario state if scenario is enabled and available; otherwise, returns the current state.
      *
-     * @param  State  $state          The current state.
-     * @param  EventBehavior|array|null  $eventBehavior The optional event behavior or event data.
+     * @param  State  $state  The current state.
+     * @param  EventBehavior|array|null  $eventBehavior  The optional event behavior or event data.
      *
      * @return State|null The scenario state if scenario is enabled and found, otherwise returns the current state.
      */
@@ -332,7 +332,7 @@ class MachineDefinition
      * Otherwise, lookup the state in the `MachineDefinition` states array.
      * If the state is not found, return the initial state.
      *
-     * @param  string|State|null  $state The state to retrieve the definition for.
+     * @param  string|State|null  $state  The state to retrieve the definition for.
      *
      * @return mixed The state definition.
      */
@@ -397,8 +397,8 @@ class MachineDefinition
      * provided behavior type map. If the behavior is still not found, it returns
      * null.
      *
-     * @param  string  $behaviorDefinition The behavior definition to look up.
-     * @param  BehaviorType  $behaviorType The type of the behavior (e.g., guard or action).
+     * @param  string  $behaviorDefinition  The behavior definition to look up.
+     * @param  BehaviorType  $behaviorType  The type of the behavior (e.g., guard or action).
      *
      * @return callable|null The invokable behavior instance or callable, or null if not found.
      */
@@ -437,8 +437,8 @@ class MachineDefinition
      * state. If no behavior is defined for the event type, a default
      * EventDefinition instance is returned.
      *
-     * @param  EventBehavior|array  $event The event to initialize.
-     * @param  State  $state The state in which the event is occurring.
+     * @param  EventBehavior|array  $event  The event to initialize.
+     * @param  State  $state  The state in which the event is occurring.
      *
      * @return EventBehavior The initialized EventBehavior instance.
      */
@@ -466,7 +466,7 @@ class MachineDefinition
     /**
      * Retrieves the nearest `StateDefinition` by string.
      *
-     * @param  string  $stateDefinitionId The state string.
+     * @param  string  $stateDefinitionId  The state string.
      *
      * @return StateDefinition|null The nearest StateDefinition or null if it is not found.
      */
@@ -507,13 +507,13 @@ class MachineDefinition
      * definition in the parent state definition. If no transition definition is found and the current
      * state definition is not the initial state, throw an exception.
      *
-     * @param  \Tarfinlabs\EventMachine\Definition\StateDefinition  $currentStateDefinition The current state definition.
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior  $eventBehavior The event behavior.
-     * @param  string|null  $firstStateDefinitionId The ID of the first state definition encountered during recursion.
+     * @param  \Tarfinlabs\EventMachine\Definition\StateDefinition  $currentStateDefinition  The current state definition.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior  $eventBehavior  The event behavior.
+     * @param  string|null  $firstStateDefinitionId  The ID of the first state definition encountered during recursion.
      *
-     * @return \Tarfinlabs\EventMachine\Definition\TransitionDefinition|null  The found transition definition, or null if none is found.
+     * @return \Tarfinlabs\EventMachine\Definition\TransitionDefinition|null The found transition definition, or null if none is found.
      *
-     * @throws \Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException  If no transition definition is found for the event type.
+     * @throws \Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException If no transition definition is found for the event type.
      */
     protected function findTransitionDefinition(
         StateDefinition $currentStateDefinition,
@@ -550,8 +550,8 @@ class MachineDefinition
     /**
      * Transition the state machine to a new state based on an event.
      *
-     * @param  EventBehavior|array  $event The event that triggers the transition.
-     * @param  State|null  $state The current state or state name, or null to use the initial state.
+     * @param  EventBehavior|array  $event  The event that triggers the transition.
+     * @param  State|null  $state  The current state or state name, or null to use the initial state.
      *
      * @return State The new state after the transition.
      */
@@ -687,8 +687,8 @@ class MachineDefinition
      * action definition, and if the action behavior is callable, it
      * executes it using the context and event payload.
      *
-     * @param  string  $actionDefinition The action definition, either a class
-     * @param  EventBehavior|null  $eventBehavior The event (optional).
+     * @param  string  $actionDefinition  The action definition, either a class
+     * @param  EventBehavior|null  $eventBehavior  The event (optional).
      *
      * @throws \ReflectionException
      */

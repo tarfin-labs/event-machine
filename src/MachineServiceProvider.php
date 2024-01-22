@@ -19,7 +19,7 @@ class MachineServiceProvider extends PackageServiceProvider
      *
      * This method is responsible for setting up the necessary configurations and assets for the given package.
      *
-     * @param  Package  $package The package to be configured.
+     * @param  Package  $package  The package to be configured.
      */
     public function configurePackage(Package $package): void
     {

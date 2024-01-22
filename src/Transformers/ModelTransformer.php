@@ -18,8 +18,8 @@ class ModelTransformer implements Transformer
     /**
      * Transforms the value of a DataProperty object.
      *
-     * @param  DataProperty  $property The DataProperty object.
-     * @param  mixed  $value The value to be transformed.
+     * @param  DataProperty  $property  The DataProperty object.
+     * @param  mixed  $value  The value to be transformed.
      *
      * @return mixed The transformed value.
      */
