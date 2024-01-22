@@ -33,10 +33,10 @@ class State
     /**
      * Constructs a new instance of the class.
      *
-     * @param  ContextManager  $context The context manager instance.
-     * @param  StateDefinition|null  $currentStateDefinition The current state definition, or null if not set.
-     * @param  EventBehavior|null  $currentEventBehavior The current event behavior, or null if not set.
-     * @param  Collection|null  $history The history collection, or null if not set.
+     * @param  ContextManager  $context  The context manager instance.
+     * @param  StateDefinition|null  $currentStateDefinition  The current state definition, or null if not set.
+     * @param  EventBehavior|null  $currentEventBehavior  The current event behavior, or null if not set.
+     * @param  Collection|null  $history  The history collection, or null if not set.
      */
     public function __construct(
         public ContextManager $context,
@@ -60,7 +60,7 @@ class State
     /**
      * Sets the current state definition for the machine.
      *
-     * @param  StateDefinition  $stateDefinition The state definition to set.
+     * @param  StateDefinition  $stateDefinition  The state definition to set.
      *
      * @return self The current object instance.
      */
@@ -75,9 +75,9 @@ class State
     /**
      * Sets the internal event behavior for the machine.
      *
-     * @param  InternalEvent  $type The internal event type.
-     * @param  string|null  $placeholder The optional placeholder parameter.
-     * @param  array|null  $payload The optional payload array.
+     * @param  InternalEvent  $type  The internal event type.
+     * @param  string|null  $placeholder  The optional placeholder parameter.
+     * @param  array|null  $payload  The optional payload array.
      *
      * @return self The current object instance.
      */
@@ -102,7 +102,7 @@ class State
     /**
      * Sets the current event behavior for the machine.
      *
-     * @param  EventBehavior  $currentEventBehavior The event behavior to set.
+     * @param  EventBehavior  $currentEventBehavior  The event behavior to set.
      *
      * @return self The current object instance.
      */
@@ -142,7 +142,7 @@ class State
     /**
      * Checks if the given value matches the current state's value.
      *
-     * @param  string  $value The value to be checked.
+     * @param  string  $value  The value to be checked.
      *
      * @return bool Returns true if the value matches the current state's value; otherwise, returns false.
      */

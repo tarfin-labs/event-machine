@@ -99,8 +99,8 @@ class StateDefinition
     /**
      * Create a new state definition with the given configuration and options.
      *
-     * @param  ?array  $config The raw configuration array used to create the state definition.
-     * @param  ?array  $options The `options` array for configuring the state definition.
+     * @param  ?array  $config  The raw configuration array used to create the state definition.
+     * @param  ?array  $options  The `options` array for configuring the state definition.
      */
     public function __construct(
         public ?array $config,
@@ -235,7 +235,7 @@ class StateDefinition
      * corresponding {@see \Tarfinlabs\EventMachine\Definition\TransitionDefinition} objects for
      * each event.
      *
-     * @param  StateDefinition  $stateDefinition The state definition to process.
+     * @param  StateDefinition  $stateDefinition  The state definition to process.
      *
      * @return array|null An array of TransitionDefinition objects, keyed by event names.
      */
@@ -455,7 +455,7 @@ class StateDefinition
     /**
      * Runs the entry actions of the current state definition with the given event.
      *
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior The event to be processed.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior  The event to be processed.
      */
     public function runEntryActions(State $state, ?EventBehavior $eventBehavior = null): void
     {

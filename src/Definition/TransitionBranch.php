@@ -137,8 +137,8 @@ class TransitionBranch
     /**
      * Adds inline behavior definitions to machine's behavior.
      *
-     * @param  array  $inlineBehaviors An array of inline behaviors.
-     * @param  BehaviorType  $behaviorType The type of behavior.
+     * @param  array  $inlineBehaviors  An array of inline behaviors.
+     * @param  BehaviorType  $behaviorType  The type of behavior.
      */
     protected function initializeInlineBehaviors(array $inlineBehaviors, BehaviorType $behaviorType): void
     {
@@ -165,7 +165,7 @@ class TransitionBranch
      *
      * If there are no actions associated with the transition definition, do nothing.
      *
-     * @param  EventBehavior|null  $eventBehavior The event or null if none is provided.
+     * @param  EventBehavior|null  $eventBehavior  The event or null if none is provided.
      *
      * @throws \ReflectionException
      */

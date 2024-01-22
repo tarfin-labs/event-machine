@@ -37,8 +37,8 @@ enum InternalEvent: string
     /**
      * Generate an internal event name based on the machine ID and an optional placeholder.
      *
-     * @param  string  $machineId The ID of the machine.
-     * @param  string|null  $placeholder An optional placeholder.
+     * @param  string  $machineId  The ID of the machine.
+     * @param  string|null  $placeholder  An optional placeholder.
      *
      * @return string The generated internal event name.
      */

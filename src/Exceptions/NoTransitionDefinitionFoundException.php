@@ -17,8 +17,8 @@ class NoTransitionDefinitionFoundException extends LogicException
     /**
      * Builds an instance of self.
      *
-     * @param  string  $eventType The event type.
-     * @param  string  $stateDefinitionId The state definition id.
+     * @param  string  $eventType  The event type.
+     * @param  string  $stateDefinitionId  The state definition id.
      *
      * @return self The newly created instance of self.
      */

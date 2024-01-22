@@ -17,7 +17,7 @@ class RestoringStateException extends RuntimeException
     /**
      * Build a new instance of the class with the given error message.
      *
-     * @param  string  $errorMessage The error message.
+     * @param  string  $errorMessage  The error message.
      *
      * @return self The new instance of the class with the given error message.
      */
