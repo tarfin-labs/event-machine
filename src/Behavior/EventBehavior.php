@@ -27,11 +27,11 @@ abstract class EventBehavior extends Data
     /**
      * Creates a new instance of the class.
      *
-     * @param  null|string|Optional  $type The type of the object. Default is null.
-     * @param  null|array|Optional  $payload The payload to be associated with the object. Default is null.
-     * @param  mixed  $actor Actor performing the event. Default is null.
-     * @param  int|Optional  $version The version number of the object. Default is 1.
-     * @param  SourceType  $source The source type of the object. Default is SourceType::EXTERNAL.
+     * @param  null|string|Optional  $type  The type of the object. Default is null.
+     * @param  null|array|Optional  $payload  The payload to be associated with the object. Default is null.
+     * @param  mixed  $actor  Actor performing the event. Default is null.
+     * @param  int|Optional  $version  The version number of the object. Default is 1.
+     * @param  SourceType  $source  The source type of the object. Default is SourceType::EXTERNAL.
      *
      * @return void
      */

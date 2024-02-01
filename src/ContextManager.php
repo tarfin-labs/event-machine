@@ -34,7 +34,7 @@ class ContextManager extends Data
     /**
      * Get a value from the context by its key.
      *
-     * @param  string  $key The key of the value to retrieve.
+     * @param  string  $key  The key of the value to retrieve.
      *
      * @return mixed The value associated with the given key, or null if the key does not exist.
      */
@@ -55,8 +55,8 @@ class ContextManager extends Data
      * subclass of the class of the object, the value is set as
      * a property of the object.
      *
-     * @param  string  $key The key for which to set the value.
-     * @param  mixed  $value The value to set for the given key.
+     * @param  string  $key  The key for which to set the value.
+     * @param  mixed  $value  The value to set for the given key.
      */
     public function set(string $key, mixed $value): mixed
     {
@@ -82,10 +82,10 @@ class ContextManager extends Data
      *
      * @param  string  $key  The key to check for existence.
      * @param  string|null  $type  The type to check for the value. If null,
-     * only existence is checked.
+     *                             only existence is checked.
      *
-     * @return bool  True if the key exists and (if a type is specified)
-     * its value is of the given type. False otherwise.
+     * @return bool True if the key exists and (if a type is specified)
+     *              its value is of the given type. False otherwise.
      */
     public function has(string $key, ?string $type = null): bool
     {
@@ -107,7 +107,7 @@ class ContextManager extends Data
     /**
      * Remove a key-value pair from the context by its key.
      *
-     * @param  string  $key The key to remove from the context.
+     * @param  string  $key  The key to remove from the context.
      */
     public function remove(string $key): void
     {
@@ -137,7 +137,7 @@ class ContextManager extends Data
      * static from() method and returns it.
      * If validation fails, it throws a MachineContextValidationException.
      *
-     * @param  array<mixed>|Arrayable<string, mixed>  $payload The payload to be validated and created from.
+     * @param  array<mixed>|Arrayable<string, mixed>  $payload  The payload to be validated and created from.
      *
      * @return static A new instance of the class created from the payload.
      */
@@ -157,8 +157,8 @@ class ContextManager extends Data
     /**
      * Set a value in the context by its name.
      *
-     * @param  string  $name The name of the value to set.
-     * @param  mixed  $value The value to set.
+     * @param  string  $name  The name of the value to set.
+     * @param  mixed  $value  The value to set.
      */
     public function __set(string $name, mixed $value): void
     {
@@ -168,7 +168,7 @@ class ContextManager extends Data
     /**
      * Magic method to dynamically retrieve a value from the context by its key.
      *
-     * @param  string  $name The key of the value to retrieve.
+     * @param  string  $name  The key of the value to retrieve.
      *
      * @return mixed The value associated with the given key, or null if the key does not exist.
      */
@@ -180,7 +180,7 @@ class ContextManager extends Data
     /**
      * Checks if a property is set on the object.
      *
-     * @param  string  $name The name of the property to check.
+     * @param  string  $name  The name of the property to check.
      *
      * @return bool True if the property exists and is set, false otherwise.
      */

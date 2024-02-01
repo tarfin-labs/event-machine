@@ -86,7 +86,7 @@ class MachineEvent extends Model
      * EventCollection. This allows for additional methods to be available
      * on the collection of MachineEvent models.
      *
-     * @param  array  $models An array of MachineEvent models.
+     * @param  array  $models  An array of MachineEvent models.
      *
      * @return EventCollection A new instance of EventCollection.
      */

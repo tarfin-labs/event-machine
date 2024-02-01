@@ -41,9 +41,9 @@ class TransitionDefinition
     /**
      * Constructs a new TransitionDefinition instance.
      *
-     * @param  null|string|array  $transitionConfig The configuration for this transition.
-     * @param  StateDefinition  $source The source state definition for this transition.
-     * @param  string  $event The event triggering this transition.
+     * @param  null|string|array  $transitionConfig  The configuration for this transition.
+     * @param  StateDefinition  $source  The source state definition for this transition.
+     * @param  string  $event  The event triggering this transition.
      */
     public function __construct(
         public null|string|array $transitionConfig,
@@ -132,10 +132,10 @@ class TransitionDefinition
      * to true, it is considered eligible. The method returns the first
      * eligible transition encountered or null if none is found.
      *
-     * @param  EventBehavior  $eventBehavior The event used to evaluate guards.
+     * @param  EventBehavior  $eventBehavior  The event used to evaluate guards.
      *
      * @return TransitionDefinition|null The first eligible transition or
-     *         null if no eligible transition is found.
+     *                                   null if no eligible transition is found.
      *
      * @throws \ReflectionException
      */

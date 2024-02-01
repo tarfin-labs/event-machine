@@ -30,7 +30,7 @@ abstract class InvokableBehavior
     /**
      * Constructs a new instance of the class.
      *
-     * @param  Collection|null  $eventQueue The event queue collection. Default is null.
+     * @param  Collection|null  $eventQueue  The event queue collection. Default is null.
      *
      * @return void
      */
@@ -44,7 +44,7 @@ abstract class InvokableBehavior
     /**
      * Raises an event by adding it to the event queue.
      *
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|array  $eventBehavior The event definition object to be raised.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|array  $eventBehavior  The event definition object to be raised.
      */
     public function raise(EventBehavior|array $eventBehavior): void
     {
@@ -58,10 +58,10 @@ abstract class InvokableBehavior
      * "$requiredContext" property are present in the given context. It returns
      * the key of the first missing attribute if any, otherwise it returns null.
      *
-     * @param  ContextManager  $context The context to be checked.
+     * @param  ContextManager  $context  The context to be checked.
      *
-     * @return string|null  The key of the first missing attribute, or null if all
-     *                      required attributes are present.
+     * @return string|null The key of the first missing attribute, or null if all
+     *                     required attributes are present.
      */
     public function hasMissingContext(ContextManager $context): ?string
     {
@@ -91,7 +91,7 @@ abstract class InvokableBehavior
      * in the given ContextManager instance. If any required context property is missing,
      * it throws a MissingMachineContextException.
      *
-     * @param  ContextManager  $context The context to be validated.
+     * @param  ContextManager  $context  The context to be validated.
      */
     public function validateRequiredContext(ContextManager $context): void
     {
@@ -125,12 +125,12 @@ abstract class InvokableBehavior
      * based on the provided state, event behavior, and action arguments.
      * The injected values are added to an array and returned.
      *
-     * @param  callable  $actionBehavior The invokable behavior to inject parameters for.
-     * @param  State  $state The state object used for parameter matching.
-     * @param  EventBehavior|null  $eventBehavior The event behavior used for parameter matching. (Optional)
-     * @param  array|null  $actionArguments The action arguments used for parameter matching. (Optional)
+     * @param  callable  $actionBehavior  The invokable behavior to inject parameters for.
+     * @param  State  $state  The state object used for parameter matching.
+     * @param  EventBehavior|null  $eventBehavior  The event behavior used for parameter matching. (Optional)
+     * @param  array|null  $actionArguments  The action arguments used for parameter matching. (Optional)
      *
-     * @return array        The injected invokable behavior parameters.
+     * @return array The injected invokable behavior parameters.
      *
      * @throws \ReflectionException
      */
