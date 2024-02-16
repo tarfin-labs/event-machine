@@ -39,7 +39,6 @@ abstract class ActionBehavior extends InvokableBehavior
      * Run the Action by resolving it from the container and invoke it.
      *
      * @param  mixed  ...$arguments
-     *
      */
     public static function run(...$arguments): mixed
     {
