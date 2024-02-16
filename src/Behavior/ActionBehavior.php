@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Behavior;
 
+use Tarfinlabs\EventMachine\ContextManager;
+
 /**
  * ActionBehavior class.
  *
@@ -12,4 +14,35 @@ namespace Tarfinlabs\EventMachine\Behavior;
  */
 abstract class ActionBehavior extends InvokableBehavior
 {
+    /**
+     * Invokes the method with the given parameters.
+     *
+     * @param  ContextManager  $context  Provides access to the context in which the method is being invoked.
+     * @param  EventBehavior  $eventBehavior  The event behavior associated with the method invocation.
+     * @param  array|null  $arguments  Optional parameters to be passed to the method.
+     */
+    abstract public function __invoke(
+        ContextManager $context,
+        EventBehavior $eventBehavior,
+        ?array $arguments = null,
+    ): void;
+
+    /**
+     * Resolve the Action from the container.
+     */
+    public static function make(): mixed
+    {
+        return app(static::class);
+    }
+
+    /**
+     * Run the Action by resolving it from the container and invoke it.
+     *
+     * @param  mixed  ...$arguments
+     *
+     */
+    public static function run(...$arguments): mixed
+    {
+        return static::make()(...$arguments);
+    }
 }
