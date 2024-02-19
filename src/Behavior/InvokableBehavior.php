@@ -180,7 +180,6 @@ abstract class InvokableBehavior
      * This method creates an instance of the invoking class and calls it as a callable, passing any provided arguments.
      *
      * @param  mixed  ...$arguments
-     *
      */
     public static function run(...$arguments): mixed
     {
