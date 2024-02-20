@@ -167,4 +167,22 @@ abstract class InvokableBehavior
 
         return $invocableBehaviorParameters;
     }
+
+    /**
+     * This method is used to create an instance of the invoking class.
+     */
+    public static function make(): mixed
+    {
+        return app(static::class);
+    }
+
+    /**
+     * This method creates an instance of the invoking class and calls it as a callable, passing any provided arguments.
+     *
+     * @param  mixed  ...$arguments
+     */
+    public static function run(...$arguments): mixed
+    {
+        return static::make()(...$arguments);
+    }
 }
