@@ -13,6 +13,7 @@ class ValidatedEvent extends EventBehavior
     {
         return [
             'payload.attribute' => ['required', 'integer', 'min:1', 'max:10'],
+            'payload.value'     => ['nullable', 'integer', 'min:1', 'max:10'],
         ];
     }
 
@@ -20,6 +21,7 @@ class ValidatedEvent extends EventBehavior
     {
         return [
             'payload.attribute' => 'Custom validation message for the attribute.',
+            'payload.value'     => 'Custom validation message for the value.',
         ];
     }
 

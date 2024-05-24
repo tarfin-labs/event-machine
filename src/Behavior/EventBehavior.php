@@ -93,4 +93,14 @@ abstract class EventBehavior extends Data
     {
         return $this->payload['scenarioType'] ?? null;
     }
+
+    /**
+     * Indicates if the validator should stop on the first rule failure.
+     *
+     * @return bool Returns true by default.
+     */
+    public static function stopOnFirstFailure(): bool
+    {
+        return true;
+    }
 }
