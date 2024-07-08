@@ -6,6 +6,4 @@ namespace Tarfinlabs\EventMachine;
 
 use Illuminate\Database\Eloquent\Collection;
 
-class EventCollection extends Collection
-{
-}
+class EventCollection extends Collection {}

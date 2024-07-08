@@ -11,6 +11,4 @@ use Illuminate\Validation\ValidationException;
  *
  * This class represents an exception that is thrown when a validation error occurs while processing a machine event.
  */
-class MachineEventValidationException extends ValidationException
-{
-}
+class MachineEventValidationException extends ValidationException {}
