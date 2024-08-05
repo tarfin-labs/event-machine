@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ElevatorMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Models\ModelA;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ElevatorMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 it('it should return a machine', function (): void {
     $abcMachine = AbcMachine::create();
