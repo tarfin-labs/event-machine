@@ -40,19 +40,23 @@ trait HasMachines
     {
         $attribute = parent::getAttribute($key);
 
-        if (
-            property_exists($this, 'machines') &&
-            array_key_exists($key, $this->machines) &&
-            $this->shouldInitializeMachine()
-        ) {
-            /** @var \Tarfinlabs\EventMachine\Actor\Machine $machineClass */
-            [$machineClass, $contextKey] = explode(':', $this->machines[$key]);
+        if ($this->shouldInitializeMachine() === true) {
+            $machine = match (true) {
+                method_exists($this, 'machines') && array_key_exists($key, $this->machines()) => $this->machines()[$key],
+                property_exists($this, 'machines') && array_key_exists($key, $this->machines) => $this->machines[$key],
+                default                                                                       => null,
+            };
 
-            $machine = $machineClass::create(state: $attribute);
+            if ($machine !== null) {
+                /** @var \Tarfinlabs\EventMachine\Actor\Machine $machineClass */
+                [$machineClass, $contextKey] = explode(':', $machine);
 
-            $machine->state->context->set($contextKey, $this);
+                $machine = $machineClass::create(state: $attribute);
 
-            return $machine;
+                $machine->state->context->set($contextKey, $this);
+
+                return $machine;
+            }
         }
 
         return $attribute;
