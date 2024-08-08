@@ -72,9 +72,6 @@ trait HasMachines
     /**
      * Checks if the machine configuration exists for the given key
      * either in the `machines` method or the `machines` property of the model.
-     *
-     * @param $key
-     * @return string|null
      */
     private function findMachine($key): ?string
     {
