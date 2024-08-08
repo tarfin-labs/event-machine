@@ -32,6 +32,7 @@ class TestCase extends Orchestra
             $table->string('value')->nullable();
             $table->ulid('abc_mre')->nullable();
             $table->ulid('traffic_mre')->nullable();
+            $table->ulid('elevator_mre')->nullable();
             $table->timestamps();
         });
     }

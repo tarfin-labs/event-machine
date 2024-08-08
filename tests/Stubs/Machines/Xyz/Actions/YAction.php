@@ -14,6 +14,6 @@ class YAction extends ActionBehavior
     {
         $context->value .= 'y';
 
-        $this->raise(new YEvent());
+        $this->raise(new YEvent);
     }
 }

@@ -56,7 +56,7 @@ test('TrafficLightsMachine transitions between states using Machine', function (
 test('TrafficLightsMachine transitions between states using an IncreaseEvent implementing EventBehavior', function (): void {
     $machineDefinition = TrafficLightsMachine::definition();
 
-    $increaseEvent = new IncreaseEvent();
+    $increaseEvent = new IncreaseEvent;
     expect($increaseEvent)->toBeInstanceOf(EventBehavior::class);
 
     $newState = $machineDefinition->transition(event: $increaseEvent);

@@ -21,7 +21,7 @@ trait HasMachines
      */
     protected static function bootHasMachines(): void
     {
-        static::creating(function (Model $model): void {
+        static::creating(static function (Model $model): void {
             foreach ($model->getCasts() as $attribute => $cast) {
                 if (
                     !isset($model->attributes[$attribute]) &&
@@ -40,19 +40,20 @@ trait HasMachines
     {
         $attribute = parent::getAttribute($key);
 
-        if (
-            property_exists($this, 'machines') &&
-            array_key_exists($key, $this->machines) &&
-            $this->shouldInitializeMachine()
-        ) {
-            /** @var \Tarfinlabs\EventMachine\Actor\Machine $machineClass */
-            [$machineClass, $contextKey] = explode(':', $this->machines[$key]);
+        if ($this->shouldInitializeMachine() === true) {
 
-            $machine = $machineClass::create(state: $attribute);
+            $machine = $this->findMachine($key);
 
-            $machine->state->context->set($contextKey, $this);
+            if ($machine !== null) {
+                /** @var \Tarfinlabs\EventMachine\Actor\Machine $machineClass */
+                [$machineClass, $contextKey] = explode(':', $machine);
 
-            return $machine;
+                $machine = $machineClass::create(state: $attribute);
+
+                $machine->state->context->set($contextKey, $this);
+
+                return $machine;
+            }
         }
 
         return $attribute;
@@ -66,5 +67,30 @@ trait HasMachines
     public function shouldInitializeMachine(): bool
     {
         return true;
+    }
+
+    /**
+     * Checks if the machine configuration exists for the given key
+     * either in the `machines` method or the `machines` property of the model.
+     */
+    private function findMachine($key): ?string
+    {
+        if (method_exists($this, 'machines')) {
+            $machines = $this->machines();
+
+            if (array_key_exists($key, $machines)) {
+                return $machines[$key];
+            }
+        }
+
+        if (property_exists($this, 'machines')) {
+            $machines = $this->machines;
+
+            if (array_key_exists($key, $machines)) {
+                return $machines[$key];
+            }
+        }
+
+        return null;
     }
 }
