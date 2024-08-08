@@ -14,11 +14,11 @@ test('An actor can be defined to an event', function (): void {
     Log::shouldReceive('debug')->with('Q Event Even Actor')->once();
     Log::shouldReceive('debug')->with('Q Event Odd Actor')->once();
 
-    $machine->send(event: new QEvent());
+    $machine->send(event: new QEvent);
 
     Log::shouldReceive('debug')->with(null)->once();
-    $machine->send(event: new EEvent());
+    $machine->send(event: new EEvent);
 
     Log::shouldReceive('debug')->with('R Actor')->times(3);
-    $machine->send(event: new REvent());
+    $machine->send(event: new REvent);
 });

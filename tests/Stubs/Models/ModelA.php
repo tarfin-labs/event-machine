@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ElevatorMachine;
 use Tarfinlabs\EventMachine\Traits\HasMachines;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ElevatorMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 /**
@@ -37,6 +37,7 @@ class ModelA extends Model
         'value'       => 'string',
         'traffic_mre' => TrafficLightsMachine::class.':modelA',
     ];
+
     protected function machines(): array
     {
         return [
