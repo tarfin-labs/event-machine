@@ -41,11 +41,24 @@ trait HasMachines
         $attribute = parent::getAttribute($key);
 
         if ($this->shouldInitializeMachine() === true) {
-            $machine = match (true) {
-                method_exists($this, 'machines') && array_key_exists($key, $this->machines()) => $this->machines()[$key],
-                property_exists($this, 'machines') && array_key_exists($key, $this->machines) => $this->machines[$key],
-                default                                                                       => null,
-            };
+
+            $machine = null;
+
+            if (method_exists($this, 'machines')) {
+                $machines = $this->machines();
+
+                if (array_key_exists($key, $machines)) {
+                    $machine = $machines[$key];
+                }
+            }
+
+            if (property_exists($this, 'machines')) {
+                $machines = $this->machines;
+
+                if (array_key_exists($key, $machines)) {
+                    $machine = $machines[$key];
+                }
+            }
 
             if ($machine !== null) {
                 /** @var \Tarfinlabs\EventMachine\Actor\Machine $machineClass */
