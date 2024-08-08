@@ -21,7 +21,7 @@ trait HasMachines
      */
     protected static function bootHasMachines(): void
     {
-        static::creating(function (Model $model): void {
+        static::creating(static function (Model $model): void {
             foreach ($model->getCasts() as $attribute => $cast) {
                 if (
                     !isset($model->attributes[$attribute]) &&
@@ -42,23 +42,7 @@ trait HasMachines
 
         if ($this->shouldInitializeMachine() === true) {
 
-            $machine = null;
-
-            if (method_exists($this, 'machines')) {
-                $machines = $this->machines();
-
-                if (array_key_exists($key, $machines)) {
-                    $machine = $machines[$key];
-                }
-            }
-
-            if (property_exists($this, 'machines')) {
-                $machines = $this->machines;
-
-                if (array_key_exists($key, $machines)) {
-                    $machine = $machines[$key];
-                }
-            }
+            $machine = $this->findMachine($key);
 
             if ($machine !== null) {
                 /** @var \Tarfinlabs\EventMachine\Actor\Machine $machineClass */
@@ -83,5 +67,33 @@ trait HasMachines
     public function shouldInitializeMachine(): bool
     {
         return true;
+    }
+
+    /**
+     * Checks if the machine configuration exists for the given key
+     * either in the `machines` method or the `machines` property of the model.
+     *
+     * @param $key
+     * @return string|null
+     */
+    private function findMachine($key): ?string
+    {
+        if (method_exists($this, 'machines')) {
+            $machines = $this->machines();
+
+            if (array_key_exists($key, $machines)) {
+                return $machines[$key];
+            }
+        }
+
+        if (property_exists($this, 'machines')) {
+            $machines = $this->machines;
+
+            if (array_key_exists($key, $machines)) {
+                return $machines[$key];
+            }
+        }
+
+        return null;
     }
 }
