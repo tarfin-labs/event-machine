@@ -44,7 +44,7 @@ class State
         public ?EventBehavior $currentEventBehavior = null,
         public ?EventCollection $history = null,
     ) {
-        $this->history ??= new EventCollection();
+        $this->history ??= new EventCollection;
 
         $this->updateMachineValueFromState();
     }

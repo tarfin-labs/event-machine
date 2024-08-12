@@ -58,10 +58,8 @@ class TrafficLightsMachine extends Machine
                     'DEX' => DecreaseEvent::class,
                 ],
                 'actions' => [
-                    'doNothingAction' => function (): void {
-                    },
-                    'doNothingAction2' => function (ContextManager $context, EventBehavior $eventBehavior): void {
-                    },
+                    'doNothingAction'            => function (): void {},
+                    'doNothingAction2'           => function (ContextManager $context, EventBehavior $eventBehavior): void {},
                     'doNothingInsideClassAction' => DoNothingInsideClassAction::class,
                 ],
             ],
