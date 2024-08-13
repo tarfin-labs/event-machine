@@ -28,8 +28,7 @@ class ContextManager extends Data
     public function __construct(
         #[ArrayType]
         public array|Optional $data = [],
-    ) {
-    }
+    ) {}
 
     /**
      * Get a value from the context by its key.
