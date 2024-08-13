@@ -102,7 +102,7 @@ class MachineDefinition
 
         $this->checkFinalStatesForTransitions();
 
-        $this->eventQueue = new Collection;
+        $this->eventQueue = new Collection();
 
         $this->initialStateDefinition = $this->root->initialStateDefinition;
 

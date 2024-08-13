@@ -488,7 +488,7 @@ class Machine implements Castable, JsonSerializable, Stringable
                 [$resultBehavior, $arguments] = explode(':', $resultBehavior);
             }
 
-            $resultBehavior = new $resultBehavior;
+            $resultBehavior = new $resultBehavior();
         }
 
         /* @var callable $resultBehavior */

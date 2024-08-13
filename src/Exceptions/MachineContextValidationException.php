@@ -9,4 +9,6 @@ use Illuminate\Validation\ValidationException;
 /**
  * Represents an exception thrown when the validation of the machine context fails.
  */
-class MachineContextValidationException extends ValidationException {}
+class MachineContextValidationException extends ValidationException
+{
+}

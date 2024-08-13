@@ -10,13 +10,13 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsCont
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 it('can initialize an empty context manager', function (): void {
-    $context = new ContextManager;
+    $context = new ContextManager();
 
     expect($context)->toBeInstanceOf(ContextManager::class);
 });
 
 it('can set and get context manager data', function (): void {
-    $context = new ContextManager;
+    $context = new ContextManager();
 
     $key1   = 'key1';
     $value1 = 'value1';
@@ -49,13 +49,13 @@ it('can set and get context manager data for context class', function (): void {
 });
 
 it('returns null for non-existent keys', function (): void {
-    $context = new ContextManager;
+    $context = new ContextManager();
 
     expect($context->get(key: 'non_existent_key'))->toBeNull();
 });
 
 it('can check if a key exists', function (): void {
-    $context = new ContextManager;
+    $context = new ContextManager();
     $context->set(key: 'key1', value: 'value1');
 
     expect($context->has(key: 'key1'))->toBeTrue();
@@ -72,7 +72,7 @@ it('can check if a key exists for context class', function (): void {
 });
 
 it('can remove a key from context data', function (): void {
-    $context = new ContextManager;
+    $context = new ContextManager();
 
     $context->set(key: 'key1', value: 'value1');
     $context->set(key: 'key2', value: 'value2');
@@ -103,7 +103,7 @@ it('can convert context data to an array', function (): void {
 });
 
 it('can handle edge cases with empty keys and values', function (): void {
-    $context = new ContextManager;
+    $context = new ContextManager();
 
     $context->set(key: '', value: 'empty_key_value');
     $context->set(key: 'empty_value_key', value: '');
@@ -161,6 +161,6 @@ it('can check existence by its type', function (): void {
     $machine->state->context->set('arrayKey', []);
     expect($machine->state->context->has(key: 'arrayKey', type: 'array'))->toBe(true);
 
-    $machine->state->context->set('objectKey', new MachineEvent);
+    $machine->state->context->set('objectKey', new MachineEvent());
     expect($machine->state->context->has(key: 'objectKey', type: MachineEvent::class))->toBe(true);
 });

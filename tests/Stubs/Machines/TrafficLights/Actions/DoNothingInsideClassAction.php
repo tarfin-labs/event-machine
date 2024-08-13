@@ -8,5 +8,7 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
 class DoNothingInsideClassAction extends ActionBehavior
 {
-    public function __invoke(): void {}
+    public function __invoke(): void
+    {
+    }
 }

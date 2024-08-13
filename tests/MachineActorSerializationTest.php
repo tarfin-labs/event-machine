@@ -6,7 +6,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Models\ModelA;
 
 test('a machine as a model attribute can serialize as root_event_id', function (): void {
-    $modelA = new ModelA;
+    $modelA = new ModelA();
 
     expect($modelA->abc_mre)->toBeInstanceOf(Machine::class);
     expect($modelA->traffic_mre)->toBeInstanceOf(Machine::class);

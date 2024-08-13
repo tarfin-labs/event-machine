@@ -10,4 +10,6 @@ namespace Tarfinlabs\EventMachine\Behavior;
  * This abstract class extends the InvokableBehavior class. It provides a way to define action behaviors
  * that can be invoked within a specific context.
  */
-abstract class ActionBehavior extends InvokableBehavior {}
+abstract class ActionBehavior extends InvokableBehavior
+{
+}

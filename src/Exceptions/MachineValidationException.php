@@ -12,4 +12,6 @@ use Illuminate\Validation\ValidationException;
  * This exception is used to handle validation errors specific to the Machine class.
  * It extends the ValidationException class to provide more specific functionality.
  */
-class MachineValidationException extends ValidationException {}
+class MachineValidationException extends ValidationException
+{
+}

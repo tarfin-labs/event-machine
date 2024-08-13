@@ -37,7 +37,7 @@ abstract class InvokableBehavior
     public function __construct(protected ?Collection $eventQueue = null)
     {
         if ($this->eventQueue === null) {
-            $this->eventQueue = new Collection;
+            $this->eventQueue = new Collection();
         }
     }
 
