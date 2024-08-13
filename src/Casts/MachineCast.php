@@ -56,7 +56,7 @@ class MachineCast implements CastsAttributes
      */
     public function set(Model $model, string $key, mixed $value, array $attributes): ?string
     {
-        if ($model->shouldInitializeMachine() === false) {
+        if ($value === null) {
             return null;
         }
 
