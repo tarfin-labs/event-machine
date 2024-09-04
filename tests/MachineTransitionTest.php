@@ -102,7 +102,7 @@ it('If the event is not transactional, its data is persistent', function (): voi
 it('If the event is transactional, it rolls back the data', function (): void {
     $machine = AsdMachine::create();
 
-    expect(fn () => $machine->send(new SEvent))
+    expect(fn () => $machine->send(new SEvent()))
         ->toThrow(new Exception('error'));
 
     $models = ModelA::all();
@@ -127,5 +127,5 @@ it('If the machine is already running, it will throw exception', function (): vo
         ->withAnyArgs()
         ->andReturn(false);
 
-    $machine->send(new EEvent);
+    $machine->send(new EEvent());
 })->throws(MachineAlreadyRunningException::class);
