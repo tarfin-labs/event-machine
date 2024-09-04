@@ -154,12 +154,12 @@ abstract class InvokableBehavior
                 : $parameterType->getName();
 
             $value = match (true) {
-                is_a($state->context, $typeName) => $state->context,    // ContextManager
-                is_a($eventBehavior, $typeName)  => $eventBehavior,     // EventBehavior
-                is_a($state, $typeName)          => $state,             // State
-                is_a($state->history, $typeName) => $state->history,    // EventCollection
-                $typeName === 'array'            => $actionArguments,   // Behavior Arguments
-                default                          => null,
+                is_a($typeName, class: ContextManager::class, allow_string: true) || is_subclass_of($typeName, class: ContextManager::class) => $state->context,    // ContextManager
+                is_a($typeName, class: EventBehavior::class, allow_string: true) || is_subclass_of($typeName, class: EventBehavior::class)   => $eventBehavior,     // EventBehavior
+                is_a($state, $typeName)                                                                                                      => $state,             // State
+                is_a($state->history, $typeName)                                                                                             => $state->history,    // EventCollection
+                $typeName === 'array'                                                                                                        => $actionArguments,   // Behavior Arguments
+                default                                                                                                                      => null,
             };
 
             $invocableBehaviorParameters[] = $value;

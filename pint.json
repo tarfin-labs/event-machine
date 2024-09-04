@@ -84,6 +84,7 @@
         "property": "none",
         "trait_import": "none"
       }
-    }
+    },
+    "new_with_parentheses": true
   }
 }

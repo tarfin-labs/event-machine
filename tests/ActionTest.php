@@ -91,7 +91,7 @@ test('result actions can return', function (): void {
     // 1. Arrange
     $value = random_int(10, 20);
 
-    $multipleWithItselfAction = new class extends ResultBehavior {
+    $multipleWithItselfAction = new class() extends ResultBehavior {
         public function __invoke(EventBehavior $event): int
         {
             return $event->payload['value'] * $event->payload['value'];
