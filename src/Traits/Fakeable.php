@@ -53,4 +53,28 @@ trait Fakeable
             App::forgetInstance(static::class);
         }
     }
+
+    /**
+     * Set run expectations for the fake behavior.
+     */
+    public static function shouldRun(): Mockery\Expectation|Mockery\CompositeExpectation
+    {
+        if (!isset(static::$fakes[static::class])) {
+            static::fake();
+        }
+
+        return static::$fakes[static::class]->shouldReceive('__invoke');
+    }
+
+    /**
+     * Assert that the behavior was run.
+     */
+    public static function assertRan(): void
+    {
+        if (!isset(static::$fakes[static::class])) {
+            throw new RuntimeException('Behavior '.static::class.' was not faked.');
+        }
+
+        static::$fakes[static::class]->shouldHaveReceived('__invoke');
+    }
 }
