@@ -47,3 +47,8 @@ it('can create a fake instance', function (): void {
     expect(TestCountGuard::isFaked())->toBe(true);
     expect(TestCountGuard::getFake())->toBeInstanceOf(MockInterface::class);
 });
+
+it('returns null for non-faked behavior', function (): void {
+    expect(TestIncrementAction::getFake())->toBeNull();
+    expect(TestIncrementAction::isFaked())->toBeFalse();
+});
