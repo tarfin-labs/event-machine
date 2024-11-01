@@ -68,6 +68,18 @@ trait Fakeable
     }
 
     /**
+     * Set return value for the fake behavior.
+     */
+    public static function shouldReturn(mixed $value): void
+    {
+        if (!isset(static::$fakes[static::class])) {
+            static::fake();
+        }
+
+        static::$fakes[static::class]->shouldReceive('__invoke')->andReturn($value);
+    }
+
+    /**
      * Assert that the behavior was run.
      */
     public static function assertRan(): void
