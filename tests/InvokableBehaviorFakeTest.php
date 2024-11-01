@@ -36,6 +36,8 @@ afterEach(function (): void {
     TestCountGuard::resetFakes();
 });
 
+// region Basic Fake Operations
+
 it('can create a fake instance', function (): void {
     // 1. Act
     TestIncrementAction::fake();
@@ -53,6 +55,29 @@ it('returns null for non-faked behavior', function (): void {
     expect(TestIncrementAction::getFake())->toBeNull();
     expect(TestIncrementAction::isFaked())->toBeFalse();
 });
+
+it('properly resets fakes', function (): void {
+    // 1. Arrange
+    TestIncrementAction::fake();
+    TestCountGuard::fake();
+
+    expect(TestIncrementAction::isFaked())->toBeTrue();
+    expect(TestCountGuard::isFaked())->toBeTrue();
+
+    // 2. Act
+    TestIncrementAction::resetFakes();
+    TestCountGuard::resetFakes();
+
+    // 3. Assert
+    expect(TestIncrementAction::isFaked())->toBeFalse();
+    expect(TestCountGuard::isFaked())->toBeFalse();
+    expect(TestIncrementAction::getFake())->toBeNull();
+    expect(TestCountGuard::getFake())->toBeNull();
+});
+
+// endregion
+
+// region Action Behaviors
 
 it('can set run expectations', function (): void {
     // 1. Arrange
@@ -85,40 +110,6 @@ it('works with multiple calls', function (): void {
     TestIncrementAction::assertRan();
 });
 
-it('can use mock to throw exceptions', function (): void {
-    // 1. Arrange
-    $context = new ContextManager(['count' => 0]);
-    TestIncrementAction::fake();
-    TestIncrementAction::shouldRun()
-        ->once()
-        ->andThrow(new RuntimeException('Test exception'));
-
-    // 2. Act & 3. Assert
-    expect(fn () => TestIncrementAction::run($context))
-        ->toThrow(RuntimeException::class, 'Test exception');
-});
-
-it('can fake guard behavior with different return values', function (): void {
-    // 1. Arrange
-    $context = new ContextManager(['count' => 0]);
-
-    TestCountGuard::fake();
-    TestCountGuard::shouldRun()
-        ->once()
-        ->andReturn(true)
-        ->ordered();
-
-    TestCountGuard::shouldRun()
-        ->once()
-        ->andReturn(false)
-        ->ordered();
-
-    // 2. Act & 3. Assert
-    expect(TestCountGuard::run($context))->toBeTrue();
-    expect(TestCountGuard::run($context))->toBeFalse();
-    TestCountGuard::assertRan();
-});
-
 it('can mock action to modify context', function (): void {
     // 1. Arrange
     $context = new ContextManager(['count' => 0]);
@@ -137,22 +128,6 @@ it('can mock action to modify context', function (): void {
     // 3. Assert
     expect($context->get('count'))->toBe(42)
         ->and($context->get('modified'))->toBeTrue();
-});
-
-it('maintains separate fake states for different behaviors', function (): void {
-    // 1. Arrange
-    TestIncrementAction::fake();
-    TestCountGuard::fake();
-
-    TestIncrementAction::shouldRun()->never();
-    TestCountGuard::shouldRun()->once()->andReturn(true);
-
-    // 2. Act
-    TestCountGuard::run(new ContextManager());
-
-    // 3. Assert
-    TestCountGuard::assertRan();
-    TestIncrementAction::assertNotRan();
 });
 
 it('returns real instance result when not faked', function (): void {
@@ -185,25 +160,6 @@ it('can verify method arguments', function (): void {
     TestIncrementAction::assertRan();
 });
 
-it('properly resets fakes', function (): void {
-    // 1. Arrange
-    TestIncrementAction::fake();
-    TestCountGuard::fake();
-
-    expect(TestIncrementAction::isFaked())->toBeTrue();
-    expect(TestCountGuard::isFaked())->toBeTrue();
-
-    // 2. Act
-    TestIncrementAction::resetFakes();
-    TestCountGuard::resetFakes();
-
-    // 3. Assert
-    expect(TestIncrementAction::isFaked())->toBeFalse();
-    expect(TestCountGuard::isFaked())->toBeFalse();
-    expect(TestIncrementAction::getFake())->toBeNull();
-    expect(TestCountGuard::getFake())->toBeNull();
-});
-
 it('can verify behavior was not run', function (): void {
     // 1. Arrange
     TestIncrementAction::fake();
@@ -212,6 +168,44 @@ it('can verify behavior was not run', function (): void {
 
     // 3. Assert
     TestIncrementAction::assertNotRan();
+});
+
+it('can use mock to throw exceptions', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['count' => 0]);
+    TestIncrementAction::fake();
+    TestIncrementAction::shouldRun()
+        ->once()
+        ->andThrow(new RuntimeException('Test exception'));
+
+    // 2. Act & 3. Assert
+    expect(fn () => TestIncrementAction::run($context))
+        ->toThrow(RuntimeException::class, 'Test exception');
+});
+
+// endregion
+
+// region Guard Behavior Tests
+
+it('can fake guard behavior with different return values', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['count' => 0]);
+
+    TestCountGuard::fake();
+    TestCountGuard::shouldRun()
+        ->once()
+        ->andReturn(true)
+        ->ordered();
+
+    TestCountGuard::shouldRun()
+        ->once()
+        ->andReturn(false)
+        ->ordered();
+
+    // 2. Act & 3. Assert
+    expect(TestCountGuard::run($context))->toBeTrue();
+    expect(TestCountGuard::run($context))->toBeFalse();
+    TestCountGuard::assertRan();
 });
 
 it('can handle consecutive different return values', function (): void {
@@ -229,6 +223,30 @@ it('can handle consecutive different return values', function (): void {
     expect(TestCountGuard::run($context))->toBeTrue();
 });
 
+// endregion
+
+// region Behavior Isolation Tests
+
+it('maintains separate fake states for different behaviors', function (): void {
+    // 1. Arrange
+    TestIncrementAction::fake();
+    TestCountGuard::fake();
+
+    TestIncrementAction::shouldRun()->never();
+    TestCountGuard::shouldRun()->once()->andReturn(true);
+
+    // 2. Act
+    TestCountGuard::run(new ContextManager());
+
+    // 3. Assert
+    TestCountGuard::assertRan();
+    TestIncrementAction::assertNotRan();
+});
+
+// endregion
+
+// region Exception Handling Tests
+
 it('throws exception when asserting non-faked behavior', function (): void {
     $expectedMessage = 'Behavior '.TestIncrementAction::class.' was not faked.';
 
@@ -242,3 +260,5 @@ it('throws exception when asserting non-faked behavior was not run', function ()
     expect(fn () => TestIncrementAction::assertNotRan())
         ->toThrow(RuntimeException::class, $expectedMessage);
 });
+
+// endregion
