@@ -118,3 +118,23 @@ it('can fake guard behavior with different return values', function (): void {
     expect(TestCountGuard::run($context))->toBeFalse();
     TestCountGuard::assertRan();
 });
+
+it('can mock action to modify context', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['count' => 0]);
+
+    TestIncrementAction::fake();
+    TestIncrementAction::shouldRun()
+        ->once()
+        ->andReturnUsing(function (ContextManager $ctx): void {
+            $ctx->set('count', 42);
+            $ctx->set('modified', true);
+        });
+
+    // 2. Act
+    TestIncrementAction::run($context);
+
+    // 3. Assert
+    expect($context->get('count'))->toBe(42)
+        ->and($context->get('modified'))->toBeTrue();
+});
