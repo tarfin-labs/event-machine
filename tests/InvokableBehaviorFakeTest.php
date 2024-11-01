@@ -83,3 +83,16 @@ it('works with multiple calls', function (): void {
     // 3. Assert
     TestIncrementAction::assertRan();
 });
+
+it('can use mock to throw exceptions', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['count' => 0]);
+    TestIncrementAction::fake();
+    TestIncrementAction::shouldRun()
+        ->once()
+        ->andThrow(new RuntimeException('Test exception'));
+
+    // 2. Act & 3. Assert
+    expect(fn () => TestIncrementAction::run($context))
+        ->toThrow(RuntimeException::class, 'Test exception');
+});
