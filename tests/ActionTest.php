@@ -99,14 +99,12 @@ test('result actions can return', function (): void {
     };
 
     // 2. Act
-    $result = $multipleWithItselfAction(
-        EventDefinition::from([
-            'type'    => 'ADD',
-            'payload' => [
-                'value' => $value,
-            ],
-        ]),
-    );
+    $result = $multipleWithItselfAction::run(EventDefinition::from([
+        'type'    => 'ADD',
+        'payload' => [
+            'value' => $value,
+        ],
+    ]));
 
     // 3. Assert
     expect($result)->toBe($value * $value);
