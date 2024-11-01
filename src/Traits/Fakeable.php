@@ -42,4 +42,15 @@ trait Fakeable
     {
         return static::$fakes[static::class] ?? null;
     }
+
+    /**
+     * Reset all fakes.
+     */
+    public static function resetFakes(): void
+    {
+        static::$fakes = [];
+        if (App::has(static::class)) {
+            App::forgetInstance(static::class);
+        }
+    }
 }
