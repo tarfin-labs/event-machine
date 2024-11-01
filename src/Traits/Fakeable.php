@@ -78,4 +78,16 @@ trait Fakeable
 
         static::$fakes[static::class]->shouldHaveReceived('__invoke');
     }
+
+    /**
+     * Assert that the behavior was not run.
+     */
+    public static function assertNotRan(): void
+    {
+        if (!isset(static::$fakes[static::class])) {
+            throw new RuntimeException('Behavior '.static::class.' was not faked.');
+        }
+
+        static::$fakes[static::class]->shouldNotHaveReceived('__invoke');
+    }
 }
