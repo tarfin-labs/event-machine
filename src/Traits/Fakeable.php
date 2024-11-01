@@ -34,4 +34,12 @@ trait Fakeable
     {
         return isset(static::$fakes[static::class]);
     }
+
+    /**
+     * Get the fake instance if exists.
+     */
+    public static function getFake(): ?MockInterface
+    {
+        return static::$fakes[static::class] ?? null;
+    }
 }
