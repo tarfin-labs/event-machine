@@ -154,3 +154,15 @@ it('maintains separate fake states for different behaviors', function (): void {
     TestCountGuard::assertRan();
     TestIncrementAction::assertNotRan();
 });
+
+it('returns real instance result when not faked', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['count' => 0]);
+
+    // 2. Act
+    TestIncrementAction::run($context);
+
+    // 3. Assert
+    expect($context->get('count'))->toBe(1);
+    expect(TestCountGuard::run($context))->toBeTrue(); // Increased by the TestIncrementAction
+});
