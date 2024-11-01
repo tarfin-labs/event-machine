@@ -56,6 +56,17 @@ it('returns null for non-faked behavior', function (): void {
     expect(TestIncrementAction::isFaked())->toBeFalse();
 });
 
+it('provides a cleaner syntax with `shouldReturn()` for simple return value mocking', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['count' => -1]);
+
+    // 2. Act
+    TestCountGuard::shouldReturn(true);
+
+    // 3. Assert
+    expect(TestCountGuard::run($context))->toBeTrue();
+});
+
 it('properly resets fakes', function (): void {
     // 1. Arrange
     TestIncrementAction::fake();
