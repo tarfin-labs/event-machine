@@ -52,3 +52,17 @@ it('returns null for non-faked behavior', function (): void {
     expect(TestIncrementAction::getFake())->toBeNull();
     expect(TestIncrementAction::isFaked())->toBeFalse();
 });
+
+it('can set run expectations', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['count' => 0]);
+
+    TestIncrementAction::fake();
+    TestIncrementAction::shouldRun();
+
+    // 2. Act
+    TestIncrementAction::run($context);
+
+    // 3. Assert
+    TestIncrementAction::assertRan();
+});
