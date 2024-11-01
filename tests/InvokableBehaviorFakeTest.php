@@ -203,3 +203,13 @@ it('properly resets fakes', function (): void {
     expect(TestIncrementAction::getFake())->toBeNull();
     expect(TestCountGuard::getFake())->toBeNull();
 });
+
+it('can verify behavior was not run', function (): void {
+    // 1. Arrange
+    TestIncrementAction::fake();
+
+    // 2. Act - intentionally not calling the action
+
+    // 3. Assert
+    TestIncrementAction::assertNotRan();
+});
