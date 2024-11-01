@@ -26,4 +26,12 @@ trait Fakeable
 
         return $mock;
     }
+
+    /**
+     * Check if the behavior is faked.
+     */
+    public static function isFaked(): bool
+    {
+        return isset(static::$fakes[static::class]);
+    }
 }
