@@ -228,3 +228,10 @@ it('can handle consecutive different return values', function (): void {
     expect(TestCountGuard::run($context))->toBeFalse();
     expect(TestCountGuard::run($context))->toBeTrue();
 });
+
+it('throws exception when asserting non-faked behavior', function (): void {
+    $expectedMessage = 'Behavior '.TestIncrementAction::class.' was not faked.';
+
+    expect(fn () => TestIncrementAction::assertRan())
+        ->toThrow(RuntimeException::class, $expectedMessage);
+});
