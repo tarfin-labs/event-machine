@@ -138,3 +138,19 @@ it('can mock action to modify context', function (): void {
     expect($context->get('count'))->toBe(42)
         ->and($context->get('modified'))->toBeTrue();
 });
+
+it('maintains separate fake states for different behaviors', function (): void {
+    // 1. Arrange
+    TestIncrementAction::fake();
+    TestCountGuard::fake();
+
+    TestIncrementAction::shouldRun()->never();
+    TestCountGuard::shouldRun()->once()->andReturn(true);
+
+    // 2. Act
+    TestCountGuard::run(new ContextManager());
+
+    // 3. Assert
+    TestCountGuard::assertRan();
+    TestIncrementAction::assertNotRan();
+});
