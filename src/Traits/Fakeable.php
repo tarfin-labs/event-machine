@@ -23,7 +23,7 @@ trait Fakeable
 
         static::$fakes[static::class] = $mock;
 
-        App::bind(static::class, fn () => $mock);
+        App::bind(abstract: static::class, concrete: fn () => $mock);
 
         return $mock;
     }
@@ -50,8 +50,8 @@ trait Fakeable
     public static function resetFakes(): void
     {
         static::$fakes = [];
-        if (App::has(static::class)) {
-            App::forgetInstance(static::class);
+        if (App::has(id: static::class)) {
+            App::forgetInstance(abstract: static::class);
         }
     }
 
@@ -85,7 +85,7 @@ trait Fakeable
     public static function assertRan(): void
     {
         if (!isset(static::$fakes[static::class])) {
-            throw new RuntimeException('Behavior '.static::class.' was not faked.');
+            throw new RuntimeException(message: 'Behavior '.static::class.' was not faked.');
         }
 
         static::$fakes[static::class]->shouldHaveReceived('__invoke');
@@ -97,7 +97,7 @@ trait Fakeable
     public static function assertNotRan(): void
     {
         if (!isset(static::$fakes[static::class])) {
-            throw new RuntimeException('Behavior '.static::class.' was not faked.');
+            throw new RuntimeException(message: 'Behavior '.static::class.' was not faked.');
         }
 
         static::$fakes[static::class]->shouldNotHaveReceived('__invoke');
