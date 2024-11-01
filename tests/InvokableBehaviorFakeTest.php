@@ -66,3 +66,20 @@ it('can set run expectations', function (): void {
     // 3. Assert
     TestIncrementAction::assertRan();
 });
+
+it('works with multiple calls', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['count' => 0]);
+
+    TestIncrementAction::fake();
+    TestIncrementAction::shouldRun()
+        ->twice()
+        ->withAnyArgs();
+
+    // 2. Act
+    TestIncrementAction::run($context);
+    TestIncrementAction::run($context);
+
+    // 3. Assert
+    TestIncrementAction::assertRan();
+});
