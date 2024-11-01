@@ -235,3 +235,10 @@ it('throws exception when asserting non-faked behavior', function (): void {
     expect(fn () => TestIncrementAction::assertRan())
         ->toThrow(RuntimeException::class, $expectedMessage);
 });
+
+it('throws exception when asserting non-faked behavior was not run', function (): void {
+    $expectedMessage = 'Behavior '.TestIncrementAction::class.' was not faked.';
+
+    expect(fn () => TestIncrementAction::assertNotRan())
+        ->toThrow(RuntimeException::class, $expectedMessage);
+});
