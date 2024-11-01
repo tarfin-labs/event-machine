@@ -9,8 +9,10 @@ use ReflectionFunction;
 use ReflectionUnionType;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Traits\Fakeable;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
 /**
@@ -21,6 +23,8 @@ use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
  */
 abstract class InvokableBehavior
 {
+    use Fakeable;
+
     /** @var array<string> An array containing the required context and the type of the context for the code to execute correctly. */
     public array $requiredContext = [];
 
@@ -169,20 +173,16 @@ abstract class InvokableBehavior
     }
 
     /**
-     * This method is used to create an instance of the invoking class.
-     */
-    public static function make(): mixed
-    {
-        return app(static::class);
-    }
-
-    /**
-     * This method creates an instance of the invoking class and calls it as a callable, passing any provided arguments.
+     * Run the behavior with the given arguments.
      *
-     * @param  mixed  ...$arguments
+     * @param  mixed  ...$args  Arguments to pass to the behavior
      */
-    public static function run(...$arguments): mixed
+    public static function run(mixed ...$args): mixed
     {
-        return static::make()(...$arguments);
+        $instance = static::isFaked()
+            ? App::make(static::class)
+            : new static();
+
+        return $instance(...$args);
     }
 }
