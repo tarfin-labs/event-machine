@@ -213,3 +213,18 @@ it('can verify behavior was not run', function (): void {
     // 3. Assert
     TestIncrementAction::assertNotRan();
 });
+
+it('can handle consecutive different return values', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['count' => 0]);
+
+    TestCountGuard::fake();
+    TestCountGuard::shouldRun()
+        ->times(3)
+        ->andReturn(true, false, true);
+
+    // 2. Act & 3. Assert
+    expect(TestCountGuard::run($context))->toBeTrue();
+    expect(TestCountGuard::run($context))->toBeFalse();
+    expect(TestCountGuard::run($context))->toBeTrue();
+});
