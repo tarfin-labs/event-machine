@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests;
 
+use RuntimeException;
 use Mockery\MockInterface;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
@@ -95,4 +96,25 @@ it('can use mock to throw exceptions', function (): void {
     // 2. Act & 3. Assert
     expect(fn () => TestIncrementAction::run($context))
         ->toThrow(RuntimeException::class, 'Test exception');
+});
+
+it('can fake guard behavior with different return values', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['count' => 0]);
+
+    TestCountGuard::fake();
+    TestCountGuard::shouldRun()
+        ->once()
+        ->andReturn(true)
+        ->ordered();
+
+    TestCountGuard::shouldRun()
+        ->once()
+        ->andReturn(false)
+        ->ordered();
+
+    // 2. Act & 3. Assert
+    expect(TestCountGuard::run($context))->toBeTrue();
+    expect(TestCountGuard::run($context))->toBeFalse();
+    TestCountGuard::assertRan();
 });

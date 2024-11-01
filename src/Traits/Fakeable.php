@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Traits;
 
 use Mockery;
+use RuntimeException;
 use Mockery\MockInterface;
 use Illuminate\Support\Facades\App;
 
