@@ -184,3 +184,22 @@ it('can verify method arguments', function (): void {
     // 3. Assert
     TestIncrementAction::assertRan();
 });
+
+it('properly resets fakes', function (): void {
+    // 1. Arrange
+    TestIncrementAction::fake();
+    TestCountGuard::fake();
+
+    expect(TestIncrementAction::isFaked())->toBeTrue();
+    expect(TestCountGuard::isFaked())->toBeTrue();
+
+    // 2. Act
+    TestIncrementAction::resetFakes();
+    TestCountGuard::resetFakes();
+
+    // 3. Assert
+    expect(TestIncrementAction::isFaked())->toBeFalse();
+    expect(TestCountGuard::isFaked())->toBeFalse();
+    expect(TestIncrementAction::getFake())->toBeNull();
+    expect(TestCountGuard::getFake())->toBeNull();
+});
