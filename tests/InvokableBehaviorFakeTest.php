@@ -166,3 +166,21 @@ it('returns real instance result when not faked', function (): void {
     expect($context->get('count'))->toBe(1);
     expect(TestCountGuard::run($context))->toBeTrue(); // Increased by the TestIncrementAction
 });
+
+it('can verify method arguments', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['count' => 5]);
+
+    TestIncrementAction::fake();
+    TestIncrementAction::shouldRun()
+        ->once()
+        ->withArgs(function (ContextManager $receivedContext) use ($context) {
+            return $receivedContext->get('count') === $context->get('count');
+        });
+
+    // 2. Act
+    TestIncrementAction::run($context);
+
+    // 3. Assert
+    TestIncrementAction::assertRan();
+});
