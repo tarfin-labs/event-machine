@@ -292,4 +292,16 @@ it('can reset all fakes at once', function (): void {
         ->and(TestCountGuard::getFake())->toBeNull();
 });
 
+it('removes all fake instances from container when resetting', function (): void {
+    // 1. Arrange
+    TestIncrementAction::shouldRun()->once();
+    TestCountGuard::shouldRun()->once();
+
+    // 2. Act
+    EventMachine::resetAllFakes();
+
+    // 3. Assert
+    expect(app()->bound(TestIncrementAction::class))->toBeFalse()
+        ->and(app()->bound(TestCountGuard::class))->toBeFalse();
+});
 // endregion
