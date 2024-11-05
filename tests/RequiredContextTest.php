@@ -2,12 +2,39 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\IsOddAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsValidatedOddGuard;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
 test('context values can be required for guards and actions', function (): void {
+class TestBehaviorWithRequiredContext extends InvokableBehavior
+{
+    public static array $requiredContext = [
+        'user.id'          => 'integer',
+        'user.name'        => 'string',
+        'settings.enabled' => 'boolean',
+    ];
+
+    public function __invoke(): void {}
+}
+
+class TestBehaviorWithoutRequiredContext extends InvokableBehavior
+{
+    public function __invoke(): void {}
+}
+
+class TestBehaviorWithNestedRequiredContext extends InvokableBehavior
+{
+    public static array $requiredContext = [
+        'deeply.nested.value'   => 'string',
+        'another.nested.number' => 'integer',
+    ];
+
+    public function __invoke(): void {}
+}
     $machineDefinition = MachineDefinition::define(config: [
         'context' => [
             'counts' => [
