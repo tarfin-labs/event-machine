@@ -320,6 +320,7 @@ it('cleans mockery container when resetting fakes', function (): void {
     TestCountGuard::shouldRun()->never();
     TestCountGuard::assertNotRan();
 });
+
 it('maintains behavior isolation after resetting all fakes', function (): void {
     // 1. Arrange
     TestIncrementAction::shouldRun()->once();
@@ -334,4 +335,27 @@ it('maintains behavior isolation after resetting all fakes', function (): void {
     TestIncrementAction::assertRan();
     expect(TestCountGuard::isFaked())->toBeFalse();
 });
+
+it('can reset fakes with different trait instances consistently', function (): void {
+    // 1. Arrange
+    TestIncrementAction::shouldRun()->once();
+    TestCountGuard::shouldRun()->twice();
+
+    // 2. Act
+    TestIncrementAction::resetAllFakes();
+
+    // Try to create new fakes
+    TestIncrementAction::shouldRun()->once();
+    TestCountGuard::shouldRun()->once();
+
+    // Reset using another instance
+    TestCountGuard::resetAllFakes();
+
+    // 3. Assert
+    expect(TestIncrementAction::isFaked())->toBeFalse()
+        ->and(TestCountGuard::isFaked())->toBeFalse()
+        ->and(TestIncrementAction::getFake())->toBeNull()
+        ->and(TestCountGuard::getFake())->toBeNull();
+});
+
 // endregion
