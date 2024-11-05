@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Tests;
 use RuntimeException;
 use Mockery\MockInterface;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Facades\EventMachine;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
@@ -270,6 +271,25 @@ it('throws exception when asserting non-faked behavior was not run', function ()
 
     expect(fn () => TestIncrementAction::assertNotRan())
         ->toThrow(RuntimeException::class, $expectedMessage);
+});
+
+// endregion
+
+// region Reset All Fakes
+
+it('can reset all fakes at once', function (): void {
+    // 1. Arrange
+    TestIncrementAction::shouldRun()->once();
+    TestCountGuard::shouldRun()->twice();
+
+    // 2. Act
+    EventMachine::resetAllFakes();
+
+    // 3. Assert
+    expect(TestIncrementAction::isFaked())->toBeFalse()
+        ->and(TestCountGuard::isFaked())->toBeFalse()
+        ->and(TestIncrementAction::getFake())->toBeNull()
+        ->and(TestCountGuard::getFake())->toBeNull();
 });
 
 // endregion
