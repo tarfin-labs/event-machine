@@ -9,7 +9,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsCont
 
 class IsValidatedOddGuard extends ValidationGuardBehavior
 {
-    public array $requiredContext = [
+    public static array $requiredContext = [
         'counts.oddCount' => 'integer',
     ];
     public ?string $errorMessage = 'Count is not odd';

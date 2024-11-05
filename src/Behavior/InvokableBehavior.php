@@ -26,7 +26,7 @@ abstract class InvokableBehavior
     use Fakeable;
 
     /** @var array<string> An array containing the required context and the type of the context for the code to execute correctly. */
-    public array $requiredContext = [];
+    public static array $requiredContext = [];
 
     /** @var bool Write log in console */
     public bool $shouldLog = false;
@@ -67,16 +67,16 @@ abstract class InvokableBehavior
      * @return string|null The key of the first missing attribute, or null if all
      *                     required attributes are present.
      */
-    public function hasMissingContext(ContextManager $context): ?string
+    public static function hasMissingContext(ContextManager $context): ?string
     {
         // Check if the requiredContext property is an empty array
-        if (empty($this->requiredContext)) {
+        if (empty(static::$requiredContext)) {
             return null;
         }
 
         // Iterate through the required context attributes
         /* @var GuardBehavior $guardBehavior */
-        foreach ($this->requiredContext as $key => $type) {
+        foreach (static::$requiredContext as $key => $type) {
             // Check if the context manager has the required context attribute
             if (!$context->has($key, $type)) {
                 // Return the key of the missing context attribute
@@ -97,9 +97,9 @@ abstract class InvokableBehavior
      *
      * @param  ContextManager  $context  The context to be validated.
      */
-    public function validateRequiredContext(ContextManager $context): void
+    public static function validateRequiredContext(ContextManager $context): void
     {
-        $missingContext = $this->hasMissingContext($context);
+        $missingContext = static::hasMissingContext($context);
 
         if ($missingContext !== null) {
             throw MissingMachineContextException::build($missingContext);
