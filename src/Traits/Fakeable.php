@@ -57,6 +57,22 @@ trait Fakeable
     }
 
     /**
+     * Reset all fakes in application container.
+     */
+    public static function resetAllFakes(): void
+    {
+        foreach (array_keys(static::$fakes) as $class) {
+            if (App::has($class)) {
+                App::forgetInstance($class);
+                App::offsetUnset($class);
+            }
+        }
+
+        Mockery::resetContainer();
+        static::$fakes = [];
+    }
+
+    /**
      * Set run expectations for the fake behavior.
      */
     public static function shouldRun(): Mockery\Expectation|Mockery\CompositeExpectation
