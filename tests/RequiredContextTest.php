@@ -35,6 +35,15 @@ class TestBehaviorWithNestedRequiredContext extends InvokableBehavior
 
     public function __invoke(): void {}
 }
+
+test('hasMissingContext returns null when no required context is defined', function (): void {
+    $behavior = new TestBehaviorWithoutRequiredContext();
+    $context  = new ContextManager([
+        'some' => 'value',
+    ]);
+
+    expect($behavior->hasMissingContext($context))->toBeNull();
+});
     $machineDefinition = MachineDefinition::define(config: [
         'context' => [
             'counts' => [
