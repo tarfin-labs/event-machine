@@ -44,6 +44,21 @@ test('hasMissingContext returns null when no required context is defined', funct
 
     expect($behavior->hasMissingContext($context))->toBeNull();
 });
+
+test('hasMissingContext returns null when all required context is present', function (): void {
+    $behavior = new TestBehaviorWithRequiredContext();
+    $context  = new ContextManager([
+        'user' => [
+            'id'   => 1,
+            'name' => 'John',
+        ],
+        'settings' => [
+            'enabled' => true,
+        ],
+    ]);
+
+    expect($behavior->hasMissingContext($context))->toBeNull();
+});
     $machineDefinition = MachineDefinition::define(config: [
         'context' => [
             'counts' => [
