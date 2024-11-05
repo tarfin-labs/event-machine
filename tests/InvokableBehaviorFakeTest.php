@@ -304,4 +304,20 @@ it('removes all fake instances from container when resetting', function (): void
     expect(app()->bound(TestIncrementAction::class))->toBeFalse()
         ->and(app()->bound(TestCountGuard::class))->toBeFalse();
 });
+
+it('cleans mockery container when resetting fakes', function (): void {
+    // 1. Arrange
+    TestIncrementAction::shouldRun()->once();
+    TestCountGuard::shouldRun()->twice();
+
+    // 2. Act
+    EventMachine::resetAllFakes();
+
+    // 3. Assert
+    TestIncrementAction::shouldRun()->never();
+    TestIncrementAction::assertNotRan();
+
+    TestCountGuard::shouldRun()->never();
+    TestCountGuard::assertNotRan();
+});
 // endregion
