@@ -52,7 +52,24 @@ trait Fakeable
         static::$fakes = [];
         if (App::has(id: static::class)) {
             App::forgetInstance(abstract: static::class);
+            App::offsetUnset(key: static::class);
         }
+    }
+
+    /**
+     * Reset all fakes in application container.
+     */
+    public static function resetAllFakes(): void
+    {
+        foreach (array_keys(static::$fakes) as $class) {
+            if (App::has($class)) {
+                App::forgetInstance($class);
+                App::offsetUnset($class);
+            }
+        }
+
+        Mockery::resetContainer();
+        static::$fakes = [];
     }
 
     /**
