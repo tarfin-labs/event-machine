@@ -52,6 +52,7 @@ trait Fakeable
         static::$fakes = [];
         if (App::has(id: static::class)) {
             App::forgetInstance(abstract: static::class);
+            App::offsetUnset(key: static::class);
         }
     }
 
