@@ -320,4 +320,18 @@ it('cleans mockery container when resetting fakes', function (): void {
     TestCountGuard::shouldRun()->never();
     TestCountGuard::assertNotRan();
 });
+it('maintains behavior isolation after resetting all fakes', function (): void {
+    // 1. Arrange
+    TestIncrementAction::shouldRun()->once();
+    TestCountGuard::shouldRun()->twice();
+    EventMachine::resetAllFakes();
+
+    // 2. Act
+    TestIncrementAction::shouldRun()->once();
+    TestIncrementAction::run(new ContextManager(['count' => 0]));
+
+    // 3. Assert
+    TestIncrementAction::assertRan();
+    expect(TestCountGuard::isFaked())->toBeFalse();
+});
 // endregion
