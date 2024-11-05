@@ -36,17 +36,17 @@ class TestBehaviorWithNestedRequiredContext extends InvokableBehavior
 }
 
 test('hasMissingContext returns null when no required context is defined', function (): void {
-    $behavior = new TestBehaviorWithoutRequiredContext();
-    $context  = new ContextManager([
+    $context = new ContextManager([
         'some' => 'value',
     ]);
 
-    expect($behavior->hasMissingContext($context))->toBeNull();
+    $result = TestBehaviorWithoutRequiredContext::hasMissingContext($context);
+
+    expect($result)->toBeNull();
 });
 
 test('hasMissingContext returns null when all required context is present', function (): void {
-    $behavior = new TestBehaviorWithRequiredContext();
-    $context  = new ContextManager([
+    $context = new ContextManager([
         'user' => [
             'id'   => 1,
             'name' => 'John',
@@ -56,12 +56,13 @@ test('hasMissingContext returns null when all required context is present', func
         ],
     ]);
 
-    expect($behavior->hasMissingContext($context))->toBeNull();
+    $result = TestBehaviorWithRequiredContext::hasMissingContext($context);
+
+    expect($result)->toBeNull();
 });
 
 test('hasMissingContext returns the first missing key path when context is missing', function (): void {
-    $behavior = new TestBehaviorWithRequiredContext();
-    $context  = new ContextManager([
+    $context = new ContextManager([
         'user' => [
             'id' => 1,
             // name is missing
@@ -71,12 +72,12 @@ test('hasMissingContext returns the first missing key path when context is missi
         ],
     ]);
 
-    expect($behavior->hasMissingContext($context))->toBe('user.name');
+    $result = TestBehaviorWithRequiredContext::hasMissingContext($context);
+
+    expect($result)->toBe('user.name');
 });
 
 test('hasMissingContext handles deeply nested context paths', function (): void {
-    $behavior = new TestBehaviorWithNestedRequiredContext();
-
     // All required context present
     $completeContext = new ContextManager([
         'deeply' => [
@@ -91,7 +92,9 @@ test('hasMissingContext handles deeply nested context paths', function (): void 
         ],
     ]);
 
-    expect($behavior->hasMissingContext($completeContext))->toBeNull();
+    $result = TestBehaviorWithNestedRequiredContext::hasMissingContext($completeContext);
+
+    expect($result)->toBeNull();
 
     // Missing nested context
     $incompleteContext = new ContextManager([
@@ -103,24 +106,26 @@ test('hasMissingContext handles deeply nested context paths', function (): void 
         // another.nested.number is missing
     ]);
 
-    expect($behavior->hasMissingContext($incompleteContext))->toBe('another.nested.number');
+    $result = TestBehaviorWithNestedRequiredContext::hasMissingContext($incompleteContext);
+
+    expect($result)->toBe('another.nested.number');
 });
 
 test('hasMissingContext returns first missing key for multiple missing fields', function (): void {
-    $behavior = new TestBehaviorWithRequiredContext();
-    $context  = new ContextManager([
+    $context = new ContextManager([
         'settings' => [
             'enabled' => true,
         ],
         // user.id and user.name both missing
     ]);
 
-    expect($behavior->hasMissingContext($context))->toBe('user.id');
+    $result = TestBehaviorWithRequiredContext::hasMissingContext($context);
+
+    expect($result)->toBe('user.id');
 });
 
 test('hasMissingContext checks type constraints', function (): void {
-    $behavior = new TestBehaviorWithRequiredContext();
-    $context  = new ContextManager([
+    $context = new ContextManager([
         'user' => [
             'id'   => 'not_an_integer', // Wrong type
             'name' => 'John',
@@ -130,12 +135,13 @@ test('hasMissingContext checks type constraints', function (): void {
         ],
     ]);
 
-    expect($behavior->hasMissingContext($context))->toBe('user.id');
+    $result = TestBehaviorWithRequiredContext::hasMissingContext($context);
+
+    expect($result)->toBe('user.id');
 });
 
 test('validateRequiredContext throws exception with correct missing key message', function (): void {
-    $behavior = new TestBehaviorWithRequiredContext();
-    $context  = new ContextManager([
+    $context = new ContextManager([
         'user' => [
             'id' => 1,
             // name is missing
@@ -145,13 +151,12 @@ test('validateRequiredContext throws exception with correct missing key message'
         ],
     ]);
 
-    expect(fn () => $behavior->validateRequiredContext($context))
+    expect(fn () => TestBehaviorWithRequiredContext::validateRequiredContext($context))
         ->toThrow(MissingMachineContextException::class, '`user.name` is missing in context.');
 });
 
 test('validateRequiredContext passes when all context is present', function (): void {
-    $behavior = new TestBehaviorWithRequiredContext();
-    $context  = new ContextManager([
+    $context = new ContextManager([
         'user' => [
             'id'   => 1,
             'name' => 'John',
@@ -161,15 +166,14 @@ test('validateRequiredContext passes when all context is present', function (): 
         ],
     ]);
 
-    expect($behavior->validateRequiredContext($context))->toBeNull();
-    expect(fn () => $behavior->validateRequiredContext($context))->not->toThrow(MissingMachineContextException::class);
+    expect(TestBehaviorWithRequiredContext::validateRequiredContext($context))->toBeNull();
+    expect(fn () => TestBehaviorWithRequiredContext::validateRequiredContext($context))->not->toThrow(MissingMachineContextException::class);
 });
 
 test('validateRequiredContext throws exception for empty context when requirements exist', function (): void {
-    $behavior = new TestBehaviorWithRequiredContext();
-    $context  = new ContextManager([]);
+    $context = new ContextManager([]);
 
-    expect(fn () => $behavior->validateRequiredContext($context))
+    expect(fn () => TestBehaviorWithRequiredContext::validateRequiredContext($context))
         ->toThrow(MissingMachineContextException::class, '`user.id` is missing in context.');
 });
 
