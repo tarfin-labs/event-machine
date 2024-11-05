@@ -118,6 +118,21 @@ test('hasMissingContext returns first missing key for multiple missing fields', 
 
     expect($behavior->hasMissingContext($context))->toBe('user.id');
 });
+
+test('hasMissingContext checks type constraints', function (): void {
+    $behavior = new TestBehaviorWithRequiredContext();
+    $context  = new ContextManager([
+        'user' => [
+            'id'   => 'not_an_integer', // Wrong type
+            'name' => 'John',
+        ],
+        'settings' => [
+            'enabled' => true,
+        ],
+    ]);
+
+    expect($behavior->hasMissingContext($context))->toBe('user.id');
+});
     $machineDefinition = MachineDefinition::define(config: [
         'context' => [
             'counts' => [
