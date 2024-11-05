@@ -106,6 +106,18 @@ test('hasMissingContext handles deeply nested context paths', function (): void 
 
     expect($behavior->hasMissingContext($incompleteContext))->toBe('another.nested.number');
 });
+
+test('hasMissingContext returns first missing key for multiple missing fields', function (): void {
+    $behavior = new TestBehaviorWithRequiredContext();
+    $context  = new ContextManager([
+        'settings' => [
+            'enabled' => true,
+        ],
+        // user.id and user.name both missing
+    ]);
+
+    expect($behavior->hasMissingContext($context))->toBe('user.id');
+});
     $machineDefinition = MachineDefinition::define(config: [
         'context' => [
             'counts' => [
