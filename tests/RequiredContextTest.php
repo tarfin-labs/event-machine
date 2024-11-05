@@ -9,7 +9,6 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Actions\IsOddAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsValidatedOddGuard;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
-test('context values can be required for guards and actions', function (): void {
 class TestBehaviorWithRequiredContext extends InvokableBehavior
 {
     public static array $requiredContext = [
@@ -165,6 +164,16 @@ test('validateRequiredContext passes when all context is present', function (): 
     expect($behavior->validateRequiredContext($context))->toBeNull();
     expect(fn () => $behavior->validateRequiredContext($context))->not->toThrow(MissingMachineContextException::class);
 });
+
+test('validateRequiredContext throws exception for empty context when requirements exist', function (): void {
+    $behavior = new TestBehaviorWithRequiredContext();
+    $context  = new ContextManager([]);
+
+    expect(fn () => $behavior->validateRequiredContext($context))
+        ->toThrow(MissingMachineContextException::class, '`user.id` is missing in context.');
+});
+
+test('context values can be required for guards and actions inside machine', function (): void {
     $machineDefinition = MachineDefinition::define(config: [
         'context' => [
             'counts' => [
