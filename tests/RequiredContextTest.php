@@ -149,6 +149,22 @@ test('validateRequiredContext throws exception with correct missing key message'
     expect(fn () => $behavior->validateRequiredContext($context))
         ->toThrow(MissingMachineContextException::class, '`user.name` is missing in context.');
 });
+
+test('validateRequiredContext passes when all context is present', function (): void {
+    $behavior = new TestBehaviorWithRequiredContext();
+    $context  = new ContextManager([
+        'user' => [
+            'id'   => 1,
+            'name' => 'John',
+        ],
+        'settings' => [
+            'enabled' => true,
+        ],
+    ]);
+
+    expect($behavior->validateRequiredContext($context))->toBeNull();
+    expect(fn () => $behavior->validateRequiredContext($context))->not->toThrow(MissingMachineContextException::class);
+});
     $machineDefinition = MachineDefinition::define(config: [
         'context' => [
             'counts' => [
