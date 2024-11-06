@@ -57,6 +57,29 @@ trait Fakeable
             App::offsetUnset($class);
         }
     }
+
+    /**
+     * Clean up Mockery expectations for a given mock instance.
+     *
+     * This method resets all expectations on a mock object by:
+     * 1. Getting all methods that have expectations
+     * 2. Creating new empty expectation directors for each method
+     * 3. Performing mockery teardown
+     *
+     * @param  MockInterface  $mock  The mock instance to clean up
+     */
+    protected static function cleanupMockeryExpectations(MockInterface $mock): void
+    {
+        foreach (array_keys($mock->mockery_getExpectations()) as $method) {
+            $mock->mockery_setExpectationsFor(
+                $method,
+                new Mockery\ExpectationDirector($method, $mock),
+            );
+        }
+
+        $mock->mockery_teardown();
+    }
+
     /**
      * Reset all fakes.
      */
