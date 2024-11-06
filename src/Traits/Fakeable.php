@@ -100,14 +100,11 @@ trait Fakeable
      */
     public static function resetAllFakes(): void
     {
-        foreach (array_keys(static::$fakes) as $class) {
-            if (App::has($class)) {
-                App::forgetInstance($class);
-                App::offsetUnset($class);
-            }
+        foreach (static::$fakes as $class => $mock) {
+            self::cleanupLaravelContainer(class: $class);
+            self::cleanupMockeryExpectations($mock);
         }
 
-        Mockery::resetContainer();
         static::$fakes = [];
     }
 
