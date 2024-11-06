@@ -85,10 +85,13 @@ trait Fakeable
      */
     public static function resetFakes(): void
     {
-        static::$fakes = [];
-        if (App::has(id: static::class)) {
-            App::forgetInstance(abstract: static::class);
-            App::offsetUnset(key: static::class);
+        if (isset(static::$fakes[static::class])) {
+            $mock = static::$fakes[static::class];
+
+            self::cleanupLaravelContainer(class: static::class);
+            self::cleanupMockeryExpectations($mock);
+
+            unset(static::$fakes[static::class]);
         }
     }
 
