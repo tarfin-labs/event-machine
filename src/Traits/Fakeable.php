@@ -45,6 +45,19 @@ trait Fakeable
     }
 
     /**
+     * Remove the fake instance from Laravel's container.
+     *
+     * This method handles the cleanup of fake instances from Laravel's service container
+     * to prevent memory leaks and ensure proper state reset between tests.
+     */
+    protected static function cleanupLaravelContainer(string $class): void
+    {
+        if (App::has($class)) {
+            App::forgetInstance($class);
+            App::offsetUnset($class);
+        }
+    }
+    /**
      * Reset all fakes.
      */
     public static function resetFakes(): void
