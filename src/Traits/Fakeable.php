@@ -45,14 +45,53 @@ trait Fakeable
     }
 
     /**
+     * Remove the fake instance from Laravel's container.
+     *
+     * This method handles the cleanup of fake instances from Laravel's service container
+     * to prevent memory leaks and ensure proper state reset between tests.
+     */
+    protected static function cleanupLaravelContainer(string $class): void
+    {
+        if (App::has($class)) {
+            App::forgetInstance($class);
+            App::offsetUnset($class);
+        }
+    }
+
+    /**
+     * Clean up Mockery expectations for a given mock instance.
+     *
+     * This method resets all expectations on a mock object by:
+     * 1. Getting all methods that have expectations
+     * 2. Creating new empty expectation directors for each method
+     * 3. Performing mockery teardown
+     *
+     * @param  MockInterface  $mock  The mock instance to clean up
+     */
+    protected static function cleanupMockeryExpectations(MockInterface $mock): void
+    {
+        foreach (array_keys($mock->mockery_getExpectations()) as $method) {
+            $mock->mockery_setExpectationsFor(
+                $method,
+                new Mockery\ExpectationDirector($method, $mock),
+            );
+        }
+
+        $mock->mockery_teardown();
+    }
+
+    /**
      * Reset all fakes.
      */
     public static function resetFakes(): void
     {
-        static::$fakes = [];
-        if (App::has(id: static::class)) {
-            App::forgetInstance(abstract: static::class);
-            App::offsetUnset(key: static::class);
+        if (isset(static::$fakes[static::class])) {
+            $mock = static::$fakes[static::class];
+
+            self::cleanupLaravelContainer(class: static::class);
+            self::cleanupMockeryExpectations($mock);
+
+            unset(static::$fakes[static::class]);
         }
     }
 
@@ -61,14 +100,11 @@ trait Fakeable
      */
     public static function resetAllFakes(): void
     {
-        foreach (array_keys(static::$fakes) as $class) {
-            if (App::has($class)) {
-                App::forgetInstance($class);
-                App::offsetUnset($class);
-            }
+        foreach (static::$fakes as $class => $mock) {
+            self::cleanupLaravelContainer(class: $class);
+            self::cleanupMockeryExpectations($mock);
         }
 
-        Mockery::resetContainer();
         static::$fakes = [];
     }
 
