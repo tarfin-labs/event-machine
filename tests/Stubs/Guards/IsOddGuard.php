@@ -9,7 +9,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsCont
 
 class IsOddGuard extends GuardBehavior
 {
-    public array $requiredContext = [
+    public static array $requiredContext = [
         'counts.oddCount' => 'integer',
     ];
 

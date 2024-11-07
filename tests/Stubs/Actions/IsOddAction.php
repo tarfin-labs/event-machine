@@ -9,7 +9,7 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
 class IsOddAction extends ActionBehavior
 {
-    public array $requiredContext = [
+    public static array $requiredContext = [
         'counts.oddCount' => 'integer',
     ];
 
