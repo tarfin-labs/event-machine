@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Tests;
 use RuntimeException;
 use Mockery\MockInterface;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Facades\EventMachine;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
@@ -270,6 +271,91 @@ it('throws exception when asserting non-faked behavior was not run', function ()
 
     expect(fn () => TestIncrementAction::assertNotRan())
         ->toThrow(RuntimeException::class, $expectedMessage);
+});
+
+// endregion
+
+// region Reset All Fakes
+
+it('can reset all fakes at once', function (): void {
+    // 1. Arrange
+    TestIncrementAction::shouldRun()->once();
+    TestCountGuard::shouldRun()->twice();
+
+    // 2. Act
+    EventMachine::resetAllFakes();
+
+    // 3. Assert
+    expect(TestIncrementAction::isFaked())->toBeFalse()
+        ->and(TestCountGuard::isFaked())->toBeFalse()
+        ->and(TestIncrementAction::getFake())->toBeNull()
+        ->and(TestCountGuard::getFake())->toBeNull();
+});
+
+it('removes all fake instances from container when resetting', function (): void {
+    // 1. Arrange
+    TestIncrementAction::shouldRun()->once();
+    TestCountGuard::shouldRun()->once();
+
+    // 2. Act
+    EventMachine::resetAllFakes();
+
+    // 3. Assert
+    expect(app()->bound(TestIncrementAction::class))->toBeFalse()
+        ->and(app()->bound(TestCountGuard::class))->toBeFalse();
+});
+
+it('cleans mockery container when resetting fakes', function (): void {
+    // 1. Arrange
+    TestIncrementAction::shouldRun()->once();
+    TestCountGuard::shouldRun()->twice();
+
+    // 2. Act
+    EventMachine::resetAllFakes();
+
+    // 3. Assert
+    TestIncrementAction::shouldRun()->never();
+    TestIncrementAction::assertNotRan();
+
+    TestCountGuard::shouldRun()->never();
+    TestCountGuard::assertNotRan();
+});
+
+it('maintains behavior isolation after resetting all fakes', function (): void {
+    // 1. Arrange
+    TestIncrementAction::shouldRun()->once();
+    TestCountGuard::shouldRun()->twice();
+    EventMachine::resetAllFakes();
+
+    // 2. Act
+    TestIncrementAction::shouldRun()->once();
+    TestIncrementAction::run(new ContextManager(['count' => 0]));
+
+    // 3. Assert
+    TestIncrementAction::assertRan();
+    expect(TestCountGuard::isFaked())->toBeFalse();
+});
+
+it('can reset fakes with different trait instances consistently', function (): void {
+    // 1. Arrange
+    TestIncrementAction::shouldRun()->once();
+    TestCountGuard::shouldRun()->twice();
+
+    // 2. Act
+    TestIncrementAction::resetAllFakes();
+
+    // Try to create new fakes
+    TestIncrementAction::shouldRun()->once();
+    TestCountGuard::shouldRun()->once();
+
+    // Reset using another instance
+    TestCountGuard::resetAllFakes();
+
+    // 3. Assert
+    expect(TestIncrementAction::isFaked())->toBeFalse()
+        ->and(TestCountGuard::isFaked())->toBeFalse()
+        ->and(TestIncrementAction::getFake())->toBeNull()
+        ->and(TestCountGuard::getFake())->toBeNull();
 });
 
 // endregion
