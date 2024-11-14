@@ -142,3 +142,53 @@ test('multiple calculators can be chained', function (): void {
     expect($state->context->get('total'))->toBe(150);
     expect($state->context->get('average'))->toBe(30);
 });
+
+test('calculators run before guards and actions', function (): void {
+    // 1. Arrange
+    $executionOrder = [];
+
+    $machine = Machine::create([
+        'config' => [
+            'initial' => 'start',
+            'context' => ['value' => 10],
+            'states'  => [
+                'start' => [
+                    'on' => [
+                        'CHECK' => [
+                            'target'      => 'end',
+                            'calculators' => 'calculateStuff',
+                            'guards'      => 'checkStuff',
+                            'actions'     => 'doStuff',
+                        ],
+                    ],
+                ],
+                'end' => [],
+            ],
+        ],
+        'behavior' => [
+            'calculators' => [
+                'calculateStuff' => function () use (&$executionOrder) {
+                    return $executionOrder[] = 'calculator';
+                },
+            ],
+            'guards' => [
+                'checkStuff' => function () use (&$executionOrder) {
+                    $executionOrder[] = 'guard';
+
+                    return true;
+                },
+            ],
+            'actions' => [
+                'doStuff' => function () use (&$executionOrder): void {
+                    $executionOrder[] = 'action';
+                },
+            ],
+        ],
+    ]);
+
+    // 2. Act
+    $state = $machine->send(['type' => 'CHECK']);
+
+    // 3. Assert
+    expect($executionOrder)->toBe(['calculator', 'guard', 'action']);
+});
