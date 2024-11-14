@@ -292,3 +292,45 @@ test('calculators can use event data', function (): void {
     // 3. Assert
     expect($state->context->get('result'))->toBe(24);
 });
+
+test('calculator can have parameters', function (): void {
+    // 1. Arrange
+    $machine = Machine::create([
+        'config' => [
+            'initial' => 'start',
+            'context' => [
+                'value' => 100,
+            ],
+            'states' => [
+                'start' => [
+                    'on' => [
+                        'APPLY_TAX' => [
+                            'target'      => 'taxed',
+                            'calculators' => 'calculateTax:0.2', // 20% tax rate
+                        ],
+                    ],
+                ],
+                'taxed' => [],
+            ],
+        ],
+        'behavior' => [
+            'calculators' => [
+                'calculateTax' => function (
+                    ContextManager $context,
+                    EventBehavior $event,
+                    ?array $args = null
+                ): void {
+                    $taxRate = (float) $args[0];
+                    $value   = $context->get('value');
+                    $context->set('tax', $value * $taxRate);
+                },
+            ],
+        ],
+    ]);
+
+    // 2. Act
+    $state = $machine->send(['type' => 'APPLY_TAX']);
+
+    // 3. Assert
+    expect($state->context->get('tax'))->toBe(20.0);
+});
