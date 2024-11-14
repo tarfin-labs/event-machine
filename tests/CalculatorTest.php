@@ -7,6 +7,8 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior;
+use Tarfinlabs\EventMachine\Tests\Stubs\Calculators\TotalCalculator;
+use Tarfinlabs\EventMachine\Tests\Stubs\Calculators\AverageCalculator;
 
 class PriceCalculator extends CalculatorBehavior
 {
@@ -106,4 +108,37 @@ test('inline calculator functions work correctly', function (): void {
 
     // 3. Assert
     expect($state->context->get('sum'))->toBe(15);
+});
+
+test('multiple calculators can be chained', function (): void {
+    // 1. Arrange
+    $machine = Machine::create([
+        'config' => [
+            'initial' => 'start',
+            'context' => [
+                'values' => [10, 20, 30, 40, 50],
+            ],
+            'states' => [
+                'start' => [
+                    'on' => [
+                        'ANALYZE' => [
+                            'target'      => 'analyzed',
+                            'calculators' => [
+                                TotalCalculator::class,
+                                AverageCalculator::class,
+                            ],
+                        ],
+                    ],
+                ],
+                'analyzed' => [],
+            ],
+        ],
+    ]);
+
+    // 2. Act
+    $state = $machine->send(['type' => 'ANALYZE']);
+
+    // 3. Assert
+    expect($state->context->get('total'))->toBe(150);
+    expect($state->context->get('average'))->toBe(30);
 });
