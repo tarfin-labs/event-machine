@@ -223,9 +223,9 @@ class TransitionDefinition
     }
 
     /**
-     * Runs all calculators for this branch.
+     * Executes calculator behaviors associated with this transition.
      *
-     * @throws \Exception If any calculator fails
+     * Returns false if any calculator fails, preventing the transition.
      */
     public function runCalculators(
         State $state,

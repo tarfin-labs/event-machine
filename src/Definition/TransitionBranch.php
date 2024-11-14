@@ -22,6 +22,7 @@ class TransitionBranch
     /** The target state definition for this transition branch, or null if there is no target. */
     public ?StateDefinition $target;
 
+    /** The calculators to be executed before guards in this transition branch. */
     public ?array $calculators = null;
 
     /** The guards to be checked before this transition branch is taken. */
@@ -103,6 +104,10 @@ class TransitionBranch
         }
     }
 
+    /**
+     * Initializes calculator behaviors for the transition branch.
+     * Handles both inline calculators and calculator class definitions.
+     */
     protected function initializeCalculators(): void
     {
         if (isset($this->transitionBranchConfig[BehaviorType::Calculator->value])) {
