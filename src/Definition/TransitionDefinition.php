@@ -274,9 +274,9 @@ class TransitionDefinition
 
                 return false;
             }
-
-            return true;
         }
+
+        return true;
     }
 
     // endregion
