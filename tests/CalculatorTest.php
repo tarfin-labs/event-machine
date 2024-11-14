@@ -192,3 +192,62 @@ test('calculators run before guards and actions', function (): void {
     // 3. Assert
     expect($executionOrder)->toBe(['calculator', 'guard', 'action']);
 });
+
+test('calculator failures prevent guard and action execution', function (): void {
+    // 1. Arrange
+    $actionExecuted = false;
+    $guardExecuted  = false;
+
+    $machine = Machine::create([
+        'config' => [
+            'initial' => 'start',
+            'context' => ['value' => 10],
+            'states'  => [
+                'start' => [
+                    'on' => [
+                        'PROCESS' => [
+                            'target'      => 'processed',
+                            'calculators' => 'problematicCalculation',
+                            'guards'      => 'checkValue',
+                            'actions'     => 'recordValue',
+                        ],
+                    ],
+                ],
+                'processed' => [],
+            ],
+        ],
+        'behavior' => [
+            'calculators' => [
+                'problematicCalculation' => function (): void {
+                    throw new RuntimeException();
+                },
+            ],
+            'guards' => [
+                'checkValue' => function () use (&$guardExecuted) {
+                    $guardExecuted = true;
+
+                    return true;
+                },
+            ],
+            'actions' => [
+                'recordValue' => function () use (&$actionExecuted): void {
+                    $actionExecuted = true;
+                },
+            ],
+        ],
+    ]);
+
+    // 2. Act
+    $state = $machine->send(['type' => 'PROCESS']);
+
+    // 3. Assert
+    // The calculator failed, so transition should not happen
+    expect($state->matches('start'))->toBeTrue();
+
+    // Guard and action should not have executed
+    expect($guardExecuted)->toBeFalse();
+    expect($actionExecuted)->toBeFalse();
+
+    // Should have recorded a calculator fail event
+    expect($state->history->pluck('type')->contains('machine.calculator.problematicCalculation.fail'))->toBeTrue();
+});
