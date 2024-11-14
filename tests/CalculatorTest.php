@@ -38,6 +38,7 @@ class ApplyDiscountAction extends ActionBehavior
 }
 
 test('calculator can set context values that guards and actions can use', function (): void {
+    // 1. Arrange
     $machine = Machine::create([
         'config' => [
             'initial' => 'start',
@@ -61,14 +62,17 @@ test('calculator can set context values that guards and actions can use', functi
         ],
     ]);
 
+    // 2. Act
     $state = $machine->send(['type' => 'PROCESS']);
 
+    // 3. Assert
     expect($state->context->get('totalPrice'))->toBe(150);
     expect($state->context->get('finalPrice'))->toBe(135);
     expect($state->matches('processed'))->toBeTrue();
 });
 
 test('inline calculator functions work correctly', function (): void {
+    // 1. Arrange
     $machine = Machine::create([
         'config' => [
             'initial' => 'start',
@@ -97,6 +101,9 @@ test('inline calculator functions work correctly', function (): void {
         ],
     ]);
 
+    // 2. Act
     $state = $machine->send(['type' => 'CALCULATE']);
+
+    // 3. Assert
     expect($state->context->get('sum'))->toBe(15);
 });
