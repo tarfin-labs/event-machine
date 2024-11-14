@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior;
@@ -250,4 +251,44 @@ test('calculator failures prevent guard and action execution', function (): void
 
     // Should have recorded a calculator fail event
     expect($state->history->pluck('type')->contains('machine.calculator.problematicCalculation.fail'))->toBeTrue();
+});
+
+test('calculators can use event data', function (): void {
+    // 1. Arrange
+    $machine = Machine::create([
+        'config' => [
+            'initial' => 'start',
+            'context' => [],
+            'states'  => [
+                'start' => [
+                    'on' => [
+                        'MULTIPLY' => [
+                            'target'      => 'end',
+                            'calculators' => 'multiplyNumbers',
+                        ],
+                    ],
+                ],
+                'end' => [],
+            ],
+        ],
+        'behavior' => [
+            'calculators' => [
+                'multiplyNumbers' => function (ContextManager $context, EventBehavior $event): void {
+                    $numbers = $event->payload['numbers'] ?? [];
+                    $context->set('result', array_product($numbers));
+                },
+            ],
+        ],
+    ]);
+
+    // 2. Act
+    $state = $machine->send([
+        'type'    => 'MULTIPLY',
+        'payload' => [
+            'numbers' => [2, 3, 4],
+        ],
+    ]);
+
+    // 3. Assert
+    expect($state->context->get('result'))->toBe(24);
 });
