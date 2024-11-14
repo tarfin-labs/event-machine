@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
+use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior;
 
 /**
  * Class BehaviorType.
@@ -17,11 +18,12 @@ use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
  */
 enum BehaviorType: string
 {
-    case Guard   = 'guards';
-    case Action  = 'actions';
-    case Result  = 'results';
-    case Event   = 'events';
-    case Context = 'context';
+    case Calculator = 'calculators';
+    case Guard      = 'guards';
+    case Action     = 'actions';
+    case Result     = 'results';
+    case Event      = 'events';
+    case Context    = 'context';
 
     /**
      * Returns the behavior class based on the current value of $this.
@@ -31,11 +33,12 @@ enum BehaviorType: string
     public function getBehaviorClass(): string
     {
         return match ($this) {
-            self::Guard   => GuardBehavior::class,
-            self::Action  => ActionBehavior::class,
-            self::Result  => ResultBehavior::class,
-            self::Event   => EventBehavior::class,
-            self::Context => ContextManager::class,
+            self::Calculator => CalculatorBehavior::class,
+            self::Guard      => GuardBehavior::class,
+            self::Action     => ActionBehavior::class,
+            self::Result     => ResultBehavior::class,
+            self::Event      => EventBehavior::class,
+            self::Context    => ContextManager::class,
         };
     }
 }
