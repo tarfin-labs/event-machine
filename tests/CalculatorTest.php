@@ -67,3 +67,36 @@ test('calculator can set context values that guards and actions can use', functi
     expect($state->context->get('finalPrice'))->toBe(135);
     expect($state->matches('processed'))->toBeTrue();
 });
+
+test('inline calculator functions work correctly', function (): void {
+    $machine = Machine::create([
+        'config' => [
+            'initial' => 'start',
+            'context' => [
+                'numbers' => [1, 2, 3, 4, 5],
+            ],
+            'states' => [
+                'start' => [
+                    'on' => [
+                        'CALCULATE' => [
+                            'target'      => 'calculated',
+                            'calculators' => 'calculateSum',
+                        ],
+                    ],
+                ],
+                'calculated' => [],
+            ],
+        ],
+        'behavior' => [
+            'calculators' => [
+                'calculateSum' => function (ContextManager $context): void {
+                    $numbers = $context->get('numbers');
+                    $context->set('sum', array_sum($numbers));
+                },
+            ],
+        ],
+    ]);
+
+    $state = $machine->send(['type' => 'CALCULATE']);
+    expect($state->context->get('sum'))->toBe(15);
+});
