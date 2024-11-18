@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
+use Throwable;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
@@ -145,6 +146,10 @@ class TransitionDefinition
     ): ?TransitionBranch {
         /* @var TransitionBranch $branch */
         foreach ($this->branches as $branch) {
+            if ($this->runCalculators($state, $eventBehavior, $branch) === false) {
+                return null;
+            }
+
             if (!isset($branch->guards)) {
                 return $branch;
             }
@@ -215,6 +220,63 @@ class TransitionDefinition
         }
 
         return null;
+    }
+
+    /**
+     * Executes calculator behaviors associated with this transition.
+     *
+     * Returns false if any calculator fails, preventing the transition.
+     */
+    public function runCalculators(
+        State $state,
+        EventBehavior $eventBehavior,
+        TransitionBranch $branch,
+    ): bool {
+        if (!isset($branch->calculators)) {
+            return true;
+        }
+
+        foreach ($branch->calculators as $calculatorDefinition) {
+            [$calculatorDefinition, $calculatorArguments] = array_pad(explode(':', $calculatorDefinition, 2), 2, null);
+            $calculatorArguments                          = $calculatorArguments === null ? [] : explode(',', $calculatorArguments);
+
+            $calculatorBehavior = $this->source->machine->getInvokableBehavior(
+                behaviorDefinition: $calculatorDefinition,
+                behaviorType: BehaviorType::Calculator
+            );
+
+            $shouldLog = $calculatorBehavior->shouldLog ?? false;
+
+            try {
+                $calculatorParameters = InvokableBehavior::injectInvokableBehaviorParameters(
+                    actionBehavior: $calculatorBehavior,
+                    state: $state,
+                    eventBehavior: $eventBehavior,
+                    actionArguments: $calculatorArguments,
+                );
+
+                ($calculatorBehavior)(...$calculatorParameters);
+
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::CALCULATOR_PASS,
+                    placeholder: $calculatorDefinition,
+                    shouldLog: $shouldLog
+                );
+            } catch (Throwable $e) {
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::CALCULATOR_FAIL,
+                    placeholder: $calculatorDefinition,
+                    payload: [
+                        'error' => "Calculator failed: {$e->getMessage()}",
+                    ],
+                    shouldLog: $shouldLog
+                );
+
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // endregion

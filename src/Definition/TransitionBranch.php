@@ -22,15 +22,18 @@ class TransitionBranch
     /** The target state definition for this transition branch, or null if there is no target. */
     public ?StateDefinition $target;
 
+    /** The calculators to be executed before guards in this transition branch. */
+    public ?array $calculators = null;
+
+    /** The guards to be checked before this transition branch is taken. */
+    public ?array $guards = null;
+
     /**
      * The actions to be performed when this transition branch is taken.
      *
      * @var null|array<string>
      */
     public ?array $actions = null;
-
-    /** The guards to be checked before this transition branch is taken. */
-    public ?array $guards = null;
 
     /** The description of the transition branch. */
     public ?string $description = null;
@@ -95,8 +98,27 @@ class TransitionBranch
 
             $this->description = $this->transitionBranchConfig['description'] ?? null;
 
+            $this->initializeCalculators();
             $this->initializeGuards();
             $this->initializeActions();
+        }
+    }
+
+    /**
+     * Initializes calculator behaviors for the transition branch.
+     * Handles both inline calculators and calculator class definitions.
+     */
+    protected function initializeCalculators(): void
+    {
+        if (isset($this->transitionBranchConfig[BehaviorType::Calculator->value])) {
+            $this->calculators = is_array($this->transitionBranchConfig[BehaviorType::Calculator->value])
+                ? $this->transitionBranchConfig[BehaviorType::Calculator->value]
+                : [$this->transitionBranchConfig[BehaviorType::Calculator->value]];
+
+            $this->initializeInlineBehaviors(
+                inlineBehaviors: $this->calculators,
+                behaviorType: BehaviorType::Calculator
+            );
         }
     }
 
@@ -178,7 +200,11 @@ class TransitionBranch
         }
 
         foreach ($this->actions as $actionDefinition) {
-            $this->transitionDefinition->source->machine->runAction($actionDefinition, $state, $eventBehavior);
+            $this->transitionDefinition->source->machine->runAction(
+                $actionDefinition,
+                $state,
+                $eventBehavior
+            );
         }
     }
 
