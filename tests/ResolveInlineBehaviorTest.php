@@ -68,3 +68,8 @@ test('it throws exception when behavior not found', function (): void {
         ->toThrow(BehaviorNotFoundException::class, 'Behavior of type `events.nonExistentEvent` not found.');
 });
 
+test('it throws exception when behavior type not found', function (): void {
+    // Act & Assert
+    expect(fn () => OrderMachine::getBehavior('invalidType.someBehavior'))
+        ->toThrow(BehaviorNotFoundException::class, 'Behavior of type `invalidType.someBehavior` not found.');
+});
