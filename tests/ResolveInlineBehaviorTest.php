@@ -19,3 +19,15 @@ test('it can get a calculator behavior', function (): void {
     expect($calculator)->toBeCallable();
     expect($context->get('items_count'))->toBe(50);
 });
+
+test('it can get a guard behavior', function (): void {
+    // 1. Arrange
+    $guard          = OrderMachine::getGuard('validateOrder');
+    $validContext   = new ContextManager(['items_count' => 5]);
+    $invalidContext = new ContextManager(['items_count' => 0]);
+
+    // 2. Act & 3. Assert
+    expect($guard)->toBeCallable()
+        ->and($guard($validContext))->toBeTrue()
+        ->and($guard($invalidContext))->toBeFalse();
+});
