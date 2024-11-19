@@ -44,3 +44,12 @@ test('it can get an action behavior', function (): void {
     expect($action)->toBeCallable()
         ->and($context->get('order_created'))->toBeTrue();
 });
+
+test('it can get an event behavior', function (): void {
+    // 1. Act
+    $eventBehavior = OrderMachine::getEvent('orderCreated');
+
+    // 3. Assert
+    expect($eventBehavior)->toBeInstanceOf(EventBehavior::class)
+        ->and($eventBehavior::getType())->toBe('ORDER_CREATED');
+});
