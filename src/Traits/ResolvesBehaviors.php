@@ -37,4 +37,12 @@ trait ResolvesBehaviors
     {
         return static::getBehavior(BehaviorType::Calculator->value.'.'.$name);
     }
+
+    /**
+     * Get a guard behavior.
+     */
+    public static function getGuard(string $name): ?callable
+    {
+        return static::getBehavior(BehaviorType::Guard->value.'.'.$name);
+    }
 }
