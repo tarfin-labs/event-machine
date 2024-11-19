@@ -53,4 +53,12 @@ trait ResolvesBehaviors
     {
         return static::getBehavior(BehaviorType::Action->value.'.'.$name);
     }
+
+    /**
+     * Get an event behavior.
+     */
+    public static function getEvent(string $name): ?EventBehavior
+    {
+        return static::getBehavior(BehaviorType::Event->value.'.'.$name);
+    }
 }
