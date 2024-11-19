@@ -16,6 +16,7 @@ use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Illuminate\Contracts\Database\Eloquent\Castable;
+use Tarfinlabs\EventMachine\Traits\ResolvesBehaviors;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
@@ -28,6 +29,8 @@ use Tarfinlabs\EventMachine\Exceptions\MachineDefinitionNotFoundException;
 
 class Machine implements Castable, JsonSerializable, Stringable
 {
+    use ResolvesBehaviors;
+
     // region Fields
 
     /** The machine definition that this machine is based on */
