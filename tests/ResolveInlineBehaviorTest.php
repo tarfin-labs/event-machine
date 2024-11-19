@@ -1,3 +1,21 @@
 <?php
 
 declare(strict_types=1);
+
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\OrderMachine;
+use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+
+test('it can get a calculator behavior', function (): void {
+    // 1. Arrange
+    $calculator = OrderMachine::getCalculator('calculateOrderTotal');
+    $context    = new ContextManager(['items_count' => 5]);
+
+    // 2. Act
+    $calculator($context);
+
+    // 3. Assert
+    expect($calculator)->toBeCallable();
+    expect($context->get('items_count'))->toBe(50);
+});
