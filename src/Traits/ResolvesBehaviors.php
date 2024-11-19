@@ -29,4 +29,12 @@ trait ResolvesBehaviors
 
         return $behaviors[$type][$name];
     }
+
+    /**
+     * Get a calculator behavior.
+     */
+    public static function getCalculator(string $name): ?callable
+    {
+        return static::getBehavior(BehaviorType::Calculator->value.'.'.$name);
+    }
 }
