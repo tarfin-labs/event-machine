@@ -10,4 +10,23 @@ use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 trait ResolvesBehaviors
 {
+    /**
+     * Get a specific behavior by its path.
+     *
+     * @param  string  $path  Behavior path (e.g. 'guards.createOrderAction')
+     *
+     * @throws BehaviorNotFoundException
+     */
+    public static function getBehavior(string $path): callable|EventBehavior
+    {
+        $behaviors = static::definition()?->behavior ?? [];
+
+        [$type, $name] = explode('.', $path);
+
+        if (!isset($behaviors[$type][$name])) {
+            throw BehaviorNotFoundException::build($path);
+        }
+
+        return $behaviors[$type][$name];
+    }
 }
