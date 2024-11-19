@@ -45,4 +45,12 @@ trait ResolvesBehaviors
     {
         return static::getBehavior(BehaviorType::Guard->value.'.'.$name);
     }
+
+    /**
+     * Get an action behavior.
+     */
+    public static function getAction(string $name): ?callable
+    {
+        return static::getBehavior(BehaviorType::Action->value.'.'.$name);
+    }
 }
