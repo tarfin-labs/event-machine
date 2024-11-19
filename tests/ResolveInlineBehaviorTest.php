@@ -31,3 +31,16 @@ test('it can get a guard behavior', function (): void {
         ->and($guard($validContext))->toBeTrue()
         ->and($guard($invalidContext))->toBeFalse();
 });
+
+test('it can get an action behavior', function (): void {
+    // 1. Arrange
+    $action  = OrderMachine::getAction('createOrder');
+    $context = new ContextManager();
+
+    // 2. Act
+    $action($context);
+
+    // 3. Assert
+    expect($action)->toBeCallable()
+        ->and($context->get('order_created'))->toBeTrue();
+});
