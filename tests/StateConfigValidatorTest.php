@@ -275,3 +275,23 @@ test('validates default condition must be last in guarded transitions', function
         exceptionMessage: "State 'state_a' has invalid conditions order for event 'EVENT'. Default condition (no guards) must be the last condition."
     );
 });
+
+test('validates target is required in guarded transitions', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'     => 'machine',
+        'states' => [
+            'state_a' => [
+                'on' => [
+                    'EVENT' => [
+                        [
+                            'guards' => 'someGuard', // Missing target
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'state_a' has invalid condition at index 0 for event 'EVENT'. Each condition must have a target."
+    );
+});
