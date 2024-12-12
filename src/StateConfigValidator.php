@@ -291,4 +291,28 @@ class StateConfigValidator
         // Normalize and validate behaviors
         self::validateTransitionBehaviors(transitionConfig: $transitionConfig, path: $path, eventName: $eventName);
     }
+
+    /**
+     * Validates and normalizes transition behaviors (guards, actions, calculators).
+     */
+    private static function validateTransitionBehaviors(
+        array &$transitionConfig,
+        string $path,
+        string $eventName
+    ): void {
+        $behaviors = ['guards', 'actions', 'calculators'];
+
+        foreach ($behaviors as $behavior) {
+            if (isset($transitionConfig[$behavior])) {
+                try {
+                    $transitionConfig[$behavior] = self::normalizeArrayOrString(value: $transitionConfig[$behavior]);
+                } catch (InvalidArgumentException) {
+                    throw new InvalidArgumentException(
+                        message: "State '{$path}' has invalid {$behavior} configuration for event '{$eventName}'. ".
+                        "{$behavior} must be an array or string."
+                    );
+                }
+            }
+        }
+    }
 }
