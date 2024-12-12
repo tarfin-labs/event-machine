@@ -229,6 +229,22 @@ test('validates final states have no child states', function (): void {
     );
 });
 
+test('validates entry and exit actions are arrays or strings', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'state_a',
+        'states'  => [
+            'state_a' => [
+                'entry' => true, // Should be an array or a string
+                'exit'  => 123, // Should be an array or a string
+            ],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'state_a' has invalid entry/exit actions configuration. Actions must be an array or string."
+    );
+});
+
 test('accepts valid state configuration with all possible features', function (): void {
     expect(fn () => MachineDefinition::define([
         'id'      => 'machine',
