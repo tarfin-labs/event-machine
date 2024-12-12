@@ -215,4 +215,22 @@ class StateConfigValidator
             }
         }
     }
+
+    /**
+     * Validates transitions configuration.
+     *
+     * @throws InvalidArgumentException
+     */
+    private static function validateTransitionsConfig(mixed $transitionsConfig, string $path): void
+    {
+        if (!is_array($transitionsConfig)) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has invalid 'on' definition. 'on' must be an array of transitions."
+            );
+        }
+
+        foreach ($transitionsConfig as $eventName => $transition) {
+            self::validateTransition(transition: $transition, path: $path, eventName: $eventName);
+        }
+    }
 }
