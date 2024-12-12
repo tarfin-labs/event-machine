@@ -175,4 +175,24 @@ class StateConfigValidator
             );
         }
     }
+
+    /**
+     * Validates final state constraints.
+     *
+     * @throws InvalidArgumentException
+     */
+    private static function validateFinalState(array $stateConfig, string $path): void
+    {
+        if (isset($stateConfig['on'])) {
+            throw new InvalidArgumentException(
+                message: "Final state '{$path}' cannot have transitions"
+            );
+        }
+
+        if (isset($stateConfig['states'])) {
+            throw new InvalidArgumentException(
+                message: "Final state '{$path}' cannot have child states"
+            );
+        }
+    }
 }
