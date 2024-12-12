@@ -295,3 +295,30 @@ test('validates target is required in guarded transitions', function (): void {
         exceptionMessage: "State 'state_a' has invalid condition at index 0 for event 'EVENT'. Each condition must have a target."
     );
 });
+
+test('accepts valid guarded transitions with multiple conditions', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'     => 'machine',
+        'states' => [
+            'state_a' => [
+                'on' => [
+                    'EVENT' => [
+                        [
+                            'target'      => 'state_b',
+                            'guards'      => ['guard1', 'guard2'],
+                            'actions'     => 'action1',
+                            'calculators' => ['calc1', 'calc2'],
+                        ],
+                        [
+                            'target' => 'state_c',
+                            'guards' => 'guard3',
+                        ],
+                        [
+                            'target' => 'state_d', // Default condition
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]))->not->toThrow(exception: InvalidArgumentException::class);
+});
