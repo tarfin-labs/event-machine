@@ -160,4 +160,19 @@ class StateConfigValidator
             self::validateTransitionsConfig(transitionsConfig: $stateConfig['on'], path: $path);
         }
     }
+
+    /**
+     * Validates state type configuration.
+     *
+     * @throws InvalidArgumentException
+     */
+    private static function validateStateType(array $stateConfig, string $path): void
+    {
+        if (!in_array($stateConfig['type'], haystack: self::VALID_STATE_TYPES, strict: true)) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has invalid type: {$stateConfig['type']}. ".
+                'Allowed types are: '.implode(separator: ', ', array: self::VALID_STATE_TYPES)
+            );
+        }
+    }
 }
