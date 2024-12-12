@@ -251,3 +251,27 @@ test('validates empty guarded transitions array', function (): void {
         exceptionMessage: "State 'state_a' has empty conditions array for event 'EVENT'. Guarded transitions must have at least one condition."
     );
 });
+
+test('validates default condition must be last in guarded transitions', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'     => 'machine',
+        'states' => [
+            'state_a' => [
+                'on' => [
+                    'EVENT' => [
+                        [
+                            'target' => 'state_b', // Default condition (no guards)
+                        ],
+                        [
+                            'target' => 'state_c',
+                            'guards' => 'someGuard',
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'state_a' has invalid conditions order for event 'EVENT'. Default condition (no guards) must be the last condition."
+    );
+});
