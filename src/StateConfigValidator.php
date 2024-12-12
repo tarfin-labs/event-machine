@@ -49,4 +49,35 @@ class StateConfigValidator
 
         throw new InvalidArgumentException('Value must be string, array or null');
     }
+
+    /**
+     * Validates the machine configuration structure.
+     *
+     * @throws InvalidArgumentException
+     */
+    public static function validate(?array $config): void
+    {
+        if ($config === null) {
+            return;
+        }
+
+        // Validate root level configuration
+        self::validateRootConfig($config);
+
+        // Validate states if they exist
+        if (isset($config['states'])) {
+            if (!is_array($config['states'])) {
+                throw new InvalidArgumentException('States configuration must be an array.');
+            }
+
+            foreach ($config['states'] as $stateName => $stateConfig) {
+                self::validateStateConfig($stateConfig, $stateName);
+            }
+        }
+
+        // Validate root level transitions if they exist
+        if (isset($config['on'])) {
+            self::validateTransitionsConfig($config['on'], 'root');
+        }
+    }
 }
