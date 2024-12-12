@@ -6,6 +6,7 @@ namespace Tests;
 
 use InvalidArgumentException;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 
 test('validates root level configuration keys', function (): void {
     expect(fn () => MachineDefinition::define([
@@ -168,3 +169,51 @@ test('validates final states have no child states', function (): void {
     );
 });
 
+test('accepts valid state configuration with all possible features', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'version' => '1.0.0',
+        'initial' => 'state_a',
+        'context' => TrafficLightsContext::class,
+        'states'  => [
+            'state_a' => [
+                'type'        => 'compound',
+                'initial'     => 'child_a',
+                'entry'       => ['entryAction1', 'entryAction2'],
+                'exit'        => 'exitAction',
+                'meta'        => ['some' => 'data'],
+                'description' => 'A compound state',
+                'on'          => [
+                    'EVENT' => [
+                        'target'      => 'state_b',
+                        'guards'      => ['guard1', 'guard2'],
+                        'actions'     => ['action1', 'action2'],
+                        'calculators' => ['calc1', 'calc2'],
+                        'description' => 'Transition to state B',
+                    ],
+                    '@always' => [
+                        [
+                            'target'      => 'state_b',
+                            'guards'      => 'guard1',
+                            'description' => 'Always transition when guard passes',
+                        ],
+                        [
+                            'target'      => 'state_c',
+                            'description' => 'Default always transition',
+                        ],
+                    ],
+                ],
+                'states' => [
+                    'child_a' => [
+                        'type' => 'atomic',
+                    ],
+                    'child_b' => [
+                        'type' => 'final',
+                    ],
+                ],
+            ],
+            'state_b' => [],
+            'state_c' => [],
+        ],
+    ]))->not->toThrow(exception: InvalidArgumentException::class);
+});
