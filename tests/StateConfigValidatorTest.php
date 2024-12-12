@@ -33,3 +33,17 @@ test('accepts valid root level configuration', function (): void {
         ],
     ]))->not->toThrow(exception: InvalidArgumentException::class);
 });
+
+test('accepts machine with root level transitions', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'state_a',
+        'on'      => [
+            'GLOBAL_EVENT' => 'state_b',
+        ],
+        'states' => [
+            'state_a' => [],
+            'state_b' => [],
+        ],
+    ]))->not->toThrow(InvalidArgumentException::class);
+});
