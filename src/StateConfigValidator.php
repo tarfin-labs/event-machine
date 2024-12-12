@@ -16,7 +16,7 @@ class StateConfigValidator
     ];
 
     private const ALLOWED_STATE_KEYS = [
-        'on', 'states', 'initial', 'type', 'meta', 'entry', 'exit', 'description',
+        'id', 'on', 'states', 'initial', 'type', 'meta', 'entry', 'exit', 'description', 'result',
     ];
 
     private const ALLOWED_TRANSITION_KEYS = [
