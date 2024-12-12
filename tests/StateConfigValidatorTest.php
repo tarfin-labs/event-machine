@@ -131,3 +131,21 @@ test('validates state type values', function (): void {
         exceptionMessage: "State 'state_a' has invalid type: invalid_type. Allowed types are: atomic, compound, final"
     );
 });
+
+test('validates final states have no transitions', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'state_a',
+        'states'  => [
+            'state_a' => [
+                'type' => 'final',
+                'on'   => [
+                    'EVENT' => 'state_b',
+                ],
+            ],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "Final state 'state_a' cannot have transitions"
+    );
+});
