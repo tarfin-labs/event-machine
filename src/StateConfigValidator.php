@@ -233,4 +233,40 @@ class StateConfigValidator
             self::validateTransition(transition: $transition, path: $path, eventName: $eventName);
         }
     }
+
+    /**
+     * Validates a single transition configuration.
+     */
+    private static function validateTransition(
+        mixed $transition,
+        string $path,
+        string $eventName
+    ): void {
+        if ($transition === null) {
+            return;
+        }
+
+        if (is_string($transition)) {
+            return;
+        }
+
+        if (!is_array($transition)) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has invalid transition for event '{$eventName}'. ".
+                'Transition must be a string (target state) or an array (transition config).'
+            );
+        }
+
+        // If it's an array of conditions (guarded transitions)
+        if (array_is_list($transition)) {
+            self::validateGuardedTransitions($transition, $path, $eventName);
+            foreach ($transition as &$condition) {
+                self::validateTransitionConfig(transitionConfig: $condition, path: $path, eventName: $eventName);
+            }
+
+            return;
+        }
+
+        self::validateTransitionConfig(transitionConfig: $transition, path: $path, eventName: $eventName);
+    }
 }
