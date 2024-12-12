@@ -217,3 +217,22 @@ test('accepts valid state configuration with all possible features', function ()
         ],
     ]))->not->toThrow(exception: InvalidArgumentException::class);
 });
+
+test('normalizes string behaviors to arrays', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'     => 'machine',
+        'states' => [
+            'state_a' => [
+                'on' => [
+                    'EVENT' => [
+                        'target'      => 'state_b',
+                        'guards'      => 'singleGuard',
+                        'actions'     => 'singleAction',
+                        'calculators' => 'singleCalculator',
+                    ],
+                ],
+            ],
+        ],
+    ]))->not->toThrow(exception: InvalidArgumentException::class);
+});
+
