@@ -97,6 +97,26 @@ test('validates transition target is either string or array', function (): void 
         exceptionMessage: "State 'state_a' has invalid transition for event 'EVENT'. Transition must be a string (target state) or an array (transition config)."
     );
 });
+
+test('validates condition arrays in transitions', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'state_a',
+        'states'  => [
+            'state_a' => [
+                'on' => [
+                    'EVENT' => [
+                        'not_an_array', // Invalid condition - should be an array
+                        ['target' => 'state_b'],
+                    ],
+                ],
+            ],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'state_a' has invalid condition in transition for event 'EVENT'. Each condition must be an array with target/guards/actions."
+    );
+});
 test('validates allowed keys in transition config', function (): void {
     expect(fn () => MachineDefinition::define([
         'id'      => 'machine',
