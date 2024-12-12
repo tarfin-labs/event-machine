@@ -300,16 +300,20 @@ class StateConfigValidator
         string $path,
         string $eventName
     ): void {
-        $behaviors = ['guards', 'actions', 'calculators'];
+        $behaviors = [
+            'guards'      => 'Guards',
+            'actions'     => 'Actions',
+            'calculators' => 'Calculators',
+        ];
 
-        foreach ($behaviors as $behavior) {
+        foreach ($behaviors as $behavior => $label) {
             if (isset($transitionConfig[$behavior])) {
                 try {
-                    $transitionConfig[$behavior] = self::normalizeArrayOrString(value: $transitionConfig[$behavior]);
+                    $transitionConfig[$behavior] = self::normalizeArrayOrString($transitionConfig[$behavior]);
                 } catch (InvalidArgumentException) {
                     throw new InvalidArgumentException(
                         message: "State '{$path}' has invalid {$behavior} configuration for event '{$eventName}'. ".
-                        "{$behavior} must be an array or string."
+                        "{$label} must be an array or string."
                     );
                 }
             }
