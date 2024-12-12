@@ -116,3 +116,18 @@ test('validates allowed keys in transition config', function (): void {
         exceptionMessage: "State 'state_a' has invalid keys in transition config for event 'EVENT': invalid_key, another_invalid. Allowed keys are: target, guards, actions, description, calculators"
     );
 });
+
+test('validates state type values', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'state_a',
+        'states'  => [
+            'state_a' => [
+                'type' => 'invalid_type', // Type should be 'atomic', 'compound', or 'final'
+            ],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'state_a' has invalid type: invalid_type. Allowed types are: atomic, compound, final"
+    );
+});
