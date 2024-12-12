@@ -335,8 +335,8 @@ class StateConfigValidator
         foreach ($conditions as $index => $condition) {
             if (!is_array($condition)) {
                 throw new InvalidArgumentException(
-                    message: "State '{$path}' has invalid condition at index {$index} for event '{$eventName}'. ".
-                    'Each condition must be an array.'
+                    message: "State '{$path}' has invalid condition in transition for event '{$eventName}'. ".
+                    'Each condition must be an array with target/guards/actions.'
                 );
             }
 
