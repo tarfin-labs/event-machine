@@ -309,7 +309,7 @@ class StateConfigValidator
         foreach ($behaviors as $behavior => $label) {
             if (isset($transitionConfig[$behavior])) {
                 try {
-                    $transitionConfig[$behavior] = self::normalizeArrayOrString($transitionConfig[$behavior]);
+                    $transitionConfig[$behavior] = self::normalizeArrayOrString(value: $transitionConfig[$behavior]);
                 } catch (InvalidArgumentException) {
                     throw new InvalidArgumentException(
                         message: "State '{$path}' has invalid {$behavior} configuration for event '{$eventName}'. ".
