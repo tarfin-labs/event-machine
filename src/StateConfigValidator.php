@@ -208,7 +208,7 @@ class StateConfigValidator
                 $actions = $stateConfig[$actionType];
                 if (!is_string($actions) && !is_array($actions)) {
                     throw new InvalidArgumentException(
-                        message: "State '{$path}' has invalid {$actionType} actions configuration. ".
+                        message: "State '{$path}' has invalid entry/exit actions configuration. ".
                         'Actions must be an array or string.'
                     );
                 }
