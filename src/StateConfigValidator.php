@@ -67,7 +67,7 @@ class StateConfigValidator
         // Validate states if they exist
         if (isset($config['states'])) {
             if (!is_array($config['states'])) {
-                throw new InvalidArgumentException('States configuration must be an array.');
+                throw new InvalidArgumentException(message: 'States configuration must be an array.');
             }
 
             foreach ($config['states'] as $stateName => $stateConfig) {
@@ -77,7 +77,7 @@ class StateConfigValidator
 
         // Validate root level transitions if they exist
         if (isset($config['on'])) {
-            self::validateTransitionsConfig($config['on'], 'root');
+            self::validateTransitionsConfig(transitionsConfig: $config['on'], path: 'root');
         }
     }
 
@@ -95,8 +95,8 @@ class StateConfigValidator
 
         if (!empty($invalidRootKeys)) {
             throw new InvalidArgumentException(
-                'Invalid root level configuration keys: '.implode(', ', $invalidRootKeys).
-                '. Allowed keys are: '.implode(', ', self::ALLOWED_ROOT_KEYS)
+                message: 'Invalid root level configuration keys: '.implode(separator: ', ', array: $invalidRootKeys).
+                '. Allowed keys are: '.implode(separator: ', ', array: self::ALLOWED_ROOT_KEYS)
             );
         }
     }
