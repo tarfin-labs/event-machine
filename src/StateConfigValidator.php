@@ -269,4 +269,26 @@ class StateConfigValidator
 
         self::validateTransitionConfig(transitionConfig: $transition, path: $path, eventName: $eventName);
     }
+
+    /**
+     * Validates the configuration of a single transition.
+     */
+    private static function validateTransitionConfig(
+        array &$transitionConfig,
+        string $path,
+        string $eventName
+    ): void {
+        // Validate allowed keys
+        $invalidKeys = array_diff(array_keys($transitionConfig), self::ALLOWED_TRANSITION_KEYS);
+        if (!empty($invalidKeys)) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has invalid keys in transition config for event '{$eventName}': ".
+                    implode(separator: ', ', array: $invalidKeys).
+                    '. Allowed keys are: '.implode(separator: ', ', array: self::ALLOWED_TRANSITION_KEYS)
+            );
+        }
+
+        // Normalize and validate behaviors
+        self::validateTransitionBehaviors(transitionConfig: $transitionConfig, path: $path, eventName: $eventName);
+    }
 }
