@@ -100,4 +100,64 @@ class StateConfigValidator
             );
         }
     }
+
+    /**
+     * Validates a single state's configuration.
+     *
+     * @throws InvalidArgumentException
+     */
+    private static function validateStateConfig(?array $stateConfig, string $path): void
+    {
+        if ($stateConfig === null) {
+            return;
+        }
+
+        // Check for transitions defined outside 'on'
+        if (isset($stateConfig['@always']) || array_key_exists(key: '@always', array: $stateConfig)) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has transitions defined directly. ".
+                "All transitions including '@always' must be defined under the 'on' key."
+            );
+        }
+
+        // Validate state keys
+        $invalidKeys = array_diff(array_keys($stateConfig), self::ALLOWED_STATE_KEYS);
+        if (!empty($invalidKeys)) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has invalid keys: ".implode(separator: ', ', array: $invalidKeys).
+                '. Allowed keys are: '.implode(separator: ', ', array: self::ALLOWED_STATE_KEYS)
+            );
+        }
+
+        // Validate state type if specified
+        if (isset($stateConfig['type'])) {
+            self::validateStateType(stateConfig: $stateConfig, path: $path);
+        }
+
+        // Validate entry/exit actions
+        self::validateStateActions(stateConfig: $stateConfig, path: $path);
+
+        // Final state validations
+        if (isset($stateConfig['type']) && $stateConfig['type'] === 'final') {
+            self::validateFinalState(stateConfig: $stateConfig, path: $path);
+        }
+
+        // Validate nested states
+        if (isset($stateConfig['states'])) {
+            if (!is_array($stateConfig['states'])) {
+                throw new InvalidArgumentException(
+                    message: "State '{$path}' has invalid states configuration. States must be an array."
+                );
+            }
+
+            foreach ($stateConfig['states'] as $childKey => $childState) {
+                self::validateStateConfig(stateConfig: $childState, path: "{$path}.{$childKey}");
+            }
+        }
+
+        // Validate transitions under 'on'
+        if (isset($stateConfig['on'])) {
+            self::validateTransitionsConfig(transitionsConfig: $stateConfig['on'], path: $path);
+        }
+    }
 }
