@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Support\Carbon;
 use Tarfinlabs\EventMachine\Actor\Machine;
-use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Results\GreenResult;
@@ -72,7 +70,7 @@ test('a machine can have outputs on final states', function (string $eventType):
                 ],
                 'yellow' => [
                     'type'   => 'final',
-                    'result' => function (ContextManager $context, EventBehavior $event): Carbon {
+                    'result' => function (): Carbon {
                         return now();
                     },
                 ],
