@@ -47,3 +47,20 @@ test('accepts machine with root level transitions', function (): void {
         ],
     ]))->not->toThrow(InvalidArgumentException::class);
 });
+
+test('transitions must be defined under the on key', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'check',
+        'states'  => [
+            'check' => [
+                '@always' => [ // Transition defined directly under state
+                    'target' => 'next',
+                ],
+            ],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'check' has transitions defined directly. All transitions including '@always' must be defined under the 'on' key."
+    );
+});
