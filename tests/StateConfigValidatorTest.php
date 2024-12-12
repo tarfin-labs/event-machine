@@ -79,3 +79,20 @@ test('validates on property is an array', function (): void {
         exceptionMessage: "State 'state_a' has invalid 'on' definition. 'on' must be an array of transitions."
     );
 });
+
+test('validates transition target is either string or array', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'state_a',
+        'states'  => [
+            'state_a' => [
+                'on' => [
+                    'EVENT' => true, // Invalid transition definition
+                ],
+            ],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'state_a' has invalid transition for event 'EVENT'. Transition must be a string (target state) or an array (transition config)."
+    );
+});
