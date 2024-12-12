@@ -149,3 +149,22 @@ test('validates final states have no transitions', function (): void {
         exceptionMessage: "Final state 'state_a' cannot have transitions"
     );
 });
+
+test('validates final states have no child states', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'state_a',
+        'states'  => [
+            'state_a' => [
+                'type'   => 'final',
+                'states' => [
+                    'child' => [],
+                ],
+            ],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "Final state 'state_a' cannot have child states"
+    );
+});
+
