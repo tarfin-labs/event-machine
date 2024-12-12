@@ -80,4 +80,24 @@ class StateConfigValidator
             self::validateTransitionsConfig($config['on'], 'root');
         }
     }
+
+    /**
+     * Validates root level configuration.
+     *
+     * @throws InvalidArgumentException
+     */
+    private static function validateRootConfig(array $config): void
+    {
+        $invalidRootKeys = array_diff(
+            array_keys($config),
+            self::ALLOWED_ROOT_KEYS
+        );
+
+        if (!empty($invalidRootKeys)) {
+            throw new InvalidArgumentException(
+                'Invalid root level configuration keys: '.implode(', ', $invalidRootKeys).
+                '. Allowed keys are: '.implode(', ', self::ALLOWED_ROOT_KEYS)
+            );
+        }
+    }
 }
