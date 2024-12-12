@@ -64,3 +64,18 @@ test('transitions must be defined under the on key', function (): void {
         exceptionMessage: "State 'check' has transitions defined directly. All transitions including '@always' must be defined under the 'on' key."
     );
 });
+
+test('validates on property is an array', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'state_a',
+        'states'  => [
+            'state_a' => [
+                'on' => 'invalid_string', // 'on' should be an array
+            ],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'state_a' has invalid 'on' definition. 'on' must be an array of transitions."
+    );
+});
