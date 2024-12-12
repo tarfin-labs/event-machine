@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
+use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
@@ -84,6 +85,8 @@ class MachineDefinition
         public ?array $scenarios,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
+        StateConfigValidator::validate($config, $this->id);
+
         $this->scenariosEnabled = isset($this->config['scenarios_enabled']) && $this->config['scenarios_enabled'] === true;
 
         $this->shouldPersist = $this->config['should_persist'] ?? $this->shouldPersist;
