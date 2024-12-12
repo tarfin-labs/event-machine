@@ -117,6 +117,25 @@ test('validates condition arrays in transitions', function (): void {
         exceptionMessage: "State 'state_a' has invalid condition in transition for event 'EVENT'. Each condition must be an array with target/guards/actions."
     );
 });
+test('validates actions configuration in transitions', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'state_a',
+        'states'  => [
+            'state_a' => [
+                'on' => [
+                    'EVENT' => [
+                        'target'  => 'state_b',
+                        'actions' => true, // Actions should be an array or string
+                    ],
+                ],
+            ],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'state_a' has invalid actions configuration for event 'EVENT'. Actions must be an array or string."
+    );
+});
 test('validates allowed keys in transition config', function (): void {
     expect(fn () => MachineDefinition::define([
         'id'      => 'machine',
