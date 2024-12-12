@@ -195,4 +195,24 @@ class StateConfigValidator
             );
         }
     }
+
+    /**
+     * Validates state entry and exit actions.
+     *
+     * @throws InvalidArgumentException
+     */
+    private static function validateStateActions(array $stateConfig, string $path): void
+    {
+        foreach (['entry', 'exit'] as $actionType) {
+            if (isset($stateConfig[$actionType])) {
+                $actions = $stateConfig[$actionType];
+                if (!is_string($actions) && !is_array($actions)) {
+                    throw new InvalidArgumentException(
+                        message: "State '{$path}' has invalid {$actionType} actions configuration. ".
+                        'Actions must be an array or string.'
+                    );
+                }
+            }
+        }
+    }
 }
