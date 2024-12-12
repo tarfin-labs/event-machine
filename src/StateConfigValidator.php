@@ -315,4 +315,46 @@ class StateConfigValidator
             }
         }
     }
+
+    /**
+     * Validates guarded transitions with multiple conditions.
+     */
+    private static function validateGuardedTransitions(array $conditions, string $path, string $eventName): void
+    {
+        if (empty($conditions)) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has empty conditions array for event '{$eventName}'. ".
+                'Guarded transitions must have at least one condition.'
+            );
+        }
+
+        foreach ($conditions as $index => $condition) {
+            if (!is_array($condition)) {
+                throw new InvalidArgumentException(
+                    message: "State '{$path}' has invalid condition at index {$index} for event '{$eventName}'. ".
+                    'Each condition must be an array.'
+                );
+            }
+
+            if (!isset($condition['target'])) {
+                throw new InvalidArgumentException(
+                    message: "State '{$path}' has invalid condition at index {$index} for event '{$eventName}'. ".
+                    'Each condition must have a target.'
+                );
+            }
+
+            // Check if this is a default condition (no guards)
+            $isDefaultCondition = !isset($condition['guards']);
+
+            if ($isDefaultCondition) {
+                // If this is not the last condition
+                if ($index !== count($conditions) - 1) {
+                    throw new InvalidArgumentException(
+                        message: "State '{$path}' has invalid conditions order for event '{$eventName}'. ".
+                        'Default condition (no guards) must be the last condition.'
+                    );
+                }
+            }
+        }
+    }
 }
