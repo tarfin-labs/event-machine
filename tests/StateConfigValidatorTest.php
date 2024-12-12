@@ -136,6 +136,27 @@ test('validates actions configuration in transitions', function (): void {
         exceptionMessage: "State 'state_a' has invalid actions configuration for event 'EVENT'. Actions must be an array or string."
     );
 });
+
+test('validates calculators configuration in transitions', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'state_a',
+        'states'  => [
+            'state_a' => [
+                'on' => [
+                    'EVENT' => [
+                        'target'      => 'state_b',
+                        'calculators' => 123, // Calculators should be an array or string
+                    ],
+                ],
+            ],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'state_a' has invalid calculators configuration for event 'EVENT'. Calculators must be an array or string."
+    );
+});
+
 test('validates allowed keys in transition config', function (): void {
     expect(fn () => MachineDefinition::define([
         'id'      => 'machine',
