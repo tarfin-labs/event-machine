@@ -724,7 +724,7 @@ class MachineDefinition
         );
 
         if ($actionBehavior instanceof InvokableBehavior) {
-            $actionBehavior->validateRequiredContext($state->context);
+            $actionBehavior::validateRequiredContext($state->context);
         }
 
         // Get the number of events in the queue before the action is executed.
