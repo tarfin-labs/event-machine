@@ -85,7 +85,7 @@ class MachineDefinition
         public ?array $scenarios,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
-        StateConfigValidator::validate($config, $this->id);
+        StateConfigValidator::validate($config);
 
         $this->scenariosEnabled = isset($this->config['scenarios_enabled']) && $this->config['scenarios_enabled'] === true;
 
