@@ -403,9 +403,9 @@ class MachineDefinition
      * @param  string  $behaviorDefinition  The behavior definition to look up.
      * @param  BehaviorType  $behaviorType  The type of the behavior (e.g., guard or action).
      *
-     * @return callable|null The invokable behavior instance or callable, or null if not found.
+     * @return callable|\Tarfinlabs\EventMachine\Behavior\InvokableBehavior|null The invokable behavior instance or callable, or null if not found.
      */
-    public function getInvokableBehavior(string $behaviorDefinition, BehaviorType $behaviorType): ?callable
+    public function getInvokableBehavior(string $behaviorDefinition, BehaviorType $behaviorType): null|callable|InvokableBehavior
     {
         // If the guard definition is an invokable GuardBehavior, create a new instance.
         if (is_subclass_of($behaviorDefinition, InvokableBehavior::class)) {
