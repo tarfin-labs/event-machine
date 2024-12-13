@@ -298,7 +298,7 @@ class MachineDefinition
         }
 
         $scenarioStateKey = str_replace($this->id, $this->id.$this->delimiter.$state->context->get('scenarioType'), $state->currentStateDefinition->id);
-        if ($state->context->has('scenarioType') && isset($this->idMap[$scenarioStateKey])) {
+        if (isset($this->idMap[$scenarioStateKey]) && $state->context->has('scenarioType')) {
             return $state->setCurrentStateDefinition(stateDefinition: $this->idMap[$scenarioStateKey]);
         }
 
