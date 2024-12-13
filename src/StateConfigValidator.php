@@ -347,17 +347,12 @@ class StateConfigValidator
                 );
             }
 
-            // Check if this is a default condition (no guards)
-            $isDefaultCondition = !isset($condition['guards']);
-
-            if ($isDefaultCondition) {
-                // If this is not the last condition
-                if ($index !== count($conditions) - 1) {
-                    throw new InvalidArgumentException(
-                        message: "State '{$path}' has invalid conditions order for event '{$eventName}'. ".
-                        'Default condition (no guards) must be the last condition.'
-                    );
-                }
+            // If this is not the last condition
+            if (!isset($condition['guards']) && $index !== count($conditions) - 1) {
+                throw new InvalidArgumentException(
+                    message: "State '{$path}' has invalid conditions order for event '{$eventName}'. ".
+                    'Default condition (no guards) must be the last condition.'
+                );
             }
         }
     }
