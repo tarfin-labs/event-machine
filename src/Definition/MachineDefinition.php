@@ -224,7 +224,7 @@ class MachineDefinition
             currentStateDefinition: $this->initialStateDefinition,
         );
 
-        $initialState                 = $this->getScenarioStateIfAvailable(state: $initialState, eventBehavior: $eventBehavior ?? null);
+        $initialState                 = $this->getScenarioStateIfAvailable(state: $initialState, eventBehavior: $event ?? null);
         $this->initialStateDefinition = $initialState->currentStateDefinition;
 
         // Record the internal machine init event.
