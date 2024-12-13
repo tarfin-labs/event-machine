@@ -167,7 +167,7 @@ class TransitionDefinition
                 $shouldLog = $guardBehavior?->shouldLog ?? false;
 
                 if ($guardBehavior instanceof GuardBehavior) {
-                    $guardBehavior->validateRequiredContext($state->context);
+                    $guardBehavior::validateRequiredContext($state->context);
                 }
 
                 // Inject guard behavior parameters
