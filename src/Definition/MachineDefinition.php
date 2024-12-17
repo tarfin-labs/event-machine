@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
+use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
@@ -84,6 +85,8 @@ class MachineDefinition
         public ?array $scenarios,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
+        StateConfigValidator::validate($config);
+
         $this->scenariosEnabled = isset($this->config['scenarios_enabled']) && $this->config['scenarios_enabled'] === true;
 
         $this->shouldPersist = $this->config['should_persist'] ?? $this->shouldPersist;
@@ -221,7 +224,7 @@ class MachineDefinition
             currentStateDefinition: $this->initialStateDefinition,
         );
 
-        $initialState                 = $this->getScenarioStateIfAvailable(state: $initialState, eventBehavior: $eventBehavior ?? null);
+        $initialState                 = $this->getScenarioStateIfAvailable(state: $initialState, eventBehavior: $event ?? null);
         $this->initialStateDefinition = $initialState->currentStateDefinition;
 
         // Record the internal machine init event.
@@ -295,7 +298,7 @@ class MachineDefinition
         }
 
         $scenarioStateKey = str_replace($this->id, $this->id.$this->delimiter.$state->context->get('scenarioType'), $state->currentStateDefinition->id);
-        if ($state->context->has('scenarioType') && isset($this->idMap[$scenarioStateKey])) {
+        if (isset($this->idMap[$scenarioStateKey]) && $state->context->has('scenarioType')) {
             return $state->setCurrentStateDefinition(stateDefinition: $this->idMap[$scenarioStateKey]);
         }
 
@@ -400,9 +403,9 @@ class MachineDefinition
      * @param  string  $behaviorDefinition  The behavior definition to look up.
      * @param  BehaviorType  $behaviorType  The type of the behavior (e.g., guard or action).
      *
-     * @return callable|null The invokable behavior instance or callable, or null if not found.
+     * @return callable|\Tarfinlabs\EventMachine\Behavior\InvokableBehavior|null The invokable behavior instance or callable, or null if not found.
      */
-    public function getInvokableBehavior(string $behaviorDefinition, BehaviorType $behaviorType): ?callable
+    public function getInvokableBehavior(string $behaviorDefinition, BehaviorType $behaviorType): null|callable|InvokableBehavior
     {
         // If the guard definition is an invokable GuardBehavior, create a new instance.
         if (is_subclass_of($behaviorDefinition, InvokableBehavior::class)) {
@@ -630,7 +633,7 @@ class MachineDefinition
 
         // Get scenario state if exists
         $newState = $this->getScenarioStateIfAvailable(state: $newState, eventBehavior: $eventBehavior);
-        if ($targetStateDefinition !== null && $targetStateDefinition?->id !== $newState->currentStateDefinition->id) {
+        if ($targetStateDefinition !== null && $targetStateDefinition->id !== $newState->currentStateDefinition->id) {
             $targetStateDefinition = $newState->currentStateDefinition;
         }
 
@@ -721,7 +724,7 @@ class MachineDefinition
         );
 
         if ($actionBehavior instanceof InvokableBehavior) {
-            $actionBehavior->validateRequiredContext($state->context);
+            $actionBehavior::validateRequiredContext($state->context);
         }
 
         // Get the number of events in the queue before the action is executed.

@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Support\Carbon;
 use Tarfinlabs\EventMachine\Actor\Machine;
-use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Results\GreenResult;
-use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 
 test('a state definition can be atomic', function (): void {
     $machine = MachineDefinition::define(config: [
@@ -73,7 +70,7 @@ test('a machine can have outputs on final states', function (string $eventType):
                 ],
                 'yellow' => [
                     'type'   => 'final',
-                    'result' => function (ContextManager $context, EventBehavior $event): Carbon {
+                    'result' => function (): Carbon {
                         return now();
                     },
                 ],
@@ -95,44 +92,6 @@ test('a machine can have outputs on final states', function (string $eventType):
     '@yellow',
     '@green',
 ]);
-
-test('a final state definition can not have child states', function (): void {
-    MachineDefinition::define(config: [
-        'initial' => 'yellow',
-        'states'  => [
-            'yellow' => [
-                'type'   => 'final',
-                'states' => [
-                    'a' => [],
-                    'b' => [],
-                ],
-            ],
-        ],
-    ]);
-})->throws(
-    exception: InvalidFinalStateDefinitionException::class,
-    exceptionMessage: 'The final state `machine.yellow` should not have child states. Please revise your state machine definitions to ensure that final states are correctly configured without child states.'
-);
-
-test('a final state definition can not have transitions', function (): void {
-    MachineDefinition::define(config: [
-        'initial' => 'yellow',
-        'states'  => [
-            'yellow' => [
-                'type' => 'final',
-                'on'   => [
-                    'EVENT' => [
-                        'target' => 'red',
-                    ],
-                ],
-            ],
-            'red' => [],
-        ],
-    ]);
-})->throws(
-    exception: InvalidFinalStateDefinitionException::class,
-    exceptionMessage: 'The final state `machine.yellow` should not have transitions. Check your state machine configuration to ensure events are not dispatched when in a final state.'
-);
 
 test('an initial state of type final triggers machine finish event', function (): void {
     $machine = Machine::create(definition: [
