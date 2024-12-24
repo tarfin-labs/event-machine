@@ -268,3 +268,69 @@ test('multiple calculators are executed in sequence and stop on first failure', 
         ->and($guardExecuted)->toBeFalse() // guard was never executed
         ->and($actionExecuted)->toBeFalse(); // action was never executed
 });
+
+test('first subtransition calculator is always executed even if its guards fail', function (): void {
+    // 1. Arrange
+    $firstCalculatorExecuted  = false;
+    $secondCalculatorExecuted = false;
+    $firstGuardExecuted       = false;
+    $firstActionExecuted      = false;
+
+    $machine = Machine::create([
+        'config' => [
+            'initial' => 'state_a',
+            'states'  => [
+                'state_a' => [
+                    'on' => [
+                        'CHECK' => [
+                            [
+                                'target'      => 'state_b',
+                                'calculators' => 'firstCalculator',
+                                'guards'      => 'alwaysFailGuard',
+                                'actions'     => 'firstAction',
+                            ],
+                            [
+                                'target'      => 'state_c',
+                                'calculators' => 'secondCalculator',
+                            ],
+                        ],
+                    ],
+                ],
+                'state_b' => [],
+                'state_c' => [],
+            ],
+        ],
+        'behavior' => [
+            'calculators' => [
+                'firstCalculator' => function () use (&$firstCalculatorExecuted): void {
+                    $firstCalculatorExecuted = true;
+                },
+                'secondCalculator' => function () use (&$secondCalculatorExecuted): void {
+                    $secondCalculatorExecuted = true;
+                },
+            ],
+            'guards' => [
+                'alwaysFailGuard' => function () use (&$firstGuardExecuted) {
+                    $firstGuardExecuted = true;
+
+                    return false; // This guard always fails
+                },
+            ],
+            'actions' => [
+                'firstAction' => function () use (&$firstActionExecuted): void {
+                    $firstActionExecuted = true;
+                },
+            ],
+        ],
+    ]);
+
+    // 2. Act
+    $state = $machine->send(['type' => 'CHECK']);
+
+    // 3. Assert
+    expect($state->matches('state_c'))->toBeTrue()
+        ->and($firstCalculatorExecuted)->toBeTrue()    // First calculator was executed
+        ->and($firstGuardExecuted)->toBeTrue()         // First guard was executed and failed
+        ->and($firstActionExecuted)->toBeFalse()       // First action was not executed
+        ->and($secondCalculatorExecuted)->toBeTrue();   // Second calculator was executed after first guard failed
+});
