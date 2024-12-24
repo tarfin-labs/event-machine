@@ -10,7 +10,7 @@ class StateConfigValidator
 {
     /** Allowed keys at different levels of the machine configuration */
     private const ALLOWED_ROOT_KEYS = [
-        'id', 'version', 'initial', 'context', 'states', 'on', 'type',
+        'id', 'version', 'initial', 'status_events', 'context', 'states', 'on', 'type',
         'meta', 'entry', 'exit', 'description', 'scenarios_enabled',
         'should_persist', 'delimiter',
     ];
