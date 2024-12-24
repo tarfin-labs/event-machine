@@ -53,7 +53,11 @@ class StateConfigValidator
     /**
      * Validates the machine configuration structure.
      *
-     * @throws InvalidArgumentException
+     * This method serves as the entry point for configuration validation.
+     * It validates the root level configuration and recursively validates
+     * all nested states and their transitions.
+     *
+     * @throws InvalidArgumentException When configuration validation fails
      */
     public static function validate(?array $config): void
     {
@@ -77,7 +81,11 @@ class StateConfigValidator
 
         // Validate root level transitions if they exist
         if (isset($config['on'])) {
-            self::validateTransitionsConfig(transitionsConfig: $config['on'], path: 'root');
+            self::validateTransitionsConfig(
+                transitionsConfig: $config['on'],
+                path: 'root',
+                parentState: $config
+            );
         }
     }
 
@@ -104,7 +112,18 @@ class StateConfigValidator
     /**
      * Validates a single state's configuration.
      *
-     * @throws InvalidArgumentException
+     * This method performs comprehensive validation of a state's configuration including:
+     * - Checking for directly defined transitions
+     * - Validating state keys
+     * - Validating state type
+     * - Validating entry/exit actions
+     * - Processing nested states
+     * - Validating transitions
+     *
+     * The validation order is important: we validate nested states first,
+     * then process the transitions to ensure proper context.
+     *
+     * @throws InvalidArgumentException When state configuration is invalid
      */
     private static function validateStateConfig(?array $stateConfig, string $path): void
     {
@@ -142,7 +161,7 @@ class StateConfigValidator
             self::validateFinalState(stateConfig: $stateConfig, path: $path);
         }
 
-        // Validate nested states
+        // Process nested states first to ensure proper context
         if (isset($stateConfig['states'])) {
             if (!is_array($stateConfig['states'])) {
                 throw new InvalidArgumentException(
@@ -151,13 +170,20 @@ class StateConfigValidator
             }
 
             foreach ($stateConfig['states'] as $childKey => $childState) {
-                self::validateStateConfig(stateConfig: $childState, path: "{$path}.{$childKey}");
+                self::validateStateConfig(
+                    stateConfig: $childState,
+                    path: "{$path}.{$childKey}"
+                );
             }
         }
 
-        // Validate transitions under 'on'
+        // Validate transitions after processing nested states
         if (isset($stateConfig['on'])) {
-            self::validateTransitionsConfig(transitionsConfig: $stateConfig['on'], path: $path);
+            self::validateTransitionsConfig(
+                transitionsConfig: $stateConfig['on'],
+                path: $path,
+                parentState: $stateConfig
+            );
         }
     }
 
@@ -217,12 +243,18 @@ class StateConfigValidator
     }
 
     /**
-     * Validates transitions configuration.
+     * Validates the transitions configuration for a state.
      *
-     * @throws InvalidArgumentException
+     * This method processes both standard event names and Event class names as transition triggers.
+     * It ensures that all transitions are properly formatted and contain valid configuration.
+     *
+     * @throws InvalidArgumentException When transitions configuration is invalid
      */
-    private static function validateTransitionsConfig(mixed $transitionsConfig, string $path): void
-    {
+    private static function validateTransitionsConfig(
+        mixed $transitionsConfig,
+        string $path,
+        ?array $parentState = null
+    ): void {
         if (!is_array($transitionsConfig)) {
             throw new InvalidArgumentException(
                 message: "State '{$path}' has invalid 'on' definition. 'on' must be an array of transitions."
@@ -230,7 +262,22 @@ class StateConfigValidator
         }
 
         foreach ($transitionsConfig as $eventName => $transition) {
-            self::validateTransition(transition: $transition, path: $path, eventName: $eventName);
+            // Handle both Event classes and string event names
+            if (is_string($eventName) && class_exists($eventName) && is_subclass_of($eventName, EventBehavior::class)) {
+                self::validateTransition(
+                    transition: $transition,
+                    path: $path,
+                    eventName: $eventName::getType()
+                );
+
+                continue;
+            }
+
+            self::validateTransition(
+                transition: $transition,
+                path: $path,
+                eventName: $eventName
+            );
         }
     }
 
