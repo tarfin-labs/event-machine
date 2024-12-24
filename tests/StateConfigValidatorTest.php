@@ -15,7 +15,7 @@ test('validates root level configuration keys', function (): void {
         'another_invalid' => 'value',
     ]))->toThrow(
         exception: InvalidArgumentException::class,
-        exceptionMessage: 'Invalid root level configuration keys: invalid_key, another_invalid. Allowed keys are: id, version, initial, context, states, on, type, meta, entry, exit, description, scenarios_enabled, should_persist, delimiter'
+        exceptionMessage: 'Invalid root level configuration keys: invalid_key, another_invalid. Allowed keys are: id, version, initial, status_events, context, states, on, type, meta, entry, exit, description, scenarios_enabled, should_persist, delimiter'
     );
 });
 
