@@ -6,7 +6,8 @@ namespace Tarfinlabs\EventMachine;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Tarfinlabs\EventMachine\Console\Commands\GenerateUmlCommand;
+use Tarfinlabs\EventMachine\Commands\GenerateUmlCommand;
+use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
 
 /**
  * Class MachineServiceProvider.
@@ -33,6 +34,7 @@ class MachineServiceProvider extends PackageServiceProvider
             ->name('event-machine')
             ->hasConfigFile('machine')
             ->hasMigration('create_machine_events_table')
-            ->hasCommand(GenerateUmlCommand::class);
+            ->hasCommand(GenerateUmlCommand::class)
+            ->hasCommand(MachineConfigValidatorCommand::class);
     }
 }
