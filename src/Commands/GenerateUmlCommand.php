@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tarfinlabs\EventMachine\Console\Commands;
+namespace Tarfinlabs\EventMachine\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
