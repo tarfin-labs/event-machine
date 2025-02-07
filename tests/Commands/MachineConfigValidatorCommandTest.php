@@ -34,4 +34,12 @@ class MachineConfigValidatorCommandTest extends TestCase
             ->expectsOutput("✓ Machine '".XyzMachine::class."' configuration is valid.")
             ->assertSuccessful();
     }
+
+    public function test_it_requires_machine_argument_or_all_option(): void
+    {
+        $this
+            ->artisan(command: 'machine:validate')
+            ->expectsOutput(output: 'Please provide a machine class name or use --all option.')
+            ->assertSuccessful();
+    }
 }
