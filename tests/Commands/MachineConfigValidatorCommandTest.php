@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Commands;
 
 use Tarfinlabs\EventMachine\Tests\TestCase;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\XyzMachine;
 
 class MachineConfigValidatorCommandTest extends TestCase
 {
@@ -22,6 +23,15 @@ class MachineConfigValidatorCommandTest extends TestCase
         $this
             ->artisan('machine:validate', ['machine' => ['NonExistentMachine']])
             ->expectsOutput("Machine class 'NonExistentMachine' not found.")
+            ->assertSuccessful();
+    }
+
+    public function test_it_validates_all_machines(): void
+    {
+        $this
+            ->artisan('machine:validate', ['--all' => true])
+            ->expectsOutput("✓ Machine '".AbcMachine::class."' configuration is valid.")
+            ->expectsOutput("✓ Machine '".XyzMachine::class."' configuration is valid.")
             ->assertSuccessful();
     }
 }
