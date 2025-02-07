@@ -16,4 +16,12 @@ class MachineConfigValidatorCommandTest extends TestCase
             ->expectsOutput("✓ Machine '".AbcMachine::class."' configuration is valid.")
             ->assertSuccessful();
     }
+
+    public function test_it_shows_error_for_non_existent_machine(): void
+    {
+        $this
+            ->artisan('machine:validate', ['machine' => ['NonExistentMachine']])
+            ->expectsOutput("Machine class 'NonExistentMachine' not found.")
+            ->assertSuccessful();
+    }
 }
