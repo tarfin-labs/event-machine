@@ -47,8 +47,8 @@ test('a state definition config should reference original machine definition con
     expect($deepState->config)->toBe($machine->config['states']['one']['states']['deep']);
 
     // TODO: Consider that if these should be reactive?
-    //$deepState->config['meta'] = 'testing meta';
-    //expect($machine->config['states']['one']['states']['deep']['meta'])->toBe('testing meta');
+    // $deepState->config['meta'] = 'testing meta';
+    // expect($machine->config['states']['one']['states']['deep']['meta'])->toBe('testing meta');
 });
 
 test('a state definition has a key', function (): void {
