@@ -6,6 +6,8 @@ namespace Tests;
 
 use InvalidArgumentException;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RecordAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\GuardedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 
 test('validates root level configuration keys', function (): void {
@@ -373,26 +375,6 @@ test('validates default condition must be last in guarded transitions', function
     );
 });
 
-test('validates target is required in guarded transitions', function (): void {
-    expect(fn () => MachineDefinition::define([
-        'id'     => 'machine',
-        'states' => [
-            'state_a' => [
-                'on' => [
-                    'EVENT' => [
-                        [
-                            'guards' => 'someGuard', // Missing target
-                        ],
-                    ],
-                ],
-            ],
-        ],
-    ]))->toThrow(
-        exception: InvalidArgumentException::class,
-        exceptionMessage: "State 'state_a' has invalid condition at index 0 for event 'EVENT'. Each condition must have a target."
-    );
-});
-
 test('accepts valid guarded transitions with multiple conditions', function (): void {
     expect(fn () => MachineDefinition::define([
         'id'     => 'machine',
@@ -418,4 +400,29 @@ test('accepts valid guarded transitions with multiple conditions', function (): 
             ],
         ],
     ]))->not->toThrow(exception: InvalidArgumentException::class);
+});
+
+test('guarded transitions can run actions without changing state when no target is specified', function (): void {
+    // 1.1. Arrange
+    RecordAction::reset();
+    $machine = GuardedMachine::create();
+
+    // 1.2. Act
+    $state = $machine->send(['type' => 'CHECK']);
+
+    // 1.3. Assert
+    expect($state->matches('processed'))->toBeTrue()
+        ->and(RecordAction::wasExecuted())->toBeFalse();
+
+    // 2.1. Arrange
+    RecordAction::reset();
+    $machine = GuardedMachine::create();
+
+    // 2.2. Act
+    $machine->send(['type' => 'INC']);
+    $state = $machine->send(['type' => 'CHECK']);
+
+    // 2.3. Assert
+    expect($state->matches('active'))->toBeTrue()
+        ->and(RecordAction::wasExecuted())->toBeTrue();
 });
