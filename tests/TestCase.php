@@ -23,6 +23,7 @@ class TestCase extends Orchestra
     public function getEnvironmentSetUp($app): void
     {
         config()->set('database.default', 'testing');
+        config()->set('cache.default', 'array');
 
         $migration = include __DIR__.'/../database/migrations/create_machine_events_table.php.stub';
         $migration->up();
