@@ -29,28 +29,6 @@ class StateConfigValidator
     ];
 
     /**
-     * Normalizes the given value into an array or returns null.
-     *
-     * @throws InvalidArgumentException If the value is neither string, array, nor null.
-     */
-    private static function normalizeArrayOrString(mixed $value): ?array
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        if (is_string($value)) {
-            return [$value];
-        }
-
-        if (is_array($value)) {
-            return $value;
-        }
-
-        throw new InvalidArgumentException('Value must be string, array or null');
-    }
-
-    /**
      * Validates the machine configuration structure.
      *
      * This method serves as the entry point for configuration validation.
@@ -375,7 +353,7 @@ class StateConfigValidator
         if (empty($conditions)) {
             throw new InvalidArgumentException(
                 message: "State '{$path}' has empty conditions array for event '{$eventName}'. ".
-                'Guarded transitions must have at least one condition.'
+                         'Guarded transitions must have at least one condition.'
             );
         }
 
@@ -383,24 +361,39 @@ class StateConfigValidator
             if (!is_array($condition)) {
                 throw new InvalidArgumentException(
                     message: "State '{$path}' has invalid condition in transition for event '{$eventName}'. ".
-                    'Each condition must be an array with target/guards/actions.'
+                             'Each condition must be an array with target/guards/actions.'
                 );
             }
 
-            if (!isset($condition['target'])) {
-                throw new InvalidArgumentException(
-                    message: "State '{$path}' has invalid condition at index {$index} for event '{$eventName}'. ".
-                    'Each condition must have a target.'
-                );
-            }
-
-            // If this is not the last condition
+            // If this is not the last condition and it has no guards
             if (!isset($condition['guards']) && $index !== count($conditions) - 1) {
                 throw new InvalidArgumentException(
                     message: "State '{$path}' has invalid conditions order for event '{$eventName}'. ".
-                    'Default condition (no guards) must be the last condition.'
+                             'Default condition (no guards) must be the last condition.'
                 );
             }
         }
+    }
+
+    /**
+     * Normalizes the given value into an array or returns null.
+     *
+     * @throws InvalidArgumentException If the value is neither string, array, nor null.
+     */
+    private static function normalizeArrayOrString(mixed $value): ?array
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            return [$value];
+        }
+
+        if (is_array($value)) {
+            return $value;
+        }
+
+        throw new InvalidArgumentException('Value must be string, array or null');
     }
 }
