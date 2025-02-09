@@ -99,14 +99,13 @@ class MachineConfigValidatorCommand extends Command
                 $this->visitor->setCurrentFile($file->getRealPath());
                 $this->traverser->traverse($ast);
 
-                $machineClasses = $this->visitor->getMachineClasses();
-                $machines       = array_merge($machines, $machineClasses);
+                $machines[] = $this->visitor->getMachineClasses();
             } catch (Throwable) {
                 continue;
             }
         }
 
-        return array_unique($machines);
+        return array_unique(array_merge(...$machines));
     }
 
     protected function getSearchPaths(): array
