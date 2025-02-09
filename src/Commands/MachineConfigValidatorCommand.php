@@ -56,7 +56,8 @@ class MachineConfigValidatorCommand extends Command
     protected function validateMachine(string $machineClass): void
     {
         try {
-            $machines      = $this->findMachineClasses();
+            $machines = $this->findMachineClasses();
+            /** @var Machine $fullClassName */
             $fullClassName = $this->resolveFullClassName($machineClass, $machines);
 
             if (!$fullClassName) {
