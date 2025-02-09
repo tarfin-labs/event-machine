@@ -111,44 +111,89 @@ class MachineConfigValidatorCommand extends Command
 
     protected function getSearchPaths(): array
     {
-        $paths = [];
+        $paths = $this->isInPackageDevelopment()
+            ? $this->getPackageDevelopmentPaths()
+            : $this->getProjectPaths();
 
-        // Package development environment
-        if ($this->isInPackageDevelopment()) {
-            $packageRoot = $this->getPackageRootPath();
+        if (empty($paths)) {
+            throw new RuntimeException(
+                message: 'No valid search paths found for Machine classes. '.
+                'If you are using event-machine package, please ensure your Machine classes are in the app/ directory.'
+            );
+        }
 
-            $srcPath = $packageRoot.'/src';
-            if (is_dir($srcPath)) {
-                $paths[] = $srcPath;
-            }
+        return array_filter($paths, callback: 'is_dir');
+    }
 
-            $testPath = $packageRoot.'/tests/Stubs/Machines';
-            if (is_dir($testPath)) {
-                $paths[] = $testPath;
-            }
+    protected function isInPackageDevelopment(): bool
+    {
+        return !str_contains($this->getPackageRootPath(), '/vendor/');
+    }
 
+    protected function getPackageDevelopmentPaths(): array
+    {
+        $paths        = [];
+        $composerJson = $this->getComposerConfig();
+
+        if (!$composerJson) {
             return $paths;
         }
 
-        // Project environment (where package is installed)
-        $appPath = base_path('app');
-        if (is_dir($appPath)) {
-            $paths[] = $appPath;
-        }
+        // Add PSR-4 autoload paths
+        foreach (['autoload', 'autoload-dev'] as $autoloadType) {
+            if (!isset($composerJson[$autoloadType]['psr-4'])) {
+                continue;
+            }
 
-        if (empty($paths)) {
-            throw new RuntimeException(message: 'No valid search paths found for Machine classes.');
+            foreach ($composerJson[$autoloadType]['psr-4'] as $namespace => $path) {
+                $namespacePaths = (array) $path;
+                foreach ($namespacePaths as $namespacePath) {
+                    $absolutePath = $this->getPackageRootPath().'/'.trim($namespacePath, characters: '/');
+                    if (is_dir($absolutePath)) {
+                        $paths[] = $absolutePath;
+                    }
+                }
+            }
         }
 
         return $paths;
     }
 
-    protected function isInPackageDevelopment(): bool
+    protected function getProjectPaths(): array
     {
-        return str_contains(
-            haystack: $this->getPackageRootPath(),
-            needle: 'vendor/orchestra/testbench-core/laravel'
-        ) === false;
+        $paths = [];
+
+        // Project app directory
+        $appPath = base_path('app');
+        if (is_dir($appPath)) {
+            $paths[] = $appPath;
+        }
+
+        return $paths;
+    }
+
+    /**
+     * @throws \JsonException
+     */
+    protected function getComposerConfig(): ?array
+    {
+        $composerPath = $this->getPackageRootPath().'/composer.json';
+
+        if (!file_exists($composerPath)) {
+            return null;
+        }
+
+        $content = file_get_contents($composerPath);
+        if ($content === false) {
+            return null;
+        }
+
+        $config = json_decode($content, associative: true, depth: JSON_THROW_ON_ERROR, flags: JSON_THROW_ON_ERROR);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return null;
+        }
+
+        return $config;
     }
 
     protected function getPackageRootPath(): string
