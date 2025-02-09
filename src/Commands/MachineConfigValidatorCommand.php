@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Commands;
 use Throwable;
 use ReflectionClass;
 use PhpParser\Parser;
+use RuntimeException;
 use PhpParser\PhpVersion;
 use PhpParser\NodeTraverser;
 use PhpParser\ParserFactory;
@@ -110,18 +111,36 @@ class MachineConfigValidatorCommand extends Command
 
     protected function getSearchPaths(): array
     {
+        $paths = [];
+
         // Package development environment
         if ($this->isInPackageDevelopment()) {
-            return [
-                $this->getPackageRootPath().'/src',
-                $this->getPackageRootPath().'/tests/Stubs/Machines',
-            ];
+            $packageRoot = $this->getPackageRootPath();
+
+            $srcPath = $packageRoot.'/src';
+            if (is_dir($srcPath)) {
+                $paths[] = $srcPath;
+            }
+
+            $testPath = $packageRoot.'/tests/Stubs/Machines';
+            if (is_dir($testPath)) {
+                $paths[] = $testPath;
+            }
+
+            return $paths;
         }
 
         // Project environment (where package is installed)
-        return [
-            base_path(path: 'app'),
-        ];
+        $appPath = base_path('app');
+        if (is_dir($appPath)) {
+            $paths[] = $appPath;
+        }
+
+        if (empty($paths)) {
+            throw new RuntimeException(message: 'No valid search paths found for Machine classes.');
+        }
+
+        return $paths;
     }
 
     protected function isInPackageDevelopment(): bool
