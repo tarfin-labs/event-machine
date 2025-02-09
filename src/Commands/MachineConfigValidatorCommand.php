@@ -27,7 +27,7 @@ class MachineConfigValidatorCommand extends Command
     {
         parent::__construct();
 
-        $this->parser    = (new ParserFactory())->createForVersion(PhpVersion::fromString(version: '8.3'));
+        $this->parser    = (new ParserFactory())->createForVersion(PhpVersion::getHostVersion());
         $this->traverser = new NodeTraverser();
         $this->visitor   = new MachineClassVisitor();
         $this->traverser->addVisitor($this->visitor);
