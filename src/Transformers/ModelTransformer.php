@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Transformers;
 
 use Spatie\LaravelData\Support\DataProperty;
-use Spatie\LaravelData\Support\Transformation\TransformationContext;
 use Spatie\LaravelData\Transformers\Transformer;
+use Spatie\LaravelData\Support\Transformation\TransformationContext;
 
 /**
  * Class ModelTransformer.
