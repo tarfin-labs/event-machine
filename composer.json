@@ -25,19 +25,13 @@
     "require-dev": {
         "infection/infection": "^0.29.6",
         "laravel/pint": "^1.0",
-        "larastan/larastan": "dev-l12-compatibility",
+        "larastan/larastan": "^2.0",
         "orchestra/testbench": "^8.0|^9.0|^10.0",
         "pestphp/pest": "^2.34|^3.0",
         "pestphp/pest-plugin-arch": "^2.7|^3.0",
         "pestphp/pest-plugin-laravel": "^2.4|^3.0",
         "pestphp/pest-plugin-type-coverage": "^2.8|^3.0"
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/laravel-shift/larastan.git"
-        }
-    ],
     "autoload": {
         "psr-4": {
             "Tarfinlabs\\EventMachine\\": "src",
