@@ -47,4 +47,4 @@ jobs:
         run: composer show -D
 
       - name: Execute tests
-        run: vendor/bin/pest -vvv
+        run: vendor/bin/pest --colors=always --order-by=random
