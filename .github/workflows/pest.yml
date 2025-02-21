@@ -3,7 +3,7 @@ name: Pest
 on:
   push:
     branches:
-      - master
+      - main
       - '*.x'
   pull_request:
 
@@ -16,7 +16,7 @@ jobs:
       matrix:
         php: [8.2, 8.3, 8.4]
         laravel: [10, 11, 12]
-        stability: [prefer-stable]
+        stability: [prefer-lowest, prefer-stable]
         exclude:
           - php: 8.4
             laravel: 10
@@ -42,7 +42,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          composer update --prefer-dist --no-interaction --no-progress --${{ matrix.stability }}
+          composer require "laravel/framework:${{ matrix.laravel }}" --${{ matrix.stability }} --prefer-dist --no-interaction
 
       - name: List Installed Dependencies
         run: composer show -D
