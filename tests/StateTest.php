@@ -36,11 +36,11 @@ test('state value can be matched', function (): void {
 });
 
 test('Logs if log writing is turned on', function (): void {
+    Log::spy();
+
     $machine = TrafficLightsMachine::create();
 
-    Log::shouldReceive('debug')
-        ->times(3)
-        ->withAnyArgs();
-
     $machine->send(event: ['type' => 'MUT']);
+
+    Log::shouldHaveReceived('debug')->times(3);
 });
