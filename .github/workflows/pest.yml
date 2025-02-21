@@ -46,7 +46,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          composer update --prefer-dist --no-interaction --no-progress --${{ matrix.stability }}
+          composer require "laravel/framework:${{ matrix.laravel }}" --${{ matrix.stability }} --prefer-dist --no-interaction
 
       - name: List Installed Dependencies
         run: composer show -D
