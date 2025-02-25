@@ -6,7 +6,6 @@ namespace Tarfinlabs\EventMachine\Transformers;
 
 use Spatie\LaravelData\Support\DataProperty;
 use Spatie\LaravelData\Transformers\Transformer;
-use Spatie\LaravelData\Support\Transformation\TransformationContext;
 
 /**
  * Class ModelTransformer.
@@ -24,7 +23,7 @@ class ModelTransformer implements Transformer
      *
      * @return mixed The transformed value.
      */
-    public function transform(DataProperty $property, mixed $value, TransformationContext $context): mixed
+    public function transform(DataProperty $property, mixed $value): mixed
     {
         return $value->id;
     }
