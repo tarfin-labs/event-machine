@@ -209,13 +209,14 @@ it('can fake guard behavior with different return values', function (): void {
         ->andReturn(true)
         ->ordered();
 
+    expect(TestCountGuard::run($context))->toBeTrue();
+
     TestCountGuard::shouldRun()
         ->once()
         ->andReturn(false)
         ->ordered();
 
     // 2. Act & 3. Assert
-    expect(TestCountGuard::run($context))->toBeTrue();
     expect(TestCountGuard::run($context))->toBeFalse();
     TestCountGuard::assertRan();
 });
