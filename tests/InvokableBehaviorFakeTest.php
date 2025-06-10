@@ -420,37 +420,29 @@ it('completely resets all fakes and cleans up resources', function (): void {
     TestCountGuard::assertNotRan();
 });
 
-it('maintains behavior isolation after resetting all fakes', function (): void {
-    // 1. Arrange
+it('maintains behavior isolation and consistency after resetting fakes', function (): void {
+    // Test isolation after reset
     TestIncrementAction::shouldRun()->once();
     TestCountGuard::shouldRun()->twice();
     EventMachine::resetAllFakes();
 
-    // 2. Act
     TestIncrementAction::shouldRun()->once();
     TestIncrementAction::run(new ContextManager(['count' => 0]));
 
-    // 3. Assert
     TestIncrementAction::assertRan();
     expect(TestCountGuard::isFaked())->toBeFalse();
-});
 
-it('can reset fakes with different trait instances consistently', function (): void {
-    // 1. Arrange
+    // Test consistent reset with different trait instances
     TestIncrementAction::shouldRun()->once();
     TestCountGuard::shouldRun()->twice();
 
-    // 2. Act
     TestIncrementAction::resetAllFakes();
 
-    // Try to create new fakes
     TestIncrementAction::shouldRun()->once();
     TestCountGuard::shouldRun()->once();
 
-    // Reset using another instance
     TestCountGuard::resetAllFakes();
 
-    // 3. Assert
     expect(TestIncrementAction::isFaked())->toBeFalse()
         ->and(TestCountGuard::isFaked())->toBeFalse()
         ->and(TestIncrementAction::getFake())->toBeNull()
