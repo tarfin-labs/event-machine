@@ -91,34 +91,27 @@ it('properly resets fakes', function (): void {
 
 // region Action Behaviors
 
-it('can set run expectations', function (): void {
+it('can set run expectations with various configurations', function (): void {
     // 1. Arrange
     $context = new ContextManager(['count' => 0]);
 
+    // Test basic expectation
     TestIncrementAction::fake();
     TestIncrementAction::shouldRun();
-
-    // 2. Act
     TestIncrementAction::run($context);
-
-    // 3. Assert
     TestIncrementAction::assertRan();
-});
 
-it('works with multiple calls', function (): void {
-    // 1. Arrange
-    $context = new ContextManager(['count' => 0]);
+    // Reset for next test
+    TestIncrementAction::resetFakes();
 
+    // Test with multiple calls and specific configuration
     TestIncrementAction::fake();
     TestIncrementAction::shouldRun()
         ->twice()
         ->withAnyArgs();
 
-    // 2. Act
     TestIncrementAction::run($context);
     TestIncrementAction::run($context);
-
-    // 3. Assert
     TestIncrementAction::assertRan();
 });
 
@@ -197,42 +190,133 @@ it('can use mock to throw exceptions', function (): void {
 
 // endregion
 
+// region Edge Cases for shouldRun and shouldReturn
+
+it('handles calling shouldReturn without explicit fake call', function (): void {
+    $context = new ContextManager(['value' => 5]);
+
+    // shouldReturn implicitly calls fake()
+    TestCountGuard::shouldReturn(true);
+    expect(TestCountGuard::isFaked())->toBeTrue();
+    expect(TestCountGuard::run($context))->toBeTrue();
+});
+
+it('handles calling shouldRun without explicit fake call', function (): void {
+    $context = new ContextManager(['count' => 0]);
+
+    // shouldRun implicitly calls fake()
+    TestIncrementAction::shouldRun()->once();
+    expect(TestIncrementAction::isFaked())->toBeTrue();
+
+    TestIncrementAction::run($context);
+    TestIncrementAction::assertRan();
+});
+
+it('verifies expectation counts accurately', function (): void {
+    TestIncrementAction::shouldRun()->times(3);
+
+    $context = new ContextManager();
+    TestIncrementAction::run($context);
+    TestIncrementAction::run($context);
+
+    // Should fail if we don't call it a third time
+    expect(fn () => TestIncrementAction::getFake()->mockery_verify())
+        ->toThrow(\Mockery\Exception\InvalidCountException::class);
+});
+
+// endregion
+
 // region Guard Behavior Tests
 
-it('can fake guard behavior with different return values', function (): void {
+it('can fake guard behavior with various return value patterns', function (): void {
     // 1. Arrange
     $context = new ContextManager(['count' => 0]);
 
+    // Test ordered expectations with different return values
     TestCountGuard::fake();
     TestCountGuard::shouldRun()
         ->once()
         ->andReturn(true)
         ->ordered();
 
+    expect(TestCountGuard::run($context))->toBeTrue();
+
     TestCountGuard::shouldRun()
         ->once()
         ->andReturn(false)
         ->ordered();
 
-    // 2. Act & 3. Assert
-    expect(TestCountGuard::run($context))->toBeTrue();
     expect(TestCountGuard::run($context))->toBeFalse();
     TestCountGuard::assertRan();
-});
 
-it('can handle consecutive different return values', function (): void {
-    // 1. Arrange
-    $context = new ContextManager(['count' => 0]);
-
+    // Reset and test consecutive return values
+    TestCountGuard::resetFakes();
     TestCountGuard::fake();
     TestCountGuard::shouldRun()
         ->times(3)
         ->andReturn(true, false, true);
 
-    // 2. Act & 3. Assert
     expect(TestCountGuard::run($context))->toBeTrue();
     expect(TestCountGuard::run($context))->toBeFalse();
     expect(TestCountGuard::run($context))->toBeTrue();
+});
+
+it('can handle multiple shouldReturn calls in the same test', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['value' => 10]);
+
+    // 2. Act & 3. Assert - First call
+    TestCountGuard::shouldReturn(true);
+    expect(TestCountGuard::run($context))->toBeTrue();
+
+    TestCountGuard::shouldReturn(false);
+    expect(TestCountGuard::run($context))->toBeFalse();
+
+    TestCountGuard::shouldReturn(true);
+    expect(TestCountGuard::run($context))->toBeTrue();
+});
+
+it('can mix shouldRun and shouldReturn calls in the same test', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['value' => 5]);
+
+    TestCountGuard::shouldRun()
+        ->once()
+        ->andReturn(true);
+    expect(TestCountGuard::run($context))->toBeTrue();
+
+    TestCountGuard::shouldReturn(false);
+    expect(TestCountGuard::run($context))->toBeFalse();
+
+    TestCountGuard::shouldRun()
+        ->once()
+        ->andReturn(true);
+    expect(TestCountGuard::run($context))->toBeTrue();
+});
+
+// endregion
+
+// region Complex Return Types and Edge Cases
+
+it('handles multiple consecutive calls with never() expectation', function (): void {
+    TestIncrementAction::shouldRun()->never();
+
+    // Should not throw since we're not calling it
+    TestIncrementAction::assertNotRan();
+});
+
+it('can chain multiple mock configurations', function (): void {
+    $context = new ContextManager(['count' => 5]);
+
+    TestIncrementAction::shouldRun()
+        ->once()
+        ->with(\Mockery::type(ContextManager::class))
+        ->andReturnUsing(function (ContextManager $ctx): void {
+            $ctx->set('count', $ctx->get('count') * 2);
+        });
+
+    TestIncrementAction::run($context);
+    expect($context->get('count'))->toBe(10);
 });
 
 // endregion
@@ -253,6 +337,39 @@ it('maintains separate fake states for different behaviors', function (): void {
     // 3. Assert
     TestCountGuard::assertRan();
     TestIncrementAction::assertNotRan();
+});
+
+it('handles multiple shouldRun calls across different behaviors', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['count' => 0]);
+
+    TestIncrementAction::shouldRun()
+        ->once()
+        ->withAnyArgs();
+
+    TestCountGuard::shouldReturn(false);
+
+    // 2. Act
+    TestIncrementAction::run($context);
+    expect(TestCountGuard::run($context))->toBeFalse();
+
+    // 3. Assert first round
+    TestIncrementAction::assertRan();
+
+    // First behavior - second expectation
+    TestIncrementAction::shouldRun()
+        ->once()
+        ->andReturnUsing(function (ContextManager $ctx): void {
+            $ctx->set('count', 10);
+        });
+
+    // Second behavior - second expectation
+    TestCountGuard::shouldReturn(true);
+
+    // 4. Act again
+    TestIncrementAction::run($context);
+    expect(TestCountGuard::run($context))->toBeTrue();
+    expect($context->get('count'))->toBe(10);
 });
 
 // endregion
@@ -277,7 +394,7 @@ it('throws exception when asserting non-faked behavior was not run', function ()
 
 // region Reset All Fakes
 
-it('can reset all fakes at once', function (): void {
+it('completely resets all fakes and cleans up resources', function (): void {
     // 1. Arrange
     TestIncrementAction::shouldRun()->once();
     TestCountGuard::shouldRun()->twice();
@@ -285,73 +402,47 @@ it('can reset all fakes at once', function (): void {
     // 2. Act
     EventMachine::resetAllFakes();
 
-    // 3. Assert
+    // 3. Assert - Verify fakes are reset
     expect(TestIncrementAction::isFaked())->toBeFalse()
         ->and(TestCountGuard::isFaked())->toBeFalse()
         ->and(TestIncrementAction::getFake())->toBeNull()
         ->and(TestCountGuard::getFake())->toBeNull();
-});
 
-it('removes all fake instances from container when resetting', function (): void {
-    // 1. Arrange
-    TestIncrementAction::shouldRun()->once();
-    TestCountGuard::shouldRun()->once();
-
-    // 2. Act
-    EventMachine::resetAllFakes();
-
-    // 3. Assert
+    // Verify container cleanup
     expect(app()->bound(TestIncrementAction::class))->toBeFalse()
         ->and(app()->bound(TestCountGuard::class))->toBeFalse();
-});
 
-it('cleans mockery container when resetting fakes', function (): void {
-    // 1. Arrange
-    TestIncrementAction::shouldRun()->once();
-    TestCountGuard::shouldRun()->twice();
-
-    // 2. Act
-    EventMachine::resetAllFakes();
-
-    // 3. Assert
+    // Verify mockery cleanup by setting new expectations
     TestIncrementAction::shouldRun()->never();
-    TestIncrementAction::assertNotRan();
-
     TestCountGuard::shouldRun()->never();
+
+    TestIncrementAction::assertNotRan();
     TestCountGuard::assertNotRan();
 });
 
-it('maintains behavior isolation after resetting all fakes', function (): void {
-    // 1. Arrange
+it('maintains behavior isolation and consistency after resetting fakes', function (): void {
+    // Test isolation after reset
     TestIncrementAction::shouldRun()->once();
     TestCountGuard::shouldRun()->twice();
     EventMachine::resetAllFakes();
 
-    // 2. Act
     TestIncrementAction::shouldRun()->once();
     TestIncrementAction::run(new ContextManager(['count' => 0]));
 
-    // 3. Assert
     TestIncrementAction::assertRan();
     expect(TestCountGuard::isFaked())->toBeFalse();
-});
 
-it('can reset fakes with different trait instances consistently', function (): void {
-    // 1. Arrange
+    // Test consistent reset with different trait instances
     TestIncrementAction::shouldRun()->once();
     TestCountGuard::shouldRun()->twice();
 
-    // 2. Act
     TestIncrementAction::resetAllFakes();
 
-    // Try to create new fakes
     TestIncrementAction::shouldRun()->once();
     TestCountGuard::shouldRun()->once();
 
-    // Reset using another instance
     TestCountGuard::resetAllFakes();
 
-    // 3. Assert
     expect(TestIncrementAction::isFaked())->toBeFalse()
         ->and(TestCountGuard::isFaked())->toBeFalse()
         ->and(TestIncrementAction::getFake())->toBeNull()

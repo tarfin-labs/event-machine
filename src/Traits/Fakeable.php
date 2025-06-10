@@ -113,11 +113,7 @@ trait Fakeable
      */
     public static function shouldRun(): Mockery\Expectation|Mockery\CompositeExpectation
     {
-        if (!isset(static::$fakes[static::class])) {
-            static::fake();
-        }
-
-        return static::$fakes[static::class]->shouldReceive('__invoke');
+        return static::fake()->shouldReceive('__invoke');
     }
 
     /**
@@ -125,11 +121,7 @@ trait Fakeable
      */
     public static function shouldReturn(mixed $value): void
     {
-        if (!isset(static::$fakes[static::class])) {
-            static::fake();
-        }
-
-        static::$fakes[static::class]->shouldReceive('__invoke')->andReturn($value);
+        static::fake()->shouldReceive('__invoke')->andReturn($value);
     }
 
     /**
