@@ -190,6 +190,18 @@ it('can use mock to throw exceptions', function (): void {
 
 // endregion
 
+// region Edge Cases for shouldRun and shouldReturn
+
+it('handles calling shouldReturn without explicit fake call', function (): void {
+    $context = new ContextManager(['value' => 5]);
+
+    // shouldReturn implicitly calls fake()
+    TestCountGuard::shouldReturn(true);
+    expect(TestCountGuard::isFaked())->toBeTrue();
+    expect(TestCountGuard::run($context))->toBeTrue();
+});
+// endregion
+
 // region Guard Behavior Tests
 
 it('can fake guard behavior with different return values', function (): void {
