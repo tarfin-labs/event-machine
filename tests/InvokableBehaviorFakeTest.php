@@ -394,7 +394,7 @@ it('throws exception when asserting non-faked behavior was not run', function ()
 
 // region Reset All Fakes
 
-it('can reset all fakes at once', function (): void {
+it('completely resets all fakes and cleans up resources', function (): void {
     // 1. Arrange
     TestIncrementAction::shouldRun()->once();
     TestCountGuard::shouldRun()->twice();
@@ -402,39 +402,21 @@ it('can reset all fakes at once', function (): void {
     // 2. Act
     EventMachine::resetAllFakes();
 
-    // 3. Assert
+    // 3. Assert - Verify fakes are reset
     expect(TestIncrementAction::isFaked())->toBeFalse()
         ->and(TestCountGuard::isFaked())->toBeFalse()
         ->and(TestIncrementAction::getFake())->toBeNull()
         ->and(TestCountGuard::getFake())->toBeNull();
-});
 
-it('removes all fake instances from container when resetting', function (): void {
-    // 1. Arrange
-    TestIncrementAction::shouldRun()->once();
-    TestCountGuard::shouldRun()->once();
-
-    // 2. Act
-    EventMachine::resetAllFakes();
-
-    // 3. Assert
+    // Verify container cleanup
     expect(app()->bound(TestIncrementAction::class))->toBeFalse()
         ->and(app()->bound(TestCountGuard::class))->toBeFalse();
-});
 
-it('cleans mockery container when resetting fakes', function (): void {
-    // 1. Arrange
-    TestIncrementAction::shouldRun()->once();
-    TestCountGuard::shouldRun()->twice();
-
-    // 2. Act
-    EventMachine::resetAllFakes();
-
-    // 3. Assert
+    // Verify mockery cleanup by setting new expectations
     TestIncrementAction::shouldRun()->never();
-    TestIncrementAction::assertNotRan();
-
     TestCountGuard::shouldRun()->never();
+
+    TestIncrementAction::assertNotRan();
     TestCountGuard::assertNotRan();
 });
 
