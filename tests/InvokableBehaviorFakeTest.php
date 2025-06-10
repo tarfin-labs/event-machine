@@ -211,6 +211,19 @@ it('handles calling shouldRun without explicit fake call', function (): void {
     TestIncrementAction::run($context);
     TestIncrementAction::assertRan();
 });
+
+it('verifies expectation counts accurately', function (): void {
+    TestIncrementAction::shouldRun()->times(3);
+
+    $context = new ContextManager();
+    TestIncrementAction::run($context);
+    TestIncrementAction::run($context);
+
+    // Should fail if we don't call it a third time
+    expect(fn () => TestIncrementAction::getFake()->mockery_verify())
+        ->toThrow(\Mockery\Exception\InvalidCountException::class);
+});
+
 // endregion
 
 // region Guard Behavior Tests
