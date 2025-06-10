@@ -250,6 +250,25 @@ it('can handle multiple shouldReturn calls in the same test', function (): void 
     TestCountGuard::shouldReturn(true);
     expect(TestCountGuard::run($context))->toBeTrue();
 });
+
+it('can mix shouldRun and shouldReturn calls in the same test', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['value' => 5]);
+
+    TestCountGuard::shouldRun()
+        ->once()
+        ->andReturn(true);
+    expect(TestCountGuard::run($context))->toBeTrue();
+
+    TestCountGuard::shouldReturn(false);
+    expect(TestCountGuard::run($context))->toBeFalse();
+
+    TestCountGuard::shouldRun()
+        ->once()
+        ->andReturn(true);
+    expect(TestCountGuard::run($context))->toBeTrue();
+});
+
 // endregion
 
 // region Behavior Isolation Tests
