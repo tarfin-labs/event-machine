@@ -200,6 +200,17 @@ it('handles calling shouldReturn without explicit fake call', function (): void 
     expect(TestCountGuard::isFaked())->toBeTrue();
     expect(TestCountGuard::run($context))->toBeTrue();
 });
+
+it('handles calling shouldRun without explicit fake call', function (): void {
+    $context = new ContextManager(['count' => 0]);
+
+    // shouldRun implicitly calls fake()
+    TestIncrementAction::shouldRun()->once();
+    expect(TestIncrementAction::isFaked())->toBeTrue();
+
+    TestIncrementAction::run($context);
+    TestIncrementAction::assertRan();
+});
 // endregion
 
 // region Guard Behavior Tests
