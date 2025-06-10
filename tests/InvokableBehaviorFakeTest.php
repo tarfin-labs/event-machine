@@ -228,10 +228,11 @@ it('verifies expectation counts accurately', function (): void {
 
 // region Guard Behavior Tests
 
-it('can fake guard behavior with different return values', function (): void {
+it('can fake guard behavior with various return value patterns', function (): void {
     // 1. Arrange
     $context = new ContextManager(['count' => 0]);
 
+    // Test ordered expectations with different return values
     TestCountGuard::fake();
     TestCountGuard::shouldRun()
         ->once()
@@ -245,21 +246,16 @@ it('can fake guard behavior with different return values', function (): void {
         ->andReturn(false)
         ->ordered();
 
-    // 2. Act & 3. Assert
     expect(TestCountGuard::run($context))->toBeFalse();
     TestCountGuard::assertRan();
-});
 
-it('can handle consecutive different return values', function (): void {
-    // 1. Arrange
-    $context = new ContextManager(['count' => 0]);
-
+    // Reset and test consecutive return values
+    TestCountGuard::resetFakes();
     TestCountGuard::fake();
     TestCountGuard::shouldRun()
         ->times(3)
         ->andReturn(true, false, true);
 
-    // 2. Act & 3. Assert
     expect(TestCountGuard::run($context))->toBeTrue();
     expect(TestCountGuard::run($context))->toBeFalse();
     expect(TestCountGuard::run($context))->toBeTrue();
@@ -296,6 +292,9 @@ it('can mix shouldRun and shouldReturn calls in the same test', function (): voi
         ->once()
         ->andReturn(true);
     expect(TestCountGuard::run($context))->toBeTrue();
+});
+
+// endregion
 });
 
 // endregion
