@@ -304,6 +304,19 @@ it('handles multiple consecutive calls with never() expectation', function (): v
     // Should not throw since we're not calling it
     TestIncrementAction::assertNotRan();
 });
+
+it('can chain multiple mock configurations', function (): void {
+    $context = new ContextManager(['count' => 5]);
+
+    TestIncrementAction::shouldRun()
+        ->once()
+        ->with(\Mockery::type(ContextManager::class))
+        ->andReturnUsing(function (ContextManager $ctx): void {
+            $ctx->set('count', $ctx->get('count') * 2);
+        });
+
+    TestIncrementAction::run($context);
+    expect($context->get('count'))->toBe(10);
 });
 
 // endregion
