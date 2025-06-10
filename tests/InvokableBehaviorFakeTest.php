@@ -295,6 +295,15 @@ it('can mix shouldRun and shouldReturn calls in the same test', function (): voi
 });
 
 // endregion
+
+// region Complex Return Types and Edge Cases
+
+it('handles multiple consecutive calls with never() expectation', function (): void {
+    TestIncrementAction::shouldRun()->never();
+
+    // Should not throw since we're not calling it
+    TestIncrementAction::assertNotRan();
+});
 });
 
 // endregion
