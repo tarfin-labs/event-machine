@@ -289,6 +289,39 @@ it('maintains separate fake states for different behaviors', function (): void {
     TestIncrementAction::assertNotRan();
 });
 
+it('handles multiple shouldRun calls across different behaviors', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['count' => 0]);
+
+    TestIncrementAction::shouldRun()
+        ->once()
+        ->withAnyArgs();
+
+    TestCountGuard::shouldReturn(false);
+
+    // 2. Act
+    TestIncrementAction::run($context);
+    expect(TestCountGuard::run($context))->toBeFalse();
+
+    // 3. Assert first round
+    TestIncrementAction::assertRan();
+
+    // First behavior - second expectation
+    TestIncrementAction::shouldRun()
+        ->once()
+        ->andReturnUsing(function (ContextManager $ctx): void {
+            $ctx->set('count', 10);
+        });
+
+    // Second behavior - second expectation
+    TestCountGuard::shouldReturn(true);
+
+    // 4. Act again
+    TestIncrementAction::run($context);
+    expect(TestCountGuard::run($context))->toBeTrue();
+    expect($context->get('count'))->toBe(10);
+});
+
 // endregion
 
 // region Exception Handling Tests
