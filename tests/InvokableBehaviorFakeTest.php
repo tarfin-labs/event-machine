@@ -236,6 +236,20 @@ it('can handle consecutive different return values', function (): void {
     expect(TestCountGuard::run($context))->toBeTrue();
 });
 
+it('can handle multiple shouldReturn calls in the same test', function (): void {
+    // 1. Arrange
+    $context = new ContextManager(['value' => 10]);
+
+    // 2. Act & 3. Assert - First call
+    TestCountGuard::shouldReturn(true);
+    expect(TestCountGuard::run($context))->toBeTrue();
+
+    TestCountGuard::shouldReturn(false);
+    expect(TestCountGuard::run($context))->toBeFalse();
+
+    TestCountGuard::shouldReturn(true);
+    expect(TestCountGuard::run($context))->toBeTrue();
+});
 // endregion
 
 // region Behavior Isolation Tests
