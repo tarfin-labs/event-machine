@@ -18,11 +18,11 @@ return new class extends Migration
 
             $table->string('source')->index();
             $table->string('type')->index();
-            $table->json('payload')->nullable();
+            $table->longText('payload')->charset('binary')->nullable(); // LONGBLOB for compressed binary data
             $table->unsignedInteger('version');
 
-            $table->json('context')->nullable();
-            $table->json('meta')->nullable();
+            $table->longText('context')->charset('binary')->nullable(); // LONGBLOB for compressed binary data
+            $table->longText('meta')->charset('binary')->nullable();    // LONGBLOB for compressed binary data
         });
     }
 
