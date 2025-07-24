@@ -4,6 +4,21 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Models\ModelA;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\XyzMachine;
+
+test('Machine can be cast to JSON', function (): void {
+    $machine = XyzMachine::create();
+
+    expect(json_encode($machine, JSON_THROW_ON_ERROR))
+        ->toBe('"'.$machine->state->history->first()->root_event_id.'"');
+});
+
+test('Machine can be cast to string', function (): void {
+    $machine = XyzMachine::create();
+
+    expect((string) $machine)
+        ->toBe($machine->state->history->first()->root_event_id);
+});
 
 test('a machine as a model attribute can serialize as root_event_id', function (): void {
     $modelA = new ModelA();
