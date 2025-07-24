@@ -87,3 +87,59 @@ test('injectInvokableBehaviorParameters handles reflection correctly', function 
     expect($params2)->toHaveCount(1);
     expect($params2[0])->toBe($state);
 });
+
+test('injectInvokableBehaviorParameters handles union types correctly', function (): void {
+    $machine = MachineDefinition::define([
+        'initial' => 'idle',
+        'states'  => [
+            'idle' => [],
+        ],
+    ]);
+
+    $state = $machine->getInitialState();
+    $event = new SEvent();
+
+    // Test with function that has union type parameter
+    $unionTypeFunction = function (ContextManager|State $param) {
+        return $param;
+    };
+
+    // This should use the first type in the union (ContextManager) and return the state's context
+    $params = InvokableBehavior::injectInvokableBehaviorParameters(
+        $unionTypeFunction,
+        $state,
+        $event
+    );
+
+    expect($params)->toHaveCount(1);
+    expect($params[0])->toBe($state->context);
+
+    // Test with regular single type parameter
+    $singleTypeFunction = function (State $param) {
+        return $param;
+    };
+
+    $params2 = InvokableBehavior::injectInvokableBehaviorParameters(
+        $singleTypeFunction,
+        $state,
+        $event
+    );
+
+    expect($params2)->toHaveCount(1);
+    expect($params2[0])->toBe($state);
+});
+
+test('constructor initializes eventQueue correctly', function (): void {
+    $behavior = new class(null) extends InvokableBehavior {
+        public function __invoke(): void {}
+
+        public function getEventQueue()
+        {
+            return $this->eventQueue;
+        }
+    };
+
+    // Test that when eventQueue is null, a new Collection is created
+    expect($behavior->getEventQueue())->not->toBeNull();
+    expect($behavior->getEventQueue())->toHaveCount(0);
+});
