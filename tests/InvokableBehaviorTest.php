@@ -44,3 +44,46 @@ test('hasMissingContext returns null for empty required context', function (): v
     $contextWithData = new ContextManager(['user_id' => '123']);
     expect($behaviorWithRequirements::hasMissingContext($contextWithData))->toBeNull();
 });
+
+test('injectInvokableBehaviorParameters handles reflection correctly', function (): void {
+    $machine = MachineDefinition::define([
+        'initial' => 'idle',
+        'states'  => [
+            'idle' => [],
+        ],
+    ]);
+
+    $state = $machine->getInitialState();
+    $event = new SEvent();
+
+    // Test with InvokableBehavior instance (instanceof should be true)
+    $behaviorInstance = new class() extends InvokableBehavior {
+        public function __invoke(State $state): State
+        {
+            return $state;
+        }
+    };
+
+    $params = InvokableBehavior::injectInvokableBehaviorParameters(
+        $behaviorInstance,
+        $state,
+        $event
+    );
+
+    expect($params)->toHaveCount(1);
+    expect($params[0])->toBe($state);
+
+    // Test with regular callable (instanceof should be false)
+    $callableFunction = function (State $state) {
+        return $state;
+    };
+
+    $params2 = InvokableBehavior::injectInvokableBehaviorParameters(
+        $callableFunction,
+        $state,
+        $event
+    );
+
+    expect($params2)->toHaveCount(1);
+    expect($params2[0])->toBe($state);
+});
