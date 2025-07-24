@@ -42,3 +42,41 @@ test('Logs if log writing is turned on', function (): void {
 
     $machine->send(event: ['type' => 'MUT']);
 });
+
+test('sequence numbers are always count of history at time of creation', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'id'      => 'test_machine',
+        'initial' => 'idle',
+        'states'  => [
+            'idle' => [
+                'on' => [
+                    'START' => 'active',
+                ],
+            ],
+            'active' => [
+                'on' => [
+                    'STOP' => 'idle',
+                ],
+            ],
+        ],
+    ]);
+
+    $initialState = $machine->getInitialState();
+
+    // The most recent event's sequence number should equal the history count
+    // This tests that sequence_number = count($this->history) + 1 was calculated correctly
+    expect($initialState->history->last()->sequence_number)->toBe($initialState->history->count());
+
+    $activeState = $machine->transition(event: ['type' => 'START']);
+
+    // After transition, the new event should have sequence number equal to history count
+    expect($activeState->history->last()->sequence_number)->toBe($activeState->history->count());
+
+    $backToIdleState = $activeState->currentStateDefinition->machine->transition(
+        event: ['type' => 'STOP'],
+        state: $activeState
+    );
+
+    // After second transition, same rule should apply
+    expect($backToIdleState->history->last()->sequence_number)->toBe($backToIdleState->history->count());
+});
