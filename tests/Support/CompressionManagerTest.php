@@ -66,4 +66,22 @@ describe('CompressionManager', function (): void {
         $largeCompressed = CompressionManager::compress(['large' => $largeData], 'payload');
         expect(CompressionManager::isCompressed($largeCompressed))->toBeTrue();
     });
+
+    it('respects field configuration', function (): void {
+        config([
+            'machine.compression.fields'    => ['payload', 'context'],
+            'machine.compression.threshold' => 10,
+        ]);
+
+        $data = ['test' => 'data with enough content to exceed threshold'];
+
+        // Should compress configured fields
+        $payloadCompressed = CompressionManager::compress($data, 'payload');
+        expect(CompressionManager::isCompressed($payloadCompressed))->toBeTrue();
+
+        // Should not compress non-configured fields
+        $metaCompressed = CompressionManager::compress($data, 'meta');
+        expect(CompressionManager::isCompressed($metaCompressed))->toBeFalse();
+        expect($metaCompressed)->toEqual(json_encode($data));
+    });
 });
