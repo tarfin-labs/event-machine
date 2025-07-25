@@ -227,4 +227,35 @@ describe('MachineEvent Compression', function (): void {
         // Should handle empty data correctly (JSON roundtrip normalizes objects to arrays)
         expect($event->payload)->toEqual($emptyData);
     });
+
+    it('handles concurrent updates correctly', function (): void {
+        $initialData = ['counter' => 0, 'data' => str_repeat('test', 100)];
+
+        $event = MachineEvent::create([
+            'id'              => '01H8BM4VK82JKPK7RPR3YGT2DY',
+            'sequence_number' => 1,
+            'created_at'      => now(),
+            'machine_id'      => 'concurrent_test',
+            'machine_value'   => ['state' => 'test'],
+            'root_event_id'   => '01H8BM4VK82JKPK7RPR3YGT2DY',
+            'source'          => 'internal',
+            'type'            => 'test.concurrent.event',
+            'payload'         => $initialData,
+            'version'         => 1,
+        ]);
+
+        // Simulate concurrent updates
+        $event1 = MachineEvent::find($event->id);
+        $event2 = MachineEvent::find($event->id);
+
+        $event1->payload = ['counter' => 1, 'data' => str_repeat('test', 150)];
+        $event2->payload = ['counter' => 2, 'data' => str_repeat('test', 200)];
+
+        $event1->save();
+        $event2->save();
+
+        // Last update should win
+        $finalEvent = MachineEvent::find($event->id);
+        expect($finalEvent->payload['counter'])->toEqual(2);
+    });
 });
