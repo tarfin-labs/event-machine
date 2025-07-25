@@ -84,4 +84,14 @@ describe('CompressionManager', function (): void {
         expect(CompressionManager::isCompressed($metaCompressed))->toBeFalse();
         expect($metaCompressed)->toEqual(json_encode($data));
     });
+
+    it('handles compression disabled globally', function (): void {
+        config(['machine.compression.enabled' => false]);
+
+        $data       = ['test' => 'data'];
+        $compressed = CompressionManager::compress($data, 'payload');
+
+        expect(CompressionManager::isCompressed($compressed))->toBeFalse();
+        expect($compressed)->toEqual(json_encode($data));
+    });
 });
