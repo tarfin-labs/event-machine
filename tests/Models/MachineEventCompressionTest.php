@@ -87,4 +87,28 @@ describe('MachineEvent Compression', function (): void {
         // Check that accessor returns decompressed data
         expect($event->meta)->toEqual($largeMeta);
     });
+
+    it('does not compress small data below threshold', function (): void {
+        $smallPayload = ['small' => 'data'];
+
+        $event = MachineEvent::create([
+            'id'              => '01H8BM4VK82JKPK7RPR3YGT2DM',
+            'sequence_number' => 1,
+            'created_at'      => now(),
+            'machine_id'      => 'test_machine',
+            'machine_value'   => ['state' => 'test'],
+            'root_event_id'   => '01H8BM4VK82JKPK7RPR3YGT2DM',
+            'source'          => 'internal',
+            'type'            => 'test.event',
+            'payload'         => $smallPayload,
+            'version'         => 1,
+        ]);
+
+        // Check that raw database value is not compressed
+        $rawPayload = $event->getAttributes()['payload'];
+        expect(CompressionManager::isCompressed($rawPayload))->toBeFalse();
+
+        // Check that accessor still returns correct data
+        expect($event->payload)->toEqual($smallPayload);
+    });
 });
