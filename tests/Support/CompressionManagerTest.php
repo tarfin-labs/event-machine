@@ -159,4 +159,17 @@ describe('CompressionManager', function (): void {
         $configProperty->setValue(null); // Reset cache
         expect(fn () => CompressionManager::getLevel())->toThrow(InvalidArgumentException::class);
     });
+
+    it('handles very large data correctly', function (): void {
+        // Test with very large data (1MB+)
+        $largeData = ['huge' => str_repeat('x', 1024 * 1024)]; // 1MB string
+
+        config(['machine.compression.threshold' => 100]);
+
+        $compressed = CompressionManager::compress($largeData, 'payload');
+        expect(CompressionManager::isCompressed($compressed))->toBeTrue();
+
+        $decompressed = CompressionManager::decompress($compressed);
+        expect($decompressed)->toEqual($largeData);
+    });
 });
