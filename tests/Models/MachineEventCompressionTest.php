@@ -200,4 +200,31 @@ describe('MachineEvent Compression', function (): void {
         $rawPayload = $event->getAttributes()['payload'];
         expect(CompressionManager::isCompressed($rawPayload))->toBeTrue();
     });
+
+    it('handles edge case: empty arrays and objects', function (): void {
+        $emptyData = [
+            'empty_array'  => [],
+            'empty_object' => [], // JSON conversion will make this an array anyway
+            'null_value'   => null,
+            'false_value'  => false,
+            'zero_value'   => 0,
+            'empty_string' => '',
+        ];
+
+        $event = MachineEvent::create([
+            'id'              => '01H8BM4VK82JKPK7RPR3YGT2DX',
+            'sequence_number' => 1,
+            'created_at'      => now(),
+            'machine_id'      => 'edge_case_test',
+            'machine_value'   => ['state' => 'test'],
+            'root_event_id'   => '01H8BM4VK82JKPK7RPR3YGT2DX',
+            'source'          => 'internal',
+            'type'            => 'test.edge.event',
+            'payload'         => $emptyData,
+            'version'         => 1,
+        ]);
+
+        // Should handle empty data correctly (JSON roundtrip normalizes objects to arrays)
+        expect($event->payload)->toEqual($emptyData);
+    });
 });
