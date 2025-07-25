@@ -112,4 +112,35 @@ describe('Compression Integration Tests', function (): void {
         expect($event->payload)->toEqual($largePayload);
         expect($event->meta)->toBeNull();
     });
+
+    it('handles backward compatibility with existing uncompressed data', function (): void {
+        $testData = ['existing' => 'uncompressed_data', 'legacy' => true];
+
+        // Create event and manually set raw attributes to simulate existing data
+        $event = new MachineEvent();
+        $event->setRawAttributes([
+            'id'              => '01H8BM4VK82JKPK7RPR3YGT2DO',
+            'sequence_number' => 1,
+            'created_at'      => now(),
+            'machine_id'      => 'backward_compatibility_test',
+            'machine_value'   => json_encode(['state' => 'legacy']),
+            'root_event_id'   => '01H8BM4VK82JKPK7RPR3YGT2DO',
+            'source'          => 'internal',
+            'type'            => 'legacy.event',
+            'payload'         => json_encode($testData), // Uncompressed JSON
+            'context'         => json_encode($testData), // Uncompressed JSON
+            'meta'            => json_encode($testData),    // Uncompressed JSON
+            'version'         => 1,
+        ]);
+
+        // Should be able to read legacy uncompressed data
+        expect($event->payload)->toEqual($testData);
+        expect($event->context)->toEqual($testData);
+        expect($event->meta)->toEqual($testData);
+
+        // Verify data is not compressed
+        expect(CompressionManager::isCompressed($event->getAttributes()['payload']))->toBeFalse();
+        expect(CompressionManager::isCompressed($event->getAttributes()['context']))->toBeFalse();
+        expect(CompressionManager::isCompressed($event->getAttributes()['meta']))->toBeFalse();
+    });
 });
