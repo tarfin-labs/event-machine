@@ -171,4 +171,33 @@ describe('MachineEvent Compression', function (): void {
         expect($event->context)->toEqual($data);
         expect($event->meta)->toEqual($data);
     });
+
+    it('can update compressed data correctly', function (): void {
+        $initialData = ['initial' => str_repeat('test', 100)];
+        $updatedData = ['updated' => str_repeat('data', 100)];
+
+        $event = MachineEvent::create([
+            'id'              => '01H8BM4VK82JKPK7RPR3YGT2DM',
+            'sequence_number' => 1,
+            'created_at'      => now(),
+            'machine_id'      => 'test_machine',
+            'machine_value'   => ['state' => 'test'],
+            'root_event_id'   => '01H8BM4VK82JKPK7RPR3YGT2DM',
+            'source'          => 'internal',
+            'type'            => 'test.event',
+            'payload'         => $initialData,
+            'version'         => 1,
+        ]);
+
+        // Update the payload
+        $event->update(['payload' => $updatedData]);
+
+        // Reload from database
+        $event->refresh();
+
+        // Check that updated data is correct and compressed
+        expect($event->payload)->toEqual($updatedData);
+        $rawPayload = $event->getAttributes()['payload'];
+        expect(CompressionManager::isCompressed($rawPayload))->toBeTrue();
+    });
 });
