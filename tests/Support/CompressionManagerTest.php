@@ -173,6 +173,18 @@ describe('CompressionManager', function (): void {
         expect($decompressed)->toEqual($largeData);
     });
 
+    it('handles malformed zlib headers in detection', function (): void {
+        // Test with data that might look like compressed but isn't valid
+        $fakeCompressed = "\x78\x9c"; // Valid zlib header start
+        expect(CompressionManager::isCompressed($fakeCompressed))->toBeTrue();
+
+        $invalidHeader = "\x78\x9d"; // Invalid zlib header
+        expect(CompressionManager::isCompressed($invalidHeader))->toBeFalse();
+
+        $singleByte = "\x78";
+        expect(CompressionManager::isCompressed($singleByte))->toBeFalse();
+    });
+
     it('handles special JSON characters and encoding', function (): void {
         $specialData = [
             'unicode'      => '🚀 çğİDeligöz',
