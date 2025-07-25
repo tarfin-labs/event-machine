@@ -76,4 +76,40 @@ describe('Compression Integration Tests', function (): void {
         $rawMachineValue = $event->getAttributes()['machine_value'];
         expect(CompressionManager::isCompressed($rawMachineValue))->toBeFalse();
     });
+
+    it('respects compression threshold and field configuration', function (): void {
+        // Create event with small context (below threshold)
+        $smallContext = ['small' => 'data', 'count' => 1];
+
+        // Create event with large payload (above threshold)
+        $largePayload = ['large' => str_repeat('x', 200)];
+
+        $event = MachineEvent::create([
+            'id'              => '01H8BM4VK82JKPK7RPR3YGT2DN',
+            'sequence_number' => 1,
+            'created_at'      => now(),
+            'machine_id'      => 'threshold_test',
+            'machine_value'   => ['state' => 'test'],
+            'root_event_id'   => '01H8BM4VK82JKPK7RPR3YGT2DN',
+            'source'          => 'internal',
+            'type'            => 'test.threshold.event',
+            'payload'         => $largePayload,
+            'context'         => $smallContext,
+            'meta'            => null,
+            'version'         => 1,
+        ]);
+
+        // Small context should not be compressed
+        $rawContext = $event->getAttributes()['context'];
+        expect(CompressionManager::isCompressed($rawContext))->toBeFalse();
+
+        // Large payload should be compressed
+        $rawPayload = $event->getAttributes()['payload'];
+        expect(CompressionManager::isCompressed($rawPayload))->toBeTrue();
+
+        // Data should still be accessible correctly
+        expect($event->context)->toEqual($smallContext);
+        expect($event->payload)->toEqual($largePayload);
+        expect($event->meta)->toBeNull();
+    });
 });
