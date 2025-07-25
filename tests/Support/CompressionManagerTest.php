@@ -129,4 +129,10 @@ describe('CompressionManager', function (): void {
         $result = CompressionManager::compress($data, 'payload');
         expect($result)->toEqual(json_encode($data));
     });
+
+    it('throws exception on decompression failure', function (): void {
+        // Invalid compressed data should throw exception
+        expect(fn () => CompressionManager::decompress('invalid_compressed_data'))
+            ->toThrow(InvalidArgumentException::class);
+    });
 });
