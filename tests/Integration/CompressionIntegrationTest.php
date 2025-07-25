@@ -143,4 +143,56 @@ describe('Compression Integration Tests', function (): void {
         expect(CompressionManager::isCompressed($event->getAttributes()['context']))->toBeFalse();
         expect(CompressionManager::isCompressed($event->getAttributes()['meta']))->toBeFalse();
     });
+
+    it('provides significant storage savings with real-world data sizes', function (): void {
+        $realWorldContext = [
+            'user_session' => [
+                'id'          => '01H8BM4VK82JKPK7RPR3YGT2DM',
+                'user_id'     => 12345,
+                'permissions' => array_fill(0, 50, 'permission_'.rand(1000, 9999)),
+                'preferences' => [
+                    'theme'         => 'dark',
+                    'language'      => 'en',
+                    'notifications' => array_fill(0, 20, 'notification_setting_'.rand(100, 999)),
+                ],
+                'activity_history' => array_fill(0, 100, [
+                    'timestamp' => now()->toISOString(),
+                    'action'    => 'user_action_'.rand(1, 50),
+                    'details'   => str_repeat('activity_detail_', 10),
+                ]),
+            ],
+            'application_state' => [
+                'current_view'   => 'dashboard',
+                'loaded_modules' => array_fill(0, 30, 'module_'.rand(1, 100)),
+                'cache_data'     => str_repeat('cached_information_', 100),
+            ],
+        ];
+
+        $originalSize = strlen(json_encode($realWorldContext));
+
+        $event = MachineEvent::create([
+            'id'              => '01H8BM4VK82JKPK7RPR3YGT2DP',
+            'sequence_number' => 1,
+            'created_at'      => now(),
+            'machine_id'      => 'storage_savings_test',
+            'machine_value'   => ['state' => 'active'],
+            'root_event_id'   => '01H8BM4VK82JKPK7RPR3YGT2DP',
+            'source'          => 'internal',
+            'type'            => 'real.world.event',
+            'context'         => $realWorldContext,
+            'version'         => 1,
+        ]);
+
+        $compressedSize   = strlen($event->getAttributes()['context']);
+        $compressionRatio = $compressedSize / $originalSize;
+        $savingsPercent   = (($originalSize - $compressedSize) / $originalSize) * 100;
+
+        // Verify significant compression achieved
+        expect($compressionRatio)->toBeLessThan(0.5); // At least 50% compression
+        expect($savingsPercent)->toBeGreaterThan(30); // At least 30% savings
+        expect(CompressionManager::isCompressed($event->getAttributes()['context']))->toBeTrue();
+
+        // Verify data integrity maintained
+        expect($event->context)->toEqual($realWorldContext);
+    });
 });
