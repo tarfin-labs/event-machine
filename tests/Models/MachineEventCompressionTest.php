@@ -258,4 +258,35 @@ describe('MachineEvent Compression', function (): void {
         $finalEvent = MachineEvent::find($event->id);
         expect($finalEvent->payload['counter'])->toEqual(2);
     });
+
+    it('handles compression when fields are disabled mid-operation', function (): void {
+        // Start with compression enabled
+        config(['machine.compression.fields' => ['payload', 'context', 'meta']]);
+
+        $data  = ['test' => str_repeat('data', 100)];
+        $event = MachineEvent::create([
+            'id'              => '01H8BM4VK82JKPK7RPR3YGT2DZ',
+            'sequence_number' => 1,
+            'created_at'      => now(),
+            'machine_id'      => 'field_disable_test',
+            'machine_value'   => ['state' => 'test'],
+            'root_event_id'   => '01H8BM4VK82JKPK7RPR3YGT2DZ',
+            'source'          => 'internal',
+            'type'            => 'test.field.event',
+            'payload'         => $data,
+            'version'         => 1,
+        ]);
+
+        // Verify it was compressed
+        expect(CompressionManager::isCompressed($event->getAttributes()['payload']))->toBeTrue();
+
+        // Now disable compression for payload
+        config(['machine.compression.fields' => ['context', 'meta']]);
+
+        // Update should work even with changed config
+        $newData = ['updated' => str_repeat('new', 100)];
+        $event->update(['payload' => $newData]);
+
+        expect($event->payload)->toEqual($newData);
+    });
 });
