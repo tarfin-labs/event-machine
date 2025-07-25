@@ -42,4 +42,13 @@ describe('CompressionManager', function (): void {
         $decompressed = CompressionManager::decompress($compressed);
         expect($decompressed)->toEqual($originalData);
     });
+
+    it('handles backward compatibility with uncompressed JSON', function (): void {
+        $data     = ['test' => 'data', 'number' => 123];
+        $jsonData = json_encode($data);
+
+        // Should be able to decompress uncompressed JSON
+        $result = CompressionManager::decompress($jsonData);
+        expect($result)->toEqual($data);
+    });
 });
