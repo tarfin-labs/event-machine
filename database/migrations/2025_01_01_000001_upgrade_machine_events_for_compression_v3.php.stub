@@ -1,184 +1,42 @@
 <?php
 
 /**
- * EventMachine v3.0 Upgrade Migration
+ * EventMachine v3.0 Upgrade Migration - Part 1: Schema Changes
  * 
  * This migration is ONLY for users upgrading from EventMachine v2.x to v3.0.
  * If you're installing EventMachine v3.0 fresh, you don't need to run this migration.
  * 
  * This migration:
- * 1. Converts existing JSON columns (payload, context, meta) to LONGBLOB for binary data storage
- * 2. Copies existing JSON data to new columns (uncompressed for GB-scale performance)
- * 3. Maintains backward compatibility
+ * 1. Adds new LONGBLOB columns (payload_compressed, context_compressed, meta_compressed)
  * 
- * After running: Use `php artisan machine:compress-events` to compress the copied data
- * For large datasets: Use `CompressMachineEventsJob` for background processing
+ * After running this migration:
+ * 1. Run: php artisan machine:migrate-events to copy data
+ * 2. Run the second migration to complete the schema changes
+ * 3. Run: php artisan machine:compress-events to compress the data
  */
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
-use Tarfinlabs\EventMachine\Support\CompressionManager;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        $this->info('EventMachine v3.0 Upgrade - Schema Migration');
-        $this->info('==========================================');
-        
-        // First, add new LONGBLOB columns for compressed binary data
-        $this->info('Adding new LONGBLOB columns...');
+        // Add new LONGBLOB columns for compressed binary data
         Schema::table('machine_events', function (Blueprint $table) {
             $table->longText('payload_compressed')->charset('binary')->nullable()->after('payload');
             $table->longText('context_compressed')->charset('binary')->nullable()->after('context');
             $table->longText('meta_compressed')->charset('binary')->nullable()->after('meta');
         });
-
-        // Copy existing JSON data to new columns (uncompressed for now)
-        $this->copyExistingData();
-
-        // Drop old JSON columns and rename new ones
-        $this->info('Renaming columns...');
-        Schema::table('machine_events', function (Blueprint $table) {
-            $table->dropColumn(['payload', 'context', 'meta']);
-        });
-
-        Schema::table('machine_events', function (Blueprint $table) {
-            $table->renameColumn('payload_compressed', 'payload');
-            $table->renameColumn('context_compressed', 'context');
-            $table->renameColumn('meta_compressed', 'meta');
-        });
-
-        $this->newLine();
-        $this->info('✓ Schema migration completed successfully!');
-        $this->info('');
-        $this->info('📋 Next Steps:');
-        $this->info('1. Run: php artisan machine:compress-events --dry-run');
-        $this->info('2. Run: php artisan machine:compress-events');
-        $this->info('3. Or use: php artisan queue:work and dispatch CompressMachineEventsJob');
-        $this->newLine();
     }
 
     public function down(): void
     {
-        // Add JSON columns back
+        // Drop the compressed columns
         Schema::table('machine_events', function (Blueprint $table) {
-            $table->json('payload_json')->nullable()->after('payload');
-            $table->json('context_json')->nullable()->after('context');
-            $table->json('meta_json')->nullable()->after('meta');
+            $table->dropColumn(['payload_compressed', 'context_compressed', 'meta_compressed']);
         });
-
-        // Migrate compressed data back to JSON
-        $this->migrateCompressedDataBack();
-
-        // Drop compressed columns and rename JSON ones back
-        Schema::table('machine_events', function (Blueprint $table) {
-            $table->dropColumn(['payload', 'context', 'meta']);
-        });
-
-        Schema::table('machine_events', function (Blueprint $table) {
-            $table->renameColumn('payload_json', 'payload');
-            $table->renameColumn('context_json', 'context');
-            $table->renameColumn('meta_json', 'meta');
-        });
-    }
-
-    protected function copyExistingData(): void
-    {
-        $chunkSize = 5000; // Larger chunks for copy-only operation
-        $totalCopied = 0;
-
-        $this->info('Copying existing JSON data to new LONGBLOB columns...');
-
-        DB::table('machine_events')
-            ->orderBy('id')
-            ->chunk($chunkSize, function ($events) use (&$totalCopied) {
-                $updates = [];
-
-                foreach ($events as $event) {
-                    $update = ['id' => $event->id];
-
-                    // Copy payload as-is (JSON string to binary column)
-                    if ($event->payload !== null) {
-                        $update['payload_compressed'] = $event->payload;
-                    }
-
-                    // Copy context as-is (JSON string to binary column)
-                    if ($event->context !== null) {
-                        $update['context_compressed'] = $event->context;
-                    }
-
-                    // Copy meta as-is (JSON string to binary column)
-                    if ($event->meta !== null) {
-                        $update['meta_compressed'] = $event->meta;
-                    }
-
-                    $updates[] = $update;
-                }
-
-                // Batch update records
-                foreach ($updates as $update) {
-                    DB::table('machine_events')
-                        ->where('id', $update['id'])
-                        ->update(array_filter($update, fn($key) => $key !== 'id', ARRAY_FILTER_USE_KEY));
-                }
-
-                $totalCopied += count($updates);
-                $this->info("Copied {$totalCopied} records...");
-            });
-
-        $this->info("Data copy completed. Total records: {$totalCopied}");
-    }
-
-    protected function migrateCompressedDataBack(): void
-    {
-        $chunkSize = 1000;
-        $totalMigrated = 0;
-
-        echo "Starting rollback migration of compressed data...\n";
-
-        DB::table('machine_events')
-            ->orderBy('id')
-            ->chunk($chunkSize, function ($events) use (&$totalMigrated) {
-                $updates = [];
-
-                foreach ($events as $event) {
-                    $update = ['id' => $event->id];
-
-                    // Decompress payload if it exists
-                    if ($event->payload !== null) {
-                        $payloadData = CompressionManager::decompress($event->payload);
-                        $update['payload_json'] = json_encode($payloadData);
-                    }
-
-                    // Decompress context if it exists
-                    if ($event->context !== null) {
-                        $contextData = CompressionManager::decompress($event->context);
-                        $update['context_json'] = json_encode($contextData);
-                    }
-
-                    // Decompress meta if it exists
-                    if ($event->meta !== null) {
-                        $metaData = CompressionManager::decompress($event->meta);
-                        $update['meta_json'] = json_encode($metaData);
-                    }
-
-                    $updates[] = $update;
-                }
-
-                // Batch update records
-                foreach ($updates as $update) {
-                    DB::table('machine_events')
-                        ->where('id', $update['id'])
-                        ->update(array_filter($update, fn($key) => $key !== 'id', ARRAY_FILTER_USE_KEY));
-                }
-
-                $totalMigrated += count($updates);
-                echo "Rolled back {$totalMigrated} records...\n";
-            });
-
-        echo "Rollback completed. Total records migrated: {$totalMigrated}\n";
     }
 };
