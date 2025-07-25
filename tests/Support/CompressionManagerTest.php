@@ -114,4 +114,10 @@ describe('CompressionManager', function (): void {
         expect($stats['savings_percent'])->toBeGreaterThan(0);
         expect($stats['compressed'])->toBeTrue();
     });
+
+    it('handles null values correctly', function (): void {
+        expect(CompressionManager::compress(null, 'payload'))->toEqual('null');
+        expect(CompressionManager::decompress(null))->toBeNull();
+        expect(CompressionManager::decompress('null'))->toBeNull();
+    });
 });
