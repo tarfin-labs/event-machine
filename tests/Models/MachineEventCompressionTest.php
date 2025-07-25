@@ -39,4 +39,28 @@ describe('MachineEvent Compression', function (): void {
         // Check that accessor returns decompressed data
         expect($event->payload)->toEqual($largePayload);
     });
+
+    it('automatically compresses context on save', function (): void {
+        $largeContext = ['context' => str_repeat('test', 100)];
+
+        $event = MachineEvent::create([
+            'id'              => '01H8BM4VK82JKPK7RPR3YGT2DM',
+            'sequence_number' => 1,
+            'created_at'      => now(),
+            'machine_id'      => 'test_machine',
+            'machine_value'   => ['state' => 'test'],
+            'root_event_id'   => '01H8BM4VK82JKPK7RPR3YGT2DM',
+            'source'          => 'internal',
+            'type'            => 'test.event',
+            'context'         => $largeContext,
+            'version'         => 1,
+        ]);
+
+        // Check that raw database value is compressed
+        $rawContext = $event->getAttributes()['context'];
+        expect(CompressionManager::isCompressed($rawContext))->toBeTrue();
+
+        // Check that accessor returns decompressed data
+        expect($event->context)->toEqual($largeContext);
+    });
 });
