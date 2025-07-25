@@ -172,4 +172,22 @@ describe('CompressionManager', function (): void {
         $decompressed = CompressionManager::decompress($compressed);
         expect($decompressed)->toEqual($largeData);
     });
+
+    it('handles special JSON characters and encoding', function (): void {
+        $specialData = [
+            'unicode'      => '🚀 çğİDeligöz',
+            'quotes'       => 'Single \' and "double" quotes',
+            'newlines'     => "Line 1\nLine 2\r\nLine 3",
+            'backslashes'  => 'Path\\to\\file',
+            'json_special' => '{"nested": "json"}',
+        ];
+
+        config(['machine.compression.threshold' => 10]);
+
+        $compressed = CompressionManager::compress($specialData, 'payload');
+        expect(CompressionManager::isCompressed($compressed))->toBeTrue();
+
+        $decompressed = CompressionManager::decompress($compressed);
+        expect($decompressed)->toEqual($specialData);
+    });
 });
