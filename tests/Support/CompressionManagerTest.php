@@ -51,4 +51,19 @@ describe('CompressionManager', function (): void {
         $result = CompressionManager::decompress($jsonData);
         expect($result)->toEqual($data);
     });
+
+    it('respects compression threshold', function (): void {
+        config(['machine.compression.threshold' => 100]);
+
+        $smallData = ['small' => 'data'];
+        $largeData = str_repeat('x', 200);
+
+        // Small data should not be compressed
+        $smallCompressed = CompressionManager::compress($smallData, 'payload');
+        expect(CompressionManager::isCompressed($smallCompressed))->toBeFalse();
+
+        // Large data should be compressed
+        $largeCompressed = CompressionManager::compress(['large' => $largeData], 'payload');
+        expect(CompressionManager::isCompressed($largeCompressed))->toBeTrue();
+    });
 });
