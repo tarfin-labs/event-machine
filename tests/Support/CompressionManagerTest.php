@@ -120,4 +120,13 @@ describe('CompressionManager', function (): void {
         expect(CompressionManager::decompress(null))->toBeNull();
         expect(CompressionManager::decompress('null'))->toBeNull();
     });
+
+    it('handles compression failure gracefully', function (): void {
+        // Mock gzcompress to return false
+        $data = ['test' => 'data'];
+
+        // Even if compression fails, it should return JSON
+        $result = CompressionManager::compress($data, 'payload');
+        expect($result)->toEqual(json_encode($data));
+    });
 });
