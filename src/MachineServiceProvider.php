@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\Commands\GenerateUmlCommand;
 use Tarfinlabs\EventMachine\Commands\CheckUpgradeCommand;
 use Tarfinlabs\EventMachine\Commands\MigrateEventsCommand;
 use Tarfinlabs\EventMachine\Commands\CompressEventsCommand;
+use Tarfinlabs\EventMachine\Commands\CompressionBenchmarkCommand;
 use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
 
 /**
@@ -41,6 +42,7 @@ class MachineServiceProvider extends PackageServiceProvider
             ->hasCommand(CompressEventsCommand::class)
             ->hasCommand(MigrateEventsCommand::class)
             ->hasCommand(CheckUpgradeCommand::class)
+            ->hasCommand(CompressionBenchmarkCommand::class)
             ->hasCommand(GenerateUmlCommand::class)
             ->hasCommand(MachineConfigValidatorCommand::class);
     }
