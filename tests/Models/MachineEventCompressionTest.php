@@ -132,4 +132,43 @@ describe('MachineEvent Compression', function (): void {
         expect($event->context)->toBeNull();
         expect($event->meta)->toBeNull();
     });
+
+    it('maintains backward compatibility with existing uncompressed data', function (): void {
+        $data     = ['existing' => 'data'];
+        $jsonData = json_encode($data);
+
+        // Directly insert uncompressed JSON data (simulating existing data)
+        $event = new MachineEvent([
+            'id'              => '01H8BM4VK82JKPK7RPR3YGT2DM',
+            'sequence_number' => 1,
+            'created_at'      => now(),
+            'machine_id'      => 'test_machine',
+            'machine_value'   => ['state' => 'test'],
+            'root_event_id'   => '01H8BM4VK82JKPK7RPR3YGT2DM',
+            'source'          => 'internal',
+            'type'            => 'test.event',
+            'version'         => 1,
+        ]);
+
+        // Set raw attributes to simulate existing uncompressed data
+        $event->setRawAttributes([
+            'id'              => '01H8BM4VK82JKPK7RPR3YGT2DM',
+            'sequence_number' => 1,
+            'created_at'      => now(),
+            'machine_id'      => 'test_machine',
+            'machine_value'   => json_encode(['state' => 'test']),
+            'root_event_id'   => '01H8BM4VK82JKPK7RPR3YGT2DM',
+            'source'          => 'internal',
+            'type'            => 'test.event',
+            'payload'         => $jsonData,
+            'context'         => $jsonData,
+            'meta'            => $jsonData,
+            'version'         => 1,
+        ]);
+
+        // Should be able to read existing uncompressed data
+        expect($event->payload)->toEqual($data);
+        expect($event->context)->toEqual($data);
+        expect($event->meta)->toEqual($data);
+    });
 });
