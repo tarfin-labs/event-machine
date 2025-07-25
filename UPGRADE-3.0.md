@@ -139,13 +139,36 @@ MACHINE_EVENTS_COMPRESSION_LEVEL=6
 MACHINE_EVENTS_COMPRESSION_THRESHOLD=100
 ```
 
+### 📊 Compression Level Benchmarks
+
+Based on 1MB of JSON data (measured on MacBook Pro M1):
+
+| Level | Compression Time | Decompression Time | Size Reduction | Recommendation |
+|-------|------------------|--------------------|----------------|----------------|
+| 1 | 4.49ms | 0.88ms | 82.7% | Real-time applications |
+| 2 | 4.67ms | 0.87ms | 83.6% | - |
+| 3 | 5.31ms | 0.85ms | 84.3% | - |
+| 4 | 7.77ms | 0.77ms | 84.8% | - |
+| 5 | 9.07ms | 0.75ms | 85.7% | - |
+| 6 | 11.39ms | 0.72ms | 86.4% | **Default - Best balance** |
+| 7 | 13.29ms | 0.74ms | 86.6% | - |
+| 8 | 22.07ms | 0.72ms | 87.1% | - |
+| 9 | 27.63ms | 0.74ms | 87.1% | Archival storage |
+
+**Key Insights:**
+- Level 6 is 2.5x slower than Level 1 but achieves 3.7% better compression
+- Level 9 is 2.4x slower than Level 6 but only 0.7% better compression
+- Decompression is consistently fast across all levels (~0.7-0.9ms)
+- JSON data compresses extremely well (82-87% reduction)
+
 ## 📊 Expected Benefits
 
-- **~70% storage reduction** for typical machine event data
+- **82-87% storage reduction** for typical JSON machine event data (based on benchmarks)
 - **Improved database performance** due to smaller data size
 - **Binary-safe storage** with LONGBLOB columns (no character set corruption)
 - **Transparent operation** - no code changes required
 - **Backward compatibility** with existing uncompressed data
+- **Fast decompression** - consistently under 1ms regardless of compression level
 
 ## 🛠️ Management Commands
 
