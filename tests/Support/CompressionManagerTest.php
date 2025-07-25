@@ -135,4 +135,28 @@ describe('CompressionManager', function (): void {
         expect(fn () => CompressionManager::decompress('invalid_compressed_data'))
             ->toThrow(InvalidArgumentException::class);
     });
+
+    it('handles edge case compression levels', function (): void {
+        // Reset config cache before testing different levels
+        $reflection     = new ReflectionClass(CompressionManager::class);
+        $configProperty = $reflection->getProperty('config');
+        $configProperty->setAccessible(true);
+
+        config(['machine.compression.level' => 0]); // Fastest compression
+        $configProperty->setValue(null); // Reset cache
+        expect(CompressionManager::getLevel())->toEqual(0);
+
+        config(['machine.compression.level' => 9]); // Best compression
+        $configProperty->setValue(null); // Reset cache
+        expect(CompressionManager::getLevel())->toEqual(9);
+
+        // Invalid levels should throw exception
+        config(['machine.compression.level' => -1]);
+        $configProperty->setValue(null); // Reset cache
+        expect(fn () => CompressionManager::getLevel())->toThrow(InvalidArgumentException::class);
+
+        config(['machine.compression.level' => 10]);
+        $configProperty->setValue(null); // Reset cache
+        expect(fn () => CompressionManager::getLevel())->toThrow(InvalidArgumentException::class);
+    });
 });
