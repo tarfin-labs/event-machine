@@ -22,4 +22,24 @@ describe('CompressionManager', function (): void {
         expect(CompressionManager::isCompressed(null))->toBeFalse();
         expect(CompressionManager::isCompressed(''))->toBeFalse();
     });
+
+    it('compresses and decompresses data correctly', function (): void {
+        // Set low threshold for testing
+        config(['machine.compression.threshold' => 10]);
+
+        $originalData = [
+            'test'   => 'data',
+            'number' => 123,
+            'array'  => [1, 2, 3, 4, 5],
+            'nested' => ['key' => 'value'],
+        ];
+
+        // Test compression
+        $compressed = CompressionManager::compress($originalData, 'payload');
+        expect(CompressionManager::isCompressed($compressed))->toBeTrue();
+
+        // Test decompression
+        $decompressed = CompressionManager::decompress($compressed);
+        expect($decompressed)->toEqual($originalData);
+    });
 });
