@@ -94,4 +94,24 @@ describe('CompressionManager', function (): void {
         expect(CompressionManager::isCompressed($compressed))->toBeFalse();
         expect($compressed)->toEqual(json_encode($data));
     });
+
+    it('calculates compression statistics', function (): void {
+        $data = ['test' => str_repeat('a', 1000)];
+
+        $stats = CompressionManager::getCompressionStats($data);
+
+        expect($stats)->toHaveKeys([
+            'original_size',
+            'compressed_size',
+            'compression_ratio',
+            'savings_percent',
+            'compressed',
+        ]);
+
+        expect($stats['original_size'])->toBeGreaterThan(0);
+        expect($stats['compressed_size'])->toBeLessThan($stats['original_size']);
+        expect($stats['compression_ratio'])->toBeLessThan(1.0);
+        expect($stats['savings_percent'])->toBeGreaterThan(0);
+        expect($stats['compressed'])->toBeTrue();
+    });
 });
