@@ -111,7 +111,7 @@ class ArchiveService
     }
 
     /**
-     * Get machines eligible for archival based on configured triggers.
+     * Get machines eligible for archival based on days inactive.
      */
     public function getEligibleMachines(int $limit = 100): Collection
     {
@@ -119,23 +119,16 @@ class ArchiveService
             return collect();
         }
 
-        $triggers = $this->config['triggers'] ?? [];
-        $query    = MachineEvent::query()
+        $daysInactive = $this->config['days_inactive'] ?? 30;
+        $cutoffDate   = Carbon::now()->subDays($daysInactive);
+
+        $query = MachineEvent::query()
             ->select('root_event_id', 'machine_id', DB::raw('MAX(created_at) as last_activity'), DB::raw('COUNT(*) as event_count'))
             ->whereNotIn('root_event_id', function ($subQuery): void {
                 $subQuery->select('root_event_id')
                     ->from('machine_event_archives');
-            });
-
-        // Apply archival triggers
-        if ($daysInactive = $triggers['days_inactive'] ?? null) {
-            $cutoffDate = Carbon::now()->subDays($daysInactive);
-            $query->having('last_activity', '<', $cutoffDate);
-        }
-
-        if ($maxEvents = $triggers['max_events'] ?? null) {
-            $query->having('event_count', '>=', $maxEvents);
-        }
+            })
+            ->having('last_activity', '<', $cutoffDate);
 
         // Apply cooldown logic - exclude recently restored machines
         $cooldownHours = $this->config['restore_cooldown_hours'] ?? 24;
