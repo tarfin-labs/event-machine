@@ -7,10 +7,8 @@ namespace Tarfinlabs\EventMachine;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tarfinlabs\EventMachine\Commands\GenerateUmlCommand;
-use Tarfinlabs\EventMachine\Commands\CheckUpgradeCommand;
-use Tarfinlabs\EventMachine\Commands\MigrateEventsCommand;
-use Tarfinlabs\EventMachine\Commands\CompressEventsCommand;
-use Tarfinlabs\EventMachine\Commands\CompressionBenchmarkCommand;
+use Tarfinlabs\EventMachine\Commands\ArchiveEventsCommand;
+use Tarfinlabs\EventMachine\Commands\ArchiveStatusCommand;
 use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
 
 /**
@@ -38,12 +36,10 @@ class MachineServiceProvider extends PackageServiceProvider
             ->name('event-machine')
             ->hasConfigFile('machine')
             ->hasMigration('create_machine_events_table')
-            ->hasMigration('upgrade_machine_events_for_compression_v2')
-            ->hasCommand(CompressEventsCommand::class)
-            ->hasCommand(MigrateEventsCommand::class)
-            ->hasCommand(CheckUpgradeCommand::class)
-            ->hasCommand(CompressionBenchmarkCommand::class)
+            ->hasMigration('create_machine_events_archive_table')
             ->hasCommand(GenerateUmlCommand::class)
+            ->hasCommand(ArchiveEventsCommand::class)
+            ->hasCommand(ArchiveStatusCommand::class)
             ->hasCommand(MachineConfigValidatorCommand::class);
     }
 }
