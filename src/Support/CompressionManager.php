@@ -13,15 +13,22 @@ class CompressionManager
     protected static function getConfig(): array
     {
         if (self::$config === null) {
-            self::$config = config('machine.compression', [
+            self::$config = config('machine.archival', [
                 'enabled'   => true,
                 'level'     => 6,
-                'fields'    => ['payload', 'context', 'meta'],
-                'threshold' => 100,
+                'threshold' => 1000, // Minimum bytes before archival compression
             ]);
         }
 
         return self::$config;
+    }
+
+    /**
+     * Clear the cached configuration. Useful for testing.
+     */
+    public static function clearCache(): void
+    {
+        self::$config = null;
     }
 
     /**
@@ -55,15 +62,15 @@ class CompressionManager
     }
 
     /**
-     * Check if a field should be compressed based on configuration.
+     * Check if data should be compressed based on size threshold.
      */
-    public static function shouldCompressField(string $field): bool
+    public static function shouldCompress(string $data): bool
     {
         if (!self::isEnabled()) {
             return false;
         }
 
-        return in_array($field, self::getConfig()['fields'], true);
+        return strlen($data) >= self::getThreshold();
     }
 
     /**
@@ -91,20 +98,13 @@ class CompressionManager
     }
 
     /**
-     * Compress data if it meets the threshold and compression is enabled.
+     * Compress JSON string if it meets the threshold and compression is enabled.
      *
      * @throws \JsonException
      */
-    public static function compress(mixed $data, string $field): string
+    public static function compressJson(string $jsonData): string
     {
-        if (!self::shouldCompressField($field)) {
-            return json_encode($data, JSON_THROW_ON_ERROR);
-        }
-
-        $jsonData = json_encode($data, JSON_THROW_ON_ERROR);
-
-        // Don't compress if data is smaller than threshold
-        if (strlen($jsonData) < self::getThreshold()) {
+        if (!self::shouldCompress($jsonData)) {
             return $jsonData;
         }
 
@@ -116,6 +116,18 @@ class CompressionManager
         }
 
         return $compressed;
+    }
+
+    /**
+     * Compress mixed data by first converting to JSON.
+     *
+     * @throws \JsonException
+     */
+    public static function compress(mixed $data): string
+    {
+        $jsonData = json_encode($data, JSON_THROW_ON_ERROR);
+
+        return self::compressJson($jsonData);
     }
 
     /**
