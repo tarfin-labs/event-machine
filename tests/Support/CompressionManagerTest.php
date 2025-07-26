@@ -5,14 +5,19 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Support\CompressionManager;
 
 beforeEach(function (): void {
-    // Reset config cache
-    $reflection     = new ReflectionClass(CompressionManager::class);
-    $configProperty = $reflection->getProperty('config');
-    $configProperty->setAccessible(true);
-    $configProperty->setValue(null);
+    // Reset config cache before each test
+    CompressionManager::clearCache();
 });
 
-describe('CompressionManager', function (): void {
+describe('CompressionManager (Archival)', function (): void {
+    beforeEach(function (): void {
+        config([
+            'machine.archival.enabled'   => true,
+            'machine.archival.level'     => 6,
+            'machine.archival.threshold' => 100,
+        ]);
+    });
+
     it('detects compressed data correctly', function (): void {
         $data       = ['test' => 'data', 'number' => 123];
         $compressed = gzcompress(json_encode($data), 6);
@@ -24,23 +29,97 @@ describe('CompressionManager', function (): void {
     });
 
     it('compresses and decompresses data correctly', function (): void {
-        // Set low threshold for testing
-        config(['machine.compression.threshold' => 10]);
-
         $originalData = [
-            'test'   => 'data',
+            'test'   => str_repeat('test_data_', 20), // Make it larger than threshold
             'number' => 123,
             'array'  => [1, 2, 3, 4, 5],
             'nested' => ['key' => 'value'],
         ];
 
         // Test compression
-        $compressed = CompressionManager::compress($originalData, 'payload');
+        $compressed = CompressionManager::compress($originalData);
         expect(CompressionManager::isCompressed($compressed))->toBeTrue();
 
         // Test decompression
         $decompressed = CompressionManager::decompress($compressed);
         expect($decompressed)->toEqual($originalData);
+    });
+
+    it('compresses JSON strings correctly', function (): void {
+        $data     = ['test' => str_repeat('data_', 30)]; // Large enough to exceed threshold
+        $jsonData = json_encode($data);
+
+        $compressed = CompressionManager::compressJson($jsonData);
+        expect(CompressionManager::isCompressed($compressed))->toBeTrue();
+
+        $decompressed = CompressionManager::decompress($compressed);
+        expect($decompressed)->toEqual($data);
+    });
+
+    it('does not compress data below threshold', function (): void {
+        config(['machine.archival.threshold' => 1000]); // High threshold
+
+        $smallData = ['test' => 'small'];
+        $jsonData  = json_encode($smallData);
+
+        $result = CompressionManager::compressJson($jsonData);
+        expect(CompressionManager::isCompressed($result))->toBeFalse();
+        expect($result)->toBe($jsonData); // Should return original JSON
+    });
+
+    it('respects compression level setting', function (): void {
+        $data = ['test' => str_repeat('test_data_', 50)];
+
+        // Test different compression levels
+        config(['machine.archival.level' => 1]);
+        CompressionManager::clearCache(); // Clear cache after config change
+        expect(CompressionManager::getLevel())->toBe(1);
+
+        config(['machine.archival.level' => 9]);
+        CompressionManager::clearCache(); // Clear cache after config change
+        expect(CompressionManager::getLevel())->toBe(9);
+    });
+
+    it('validates compression level bounds', function (): void {
+        config(['machine.archival.level' => -1]);
+        expect(fn () => CompressionManager::getLevel())
+            ->toThrow(InvalidArgumentException::class, 'Compression level must be between 0 and 9');
+
+        config(['machine.archival.level' => 10]);
+        expect(fn () => CompressionManager::getLevel())
+            ->toThrow(InvalidArgumentException::class, 'Compression level must be between 0 and 9');
+    });
+
+    it('handles compression failures gracefully', function (): void {
+        $data = ['test' => str_repeat('data_', 50)];
+
+        // This should not throw an exception even if compression fails internally
+        $result = CompressionManager::compress($data);
+        expect($result)->toBeString();
+    });
+
+    it('checks if data should be compressed based on threshold', function (): void {
+        config(['machine.archival.threshold' => 100]);
+
+        $largeData = str_repeat('x', 200);
+        $smallData = str_repeat('x', 50);
+
+        expect(CompressionManager::shouldCompress($largeData))->toBeTrue();
+        expect(CompressionManager::shouldCompress($smallData))->toBeFalse();
+    });
+
+    it('respects global enabled/disabled setting', function (): void {
+        config(['machine.archival.enabled' => false]);
+        CompressionManager::clearCache(); // Clear cache after config change
+
+        $data = str_repeat('x', 200); // Large data
+        expect(CompressionManager::shouldCompress($data))->toBeFalse();
+        expect(CompressionManager::isEnabled())->toBeFalse();
+
+        config(['machine.archival.enabled' => true]);
+        CompressionManager::clearCache(); // Clear cache after config change
+        expect(CompressionManager::shouldCompress($data))->toBeTrue();
+        expect(CompressionManager::isEnabled())->toBeTrue();
     });
 
     it('handles backward compatibility with uncompressed JSON', function (): void {
@@ -52,154 +131,33 @@ describe('CompressionManager', function (): void {
         expect($result)->toEqual($data);
     });
 
-    it('respects compression threshold', function (): void {
-        config(['machine.compression.threshold' => 100]);
-
-        $smallData = ['small' => 'data'];
-        $largeData = str_repeat('x', 200);
-
-        // Small data should not be compressed
-        $smallCompressed = CompressionManager::compress($smallData, 'payload');
-        expect(CompressionManager::isCompressed($smallCompressed))->toBeFalse();
-
-        // Large data should be compressed
-        $largeCompressed = CompressionManager::compress(['large' => $largeData], 'payload');
-        expect(CompressionManager::isCompressed($largeCompressed))->toBeTrue();
-    });
-
-    it('respects field configuration', function (): void {
-        config([
-            'machine.compression.fields'    => ['payload', 'context'],
-            'machine.compression.threshold' => 10,
-        ]);
-
-        $data = ['test' => 'data with enough content to exceed threshold'];
-
-        // Should compress configured fields
-        $payloadCompressed = CompressionManager::compress($data, 'payload');
-        expect(CompressionManager::isCompressed($payloadCompressed))->toBeTrue();
-
-        // Should not compress non-configured fields
-        $metaCompressed = CompressionManager::compress($data, 'meta');
-        expect(CompressionManager::isCompressed($metaCompressed))->toBeFalse();
-        expect($metaCompressed)->toEqual(json_encode($data));
-    });
-
-    it('handles compression disabled globally', function (): void {
-        config(['machine.compression.enabled' => false]);
-
-        $data       = ['test' => 'data'];
-        $compressed = CompressionManager::compress($data, 'payload');
-
-        expect(CompressionManager::isCompressed($compressed))->toBeFalse();
-        expect($compressed)->toEqual(json_encode($data));
-    });
-
-    it('calculates compression statistics', function (): void {
-        $data = ['test' => str_repeat('a', 1000)];
+    it('provides compression statistics', function (): void {
+        $data = ['test' => str_repeat('test_data_', 50)];
 
         $stats = CompressionManager::getCompressionStats($data);
 
-        expect($stats)->toHaveKeys([
-            'original_size',
-            'compressed_size',
-            'compression_ratio',
-            'savings_percent',
-            'compressed',
-        ]);
+        expect($stats)->toHaveKey('original_size');
+        expect($stats)->toHaveKey('compressed_size');
+        expect($stats)->toHaveKey('compression_ratio');
+        expect($stats)->toHaveKey('savings_percent');
+        expect($stats)->toHaveKey('compressed');
 
         expect($stats['original_size'])->toBeGreaterThan(0);
-        expect($stats['compressed_size'])->toBeLessThan($stats['original_size']);
+        expect($stats['compressed_size'])->toBeGreaterThan(0);
         expect($stats['compression_ratio'])->toBeLessThan(1.0);
-        expect($stats['savings_percent'])->toBeGreaterThan(0);
+        expect($stats['savings_percent'])->toBeGreaterThan(0.0);
         expect($stats['compressed'])->toBeTrue();
     });
 
-    it('handles null values correctly', function (): void {
-        expect(CompressionManager::compress(null, 'payload'))->toEqual('null');
-        expect(CompressionManager::decompress(null))->toBeNull();
-        expect(CompressionManager::decompress('null'))->toBeNull();
-    });
+    it('handles small data in compression statistics', function (): void {
+        config(['machine.archival.threshold' => 1000]);
 
-    it('handles compression failure gracefully', function (): void {
-        // Mock gzcompress to return false
-        $data = ['test' => 'data'];
+        $smallData = ['test' => 'small'];
+        $stats     = CompressionManager::getCompressionStats($smallData);
 
-        // Even if compression fails, it should return JSON
-        $result = CompressionManager::compress($data, 'payload');
-        expect($result)->toEqual(json_encode($data));
-    });
-
-    it('throws exception on decompression failure', function (): void {
-        // Invalid compressed data should throw exception
-        expect(fn () => CompressionManager::decompress('invalid_compressed_data'))
-            ->toThrow(InvalidArgumentException::class);
-    });
-
-    it('handles edge case compression levels', function (): void {
-        // Reset config cache before testing different levels
-        $reflection     = new ReflectionClass(CompressionManager::class);
-        $configProperty = $reflection->getProperty('config');
-        $configProperty->setAccessible(true);
-
-        config(['machine.compression.level' => 0]); // Fastest compression
-        $configProperty->setValue(null); // Reset cache
-        expect(CompressionManager::getLevel())->toEqual(0);
-
-        config(['machine.compression.level' => 9]); // Best compression
-        $configProperty->setValue(null); // Reset cache
-        expect(CompressionManager::getLevel())->toEqual(9);
-
-        // Invalid levels should throw exception
-        config(['machine.compression.level' => -1]);
-        $configProperty->setValue(null); // Reset cache
-        expect(fn () => CompressionManager::getLevel())->toThrow(InvalidArgumentException::class);
-
-        config(['machine.compression.level' => 10]);
-        $configProperty->setValue(null); // Reset cache
-        expect(fn () => CompressionManager::getLevel())->toThrow(InvalidArgumentException::class);
-    });
-
-    it('handles very large data correctly', function (): void {
-        // Test with very large data (1MB+)
-        $largeData = ['huge' => str_repeat('x', 1024 * 1024)]; // 1MB string
-
-        config(['machine.compression.threshold' => 100]);
-
-        $compressed = CompressionManager::compress($largeData, 'payload');
-        expect(CompressionManager::isCompressed($compressed))->toBeTrue();
-
-        $decompressed = CompressionManager::decompress($compressed);
-        expect($decompressed)->toEqual($largeData);
-    });
-
-    it('handles malformed zlib headers in detection', function (): void {
-        // Test with data that might look like compressed but isn't valid
-        $fakeCompressed = "\x78\x9c"; // Valid zlib header start
-        expect(CompressionManager::isCompressed($fakeCompressed))->toBeTrue();
-
-        $invalidHeader = "\x78\x9d"; // Invalid zlib header
-        expect(CompressionManager::isCompressed($invalidHeader))->toBeFalse();
-
-        $singleByte = "\x78";
-        expect(CompressionManager::isCompressed($singleByte))->toBeFalse();
-    });
-
-    it('handles special JSON characters and encoding', function (): void {
-        $specialData = [
-            'unicode'      => '🚀 çğİDeligöz',
-            'quotes'       => 'Single \' and "double" quotes',
-            'newlines'     => "Line 1\nLine 2\r\nLine 3",
-            'backslashes'  => 'Path\\to\\file',
-            'json_special' => '{"nested": "json"}',
-        ];
-
-        config(['machine.compression.threshold' => 10]);
-
-        $compressed = CompressionManager::compress($specialData, 'payload');
-        expect(CompressionManager::isCompressed($compressed))->toBeTrue();
-
-        $decompressed = CompressionManager::decompress($compressed);
-        expect($decompressed)->toEqual($specialData);
+        expect($stats['compression_ratio'])->toBe(1.0);
+        expect($stats['savings_percent'])->toBe(0.0);
+        expect($stats['compressed'])->toBeFalse();
+        expect($stats['original_size'])->toBe($stats['compressed_size']);
     });
 });

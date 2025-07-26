@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
-use Tarfinlabs\EventMachine\Casts\CompressedJsonCast;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Tarfinlabs\EventMachine\Database\Factories\MachineEventFactory;
 
@@ -64,10 +63,10 @@ class MachineEvent extends Model
         'root_event_id'   => 'string',
         'source'          => SourceType::class,
         'type'            => 'string',
-        'payload'         => CompressedJsonCast::class.':payload',
+        'payload'         => 'array',
         'version'         => 'integer',
-        'context'         => CompressedJsonCast::class.':context',
-        'meta'            => CompressedJsonCast::class.':meta',
+        'context'         => 'array',
+        'meta'            => 'array',
     ];
 
     /**
