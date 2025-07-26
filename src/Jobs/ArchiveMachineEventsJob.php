@@ -37,10 +37,10 @@ class ArchiveMachineEventsJob implements ShouldQueue
 
     protected function archiveQualifiedMachines(array $config): void
     {
-        $triggers = $config['triggers'] ?? [];
+        $daysInactive = $config['days_inactive'] ?? 30;
 
         // Find machines that qualify for archival
-        $qualifiedRootEventIds = $this->findQualifiedMachines($triggers);
+        $qualifiedRootEventIds = $this->findQualifiedMachines($daysInactive);
 
         foreach ($qualifiedRootEventIds->chunk($this->batchSize) as $chunk) {
             foreach ($chunk as $rootEventId) {
@@ -52,30 +52,18 @@ class ArchiveMachineEventsJob implements ShouldQueue
         }
     }
 
-    protected function findQualifiedMachines(array $triggers): \Illuminate\Support\Collection
+    protected function findQualifiedMachines(int $daysInactive): \Illuminate\Support\Collection
     {
-        $query = MachineEvent::query()
+        $cutoffDate = Carbon::now()->subDays($daysInactive);
+
+        return MachineEvent::query()
             ->select('root_event_id')
             ->whereNotIn('root_event_id', function ($subQuery): void {
                 $subQuery->select('root_event_id')
                     ->from('machine_event_archives');
-            });
-
-        // Apply archival triggers
-        if ($daysInactive = $triggers['days_inactive'] ?? null) {
-            $cutoffDate = Carbon::now()->subDays($daysInactive);
-            $query->where('created_at', '<', $cutoffDate);
-        }
-
-        if ($maxEvents = $triggers['max_events'] ?? null) {
-            $query->havingRaw('COUNT(*) >= ?', [$maxEvents]);
-        }
-
-        if ($maxSize = $triggers['max_size'] ?? null) {
-            $query->havingRaw('SUM(LENGTH(JSON_EXTRACT(payload, "$")) + LENGTH(JSON_EXTRACT(context, "$")) + LENGTH(JSON_EXTRACT(meta, "$"))) >= ?', [$maxSize]);
-        }
-
-        return $query->groupBy('root_event_id')
+            })
+            ->where('created_at', '<', $cutoffDate)
+            ->groupBy('root_event_id')
             ->pluck('root_event_id');
     }
 
@@ -123,29 +111,19 @@ class ArchiveMachineEventsJob implements ShouldQueue
             return 0;
         }
 
-        $triggers = $config['triggers'] ?? [];
-        $query    = MachineEvent::query()
+        $daysInactive = $config['days_inactive'] ?? 30;
+        $cutoffDate   = Carbon::now()->subDays($daysInactive);
+
+        return MachineEvent::query()
             ->select('root_event_id')
             ->whereNotIn('root_event_id', function ($subQuery): void {
                 $subQuery->select('root_event_id')
                     ->from('machine_event_archives');
-            });
-
-        // Apply the same triggers as findQualifiedMachines
-        if ($daysInactive = $triggers['days_inactive'] ?? null) {
-            $cutoffDate = Carbon::now()->subDays($daysInactive);
-            $query->where('created_at', '<', $cutoffDate);
-        }
-
-        if ($maxEvents = $triggers['max_events'] ?? null) {
-            $query->havingRaw('COUNT(*) >= ?', [$maxEvents]);
-        }
-
-        if ($maxSize = $triggers['max_size'] ?? null) {
-            $query->havingRaw('SUM(LENGTH(JSON_EXTRACT(payload, "$")) + LENGTH(JSON_EXTRACT(context, "$")) + LENGTH(JSON_EXTRACT(meta, "$"))) >= ?', [$maxSize]);
-        }
-
-        return $query->groupBy('root_event_id')->get()->count();
+            })
+            ->where('created_at', '<', $cutoffDate)
+            ->groupBy('root_event_id')
+            ->get()
+            ->count();
     }
 
     /**

@@ -10,26 +10,17 @@ describe('ArchiveMachineEventsJob', function (): void {
     beforeEach(function (): void {
         // Enable archival for tests
         config([
-            'machine.archival.enabled'   => true,
-            'machine.archival.level'     => 6,
-            'machine.archival.threshold' => 100,
-            'machine.archival.triggers'  => [
-                'days_inactive' => 30,
-                'max_events'    => 5,
-                'max_size'      => 0,
-            ],
+            'machine.archival.enabled'       => true,
+            'machine.archival.level'         => 6,
+            'machine.archival.threshold'     => 100,
+            'machine.archival.days_inactive' => 30,
         ]);
     });
 
     it('can get count of qualified machines for archival', function (): void {
-        // Use a config that only uses days_inactive trigger
         $config = [
-            'enabled'  => true,
-            'triggers' => [
-                'days_inactive' => 30,
-                'max_events'    => 0, // Disabled
-                'max_size'      => 0,   // Disabled
-            ],
+            'enabled'       => true,
+            'days_inactive' => 30,
         ];
 
         $oldDate    = now()->subDays(35); // Older than 30 days
@@ -50,35 +41,6 @@ describe('ArchiveMachineEventsJob', function (): void {
             'machine_id'    => 'recent_machine',
             'created_at'    => $recentDate,
         ]);
-
-        $qualifiedCount = ArchiveMachineEventsJob::getQualifiedMachinesCount($config);
-
-        expect($qualifiedCount)->toBe(1);
-    });
-
-    it('qualifies machines based on max events trigger', function (): void {
-        // Use a config that only uses max_events trigger
-        $config = [
-            'enabled'  => true,
-            'triggers' => [
-                'days_inactive' => 0, // Disabled
-                'max_events'    => 5,
-                'max_size'      => 0,      // Disabled
-            ],
-        ];
-
-        $rootEventId = '01H8BM4VK82JKPK7RPR3YGT2DM';
-        $machineId   = 'high_volume_machine';
-
-        // Create 6 events (exceeds max_events of 5)
-        for ($i = 1; $i <= 6; $i++) {
-            MachineEvent::factory()->create([
-                'sequence_number' => $i,
-                'root_event_id'   => $rootEventId,
-                'machine_id'      => $machineId,
-                'created_at'      => now()->subDays(1), // Recent but has many events
-            ]);
-        }
 
         $qualifiedCount = ArchiveMachineEventsJob::getQualifiedMachinesCount($config);
 
@@ -125,12 +87,8 @@ describe('ArchiveMachineEventsJob', function (): void {
 
         // Run the job with custom config
         $config = [
-            'enabled'  => true,
-            'triggers' => [
-                'days_inactive' => 30,
-                'max_events'    => 0, // Disabled
-                'max_size'      => 0,   // Disabled
-            ],
+            'enabled'       => true,
+            'days_inactive' => 30,
         ];
         $job = ArchiveMachineEventsJob::withConfig($config, 100);
         $job->handle();
@@ -162,12 +120,8 @@ describe('ArchiveMachineEventsJob', function (): void {
 
         // Run job with custom config
         $config = [
-            'enabled'  => true,
-            'triggers' => [
-                'days_inactive' => 30,
-                'max_events'    => 0, // Disabled
-                'max_size'      => 0,   // Disabled
-            ],
+            'enabled'       => true,
+            'days_inactive' => 30,
         ];
         $job = ArchiveMachineEventsJob::withConfig($config, 100);
         $job->handle();
@@ -190,12 +144,8 @@ describe('ArchiveMachineEventsJob', function (): void {
 
         // Custom config with shorter inactive period
         $customConfig = [
-            'enabled'  => true,
-            'triggers' => [
-                'days_inactive' => 15, // Shorter period
-                'max_events'    => 0,
-                'max_size'      => 0,
-            ],
+            'enabled'       => true,
+            'days_inactive' => 15, // Shorter period
         ];
 
         // Should qualify under custom config
