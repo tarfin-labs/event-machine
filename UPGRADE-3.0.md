@@ -42,13 +42,8 @@ Edit `config/machine.php` to customize archival settings:
 'archival' => [
     'enabled' => true,        // Enable/disable archival
     'level' => 6,            // Compression level (0-9)
-    'threshold' => 1000,     // Minimum size before compression
-    'triggers' => [
-        'days_inactive' => 30,    // Archive after X days of inactivity
-        'max_events' => 0,        // Archive when machine has X events (0 = disabled)
-        'max_size' => 0,          // Archive when machine exceeds X bytes (0 = disabled)
-    ],
-    'cleanup_after_archive' => false, // Delete original events after archival
+    'threshold' => 1000,      // Minimum size before compression
+    'days_inactive' => 30,    // Archive after X days of inactivity
     
     // 🆕 NEW: Restore tracking and cooldown settings
     'restore_cooldown_hours' => 24, // Prevent re-archival for X hours after restore
@@ -67,9 +62,8 @@ Edit `config/machine.php` to customize archival settings:
     // 🆕 NEW: Machine-specific overrides
     'machine_overrides' => [
         // 'critical_machine' => [
-        //     'triggers' => ['days_inactive' => 90],
+        //     'days_inactive' => 90,    // Keep longer for critical machines
         //     'compression_level' => 9,
-        //     'cleanup_after_archive' => false,
         // ],
     ],
 ],
@@ -236,21 +230,14 @@ php artisan machine:archive-status --cleanup-archive=01H8BM4VK82JKPK7RPR3YGT2DM
 - **`enabled`**: Enable/disable archival globally
 - **`level`**: Compression level (0=fastest, 9=best compression, 6=balanced)
 - **`threshold`**: Minimum data size (bytes) before compression is applied
-- **`triggers.days_inactive`**: Archive machines after X days of inactivity
-- **`triggers.max_events`**: Archive when machine has X events (0=disabled)
-- **`triggers.max_size`**: Archive when machine exceeds X bytes (0=disabled)
+- **`days_inactive`**: Archive machines after X days of inactivity
 
 ### 🆕 NEW: Restore Tracking Settings
 - **`restore_cooldown_hours`**: Prevent re-archival for X hours after restore (default: 24)
 - **`archive_retention_days`**: Auto-delete archives after X days (null=keep forever)
 
-### 🆕 NEW: Advanced Enterprise Settings
+### Advanced Settings
 - **`advanced.batch_size`**: Archival processing batch size (default: 100)
-- **`advanced.max_concurrent_jobs`**: Maximum concurrent archival jobs (default: 3)
-- **`advanced.auto_schedule`**: Automatically schedule periodic archival (default: false)
-- **`advanced.schedule_expression`**: Cron expression for auto scheduling (default: '0 2 * * *')
-- **`advanced.slow_operation_threshold`**: Log slow operations over X seconds (default: 60)
-- **`advanced.verify_integrity`**: Verify compressed data integrity (default: true)
 
 ### 🆕 NEW: Machine-Specific Overrides
 Configure different archival policies per machine type via `machine_overrides` array.
@@ -262,8 +249,6 @@ MACHINE_EVENTS_ARCHIVAL_ENABLED=true
 MACHINE_EVENTS_COMPRESSION_LEVEL=6
 MACHINE_EVENTS_ARCHIVAL_THRESHOLD=1000
 MACHINE_EVENTS_ARCHIVAL_DAYS=30
-MACHINE_EVENTS_ARCHIVAL_MAX_EVENTS=0
-MACHINE_EVENTS_ARCHIVAL_MAX_SIZE=0
 
 # 🆕 NEW: Restore tracking settings
 MACHINE_EVENTS_RESTORE_COOLDOWN_HOURS=24
@@ -366,8 +351,8 @@ ArchiveMachineEventsJob::dispatch(100); // Batch size
 
 // Custom archival configuration
 $customConfig = [
-    'enabled' => true,
-    'triggers' => ['days_inactive' => 15],
+    'enabled'       => true,
+    'days_inactive' => 15,
 ];
 ArchiveMachineEventsJob::withConfig($customConfig, 50)->dispatch();
 ```
