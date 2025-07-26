@@ -25,17 +25,8 @@ return [
         // Smaller datasets may not benefit from compression due to overhead.
         'threshold' => env('MACHINE_EVENTS_ARCHIVAL_THRESHOLD', 1000),
 
-        // Default archival triggers (can be overridden per machine)
-        'triggers' => [
-            // Archive after this many days of inactivity
-            'days_inactive' => env('MACHINE_EVENTS_ARCHIVAL_DAYS', 30),
-
-            // Archive when machine has this many events (0 = disabled)
-            'max_events' => env('MACHINE_EVENTS_ARCHIVAL_MAX_EVENTS', 0),
-
-            // Archive when total machine events exceed this size in bytes (0 = disabled)
-            'max_size' => env('MACHINE_EVENTS_ARCHIVAL_MAX_SIZE', 0),
-        ],
+        // Archive after this many days of inactivity
+        'days_inactive' => env('MACHINE_EVENTS_ARCHIVAL_DAYS', 30),
 
         // Restore tracking and cooldown settings
         'restore_cooldown_hours' => env('MACHINE_EVENTS_RESTORE_COOLDOWN_HOURS', 24),
@@ -47,31 +38,13 @@ return [
         'advanced' => [
             // Batch size for archival processing (per transaction)
             'batch_size' => env('MACHINE_EVENTS_ARCHIVAL_BATCH_SIZE', 100),
-
-            // Maximum number of concurrent archival jobs
-            'max_concurrent_jobs' => env('MACHINE_EVENTS_MAX_CONCURRENT_JOBS', 3),
-
-            // Whether to automatically schedule periodic archival
-            'auto_schedule' => env('MACHINE_EVENTS_AUTO_SCHEDULE_ARCHIVAL', false),
-
-            // Archival schedule (cron expression for auto scheduling)
-            'schedule_expression' => env('MACHINE_EVENTS_ARCHIVAL_SCHEDULE', '0 2 * * *'), // Daily at 2 AM
-
-            // Performance monitoring - log slow archive operations (seconds)
-            'slow_operation_threshold' => env('MACHINE_EVENTS_SLOW_THRESHOLD', 60),
-
-            // Archive verification - verify compressed data integrity
-            'verify_integrity' => env('MACHINE_EVENTS_VERIFY_INTEGRITY', true),
         ],
 
         // Machine-specific overrides (can be set per machine type)
         'machine_overrides' => [
             // Example:
             // 'critical_machine' => [
-            //     'triggers' => [
-            //         'days_inactive' => 90,  // Keep longer for critical machines
-            //         'max_events' => 1000,   // Archive when very large
-            //     ],
+            //     'days_inactive' => 90,      // Keep longer for critical machines
             //     'compression_level' => 9,   // Maximum compression
             // ],
         ],
