@@ -137,6 +137,25 @@ it('If the machine is already running, it will throw exception', function (): vo
     $machine->send(new EEvent());
 })->throws(MachineAlreadyRunningException::class);
 
+it('If the machine is already running, it will throw exception with custom lock key', function (): void {
+    $machine = AsdMachine::create();
+    $machine->persist();
+
+    $lockKey = 'test-123';
+
+    Cache::shouldReceive('lock')
+        ->once()
+        ->with($lockKey, 60)
+        ->andReturnSelf();
+
+    Cache::shouldReceive('get')
+        ->once()
+        ->withAnyArgs()
+        ->andReturn(false);
+
+    $machine->send(event: new EEvent(), lockKey: $lockKey);
+})->throws(MachineAlreadyRunningException::class);
+
 // === Forbidden Transition Tests ===
 
 test('Top-level event transition can switch from a deeply nested state to another top-level state', function (): void {
