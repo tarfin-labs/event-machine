@@ -164,13 +164,19 @@ class Machine implements Castable, JsonSerializable, Stringable
      */
     public function send(
         EventBehavior|array|string $event,
+        ?string $lockKey = null,
     ): State {
+        $key = match ($lockKey) {
+            null    => 'mre:'.$this->state?->history->first()->root_event_id ?? null,
+            default => $lockKey,
+        };
+
         if ($this->state !== null) {
-            $lock = Cache::lock('mre:'.$this->state->history->first()->root_event_id, 60);
+            $lock = Cache::lock($key, 60);
         }
 
         if (isset($lock) && !$lock->get()) {
-            throw MachineAlreadyRunningException::build($this->state->history->first()->root_event_id);
+            throw MachineAlreadyRunningException::build($key);
         }
 
         try {
