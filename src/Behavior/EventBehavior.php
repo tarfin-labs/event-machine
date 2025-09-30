@@ -4,11 +4,23 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Behavior;
 
+use Illuminate\Contracts\Pagination\CursorPaginator as CursorPaginatorContract;
+use Illuminate\Contracts\Pagination\Paginator as PaginatorContract;
+use Illuminate\Pagination\AbstractCursorPaginator;
+use Illuminate\Pagination\AbstractPaginator;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Enumerable;
+use Illuminate\Support\LazyCollection;
+use Spatie\LaravelData\CursorPaginatedDataCollection;
 use Spatie\LaravelData\Data;
+use Spatie\LaravelData\DataCollection;
 use Spatie\LaravelData\Optional;
+use Spatie\LaravelData\PaginatedDataCollection;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Traits\InteractsWithData;
 use Spatie\LaravelData\Attributes\WithoutValidation;
 use Tarfinlabs\EventMachine\Exceptions\MachineEventValidationException;
 
@@ -19,6 +31,12 @@ use Tarfinlabs\EventMachine\Exceptions\MachineEventValidationException;
  */
 abstract class EventBehavior extends Data
 {
+    use InteractsWithData {
+        InteractsWithData::collect as collection;
+        InteractsWithData::only as onlyItems;
+        InteractsWithData::except as exceptItems;
+    }
+
     /** Actor performing the event. */
     private mixed $actor = null;
 
@@ -102,5 +120,57 @@ abstract class EventBehavior extends Data
     public static function stopOnFirstFailure(): bool
     {
         return true;
+    }
+
+    public static function collect(...$args): array|DataCollection|PaginatedDataCollection|CursorPaginatedDataCollection|Enumerable|AbstractPaginator|PaginatorContract|AbstractCursorPaginator|CursorPaginatorContract|LazyCollection|Collection
+    {
+        return parent::collect(...$args);
+    }
+
+    public function only(...$args): static
+    {
+        return parent::only(...$args);
+    }
+
+
+    public function except(...$args): static
+    {
+        return parent::except(...$args);
+    }
+
+    /**
+     * Get all of the input and files for the request.
+     *
+     * @param  array|mixed|null  $keys
+     *
+     * @return array
+     */
+    public function all($keys = null): array
+    {
+        $input = $this->payload ?? [];
+
+        if (!$keys) {
+            return $input;
+        }
+
+        $results = [];
+
+        foreach (is_array($keys) ? $keys : func_get_args() as $key) {
+            Arr::set($results, $key, Arr::get($input, $key));
+        }
+
+        return $results;
+    }
+
+    /**
+     * Retrieve data from the instance.
+     *
+     * @param  string  $key
+     * @param  mixed  $default
+     * @return mixed
+     */
+    public function data($key = null, $default = null): mixed
+    {
+        return data_get($this->all(), $key, $default);
     }
 }
