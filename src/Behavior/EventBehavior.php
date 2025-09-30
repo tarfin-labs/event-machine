@@ -4,25 +4,25 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Behavior;
 
-use Illuminate\Contracts\Pagination\CursorPaginator as CursorPaginatorContract;
-use Illuminate\Contracts\Pagination\Paginator as PaginatorContract;
-use Illuminate\Pagination\AbstractCursorPaginator;
-use Illuminate\Pagination\AbstractPaginator;
 use Illuminate\Support\Arr;
+use Spatie\LaravelData\Data;
+use Spatie\LaravelData\Optional;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Enumerable;
 use Illuminate\Support\LazyCollection;
-use Spatie\LaravelData\CursorPaginatedDataCollection;
-use Spatie\LaravelData\Data;
 use Spatie\LaravelData\DataCollection;
-use Spatie\LaravelData\Optional;
-use Spatie\LaravelData\PaginatedDataCollection;
 use Tarfinlabs\EventMachine\ContextManager;
+use Illuminate\Pagination\AbstractPaginator;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Illuminate\Validation\ValidationException;
+use Spatie\LaravelData\PaginatedDataCollection;
 use Illuminate\Support\Traits\InteractsWithData;
+use Illuminate\Pagination\AbstractCursorPaginator;
 use Spatie\LaravelData\Attributes\WithoutValidation;
+use Spatie\LaravelData\CursorPaginatedDataCollection;
+use Illuminate\Contracts\Pagination\Paginator as PaginatorContract;
 use Tarfinlabs\EventMachine\Exceptions\MachineEventValidationException;
+use Illuminate\Contracts\Pagination\CursorPaginator as CursorPaginatorContract;
 
 /**
  * Class EventBehavior.
@@ -132,7 +132,6 @@ abstract class EventBehavior extends Data
         return parent::only(...$args);
     }
 
-
     public function except(...$args): static
     {
         return parent::except(...$args);
@@ -142,8 +141,6 @@ abstract class EventBehavior extends Data
      * Get all of the input and files for the request.
      *
      * @param  array|mixed|null  $keys
-     *
-     * @return array
      */
     public function all($keys = null): array
     {
@@ -167,7 +164,6 @@ abstract class EventBehavior extends Data
      *
      * @param  string  $key
      * @param  mixed  $default
-     * @return mixed
      */
     public function data($key = null, $default = null): mixed
     {
