@@ -141,26 +141,24 @@ test('data method returns all data when key is null', function (): void {
     expect($event->data())->toBe($payload);
 });
 
-describe('InteractsWithData trait integration', function (): void {
-    test('trait methods work with event payload', function (): void {
-        $event = new SimpleEvent(payload: [
-            'name'      => 'John Doe',
-            'age'       => '30',
-            'price'     => '19.99',
-            'active'    => true,
-            'birthdate' => '1994-01-01',
-            'tags'      => ['php', 'laravel'],
-        ]);
+test('trait methods work with event payload', function (): void {
+    $event = new SimpleEvent(payload: [
+        'name'      => 'John Doe',
+        'age'       => '30',
+        'price'     => '19.99',
+        'active'    => true,
+        'birthdate' => '1994-01-01',
+        'tags'      => ['php', 'laravel'],
+    ]);
 
-        expect($event->has('name'))->toBeTrue()
-            ->and($event->missing('email'))->toBeTrue()
-            ->and($event->integer('age'))->toBe(30)
-            ->and($event->float('price'))->toBe(19.99)
-            ->and($event->boolean('active'))->toBeTrue()
-            ->and($event->str('name'))->toEqual(str('John Doe'))
-            ->and($event->string('name')->upper()->toString())->toBe('JOHN DOE')
-            ->and($event->date('birthdate'))->toEqual(Date::parse('1994-01-01'))
-            ->and($event->array('tags'))->toEqual(['php', 'laravel'])
-            ->and($event->collection('tags'))->toHaveCount(2);
-    });
+    expect($event->has('name'))->toBeTrue()
+        ->and($event->missing('email'))->toBeTrue()
+        ->and($event->integer('age'))->toBe(30)
+        ->and($event->float('price'))->toBe(19.99)
+        ->and($event->boolean('active'))->toBeTrue()
+        ->and($event->str('name'))->toEqual(str('John Doe'))
+        ->and($event->string('name')->upper()->toString())->toBe('JOHN DOE')
+        ->and($event->date('birthdate'))->toEqual(Date::parse('1994-01-01'))
+        ->and($event->array('tags'))->toEqual(['php', 'laravel'])
+        ->and($event->collection('tags'))->toHaveCount(2);
 });
