@@ -31,6 +31,11 @@ use Illuminate\Contracts\Pagination\CursorPaginator as CursorPaginatorContract;
  */
 abstract class EventBehavior extends Data
 {
+    /**
+     * Use InteractsWithData trait with aliases to avoid conflicts between:
+     * - Spatie Data's static collect() vs Laravel trait's non-static collect()
+     * - Different return types between parent class and trait methods
+     */
     use InteractsWithData {
         InteractsWithData::collect as collection;
         InteractsWithData::only as onlyItems;
@@ -122,16 +127,28 @@ abstract class EventBehavior extends Data
         return true;
     }
 
+    /**
+     * Delegate to parent's static collect() from Spatie Data class.
+     * The trait's non-static collect() is aliased as 'collection' to avoid conflict.
+     */
     public static function collect(...$args): array|DataCollection|PaginatedDataCollection|CursorPaginatedDataCollection|Enumerable|AbstractPaginator|PaginatorContract|AbstractCursorPaginator|CursorPaginatorContract|LazyCollection|Collection
     {
         return parent::collect(...$args);
     }
 
+    /**
+     * Override only() to return static type for fluent interface.
+     * Uses parent implementation which correctly returns EventBehavior instance.
+     */
     public function only(...$args): static
     {
         return parent::only(...$args);
     }
 
+    /**
+     * Override except() to return static type for fluent interface.
+     * Uses parent implementation which correctly returns EventBehavior instance.
+     */
     public function except(...$args): static
     {
         return parent::except(...$args);
