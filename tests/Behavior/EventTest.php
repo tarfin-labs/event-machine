@@ -12,6 +12,13 @@ test('an event has a version', function (): void {
         ->and($eventWithVersionDefinition->version)->toBe(13);
 });
 
+test('an event has a type', function (): void {
+    $event = new SimpleEvent();
+
+    expect($event->type)->toBe('SIMPLE_EVENT')
+        ->and(SimpleEvent::getType())->toBe('SIMPLE_EVENT');
+});
+
 test('all method returns entire payload', function (): void {
     $payload = [
         'name'  => 'John',
