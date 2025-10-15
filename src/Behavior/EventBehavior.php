@@ -4,13 +4,25 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Behavior;
 
+use Illuminate\Support\Arr;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Optional;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Enumerable;
+use Illuminate\Support\LazyCollection;
+use Spatie\LaravelData\DataCollection;
 use Tarfinlabs\EventMachine\ContextManager;
+use Illuminate\Pagination\AbstractPaginator;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Illuminate\Validation\ValidationException;
+use Spatie\LaravelData\PaginatedDataCollection;
+use Illuminate\Support\Traits\InteractsWithData;
+use Illuminate\Pagination\AbstractCursorPaginator;
 use Spatie\LaravelData\Attributes\WithoutValidation;
+use Spatie\LaravelData\CursorPaginatedDataCollection;
+use Illuminate\Contracts\Pagination\Paginator as PaginatorContract;
 use Tarfinlabs\EventMachine\Exceptions\MachineEventValidationException;
+use Illuminate\Contracts\Pagination\CursorPaginator as CursorPaginatorContract;
 
 /**
  * Class EventBehavior.
@@ -19,6 +31,17 @@ use Tarfinlabs\EventMachine\Exceptions\MachineEventValidationException;
  */
 abstract class EventBehavior extends Data
 {
+    /**
+     * Use InteractsWithData trait with aliases to avoid conflicts between:
+     * - Spatie Data's static collect() vs Laravel trait's non-static collect()
+     * - Different return types between parent class and trait methods
+     */
+    use InteractsWithData {
+        InteractsWithData::collect as collection;
+        InteractsWithData::only as onlyItems;
+        InteractsWithData::except as exceptItems;
+    }
+
     /** Actor performing the event. */
     private mixed $actor = null;
 
@@ -102,5 +125,65 @@ abstract class EventBehavior extends Data
     public static function stopOnFirstFailure(): bool
     {
         return true;
+    }
+
+    /**
+     * Delegate to parent's static collect() from Spatie Data class.
+     * The trait's non-static collect() is aliased as 'collection' to avoid conflict.
+     */
+    public static function collect(...$args): array|DataCollection|PaginatedDataCollection|CursorPaginatedDataCollection|Enumerable|AbstractPaginator|PaginatorContract|AbstractCursorPaginator|CursorPaginatorContract|LazyCollection|Collection
+    {
+        return parent::collect(...$args);
+    }
+
+    /**
+     * Override only() to return static type for fluent interface.
+     * Uses parent implementation which correctly returns EventBehavior instance.
+     */
+    public function only(...$args): static
+    {
+        return parent::only(...$args);
+    }
+
+    /**
+     * Override except() to return static type for fluent interface.
+     * Uses parent implementation which correctly returns EventBehavior instance.
+     */
+    public function except(...$args): static
+    {
+        return parent::except(...$args);
+    }
+
+    /**
+     * Get all of the input and files for the request.
+     *
+     * @param  array|mixed|null  $keys
+     */
+    public function all($keys = null): array
+    {
+        $input = $this->payload ?? [];
+
+        if (!$keys) {
+            return $input;
+        }
+
+        $results = [];
+
+        foreach (is_array($keys) ? $keys : func_get_args() as $key) {
+            Arr::set($results, $key, Arr::get($input, $key));
+        }
+
+        return $results;
+    }
+
+    /**
+     * Retrieve data from the instance.
+     *
+     * @param  string  $key
+     * @param  mixed  $default
+     */
+    public function data($key = null, $default = null): mixed
+    {
+        return data_get($this->all(), $key, $default);
     }
 }
