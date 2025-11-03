@@ -173,6 +173,59 @@ test('context changes are visible across actions', function (): void {
     expect($state->context->get('counter'))->toBe(3);
 });
 
+test('exit actions execute before entry actions', function (): void {
+    $machine = MachineDefinition::define(
+        config: [
+            'id'      => 'test',
+            'initial' => 'A',
+            'context' => [
+                'executionOrder' => [],
+            ],
+            'states' => [
+                'A' => [
+                    'exit' => 'exitA',
+                    'on'   => [
+                        'GO' => [
+                            'target'  => 'B',
+                            'actions' => 'transitionAction',
+                        ],
+                    ],
+                ],
+                'B' => [
+                    'entry' => 'entryB',
+                ],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'exitA' => function (ContextManager $context): void {
+                    $order   = $context->get('executionOrder');
+                    $order[] = 'exit_A';
+                    $context->set('executionOrder', $order);
+                },
+                'transitionAction' => function (ContextManager $context): void {
+                    $order   = $context->get('executionOrder');
+                    $order[] = 'transition_action';
+                    $context->set('executionOrder', $order);
+                },
+                'entryB' => function (ContextManager $context): void {
+                    $order   = $context->get('executionOrder');
+                    $order[] = 'entry_B';
+                    $context->set('executionOrder', $order);
+                },
+            ],
+        ],
+    );
+
+    $state = $machine->transition(event: ['type' => 'GO']);
+
+    expect($state->context->get('executionOrder'))->toBe([
+        'transition_action',
+        'exit_A',
+        'entry_B',
+    ]);
+});
+
 test('raised events from XyzMachine process after each entry completes', function (): void {
     $machine = XyzMachine::create();
 
