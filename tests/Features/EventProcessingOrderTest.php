@@ -86,3 +86,52 @@ test('XyzMachine demonstrates entry actions before raised events', function (): 
     expect($entryAFinishIndex)->toBeLessThan($xEventIndex);
     expect($entryAStartIndex)->toBeLessThan($entryAFinishIndex);
 });
+
+test('multiple entry actions complete in order', function (): void {
+    $machine = MachineDefinition::define(
+        config: [
+            'id'      => 'test',
+            'initial' => 'idle',
+            'context' => [
+                'executionOrder' => [],
+            ],
+            'states' => [
+                'idle' => [
+                    'on' => [
+                        'START' => 'loading',
+                    ],
+                ],
+                'loading' => [
+                    'entry' => ['firstEntry', 'secondEntry', 'thirdEntry'],
+                ],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'firstEntry' => function (ContextManager $context): void {
+                    $order   = $context->get('executionOrder');
+                    $order[] = 'first_entry';
+                    $context->set('executionOrder', $order);
+                },
+                'secondEntry' => function (ContextManager $context): void {
+                    $order   = $context->get('executionOrder');
+                    $order[] = 'second_entry';
+                    $context->set('executionOrder', $order);
+                },
+                'thirdEntry' => function (ContextManager $context): void {
+                    $order   = $context->get('executionOrder');
+                    $order[] = 'third_entry';
+                    $context->set('executionOrder', $order);
+                },
+            ],
+        ],
+    );
+
+    $state = $machine->transition(event: ['type' => 'START']);
+
+    expect($state->context->get('executionOrder'))->toBe([
+        'first_entry',
+        'second_entry',
+        'third_entry',
+    ]);
+});
