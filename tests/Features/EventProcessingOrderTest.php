@@ -172,3 +172,39 @@ test('context changes are visible across actions', function (): void {
     $state = $machine->transition(event: ['type' => 'INCREMENT'], state: $state);
     expect($state->context->get('counter'))->toBe(3);
 });
+
+test('raised events from XyzMachine process after each entry completes', function (): void {
+    $machine = XyzMachine::create();
+
+    $history = $machine->state->history->pluck('type')->toArray();
+
+    // State #a entry should complete before @x event processes
+    $aEntryStart  = array_search('xyz.state.#a.entry.start', $history, true);
+    $aEntryFinish = array_search('xyz.state.#a.entry.finish', $history, true);
+    $xEventRaised = array_search('xyz.event.@x.raised', $history, true);
+    $xEvent       = array_search('@x', $history, true);
+
+    expect($aEntryStart)->toBeLessThan($xEventRaised);
+    expect($xEventRaised)->toBeLessThan($aEntryFinish);
+    expect($aEntryFinish)->toBeLessThan($xEvent);
+
+    // State #x entry should complete before Y_EVENT processes
+    $xEntryStart  = array_search('xyz.state.#x.entry.start', $history, true);
+    $xEntryFinish = array_search('xyz.state.#x.entry.finish', $history, true);
+    $yEventRaised = array_search('xyz.event.Y_EVENT.raised', $history, true);
+    $yEvent       = array_search('Y_EVENT', $history, true);
+
+    expect($xEntryStart)->toBeLessThan($yEventRaised);
+    expect($yEventRaised)->toBeLessThan($xEntryFinish);
+    expect($xEntryFinish)->toBeLessThan($yEvent);
+
+    // State #y entry should complete before @z event processes
+    $yEntryStart  = array_search('xyz.state.#y.entry.start', $history, true);
+    $yEntryFinish = array_search('xyz.state.#y.entry.finish', $history, true);
+    $zEventRaised = array_search('xyz.event.@z.raised', $history, true);
+    $zEvent       = array_search('@z', $history, true);
+
+    expect($yEntryStart)->toBeLessThan($zEventRaised);
+    expect($zEventRaised)->toBeLessThan($yEntryFinish);
+    expect($yEntryFinish)->toBeLessThan($zEvent);
+});
