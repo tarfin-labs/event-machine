@@ -135,3 +135,40 @@ test('multiple entry actions complete in order', function (): void {
         'third_entry',
     ]);
 });
+
+test('context changes are visible across actions', function (): void {
+    $machine = MachineDefinition::define(
+        config: [
+            'id'      => 'test',
+            'initial' => 'idle',
+            'context' => [
+                'counter' => 0,
+            ],
+            'states' => [
+                'idle' => [
+                    'on' => [
+                        'INCREMENT' => [
+                            'actions' => 'incrementCounter',
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'incrementCounter' => function (ContextManager $context): void {
+                    $context->set('counter', $context->get('counter') + 1);
+                },
+            ],
+        ],
+    );
+
+    $state = $machine->transition(event: ['type' => 'INCREMENT']);
+    expect($state->context->get('counter'))->toBe(1);
+
+    $state = $machine->transition(event: ['type' => 'INCREMENT'], state: $state);
+    expect($state->context->get('counter'))->toBe(2);
+
+    $state = $machine->transition(event: ['type' => 'INCREMENT'], state: $state);
+    expect($state->context->get('counter'))->toBe(3);
+});
