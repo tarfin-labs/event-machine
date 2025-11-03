@@ -298,18 +298,32 @@ Events that only fire under certain conditions:
 
 ### Delayed Events
 
-Schedule events to fire later:
+Schedule events to fire later using Laravel's queue system:
 
 ```php
 class ScheduleReminderAction extends ActionBehavior
 {
     public function __invoke(AppointmentContext $context): void
     {
+        // Schedule a job using Laravel's queue (not internal event queue)
         dispatch(new SendReminderJob($context->appointmentId))
             ->delay($context->reminderTime);
     }
 }
+
+// In the job, you can send an event to the machine
+class SendReminderJob implements ShouldQueue
+{
+    public function handle(): void
+    {
+        // Find the machine and send an event
+        $machine = AppointmentMachine::find($this->appointmentId);
+        $machine->send('REMINDER_SENT');
+    }
+}
 ```
+
+> **Note:** Delayed processing requires Laravel's queue system. The internal event queue only handles immediate, in-memory events during the current execution.
 
 ## Advanced Action Patterns
 
@@ -359,22 +373,27 @@ behavior: [
 
 ### Async Actions
 
-Actions can dispatch jobs for background processing:
+Actions can dispatch jobs to Laravel's queue system for background processing:
 
 ```php
 class ProcessLargeFileAction extends ActionBehavior
 {
     public function __invoke(FileContext $context): void
     {
-        // Queue background job
+        // Dispatch to Laravel's queue (Redis/database)
+        // This is DIFFERENT from EventMachine's internal event queue
         ProcessFileJob::dispatch($context->fileId)
             ->onQueue('file-processing');
-            
+
+        // The action completes immediately
+        // The job will be processed later by a queue worker
         $context->processingStarted = true;
         $context->processingStartedAt = now();
     }
 }
 ```
+
+> **Note:** Laravel's job queue is for long-running or background tasks. For immediate state transitions within the same execution, use `raise()` to add events to the internal event queue.
 
 ### Error Handling in Actions
 
@@ -406,6 +425,325 @@ class ReliableApiCallAction extends ActionBehavior
     }
 }
 ```
+
+## Event Processing Order
+
+Understanding how EventMachine processes events and executes actions is crucial for building predictable state machines. EventMachine follows **run-to-completion semantics**, a foundational principle in state machine theory.
+
+### Run-to-Completion Semantics
+
+When a transition occurs, EventMachine processes it completely before handling any other events. This ensures deterministic behavior and prevents race conditions.
+
+#### Execution Flow
+
+When a transition is triggered, actions execute in this specific order:
+
+1. **Transition Actions** - Actions defined on the transition itself
+2. **Exit Actions** - Actions from the source state
+3. **Entry Actions** - Actions from the target state
+4. **Raised Events** - Any events raised during steps 1-3 are processed
+
+```php
+'states' => [
+    'loading' => [
+        'on' => [
+            'SUCCESS' => [
+                'target' => 'ready',
+                'actions' => 'logTransition'  // 1. Runs FIRST
+            ]
+        ],
+        'exit' => 'cleanup'  // 2. Runs second
+    ],
+    'ready' => [
+        'entry' => [
+            'initializeData',  // 3. Runs third
+            'raiseCompleted'   // 4. Queues COMPLETED event
+        ],
+        'on' => [
+            'COMPLETED' => 'finished'  // 5. Processed after entry completes
+        ]
+    ],
+    'finished' => [
+        'type' => 'final'
+    ]
+]
+```
+
+### Why Entry Actions Execute Before Raised Events
+
+This behavior is **intentional and follows industry standards**. Entry actions complete entirely before any raised events are processed. This is defined by:
+
+- **SCXML (W3C Standard)**: "The event will not be processed until the current block of executable content has completed"
+- **UML State Machines**: Entry behaviors must complete before processing new events
+- **Harel Statecharts**: Run-to-completion model prevents processing events mid-transition
+
+### Example: Raised Events Wait for Entry Actions
+
+```php
+$machine = MachineDefinition::define(
+    config: [
+        'id' => 'example',
+        'initial' => 'idle',
+        'states' => [
+            'idle' => [
+                'on' => [
+                    'START' => 'loading'
+                ]
+            ],
+            'loading' => [
+                'entry' => function (ContextManager $context) {
+                    Log::info('Loading started');
+                    // This event is queued, not immediately processed
+                    return $this->raise('LOADED');
+                },
+                'on' => [
+                    'LOADED' => 'complete'
+                ]
+            ],
+            'complete' => [
+                'entry' => function () {
+                    Log::info('Loading complete');
+                }
+            ]
+        ]
+    ]
+);
+
+$machine->send('START');
+
+// Output:
+// "Loading started"
+// "Loading complete"  ← Entry action finishes first
+// Then LOADED event is processed
+```
+
+### Internal Event Queue
+
+EventMachine maintains an **internal, in-memory event queue** for raised events within a single state machine execution. This is completely separate from Laravel's queue system.
+
+> **Important:** EventMachine's internal queue is NOT related to Laravel's queue system (Redis, database, etc.). It's an in-memory queue that only exists during the current state machine execution cycle.
+
+These internal events:
+
+- Are added to the queue when `raise()` is called during a transition
+- Wait until all entry actions complete
+- Process in FIFO (first-in, first-out) order
+- Follow the same run-to-completion semantics
+- Live only in memory during the current request/execution
+- Are NOT persisted to Redis, database, or any external queue system
+
+```php
+'entry' => [
+    function () {
+        // These are added to the INTERNAL event queue (in-memory)
+        // NOT Laravel's job queue (Redis/database)
+        $this->raise('FIRST');   // Queued first in memory
+        $this->raise('SECOND');  // Queued second in memory
+        Log::info('Entry done'); // Completes before events process
+    }
+]
+
+// Execution order (all happens in the same request):
+// 1. Entry action runs
+// 2. Log output: "Entry done"
+// 3. FIRST event processes (from internal queue)
+// 4. SECOND event processes (from internal queue)
+```
+
+#### Internal Queue vs Laravel Queue
+
+| Feature | Internal Event Queue | Laravel Queue |
+|---------|---------------------|---------------|
+| **Location** | In-memory (current execution) | External (Redis/DB/SQS) |
+| **Lifetime** | Single request/execution cycle | Persistent until processed |
+| **Purpose** | State machine event ordering | Background job processing |
+| **Processing** | Synchronous (immediate) | Asynchronous (workers) |
+| **Persistence** | No persistence | Persisted |
+| **Use Case** | Raised events within machine | Long-running tasks, emails, etc. |
+
+Example showing both:
+
+```php
+'processing' => [
+    'entry' => function (ContextManager $context) {
+        // Internal queue - processes immediately in this execution
+        $this->raise('VALIDATE');
+
+        // Laravel queue - processes later by a worker
+        ProcessLargeFileJob::dispatch($context->fileId)
+            ->onQueue('file-processing');
+    },
+    'on' => [
+        'VALIDATE' => [
+            'target' => 'validated',
+            'actions' => 'runValidation'  // Runs immediately
+        ]
+    ]
+]
+```
+
+### Benefits of Run-to-Completion
+
+This execution model provides several critical advantages:
+
+#### 1. Deterministic Behavior
+The same sequence of events always produces the same result, making debugging and testing straightforward.
+
+#### 2. State Consistency
+The state machine is always in a valid, complete state. No partial transitions or intermediate states exist.
+
+#### 3. Predictable Execution
+You can trace exactly when each action executes, making the system easier to understand and maintain.
+
+#### 4. No Race Conditions
+Events cannot interrupt transitions, preventing concurrent state modifications.
+
+#### 5. Standards Compliance
+Compatible with SCXML, UML, Harel Statecharts, and other major state machine implementations.
+
+### Common Pitfalls
+
+#### Expecting Immediate Event Processing
+
+```php
+// ❌ Common Misconception
+'entry' => function (ContextManager $context) {
+    $this->raise('NEXT');
+    // Next state changes do NOT happen here
+    // The entry action must complete first
+}
+
+// ✅ Correct Understanding
+'entry' => function (ContextManager $context) {
+    $this->raise('NEXT');
+    // Set up state for when NEXT processes
+    $context->readyForNext = true;
+    // Entry completes, THEN NEXT is processed
+}
+```
+
+#### Debugging Raised Events
+
+When debugging, remember that raised events appear "delayed" because entry actions execute first:
+
+```php
+'loading' => [
+    'entry' => function () {
+        Log::debug('1. Entry started');
+        $this->raise('DONE');
+        Log::debug('2. Entry done, event queued');
+    }
+],
+'complete' => [
+    'on' => [
+        'DONE' => [
+            'actions' => function () {
+                Log::debug('3. DONE event processing');
+            }
+        ]
+    ]
+]
+
+// Output:
+// "1. Entry started"
+// "2. Entry done, event queued"
+// "3. DONE event processing"
+```
+
+### Alternative Patterns
+
+If you need different behavior, consider these patterns:
+
+#### Pattern 1: Manual Event After Transition
+
+```php
+// Let the transition complete, then send event manually
+$machine = $machine->send('START');
+// Transition fully completes here
+$machine = $machine->send('NEXT');
+```
+
+#### Pattern 2: Always Transitions
+
+Use `@always` transitions that evaluate after entry actions:
+
+```php
+'ready' => [
+    'entry' => function (ContextManager $context) {
+        $context->shouldProceed = true;
+    },
+    'on' => [
+        '@always' => [
+            [
+                'target' => 'next',
+                'guards' => fn($ctx) => $ctx->shouldProceed
+            ]
+        ]
+    ]
+]
+```
+
+### Testing Event Processing Order
+
+Test that actions execute in the correct order:
+
+```php
+public function test_entry_actions_execute_before_raised_events()
+{
+    $executionOrder = [];
+
+    $machine = MachineDefinition::define([
+        'states' => [
+            'A' => [
+                'on' => [
+                    'GO' => [
+                        'target' => 'B',
+                        'actions' => function ($ctx) use (&$executionOrder) {
+                            $executionOrder[] = 'transition_action';
+                            return $this->raise('NEXT');
+                        }
+                    ]
+                ]
+            ],
+            'B' => [
+                'entry' => fn($ctx) => $executionOrder[] = 'B_entry',
+                'on' => [
+                    'NEXT' => [
+                        'target' => 'C',
+                        'actions' => fn($ctx) => $executionOrder[] = 'next_transition'
+                    ]
+                ]
+            ],
+            'C' => [
+                'entry' => fn($ctx) => $executionOrder[] = 'C_entry'
+            ]
+        ]
+    ]);
+
+    $machine->send('GO');
+
+    // Verify execution order
+    expect($executionOrder)->toBe([
+        'transition_action',  // 1. Transition action (FIRST!)
+        'B_entry',           // 2. Target state entry (before raised event)
+        'next_transition',   // 3. Raised event transition
+        'C_entry'           // 4. Final state entry
+    ]);
+}
+```
+
+### Standards Comparison
+
+EventMachine's behavior aligns with major state machine standards:
+
+| Framework/Standard | Entry Actions First | Run-to-Completion | Internal Events Priority |
+|-------------------|-------------------|------------------|------------------------|
+| **SCXML (W3C)** | ✅ Yes | ✅ Yes | ✅ Yes |
+| **UML 2.5** | ✅ Yes | ✅ Yes | ⚠️ Partially specified |
+| **Harel/STATEMATE** | ✅ Yes | ✅ Yes | ✅ Yes |
+| **EventMachine** | ✅ Yes | ✅ Yes | ✅ Yes (FIFO) |
+
+This consistency ensures that patterns and knowledge transfer across different state machine implementations.
 
 ## Event Sourcing
 
