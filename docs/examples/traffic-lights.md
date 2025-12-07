@@ -1,788 +1,426 @@
-# Traffic Lights State Machine
+# Traffic Lights Example
 
-This example demonstrates a traffic light control system using EventMachine. It showcases hierarchical states, timers, parallel execution, and complex state transitions.
+A comprehensive example demonstrating custom context classes, typed behaviors, events, guards, and actions.
 
-## Basic Traffic Light
+## Overview
 
-Let's start with a simple traffic light that cycles through red, yellow, and green:
+This example models a traffic light counter system with:
+- Custom typed context class with validation
+- Multiple event types (INC, DEX, MUT, ADD, SUB)
+- Validation guard with error messages
+- Type-safe actions using custom context
+
+```mermaid
+stateDiagram-v2
+    [*] --> active
+    active --> active : INC / increment
+    active --> active : DEX / decrement
+    active --> active : MUT [isEven] / multiply
+    active --> active : ADD / addValue
+    active --> active : SUB / subtractValue
+```
+
+## Custom Context Class
 
 ```php
 <?php
 
-namespace App\Machines;
+namespace App\Machines\TrafficLights;
 
-use Tarfinlabs\EventMachine\Actor\Machine;
-use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-
-class SimpleTrafficLightMachine extends Machine
-{
-    public static function definition(): MachineDefinition
-    {
-        return MachineDefinition::define(
-            config: [
-                'initial' => 'red',
-                'states' => [
-                    'red' => [
-                        'on' => [
-                            'TIMER' => 'green'
-                        ]
-                    ],
-                    'green' => [
-                        'on' => [
-                            'TIMER' => 'yellow'
-                        ]
-                    ],
-                    'yellow' => [
-                        'on' => [
-                            'TIMER' => 'red'
-                        ]
-                    ]
-                ]
-            ]
-        );
-    }
-}
-```
-
-### Usage
-
-```php
-$light = SimpleTrafficLightMachine::create();
-echo $light->state->value; // 'red'
-
-$light = $light->send('TIMER');
-echo $light->state->value; // 'green'
-
-$light = $light->send('TIMER');
-echo $light->state->value; // 'yellow'
-
-$light = $light->send('TIMER');
-echo $light->state->value; // 'red'
-```
-
-## Advanced Traffic Light with Context
-
-Let's create a more sophisticated version with timing, counters, and configuration:
-
-```php
-<?php
-
-namespace App\Contexts;
-
-use Tarfinlabs\EventMachine\ContextManager;
 use Spatie\LaravelData\Optional;
+use Tarfinlabs\EventMachine\ContextManager;
 use Spatie\LaravelData\Attributes\Validation\Min;
+use Spatie\LaravelData\Attributes\Validation\IntegerType;
 
-class TrafficLightContext extends ContextManager
+class TrafficLightsContext extends ContextManager
 {
     public function __construct(
+        #[IntegerType]
         #[Min(0)]
-        public int|Optional $cycleCount,
-        #[Min(0)]
-        public int|Optional $redDuration,
-        #[Min(0)]
-        public int|Optional $yellowDuration,
-        #[Min(0)]
-        public int|Optional $greenDuration,
-        public array|Optional $schedule,
-        public bool|Optional $maintenanceMode,
-        public string|Optional $intersectionId,
-        public ?DateTime|Optional $lastStateChange
+        public int|Optional $count,
     ) {
         parent::__construct();
-        
-        // Set defaults
-        if ($this->cycleCount instanceof Optional) {
-            $this->cycleCount = 0;
-        }
-        if ($this->redDuration instanceof Optional) {
-            $this->redDuration = 30; // 30 seconds
-        }
-        if ($this->yellowDuration instanceof Optional) {
-            $this->yellowDuration = 5; // 5 seconds
-        }
-        if ($this->greenDuration instanceof Optional) {
-            $this->greenDuration = 25; // 25 seconds
-        }
-        if ($this->schedule instanceof Optional) {
-            $this->schedule = [];
-        }
-        if ($this->maintenanceMode instanceof Optional) {
-            $this->maintenanceMode = false;
+
+        // Set default value if not provided
+        if ($this->count instanceof Optional) {
+            $this->count = 0;
         }
     }
 
-    public function getCurrentDuration(string $state): int
+    /**
+     * Helper method for business logic.
+     */
+    public function isCountEven(): bool
     {
-        return match($state) {
-            'red' => $this->redDuration,
-            'yellow' => $this->yellowDuration,
-            'green' => $this->greenDuration,
-            default => 30
-        };
-    }
-
-    public function isRushHour(): bool
-    {
-        $hour = now()->hour;
-        return ($hour >= 7 && $hour <= 9) || ($hour >= 17 && $hour <= 19);
-    }
-
-    public function shouldUseNightMode(): bool
-    {
-        $hour = now()->hour;
-        return $hour >= 22 || $hour <= 6;
+        return $this->count % 2 === 0;
     }
 }
 ```
 
-## Complete Traffic Light Machine
+## Event Classes
+
+### Increase Event
 
 ```php
 <?php
 
-namespace App\Machines;
+namespace App\Machines\TrafficLights\Events;
 
-use App\Contexts\TrafficLightContext;
-use App\Actions\TrafficLight\StartTimerAction;
-use App\Actions\TrafficLight\IncrementCycleAction;
-use App\Actions\TrafficLight\LogStateChangeAction;
-use App\Guards\TrafficLight\IsMaintenanceModeGuard;
-use App\Guards\TrafficLight\IsNightModeGuard;
-use Tarfinlabs\EventMachine\Actor\Machine;
-use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
-class TrafficLightMachine extends Machine
+class IncreaseEvent extends EventBehavior
 {
-    public static function definition(): MachineDefinition
+    public static function getType(): string
     {
-        return MachineDefinition::define(
-            config: [
-                'initial' => 'operational',
-                'context' => TrafficLightContext::class,
-                'states' => [
-                    'operational' => [
-                        'initial' => 'red',
-                        'entry' => 'logStateChange',
-                        'states' => [
-                            'red' => [
-                                'entry' => [
-                                    'startTimer',
-                                    'logStateChange'
-                                ],
-                                'on' => [
-                                    'TIMER_EXPIRED' => [
-                                        [
-                                            'target' => '#nightMode',
-                                            'guards' => 'isNightMode'
-                                        ],
-                                        [
-                                            'target' => 'green',
-                                            'actions' => 'incrementCycle'
-                                        ]
-                                    ]
-                                ]
-                            ],
-                            'green' => [
-                                'entry' => [
-                                    'startTimer',
-                                    'logStateChange'
-                                ],
-                                'on' => [
-                                    'TIMER_EXPIRED' => 'yellow',
-                                    'PEDESTRIAN_REQUEST' => [
-                                        'guards' => 'canGrantPedestrianCrossing',
-                                        'actions' => 'schedulePedestrianCrossing'
-                                    ]
-                                ]
-                            ],
-                            'yellow' => [
-                                'entry' => [
-                                    'startTimer',
-                                    'logStateChange'
-                                ],
-                                'on' => [
-                                    'TIMER_EXPIRED' => 'red'
-                                ]
-                            ]
-                        ],
-                        'on' => [
-                            'MAINTENANCE_MODE' => 'maintenance',
-                            'EMERGENCY' => 'emergency'
-                        ]
-                    ],
-                    'nightMode' => [
-                        'id' => 'nightMode',
-                        'entry' => 'startFlashing',
-                        'on' => [
-                            'DAY_MODE' => 'operational.red',
-                            'MAINTENANCE_MODE' => 'maintenance'
-                        ]
-                    ],
-                    'maintenance' => [
-                        'entry' => 'enableMaintenanceMode',
-                        'on' => [
-                            'RESUME_OPERATION' => [
-                                [
-                                    'target' => 'nightMode',
-                                    'guards' => 'isNightMode'
-                                ],
-                                {
-                                    'target' => 'operational.red'
-                                }
-                            ]
-                        ]
-                    ],
-                    'emergency' => [
-                        'entry' => 'activateEmergencyMode',
-                        'on' => [
-                            'CLEAR_EMERGENCY' => 'operational.red'
-                        ]
-                    ]
-                ]
-            ],
-            behavior: [
-                'actions' => [
-                    'startTimer' => StartTimerAction::class,
-                    'incrementCycle' => IncrementCycleAction::class,
-                    'logStateChange' => LogStateChangeAction::class,
-                    'startFlashing' => function (TrafficLightContext $context): void {
-                        Log::info('Traffic light entering night mode - flashing yellow', [
-                            'intersection_id' => $context->intersectionId,
-                            'time' => now()
-                        ]);
-                    },
-                    'enableMaintenanceMode' => function (TrafficLightContext $context): void {
-                        $context->maintenanceMode = true;
-                        $context->lastStateChange = now();
-                        
-                        // Notify maintenance system
-                        event(new TrafficLightMaintenanceActivated($context->intersectionId));
-                    },
-                    'activateEmergencyMode' => function (TrafficLightContext $context): void {
-                        Log::emergency('Traffic light emergency mode activated', [
-                            'intersection_id' => $context->intersectionId,
-                            'time' => now()
-                        ]);
-                        
-                        // Notify emergency services
-                        event(new TrafficLightEmergencyActivated($context->intersectionId));
-                    }
-                ],
-                'guards' => [
-                    'isNightMode' => IsNightModeGuard::class,
-                    'isMaintenanceMode' => IsMaintenanceModeGuard::class,
-                    'canGrantPedestrianCrossing' => function (TrafficLightContext $context): bool {
-                        // Allow pedestrian crossing if green light has been on for at least 10 seconds
-                        return $context->lastStateChange && 
-                               $context->lastStateChange->diffInSeconds(now()) >= 10;
-                    }
-                ]
-            ]
-        );
+        return 'INC';
     }
 }
 ```
 
-## Action Implementations
+### Multiply Event
 
 ```php
 <?php
 
-namespace App\Actions\TrafficLight;
+namespace App\Machines\TrafficLights\Events;
 
-use App\Contexts\TrafficLightContext;
-use App\Jobs\TrafficLightTimerJob;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+
+class MultiplyEvent extends EventBehavior
+{
+    public static function getType(): string
+    {
+        return 'MUT';
+    }
+
+    public function validatePayload(): ?array
+    {
+        return [
+            'factor' => ['sometimes', 'integer', 'min:1'],
+        ];
+    }
+}
+```
+
+### Add Value Event
+
+```php
+<?php
+
+namespace App\Machines\TrafficLights\Events;
+
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+
+class AddValueEvent extends EventBehavior
+{
+    public static function getType(): string
+    {
+        return 'ADD';
+    }
+
+    public function validatePayload(): ?array
+    {
+        return [
+            'value' => ['required', 'integer'],
+        ];
+    }
+}
+```
+
+## Validation Guard
+
+```php
+<?php
+
+namespace App\Machines\TrafficLights\Guards;
+
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
+use App\Machines\TrafficLights\TrafficLightsContext;
+
+class IsEvenGuard extends ValidationGuardBehavior
+{
+    public ?string $errorMessage = 'Count is not even';
+    public bool $shouldLog = true;
+
+    public function __invoke(TrafficLightsContext $context): bool
+    {
+        return $context->count % 2 === 0;
+    }
+}
+```
+
+## Action Classes
+
+### Increment Action
+
+```php
+<?php
+
+namespace App\Machines\TrafficLights\Actions;
+
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use App\Machines\TrafficLights\TrafficLightsContext;
 
-class StartTimerAction extends ActionBehavior
+class IncrementAction extends ActionBehavior
 {
-    public function __invoke(TrafficLightContext $context, $event, $state): void
+    public function __invoke(TrafficLightsContext $context): void
     {
-        $currentState = $state->key;
-        $duration = $context->getCurrentDuration($currentState);
-        
-        // Adjust duration for rush hour
-        if ($context->isRushHour()) {
-            $duration = match($currentState) {
-                'green' => $duration + 15, // Longer green during rush hour
-                'red' => $duration + 10,   // Longer red for cross traffic
-                default => $duration
-            };
-        }
-        
-        // Dispatch timer job
-        TrafficLightTimerJob::dispatch($context->intersectionId, $duration)
-            ->delay($duration);
-            
-        Log::info('Traffic light timer started', [
-            'intersection_id' => $context->intersectionId,
-            'state' => $currentState,
-            'duration' => $duration,
-            'rush_hour_adjustment' => $context->isRushHour()
-        ]);
-    }
-}
-
-class IncrementCycleAction extends ActionBehavior
-{
-    public function __invoke(TrafficLightContext $context): void
-    {
-        $context->cycleCount++;
-        $context->lastStateChange = now();
-        
-        // Log cycle statistics every 100 cycles
-        if ($context->cycleCount % 100 === 0) {
-            Log::info('Traffic light cycle milestone', [
-                'intersection_id' => $context->intersectionId,
-                'total_cycles' => $context->cycleCount,
-                'uptime_hours' => now()->diffInHours($context->lastStateChange)
-            ]);
-        }
-    }
-}
-
-class LogStateChangeAction extends ActionBehavior
-{
-    public function __invoke(TrafficLightContext $context, $event, $state): void
-    {
-        $context->lastStateChange = now();
-        
-        Log::info('Traffic light state changed', [
-            'intersection_id' => $context->intersectionId,
-            'new_state' => $state->key,
-            'event' => $event->type ?? 'entry',
-            'cycle_count' => $context->cycleCount,
-            'timestamp' => now()
-        ]);
+        $context->count++;
     }
 }
 ```
 
-## Guard Implementations
+### Decrement Action
 
 ```php
 <?php
 
-namespace App\Guards\TrafficLight;
+namespace App\Machines\TrafficLights\Actions;
 
-use App\Contexts\TrafficLightContext;
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use App\Machines\TrafficLights\TrafficLightsContext;
 
-class IsNightModeGuard extends GuardBehavior
+class DecrementAction extends ActionBehavior
 {
-    public function __invoke(TrafficLightContext $context): bool
+    public function __invoke(TrafficLightsContext $context): void
     {
-        return $context->shouldUseNightMode();
-    }
-}
-
-class IsMaintenanceModeGuard extends GuardBehavior
-{
-    public function __invoke(TrafficLightContext $context): bool
-    {
-        return $context->maintenanceMode;
+        $context->count--;
     }
 }
 ```
 
-## Timer Job Implementation
+### Multiply By Two Action
 
 ```php
 <?php
 
-namespace App\Jobs;
+namespace App\Machines\TrafficLights\Actions;
 
-use App\Machines\TrafficLightMachine;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use App\Machines\TrafficLights\TrafficLightsContext;
 
-class TrafficLightTimerJob implements ShouldQueue
+class MultiplyByTwoAction extends ActionBehavior
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    public function __construct(
-        private string $intersectionId,
-        private int $duration
-    ) {}
-
-    public function handle(): void
+    public function __invoke(TrafficLightsContext $context): void
     {
-        try {
-            $trafficLight = TrafficLightMachine::find($this->intersectionId);
-            
-            if ($trafficLight) {
-                $trafficLight->send('TIMER_EXPIRED');
-                
-                Log::debug('Traffic light timer expired', [
-                    'intersection_id' => $this->intersectionId,
-                    'duration' => $this->duration
-                ]);
-            }
-        } catch (Exception $e) {
-            Log::error('Traffic light timer job failed', [
-                'intersection_id' => $this->intersectionId,
-                'error' => $e->getMessage()
-            ]);
-            
-            // Retry the job
-            $this->fail($e);
-        }
+        $context->count *= 2;
     }
 }
 ```
 
-## Intersection with Multiple Traffic Lights
+### Add Value Action
 
 ```php
 <?php
 
-namespace App\Machines;
+namespace App\Machines\TrafficLights\Actions;
+
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use App\Machines\TrafficLights\TrafficLightsContext;
+
+class AddValueAction extends ActionBehavior
+{
+    public function __invoke(
+        TrafficLightsContext $context,
+        EventBehavior $event
+    ): void {
+        $context->count += $event->payload['value'];
+    }
+}
+```
+
+## Machine Definition
+
+```php
+<?php
+
+namespace App\Machines\TrafficLights;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use App\Machines\TrafficLights\Guards\IsEvenGuard;
+use App\Machines\TrafficLights\Events\AddValueEvent;
+use App\Machines\TrafficLights\Events\IncreaseEvent;
+use App\Machines\TrafficLights\Events\MultiplyEvent;
+use App\Machines\TrafficLights\Actions\AddValueAction;
+use App\Machines\TrafficLights\Actions\DecrementAction;
+use App\Machines\TrafficLights\Actions\IncrementAction;
+use App\Machines\TrafficLights\Actions\MultiplyByTwoAction;
 
-class IntersectionMachine extends Machine
+class TrafficLightsMachine extends Machine
 {
     public static function definition(): MachineDefinition
     {
         return MachineDefinition::define(
             config: [
-                'initial' => 'normalOperation',
-                'context' => [
-                    'intersectionId' => null,
-                    'trafficLights' => [],
-                    'pedestrianSignals' => [],
-                    'emergencyOverride' => false
-                ],
-                'states' => [
-                    'normalOperation' => [
-                        'type' => 'parallel',
-                        'states' => [
-                            'northSouth' => [
-                                'initial' => 'red',
-                                'states' => [
-                                    'red' => [
-                                        'entry' => 'startNSTimer',
-                                        'on' => ['NS_TIMER_EXPIRED' => 'green']
-                                    ],
-                                    'green' => [
-                                        'entry' => 'startNSTimer',
-                                        'on' => ['NS_TIMER_EXPIRED' => 'yellow']
-                                    ],
-                                    'yellow' => [
-                                        'entry' => 'startNSTimer',
-                                        'on' => ['NS_TIMER_EXPIRED' => 'red']
-                                    ]
-                                ]
+                'initial' => 'active',
+                'context' => TrafficLightsContext::class,
+                'states'  => [
+                    'active' => [
+                        'on' => [
+                            // Guarded multiply - only when count is even
+                            'MUT' => [
+                                'guards'  => IsEvenGuard::class,
+                                'actions' => [
+                                    MultiplyByTwoAction::class,
+                                    'doNothingAction', // Inline closure
+                                ],
                             ],
-                            'eastWest' => [
-                                'initial' => 'green',
-                                'states' => [
-                                    'red' => [
-                                        'entry' => 'startEWTimer',
-                                        'on' => ['EW_TIMER_EXPIRED' => 'green']
-                                    ],
-                                    'green' => [
-                                        'entry' => 'startEWTimer',
-                                        'on' => ['EW_TIMER_EXPIRED' => 'yellow']
-                                    ],
-                                    'yellow' => [
-                                        'entry' => 'startEWTimer',
-                                        'on' => ['EW_TIMER_EXPIRED' => 'red']
-                                    ]
-                                ]
-                            ]
+                            // Event class as key - auto-registered
+                            IncreaseEvent::class => [
+                                'actions' => IncrementAction::class
+                            ],
+                            // String event type
+                            'DEX' => [
+                                'actions' => DecrementAction::class
+                            ],
+                            // Event with payload
+                            AddValueEvent::class => [
+                                'actions' => AddValueAction::class
+                            ],
                         ],
-                        'on' => [
-                            'EMERGENCY_OVERRIDE' => 'emergencyOperation'
-                        ]
                     ],
-                    'emergencyOperation' => [
-                        'entry' => 'activateEmergencySequence',
-                        'on' => [
-                            'CLEAR_EMERGENCY' => 'normalOperation'
-                        ]
-                    ]
-                ]
+                ],
             ],
             behavior: [
+                'events' => [
+                    'MUT' => MultiplyEvent::class,
+                ],
                 'actions' => [
-                    'startNSTimer' => function ($context, $event, $state): void {
-                        // Start timer for North-South lights
-                        $duration = $this->getTimingForState('northSouth', $state->key);
-                        TrafficLightTimerJob::dispatch("ns_{$context->intersectionId}", $duration)
-                            ->delay($duration);
+                    'doNothingAction' => function (): void {
+                        // Inline action - does nothing
                     },
-                    'startEWTimer' => function ($context, $event, $state): void {
-                        // Start timer for East-West lights  
-                        $duration = $this->getTimingForState('eastWest', $state->key);
-                        TrafficLightTimerJob::dispatch("ew_{$context->intersectionId}", $duration)
-                            ->delay($duration);
-                    },
-                    'activateEmergencySequence' => function ($context): void {
-                        // All lights to red, then clear for emergency vehicles
-                        Log::emergency('Intersection emergency override activated', [
-                            'intersection_id' => $context->intersectionId
-                        ]);
-                        
-                        $context->emergencyOverride = true;
-                    }
-                ]
-            ]
+                ],
+            ],
         );
     }
 }
 ```
 
-## Laravel Integration Examples
+## Usage Examples
 
-### Controller
+### Basic Operations
 
 ```php
-<?php
+// Create machine
+$machine = TrafficLightsMachine::create();
 
-namespace App\Http\Controllers;
+// Initial state
+expect($machine->state->context->count)->toBe(0);
+expect($machine->state->matches('active'))->toBeTrue();
 
-use App\Machines\TrafficLightMachine;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+// Increment
+$machine->send(['type' => 'INC']);
+expect($machine->state->context->count)->toBe(1);
 
-class TrafficLightController extends Controller
-{
-    public function createIntersection(Request $request): JsonResponse
-    {
-        $request->validate([
-            'intersection_id' => 'required|string|unique:traffic_lights',
-            'red_duration' => 'integer|min:5|max:120',
-            'yellow_duration' => 'integer|min:3|max:10', 
-            'green_duration' => 'integer|min:5|max:120'
-        ]);
+// Decrement
+$machine->send(['type' => 'DEX']);
+expect($machine->state->context->count)->toBe(0);
+```
 
-        $trafficLight = TrafficLightMachine::create([
-            'intersectionId' => $request->intersection_id,
-            'redDuration' => $request->red_duration ?? 30,
-            'yellowDuration' => $request->yellow_duration ?? 5,
-            'greenDuration' => $request->green_duration ?? 25
-        ]);
+### Using Event Classes
 
-        return response()->json([
-            'intersection_id' => $trafficLight->state->context->intersectionId,
-            'current_state' => $trafficLight->state->value,
-            'cycle_count' => $trafficLight->state->context->cycleCount
-        ]);
-    }
+```php
+use App\Machines\TrafficLights\Events\IncreaseEvent;
+use App\Machines\TrafficLights\Events\AddValueEvent;
 
-    public function getStatus(string $intersectionId): JsonResponse
-    {
-        $trafficLight = TrafficLightMachine::find($intersectionId);
+$machine = TrafficLightsMachine::create();
 
-        if (!$trafficLight) {
-            return response()->json(['error' => 'Intersection not found'], 404);
-        }
+// Send using event class
+$machine->send(IncreaseEvent::class);
+expect($machine->state->context->count)->toBe(1);
 
-        return response()->json([
-            'intersection_id' => $intersectionId,
-            'current_state' => $trafficLight->state->value,
-            'cycle_count' => $trafficLight->state->context->cycleCount,
-            'maintenance_mode' => $trafficLight->state->context->maintenanceMode,
-            'last_state_change' => $trafficLight->state->context->lastStateChange
-        ]);
-    }
+// Send with payload
+$machine->send([
+    'type' => AddValueEvent::class,
+    'payload' => ['value' => 10],
+]);
+expect($machine->state->context->count)->toBe(11);
+```
 
-    public function triggerMaintenance(string $intersectionId): JsonResponse
-    {
-        $trafficLight = TrafficLightMachine::find($intersectionId);
+### Guarded Transitions
 
-        if (!$trafficLight) {
-            return response()->json(['error' => 'Intersection not found'], 404);
-        }
+```php
+$machine = TrafficLightsMachine::create();
 
-        $trafficLight = $trafficLight->send('MAINTENANCE_MODE');
+// Count is 0 (even) - multiply works
+$machine->send(['type' => 'MUT']);
+expect($machine->state->context->count)->toBe(0); // 0 * 2 = 0
 
-        return response()->json([
-            'message' => 'Maintenance mode activated',
-            'current_state' => $trafficLight->state->value
-        ]);
-    }
+// Increment to 1
+$machine->send(['type' => 'INC']);
+expect($machine->state->context->count)->toBe(1);
 
-    public function triggerEmergency(string $intersectionId): JsonResponse
-    {
-        $trafficLight = TrafficLightMachine::find($intersectionId);
-
-        if (!$trafficLight) {
-            return response()->json(['error' => 'Intersection not found'], 404);
-        }
-
-        $trafficLight = $trafficLight->send('EMERGENCY');
-
-        return response()->json([
-            'message' => 'Emergency mode activated',
-            'current_state' => $trafficLight->state->value
-        ]);
-    }
+// Count is 1 (odd) - multiply blocked by guard
+try {
+    $machine->send(['type' => 'MUT']);
+} catch (MachineValidationException $e) {
+    expect($e->getMessage())->toContain('Count is not even');
 }
 ```
 
-### Command for Managing Traffic Lights
+### Context Helper Methods
 
 ```php
-<?php
+$machine = TrafficLightsMachine::create();
 
-namespace App\Console\Commands;
+// Use context helper method
+expect($machine->state->context->isCountEven())->toBeTrue();
 
-use App\Machines\TrafficLightMachine;
-use Illuminate\Console\Command;
-
-class TrafficLightCommand extends Command
-{
-    protected $signature = 'traffic-light {action} {intersection_id?}';
-    protected $description = 'Manage traffic light intersections';
-
-    public function handle(): int
-    {
-        $action = $this->argument('action');
-        $intersectionId = $this->argument('intersection_id');
-
-        return match($action) {
-            'list' => $this->listIntersections(),
-            'status' => $this->showStatus($intersectionId),
-            'maintenance' => $this->enableMaintenance($intersectionId),
-            'resume' => $this->resumeOperation($intersectionId),
-            default => $this->error('Unknown action')
-        };
-    }
-
-    private function listIntersections(): int
-    {
-        // This would typically query a database of traffic light machines
-        $this->info('Active Traffic Light Intersections:');
-        $this->table(['ID', 'State', 'Cycles', 'Last Change'], [
-            // Sample data - in real app, query from storage
-        ]);
-        
-        return 0;
-    }
-
-    private function showStatus(?string $intersectionId): int
-    {
-        if (!$intersectionId) {
-            $this->error('Intersection ID required for status command');
-            return 1;
-        }
-
-        $trafficLight = TrafficLightMachine::find($intersectionId);
-        
-        if (!$trafficLight) {
-            $this->error("Intersection {$intersectionId} not found");
-            return 1;
-        }
-
-        $context = $trafficLight->state->context;
-        
-        $this->info("Traffic Light Status for {$intersectionId}:");
-        $this->line("Current State: {$trafficLight->state->value}");
-        $this->line("Cycle Count: {$context->cycleCount}");
-        $this->line("Maintenance Mode: " . ($context->maintenanceMode ? 'YES' : 'NO'));
-        $this->line("Last State Change: {$context->lastStateChange}");
-        
-        return 0;
-    }
-}
+$machine->send(['type' => 'INC']);
+expect($machine->state->context->isCountEven())->toBeFalse();
 ```
 
 ## Testing
 
 ```php
-<?php
+use App\Machines\TrafficLights\TrafficLightsMachine;
+use App\Machines\TrafficLights\Actions\IncrementAction;
+use App\Machines\TrafficLights\Guards\IsEvenGuard;
 
-namespace Tests\Feature;
+it('increments count', function () {
+    $machine = TrafficLightsMachine::create();
 
-use Tests\TestCase;
-use App\Machines\TrafficLightMachine;
-use Illuminate\Support\Facades\Queue;
+    $machine->send(['type' => 'INC']);
+    $machine->send(['type' => 'INC']);
 
-class TrafficLightMachineTest extends TestCase
-{
-    public function test_traffic_light_starts_in_red_state()
-    {
-        $light = TrafficLightMachine::create(['intersectionId' => 'test-001']);
-        
-        $this->assertEquals('operational.red', $light->state->value);
-        $this->assertEquals(0, $light->state->context->cycleCount);
-    }
+    expect($machine->state->context->count)->toBe(2);
+});
 
-    public function test_traffic_light_cycles_correctly()
-    {
-        $light = TrafficLightMachine::create(['intersectionId' => 'test-001']);
-        
-        // Red -> Green
-        $light = $light->send('TIMER_EXPIRED');
-        $this->assertEquals('operational.green', $light->state->value);
-        $this->assertEquals(1, $light->state->context->cycleCount);
-        
-        // Green -> Yellow
-        $light = $light->send('TIMER_EXPIRED');
-        $this->assertEquals('operational.yellow', $light->state->value);
-        
-        // Yellow -> Red
-        $light = $light->send('TIMER_EXPIRED');
-        $this->assertEquals('operational.red', $light->state->value);
-    }
+it('uses typed context', function () {
+    $machine = TrafficLightsMachine::create();
 
-    public function test_maintenance_mode_can_be_activated()
-    {
-        $light = TrafficLightMachine::create(['intersectionId' => 'test-001']);
-        
-        $light = $light->send('MAINTENANCE_MODE');
-        
-        $this->assertEquals('maintenance', $light->state->value);
-        $this->assertTrue($light->state->context->maintenanceMode);
-    }
+    expect($machine->state->context)
+        ->toBeInstanceOf(TrafficLightsContext::class);
+});
 
-    public function test_night_mode_activation()
-    {
-        // Mock night time
-        $this->travelTo(now()->setHour(2));
-        
-        $light = TrafficLightMachine::create(['intersectionId' => 'test-001']);
-        $light = $light->send('TIMER_EXPIRED');
-        
-        $this->assertEquals('nightMode', $light->state->value);
-    }
+it('blocks multiply when odd', function () {
+    $machine = TrafficLightsMachine::create();
+    $machine->send(['type' => 'INC']); // count = 1
 
-    public function test_timer_jobs_are_dispatched()
-    {
-        Queue::fake();
-        
-        $light = TrafficLightMachine::create(['intersectionId' => 'test-001']);
-        
-        // Timer should be started on state entry
-        Queue::assertPushed(TrafficLightTimerJob::class);
-    }
-}
+    expect(fn() => $machine->send(['type' => 'MUT']))
+        ->toThrow(MachineValidationException::class);
+});
+
+it('allows multiply when even', function () {
+    $machine = TrafficLightsMachine::create();
+    $machine->send(['type' => 'INC']); // count = 1
+    $machine->send(['type' => 'INC']); // count = 2
+
+    $machine->send(['type' => 'MUT']);
+
+    expect($machine->state->context->count)->toBe(4);
+});
 ```
 
 ## Key Concepts Demonstrated
 
-This traffic light example showcases:
-
-1. **Hierarchical States**: Operational state contains red/green/yellow substates
-2. **Parallel States**: Multiple traffic lights operating simultaneously  
-3. **Timed Transitions**: Using Laravel jobs for timer-based state changes
-4. **Context-Driven Logic**: Rush hour adjustments and night mode
-5. **Guard Conditions**: Preventing certain transitions based on context
-6. **Entry/Exit Actions**: Automatic actions when entering/leaving states
-7. **Emergency Handling**: Override mechanisms for emergency situations
-8. **Laravel Integration**: Controllers, commands, jobs, and events
-9. **Real-world Complexity**: Maintenance modes, logging, and error handling
-
-The traffic light pattern is excellent for any time-based system with cyclical behavior, such as:
-- Manufacturing process control
-- Automated task scheduling  
-- System monitoring and alerting
-- Game state management
-- Workflow automation
+1. **Custom Context Class** - Type-safe context with validation attributes
+2. **Event Behavior Classes** - Reusable event definitions with validation
+3. **Validation Guard** - Guard with error message when condition fails
+4. **Typed Actions** - Actions using custom context type hints
+5. **Mixed Behavior Registration** - Both class-based and inline behaviors
+6. **Event Class Keys** - Using event classes directly as transition keys
