@@ -10,12 +10,14 @@ use JsonSerializable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Casts\MachineCast;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Illuminate\Contracts\Database\Eloquent\Castable;
+use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Traits\ResolvesBehaviors;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
@@ -274,10 +276,16 @@ class Machine implements Castable, JsonSerializable, Stringable
      */
     public function restoreStateFromRootEventId(string $key): State
     {
+        // First, try to find events in the active table
         $machineEvents = MachineEvent::query()
             ->where('root_event_id', $key)
             ->oldest('sequence_number')
             ->get();
+
+        // If not found in active table, check archive
+        if ($machineEvents->isEmpty()) {
+            $machineEvents = $this->restoreFromArchive($key);
+        }
 
         if ($machineEvents->isEmpty()) {
             throw RestoringStateException::build('Machine state is not found.');
@@ -291,6 +299,24 @@ class Machine implements Castable, JsonSerializable, Stringable
             currentEventBehavior: $this->restoreCurrentEventBehavior($lastMachineEvent),
             history: $machineEvents,
         );
+    }
+
+    /**
+     * Restores machine events from the archive table.
+     *
+     * This method looks up the archived events by root_event_id, decompresses them,
+     * and returns them as an EventCollection for transparent operation.
+     *
+     * @param  string  $rootEventId  The root event identifier.
+     *
+     * @return EventCollection The restored machine events.
+     */
+    protected function restoreFromArchive(string $rootEventId): EventCollection
+    {
+        $archiveService = new ArchiveService();
+        $events         = $archiveService->restoreMachine($rootEventId, true);
+
+        return $events ?? new EventCollection([]);
     }
 
     /**

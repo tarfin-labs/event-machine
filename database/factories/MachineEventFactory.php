@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Database\Factories;
 
 use Symfony\Component\Uid\Ulid;
+use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -33,7 +34,8 @@ class MachineEventFactory extends Factory
             'machine_value' => [
                 $this->faker->word().'_state',
             ],
-            'type' => mb_strtoupper(
+            'source' => $this->faker->randomElement(SourceType::cases()),
+            'type'   => mb_strtoupper(
                 implode(
                     separator: '_',
                     array: $this->faker->words($this->faker->numberBetween(1, 3))
@@ -48,6 +50,11 @@ class MachineEventFactory extends Factory
                 $this->faker->word(),
                 $this->faker->word(),
             ],
+            'meta' => [
+                $this->faker->word(),
+                $this->faker->word(),
+            ],
+            'root_event_id' => Ulid::generate(),
         ];
     }
 }
