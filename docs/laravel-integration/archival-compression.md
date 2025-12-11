@@ -318,23 +318,261 @@ php artisan machine:archive-events --queue
 ],
 ```
 
+## Real-World Scenarios
+
+### High-Volume Order Processing
+
+For e-commerce systems with thousands of orders daily:
+
+```php
+// config/machine.php
+'machine_overrides' => [
+    'order_processing' => [
+        'days_inactive' => 14,      // Archive completed orders faster
+        'compression_level' => 6,    // Good balance
+    ],
+],
+```
+
+**Expected results:**
+- 10,000 orders/day × 50 events/order = 500,000 events/day
+- After 14 days archival: ~7M events in active table
+- Compression savings: ~85% (from 2GB to 300MB archived)
+
+### Compliance & Audit Systems
+
+For financial services requiring long-term retention:
+
+```php
+'machine_overrides' => [
+    'financial_transaction' => [
+        'days_inactive' => 365,           // Keep active for 1 year
+        'compression_level' => 9,          // Maximum compression
+        'archive_retention_days' => 2555,  // 7 years retention
+    ],
+    'audit_log' => [
+        'enabled' => false,  // Never archive audit trails
+    ],
+],
+```
+
+### Multi-Tenant SaaS Application
+
+Different archival strategies per tenant tier:
+
+```php
+// Dynamic configuration based on tenant
+$tenantConfig = match ($tenant->plan) {
+    'enterprise' => ['days_inactive' => 90, 'archive_retention_days' => 365],
+    'business'   => ['days_inactive' => 30, 'archive_retention_days' => 180],
+    'starter'    => ['days_inactive' => 7, 'archive_retention_days' => 30],
+};
+
+$service = new ArchiveService($tenantConfig);
+```
+
+### Microservices with Shared Database
+
+When multiple services share the event store:
+
+```php
+// Schedule different services at different times
+$schedule->command('machine:archive-events --force')
+    ->daily()
+    ->at('02:00')  // Service A
+    ->environments(['production']);
+
+// Or use queue with service-specific priorities
+ArchiveMachineEventsJob::dispatch()
+    ->onQueue('archival-low-priority');
+```
+
+## Performance Tuning
+
+### Compression Level Selection
+
+| Scenario | Recommended Level | Rationale |
+|----------|------------------|-----------|
+| Real-time archival | 1-3 | Speed matters more than size |
+| Nightly batch jobs | 6 | Good balance (default) |
+| Storage-constrained | 9 | Maximum compression |
+| SSD storage | 4-6 | Fast I/O compensates |
+| HDD storage | 7-9 | Minimize disk usage |
+
+### Batch Size Optimization
+
+```php
+// Small batches - less memory, more queries
+'batch_size' => 50,   // Memory-constrained environments
+
+// Large batches - faster, more memory
+'batch_size' => 500,  // Dedicated archival workers
+```
+
+**Memory estimation:**
+- ~100KB per machine in batch (average)
+- 100 batch size ≈ 10MB memory
+- 500 batch size ≈ 50MB memory
+
+### Index Strategy
+
+Ensure these indexes exist for optimal performance:
+
+```sql
+-- For finding archival candidates
+CREATE INDEX idx_machine_events_last_activity
+ON machine_events (root_event_id, created_at);
+
+-- For archive lookups
+CREATE INDEX idx_archives_machine_archived
+ON machine_event_archives (machine_id, archived_at);
+```
+
+### Query Optimization for Large Tables
+
+```php
+// Instead of loading all eligible machines at once
+$service = new ArchiveService();
+
+// Process in chunks
+$eligible = $service->getEligibleMachines(limit: 100);
+
+while ($eligible->isNotEmpty()) {
+    $rootIds = $eligible->pluck('root_event_id')->toArray();
+    $service->batchArchive($rootIds);
+
+    $eligible = $service->getEligibleMachines(limit: 100);
+}
+```
+
+## Storage Estimation
+
+### Calculate Current Storage
+
+```php
+use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Support\CompressionManager;
+
+// Sample 100 machines for estimation
+$samples = MachineEvent::selectRaw('root_event_id, COUNT(*) as count')
+    ->groupBy('root_event_id')
+    ->limit(100)
+    ->get();
+
+$totalEstimate = 0;
+$compressedEstimate = 0;
+
+foreach ($samples as $sample) {
+    $events = MachineEvent::where('root_event_id', $sample->root_event_id)
+        ->get()
+        ->toArray();
+
+    $stats = CompressionManager::getCompressionStats($events);
+    $totalEstimate += $stats['original_size'];
+    $compressedEstimate += $stats['compressed_size'];
+}
+
+$ratio = $compressedEstimate / $totalEstimate;
+echo "Estimated compression ratio: " . round($ratio * 100) . "%";
+echo "Potential savings: " . round((1 - $ratio) * 100) . "%";
+```
+
+### Project Future Storage
+
+```php
+// Current stats
+$currentEvents = MachineEvent::count();
+$avgEventSize = 500; // bytes, estimate from sampling
+$growthRate = 10000; // events per day
+
+// Project 30 days
+$futureEvents = $currentEvents + ($growthRate * 30);
+$uncompressedSize = $futureEvents * $avgEventSize;
+$compressedSize = $uncompressedSize * 0.15; // 85% compression
+
+echo "30-day projection without archival: " .
+    round($uncompressedSize / 1024 / 1024 / 1024, 2) . " GB";
+echo "30-day projection with archival: " .
+    round($compressedSize / 1024 / 1024 / 1024, 2) . " GB";
+```
+
 ## Troubleshooting
 
 ### Events Not Archiving
 
-1. Check if archival is enabled
-2. Verify `days_inactive` setting
-3. Check for recent activity on the machine
-4. Look for errors in logs
+1. Check if archival is enabled:
+   ```php
+   dd(config('machine.archival.enabled'));
+   ```
+
+2. Verify `days_inactive` setting:
+   ```php
+   $service = new ArchiveService();
+   $eligible = $service->getEligibleMachines();
+   dd($eligible->count()); // Should be > 0
+   ```
+
+3. Check for recent activity on the machine:
+   ```sql
+   SELECT root_event_id, MAX(created_at) as last_activity
+   FROM machine_events
+   GROUP BY root_event_id
+   HAVING last_activity < DATE_SUB(NOW(), INTERVAL 30 DAY);
+   ```
+
+4. Look for errors in logs:
+   ```bash
+   grep -i "archive" storage/logs/laravel.log
+   ```
 
 ### Slow Restoration
 
-1. Consider reducing compression level
-2. Check database indexes
-3. Monitor disk I/O
+1. Consider reducing compression level for frequently accessed machines
+2. Check database indexes on `machine_event_archives`
+3. Monitor disk I/O during restoration
+4. Check if restore cooldown is causing repeated restores
 
 ### High CPU During Archival
 
-1. Lower compression level
-2. Reduce batch size
-3. Run during off-peak hours
+1. Lower compression level:
+   ```env
+   MACHINE_EVENTS_COMPRESSION_LEVEL=3
+   ```
+
+2. Reduce batch size:
+   ```env
+   MACHINE_EVENTS_ARCHIVAL_BATCH_SIZE=25
+   ```
+
+3. Run during off-peak hours via scheduler
+
+### Archive Thrashing (Frequent Restore/Archive Cycles)
+
+If machines are being archived and restored repeatedly:
+
+```php
+// Increase cooldown period
+'restore_cooldown_hours' => 72, // 3 days
+
+// Or increase days_inactive for specific machines
+'machine_overrides' => [
+    'frequently_accessed' => [
+        'days_inactive' => 90,
+    ],
+],
+```
+
+### Disk Space Not Decreasing After Archival
+
+Original events are deleted after archival, but:
+1. MySQL may not immediately reclaim space - run `OPTIMIZE TABLE machine_events`
+2. Check if transactions are holding locks
+3. Verify archival completed successfully in logs
+
+## API Reference
+
+For detailed API documentation, see:
+
+- [ArchiveService](/api-reference/archive-service) - Core archival operations
+- [MachineEventArchive](/api-reference/machine-event-archive) - Archive model
+- [CompressionManager](/api-reference/compression-manager) - Compression utilities
