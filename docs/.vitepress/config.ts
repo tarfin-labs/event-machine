@@ -126,6 +126,9 @@ export default withMermaid(
             { text: 'TransitionDefinition', link: '/api-reference/transition-definition' },
             { text: 'ContextManager', link: '/api-reference/context-manager' },
             { text: 'Behaviors', link: '/api-reference/behaviors' },
+            { text: 'ArchiveService', link: '/api-reference/archive-service' },
+            { text: 'MachineEventArchive', link: '/api-reference/machine-event-archive' },
+            { text: 'CompressionManager', link: '/api-reference/compression-manager' },
             { text: 'Exceptions', link: '/api-reference/exceptions' }
           ]
         },
