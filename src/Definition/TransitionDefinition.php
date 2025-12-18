@@ -179,7 +179,10 @@ class TransitionDefinition
                 );
 
                 // Execute the guard behavior
-                $guardResult = ($guardBehavior)(...$guardBehaviorParameters);
+                $guardResult = match (true) {
+                    $guardBehavior instanceof InvokableBehavior => $guardBehavior::run(...$guardBehaviorParameters),
+                    default                                     => ($guardBehavior)(...$guardBehaviorParameters),
+                };
 
                 if ($guardResult === false) {
                     $guardsPassed = false;
@@ -255,7 +258,11 @@ class TransitionDefinition
                     actionArguments: $calculatorArguments,
                 );
 
-                ($calculatorBehavior)(...$calculatorParameters);
+                if ($calculatorBehavior instanceof InvokableBehavior) {
+                    $calculatorBehavior::run(...$calculatorParameters);
+                } else {
+                    ($calculatorBehavior)(...$calculatorParameters);
+                }
 
                 $state->setInternalEventBehavior(
                     type: InternalEvent::CALCULATOR_PASS,

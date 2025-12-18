@@ -739,7 +739,11 @@ class MachineDefinition
         );
 
         // Execute the action behavior
-        ($actionBehavior)(...$actionBehaviorParemeters);
+        if ($actionBehavior instanceof InvokableBehavior) {
+            $actionBehavior::run(...$actionBehaviorParemeters);
+        } else {
+            ($actionBehavior)(...$actionBehaviorParemeters);
+        }
 
         // Get the number of events in the queue after the action is executed.
         $newNumberOfEventsInQueue = $this->eventQueue->count();
