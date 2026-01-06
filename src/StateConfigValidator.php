@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine;
 
 use InvalidArgumentException;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
 class StateConfigValidator
 {
