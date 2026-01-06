@@ -167,7 +167,7 @@ class Machine implements Castable, JsonSerializable, Stringable
     public function send(
         EventBehavior|array|string $event,
     ): State {
-        if ($this->state !== null) {
+        if ($this->state instanceof State) {
             $lock = Cache::lock('mre:'.$this->state->history->first()->root_event_id, 60);
         }
 
@@ -176,7 +176,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         }
 
         try {
-            $lastPreviousEventNumber = $this->state !== null
+            $lastPreviousEventNumber = $this->state instanceof State
                 ? $this->state->history->last()->sequence_number
                 : 0;
 
@@ -186,7 +186,7 @@ class Machine implements Castable, JsonSerializable, Stringable
             }
 
             $this->state = match (true) {
-                $event->isTransactional ?? false => DB::transaction(fn () => $this->definition->transition($event, $this->state)),
+                $event->isTransactional ?? false => DB::transaction(fn (): State => $this->definition->transition($event, $this->state)),
                 default                          => $this->definition->transition($event, $this->state)
             };
 
@@ -227,7 +227,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         $lastHistoryEvent = $this->state->history->last();
 
         MachineEvent::upsert(
-            values: $this->state->history->map(function (MachineEvent $machineEvent, int $index) use (&$incrementalContext, $lastHistoryEvent) {
+            values: $this->state->history->map(function (MachineEvent $machineEvent, int $index) use (&$incrementalContext, $lastHistoryEvent): array {
                 // Get the context of the current machine event.
                 $changes = $machineEvent->context;
 
@@ -250,7 +250,7 @@ class Machine implements Castable, JsonSerializable, Stringable
                     'context'       => json_encode($machineEvent->context, JSON_THROW_ON_ERROR),
                     'meta'          => json_encode($machineEvent->meta, JSON_THROW_ON_ERROR),
                 ]);
-            })->toArray(),
+            })->all(),
             uniqueBy: ['id']
         );
 
@@ -418,9 +418,9 @@ class Machine implements Castable, JsonSerializable, Stringable
         $failedGuardEvents = $this
             ->state
             ->history
-            ->filter(fn (MachineEvent $machineEvent) => $machineEvent->sequence_number > $lastPreviousEventNumber)
-            ->filter(fn (MachineEvent $machineEvent) => preg_match("/{$machineId}\.guard\..*\.fail/", $machineEvent->type))
-            ->filter(function (MachineEvent $machineEvent) {
+            ->filter(fn (MachineEvent $machineEvent): bool => $machineEvent->sequence_number > $lastPreviousEventNumber)
+            ->filter(fn (MachineEvent $machineEvent): int|false => preg_match("/{$machineId}\.guard\..*\.fail/", $machineEvent->type))
+            ->filter(function (MachineEvent $machineEvent): bool {
                 $failedGuardType  = explode('.', $machineEvent->type)[2];
                 $failedGuardClass = $this->definition->behavior[BehaviorType::Guard->value][$failedGuardType];
 
@@ -480,7 +480,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      */
     public function __toString(): string
     {
-        return $this->state->history->first()->root_event_id ?? '';
+        return (string) ($this->state->history->first()->root_event_id ?? '');
     }
 
     // endregion
@@ -513,8 +513,8 @@ class Machine implements Castable, JsonSerializable, Stringable
         $resultBehavior = $behaviorDefinition[$id];
         if (!is_callable($resultBehavior)) {
             // If the result behavior contains a colon, it means that it has a parameter.
-            if (str_contains($resultBehavior, ':')) {
-                [$resultBehavior, $arguments] = explode(':', $resultBehavior);
+            if (str_contains((string) $resultBehavior, ':')) {
+                [$resultBehavior, $arguments] = explode(':', (string) $resultBehavior);
             }
 
             $resultBehavior = new $resultBehavior();
@@ -541,7 +541,7 @@ class Machine implements Castable, JsonSerializable, Stringable
                     $difference[$key] = $value;
                 } else {
                     $new_diff = $this->arrayRecursiveDiff($value, $array2[$key]);
-                    if (!empty($new_diff)) {
+                    if ($new_diff !== []) {
                         $difference[$key] = $new_diff;
                     }
                 }

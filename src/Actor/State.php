@@ -132,7 +132,7 @@ class State
             ])
         );
 
-        if ($shouldLog === true) {
+        if ($shouldLog) {
             Log::debug("[{$rootEventId}] {$currentEventBehavior->type}");
         }
 

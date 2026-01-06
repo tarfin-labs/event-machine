@@ -63,7 +63,7 @@ class ArchiveStatusCommand extends Command
 
         // Recent archival activity
         $recentArchives = MachineEventArchive::query()
-            ->orderBy('archived_at', 'desc')
+            ->latest('archived_at')
             ->limit(10)
             ->get(['machine_id', 'event_count', 'compression_level', 'savings_percent', 'archived_at', 'restore_count', 'last_restored_at']);
 
@@ -72,7 +72,7 @@ class ArchiveStatusCommand extends Command
             $this->info('Recent Archival Activity (Last 10)');
             $this->table(
                 ['Machine ID', 'Events', 'Compression', 'Savings %', 'Restores', 'Archived At'],
-                $recentArchives->map(function ($archive) {
+                $recentArchives->map(function ($archive): array {
                     return [
                         $archive->machine_id,
                         $archive->event_count,
@@ -81,14 +81,14 @@ class ArchiveStatusCommand extends Command
                         $archive->restore_count,
                         $archive->archived_at->format('Y-m-d H:i:s'),
                     ];
-                })->toArray()
+                })->all()
             );
         }
 
         // Show archives with recent restoration activity
         $recentRestores = MachineEventArchive::query()
             ->whereNotNull('last_restored_at')
-            ->orderBy('last_restored_at', 'desc')
+            ->latest('last_restored_at')
             ->limit(5)
             ->get(['machine_id', 'restore_count', 'last_restored_at', 'archived_at']);
 
@@ -97,14 +97,14 @@ class ArchiveStatusCommand extends Command
             $this->info('Recent Restore Activity (Last 5)');
             $this->table(
                 ['Machine ID', 'Total Restores', 'Last Restored', 'Originally Archived'],
-                $recentRestores->map(function ($archive) {
+                $recentRestores->map(function ($archive): array {
                     return [
                         $archive->machine_id,
                         $archive->restore_count,
                         $archive->last_restored_at->format('Y-m-d H:i:s'),
                         $archive->archived_at->format('Y-m-d H:i:s'),
                     ];
-                })->toArray()
+                })->all()
             );
         }
 
@@ -134,9 +134,9 @@ class ArchiveStatusCommand extends Command
 
         $this->table(
             ['Root Event ID', 'Events', 'Original Size', 'Compressed Size', 'Savings %', 'Restores', 'Last Restored'],
-            $archives->map(function ($archive) {
+            $archives->map(function ($archive): array {
                 return [
-                    substr($archive->root_event_id, 0, 8).'...',
+                    substr((string) $archive->root_event_id, 0, 8).'...',
                     $archive->event_count,
                     $this->formatBytes($archive->original_size),
                     $this->formatBytes($archive->compressed_size),

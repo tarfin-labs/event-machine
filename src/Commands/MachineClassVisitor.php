@@ -8,16 +8,15 @@ use PhpParser\Node;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\NodeVisitorAbstract;
 use PhpParser\Node\Stmt\Namespace_;
+use Tarfinlabs\EventMachine\Actor\Machine;
 
 class MachineClassVisitor extends NodeVisitorAbstract
 {
     private array $machineClasses     = [];
     private ?string $currentNamespace = null;
-    private string $currentFile;
 
     public function setCurrentFile(string $file): void
     {
-        $this->currentFile      = $file;
         $this->machineClasses   = [];
         $this->currentNamespace = null;
     }
@@ -30,7 +29,7 @@ class MachineClassVisitor extends NodeVisitorAbstract
 
         if ($node instanceof Class_ && !$node->isAbstract()) {
             $extends = $node->extends?->toString();
-            if ($extends === 'Machine' || $extends === '\\Tarfinlabs\\EventMachine\\Actor\\Machine') {
+            if ($extends === 'Machine' || $extends === Machine::class) {
                 $className = $node->name->toString();
                 if ($this->currentNamespace) {
                     $className = $this->currentNamespace.'\\'.$className;

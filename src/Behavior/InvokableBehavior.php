@@ -40,7 +40,7 @@ abstract class InvokableBehavior
      */
     public function __construct(protected ?Collection $eventQueue = null)
     {
-        if ($this->eventQueue === null) {
+        if (!$this->eventQueue instanceof Collection) {
             $this->eventQueue = new Collection();
         }
     }
@@ -70,7 +70,7 @@ abstract class InvokableBehavior
     public static function hasMissingContext(ContextManager $context): ?string
     {
         // Check if the requiredContext property is an empty array
-        if (empty(static::$requiredContext)) {
+        if (static::$requiredContext === []) {
             return null;
         }
 
@@ -160,7 +160,7 @@ abstract class InvokableBehavior
             $value = match (true) {
                 is_a($typeName, class: ContextManager::class, allow_string: true) || is_subclass_of($typeName, class: ContextManager::class) => $state->context,    // ContextManager
                 is_a($typeName, class: EventBehavior::class, allow_string: true) || is_subclass_of($typeName, class: EventBehavior::class)   => $eventBehavior,     // EventBehavior
-                is_a($state, $typeName)                                                                                                      => $state,             // State
+                $state instanceof $typeName                                                                                                  => $state,             // State
                 is_a($state->history, $typeName)                                                                                             => $state->history,    // EventCollection
                 $typeName === 'array'                                                                                                        => $actionArguments,   // Behavior Arguments
                 default                                                                                                                      => null,

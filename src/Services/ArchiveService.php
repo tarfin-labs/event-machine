@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Services;
 
+use Exception;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -47,10 +48,10 @@ class ArchiveService
             return null;
         }
 
-        $eventCollection  = new EventCollection($events->all());
-        $compressionLevel = $compressionLevel ?? $this->config['level'] ?? 6;
+        $eventCollection = new EventCollection($events->all());
+        $compressionLevel ??= $this->config['level'] ?? 6;
 
-        return DB::transaction(function () use ($eventCollection, $compressionLevel, $rootEventId) {
+        return DB::transaction(function () use ($eventCollection, $compressionLevel, $rootEventId): MachineEventArchive {
             try {
                 // Create archive
                 $archive = MachineEventArchive::archiveEvents($eventCollection, $compressionLevel);
@@ -63,7 +64,7 @@ class ArchiveService
 
                 return $archive;
 
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 logger()->error('Failed to archive machine events', [
                     'root_event_id' => $rootEventId,
                     'error'         => $e->getMessage(),
@@ -100,7 +101,7 @@ class ArchiveService
 
             return $events;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             logger()->error('Failed to restore machine events from archive', [
                 'root_event_id' => $rootEventId,
                 'error'         => $e->getMessage(),
@@ -228,7 +229,7 @@ class ArchiveService
 
             $archive = $this->archiveMachine($rootEventId, $compressionLevel);
 
-            if ($archive) {
+            if ($archive instanceof MachineEventArchive) {
                 $results['archived'][] = [
                     'root_event_id'     => $rootEventId,
                     'machine_id'        => $archive->machine_id,

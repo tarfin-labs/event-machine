@@ -131,12 +131,10 @@ class ArchiveEventsCommand extends Command
             return self::SUCCESS;
         }
 
-        if (!$this->option('force')) {
-            if (!$this->confirm("Archive {$qualifiedCount} machines and move them to compressed storage? Continue?")) {
-                $this->info('Operation cancelled.');
+        if (!$this->option('force') && !$this->confirm("Archive {$qualifiedCount} machines and move them to compressed storage? Continue?")) {
+            $this->info('Operation cancelled.');
 
-                return self::SUCCESS;
-            }
+            return self::SUCCESS;
         }
 
         $batchSize = (int) $this->option('batch-size');

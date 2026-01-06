@@ -32,7 +32,7 @@ return [
         'restore_cooldown_hours' => env('MACHINE_EVENTS_RESTORE_COOLDOWN_HOURS', 24),
 
         // Automatic archive retention policy (days). Set to null to keep forever.
-        'archive_retention_days' => env('MACHINE_EVENTS_ARCHIVE_RETENTION_DAYS', null),
+        'archive_retention_days' => env('MACHINE_EVENTS_ARCHIVE_RETENTION_DAYS'),
 
         // Advanced settings for enterprise environments
         'advanced' => [

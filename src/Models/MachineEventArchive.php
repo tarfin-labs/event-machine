@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Models;
 
+use RuntimeException;
+use InvalidArgumentException;
 use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Tarfinlabs\EventMachine\EventCollection;
@@ -73,7 +75,7 @@ class MachineEventArchive extends Model
     public static function archiveEvents(EventCollection $events, ?int $compressionLevel = null): self
     {
         if ($events->isEmpty()) {
-            throw new \InvalidArgumentException('Cannot archive empty event collection');
+            throw new InvalidArgumentException('Cannot archive empty event collection');
         }
 
         $rootEventId = $events->first()->root_event_id;
@@ -82,7 +84,7 @@ class MachineEventArchive extends Model
         // Convert events to array format for compression
         $eventsData = $events->map(function (MachineEvent $event) {
             return $event->toArray();
-        })->toArray();
+        })->all();
 
         $jsonData     = json_encode($eventsData, JSON_THROW_ON_ERROR);
         $originalSize = strlen($jsonData);
@@ -91,7 +93,7 @@ class MachineEventArchive extends Model
         $compressedData = gzcompress($jsonData, $level);
 
         if ($compressedData === false) {
-            throw new \RuntimeException('Failed to compress events data');
+            throw new RuntimeException('Failed to compress events data');
         }
 
         return self::create([
@@ -118,12 +120,12 @@ class MachineEventArchive extends Model
         $decompressed = gzuncompress($this->events_data);
 
         if ($decompressed === false) {
-            throw new \RuntimeException('Failed to decompress archived events data');
+            throw new RuntimeException('Failed to decompress archived events data');
         }
 
         $eventsData = json_decode($decompressed, true, 512, JSON_THROW_ON_ERROR);
 
-        $events = collect($eventsData)->map(function (array $eventData) {
+        $events = collect($eventsData)->map(function (array $eventData): MachineEvent {
             return new MachineEvent($eventData);
         });
 
@@ -133,7 +135,7 @@ class MachineEventArchive extends Model
     /**
      * Get compression ratio (0.0 - 1.0, lower is better compression).
      */
-    public function getCompressionRatioAttribute(): float
+    protected function getCompressionRatioAttribute(): float
     {
         if ($this->original_size === 0) {
             return 1.0;
@@ -145,7 +147,7 @@ class MachineEventArchive extends Model
     /**
      * Get compression savings percentage (0-100%).
      */
-    public function getSavingsPercentAttribute(): float
+    protected function getSavingsPercentAttribute(): float
     {
         if ($this->original_size === 0) {
             return 0.0;
@@ -157,7 +159,7 @@ class MachineEventArchive extends Model
     /**
      * Scope to filter by machine ID.
      */
-    public function scopeForMachine($query, string $machineId)
+    protected function scopeForMachine($query, string $machineId)
     {
         return $query->where('machine_id', $machineId);
     }
@@ -165,7 +167,7 @@ class MachineEventArchive extends Model
     /**
      * Scope to filter by archived date range.
      */
-    public function scopeArchivedBetween($query, Carbon $from, Carbon $to)
+    protected function scopeArchivedBetween($query, Carbon $from, Carbon $to)
     {
         return $query->whereBetween('archived_at', [$from, $to]);
     }

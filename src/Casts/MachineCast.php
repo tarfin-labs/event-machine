@@ -39,7 +39,7 @@ class MachineCast implements CastsAttributes
         }
 
         /** @var \Tarfinlabs\EventMachine\Actor\Machine $machineClass */
-        [$machineClass, $contextKey] = explode(':', $model->getCasts()[$key]);
+        [$machineClass, $contextKey] = explode(':', (string) $model->getCasts()[$key]);
 
         $machine = $machineClass::create(state: $value);
 
