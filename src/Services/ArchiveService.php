@@ -113,6 +113,7 @@ class ArchiveService
 
     /**
      * Get machines eligible for archival based on days inactive.
+     * Optimized for large tables using NOT EXISTS pattern.
      */
     public function getEligibleMachines(int $limit = 100): Collection
     {
@@ -124,12 +125,20 @@ class ArchiveService
         $cutoffDate   = Carbon::now()->subDays($daysInactive);
 
         $query = MachineEvent::query()
-            ->select('root_event_id', 'machine_id', DB::raw('MAX(created_at) as last_activity'), DB::raw('COUNT(*) as event_count'))
+            ->select('root_event_id', 'machine_id')
+            ->where('created_at', '<', $cutoffDate)
+            // Exclude already archived
             ->whereNotIn('root_event_id', function ($subQuery): void {
                 $subQuery->select('root_event_id')
                     ->from('machine_event_archives');
             })
-            ->having('last_activity', '<', $cutoffDate);
+            // Exclude machines with recent activity (NOT EXISTS is index-friendly)
+            ->whereNotExists(function ($subQuery) use ($cutoffDate): void {
+                $subQuery->select(DB::raw(1))
+                    ->from('machine_events as recent')
+                    ->whereColumn('recent.root_event_id', 'machine_events.root_event_id')
+                    ->where('recent.created_at', '>=', $cutoffDate);
+            });
 
         // Apply cooldown logic - exclude recently restored machines
         $cooldownHours = $this->config['restore_cooldown_hours'] ?? 24;
@@ -142,7 +151,7 @@ class ArchiveService
             });
         }
 
-        return $query->groupBy('root_event_id', 'machine_id')
+        return $query->distinct()
             ->limit($limit)
             ->get();
     }
