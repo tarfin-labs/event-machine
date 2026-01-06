@@ -23,6 +23,9 @@ return new class extends Migration
 
             $table->json('context')->nullable();
             $table->json('meta')->nullable();
+
+            // Composite index for archival query performance (GROUP BY + MAX)
+            $table->index(['root_event_id', 'created_at']);
         });
     }
 

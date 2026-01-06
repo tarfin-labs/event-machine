@@ -57,13 +57,13 @@ class ArchiveMachineEventsJob implements ShouldQueue
         $cutoffDate = Carbon::now()->subDays($daysInactive);
 
         return MachineEvent::query()
-            ->select('root_event_id')
+            ->select('root_event_id', DB::raw('MAX(created_at) as last_activity'))
             ->whereNotIn('root_event_id', function ($subQuery): void {
                 $subQuery->select('root_event_id')
                     ->from('machine_event_archives');
             })
-            ->where('created_at', '<', $cutoffDate)
             ->groupBy('root_event_id')
+            ->having('last_activity', '<', $cutoffDate)
             ->pluck('root_event_id');
     }
 
