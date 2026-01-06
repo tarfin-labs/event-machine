@@ -100,8 +100,8 @@ class ArchiveEventsCommand extends Command
             ['Total Events', number_format($totalEvents)],
             ['Estimated Data Size', $this->formatBytes($estimatedSize)],
             ['Compression Level', $config['level'] ?? 6],
-            ['Estimated Compressed Size', $this->formatBytes($estimatedSize * 0.15)], // ~85% compression typical
-            ['Estimated Savings', $this->formatBytes($estimatedSize * 0.85)],
+            ['Estimated Compressed Size', $this->formatBytes((int) ($estimatedSize * 0.15))], // ~85% compression typical
+            ['Estimated Savings', $this->formatBytes((int) ($estimatedSize * 0.85))],
         ]);
 
         return self::SUCCESS;
