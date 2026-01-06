@@ -27,6 +27,7 @@
         "driftingly/rector-laravel": "^2.1",
         "larastan/larastan": "^3.1.0",
         "laravel/pint": "^1.0",
+        "nunomaduro/larastan": "^3.8",
         "orchestra/testbench": "^8.23.1|^9.0|^10.0",
         "pestphp/pest": "^4.0",
         "pestphp/pest-plugin-arch": "^4.0",
