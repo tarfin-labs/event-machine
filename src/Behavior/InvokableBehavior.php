@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Behavior;
 
 use ReflectionMethod;
 use ReflectionFunction;
+use ReflectionNamedType;
 use ReflectionUnionType;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
@@ -153,11 +154,14 @@ abstract class InvokableBehavior
         foreach ($invocableBehaviorReflection->getParameters() as $parameter) {
             $parameterType = $parameter->getType();
 
-            $typeName = $parameterType instanceof ReflectionUnionType
-                ? $parameterType->getTypes()[0]->getName()
-                : $parameterType->getName();
+            $typeName = match (true) {
+                $parameterType instanceof ReflectionUnionType => $parameterType->getTypes()[0]->getName(),
+                $parameterType instanceof ReflectionNamedType => $parameterType->getName(),
+                default                                       => null,
+            };
 
             $value = match (true) {
+                $typeName === null                                                                                                           => null,
                 is_a($typeName, class: ContextManager::class, allow_string: true) || is_subclass_of($typeName, class: ContextManager::class) => $state->context,    // ContextManager
                 is_a($typeName, class: EventBehavior::class, allow_string: true) || is_subclass_of($typeName, class: EventBehavior::class)   => $eventBehavior,     // EventBehavior
                 $state instanceof $typeName                                                                                                  => $state,             // State
