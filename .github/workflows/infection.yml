@@ -22,6 +22,6 @@ jobs:
         uses: ramsey/composer-install@v3
 
       - name: Run Infection
-        run: composer infection
+        run: composer test:mutation
         continue-on-error: true
 
