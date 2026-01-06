@@ -19,10 +19,24 @@ class ArchiveMachineEventsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * The number of seconds the job can run before timing out.
+     * Default: 30 minutes for large dataset processing.
+     */
+    public int $timeout = 1800;
+
+    /** The number of times the job may be attempted. */
+    public int $tries = 3;
+
+    /** The number of seconds to wait before retrying the job. */
+    public int $backoff = 60;
+
     public function __construct(
         protected int $batchSize = 100,
         protected ?array $archivalConfig = null
-    ) {}
+    ) {
+        $this->onQueue(config('machine.archival.advanced.queue', 'default'));
+    }
 
     public function handle(): void
     {
@@ -115,13 +129,13 @@ class ArchiveMachineEventsJob implements ShouldQueue
         $cutoffDate   = Carbon::now()->subDays($daysInactive);
 
         return MachineEvent::query()
-            ->select('root_event_id')
+            ->select('root_event_id', DB::raw('MAX(created_at) as last_activity'))
             ->whereNotIn('root_event_id', function ($subQuery): void {
                 $subQuery->select('root_event_id')
                     ->from('machine_event_archives');
             })
-            ->where('created_at', '<', $cutoffDate)
             ->groupBy('root_event_id')
+            ->having('last_activity', '<', $cutoffDate)
             ->get()
             ->count();
     }

@@ -38,6 +38,9 @@ return [
         'advanced' => [
             // Batch size for archival processing (per transaction)
             'batch_size' => env('MACHINE_EVENTS_ARCHIVAL_BATCH_SIZE', 100),
+
+            // Queue name for archival jobs (use dedicated queue for large datasets)
+            'queue' => env('MACHINE_EVENTS_ARCHIVAL_QUEUE', 'default'),
         ],
 
         // Machine-specific overrides (can be set per machine type)
