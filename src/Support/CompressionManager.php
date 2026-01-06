@@ -187,8 +187,8 @@ class CompressionManager
         return [
             'original_size'     => $originalSize,
             'compressed_size'   => $compressedSize,
-            'compression_ratio' => $originalSize > 0 ? $compressedSize / $originalSize : 1.0,
-            'savings_percent'   => $originalSize > 0 ? (($originalSize - $compressedSize) / $originalSize) * 100 : 0.0,
+            'compression_ratio' => $compressedSize / $originalSize,
+            'savings_percent'   => (($originalSize - $compressedSize) / $originalSize) * 100,
             'compressed'        => $compressed !== false && $compressedSize < $originalSize,
         ];
     }
