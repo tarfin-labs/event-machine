@@ -95,6 +95,8 @@ class ArchiveEventsCommand extends Command
             ->selectRaw('SUM(LENGTH(JSON_EXTRACT(payload, "$")) + LENGTH(JSON_EXTRACT(context, "$")) + LENGTH(JSON_EXTRACT(meta, "$"))) as total_size')
             ->value('total_size') ?? 0;
 
+        $estimatedSize = (int) $estimatedSize;
+
         $this->table(['Metric', 'Value'], [
             ['Qualified Machines', number_format($qualifiedCount)],
             ['Total Events', number_format($totalEvents)],

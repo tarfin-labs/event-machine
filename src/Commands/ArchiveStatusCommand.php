@@ -45,16 +45,16 @@ class ArchiveStatusCommand extends Command
         $activeMachines = MachineEvent::distinct('root_event_id')->count();
 
         $archivedMachines    = MachineEventArchive::count();
-        $totalArchivedEvents = MachineEventArchive::sum('event_count');
-        $totalOriginalSize   = MachineEventArchive::sum('original_size');
-        $totalCompressedSize = MachineEventArchive::sum('compressed_size');
+        $totalArchivedEvents = (int) MachineEventArchive::sum('event_count');
+        $totalOriginalSize   = (int) MachineEventArchive::sum('original_size');
+        $totalCompressedSize = (int) MachineEventArchive::sum('compressed_size');
 
         $compressionRatio = $totalOriginalSize > 0 ? $totalCompressedSize / $totalOriginalSize : 0;
         $savings          = $totalOriginalSize - $totalCompressedSize;
 
         $this->table(['Metric', 'Active Events', 'Archived Events'], [
             ['Machines', number_format($activeMachines), number_format($archivedMachines)],
-            ['Events', number_format($activeEvents), number_format($totalArchivedEvents)],
+            ['Events', number_format((int) $activeEvents), number_format($totalArchivedEvents)],
             ['Storage Size', '-', $this->formatBytes($totalCompressedSize)],
             ['Original Size', '-', $this->formatBytes($totalOriginalSize)],
             ['Compression Ratio', '-', round($compressionRatio * 100, 1).'%'],
@@ -65,7 +65,7 @@ class ArchiveStatusCommand extends Command
         $recentArchives = MachineEventArchive::query()
             ->latest('archived_at')
             ->limit(10)
-            ->get(['machine_id', 'event_count', 'compression_level', 'savings_percent', 'archived_at', 'restore_count', 'last_restored_at']);
+            ->get(['machine_id', 'event_count', 'compression_level', 'original_size', 'compressed_size', 'archived_at', 'restore_count', 'last_restored_at']);
 
         if ($recentArchives->isNotEmpty()) {
             $this->newLine();
@@ -73,11 +73,15 @@ class ArchiveStatusCommand extends Command
             $this->table(
                 ['Machine ID', 'Events', 'Compression', 'Savings %', 'Restores', 'Archived At'],
                 $recentArchives->map(function ($archive): array {
+                    $savingsPercent = $archive->original_size > 0
+                        ? (($archive->original_size - $archive->compressed_size) / $archive->original_size) * 100
+                        : 0;
+
                     return [
                         $archive->machine_id,
                         $archive->event_count,
                         "Level {$archive->compression_level}",
-                        round($archive->savings_percent, 1).'%',
+                        round($savingsPercent, 1).'%',
                         $archive->restore_count,
                         $archive->archived_at->format('Y-m-d H:i:s'),
                     ];
