@@ -24,8 +24,9 @@
         "spatie/laravel-package-tools": "^1.14.0"
     },
     "require-dev": {
-        "laravel/pint": "^1.0",
+        "driftingly/rector-laravel": "^2.1",
         "larastan/larastan": "^3.1.0",
+        "laravel/pint": "^1.0",
         "orchestra/testbench": "^8.23.1|^9.0|^10.0",
         "pestphp/pest": "^4.0",
         "pestphp/pest-plugin-arch": "^4.0",
@@ -51,8 +52,7 @@
         "test:rector": "rector --dry-run",
         "test:pint": "pint --config=pint.json --test",
         "test:phpstan": "phpstan analyse --configuration=phpstan.neon.dist --ansi",
-        "test:unit": "pest --colors=always --order-by=random",
-        "test:parallel": "pest --parallel --colors=always --order-by=random",
+        "test:unit": "pest --parallel --colors=always --order-by=random",
         "test:types": "pest --type-coverage --colors=always",
         "test:coverage": "pest --coverage --colors=always --min=80",
         "test:profile": "pest --profile --colors=always --order-by=random",
