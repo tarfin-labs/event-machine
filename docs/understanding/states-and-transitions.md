@@ -1,0 +1,319 @@
+# States and Transitions
+
+States and transitions are the foundation of every state machine. Understanding them deeply is essential to using EventMachine effectively.
+
+## What is a State?
+
+A **state** represents a distinct phase or condition in your system. At any given moment, your machine is in exactly one state.
+
+Think of it like a traffic light:
+- It's either **green**, **yellow**, or **red**
+- Never two colors at once
+- Never "kind of green" or "between yellow and red"
+
+```php
+'states' => [
+    'pending' => [...],    // Order is waiting
+    'paid' => [...],       // Payment received
+    'shipped' => [...],    // On the way
+    'delivered' => [...],  // Arrived
+]
+```
+
+### State Properties
+
+Each state can have:
+
+```php
+'pending' => [
+    'on' => [                    // Transitions from this state
+        'PAY' => 'paid',
+    ],
+    'entry' => ['logEntry'],     // Actions when entering
+    'exit' => ['logExit'],       // Actions when leaving
+    'meta' => [                  // Custom metadata
+        'description' => 'Waiting for payment',
+    ],
+]
+```
+
+### Final States
+
+A **final state** is a terminal state - no transitions out:
+
+```php
+'delivered' => [
+    'type' => 'final',
+    'result' => 'calculateDeliveryResult',  // Compute final output
+]
+```
+
+When a machine reaches a final state:
+- No more events can trigger transitions
+- Optional result behavior computes the final output
+- The machine is considered "done"
+
+## What is a Transition?
+
+A **transition** is the movement from one state to another, triggered by an event.
+
+```
+┌─────────┐    PAY    ┌─────────┐
+│ pending │ ────────► │  paid   │
+└─────────┘           └─────────┘
+```
+
+The simplest transition:
+
+```php
+'pending' => [
+    'on' => [
+        'PAY' => 'paid',  // PAY event -> go to 'paid' state
+    ],
+]
+```
+
+### Transition with Actions
+
+Execute code during transition:
+
+```php
+'pending' => [
+    'on' => [
+        'PAY' => [
+            'target' => 'paid',
+            'actions' => 'processPayment',  // Run this action
+        ],
+    ],
+]
+```
+
+Multiple actions:
+
+```php
+'PAY' => [
+    'target' => 'paid',
+    'actions' => ['processPayment', 'sendReceipt', 'notifyWarehouse'],
+]
+```
+
+### Guarded Transitions
+
+Only transition if a condition is true:
+
+```php
+'pending' => [
+    'on' => [
+        'PAY' => [
+            'target' => 'paid',
+            'guards' => 'hasValidPayment',
+        ],
+    ],
+]
+```
+
+If the guard returns `false`, the transition doesn't happen. The machine stays in `pending`.
+
+### Multiple Transition Branches
+
+Different outcomes based on conditions:
+
+```php
+'pending' => [
+    'on' => [
+        'PAY' => [
+            [
+                'target' => 'paid',
+                'guards' => 'isFullPayment',
+            ],
+            [
+                'target' => 'partial',
+                'guards' => 'isPartialPayment',
+            ],
+            [
+                'target' => 'failed',  // Default if no guards match
+            ],
+        ],
+    ],
+]
+```
+
+Guards are evaluated in order. First matching guard wins.
+
+### Self Transitions
+
+Stay in the same state but trigger actions:
+
+```php
+'active' => [
+    'on' => [
+        'HEARTBEAT' => [
+            'target' => 'active',  // Same state
+            'actions' => 'updateLastSeen',
+        ],
+    ],
+]
+```
+
+### Internal Transitions
+
+Like self transitions, but don't trigger entry/exit actions:
+
+```php
+'active' => [
+    'on' => [
+        'HEARTBEAT' => [
+            'actions' => 'updateLastSeen',
+            // No target = internal transition
+        ],
+    ],
+]
+```
+
+## Transition Execution Order
+
+When a transition happens, actions execute in this order:
+
+```
+1. Calculators run (prepare context data)
+2. Guards check (can transition happen?)
+3. Exit actions (leaving current state)
+4. Transition actions (during transition)
+5. Entry actions (entering new state)
+6. Always transitions check (automatic follow-up)
+7. Queued events process (events raised during actions)
+```
+
+Example:
+
+```php
+'pending' => [
+    'exit' => ['logLeavingPending'],
+    'on' => [
+        'PAY' => [
+            'target' => 'paid',
+            'actions' => 'processPayment',
+        ],
+    ],
+],
+'paid' => [
+    'entry' => ['sendConfirmation'],
+],
+```
+
+When `PAY` event fires:
+1. `logLeavingPending` (exit from pending)
+2. `processPayment` (transition action)
+3. `sendConfirmation` (entry to paid)
+
+## Visualizing State Machines
+
+Use Mermaid diagrams in your documentation:
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending
+    pending --> paid: PAY
+    pending --> cancelled: CANCEL
+    paid --> shipped: SHIP
+    paid --> cancelled: REFUND
+    shipped --> delivered: DELIVER
+    delivered --> [*]
+    cancelled --> [*]
+```
+
+## Common Patterns
+
+### Sequential States
+
+```php
+'states' => [
+    'step1' => ['on' => ['NEXT' => 'step2']],
+    'step2' => ['on' => ['NEXT' => 'step3', 'BACK' => 'step1']],
+    'step3' => ['on' => ['NEXT' => 'complete', 'BACK' => 'step2']],
+    'complete' => ['type' => 'final'],
+]
+```
+
+### Parallel Approval
+
+```php
+'states' => [
+    'pending' => [
+        'on' => [
+            'APPROVE' => [
+                ['target' => 'approved', 'guards' => 'allApproversApproved'],
+                ['target' => 'pending'],  // Stay if not all approved
+            ],
+            'REJECT' => 'rejected',
+        ],
+    ],
+    'approved' => ['type' => 'final'],
+    'rejected' => ['type' => 'final'],
+]
+```
+
+### Retry Pattern
+
+```php
+'states' => [
+    'processing' => [
+        'on' => [
+            'SUCCESS' => 'completed',
+            'FAILURE' => [
+                ['target' => 'processing', 'guards' => 'canRetry', 'actions' => 'incrementRetry'],
+                ['target' => 'failed'],
+            ],
+        ],
+    ],
+    'completed' => ['type' => 'final'],
+    'failed' => ['type' => 'final'],
+]
+```
+
+## State Definition Reference
+
+```php
+'stateName' => [
+    // Transitions
+    'on' => [
+        'EVENT_NAME' => 'targetState',          // Simple
+        'EVENT_NAME' => [                       // With options
+            'target' => 'targetState',
+            'guards' => 'guardName',
+            'actions' => ['action1', 'action2'],
+        ],
+        'EVENT_NAME' => [                       // Multiple branches
+            ['target' => 'state1', 'guards' => 'guard1'],
+            ['target' => 'state2', 'guards' => 'guard2'],
+            ['target' => 'default'],
+        ],
+    ],
+
+    // Lifecycle
+    'entry' => ['entryAction1', 'entryAction2'],
+    'exit' => ['exitAction1'],
+
+    // State type
+    'type' => 'final',              // Terminal state
+
+    // Final state output
+    'result' => 'computeResult',
+
+    // Metadata
+    'meta' => [
+        'description' => 'Human readable description',
+        'timeout' => 3600,
+    ],
+
+    // Child states (hierarchical)
+    'initial' => 'childState',
+    'states' => [...],
+]
+```
+
+## Next Steps
+
+- [Events](/understanding/events) - What triggers transitions
+- [Context](/understanding/context) - Data that flows through states
+- [Machine Lifecycle](/understanding/machine-lifecycle) - The complete picture
