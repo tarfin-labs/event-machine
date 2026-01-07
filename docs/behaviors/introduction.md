@@ -1,6 +1,8 @@
-# Behaviors Overview
+# Introduction to Behaviors
 
 Behaviors are the building blocks for logic in EventMachine. They define how your machine responds to events, validates transitions, computes values, and produces results.
+
+This section covers all behavior types in depth. If you're just getting started, read through [Actions](/behaviors/actions) and [Guards](/behaviors/guards) first - they're the most commonly used.
 
 ## Behavior Types
 
@@ -315,3 +317,12 @@ class SendNotificationAction extends ActionBehavior
     }
 }
 ```
+
+## Next Steps
+
+- [Actions](/behaviors/actions) - Execute side effects during transitions
+- [Guards](/behaviors/guards) - Control transition flow
+- [Validation Guards](/behaviors/validation-guards) - Guards with error messages
+- [Calculators](/behaviors/calculators) - Compute values before guards
+- [Events](/behaviors/events) - Define custom event classes
+- [Results](/behaviors/results) - Compute final state output

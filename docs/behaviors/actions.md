@@ -439,3 +439,9 @@ class ValidateAction extends ActionBehavior
     }
 }
 ```
+
+## Next Steps
+
+- [Guards](/behaviors/guards) - Control which transitions can occur
+- [Calculators](/behaviors/calculators) - Compute values before guards
+- [Raised Events](/advanced/raised-events) - Queue events from actions

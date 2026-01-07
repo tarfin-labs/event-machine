@@ -12,7 +12,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /introduction/quick-start
+      link: /getting-started/your-first-machine
     - theme: alt
       text: View on GitHub
       link: https://github.com/tarfin-labs/event-machine
