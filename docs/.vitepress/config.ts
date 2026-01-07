@@ -54,6 +54,7 @@ export default withMermaid(
             { text: 'What is EventMachine?', link: '/getting-started/what-is-event-machine' },
             { text: 'Comparison', link: '/getting-started/comparison' },
             { text: 'Installation', link: '/getting-started/installation' },
+            { text: 'Upgrading', link: '/getting-started/upgrading' },
             { text: 'Your First Machine', link: '/getting-started/your-first-machine' }
           ]
         },
@@ -135,13 +136,6 @@ export default withMermaid(
             { text: 'Fakeable Behaviors', link: '/testing/fakeable-behaviors' },
             { text: 'State Assertions', link: '/testing/state-assertions' },
             { text: 'Persistence Testing', link: '/testing/persistence-testing' }
-          ]
-        },
-        {
-          text: 'Migration',
-          collapsed: true,
-          items: [
-            { text: 'Upgrading', link: '/migration/upgrading' }
           ]
         }
       ],

@@ -119,54 +119,40 @@ Archive old machine events to compressed storage.
 ### Usage
 
 ```bash
-# Run archival synchronously
+# Dispatch archival jobs to queue (default)
 php artisan machine:archive-events
 
-# Preview without changes (dry run)
+# Preview what would be dispatched
 php artisan machine:archive-events --dry-run
 
-# Dispatch to queue
-php artisan machine:archive-events --queue
+# Run synchronously (testing only)
+php artisan machine:archive-events --sync
 
-# Custom batch size
-php artisan machine:archive-events --batch-size=200
-
-# Skip confirmation prompt
-php artisan machine:archive-events --force
+# Custom dispatch limit per run
+php artisan machine:archive-events --dispatch-limit=100
 ```
 
 ### Options
 
 | Option | Description |
 |--------|-------------|
-| `--batch-size=N` | Instances per batch (default: 100) |
 | `--dry-run` | Preview without changes |
-| `--force` | Skip confirmation |
-| `--queue` | Dispatch to queue |
+| `--sync` | Run synchronously instead of queue |
+| `--dispatch-limit=N` | Max workflows to dispatch per run (default: 50) |
 
 ### Example Output
 
 ```
-Archiving machine events...
+Finding eligible machines for archival...
 
 Configuration:
   Days inactive: 30
-  Compression level: 6
-  Batch size: 100
+  Dispatch limit: 50
 
-Found 1,234 machines eligible for archival.
+Dispatching archival jobs...
+  Dispatched: 50 workflows to queue
 
-Proceed with archival? (yes/no) [no]:
-> yes
-
-Archiving... 100%
-
-Archival complete!
-  Machines archived: 1,234
-  Events archived: 45,678
-  Original size: 125 MB
-  Compressed size: 18 MB
-  Savings: 85%
+Run again to dispatch the next batch.
 ```
 
 ### Dry Run Output
@@ -174,16 +160,15 @@ Archival complete!
 ```
 php artisan machine:archive-events --dry-run
 
-DRY RUN - No changes will be made
+DRY RUN - No jobs will be dispatched
 
 Found 1,234 machines eligible for archival:
   - order: 456 machines
   - payment: 389 machines
   - fulfillment: 389 machines
 
-Estimated compression:
-  Original: ~125 MB
-  Compressed: ~18 MB (85% savings)
+Would dispatch: 50 jobs (dispatch_limit)
+Remaining: 1,184 machines
 ```
 
 ## machine:archive-status
