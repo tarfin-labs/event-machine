@@ -322,5 +322,5 @@ If you encounter issues during upgrade:
 
 ## Related
 
-- [Installation](/introduction/installation) - Fresh installation guide
-- [Quick Start](/introduction/quick-start) - Getting started tutorial
+- [Installation](/getting-started/installation) - Fresh installation guide
+- [Your First Machine](/getting-started/your-first-machine) - Getting started tutorial

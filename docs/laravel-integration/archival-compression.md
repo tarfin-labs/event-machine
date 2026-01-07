@@ -605,10 +605,3 @@ Original events are deleted after archival, but:
 2. Check if transactions are holding locks
 3. Verify archival completed successfully in logs
 
-## API Reference
-
-For detailed API documentation, see:
-
-- [ArchiveService](/api-reference/archive-service) - Core archival operations
-- [MachineEventArchive](/api-reference/machine-event-archive) - Archive model
-- [CompressionManager](/api-reference/compression-manager) - Compression utilities
