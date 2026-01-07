@@ -53,11 +53,17 @@ EventMachine supports several syntax forms for flexibility:
 ],
 ```
 
+### Null (Forbidden)
+
+```php
+'CANCEL' => null,  // Block this event
+```
+
 ## Transition Properties
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `target` | string | The destination state |
+| `target` | string\|null | The destination state (`null` = forbidden) |
 | `actions` | string\|array | Actions to execute during transition |
 | `guards` | string\|array | Conditions that must pass |
 | `calculators` | string\|array | Context computations before guards |
@@ -218,6 +224,70 @@ Stay in the same state without triggering entry/exit actions:
 ::: info Internal vs Self Transitions
 - **Internal**: No target, entry/exit actions skipped
 - **Self**: Target equals current state, entry/exit actions run
+:::
+
+## Forbidden Transitions
+
+Block specific events by setting the transition target to `null`:
+
+```php
+'checkout' => [
+    'initial' => 'payment',
+    'on' => [
+        'CANCEL' => 'cancelled',  // Parent allows cancel
+    ],
+    'states' => [
+        'payment' => [
+            'on' => [
+                'PROCEED' => 'confirmation',
+            ],
+        ],
+        'confirmation' => [
+            'on' => [
+                'CANCEL' => null,  // Block cancel in confirmation
+            ],
+        ],
+    ],
+],
+```
+
+When `CANCEL` is sent while in `confirmation` state:
+- The child state's `null` transition overrides the parent's `CANCEL => 'cancelled'`
+- The event is effectively blocked - no transition occurs
+
+### Use Cases
+
+**Override parent transitions:**
+```php
+'parent' => [
+    'on' => [
+        'RESET' => 'initial',  // Available to all children
+    ],
+    'states' => [
+        'critical' => [
+            'on' => [
+                'RESET' => null,  // Except in critical state
+            ],
+        ],
+    ],
+],
+```
+
+**Disable events in specific states:**
+```php
+'states' => [
+    'processing' => [
+        'on' => [
+            'SUBMIT' => null,    // Can't submit while processing
+            'CANCEL' => null,    // Can't cancel while processing
+        ],
+    ],
+],
+```
+
+::: warning Null vs Omitted
+- `'EVENT' => null` - Explicitly forbidden, blocks even inherited transitions
+- Event not defined - Falls through to parent, or throws `NoTransitionDefinitionFoundException`
 :::
 
 ## Always Transitions
