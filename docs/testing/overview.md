@@ -276,6 +276,52 @@ afterEach(function () {
 });
 ```
 
+### ResolvesBehaviors Trait
+
+Access behavior definitions directly for testing and debugging:
+
+```php
+use Tarfinlabs\EventMachine\Traits\ResolvesBehaviors;
+
+class OrderMachine extends Machine
+{
+    use ResolvesBehaviors;
+    // ...
+}
+```
+
+Available methods:
+
+```php
+// Get any behavior by path
+$behavior = OrderMachine::getBehavior('guards.hasItems');
+$behavior = OrderMachine::getBehavior('actions.processOrder');
+
+// Shorthand methods
+$guard = OrderMachine::getGuard('hasItems');
+$action = OrderMachine::getAction('processOrder');
+$calculator = OrderMachine::getCalculator('calculateTotal');
+$event = OrderMachine::getEvent('SUBMIT');
+```
+
+Useful for testing behaviors in isolation:
+
+```php
+it('guard checks items correctly', function () {
+    $guard = OrderMachine::getGuard('hasItems');
+
+    $context = new OrderContext(items: []);
+    expect($guard($context))->toBeFalse();
+
+    $context = new OrderContext(items: [['id' => 1]]);
+    expect($guard($context))->toBeTrue();
+});
+```
+
+::: tip
+`getBehavior()` throws `BehaviorNotFoundException` if the behavior doesn't exist, making it easy to catch configuration errors in tests.
+:::
+
 ### Create Machine with Context
 
 ```php

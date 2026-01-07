@@ -170,7 +170,7 @@ export default withMermaid(
     },
 
     markdown: {
-      lineNumbers: true,
+      lineNumbers: false,
       theme: {
         light: 'github-light',
         dark: 'github-dark'

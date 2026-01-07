@@ -246,7 +246,7 @@ What happens:
 1. Entry actions run (if any)
 2. Result behavior computes final output
 3. Machine is "done" - no more transitions possible
-4. `machine.stop` internal event fires
+4. `machine.finish` internal event fires
 
 Check if done:
 
@@ -293,7 +293,7 @@ Implemented via cache locks:
 | Event | When |
 |-------|------|
 | `machine.start` | Machine initialized |
-| `machine.stop` | Reached final state |
+| `machine.finish` | Reached final state |
 
 ## State History Access
 

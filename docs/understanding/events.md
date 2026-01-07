@@ -165,25 +165,29 @@ class PayEvent extends EventBehavior
 
 ## Invalid Events
 
-If you send an event that has no matching transition, nothing happens:
+If you send an event that has no matching transition, EventMachine throws a `NoTransitionDefinitionFoundException`:
 
 ```php
-// Machine is in 'shipped' state
-$machine->send(['type' => 'PAY']);  // No transition for PAY in 'shipped'
+use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
-// Machine stays in 'shipped' - no error thrown
-$machine->state->matches('shipped');  // true
+// Machine is in 'shipped' state
+try {
+    $machine->send(['type' => 'PAY']);  // No transition for PAY in 'shipped'
+} catch (NoTransitionDefinitionFoundException $e) {
+    // Handle the invalid event
+    // $e->getMessage() includes the event type and current state
+}
 ```
 
-To detect if a transition happened, check the state:
+To check if a transition is valid before sending:
 
 ```php
-$before = $machine->state->currentStateDefinition->id;
-$machine->send(['type' => 'SOME_EVENT']);
-$after = $machine->state->currentStateDefinition->id;
+// Check available transitions for current state
+$currentState = $machine->state->currentStateDefinition;
+$availableEvents = array_keys($currentState->transitionDefinitions ?? []);
 
-if ($before === $after) {
-    // No transition happened
+if (in_array('PAY', $availableEvents)) {
+    $machine->send(['type' => 'PAY']);
 }
 ```
 
@@ -220,7 +224,7 @@ EventMachine uses special internal events:
 | Event | When |
 |-------|------|
 | `machine.start` | Machine initialized |
-| `machine.stop` | Machine reached final state |
+| `machine.finish` | Machine reached final state |
 
 You generally don't need to handle these directly.
 

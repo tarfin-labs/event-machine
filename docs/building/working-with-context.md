@@ -281,7 +281,7 @@ $machine->send(['type' => 'INCREMENT']);
 // Context: { count: 1 }
 
 // Later, restore from database
-$machine = OrderMachine::withHistory($rootEventId);
+$machine = OrderMachine::create(state: $rootEventId);
 // Context: { count: 1 } - restored!
 ```
 

@@ -285,6 +285,50 @@ class CalculateDeliveryDateCalculator extends CalculatorBehavior
 }
 ```
 
+## Calculator Failure Behavior
+
+::: warning Critical
+If a calculator throws an exception, the **entire transition is aborted**. The exception is caught, a `machine.calculator.{name}.fail` internal event is recorded, and the transition returns `false`.
+:::
+
+```php
+class RiskyCalculator extends CalculatorBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        // If this throws, the transition is aborted
+        $result = $this->externalService->calculate($context->data);
+        $context->calculatedValue = $result;
+    }
+}
+```
+
+Handle potential failures gracefully:
+
+```php
+class SafeCalculator extends CalculatorBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        try {
+            $result = $this->externalService->calculate($context->data);
+            $context->calculatedValue = $result;
+        } catch (ExternalServiceException $e) {
+            // Set a default or flag for guards to check
+            $context->calculatedValue = null;
+            $context->calculationFailed = true;
+        }
+    }
+}
+```
+
+The internal event recorded on failure:
+
+```php
+// Event type: {machine}.calculator.{calculatorName}.fail
+// Payload: ['error' => 'Calculator failed: {exception message}']
+```
+
 ## Calculator vs Action
 
 | Aspect | Calculator | Action |
@@ -292,7 +336,7 @@ class CalculateDeliveryDateCalculator extends CalculatorBehavior
 | Runs | Before guards | After guards pass |
 | Purpose | Prepare data | Execute side effects |
 | Typical use | Compute values | Call services, send emails |
-| Can block transition | No (use guards) | No |
+| Can block transition | Yes (if throws exception) | No |
 
 ### When to Use Calculators
 

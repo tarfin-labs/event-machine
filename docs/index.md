@@ -135,11 +135,11 @@ $approval = $machine->state->history
 <div class="feature-section">
 <div class="feature-text">
 
-## Testable Business Logic
+## Behaviors: Guards, Actions, Calculators
 
-**Guards protect. Actions execute. Tests verify.** Conditional transitions with full testability. Every behavior is a class you can unit test.
+**Calculators compute. Guards validate. Actions execute.** Each transition runs through a pipeline: calculate derived values, check conditions, then execute side effects.
 
-Guards validate before transitions happen. Actions execute side effects after. Calculators compute values. All isolated, all testable.
+Every behavior is a single-responsibility class. Compose them freely to build complex workflows from simple, testable pieces.
 
 [Explore behaviors &rarr;](/behaviors/introduction)
 
@@ -148,29 +148,85 @@ Guards validate before transitions happen. Actions execute side effects after. C
 
 ```php
 'CHECKOUT' => [
-    'target'  => 'processing',
-    'guards'  => [HasItemsGuard::class, HasAddressGuard::class],
-    'actions' => [CalculateTotalAction::class, SendReceiptAction::class],
+    'target'      => 'processing',
+    'calculators' => PriceCalculator::class,  // Runs first
+    'guards'      => MinimumOrderGuard::class, // Validates
+    'actions'     => SendReceiptAction::class, // Executes
 ],
 ```
 
 ```php
-class HasItemsGuard extends GuardBehavior
+class PriceCalculator extends CalculatorBehavior
 {
-    public function __invoke(OrderContext $context): bool
+    public function __invoke(ContextManager $context): void
     {
-        return count($context->items) > 0;
+        $context->set('total', $context->get('quantity') * $context->get('price'));
     }
 }
 ```
 
 ```php
-// Unit test your guards in isolation
-it('blocks checkout with empty cart', function () {
-    $guard = new HasItemsGuard();
-    $context = new OrderContext(items: []);
+class MinimumOrderGuard extends GuardBehavior
+{
+    public function __invoke(ContextManager $context): bool
+    {
+        return $context->get('total') >= 100;
+    }
+}
+```
 
-    expect($guard($context))->toBeFalse();
+```php
+class SendReceiptAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        Mail::to($context->get('email'))->send(new Receipt($context->get('total')));
+    }
+}
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
+## Testable Behaviors
+
+**Mock, assert, verify.** Every behavior supports faking for isolated unit tests. No more integration tests for simple business logic.
+
+Use `shouldReturn()` to mock guards, `shouldRun()` to verify actions. Assert behaviors ran or didn't. Full Mockery integration built-in.
+
+[Testing behaviors &rarr;](/testing/fakeable-behaviors)
+
+</div>
+<div class="feature-code">
+
+```php
+it('blocks checkout with insufficient total', function () {
+    $context = new ContextManager(['total' => 50]);
+
+    expect(MinimumOrderGuard::run($context))->toBeFalse();
+});
+```
+
+```php
+it('sends receipt on checkout', function () {
+    SendReceiptAction::shouldRun()->once();
+
+    $machine->send(['type' => 'CHECKOUT']);
+
+    SendReceiptAction::assertRan();
+});
+```
+
+```php
+it('can mock guard to always pass', function () {
+    MinimumOrderGuard::shouldReturn(true);
+
+    $machine->send(['type' => 'CHECKOUT']);
+
+    expect($machine->state->matches('processing'))->toBeTrue();
 });
 ```
 

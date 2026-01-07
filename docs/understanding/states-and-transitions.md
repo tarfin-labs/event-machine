@@ -37,6 +37,49 @@ Each state can have:
 ]
 ```
 
+### Accessing Current State
+
+The `State` object provides several ways to inspect the current state:
+
+```php
+$machine = OrderMachine::create();
+$state = $machine->state;
+
+// Get the raw state value as array
+$state->value;  // ['order.pending']
+
+// Check if in a specific state
+$state->matches('pending');  // true
+
+// Access current state definition
+$state->currentStateDefinition->id;  // 'order.pending'
+
+// Access context
+$state->context->get('total');
+
+// Access event history
+$state->history;  // EventCollection
+```
+
+### The `matches()` Method
+
+Use `matches()` to check the current state:
+
+```php
+// Simple state check
+$state->matches('pending');  // Checks for 'order.pending'
+
+// Full state path also works
+$state->matches('order.pending');  // Same result
+
+// For nested states, use dot notation
+$state->matches('checkout.payment.processing');
+```
+
+::: tip State ID Conventions
+EventMachine uses dot notation for state IDs: `{machineId}.{stateName}`. When you call `matches('pending')`, it automatically prepends the machine ID.
+:::
+
 ### Final States
 
 A **final state** is a terminal state - no transitions out:
