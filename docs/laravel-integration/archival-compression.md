@@ -362,7 +362,7 @@ Track archive size and restore frequency before changing settings.
 
 ### 3. Use Dedicated Queue for Large Datasets
 
-```env
+```dotenv
 MACHINE_EVENTS_ARCHIVAL_QUEUE=archival
 ```
 
@@ -575,12 +575,12 @@ echo "30-day projection with archival: " .
 ### High CPU During Archival
 
 1. Lower compression level:
-   ```env
+   ```dotenv
    MACHINE_EVENTS_COMPRESSION_LEVEL=3
    ```
 
 2. Reduce dispatch limit:
-   ```env
+   ```dotenv
    MACHINE_EVENTS_ARCHIVAL_DISPATCH_LIMIT=25
    ```
 
