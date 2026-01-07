@@ -97,11 +97,49 @@ MachineEvent::where('root_event_id', $rootEventId)
 <div class="feature-section">
 <div class="feature-text">
 
-## Guards Protect, Actions Execute
+## Complete Audit Trail
 
-**Conditional transitions with business logic.** Guards validate before transitions happen. Actions execute side effects after.
+**Compliance-ready history at your fingertips.** Filter events by type, date range, or payload. Know who did what and when - with evidence.
 
-Validation errors? Return them from guards. Send emails? Queue jobs? Update context? That's what actions do.
+Regulatory audit? Legal discovery? Customer dispute? Your machine history is queryable, filterable, and legally defensible.
+
+[Query your history &rarr;](/laravel-integration/persistence)
+
+</div>
+<div class="feature-code">
+
+```php
+// Find all approval events in date range
+MachineEvent::where('root_event_id', $rootEventId)
+    ->where('type', 'APPROVE')
+    ->whereBetween('created_at', [$start, $end])
+    ->get();
+
+// Get full state at any point in history
+$machine = OrderMachine::create(state: $rootEventId);
+$machine->state->history->each(function ($event) {
+    echo "{$event->type} at {$event->created_at}\n";
+    echo "Context: " . json_encode($event->context) . "\n";
+});
+
+// Who approved this order?
+$approval = $machine->state->history
+    ->where('type', 'APPROVE')
+    ->first();
+// {"by": "admin", "approved_at": "2024-01-15 11:45:00"}
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
+## Testable Business Logic
+
+**Guards protect. Actions execute. Tests verify.** Conditional transitions with full testability. Every behavior is a class you can unit test.
+
+Guards validate before transitions happen. Actions execute side effects after. Calculators compute values. All isolated, all testable.
 
 [Explore behaviors &rarr;](/behaviors/introduction)
 
@@ -127,13 +165,13 @@ class HasItemsGuard extends GuardBehavior
 ```
 
 ```php
-class SendReceiptAction extends ActionBehavior
-{
-    public function __invoke(OrderContext $context): void
-    {
-        Mail::to($context->email)->queue(new ReceiptMail($context));
-    }
-}
+// Unit test your guards in isolation
+it('blocks checkout with empty cart', function () {
+    $guard = new HasItemsGuard();
+    $context = new OrderContext(items: []);
+
+    expect($guard($context))->toBeFalse();
+});
 ```
 
 </div>
