@@ -56,9 +56,6 @@ class ArchiveService
                 // Create archive
                 $archive = MachineEventArchive::archiveEvents($eventCollection, $compressionLevel);
 
-                // Track restoration metadata
-                $this->trackArchiveCreation($archive);
-
                 // Always cleanup original events after successful archival
                 MachineEvent::where('root_event_id', $rootEventId)->delete();
 
@@ -229,18 +226,6 @@ class ArchiveService
     protected function isArchivalEnabled(): bool
     {
         return $this->config['enabled'] ?? true;
-    }
-
-    /**
-     * Track archive creation metadata.
-     */
-    protected function trackArchiveCreation(MachineEventArchive $archive): void
-    {
-        // Set initial tracking metadata
-        $archive->update([
-            'restore_count'    => 0,
-            'last_restored_at' => null,
-        ]);
     }
 
     /**
