@@ -36,6 +36,7 @@ class MachineServiceProvider extends PackageServiceProvider
             ->name('event-machine')
             ->hasConfigFile('machine')
             ->hasMigration('create_machine_events_table')
+            ->hasMigration('add_archival_index_to_machine_events_table')
             ->hasMigration('create_machine_events_archive_table')
             ->hasCommand(GenerateUmlCommand::class)
             ->hasCommand(ArchiveEventsCommand::class)
