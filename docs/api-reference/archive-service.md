@@ -77,20 +77,20 @@ $events = $service->restoreMachine('01HQ3K5V7X8Y9Z', keepArchive: false);
 public function getEligibleInstances(int $limit = 100): Collection
 ```
 
-Finds machines eligible for archival based on inactivity threshold and cooldown settings.
+Finds machines eligible for archival based on inactivity threshold and cooldown settings. Uses optimized NOT EXISTS queries for large tables.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `$limit` | `int` | `100` | Maximum number of instances to return |
 
-**Returns:** Collection of eligible machines with `root_event_id`, `machine_id`, `last_activity`, and `event_count`.
+**Returns:** Collection of eligible machines with `root_event_id` and `machine_id`.
 
 ```php
 $eligible = $service->getEligibleInstances(50);
 
 foreach ($eligible as $machine) {
-    echo "{$machine->machine_id}: {$machine->event_count} events";
-    echo "Last activity: {$machine->last_activity}";
+    echo "Machine: {$machine->machine_id}";
+    echo "Root Event ID: {$machine->root_event_id}";
 }
 ```
 
@@ -143,6 +143,41 @@ if ($service->canReArchive('01HQ3K5V7X8Y9Z')) {
     $service->archiveMachine('01HQ3K5V7X8Y9Z');
 }
 ```
+
+### restoreAndDelete
+
+```php
+public function restoreAndDelete(string $rootEventId): bool
+```
+
+Restores events from archive to `machine_events` table and deletes the archive. This method is used internally by the auto-restore feature when new events arrive for an archived machine.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$rootEventId` | `string` | The root event ID to restore |
+
+**Returns:** `true` on success, `false` if archive not found.
+
+::: warning Transaction Safety
+This method runs within a database transaction with row-level locking to prevent race conditions when multiple events arrive simultaneously.
+:::
+
+```php
+// Typically called automatically by MachineEvent::creating() hook
+// Manual usage:
+$success = $service->restoreAndDelete('01HQ3K5V7X8Y9Z');
+
+if ($success) {
+    // All archived events are now in machine_events
+    // Archive has been deleted
+}
+```
+
+**Internal Implementation:**
+1. Acquires lock on archive row (`lockForUpdate()`)
+2. Decompresses and restores events to `machine_events`
+3. Deletes the archive
+4. Commits transaction
 
 ## Configuration
 
