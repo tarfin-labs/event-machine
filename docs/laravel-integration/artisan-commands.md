@@ -188,103 +188,41 @@ Estimated compression:
 
 ## machine:archive-status
 
-View archival status and manage archives.
+View archive summary and manage archived events.
 
 ### Usage
 
 ```bash
-# Show overall statistics
+# Show summary
 php artisan machine:archive-status
-
-# Show details for specific machine type
-php artisan machine:archive-status --machine-id=order
 
 # Restore archived events
 php artisan machine:archive-status --restore=01HXYZ...
 
-# Clean up archive entry
-php artisan machine:archive-status --cleanup-archive=01HXYZ...
+# Delete archive permanently
+php artisan machine:archive-status --cleanup=01HXYZ...
 ```
 
 ### Options
 
 | Option | Description |
 |--------|-------------|
-| `--machine-id=ID` | Filter by machine ID |
-| `--restore=ID` | Restore specific archive |
-| `--cleanup-archive=ID` | Delete specific archive |
+| `--restore=ID` | Restore events from archive |
+| `--cleanup=ID` | Delete archive permanently |
 
-### Statistics Output
-
-```
-Archive Statistics
-==================
-
-Total Archives: 5,678
-Total Events Archived: 234,567
-
-Storage:
-  Original Size: 1.2 GB
-  Compressed Size: 180 MB
-  Savings: 85%
-
-By Machine Type:
-  order: 2,345 archives (95,678 events)
-  payment: 1,876 archives (78,234 events)
-  fulfillment: 1,457 archives (60,655 events)
-
-Recent Activity:
-  Last 24h: 123 archives created
-  Last 7d: 456 archives created
-
-Restore Activity:
-  Total restores: 234
-  Last restore: 2 hours ago
-```
-
-### Specific Machine Output
+### Output
 
 ```
-php artisan machine:archive-status --machine-id=01HXYZ...
+Machine Events Archive Status
 
-Archive Details
-===============
++----------+-----------+--------+--------+
+|          | Instances | Events | Size   |
++----------+-----------+--------+--------+
+| Active   | 1,234     | 56,789 | -      |
+| Archived | 5,678     | 234,567| 180 MB |
++----------+-----------+--------+--------+
 
-Root Event ID: 01HXYZ...
-Machine ID: order
-Event Count: 156
-Original Size: 45 KB
-Compressed Size: 7 KB
-Compression Ratio: 15.6%
-
-Archived At: 2024-01-15 10:30:00
-Restore Count: 2
-Last Restored: 2024-02-01 14:22:00
-
-Events:
-  First Event: 2023-06-01 09:00:00
-  Last Event: 2023-12-15 16:45:00
-```
-
-### Restore Operation
-
-```
-php artisan machine:archive-status --restore=01HXYZ...
-
-Restoring archive 01HXYZ...
-
-  Machine ID: order
-  Event Count: 156
-  Compressed Size: 7 KB
-
-Decompressing... done
-Inserting events... done
-
-Restore complete!
-  Events restored: 156
-  Time taken: 0.5s
-
-Note: Archive entry retained for future reference.
+Compression: 85% saved (1.02 GB)
 ```
 
 ## Scheduling Commands
@@ -295,17 +233,12 @@ Add commands to your scheduler:
 // app/Console/Kernel.php
 protected function schedule(Schedule $schedule): void
 {
-    // Archive events daily at midnight
-    $schedule->command('machine:archive-events --force')
-        ->daily()
-        ->at('00:00')
+    // Fan-out archival: dispatches individual jobs per workflow
+    $schedule->command('machine:archive-events')
+        ->everyFiveMinutes()
         ->withoutOverlapping()
-        ->appendOutputTo(storage_path('logs/archive.log'));
-
-    // Or use queue
-    $schedule->command('machine:archive-events --force --queue')
-        ->daily()
-        ->at('00:00');
+        ->onOneServer()
+        ->runInBackground();
 
     // Weekly validation check
     $schedule->command('machine:validate --all')

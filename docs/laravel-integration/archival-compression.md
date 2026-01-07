@@ -77,17 +77,14 @@ php artisan machine:archive-events --dispatch-limit=100
 ### Check Archive Status
 
 ```bash
-# Overall statistics
+# Show summary
 php artisan machine:archive-status
-
-# Specific machine details
-php artisan machine:archive-status --machine-id=order
 
 # Restore archived events
 php artisan machine:archive-status --restore=01HXYZ...
 
-# Clean up archive
-php artisan machine:archive-status --cleanup-archive=01HXYZ...
+# Delete archive permanently
+php artisan machine:archive-status --cleanup=01HXYZ...
 ```
 
 ## Archive Table

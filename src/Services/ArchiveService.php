@@ -159,43 +159,6 @@ class ArchiveService
     }
 
     /**
-     * Get archive statistics.
-     */
-    public function getArchiveStats(): array
-    {
-        if (!$this->isArchivalEnabled()) {
-            return [
-                'enabled'                   => false,
-                'total_archives'            => 0,
-                'total_events_archived'     => 0,
-                'total_space_saved'         => 0,
-                'average_compression_ratio' => 0,
-            ];
-        }
-
-        $stats = MachineEventArchive::query()
-            ->selectRaw('
-                COUNT(*) as total_archives,
-                SUM(event_count) as total_events_archived,
-                SUM(original_size - compressed_size) as total_space_saved,
-                AVG(compressed_size / original_size) as average_compression_ratio
-            ')
-            ->first();
-
-        return [
-            'enabled'                   => true,
-            'total_archives'            => $stats->total_archives ?? 0,
-            'total_events_archived'     => $stats->total_events_archived ?? 0,
-            'total_space_saved'         => $stats->total_space_saved ?? 0,
-            'total_space_saved_mb'      => round(($stats->total_space_saved ?? 0) / 1024 / 1024, 2),
-            'average_compression_ratio' => round($stats->average_compression_ratio ?? 0, 3),
-            'space_savings_percent'     => $stats->total_space_saved > 0
-                ? round((($stats->total_space_saved ?? 0) / (($stats->total_space_saved ?? 0) + DB::table('machine_event_archives')->sum('compressed_size'))) * 100, 1)
-                : 0,
-        ];
-    }
-
-    /**
      * Check if a machine can be re-archived based on cooldown settings.
      */
     public function canReArchive(string $rootEventId): bool

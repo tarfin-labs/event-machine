@@ -134,35 +134,6 @@ describe('ArchiveService', function (): void {
         expect($eligibleMachines->first()->root_event_id)->toBe($oldRootEventId);
     });
 
-    it('can get archive statistics', function (): void {
-        // Create some archives
-        $events1 = new EventCollection([
-            MachineEvent::factory()->create([
-                'root_event_id' => '01H8BM4VK82JKPK7RPR3YGT2DM',
-                'machine_id'    => 'machine_1',
-            ]),
-        ]);
-
-        $events2 = new EventCollection([
-            MachineEvent::factory()->create([
-                'root_event_id' => '01H8BM4VK82JKPK7RPR3YGT2DN',
-                'machine_id'    => 'machine_2',
-            ]),
-        ]);
-
-        MachineEventArchive::archiveEvents($events1);
-        MachineEventArchive::archiveEvents($events2);
-
-        $archiveService = new ArchiveService();
-        $stats          = $archiveService->getArchiveStats();
-
-        expect($stats['enabled'])->toBeTrue();
-        expect($stats['total_archives'])->toBe(2);
-        expect($stats['total_events_archived'])->toBe(2);
-        expect($stats['total_space_saved'])->toBeGreaterThan(0);
-        expect($stats['average_compression_ratio'])->toBeGreaterThanOrEqual(0);
-    });
-
     it('can batch archive multiple machines', function (): void {
         $rootEventIds = [
             '01H8BM4VK82JKPK7RPR3YGT2DM',
@@ -231,8 +202,5 @@ describe('ArchiveService', function (): void {
         $result = $archiveService->archiveMachine('01H8BM4VK82JKPK7RPR3YGT2DM');
 
         expect($result)->toBeNull();
-
-        $stats = $archiveService->getArchiveStats();
-        expect($stats['enabled'])->toBeFalse();
     });
 });

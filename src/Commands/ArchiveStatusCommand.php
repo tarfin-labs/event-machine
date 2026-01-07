@@ -10,223 +10,144 @@ use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 
+/**
+ * Simple archive status and operations command.
+ *
+ * Shows archive summary and provides restore/cleanup operations.
+ */
 class ArchiveStatusCommand extends Command
 {
     protected $signature = 'machine:archive-status
-                           {--machine-id= : Show details for specific machine ID}
                            {--restore= : Restore archived events for specific root_event_id}
-                           {--cleanup-archive= : Delete archived events for specific root_event_id}';
-    protected $description = 'Show archival status and manage archived machine events';
+                           {--cleanup= : Permanently delete archive for specific root_event_id}';
+    protected $description = 'Show archive summary and manage archived machine events';
 
     public function handle(): int
     {
-        if ($machineId = $this->option('machine-id')) {
-            return $this->showMachineDetails($machineId);
-        }
-
         if ($rootEventId = $this->option('restore')) {
-            return $this->restoreEvents($rootEventId);
+            return $this->restoreArchive($rootEventId);
         }
 
-        if ($rootEventId = $this->option('cleanup-archive')) {
+        if ($rootEventId = $this->option('cleanup')) {
             return $this->cleanupArchive($rootEventId);
         }
 
-        return $this->showOverallStatus();
+        return $this->showSummary();
     }
 
-    protected function showOverallStatus(): int
+    /**
+     * Show simple archive summary.
+     */
+    protected function showSummary(): int
     {
+        $activeCount  = MachineEvent::distinct('root_event_id')->count();
+        $activeEvents = MachineEvent::count();
+
+        $stats = MachineEventArchive::query()
+            ->selectRaw('
+                COUNT(*) as count,
+                COALESCE(SUM(event_count), 0) as events,
+                COALESCE(SUM(original_size), 0) as original_total,
+                COALESCE(SUM(compressed_size), 0) as compressed_total
+            ')
+            ->first();
+
+        $archiveCount   = (int) $stats->count;
+        $archiveEvents  = (int) $stats->events;
+        $originalSize   = (int) $stats->original_total;
+        $compressedSize = (int) $stats->compressed_total;
+        $saved          = $originalSize - $compressedSize;
+        $ratio          = $originalSize > 0 ? round(($saved / $originalSize) * 100, 1) : 0;
+
         $this->info('Machine Events Archive Status');
-        $this->info('=============================');
-
-        // Overall statistics
-        $activeEvents   = MachineEvent::count();
-        $activeMachines = MachineEvent::distinct('root_event_id')->count();
-
-        $archivedMachines    = MachineEventArchive::count();
-        $totalArchivedEvents = (int) MachineEventArchive::sum('event_count');
-        $totalOriginalSize   = (int) MachineEventArchive::sum('original_size');
-        $totalCompressedSize = (int) MachineEventArchive::sum('compressed_size');
-
-        $compressionRatio = $totalOriginalSize > 0 ? $totalCompressedSize / $totalOriginalSize : 0;
-        $savings          = $totalOriginalSize - $totalCompressedSize;
-
-        $this->table(['Metric', 'Active Events', 'Archived Events'], [
-            ['Instances', number_format($activeMachines), number_format($archivedMachines)],
-            ['Events', number_format((int) $activeEvents), number_format($totalArchivedEvents)],
-            ['Storage Size', '-', $this->formatBytes($totalCompressedSize)],
-            ['Original Size', '-', $this->formatBytes($totalOriginalSize)],
-            ['Compression Ratio', '-', round($compressionRatio * 100, 1).'%'],
-            ['Space Saved', '-', $this->formatBytes($savings)],
-        ]);
-
-        // Recent archival activity
-        $recentArchives = MachineEventArchive::query()
-            ->latest('archived_at')
-            ->limit(10)
-            ->get(['machine_id', 'event_count', 'compression_level', 'original_size', 'compressed_size', 'archived_at', 'restore_count', 'last_restored_at']);
-
-        if ($recentArchives->isNotEmpty()) {
-            $this->newLine();
-            $this->info('Recent Archival Activity (Last 10)');
-            $this->table(
-                ['Machine ID', 'Events', 'Compression', 'Savings %', 'Restores', 'Archived At'],
-                $recentArchives->map(function ($archive): array {
-                    $savingsPercent = $archive->original_size > 0
-                        ? (($archive->original_size - $archive->compressed_size) / $archive->original_size) * 100
-                        : 0;
-
-                    return [
-                        $archive->machine_id,
-                        $archive->event_count,
-                        "Level {$archive->compression_level}",
-                        round($savingsPercent, 1).'%',
-                        $archive->restore_count,
-                        $archive->archived_at->format('Y-m-d H:i:s'),
-                    ];
-                })->all()
-            );
-        }
-
-        // Show archives with recent restoration activity
-        $recentRestores = MachineEventArchive::query()
-            ->whereNotNull('last_restored_at')
-            ->latest('last_restored_at')
-            ->limit(5)
-            ->get(['machine_id', 'restore_count', 'last_restored_at', 'archived_at']);
-
-        if ($recentRestores->isNotEmpty()) {
-            $this->newLine();
-            $this->info('Recent Restore Activity (Last 5)');
-            $this->table(
-                ['Machine ID', 'Total Restores', 'Last Restored', 'Originally Archived'],
-                $recentRestores->map(function ($archive): array {
-                    return [
-                        $archive->machine_id,
-                        $archive->restore_count,
-                        $archive->last_restored_at->format('Y-m-d H:i:s'),
-                        $archive->archived_at->format('Y-m-d H:i:s'),
-                    ];
-                })->all()
-            );
-        }
-
-        return self::SUCCESS;
-    }
-
-    protected function showMachineDetails(string $machineId): int
-    {
-        $archives = MachineEventArchive::forMachine($machineId)
-            ->orderBy('archived_at', 'desc')
-            ->get();
-
-        if ($archives->isEmpty()) {
-            $this->info("No archived events found for machine: {$machineId}");
-
-            // Check if machine has active events
-            $activeEvents = MachineEvent::where('machine_id', $machineId)->count();
-            if ($activeEvents > 0) {
-                $this->info("Machine has {$activeEvents} active events that haven't been archived yet.");
-            }
-
-            return self::SUCCESS;
-        }
-
-        $this->info("Archived Events for Machine: {$machineId}");
-        $this->info(str_repeat('=', 50));
+        $this->newLine();
 
         $this->table(
-            ['Root Event ID', 'Events', 'Original Size', 'Compressed Size', 'Savings %', 'Restores', 'Last Restored'],
-            $archives->map(function ($archive): array {
-                return [
-                    substr((string) $archive->root_event_id, 0, 8).'...',
-                    $archive->event_count,
-                    $this->formatBytes($archive->original_size),
-                    $this->formatBytes($archive->compressed_size),
-                    round($archive->savings_percent, 1).'%',
-                    $archive->restore_count,
-                    $archive->last_restored_at ? $archive->last_restored_at->format('Y-m-d H:i:s') : 'Never',
-                ];
-            })->toArray()
+            ['', 'Instances', 'Events', 'Size'],
+            [
+                ['Active', number_format($activeCount), number_format($activeEvents), '-'],
+                ['Archived', number_format($archiveCount), number_format($archiveEvents), $this->formatBytes($compressedSize)],
+            ]
         );
 
-        $totalEvents  = $archives->sum('event_count');
-        $totalSavings = $archives->sum('original_size') - $archives->sum('compressed_size');
-
-        $this->newLine();
-        $this->info("Total: {$totalEvents} events archived, ".$this->formatBytes($totalSavings).' saved');
+        if ($archiveCount > 0) {
+            $this->newLine();
+            $this->line("Compression: {$ratio}% saved ({$this->formatBytes($saved)})");
+        }
 
         return self::SUCCESS;
     }
 
-    protected function restoreEvents(string $rootEventId): int
+    /**
+     * Restore events from archive.
+     */
+    protected function restoreArchive(string $rootEventId): int
     {
         $archive = MachineEventArchive::find($rootEventId);
 
         if (!$archive) {
-            $this->error("No archived events found for root_event_id: {$rootEventId}");
+            $this->error("Archive not found: {$rootEventId}");
 
             return self::FAILURE;
         }
 
-        if (!$this->confirm("Restore {$archive->event_count} events for machine {$archive->machine_id}?")) {
-            $this->info('Restore cancelled.');
-
+        if (!$this->confirm("Restore {$archive->event_count} events for {$archive->machine_id}?")) {
             return self::SUCCESS;
         }
 
-        $archiveService = new ArchiveService();
-
         try {
-            DB::transaction(function () use ($archiveService, $rootEventId): void {
-                // Restore events using ArchiveService (this will track restoration)
-                $events = $archiveService->restoreMachine($rootEventId, false); // Don't keep archive
+            DB::transaction(function () use ($rootEventId): void {
+                $archiveService = new ArchiveService();
+                $events         = $archiveService->restoreMachine($rootEventId, keepArchive: false);
 
-                // Re-create active events
                 foreach ($events as $event) {
                     MachineEvent::create($event->toArray());
                 }
             });
 
-            $this->info("Successfully restored {$archive->event_count} events and deleted archive.");
+            $this->info("Restored {$archive->event_count} events.");
 
-        } catch (\Exception $e) {
-            $this->error("Failed to restore events: {$e->getMessage()}");
+            return self::SUCCESS;
+
+        } catch (\Throwable $e) {
+            $this->error("Restore failed: {$e->getMessage()}");
 
             return self::FAILURE;
         }
-
-        return self::SUCCESS;
     }
 
+    /**
+     * Permanently delete an archive.
+     */
     protected function cleanupArchive(string $rootEventId): int
     {
         $archive = MachineEventArchive::find($rootEventId);
 
         if (!$archive) {
-            $this->error("No archived events found for root_event_id: {$rootEventId}");
+            $this->error("Archive not found: {$rootEventId}");
 
             return self::FAILURE;
         }
 
-        if (!$this->confirm("Permanently delete archived events for machine {$archive->machine_id}? This cannot be undone.")) {
-            $this->info('Cleanup cancelled.');
-
+        if (!$this->confirm("Permanently delete archive for {$archive->machine_id}? This cannot be undone.")) {
             return self::SUCCESS;
         }
 
         $archive->delete();
-        $this->info('Archived events permanently deleted.');
+        $this->info('Archive deleted.');
 
         return self::SUCCESS;
     }
 
     protected function formatBytes(int $bytes): string
     {
+        if ($bytes === 0) {
+            return '0 B';
+        }
+
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
 
-        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+        for ($i = 0; $bytes >= 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
 

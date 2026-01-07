@@ -124,34 +124,6 @@ echo "Failed: " . count($results['failed']);
 echo "Skipped (cooldown): " . count($results['skipped']);
 ```
 
-### getArchiveStats
-
-```php
-public function getArchiveStats(): array
-```
-
-Returns comprehensive statistics about the archive system.
-
-**Returns:** Array containing:
-
-| Key | Type | Description |
-|-----|------|-------------|
-| `enabled` | `bool` | Whether archival is enabled |
-| `total_archives` | `int` | Number of archived machines |
-| `total_events_archived` | `int` | Total events in archives |
-| `total_space_saved` | `int` | Bytes saved through compression |
-| `total_space_saved_mb` | `float` | MB saved through compression |
-| `average_compression_ratio` | `float` | Average ratio (0.0-1.0, lower is better) |
-| `space_savings_percent` | `float` | Percentage of space saved |
-
-```php
-$stats = $service->getArchiveStats();
-
-echo "Total archives: {$stats['total_archives']}";
-echo "Space saved: {$stats['total_space_saved_mb']} MB";
-echo "Average compression: " . round($stats['average_compression_ratio'] * 100) . "%";
-```
-
 ### canReArchive
 
 ```php
@@ -197,9 +169,9 @@ class ArchiveController extends Controller
         protected ArchiveService $archiveService
     ) {}
 
-    public function stats()
+    public function archive(string $rootEventId)
     {
-        return $this->archiveService->getArchiveStats();
+        return $this->archiveService->archiveMachine($rootEventId);
     }
 }
 ```
