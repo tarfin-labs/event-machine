@@ -405,9 +405,3 @@ MachineDefinition::define(
     ],
 );
 ```
-
-## Next Steps
-
-- [Defining States](/building/defining-states) - Deep dive into states
-- [Writing Transitions](/building/writing-transitions) - Transition patterns
-- [Behaviors](/behaviors/introduction) - Implementing actions, guards, and more

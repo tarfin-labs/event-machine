@@ -55,9 +55,3 @@ class MyMachine extends Machine
     }
 }
 ```
-
-## Next Steps
-
-- [Traffic Light](/patterns/traffic-light) - Start here
-- [Testing](/testing/introduction) - Learn to test your patterns
-- [Laravel Integration](/laravel/introduction) - Use patterns in Laravel apps

@@ -309,9 +309,3 @@ MachineDefinition::define(
     'description' => 'Human readable text',
 ],
 ```
-
-## Next Steps
-
-- [Writing Transitions](/building/writing-transitions) - Define how states connect
-- [Working with Context](/building/working-with-context) - Manage state data
-- [Handling Events](/building/handling-events) - Trigger state changes

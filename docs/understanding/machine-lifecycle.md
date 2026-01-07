@@ -371,9 +371,3 @@ class SendEmailAction extends ActionBehavior
     }
 }
 ```
-
-## Next Steps
-
-- [Building Machines](/building/defining-states) - Practical construction
-- [Actions](/behaviors/actions) - Side effects in detail
-- [Persistence](/laravel/persistence) - Database integration

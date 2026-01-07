@@ -396,10 +396,3 @@ When a transition fires, this is the execution sequence:
    - Stay in current state
    - No actions execute
 ```
-
-## Next Steps
-
-- [Working with Context](/building/working-with-context) - Pass data through transitions
-- [Handling Events](/building/handling-events) - Trigger transitions
-- [Actions](/behaviors/actions) - Implement transition logic
-- [Guards](/behaviors/guards) - Control transition flow

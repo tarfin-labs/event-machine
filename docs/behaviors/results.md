@@ -417,9 +417,3 @@ return [
 'failed' => ['type' => 'final', 'result' => FailureResult::class],
 'cancelled' => ['type' => 'final', 'result' => CancelledResult::class],
 ```
-
-## Next Steps
-
-- [Defining States](/building/defining-states) - Learn about final states
-- [Testing](/testing/introduction) - Test result behaviors
-- [Laravel Integration](/laravel/introduction) - Use results in controllers

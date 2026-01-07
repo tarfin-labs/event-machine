@@ -317,12 +317,3 @@ class SendNotificationAction extends ActionBehavior
     }
 }
 ```
-
-## Next Steps
-
-- [Actions](/behaviors/actions) - Execute side effects during transitions
-- [Guards](/behaviors/guards) - Control transition flow
-- [Validation Guards](/behaviors/validation-guards) - Guards with error messages
-- [Calculators](/behaviors/calculators) - Compute values before guards
-- [Events](/behaviors/events) - Define custom event classes
-- [Results](/behaviors/results) - Compute final state output

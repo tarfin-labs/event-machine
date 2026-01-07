@@ -401,9 +401,3 @@ public function __invoke(ContextManager $context): void
     $context->total = collect($items)->sum('price');
 }
 ```
-
-## Next Steps
-
-- [Guards](/behaviors/guards) - Use calculated values in conditions
-- [Actions](/behaviors/actions) - Execute side effects after calculations
-- [Results](/behaviors/results) - Compute final output in final states

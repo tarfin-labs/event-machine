@@ -305,9 +305,3 @@ $machine->send([
     // Where's the amount? Method? Transaction ID?
 ]);
 ```
-
-## Next Steps
-
-- [Context](/understanding/context) - Data that flows with events
-- [Machine Lifecycle](/understanding/machine-lifecycle) - Complete flow
-- [Event Behaviors](/behaviors/events) - Custom event classes in depth

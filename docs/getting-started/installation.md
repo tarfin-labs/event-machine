@@ -71,8 +71,3 @@ echo $state->matches('running'); // true
 ```
 
 If this works, EventMachine is installed correctly.
-
-## Next Steps
-
-- [Build your first machine](/getting-started/your-first-machine) - A complete tutorial
-- [Understanding states](/understanding/states-and-transitions) - Learn the core model

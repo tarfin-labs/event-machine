@@ -354,9 +354,3 @@ $state = $cart->send([
 
 echo $state->context->total; // 1999
 ```
-
-## Next Steps
-
-- [Handling Events](/building/handling-events) - Send data to machines
-- [Actions](/behaviors/actions) - Modify context in actions
-- [Guards](/behaviors/guards) - Check context in guards

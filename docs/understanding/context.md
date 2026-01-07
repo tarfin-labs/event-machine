@@ -323,9 +323,3 @@ count($context->get('items'));
     'status' => 'pending',   // Default value
 ]
 ```
-
-## Next Steps
-
-- [Machine Lifecycle](/understanding/machine-lifecycle) - How context flows through transitions
-- [Custom Context Classes](/advanced/custom-context) - Advanced patterns
-- [Calculators](/behaviors/calculators) - Pre-computing context values

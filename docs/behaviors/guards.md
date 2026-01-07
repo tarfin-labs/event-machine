@@ -434,9 +434,3 @@ class ValidateAmountGuard extends ValidationGuardBehavior
     }
 }
 ```
-
-## Next Steps
-
-- [Validation Guards](/behaviors/validation-guards) - Guards with error messages
-- [Calculators](/behaviors/calculators) - Compute values before guards
-- [Actions](/behaviors/actions) - Execute side effects when guards pass

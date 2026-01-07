@@ -394,9 +394,3 @@ $state = $cart->send(CheckoutEvent::from([
 
 echo $state->value; // 'completed' or 'failed'
 ```
-
-## Next Steps
-
-- [Configuration](/building/configuration) - Machine configuration options
-- [Actions](/behaviors/actions) - Handle events with side effects
-- [Testing](/testing/introduction) - Test event handling

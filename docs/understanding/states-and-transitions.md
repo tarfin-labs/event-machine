@@ -311,9 +311,3 @@ stateDiagram-v2
     'states' => [...],
 ]
 ```
-
-## Next Steps
-
-- [Events](/understanding/events) - What triggers transitions
-- [Context](/understanding/context) - Data that flows through states
-- [Machine Lifecycle](/understanding/machine-lifecycle) - The complete picture
