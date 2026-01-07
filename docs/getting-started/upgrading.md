@@ -7,7 +7,7 @@ Guide for upgrading between EventMachine versions.
 ### Requirements
 
 - PHP 8.2+ (upgraded from 8.1)
-- Laravel 10.x or 11.x
+- Laravel 10.x, 11.x, or 12.x
 
 ### Breaking Changes
 
@@ -306,7 +306,7 @@ Events use array format with `type` and `payload` keys.
 
 | EventMachine | PHP | Laravel |
 |--------------|-----|---------|
-| 3.x | 8.2+ | 10.x, 11.x |
+| 3.x | 8.2+ | 10.x, 11.x, 12.x |
 | 2.x | 8.1+ | 9.x, 10.x |
 | 1.x | 8.0+ | 8.x, 9.x |
 

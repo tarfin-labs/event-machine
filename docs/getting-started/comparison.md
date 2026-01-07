@@ -231,7 +231,7 @@ order.history # All transitions with timestamps and metadata
 
 ### state_machines
 
-[state_machines](https://github.com/state-machines/state_machines) provides a comprehensive state machine implementation with ORM integrations.
+[state_machines](https://github.com/state-machines/state_machines) provides a complete state machine implementation with ORM integrations.
 
 ```ruby
 class Vehicle

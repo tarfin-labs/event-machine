@@ -332,6 +332,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Tarfinlabs\EventMachine\Traits\HasMachines;
+use Tarfinlabs\EventMachine\Casts\MachineCast;
 use App\Machines\TrafficLightMachine;
 
 class Intersection extends Model
@@ -339,7 +340,7 @@ class Intersection extends Model
     use HasMachines;
 
     protected $casts = [
-        'light' => TrafficLightMachine::class,
+        'light' => MachineCast::class . ':' . TrafficLightMachine::class,
     ];
 }
 ```

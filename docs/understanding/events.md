@@ -81,7 +81,7 @@ EventMachine fires internal events for lifecycle tracking:
 
 ## Learn More
 
-For comprehensive events documentation including:
+For complete events documentation including:
 
 - Custom event classes with validation
 - Event versioning

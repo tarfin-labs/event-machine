@@ -3,7 +3,7 @@
 ## Requirements
 
 - PHP 8.2 or higher
-- Laravel 10.x or 11.x
+- Laravel 10.x, 11.x, or 12.x
 - ext-zlib (for compression features)
 
 ## Install via Composer
@@ -22,16 +22,29 @@ This creates `config/machine.php`:
 
 ```php
 return [
-    // Table name for storing events
-    'table_name' => env('MACHINE_EVENTS_TABLE', 'machine_events'),
-
-    // Event archival settings
     'archival' => [
+        // Enable/disable archival globally
         'enabled' => env('MACHINE_EVENTS_ARCHIVAL_ENABLED', true),
+
+        // Compression level (0-9)
         'level' => env('MACHINE_EVENTS_COMPRESSION_LEVEL', 6),
+
+        // Minimum data size (bytes) before compression
         'threshold' => env('MACHINE_EVENTS_ARCHIVAL_THRESHOLD', 1000),
+
+        // Archive after this many days of inactivity
         'days_inactive' => env('MACHINE_EVENTS_ARCHIVAL_DAYS', 30),
+
+        // Cooldown hours before allowing restore
         'restore_cooldown_hours' => env('MACHINE_EVENTS_RESTORE_COOLDOWN_HOURS', 24),
+
+        'advanced' => [
+            // Max workflows to dispatch per scheduler run
+            'dispatch_limit' => env('MACHINE_EVENTS_ARCHIVAL_DISPATCH_LIMIT', 50),
+
+            // Queue name (null = default queue)
+            'queue' => env('MACHINE_EVENTS_ARCHIVAL_QUEUE'),
+        ],
     ],
 ];
 ```
