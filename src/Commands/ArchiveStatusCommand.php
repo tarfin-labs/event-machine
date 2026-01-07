@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
@@ -90,19 +89,21 @@ class ArchiveStatusCommand extends Command
             return self::SUCCESS;
         }
 
+        $eventCount = $archive->event_count;
+
         try {
-            DB::transaction(function () use ($rootEventId): void {
-                $archiveService = new ArchiveService();
-                $events         = $archiveService->restoreMachine($rootEventId, keepArchive: false);
+            $archiveService = new ArchiveService();
+            $result         = $archiveService->restoreAndDelete($rootEventId);
 
-                foreach ($events as $event) {
-                    MachineEvent::create($event->toArray());
-                }
-            });
+            if ($result) {
+                $this->info("Restored {$eventCount} events.");
 
-            $this->info("Restored {$archive->event_count} events.");
+                return self::SUCCESS;
+            }
 
-            return self::SUCCESS;
+            $this->error('Restore failed: archive may have been already restored.');
+
+            return self::FAILURE;
 
         } catch (\Throwable $e) {
             $this->error("Restore failed: {$e->getMessage()}");
