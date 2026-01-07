@@ -84,7 +84,11 @@ class CompressionManager
         }
 
         // Check for zlib header format
-        $header = unpack('n', substr($data, 0, 2))[1];
+        $unpacked = unpack('n', substr($data, 0, 2));
+        if ($unpacked === false || !isset($unpacked[1])) {
+            return false;
+        }
+        $header = $unpacked[1];
 
         // zlib header validation:
         // - Header must be divisible by 31
