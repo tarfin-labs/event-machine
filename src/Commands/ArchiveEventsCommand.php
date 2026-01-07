@@ -4,21 +4,34 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Commands;
 
+use Exception;
 use Illuminate\Support\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
-use Tarfinlabs\EventMachine\Jobs\ArchiveMachineEventsJob;
+use Tarfinlabs\EventMachine\Jobs\ArchiveSingleMachineJob;
 
+/**
+ * Command-based dispatcher for archival (Fan-out pattern).
+ *
+ * Finds eligible machine instances and dispatches ArchiveSingleMachineJob
+ * for each. Designed to be called from scheduler.
+ *
+ * Usage in Kernel.php:
+ *   $schedule->command('machine:archive-events')
+ *       ->everyFiveMinutes()
+ *       ->withoutOverlapping()
+ *       ->onOneServer()
+ *       ->runInBackground();
+ */
 class ArchiveEventsCommand extends Command
 {
     protected $signature = 'machine:archive-events
-                           {--batch-size=100 : Number of machines to process per batch}
-                           {--dry-run : Show statistics without archiving}
-                           {--force : Skip confirmation prompt}
-                           {--queue : Dispatch to queue (recommended for production)}
-                           {--once : Run single batch only, no self-dispatch}';
-    protected $description = 'Archive inactive machine events to compressed storage';
+                           {--dispatch-limit=50 : Max workflows to dispatch per run}
+                           {--dry-run : Show what would be dispatched without dispatching}
+                           {--sync : Run synchronously (testing only)}';
+    protected $description = 'Dispatch archival jobs for inactive machine events (fan-out pattern)';
 
     public function handle(): int
     {
@@ -30,198 +43,99 @@ class ArchiveEventsCommand extends Command
             return self::FAILURE;
         }
 
-        if ($this->option('dry-run')) {
-            return $this->dryRun($config);
+        $dispatchLimit = (int) $this->option('dispatch-limit');
+        $dryRun        = $this->option('dry-run');
+        $sync          = $this->option('sync');
+
+        // Find eligible machines
+        $cutoffDate = Carbon::now()->subDays($config['days_inactive'] ?? 30);
+        $machines   = $this->findEligibleMachines($cutoffDate, $dispatchLimit);
+
+        if ($machines->isEmpty()) {
+            $this->info('No eligible machines found.');
+
+            return self::SUCCESS;
         }
 
-        if ($this->option('queue')) {
-            return $this->dispatchToQueue($config);
+        if ($dryRun) {
+            return $this->showDryRun($machines);
         }
 
-        return $this->runSynchronous($config);
+        // Dispatch jobs
+        return $this->dispatchJobs($machines, $sync);
     }
 
     /**
-     * Show archival statistics without making changes.
-     * Optimized for large tables - uses sampling instead of full COUNT.
+     * Find eligible machine instances using NOT EXISTS pattern.
+     * Optimized for large tables (100GB+).
      */
-    protected function dryRun(array $config): int
+    protected function findEligibleMachines(Carbon $cutoffDate, int $limit): Collection
     {
-        $this->info('Machine Events Archival - Dry Run');
-        $this->info('==================================');
-        $this->newLine();
-
-        $daysInactive = $config['days_inactive'] ?? 30;
-        $cutoffDate   = Carbon::now()->subDays($daysInactive);
-
-        // Fast: Count active machines (uses created_at index)
-        $this->output->write('Counting active machines... ');
-        $start          = microtime(true);
-        $activeMachines = MachineEvent::query()
-            ->where('created_at', '>=', $cutoffDate)
+        return MachineEvent::query()
+            ->select('root_event_id')
+            ->where('created_at', '<', $cutoffDate)
+            // Exclude already archived
+            ->whereNotIn('root_event_id', function ($subQuery): void {
+                $subQuery->select('root_event_id')
+                    ->from('machine_event_archives');
+            })
+            // Exclude instances with recent activity (NOT EXISTS is index-friendly)
+            ->whereNotExists(function ($subQuery) use ($cutoffDate): void {
+                $subQuery->select(DB::raw(1))
+                    ->from('machine_events as recent')
+                    ->whereColumn('recent.root_event_id', 'machine_events.root_event_id')
+                    ->where('recent.created_at', '>=', $cutoffDate);
+            })
             ->distinct()
-            ->count('root_event_id');
-        $this->line(sprintf('%s (%.2fs)', number_format($activeMachines), microtime(true) - $start));
-
-        // Get total machines from index cardinality (instant)
-        $this->output->write('Estimating total machines... ');
-        $indexStats = DB::select("
-            SELECT CARDINALITY
-            FROM information_schema.STATISTICS
-            WHERE TABLE_SCHEMA = DATABASE()
-            AND TABLE_NAME = 'machine_events'
-            AND INDEX_NAME = 'machine_events_root_event_id_index'
-            LIMIT 1
-        ");
-        $totalMachines = $indexStats[0]->CARDINALITY ?? 0;
-        $this->line(number_format($totalMachines).' (from index)');
-
-        // Check archive stats if table exists
-        $archiveStats = $this->getArchiveStats();
-
-        // Calculate estimates
-        $archivedCount      = $archiveStats['total_archives'] ?? 0;
-        $archivableMachines = max(0, $totalMachines - $activeMachines - $archivedCount);
-
-        $this->newLine();
-        $this->table(['Metric', 'Value'], [
-            ['Days Inactive Threshold', $daysInactive],
-            ['Cutoff Date', $cutoffDate->format('Y-m-d H:i:s')],
-            ['Total Machines (est.)', number_format($totalMachines)],
-            ['Active Machines', number_format($activeMachines)],
-            ['Already Archived', number_format($archivedCount)],
-            ['Archivable (est.)', number_format($archivableMachines)],
-        ]);
-
-        if ($archivedCount > 0) {
-            $this->newLine();
-            $this->info('Archive Statistics:');
-            $this->table(['Metric', 'Value'], [
-                ['Total Archives', number_format($archiveStats['total_archives'])],
-                ['Events Archived', number_format($archiveStats['total_events_archived'])],
-                ['Space Saved', ($archiveStats['total_space_saved_mb'] ?? 0).' MB'],
-                ['Avg Compression', round(($archiveStats['average_compression_ratio'] ?? 0) * 100, 1).'%'],
-            ]);
-        }
-
-        // Estimate time
-        if ($archivableMachines > 0) {
-            $batchSize       = (int) $this->option('batch-size');
-            $batches         = ceil($archivableMachines / $batchSize);
-            $estTimePerBatch = 15; // seconds
-            $totalSeconds    = $batches * ($estTimePerBatch + 5); // +5s delay
-
-            $this->newLine();
-            $this->info('Estimated Archival Time:');
-            $this->table(['Parameter', 'Value'], [
-                ['Batch Size', $batchSize],
-                ['Total Batches', number_format($batches)],
-                ['Est. Time/Batch', $estTimePerBatch.'s'],
-                ['Est. Total Time', $this->formatDuration($totalSeconds)],
-            ]);
-        }
-
-        return self::SUCCESS;
+            ->limit($limit)
+            ->pluck('root_event_id');
     }
 
-    /**
-     * Dispatch archival job to queue (recommended for production).
-     */
-    protected function dispatchToQueue(array $config): int
+    protected function dispatchJobs(Collection $machines, bool $sync): int
     {
-        $batchSize = (int) $this->option('batch-size');
-        $once      = $this->option('once');
-
-        $this->info('Dispatching archival job to queue...');
-        $this->table(['Setting', 'Value'], [
-            ['Batch Size', $batchSize],
-            ['Mode', $once ? 'Single batch' : 'Continuous (self-dispatch)'],
-            ['Queue', $config['advanced']['queue'] ?? 'default'],
-        ]);
-
-        if ($once) {
-            // Single batch, no self-dispatch
-            ArchiveMachineEventsJob::dispatch($batchSize, null, array_merge($config, ['once' => true]));
-        } else {
-            // Continuous with self-dispatch
-            ArchiveMachineEventsJob::dispatch($batchSize, null, $config);
-        }
-
-        $this->newLine();
-        $this->info('✓ Job dispatched. Monitor queue workers for progress.');
-        $this->line('  Logs: storage/logs/laravel.log');
-
-        return self::SUCCESS;
-    }
-
-    /**
-     * Run archival synchronously (for small datasets or testing).
-     */
-    protected function runSynchronous(array $config): int
-    {
-        $batchSize = (int) $this->option('batch-size');
-
-        $this->warn('Running synchronously. For production, use --queue');
-        $this->newLine();
-
-        if (!$this->option('force')) {
-            if (!$this->confirm('This may take a long time on large datasets. Continue?')) {
-                return self::SUCCESS;
-            }
-        }
-
-        $job = new ArchiveMachineEventsJob($batchSize, null, $config);
+        $queue = config('machine.archival.advanced.queue');
 
         try {
-            $job->handle();
-            $this->info('✓ Archival batch completed.');
-        } catch (\Exception $e) {
-            $this->error('Archival failed: '.$e->getMessage());
+            foreach ($machines as $rootEventId) {
+                $job = new ArchiveSingleMachineJob($rootEventId);
+
+                if ($queue !== null) {
+                    $job->onQueue($queue);
+                }
+
+                if ($sync) {
+                    dispatch_sync($job);
+                } else {
+                    dispatch($job);
+                }
+            }
+        } catch (Exception $e) {
+            $this->error('Failed to dispatch jobs: '.$e->getMessage());
 
             return self::FAILURE;
         }
 
+        $this->info("Dispatched {$machines->count()} archival jobs.");
+
+        if ($queue) {
+            $this->line("  Queue: {$queue}");
+        }
+
         return self::SUCCESS;
     }
 
-    protected function getArchiveStats(): array
+    protected function showDryRun(Collection $machines): int
     {
-        try {
-            $stats = DB::table('machine_event_archives')
-                ->selectRaw('
-                    COUNT(*) as total_archives,
-                    COALESCE(SUM(event_count), 0) as total_events_archived,
-                    COALESCE(SUM(original_size - compressed_size), 0) as total_space_saved,
-                    COALESCE(AVG(compressed_size / NULLIF(original_size, 0)), 0) as average_compression_ratio
-                ')
-                ->first();
+        $this->info('Dry Run - Would dispatch:');
+        $this->table(
+            ['#', 'Root Event ID'],
+            $machines->map(fn ($id, $i): array => [$i + 1, $id])->all()
+        );
 
-            return [
-                'total_archives'            => (int) ($stats->total_archives ?? 0),
-                'total_events_archived'     => (int) ($stats->total_events_archived ?? 0),
-                'total_space_saved_mb'      => round(($stats->total_space_saved ?? 0) / 1024 / 1024, 2),
-                'average_compression_ratio' => (float) ($stats->average_compression_ratio ?? 0),
-            ];
-        } catch (\Exception $e) {
-            // Table doesn't exist yet
-            return [
-                'total_archives'            => 0,
-                'total_events_archived'     => 0,
-                'total_space_saved_mb'      => 0,
-                'average_compression_ratio' => 0,
-            ];
-        }
-    }
+        $this->newLine();
+        $this->line("Total: {$machines->count()} machines");
+        $this->line('Queue: '.config('machine.archival.advanced.queue', 'default'));
 
-    protected function formatDuration(int $seconds): string
-    {
-        if ($seconds < 60) {
-            return $seconds.' seconds';
-        }
-        if ($seconds < 3600) {
-            return round($seconds / 60, 1).' minutes';
-        }
-
-        return round($seconds / 3600, 1).' hours';
+        return self::SUCCESS;
     }
 }
