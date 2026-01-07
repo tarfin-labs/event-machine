@@ -1,82 +1,29 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
  * Add composite index for archival query optimization.
  *
- * This migration is for EXISTING installations that already have the
- * machine_events table. New installations get the index from the
- * create_machine_events_table migration.
- *
- * The index enables efficient NOT EXISTS queries:
- *   WHERE root_event_id = ? AND created_at >= ?
- *
- * Uses ALGORITHM=INPLACE, LOCK=NONE for online DDL (no table locking).
+ * This index enables efficient NOT EXISTS queries used by the archival job:
+ *   WHERE recent.root_event_id = machine_events.root_event_id
+ *     AND recent.created_at >= :cutoffDate
  */
 return new class extends Migration
 {
-    private const INDEX_NAME = 'idx_machine_events_archival';
-
     public function up(): void
     {
-        // Skip if composite index already exists (idempotent)
-        if ($this->hasCompositeIndex()) {
-            return;
-        }
-
-        // Online DDL - doesn't lock the table
-        DB::statement('
-            ALTER TABLE machine_events
-            ADD INDEX ' . self::INDEX_NAME . ' (root_event_id, created_at),
-            ALGORITHM=INPLACE, LOCK=NONE
-        ');
+        Schema::table('machine_events', function (Blueprint $table) {
+            $table->index(['root_event_id', 'created_at'], 'machine_events_archival_idx');
+        });
     }
 
     public function down(): void
     {
-        if (!$this->indexExists(self::INDEX_NAME)) {
-            return;
-        }
-
-        Schema::table('machine_events', function ($table) {
-            $table->dropIndex(self::INDEX_NAME);
+        Schema::table('machine_events', function (Blueprint $table) {
+            $table->dropIndex('machine_events_archival_idx');
         });
-    }
-
-    /**
-     * Check if a composite index on (root_event_id, created_at) already exists.
-     */
-    private function hasCompositeIndex(): bool
-    {
-        $indexes = DB::select("
-            SELECT INDEX_NAME
-            FROM information_schema.STATISTICS
-            WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME = 'machine_events'
-              AND COLUMN_NAME = 'root_event_id'
-              AND SEQ_IN_INDEX = 1
-              AND INDEX_NAME IN (
-                  SELECT INDEX_NAME
-                  FROM information_schema.STATISTICS
-                  WHERE TABLE_SCHEMA = DATABASE()
-                    AND TABLE_NAME = 'machine_events'
-                    AND COLUMN_NAME = 'created_at'
-                    AND SEQ_IN_INDEX = 2
-              )
-        ");
-
-        return count($indexes) > 0;
-    }
-
-    private function indexExists(string $indexName): bool
-    {
-        $indexes = DB::select("
-            SHOW INDEX FROM machine_events WHERE Key_name = ?
-        ", [$indexName]);
-
-        return count($indexes) > 0;
     }
 };
