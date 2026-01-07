@@ -176,40 +176,6 @@ Decompresses data if compressed, otherwise parses as JSON. Provides transparent 
 $events = CompressionManager::decompress($storedData);
 ```
 
-### getCompressionStats
-
-```php
-public static function getCompressionStats(mixed $data): array
-```
-
-Calculates compression statistics for given data without actually storing it.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$data` | `mixed` | Data to analyze |
-
-**Returns:** Array with compression statistics.
-
-| Key | Type | Description |
-|-----|------|-------------|
-| `original_size` | `int` | Size in bytes before compression |
-| `compressed_size` | `int` | Size in bytes after compression |
-| `compression_ratio` | `float` | Ratio (0.0-1.0, lower is better) |
-| `savings_percent` | `float` | Percentage saved (0-100%) |
-| `compressed` | `bool` | Whether compression was applied |
-
-```php
-$stats = CompressionManager::getCompressionStats($largeArray);
-
-echo "Original: {$stats['original_size']} bytes";
-echo "Compressed: {$stats['compressed_size']} bytes";
-echo "Savings: {$stats['savings_percent']}%";
-
-if (!$stats['compressed']) {
-    echo "Data below threshold, not compressed";
-}
-```
-
 ### clearCache
 
 ```php
@@ -250,12 +216,17 @@ The `isCompressed()` method detects this format by validating the zlib header.
 ### Estimate Storage Savings
 
 ```php
-// Before archiving, estimate savings
+// Before archiving, estimate compression ratio
 $events = MachineEvent::where('root_event_id', $id)->get()->toArray();
-$stats = CompressionManager::getCompressionStats($events);
+$jsonData = json_encode($events);
+$originalSize = strlen($jsonData);
 
-if ($stats['savings_percent'] > 50) {
-    echo "Good candidate for archival - {$stats['savings_percent']}% savings";
+if (CompressionManager::shouldCompress($jsonData)) {
+    $compressed = CompressionManager::compressJson($jsonData);
+    $compressedSize = strlen($compressed);
+    $savingsPercent = (1 - ($compressedSize / $originalSize)) * 100;
+
+    echo "Good candidate for archival - {$savingsPercent}% savings";
 }
 ```
 
