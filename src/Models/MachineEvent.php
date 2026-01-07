@@ -45,12 +45,9 @@ class MachineEvent extends Model
     {
         static::creating(function (MachineEvent $event): void {
             // Auto-restore: if archive exists for this root_event_id, restore and delete it
+            // Uses restoreAndDelete() which has row-level locking to prevent race conditions
             if ($event->root_event_id) {
-                $archive = MachineEventArchive::where('root_event_id', $event->root_event_id)->first();
-
-                if ($archive) {
-                    (new ArchiveService())->restoreAndDelete($event->root_event_id);
-                }
+                (new ArchiveService())->restoreAndDelete($event->root_event_id);
             }
         });
     }
