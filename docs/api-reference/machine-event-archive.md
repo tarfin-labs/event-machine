@@ -215,16 +215,18 @@ When new events are created for an archived machine, the `MachineEvent::creating
 protected static function booted(): void
 {
     static::creating(function (MachineEvent $event): void {
+        // Auto-restore: if archive exists, restore and delete it
+        // Uses restoreAndDelete() which has row-level locking
         if ($event->root_event_id) {
-            $archive = MachineEventArchive::where('root_event_id', $event->root_event_id)->first();
-
-            if ($archive) {
-                (new ArchiveService())->restoreAndDelete($event->root_event_id);
-            }
+            (new ArchiveService())->restoreAndDelete($event->root_event_id);
         }
     });
 }
 ```
+
+::: tip No Double-Check Needed
+The `restoreAndDelete()` method handles archive existence checking internally with `lockForUpdate()`. This prevents race conditions when multiple events arrive simultaneously - only the first event triggers the restore.
+:::
 
 This ensures that archived events are automatically restored when new events arrive, eliminating split state issues.
 
