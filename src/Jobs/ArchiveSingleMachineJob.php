@@ -10,9 +10,8 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Tarfinlabs\EventMachine\EventCollection;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
-use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 
 /**
@@ -75,31 +74,22 @@ class ArchiveSingleMachineJob implements ShouldBeUnique, ShouldQueue
         DB::transaction(function () use ($config): void {
             $this->archiveMachine($config);
         });
-
-        logger()->info('ArchiveSingleMachineJob: Archived machine', [
-            'root_event_id' => $this->rootEventId,
-        ]);
     }
 
     protected function archiveMachine(array $config): void
     {
-        $events = MachineEvent::query()
-            ->where('root_event_id', $this->rootEventId)
-            ->orderBy('sequence_number')
-            ->get();
-
-        if ($events->isEmpty()) {
-            return;
-        }
-
-        $eventCollection  = new EventCollection($events->all());
+        $archiveService   = new ArchiveService($config);
         $compressionLevel = $config['level'] ?? 6;
+        $archive          = $archiveService->archiveMachine($this->rootEventId, $compressionLevel);
 
-        // Create archive
-        MachineEventArchive::archiveEvents($eventCollection, $compressionLevel);
-
-        // Cleanup original events
-        MachineEvent::where('root_event_id', $this->rootEventId)->delete();
+        if ($archive instanceof \Tarfinlabs\EventMachine\Models\MachineEventArchive) {
+            logger()->info('ArchiveSingleMachineJob: Archived machine', [
+                'root_event_id'     => $this->rootEventId,
+                'machine_id'        => $archive->machine_id,
+                'event_count'       => $archive->event_count,
+                'compression_ratio' => $archive->compression_ratio,
+            ]);
+        }
     }
 
     protected function configureQueue(): void
