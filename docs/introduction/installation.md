@@ -58,19 +58,9 @@ return [
         // Cooldown hours before allowing restore
         'restore_cooldown_hours' => env('MACHINE_EVENTS_RESTORE_COOLDOWN_HOURS', 24),
 
-        // Archive retention (days). null = keep forever
-        'archive_retention_days' => env('MACHINE_EVENTS_ARCHIVE_RETENTION_DAYS', null),
-
         'advanced' => [
-            'batch_size' => env('MACHINE_EVENTS_ARCHIVAL_BATCH_SIZE', 100),
-        ],
-
-        // Per-machine overrides
-        'machine_overrides' => [
-            // 'critical_machine' => [
-            //     'days_inactive' => 90,
-            //     'compression_level' => 9,
-            // ],
+            'dispatch_limit' => env('MACHINE_EVENTS_ARCHIVAL_DISPATCH_LIMIT', 50),
+            'queue' => env('MACHINE_EVENTS_ARCHIVAL_QUEUE'),
         ],
     ],
 ];
@@ -87,7 +77,8 @@ return [
 | `threshold` | `1000` | Minimum bytes before compression |
 | `days_inactive` | `30` | Days before archival |
 | `restore_cooldown_hours` | `24` | Hours between restores |
-| `archive_retention_days` | `null` | Days to keep archives |
+| `dispatch_limit` | `50` | Max workflows per scheduler run |
+| `queue` | `null` | Queue name (null = default) |
 
 ### Environment Variables
 

@@ -71,6 +71,8 @@ class MachineEventArchive extends Model
 
     /**
      * Archive a collection of machine events.
+     *
+     * @throws \JsonException
      */
     public static function archiveEvents(EventCollection $events, ?int $compressionLevel = null): self
     {

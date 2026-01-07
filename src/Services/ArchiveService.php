@@ -261,26 +261,6 @@ class ArchiveService
     }
 
     /**
-     * Clean up old archives based on retention policy.
-     */
-    public function cleanupOldArchives(): int
-    {
-        if (!$this->isArchivalEnabled()) {
-            return 0;
-        }
-
-        $retentionDays = $this->config['archive_retention_days'] ?? null;
-
-        if (!$retentionDays) {
-            return 0;
-        }
-
-        $cutoffDate = Carbon::now()->subDays($retentionDays);
-
-        return MachineEventArchive::where('archived_at', '<', $cutoffDate)->delete();
-    }
-
-    /**
      * Check if archival is enabled.
      */
     protected function isArchivalEnabled(): bool

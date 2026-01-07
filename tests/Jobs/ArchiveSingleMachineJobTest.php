@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Queue;
+use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 use Tarfinlabs\EventMachine\Jobs\ArchiveSingleMachineJob;
@@ -76,7 +77,7 @@ describe('ArchiveSingleMachineJob', function (): void {
 
         // Archive it first
         MachineEventArchive::archiveEvents(
-            new \Tarfinlabs\EventMachine\EventCollection([$event])
+            new EventCollection([$event])
         );
         MachineEvent::where('root_event_id', $rootEventId)->delete();
 

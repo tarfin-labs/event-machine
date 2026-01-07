@@ -31,23 +31,12 @@ return [
         // Cooldown hours before allowing restore
         'restore_cooldown_hours' => env('MACHINE_EVENTS_RESTORE_COOLDOWN_HOURS', 24),
 
-        // Archive retention (days). null = keep forever
-        'archive_retention_days' => env('MACHINE_EVENTS_ARCHIVE_RETENTION_DAYS', null),
-
         'advanced' => [
             // Max workflows (unique root_event_ids) to dispatch per scheduler run
             'dispatch_limit' => env('MACHINE_EVENTS_ARCHIVAL_DISPATCH_LIMIT', 50),
 
             // Queue name (null = default queue)
             'queue' => env('MACHINE_EVENTS_ARCHIVAL_QUEUE'),
-        ],
-
-        // Per-machine overrides
-        'machine_overrides' => [
-            'high_volume_machine' => [
-                'days_inactive' => 7,
-                'compression_level' => 9,
-            ],
         ],
     ],
 ];
@@ -62,7 +51,6 @@ return [
 | `threshold` | `1000` | Minimum bytes before compression |
 | `days_inactive` | `30` | Days before archival |
 | `restore_cooldown_hours` | `24` | Hours between restores |
-| `archive_retention_days` | `null` | Days to keep archives |
 | `dispatch_limit` | `50` | Max workflows per scheduler run |
 | `queue` | `null` | Queue name (null = default) |
 
@@ -178,32 +166,6 @@ ArchiveSingleMachineJob::dispatch($rootEventId)
     ->onQueue('archival');
 ```
 
-## Per-Machine Configuration
-
-Override settings for specific machines:
-
-```php
-// config/machine.php
-'machine_overrides' => [
-    // High-volume machine - archive sooner, compress more
-    'logging_machine' => [
-        'days_inactive' => 7,
-        'compression_level' => 9,
-    ],
-
-    // Critical machine - archive later
-    'financial_transaction' => [
-        'days_inactive' => 365,
-        'compression_level' => 6,
-    ],
-
-    // Never archive
-    'audit_trail' => [
-        'enabled' => false,
-    ],
-],
-```
-
 ## Compression Levels
 
 | Level | Compression | Speed | Use Case |
@@ -214,21 +176,6 @@ Override settings for specific machines:
 | 7-9 | High | Slow | Storage-constrained |
 
 Level 6 (default) provides a good balance of compression and speed.
-
-## Retention Policy
-
-Clean up old archives:
-
-```php
-// config/machine.php
-'archive_retention_days' => 365, // Delete archives after 1 year
-```
-
-Or clean up manually:
-
-```bash
-php artisan machine:archive-status --cleanup-archive=01HXYZ...
-```
 
 ## Monitoring
 
@@ -327,21 +274,6 @@ MACHINE_EVENTS_ARCHIVAL_QUEUE=archival
 php artisan queue:work --queue=archival
 ```
 
-### 4. Plan Retention Policy
-
-```php
-'archive_retention_days' => 365, // Don't keep forever
-```
-
-### 5. Override for Specific Machines
-
-```php
-'machine_overrides' => [
-    'high_volume' => ['days_inactive' => 7],
-    'critical' => ['days_inactive' => 90],
-],
-```
-
 ## Real-World Scenarios
 
 ### High-Volume Order Processing
@@ -350,35 +282,14 @@ For e-commerce systems with thousands of orders daily:
 
 ```php
 // config/machine.php
-'machine_overrides' => [
-    'order_processing' => [
-        'days_inactive' => 14,      // Archive completed orders faster
-        'compression_level' => 6,    // Good balance
-    ],
-],
+'days_inactive' => 14,       // Archive completed orders after 2 weeks
+'level' => 6,                // Good compression balance
 ```
 
 **Expected results:**
 - 10,000 orders/day × 50 events/order = 500,000 events/day
 - After 14 days archival: ~7M events in active table
 - Compression savings: ~85% (from 2GB to 300MB archived)
-
-### Compliance & Audit Systems
-
-For financial services requiring long-term retention:
-
-```php
-'machine_overrides' => [
-    'financial_transaction' => [
-        'days_inactive' => 365,           // Keep active for 1 year
-        'compression_level' => 9,          // Maximum compression
-        'archive_retention_days' => 2555,  // 7 years retention
-    ],
-    'audit_log' => [
-        'enabled' => false,  // Never archive audit trails
-    ],
-],
-```
 
 ### Multi-Tenant SaaS Application
 
@@ -387,9 +298,9 @@ Different archival strategies per tenant tier:
 ```php
 // Dynamic configuration based on tenant
 $tenantConfig = match ($tenant->plan) {
-    'enterprise' => ['days_inactive' => 90, 'archive_retention_days' => 365],
-    'business'   => ['days_inactive' => 30, 'archive_retention_days' => 180],
-    'starter'    => ['days_inactive' => 7, 'archive_retention_days' => 30],
+    'enterprise' => ['days_inactive' => 90],
+    'business'   => ['days_inactive' => 30],
+    'starter'    => ['days_inactive' => 7],
 };
 
 $service = new ArchiveService($tenantConfig);
@@ -580,12 +491,8 @@ If machines are being archived and restored repeatedly:
 // Increase cooldown period
 'restore_cooldown_hours' => 72, // 3 days
 
-// Or increase days_inactive for specific machines
-'machine_overrides' => [
-    'frequently_accessed' => [
-        'days_inactive' => 90,
-    ],
-],
+// Or increase days_inactive globally
+'days_inactive' => 90, // Longer period before archival
 ```
 
 ### Disk Space Not Decreasing After Archival

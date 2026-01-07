@@ -378,13 +378,12 @@ class SubmitEvent extends EventBehavior
 
 ### 4. Plan for Archival
 
-Configure archival early for high-volume machines:
+Configure archival early for high-volume systems:
 
 ```php
-'machine_overrides' => [
-    'high_volume_machine' => [
-        'days_inactive' => 7,
-        'compression_level' => 9,
-    ],
+// config/machine.php
+'archival' => [
+    'days_inactive' => 7,    // Archive sooner for high volume
+    'level' => 9,            // Maximum compression
 ],
 ```

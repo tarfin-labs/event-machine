@@ -172,22 +172,6 @@ if ($service->canReArchive('01HQ3K5V7X8Y9Z')) {
 }
 ```
 
-### cleanupOldArchives
-
-```php
-public function cleanupOldArchives(): int
-```
-
-Removes old archives based on the `archive_retention_days` configuration. Archives older than the retention period are permanently deleted.
-
-**Returns:** Number of archives deleted.
-
-```php
-// In a scheduled command
-$deleted = $service->cleanupOldArchives();
-logger()->info("Cleaned up {$deleted} old archives");
-```
-
 ## Configuration
 
 The service uses configuration from `config/machine.php`:
@@ -199,7 +183,6 @@ The service uses configuration from `config/machine.php`:
     'threshold' => env('MACHINE_EVENTS_ARCHIVAL_THRESHOLD', 1000),
     'days_inactive' => env('MACHINE_EVENTS_ARCHIVAL_DAYS', 30),
     'restore_cooldown_hours' => env('MACHINE_EVENTS_RESTORE_COOLDOWN_HOURS', 24),
-    'archive_retention_days' => env('MACHINE_EVENTS_ARCHIVE_RETENTION_DAYS', null),
 ],
 ```
 

@@ -31,9 +31,6 @@ return [
         // Restore tracking and cooldown settings
         'restore_cooldown_hours' => env('MACHINE_EVENTS_RESTORE_COOLDOWN_HOURS', 24),
 
-        // Automatic archive retention policy (days). Set to null to keep forever.
-        'archive_retention_days' => env('MACHINE_EVENTS_ARCHIVE_RETENTION_DAYS'),
-
         // Advanced settings for enterprise environments
         'advanced' => [
             // Max workflows (unique root_event_ids) to dispatch per scheduler run
@@ -42,15 +39,6 @@ return [
             // Queue name for archival jobs (null = default queue)
             // For high-volume archival, use a dedicated queue with its own workers
             'queue' => env('MACHINE_EVENTS_ARCHIVAL_QUEUE'),
-        ],
-
-        // Machine-specific overrides (can be set per machine type)
-        'machine_overrides' => [
-            // Example:
-            // 'critical_machine' => [
-            //     'days_inactive' => 90,      // Keep longer for critical machines
-            //     'compression_level' => 9,   // Maximum compression
-            // ],
         ],
     ],
 ];
