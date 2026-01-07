@@ -95,7 +95,7 @@ $collection = new EventCollection($events->all());
 $archive = MachineEventArchive::archiveEvents($collection, compressionLevel: 9);
 
 echo "Archived {$archive->event_count} events";
-echo "Compression: {$archive->savings_percent}%";
+echo "Compression ratio: {$archive->compression_ratio}";  // e.g., 0.15 (15% of original)
 ```
 
 ## Instance Methods
@@ -137,51 +137,14 @@ $archive = MachineEventArchive::find($rootEventId);
 echo $archive->compression_ratio; // 0.15 = compressed to 15% of original
 ```
 
-### savings_percent
+::: tip Calculating Savings Percentage
+To calculate space savings from the compression ratio:
 
 ```php
-public function getSavingsPercentAttribute(): float
+$savingsPercent = (1 - $archive->compression_ratio) * 100;
+// e.g., compression_ratio = 0.15 → savings = 85%
 ```
-
-Returns the space savings as a percentage (0-100%).
-
-```php
-$archive = MachineEventArchive::find($rootEventId);
-
-echo $archive->savings_percent; // 85.0 = saved 85% of space
-```
-
-## Query Scopes
-
-### forMachine
-
-```php
-public function scopeForMachine($query, string $machineId)
-```
-
-Filters archives by machine ID.
-
-```php
-$archives = MachineEventArchive::forMachine('order-machine')
-    ->get();
-```
-
-### archivedBetween
-
-```php
-public function scopeArchivedBetween($query, Carbon $from, Carbon $to)
-```
-
-Filters archives by date range.
-
-```php
-use Carbon\Carbon;
-
-$archives = MachineEventArchive::archivedBetween(
-    Carbon::now()->subMonth(),
-    Carbon::now()
-)->get();
-```
+:::
 
 ## Usage Examples
 
@@ -231,7 +194,8 @@ $recentArchives = MachineEventArchive::query()
 ```php
 $machineId = 'order-processing';
 
-$impact = MachineEventArchive::forMachine($machineId)
+$impact = MachineEventArchive::query()
+    ->where('machine_id', $machineId)
     ->selectRaw('
         SUM(original_size) as would_be,
         SUM(compressed_size) as actual
@@ -241,6 +205,28 @@ $impact = MachineEventArchive::forMachine($machineId)
 $savedMB = ($impact->would_be - $impact->actual) / 1024 / 1024;
 echo "Storage saved for {$machineId}: {$savedMB} MB";
 ```
+
+## Auto-Restore Integration
+
+When new events are created for an archived machine, the `MachineEvent::creating()` hook automatically triggers restoration:
+
+```php
+// In MachineEvent model (automatic behavior)
+protected static function booted(): void
+{
+    static::creating(function (MachineEvent $event): void {
+        if ($event->root_event_id) {
+            $archive = MachineEventArchive::where('root_event_id', $event->root_event_id)->first();
+
+            if ($archive) {
+                (new ArchiveService())->restoreAndDelete($event->root_event_id);
+            }
+        }
+    });
+}
+```
+
+This ensures that archived events are automatically restored when new events arrive, eliminating split state issues.
 
 ## Model Configuration
 
