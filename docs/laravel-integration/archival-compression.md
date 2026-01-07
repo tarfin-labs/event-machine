@@ -107,26 +107,122 @@ $archive->last_restored_at;  // Last restore time
 ### Compression Statistics
 
 ```php
-$archive->compressionRatio;   // e.g., 0.15 (15% of original)
-$archive->savingsPercent;     // e.g., 85% savings
+$archive->compression_ratio;  // e.g., 0.15 (15% of original size)
+
+// Calculate savings percentage
+$savingsPercent = (1 - $archive->compression_ratio) * 100;  // e.g., 85% savings
 ```
 
 ## Transparent Restoration
 
-When you access an archived machine, it's automatically restored:
+When you access an archived machine, events are restored in-memory without modifying the database:
 
 ```php
 // Events were archived 60 days ago
-$machine = OrderMachine::create(state: $archivedRootId);
+$machine = Machine::withDefinition(OrderMachine::definition());
+$state = $machine->restoreStateFromRootEventId($archivedRootId);
 
 // Behind the scenes:
 // 1. Check if events exist in machine_events
-// 2. If not, check machine_events_archive
-// 3. Decompress and restore to machine_events
-// 4. Continue as normal
+// 2. If not, check machine_event_archives
+// 3. Decompress and restore events IN-MEMORY (no DB write)
+// 4. Track restoration (restore_count, last_restored_at)
+// 5. Return state - archive remains intact
 
-$machine->state->matches('completed'); // Works normally
+$state->matches('completed'); // Works normally
 ```
+
+::: tip Transparent = Read-Only
+Transparent restoration reads from the archive but doesn't write events back to `machine_events`. The archive stays intact, allowing repeated access without data duplication.
+:::
+
+## Auto-Restore (v3)
+
+When new events are created for an archived machine, EventMachine automatically restores all archived events and deletes the archive. This eliminates "split state" where some events are archived and some are active.
+
+### How It Works
+
+```php
+// Machine was archived 60 days ago with 100 events
+// Archive exists, machine_events is empty for this root_event_id
+
+// Now a new event arrives...
+$machine->send(['type' => 'PAYMENT_RECEIVED', 'amount' => 500]);
+
+// Behind the scenes (automatic):
+// 1. MachineEvent::creating() hook detects archive exists
+// 2. ArchiveService::restoreAndDelete() is called
+// 3. All 100 archived events are restored to machine_events
+// 4. Archive is deleted
+// 5. New event is saved (now event #101)
+// 6. All events are together in machine_events
+```
+
+### Lifecycle Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  NORMAL FLOW                                                     │
+│  machine_events ──(30 days inactive)──► archive                  │
+│                                          │                       │
+│                        ┌─────────────────┴─────────────────┐     │
+│                        │                                   │     │
+│                        ▼                                   ▼     │
+│                 Transparent Read               New Event Arrives │
+│                 (keepArchive=true)             (auto-restore)    │
+│                        │                                   │     │
+│                        ▼                                   ▼     │
+│                 In-memory state              Restore + Delete    │
+│                 Archive intact              Events back to DB    │
+│                                                    │             │
+│                                                    ▼             │
+│                                             machine_events       │
+│                                             (all events united)  │
+│                                                    │             │
+│                                                    ▼             │
+│                                             (30 days inactive)   │
+│                                                    │             │
+│                                                    ▼             │
+│                                                archive           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Benefits
+
+| Scenario | Without Auto-Restore | With Auto-Restore |
+|----------|---------------------|-------------------|
+| New event for archived machine | Split state problem | Events unified automatically |
+| Query all events | Must check both tables | Single table query |
+| Event ordering | Complex merge logic | Natural sequence order |
+| Archive cleanup | Manual intervention | Automatic |
+
+### Configuration
+
+Auto-restore is always enabled when archival is enabled. No additional configuration needed.
+
+```php
+// config/machine.php
+'archival' => [
+    'enabled' => true,  // Auto-restore is part of archival
+],
+```
+
+### Cooldown Period
+
+After auto-restore, the machine won't be eligible for re-archival until the cooldown period passes and the inactivity threshold is met again.
+
+```php
+'archival' => [
+    'days_inactive' => 30,              // 30 days before archival
+    'restore_cooldown_hours' => 24,     // 24 hours after restore
+],
+```
+
+**Example Timeline:**
+1. Machine archived on Jan 1
+2. New event arrives on Jan 15 → Auto-restore triggered
+3. Cooldown until Jan 16
+4. If no activity until Feb 15 → Eligible for re-archival
 
 ## Programmatic Archival
 
@@ -140,8 +236,14 @@ $service = new ArchiveService();
 // Archive a specific machine
 $archive = $service->archiveMachine($rootEventId);
 
-// Restore from archive
-$events = $service->restoreFromArchive($rootEventId);
+// Transparent restore (in-memory, keeps archive)
+$events = $service->restoreMachine($rootEventId, keepArchive: true);
+
+// Full restore (writes to DB, deletes archive)
+$events = $service->restoreMachine($rootEventId, keepArchive: false);
+
+// Restore and delete (used by auto-restore)
+$success = $service->restoreAndDelete($rootEventId);
 
 // Check if archived
 $isArchived = MachineEventArchive::where('root_event_id', $rootId)->exists();
@@ -390,20 +492,27 @@ $samples = MachineEvent::selectRaw('root_event_id, COUNT(*) as count')
     ->limit(100)
     ->get();
 
-$totalEstimate = 0;
-$compressedEstimate = 0;
+$totalOriginal = 0;
+$totalCompressed = 0;
 
 foreach ($samples as $sample) {
     $events = MachineEvent::where('root_event_id', $sample->root_event_id)
         ->get()
         ->toArray();
 
-    $stats = CompressionManager::getCompressionStats($events);
-    $totalEstimate += $stats['original_size'];
-    $compressedEstimate += $stats['compressed_size'];
+    $jsonData = json_encode($events);
+    $originalSize = strlen($jsonData);
+    $totalOriginal += $originalSize;
+
+    if (CompressionManager::shouldCompress($jsonData)) {
+        $compressed = CompressionManager::compressJson($jsonData);
+        $totalCompressed += strlen($compressed);
+    } else {
+        $totalCompressed += $originalSize;
+    }
 }
 
-$ratio = $compressedEstimate / $totalEstimate;
+$ratio = $totalCompressed / $totalOriginal;
 echo "Estimated compression ratio: " . round($ratio * 100) . "%";
 echo "Potential savings: " . round((1 - $ratio) * 100) . "%";
 ```
