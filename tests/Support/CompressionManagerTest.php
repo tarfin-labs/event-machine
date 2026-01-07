@@ -131,3 +131,49 @@ describe('CompressionManager (Archival)', function (): void {
         expect($result)->toEqual($data);
     });
 });
+
+describe('CompressionManager Edge Cases', function (): void {
+    beforeEach(function (): void {
+        CompressionManager::clearCache();
+        config([
+            'machine.archival.enabled'   => true,
+            'machine.archival.level'     => 6,
+            'machine.archival.threshold' => 100,
+        ]);
+    });
+
+    it('handles malformed binary data in isCompressed check', function (): void {
+        // Random bytes that might look like headers
+        $randomData = random_bytes(10);
+
+        // Should not throw, just return true or false
+        $result = CompressionManager::isCompressed($randomData);
+
+        expect($result)->toBeBool();
+    });
+
+    it('returns false for truncated data', function (): void {
+        expect(CompressionManager::isCompressed(''))->toBeFalse();
+        expect(CompressionManager::isCompressed('x'))->toBeFalse();
+    });
+
+    it('returns false for null data', function (): void {
+        expect(CompressionManager::isCompressed(null))->toBeFalse();
+    });
+
+    it('handles single byte data safely', function (): void {
+        expect(CompressionManager::isCompressed("\x00"))->toBeFalse();
+        expect(CompressionManager::isCompressed("\x78"))->toBeFalse();
+        expect(CompressionManager::isCompressed("\xff"))->toBeFalse();
+    });
+
+    it('handles data that mimics zlib header prefix but is not valid', function (): void {
+        // Zlib header starts with 0x78 (common) but we need a complete valid header
+        // This tests handling of partial/invalid headers
+        $partialHeader = "\x78\x9c"; // Valid zlib header but no content
+
+        // Should handle gracefully
+        $result = CompressionManager::isCompressed($partialHeader);
+        expect($result)->toBeBool();
+    });
+});
