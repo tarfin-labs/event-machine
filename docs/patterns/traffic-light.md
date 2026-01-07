@@ -1,6 +1,6 @@
 # Traffic Lights Example
 
-A comprehensive example demonstrating custom context classes, typed behaviors, events, guards, and actions.
+A complete example demonstrating custom context classes, typed behaviors, events, guards, and actions.
 
 ## Overview
 

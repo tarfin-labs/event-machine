@@ -1,6 +1,6 @@
 # State Assertions
 
-Comprehensive guide to asserting machine state in your tests.
+Complete guide to asserting machine state in your tests.
 
 ## State Matching
 

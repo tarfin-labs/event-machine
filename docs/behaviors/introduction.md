@@ -59,14 +59,14 @@ abstract class InvokableBehavior
     // Whether to log execution
     public bool $shouldLog = false;
 
-    // Queue for raised events
-    public Collection $eventQueue;
+    // Queue for raised events (protected)
+    protected ?Collection $eventQueue;
 
     // Raise an event from within the behavior
-    public function raise(array $event): void;
+    public function raise(EventBehavior|array $eventBehavior): void;
 
     // Get behavior type name
-    public function getType(): string;
+    public static function getType(): string;
 }
 ```
 

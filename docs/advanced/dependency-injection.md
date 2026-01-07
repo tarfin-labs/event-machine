@@ -1,6 +1,6 @@
 # Dependency Injection
 
-EventMachine leverages Laravel's service container for dependency injection in behaviors. This allows you to inject services, repositories, and other dependencies into your actions, guards, calculators, and other behaviors.
+EventMachine uses Laravel's service container for dependency injection in behaviors. This allows you to inject services, repositories, and other dependencies into your actions, guards, calculators, and other behaviors.
 
 ## Constructor Injection
 

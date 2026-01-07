@@ -1,6 +1,6 @@
 # Eloquent Integration
 
-EventMachine integrates seamlessly with Eloquent models through the `HasMachines` trait and `MachineCast`.
+EventMachine integrates with Eloquent models through the `HasMachines` trait and `MachineCast`.
 
 ## HasMachines Trait
 

@@ -1,6 +1,6 @@
 # Custom Context Classes
 
-Custom context classes provide type safety, validation, and computed methods for your machine's data. They extend `ContextManager` and leverage Spatie Laravel Data.
+Custom context classes provide type safety, validation, and computed methods for your machine's data. They extend `ContextManager` and use Spatie Laravel Data.
 
 ## Basic Custom Context
 

@@ -1,6 +1,6 @@
 # Testing Overview
 
-EventMachine provides robust testing support through the Fakeable trait, state assertions, and database testing utilities.
+EventMachine provides full testing support through the Fakeable trait, state assertions, and database testing utilities.
 
 ## Test Setup
 
