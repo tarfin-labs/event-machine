@@ -251,4 +251,45 @@ class ArchiveService
         $archive->increment('restore_count');
         $archive->update(['last_restored_at' => Carbon::now()]);
     }
+
+    /**
+     * Restore events from archive to machine_events and delete the archive.
+     * Used for auto-restore when new events arrive for an archived machine.
+     */
+    public function restoreAndDelete(string $rootEventId): bool
+    {
+        return DB::transaction(function () use ($rootEventId): bool {
+            $archive = MachineEventArchive::lockForUpdate()
+                ->where('root_event_id', $rootEventId)
+                ->first();
+
+            if (!$archive) {
+                return false;
+            }
+
+            // Restore events to machine_events table
+            // Using insert() to bypass model events (avoid infinite loop)
+            $events = $archive->restoreEvents();
+
+            // Prepare events for raw insert (encode array fields as JSON)
+            $insertData = $events->map(function ($event) {
+                $data = $event->toArray();
+
+                // Encode array fields as JSON for raw insert
+                $data['machine_value'] = json_encode($data['machine_value']);
+                $data['payload']       = json_encode($data['payload']);
+                $data['context']       = json_encode($data['context']);
+                $data['meta']          = json_encode($data['meta']);
+
+                return $data;
+            })->all();
+
+            MachineEvent::insert($insertData);
+
+            // Delete the archive
+            $archive->delete();
+
+            return true;
+        });
+    }
 }

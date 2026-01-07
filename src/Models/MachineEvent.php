@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Tarfinlabs\EventMachine\Database\Factories\MachineEventFactory;
 
@@ -35,7 +36,25 @@ class MachineEvent extends Model
     use HasFactory;
     use HasUlids;
 
-    public $timestamps  = false;
+    public $timestamps = false;
+
+    /**
+     * Boot the model and register event listeners.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (MachineEvent $event): void {
+            // Auto-restore: if archive exists for this root_event_id, restore and delete it
+            if ($event->root_event_id) {
+                $archive = MachineEventArchive::where('root_event_id', $event->root_event_id)->first();
+
+                if ($archive) {
+                    (new ArchiveService())->restoreAndDelete($event->root_event_id);
+                }
+            }
+        });
+    }
+
     protected $fillable = [
         // ID Related Attributes
         'id',
