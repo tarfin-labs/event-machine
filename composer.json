@@ -1,10 +1,14 @@
 {
     "name": "tarfin-labs/event-machine",
-    "description": "An event-driven state machine library for PHP, providing an expressive language to define and manage application states, enabling developers to create complex workflows with ease and maintainability.",
+    "description": "Event-driven state machines for Laravel with event sourcing, type-safe context, and full audit trail.",
     "keywords": [
-        "tarfin-labs",
         "laravel",
-        "event-machine"
+        "state-machine",
+        "finite-state-machine",
+        "event-sourcing",
+        "workflow",
+        "xstate",
+        "fsm"
     ],
     "homepage": "https://github.com/tarfin-labs/event-machine",
     "license": "MIT",
