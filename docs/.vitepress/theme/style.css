@@ -1,0 +1,248 @@
+/* Custom theme styles for EventMachine */
+/* Fonts are loaded via <link> tags in config.ts head for better performance */
+
+:root {
+  /* Fonts */
+  --vp-font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --vp-font-family-mono: 'Iosevka', 'Fira Code', 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+
+  /* Brand colors - Light mode (Emerald) */
+  --vp-c-brand-1: #10b981;
+  --vp-c-brand-2: #059669;
+  --vp-c-brand-3: #34d399;
+  --vp-c-brand-soft: rgba(16, 185, 129, 0.14);
+
+  /* Button brand colors */
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: #fff;
+  --vp-button-brand-bg: #10b981;
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: #fff;
+  --vp-button-brand-hover-bg: #059669;
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: #fff;
+  --vp-button-brand-active-bg: #047857;
+
+  /* Home hero */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%);
+}
+
+.dark {
+  /* Brand colors - Dark mode */
+  --vp-c-brand-1: #34d399;
+  --vp-c-brand-2: #6ee7b7;
+  --vp-c-brand-3: #a7f3d0;
+  --vp-c-brand-soft: rgba(52, 211, 153, 0.16);
+
+  /* Button brand colors */
+  --vp-button-brand-bg: #10b981;
+  --vp-button-brand-hover-bg: #059669;
+  --vp-button-brand-active-bg: #047857;
+
+  /* Home hero */
+  --vp-home-hero-name-background: linear-gradient(135deg, #34d399 0%, #6ee7b7 50%, #a7f3d0 100%);
+}
+
+/* Code block styling */
+.vp-doc div[class*='language-'] code {
+  font-size: 1.05em;
+  font-weight: 500;
+  line-height: 1.9;
+}
+
+/* Inline code styling */
+.vp-doc :not(pre) > code {
+  font-size: 0.95em;
+  font-weight: 500;
+  padding: 0.2em 0.4em;
+}
+
+/* Hero section typography */
+.VPHero .name {
+  font-weight: 700;
+}
+
+.VPHero .text {
+  font-weight: 600;
+}
+
+.VPHero .tagline {
+  font-weight: 400;
+}
+
+/* ==========================================
+   Homepage Feature Sections (Alternating Layout)
+   ========================================== */
+
+.feature-sections {
+  max-width: 1152px;
+  margin: 0 auto;
+  padding: 0 24px 64px;
+}
+
+.feature-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 48px;
+  padding: 40px 0;
+}
+
+/* Alternate layout: even sections have code on left */
+.feature-section:nth-child(even) {
+  flex-direction: row-reverse;
+}
+
+.feature-text {
+  flex: 0.8;
+  min-width: 0;
+}
+
+.feature-text h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--vp-c-text-1);
+  margin: 0 0 16px;
+  line-height: 1.3;
+}
+
+.feature-text p {
+  font-size: 1rem;
+  color: var(--vp-c-text-2);
+  line-height: 1.7;
+  margin: 0 0 16px;
+}
+
+.feature-text p:last-of-type {
+  margin-bottom: 16px;
+}
+
+.feature-text a {
+  color: var(--vp-c-brand-1);
+  font-weight: 500;
+}
+
+.feature-text a:hover {
+  color: var(--vp-c-brand-2);
+}
+
+.feature-code {
+  flex: 1.2;
+  min-width: 0;
+}
+
+.feature-code div[class*='language-'] {
+  margin: 0;
+}
+
+/* Ensure code blocks are visible on initial load (SSR hydration fix) */
+.feature-code div[class*='language-'] pre,
+.feature-code div[class*='language-'] code {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Shiki theme CSS variable fallbacks for initial page load */
+.shiki span[style*='--shiki-light'] {
+  color: var(--shiki-light);
+}
+
+.dark .shiki span[style*='--shiki-dark'] {
+  color: var(--shiki-dark);
+}
+
+/* Add spacing between consecutive code blocks */
+.feature-code div[class*='language-'] + div[class*='language-'] {
+  margin-top: 12px;
+}
+
+/* Responsive: Stack on mobile */
+@media (max-width: 768px) {
+  .feature-section,
+  .feature-section:nth-child(even) {
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .feature-text h2 {
+    font-size: 1.35rem;
+  }
+
+  .feature-sections {
+    padding: 0 16px 48px;
+  }
+
+  .feature-section {
+    padding: 32px 0;
+  }
+}
+
+/* ==========================================
+   Terminal Window Style for Shell Code Blocks
+   ========================================== */
+
+:root {
+  --terminal-dot-red: #ff5f56;
+  --terminal-dot-yellow: #ffbd2e;
+  --terminal-dot-green: #27c93f;
+}
+
+/* Terminal window styling for bash/shell code blocks */
+.vp-doc div[class*='language-bash'],
+.vp-doc div[class*='language-shell'],
+.vp-doc div[class*='language-sh'] {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+/* Terminal header bar background */
+.vp-doc div[class*='language-bash']::before,
+.vp-doc div[class*='language-shell']::before,
+.vp-doc div[class*='language-sh']::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  background: transparent;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+  z-index: 5;
+}
+
+/* Terminal dots */
+.vp-doc div[class*='language-bash']::after,
+.vp-doc div[class*='language-shell']::after,
+.vp-doc div[class*='language-sh']::after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  width: 12px;
+  height: 12px;
+  background-color: var(--terminal-dot-red);
+  border-radius: 50%;
+  box-shadow:
+    20px 0 0 var(--terminal-dot-yellow),
+    40px 0 0 var(--terminal-dot-green);
+  z-index: 10;
+}
+
+/* Adjust code padding to make room for header bar */
+.vp-doc div[class*='language-bash'] > pre,
+.vp-doc div[class*='language-shell'] > pre,
+.vp-doc div[class*='language-sh'] > pre {
+  padding-top: 48px !important;
+}
+
+/* Hide the language label for terminal blocks */
+.vp-doc div[class*='language-bash'] > span.lang,
+.vp-doc div[class*='language-shell'] > span.lang,
+.vp-doc div[class*='language-sh'] > span.lang {
+  display: none;
+}

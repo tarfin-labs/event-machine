@@ -7,7 +7,20 @@ export default withMermaid(
     description: 'Event-driven state machine library for Laravel inspired by XState',
 
     head: [
+      // Font preconnect (non-blocking)
+      ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
+      ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
+      ['link', { rel: 'preconnect', href: 'https://cdn.jsdelivr.net' }],
+
+      // Fonts (loaded async, non-blocking)
+      ['link', { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap' }],
+      ['link', { rel: 'stylesheet', href: 'https://cdn.jsdelivr.net/npm/@fontsource/iosevka@5/400.css' }],
+      ['link', { rel: 'stylesheet', href: 'https://cdn.jsdelivr.net/npm/@fontsource/iosevka@5/500.css' }],
+
+      // Favicon
       ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo-light.svg' }],
+
+      // Meta
       ['meta', { name: 'theme-color', content: '#10b981' }],
       ['meta', { property: 'og:type', content: 'website' }],
       ['meta', { property: 'og:title', content: 'EventMachine' }],
