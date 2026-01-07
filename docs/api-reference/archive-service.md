@@ -71,22 +71,22 @@ $events = $service->restoreMachine('01HQ3K5V7X8Y9Z');
 $events = $service->restoreMachine('01HQ3K5V7X8Y9Z', keepArchive: false);
 ```
 
-### getEligibleMachines
+### getEligibleInstances
 
 ```php
-public function getEligibleMachines(int $limit = 100): Collection
+public function getEligibleInstances(int $limit = 100): Collection
 ```
 
 Finds machines eligible for archival based on inactivity threshold and cooldown settings.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `$limit` | `int` | `100` | Maximum number of machines to return |
+| `$limit` | `int` | `100` | Maximum number of instances to return |
 
 **Returns:** Collection of eligible machines with `root_event_id`, `machine_id`, `last_activity`, and `event_count`.
 
 ```php
-$eligible = $service->getEligibleMachines(50);
+$eligible = $service->getEligibleInstances(50);
 
 foreach ($eligible as $machine) {
     echo "{$machine->machine_id}: {$machine->event_count} events";

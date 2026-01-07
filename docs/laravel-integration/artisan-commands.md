@@ -139,7 +139,7 @@ php artisan machine:archive-events --force
 
 | Option | Description |
 |--------|-------------|
-| `--batch-size=N` | Machines per batch (default: 100) |
+| `--batch-size=N` | Instances per batch (default: 100) |
 | `--dry-run` | Preview without changes |
 | `--force` | Skip confirmation |
 | `--queue` | Dispatch to queue |

@@ -35,7 +35,11 @@ return [
         'archive_retention_days' => env('MACHINE_EVENTS_ARCHIVE_RETENTION_DAYS', null),
 
         'advanced' => [
-            'batch_size' => env('MACHINE_EVENTS_ARCHIVAL_BATCH_SIZE', 100),
+            // Max workflows (unique root_event_ids) to dispatch per scheduler run
+            'dispatch_limit' => env('MACHINE_EVENTS_ARCHIVAL_DISPATCH_LIMIT', 50),
+
+            // Queue name (null = default queue)
+            'queue' => env('MACHINE_EVENTS_ARCHIVAL_QUEUE'),
         ],
 
         // Per-machine overrides
@@ -59,27 +63,27 @@ return [
 | `days_inactive` | `30` | Days before archival |
 | `restore_cooldown_hours` | `24` | Hours between restores |
 | `archive_retention_days` | `null` | Days to keep archives |
-| `batch_size` | `100` | Machines per batch |
+| `dispatch_limit` | `50` | Max workflows per scheduler run |
+| `queue` | `null` | Queue name (null = default) |
 
 ## Archival Commands
 
 ### Archive Events
 
+The archival command uses a **fan-out pattern**: it finds eligible machines and dispatches individual `ArchiveSingleMachineJob` for each. This enables parallel processing across queue workers.
+
 ```bash
-# Run archival synchronously
+# Dispatch archival jobs to queue (default)
 php artisan machine:archive-events
 
-# Preview without changes
+# Preview what would be dispatched
 php artisan machine:archive-events --dry-run
 
-# Dispatch to queue
-php artisan machine:archive-events --queue
+# Run synchronously (testing only)
+php artisan machine:archive-events --sync
 
-# Custom batch size
-php artisan machine:archive-events --batch-size=200
-
-# Skip confirmation
-php artisan machine:archive-events --force
+# Custom dispatch limit per run
+php artisan machine:archive-events --dispatch-limit=100
 ```
 
 ### Check Archive Status
@@ -164,13 +168,14 @@ $isArchived = MachineEventArchive::where('root_event_id', $rootId)->exists();
 ### Archive Job
 
 ```php
-use Tarfinlabs\EventMachine\Jobs\ArchiveMachineEventsJob;
+use Tarfinlabs\EventMachine\Jobs\ArchiveSingleMachineJob;
 
-// Dispatch archival job
-ArchiveMachineEventsJob::dispatch($rootEventId);
+// Dispatch archival job for a specific machine
+ArchiveSingleMachineJob::dispatch($rootEventId);
 
-// With custom compression level
-ArchiveMachineEventsJob::dispatch($rootEventId, compressionLevel: 9);
+// With custom queue
+ArchiveSingleMachineJob::dispatch($rootEventId)
+    ->onQueue('archival');
 ```
 
 ## Per-Machine Configuration
@@ -272,16 +277,31 @@ Add to your scheduler:
 // app/Console/Kernel.php
 protected function schedule(Schedule $schedule): void
 {
-    // Run archival daily at midnight
-    $schedule->command('machine:archive-events --force')
-        ->daily()
-        ->at('00:00')
-        ->withoutOverlapping();
-
-    // Or dispatch to queue
-    $schedule->command('machine:archive-events --force --queue')
-        ->daily();
+    // Fan-out pattern: dispatches individual jobs for each eligible machine
+    $schedule->command('machine:archive-events')
+        ->everyFiveMinutes()
+        ->withoutOverlapping()
+        ->onOneServer()
+        ->runInBackground();
 }
+```
+
+### Tuning for Your Workload
+
+The archival throughput depends on:
+- **dispatch_limit**: How many workflows to dispatch per run (default: 50)
+- **Scheduler frequency**: How often to run the command
+- **Queue workers**: How many workers processing the archival queue
+
+```bash
+# Example: 50 workflows × 12 runs/hour × 4 workers = 2400 workflows/hour
+
+# For 100GB databases, recommended settings:
+MACHINE_EVENTS_ARCHIVAL_DISPATCH_LIMIT=100
+MACHINE_EVENTS_ARCHIVAL_QUEUE=archival
+
+# Then run dedicated workers:
+php artisan queue:work --queue=archival --tries=3
 ```
 
 ## Best Practices
@@ -297,10 +317,14 @@ protected function schedule(Schedule $schedule): void
 
 Track archive size and restore frequency before changing settings.
 
-### 3. Use Queue for Large Archives
+### 3. Use Dedicated Queue for Large Datasets
+
+```env
+MACHINE_EVENTS_ARCHIVAL_QUEUE=archival
+```
 
 ```bash
-php artisan machine:archive-events --queue
+php artisan queue:work --queue=archival
 ```
 
 ### 4. Plan Retention Policy
@@ -377,13 +401,14 @@ When multiple services share the event store:
 
 ```php
 // Schedule different services at different times
-$schedule->command('machine:archive-events --force')
-    ->daily()
+$schedule->command('machine:archive-events')
+    ->everyFiveMinutes()
     ->at('02:00')  // Service A
-    ->environments(['production']);
+    ->environments(['production'])
+    ->onOneServer();
 
 // Or use queue with service-specific priorities
-ArchiveMachineEventsJob::dispatch()
+ArchiveSingleMachineJob::dispatch($rootEventId)
     ->onQueue('archival-low-priority');
 ```
 
@@ -399,20 +424,21 @@ ArchiveMachineEventsJob::dispatch()
 | SSD storage | 4-6 | Fast I/O compensates |
 | HDD storage | 7-9 | Minimize disk usage |
 
-### Batch Size Optimization
+### Dispatch Limit Optimization
+
+The `dispatch_limit` controls how many workflows (unique root_event_ids) are found and dispatched per scheduler run:
 
 ```php
-// Small batches - less memory, more queries
-'batch_size' => 50,   // Memory-constrained environments
+// Conservative - fewer jobs per run, more runs
+'dispatch_limit' => 25,   // Memory-constrained environments
 
-// Large batches - faster, more memory
-'batch_size' => 500,  // Dedicated archival workers
+// Aggressive - more jobs per run, faster archival
+'dispatch_limit' => 200,  // High-capacity environments
 ```
 
-**Memory estimation:**
-- ~100KB per machine in batch (average)
-- 100 batch size ≈ 10MB memory
-- 500 batch size ≈ 50MB memory
+**Throughput estimation:**
+- dispatch_limit × runs_per_hour × workers = workflows/hour
+- Example: 50 × 12 × 4 = 2400 workflows/hour
 
 ### Index Strategy
 
@@ -435,13 +461,13 @@ ON machine_event_archives (machine_id, archived_at);
 $service = new ArchiveService();
 
 // Process in chunks
-$eligible = $service->getEligibleMachines(limit: 100);
+$eligible = $service->getEligibleInstances(limit: 100);
 
 while ($eligible->isNotEmpty()) {
     $rootIds = $eligible->pluck('root_event_id')->toArray();
     $service->batchArchive($rootIds);
 
-    $eligible = $service->getEligibleMachines(limit: 100);
+    $eligible = $service->getEligibleInstances(limit: 100);
 }
 ```
 
@@ -508,7 +534,7 @@ echo "30-day projection with archival: " .
 2. Verify `days_inactive` setting:
    ```php
    $service = new ArchiveService();
-   $eligible = $service->getEligibleMachines();
+   $eligible = $service->getEligibleInstances();
    dd($eligible->count()); // Should be > 0
    ```
 
@@ -539,9 +565,9 @@ echo "30-day projection with archival: " .
    MACHINE_EVENTS_COMPRESSION_LEVEL=3
    ```
 
-2. Reduce batch size:
+2. Reduce dispatch limit:
    ```env
-   MACHINE_EVENTS_ARCHIVAL_BATCH_SIZE=25
+   MACHINE_EVENTS_ARCHIVAL_DISPATCH_LIMIT=25
    ```
 
 3. Run during off-peak hours via scheduler
