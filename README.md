@@ -80,34 +80,25 @@ php artisan vendor:publish --tag="event-machine-migrations"
 php artisan migrate
 ```
 
-## Quick Example
+## Eloquent Integration
 
 ```php
-// Define your machine
-class OrderMachine extends Machine
+class Order extends Model
 {
-    public static function definition(): MachineDefinition
-    {
-        return MachineDefinition::define(
-            config: [
-                'initial' => 'draft',
-                'states' => [
-                    'draft'     => ['on' => ['SUBMIT' => 'pending']],
-                    'pending'   => ['on' => ['APPROVE' => 'approved', 'REJECT' => 'rejected']],
-                    'approved'  => ['type' => 'final'],
-                    'rejected'  => ['type' => 'final'],
-                ],
-            ],
-        );
-    }
+    use HasMachines;
+
+    protected $casts = [
+        'machine' => MachineCast::class.':'.OrderMachine::class,
+    ];
 }
 
-// Use it
-$machine = OrderMachine::create();
-$machine->send(['type' => 'SUBMIT']);
-$machine->send(['type' => 'APPROVE']);
+// Use it naturally
+$order = Order::create();
+$order->machine->send(['type' => 'SUBMIT']);
+$order->machine->send(['type' => 'APPROVE']);
 
-$machine->state->matches('approved'); // true
+$order->machine->state->matches('approved'); // true
+$order->machine->state->history->count();    // 3 events tracked
 ```
 
 ## Documentation
