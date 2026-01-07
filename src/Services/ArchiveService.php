@@ -271,18 +271,10 @@ class ArchiveService
             // Using insert() to bypass model events (avoid infinite loop)
             $events = $archive->restoreEvents();
 
-            // Prepare events for raw insert (encode array fields as JSON)
-            $insertData = $events->map(function ($event) {
-                $data = $event->toArray();
-
-                // Encode array fields as JSON for raw insert
-                $data['machine_value'] = json_encode($data['machine_value']);
-                $data['payload']       = json_encode($data['payload']);
-                $data['context']       = json_encode($data['context']);
-                $data['meta']          = json_encode($data['meta']);
-
-                return $data;
-            })->all();
+            // Use getAttributes() to get raw database-ready values:
+            // - datetime fields stay in MySQL format (not ISO8601)
+            // - JSON fields stay as JSON strings (not PHP arrays)
+            $insertData = $events->map(fn ($event) => $event->getAttributes())->all();
 
             MachineEvent::insert($insertData);
 
