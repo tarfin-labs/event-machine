@@ -18,18 +18,13 @@ use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 class ArchiveStatusCommand extends Command
 {
     protected $signature = 'machine:archive-status
-                           {--restore= : Restore archived events for specific root_event_id}
-                           {--cleanup= : Permanently delete archive for specific root_event_id}';
+                           {--restore= : Restore archived events for specific root_event_id}';
     protected $description = 'Show archive summary and manage archived machine events';
 
     public function handle(): int
     {
         if ($rootEventId = $this->option('restore')) {
             return $this->restoreArchive($rootEventId);
-        }
-
-        if ($rootEventId = $this->option('cleanup')) {
-            return $this->cleanupArchive($rootEventId);
         }
 
         return $this->showSummary();
@@ -114,29 +109,6 @@ class ArchiveStatusCommand extends Command
 
             return self::FAILURE;
         }
-    }
-
-    /**
-     * Permanently delete an archive.
-     */
-    protected function cleanupArchive(string $rootEventId): int
-    {
-        $archive = MachineEventArchive::find($rootEventId);
-
-        if (!$archive) {
-            $this->error("Archive not found: {$rootEventId}");
-
-            return self::FAILURE;
-        }
-
-        if (!$this->confirm("Permanently delete archive for {$archive->machine_id}? This cannot be undone.")) {
-            return self::SUCCESS;
-        }
-
-        $archive->delete();
-        $this->info('Archive deleted.');
-
-        return self::SUCCESS;
     }
 
     protected function formatBytes(int $bytes): string

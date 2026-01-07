@@ -82,9 +82,6 @@ php artisan machine:archive-status
 
 # Restore archived events
 php artisan machine:archive-status --restore=01HXYZ...
-
-# Delete archive permanently
-php artisan machine:archive-status --cleanup=01HXYZ...
 ```
 
 ## Archive Table
