@@ -16,9 +16,11 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
  * Tests the complete archive lifecycle:
  * 1. Archive: events move to archive, deleted from machine_events
  * 2. Access: transparent in-memory restore (no DB write)
- * 3. New events: arrive in machine_events while archive exists
- * 4. Cooldown: prevents archiving new events for recently-accessed archives
- * 5. Re-archive: after cooldown, new events can be archived
+ * 3. New events: trigger auto-restore, archive deleted, all events in machine_events
+ * 4. Re-archive: after inactivity period, events can be archived again
+ *
+ * Note: Auto-restore feature eliminates "split state" - when new events arrive,
+ * archived events are automatically restored and archive is deleted.
  */
 describe('Archive Lifecycle', function (): void {
     beforeEach(function (): void {
@@ -118,9 +120,9 @@ describe('Archive Lifecycle', function (): void {
         expect($archive->last_restored_at)->not->toBeNull();
 
         // ============================================
-        // PHASE 4: New event arrives (machine continues)
+        // PHASE 4: New event arrives → Auto-restore triggered
         // ============================================
-        $newEvent = MachineEvent::create([
+        MachineEvent::create([
             'id'              => Str::ulid()->toString(),
             'sequence_number' => 3,
             'created_at'      => now(),
@@ -135,56 +137,55 @@ describe('Archive Lifecycle', function (): void {
             'version'         => 1,
         ]);
 
-        // Now we have split state: archive + active
-        expect(MachineEvent::where('root_event_id', $rootEventId)->count())->toBe(1);
-        expect(MachineEventArchive::where('root_event_id', $rootEventId)->count())->toBe(1);
+        // Auto-restore eliminates split state:
+        // - Archive is deleted
+        // - All events (restored + new) are in machine_events
+        expect(MachineEventArchive::where('root_event_id', $rootEventId)->exists())->toBeFalse();
+        expect(MachineEvent::where('root_event_id', $rootEventId)->count())->toBe(3);
+
+        // Verify event order and data integrity
+        $allEvents = MachineEvent::where('root_event_id', $rootEventId)
+            ->orderBy('sequence_number')
+            ->get();
+
+        expect($allEvents[0]->type)->toBe('START');
+        expect($allEvents[1]->type)->toBe('PROCESS');
+        expect($allEvents[2]->type)->toBe('COMPLETE');
 
         // ============================================
-        // PHASE 5: Archive job should skip (cooldown active)
+        // PHASE 5: Verify re-archive eligibility
         // ============================================
+        // Make all events old enough for archival
+        MachineEvent::where('root_event_id', $rootEventId)
+            ->update(['created_at' => now()->subDays(35)]);
+
         $eligibleInstances = $archiveService->getEligibleInstances(100);
+        $eligibleRootIds   = $eligibleInstances->pluck('root_event_id')->toArray();
 
-        // This machine should NOT be eligible due to cooldown
-        $eligibleRootIds = $eligibleInstances->pluck('root_event_id')->toArray();
-        expect($eligibleRootIds)->not->toContain($rootEventId);
+        expect($eligibleRootIds)->toContain($rootEventId);
 
         // ============================================
-        // PHASE 6: Design decision - archive already exists
+        // PHASE 6: Re-archive and verify
         // ============================================
-        // Once an archive exists for a root_event_id, new events in machine_events
-        // are NOT eligible for archival (to prevent duplicate archives).
-        // The split state (archive + active events) is intentional and permanent
-        // until the archive is fully restored/deleted.
+        $newArchive = $archiveService->archiveMachine($rootEventId);
 
-        // Simulate cooldown expiry
-        $archive->update(['last_restored_at' => now()->subHours(25)]);
-
-        // Make the new event old enough
-        $newEvent->update(['created_at' => now()->subDays(35)]);
-
-        $eligibleAfterCooldown = $archiveService->getEligibleInstances(100);
-
-        // Still NOT eligible because archive already exists for this root_event_id
-        // This is by design - we don't create duplicate/incremental archives
-        $eligibleRootIds = $eligibleAfterCooldown->pluck('root_event_id')->toArray();
-        expect($eligibleRootIds)->not->toContain($rootEventId);
-
-        // Verify split state remains: archive + active events
-        expect(MachineEventArchive::where('root_event_id', $rootEventId)->count())->toBe(1);
-        expect(MachineEvent::where('root_event_id', $rootEventId)->count())->toBe(1);
+        expect($newArchive)->toBeInstanceOf(MachineEventArchive::class);
+        expect($newArchive->event_count)->toBe(3); // All 3 events now
+        expect(MachineEvent::where('root_event_id', $rootEventId)->count())->toBe(0);
+        expect(MachineEventArchive::where('root_event_id', $rootEventId)->exists())->toBeTrue();
     });
 
-    it('merges archive and active events when restoring state', function (): void {
+    it('auto-restores archived events when new event is created', function (): void {
         $rootEventId = Str::ulid()->toString();
-        $machineId   = 'merge_test_machine';
+        $machineId   = 'auto_restore_machine';
 
-        // Create and archive old events
+        // Create and archive old event
         $oldEvent = MachineEvent::create([
             'id'              => Str::ulid()->toString(),
             'sequence_number' => 1,
             'created_at'      => now()->subDays(60),
             'machine_id'      => $machineId,
-            'machine_value'   => ['merge_test_machine.initial'],
+            'machine_value'   => ['auto_restore_machine.initial'],
             'root_event_id'   => $rootEventId,
             'source'          => SourceType::INTERNAL,
             'type'            => 'OLD_EVENT',
@@ -198,13 +199,17 @@ describe('Archive Lifecycle', function (): void {
         MachineEventArchive::archiveEvents($eventCollection);
         MachineEvent::where('root_event_id', $rootEventId)->delete();
 
-        // Create new active event
+        // Verify archive exists
+        expect(MachineEventArchive::where('root_event_id', $rootEventId)->exists())->toBeTrue();
+        expect(MachineEvent::where('root_event_id', $rootEventId)->count())->toBe(0);
+
+        // Create new event - this triggers auto-restore
         MachineEvent::create([
             'id'              => Str::ulid()->toString(),
             'sequence_number' => 2,
             'created_at'      => now(),
             'machine_id'      => $machineId,
-            'machine_value'   => ['merge_test_machine.processing'],
+            'machine_value'   => ['auto_restore_machine.processing'],
             'root_event_id'   => $rootEventId,
             'source'          => SourceType::INTERNAL,
             'type'            => 'NEW_EVENT',
@@ -214,7 +219,11 @@ describe('Archive Lifecycle', function (): void {
             'version'         => 1,
         ]);
 
-        // Machine should prefer active events
+        // Auto-restore should have merged all events
+        expect(MachineEventArchive::where('root_event_id', $rootEventId)->exists())->toBeFalse();
+        expect(MachineEvent::where('root_event_id', $rootEventId)->count())->toBe(2);
+
+        // Restore state and verify both events are present
         $machineDefinition = MachineDefinition::define([
             'id'      => $machineId,
             'initial' => 'initial',
@@ -227,9 +236,10 @@ describe('Archive Lifecycle', function (): void {
         $machine = Machine::withDefinition($machineDefinition);
         $state   = $machine->restoreStateFromRootEventId($rootEventId);
 
-        // Should only have the active event (active takes precedence)
-        expect($state->history)->toHaveCount(1);
-        expect($state->history->first()->type)->toBe('NEW_EVENT');
+        // Should have both events (archived was restored + new)
+        expect($state->history)->toHaveCount(2);
+        expect($state->history->first()->type)->toBe('OLD_EVENT');
+        expect($state->history->last()->type)->toBe('NEW_EVENT');
     });
 
     it('tracks multiple restores correctly', function (): void {

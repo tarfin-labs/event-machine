@@ -96,7 +96,7 @@ describe('Archive Transparency Integration', function (): void {
         expect($state->history->last()->payload)->toEqual(['data' => 'process_data']);
     });
 
-    it('prefers active events over archived when both exist', function (): void {
+    it('auto-restores archived events when new event is created', function (): void {
         $rootEventId = '01H8BM4VK82JKPK7RPR3YGT2DO';
         $machineId   = 'test_machine';
 
@@ -123,38 +123,48 @@ describe('Archive Transparency Integration', function (): void {
         // Delete the original events
         MachineEvent::where('root_event_id', $rootEventId)->delete();
 
-        // Create new active events with same root_event_id
-        $activeEvent = MachineEvent::create([
+        // Verify archive exists, no active events
+        expect(MachineEventArchive::where('root_event_id', $rootEventId)->exists())->toBeTrue();
+        expect(MachineEvent::where('root_event_id', $rootEventId)->count())->toBe(0);
+
+        // Create new event - this triggers auto-restore
+        MachineEvent::create([
             'id'              => '01H8BM4VK82JKPK7RPR3YGT2DP',
-            'sequence_number' => 1,
+            'sequence_number' => 2,
             'created_at'      => now(),
             'machine_id'      => $machineId,
-            'machine_value'   => ['test_machine.initial'],
+            'machine_value'   => ['test_machine.processing'],
             'root_event_id'   => $rootEventId,
             'source'          => SourceType::INTERNAL,
             'type'            => 'new.event',
             'payload'         => ['data' => 'active_data'],
-            'context'         => ['step' => 1],
+            'context'         => ['step' => 2],
             'meta'            => ['debug' => 'active'],
             'version'         => 1,
         ]);
+
+        // Auto-restore should have merged all events and deleted archive
+        expect(MachineEventArchive::where('root_event_id', $rootEventId)->exists())->toBeFalse();
+        expect(MachineEvent::where('root_event_id', $rootEventId)->count())->toBe(2);
 
         $machineDefinition = MachineDefinition::define([
             'id'      => 'test_machine',
             'initial' => 'initial',
             'states'  => [
-                'initial' => ['type' => 'final'],
+                'initial'    => ['on' => ['new.event' => 'processing']],
+                'processing' => ['type' => 'final'],
             ],
         ]);
 
         $machine = Machine::withDefinition($machineDefinition);
+        $state   = $machine->restoreStateFromRootEventId($rootEventId);
 
-        // Should prefer active events over archived ones
-        $state = $machine->restoreStateFromRootEventId($rootEventId);
-
-        expect($state->history)->toHaveCount(1);
-        expect($state->history->first()->type)->toBe('new.event');
-        expect($state->history->first()->payload)->toEqual(['data' => 'active_data']);
+        // Should have both events (archived was restored + new)
+        expect($state->history)->toHaveCount(2);
+        expect($state->history->first()->type)->toBe('old.event');
+        expect($state->history->first()->payload)->toEqual(['data' => 'archived_data']);
+        expect($state->history->last()->type)->toBe('new.event');
+        expect($state->history->last()->payload)->toEqual(['data' => 'active_data']);
     });
 
     it('throws exception when machine is not found in either table', function (): void {
