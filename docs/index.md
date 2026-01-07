@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: EventMachine
-  text: Event-Driven State Machines for Laravel
-  tagline: Complex workflows, simple code, complete history.
+  text: State Machines with Complete History
+  tagline: Define states. Transition safely. Track everything. Restore anytime.
   image:
     light: /logo-light.svg
     dark: /logo-dark.svg
@@ -12,221 +12,265 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /getting-started/your-first-machine
+      link: /getting-started/what-is-event-machine
     - theme: alt
       text: View on GitHub
       link: https://github.com/tarfin-labs/event-machine
-
-features:
-  - icon: 📝
-    title: Full Event Sourcing
-    details: Every state change is recorded as an event, enabling complete audit trails and state restoration from any point.
-  - icon: 🔧
-    title: Laravel Native
-    details: Deep integration with Eloquent models, dependency injection, service providers, and Artisan commands.
-  - icon: 🛡️
-    title: Type-Safe Context
-    details: Validated, type-safe context management with custom context classes powered by Spatie Laravel Data.
-  - icon: 🎯
-    title: Guards & Conditions
-    details: Control transitions with guard conditions that validate context before allowing state changes.
-  - icon: ⚡
-    title: Actions & Side Effects
-    details: Execute business logic during transitions with entry, exit, and transition actions.
-  - icon: 🧮
-    title: Calculators
-    details: Transform context data before guard evaluation with dedicated calculator behaviors.
-  - icon: 🏗️
-    title: Hierarchical States
-    details: Organize complex workflows with nested and parallel states for better structure.
-  - icon: 🔄
-    title: Eventless Transitions
-    details: Automatic transitions with @always for immediate state changes based on conditions.
-  - icon: 🧪
-    title: Comprehensive Testing
-    details: Built-in Fakeable trait for mocking behaviors with full assertion support.
-  - icon: 📦
-    title: Event Archival
-    details: Automatic compression and archival of old events for optimal database performance.
-  - icon: 🔗
-    title: Eloquent Integration
-    details: Attach state machines to models with the HasMachines trait and automatic casting.
-  - icon: 🎭
-    title: Scenarios
-    details: Define alternative machine configurations for different environments or use cases.
 ---
 
-## Quick Example
+<HomeFeatures>
 
-::: code-group
+<div class="feature-section">
+<div class="feature-text">
 
-```php [OrderMachine.php]
-<?php
+## Declare Your States
 
-namespace App\Machines;
+**Define complex workflows in plain PHP arrays.** States, transitions, guards, actions - all in one declarative configuration.
 
-use Tarfinlabs\EventMachine\Actor\Machine;
-use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use App\Machines\Order\OrderContext;
-use App\Machines\Order\Guards\HasItemsGuard;
-use App\Machines\Order\Actions\CalculateTotalAction;
-use App\Machines\Order\Actions\NotifyCustomerAction;
+No more scattered if/else chains. No more inconsistent state checks. Your business logic lives in one place.
 
-class OrderMachine extends Machine
-{
-    public static function definition(): MachineDefinition
-    {
-        return MachineDefinition::define(
-            config: [
-                'initial' => 'pending',
-                'context' => OrderContext::class,
-                'states' => [
-                    'pending' => [
-                        'on' => [
-                            'SUBMIT' => [
-                                'target'  => 'processing',
-                                'guards'  => HasItemsGuard::class,
-                                'actions' => CalculateTotalAction::class,
-                            ],
-                        ],
-                    ],
-                    'processing' => [
-                        'on' => [
-                            'COMPLETE' => [
-                                'target'  => 'completed',
-                                'actions' => NotifyCustomerAction::class,
-                            ],
-                            'CANCEL' => 'cancelled',
-                        ],
-                    ],
-                    'completed' => ['type' => 'final'],
-                    'cancelled' => ['type' => 'final'],
+[Build your first machine &rarr;](/getting-started/your-first-machine)
+
+</div>
+<div class="feature-code">
+
+```php
+MachineDefinition::define(
+    config: [
+        'initial' => 'draft',
+        'context' => ['items' => [], 'total' => 0],
+        'states' => [
+            'draft' => [
+                'on' => ['SUBMIT' => 'review'],
+            ],
+            'review' => [
+                'on' => [
+                    'APPROVE' => 'approved',
+                    'REJECT'  => 'draft',
                 ],
             ],
-        );
-    }
-}
+            'approved' => ['type' => 'final'],
+        ],
+    ],
+);
 ```
 
-```php [OrderContext.php]
-<?php
+</div>
+</div>
 
-namespace App\Machines\Order;
+<div class="feature-section">
+<div class="feature-text">
 
-use Spatie\LaravelData\Optional;
-use Tarfinlabs\EventMachine\ContextManager;
-use Spatie\LaravelData\Attributes\Validation\Min;
+## Every Transition, Persisted
 
-class OrderContext extends ContextManager
-{
-    public function __construct(
-        public array|Optional $items = [],
+**Event sourcing built in.** Every state change becomes an immutable event in your database. Complete audit trail without extra code.
 
-        #[Min(0)]
-        public int|Optional $total = 0,
+Know exactly what happened, when, and why. Compliance-ready from day one. Debug production issues by replaying history.
 
-        public ?string $customer_email = null,
-    ) {
-        parent::__construct();
+[Learn about persistence &rarr;](/laravel-integration/persistence)
 
-        if ($this->items instanceof Optional) {
-            $this->items = [];
-        }
+</div>
+<div class="feature-code">
 
-        if ($this->total instanceof Optional) {
-            $this->total = 0;
-        }
-    }
+```php
+// Send an event
+$order->send(['type' => 'SUBMIT']);
 
-    public function hasItems(): bool
-    {
-        return count($this->items) > 0;
-    }
-}
+// Every transition is recorded in machine_events table
+// | id | type    | payload         | created_at          |
+// |----|---------|-----------------|---------------------|
+// | 1  | @init   | {}              | 2024-01-15 10:30:00 |
+// | 2  | SUBMIT  | {"user_id": 5}  | 2024-01-15 10:30:01 |
+// | 3  | APPROVE | {"by": "admin"} | 2024-01-15 11:45:00 |
+
+// Query event history by root_event_id
+$rootEventId = $order->state->history->first()->root_event_id;
+
+MachineEvent::where('root_event_id', $rootEventId)
+    ->oldest('sequence_number')
+    ->get();
 ```
 
-```php [HasItemsGuard.php]
-<?php
+</div>
+</div>
 
-namespace App\Machines\Order\Guards;
+<div class="feature-section">
+<div class="feature-text">
 
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
-use App\Machines\Order\OrderContext;
+## Guards Protect, Actions Execute
 
+**Conditional transitions with business logic.** Guards validate before transitions happen. Actions execute side effects after.
+
+Validation errors? Return them from guards. Send emails? Queue jobs? Update context? That's what actions do.
+
+[Explore behaviors &rarr;](/behaviors/introduction)
+
+</div>
+<div class="feature-code">
+
+```php
+'CHECKOUT' => [
+    'target'  => 'processing',
+    'guards'  => [HasItemsGuard::class, HasAddressGuard::class],
+    'actions' => [CalculateTotalAction::class, SendReceiptAction::class],
+],
+```
+
+```php
 class HasItemsGuard extends GuardBehavior
 {
     public function __invoke(OrderContext $context): bool
     {
-        return $context->hasItems();
+        return count($context->items) > 0;
     }
 }
 ```
 
-```php [CalculateTotalAction.php]
-<?php
-
-namespace App\Machines\Order\Actions;
-
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
-use App\Machines\Order\OrderContext;
-
-class CalculateTotalAction extends ActionBehavior
+```php
+class SendReceiptAction extends ActionBehavior
 {
     public function __invoke(OrderContext $context): void
     {
-        $context->total = collect($context->items)
-            ->sum(fn($item) => $item['price'] * $item['quantity']);
+        Mail::to($context->email)->queue(new ReceiptMail($context));
     }
 }
 ```
 
-```php [NotifyCustomerAction.php]
-<?php
+</div>
+</div>
 
-namespace App\Machines\Order\Actions;
+<div class="feature-section">
+<div class="feature-text">
 
-use Illuminate\Support\Facades\Mail;
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
-use App\Machines\Order\OrderContext;
+## Archive Millions, Restore Any
 
-class NotifyCustomerAction extends ActionBehavior
+**Enterprise-grade event management.** Completed machines pile up? Archive them. Events compressed to a fraction of their size, but fully restorable when needed.
+
+Six months later, compliance asks about order #12847? One line brings the entire machine back with full context and history.
+
+[Archival & restoration &rarr;](/laravel-integration/archival-compression)
+
+</div>
+<div class="feature-code">
+
+```bash
+# Archive inactive machines (30+ days by default)
+php artisan machine:archive-events
+
+# Events compressed: 847 events → 1 archived record
+# Storage: 2.3 MB → 127 KB
+```
+
+```php
+// Months later: restore the entire machine
+$archive = MachineEventArchive::where(
+    'root_event_id', $rootEventId
+)->first();
+
+// Restore automatically decompresses events
+$order = OrderMachine::create(state: $archive->root_event_id);
+
+// Full machine restored with complete history
+$order->state->matches('completed');       // true
+$order->state->context->total;             // 15000
+$order->state->history->count();           // 847
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
+## Type-Safe Context
+
+**Validated data at every step.** Context classes powered by Spatie Laravel Data give you typed properties, validation rules, and transformations.
+
+No more `$context['total']` typos. No more missing validation. IDE autocompletion everywhere.
+
+[Working with context &rarr;](/building/working-with-context)
+
+</div>
+<div class="feature-code">
+
+```php
+class OrderContext extends ContextManager
 {
+    public function __construct(
+        public array $items = [],
+
+        #[Min(0)]
+        public int $total = 0,
+
+        #[Email]
+        public ?string $customerEmail = null,
+
+        public OrderStatus $status = OrderStatus::Draft,
+    ) {
+        parent::__construct();
+    }
+
+    public function itemCount(): int
+    {
+        return count($this->items);
+    }
+}
+```
+
+```php
+// Type-safe access everywhere
+$order->state->context->total;        // int
+$order->state->context->itemCount();  // method calls work
+$order->state->context->status;       // enum
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
+## Laravel Native
+
+**Built for Laravel, not bolted on.** Eloquent integration, dependency injection, service providers, Artisan commands - everything you expect.
+
+Attach machines to models. Inject services into behaviors. Validate with Artisan. Test with Pest.
+
+[Laravel integration &rarr;](/laravel-integration/overview)
+
+</div>
+<div class="feature-code">
+
+```php
+// Attach to Eloquent models
+class Order extends Model
+{
+    use HasMachines;
+
+    protected $casts = [
+        'machine' => MachineCast::class.':'.OrderMachine::class,
+    ];
+}
+```
+
+```php
+// Dependency injection in behaviors
+class ProcessPaymentAction extends ActionBehavior
+{
+    public function __construct(
+        private PaymentGateway $gateway,
+        private OrderRepository $orders,
+    ) {}
+
     public function __invoke(OrderContext $context): void
     {
-        if ($context->customer_email) {
-            Mail::to($context->customer_email)
-                ->queue(new OrderCompletedMail($context));
-        }
+        $this->gateway->charge($context->total);
+        $this->orders->markPaid($context->orderId);
     }
 }
 ```
 
-```php [Usage]
-<?php
+</div>
+</div>
 
-use App\Machines\OrderMachine;
-
-// Create a new machine instance
-$order = OrderMachine::create();
-
-// Add items to context
-$order->state->context->items = [
-    ['name' => 'Widget', 'price' => 100, 'quantity' => 2],
-    ['name' => 'Gadget', 'price' => 50, 'quantity' => 1],
-];
-$order->state->context->customer_email = 'customer@example.com';
-
-// Submit the order
-$order->send(['type' => 'SUBMIT']);
-
-// Check state and total
-echo $order->state->value;           // 'processing'
-echo $order->state->context->total;  // 250
-
-// Complete the order
-$order->send(['type' => 'COMPLETE']);
-
-echo $order->state->value;           // 'completed'
-```
-
-:::
+</HomeFeatures>
