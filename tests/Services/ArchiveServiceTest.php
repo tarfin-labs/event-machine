@@ -128,7 +128,7 @@ describe('ArchiveService', function (): void {
             ],
         ]);
 
-        $eligibleMachines = $archiveService->getEligibleMachines();
+        $eligibleMachines = $archiveService->getEligibleInstances();
 
         expect($eligibleMachines)->toHaveCount(1);
         expect($eligibleMachines->first()->root_event_id)->toBe($oldRootEventId);

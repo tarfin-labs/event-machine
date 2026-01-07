@@ -53,7 +53,7 @@ class ArchiveStatusCommand extends Command
         $savings          = $totalOriginalSize - $totalCompressedSize;
 
         $this->table(['Metric', 'Active Events', 'Archived Events'], [
-            ['Machines', number_format($activeMachines), number_format($archivedMachines)],
+            ['Instances', number_format($activeMachines), number_format($archivedMachines)],
             ['Events', number_format((int) $activeEvents), number_format($totalArchivedEvents)],
             ['Storage Size', '-', $this->formatBytes($totalCompressedSize)],
             ['Original Size', '-', $this->formatBytes($totalOriginalSize)],

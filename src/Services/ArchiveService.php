@@ -112,10 +112,12 @@ class ArchiveService
     }
 
     /**
-     * Get machines eligible for archival based on days inactive.
+     * Get machine instances eligible for archival based on days inactive.
      * Optimized for large tables using NOT EXISTS pattern.
+     *
+     * @return Collection<int, MachineEvent> Collection of eligible root_event_ids with machine_id
      */
-    public function getEligibleMachines(int $limit = 100): Collection
+    public function getEligibleInstances(int $limit = 100): Collection
     {
         if (!$this->isArchivalEnabled()) {
             return collect();
@@ -132,7 +134,7 @@ class ArchiveService
                 $subQuery->select('root_event_id')
                     ->from('machine_event_archives');
             })
-            // Exclude machines with recent activity (NOT EXISTS is index-friendly)
+            // Exclude instances with recent activity (NOT EXISTS is index-friendly)
             ->whereNotExists(function ($subQuery) use ($cutoffDate): void {
                 $subQuery->select(DB::raw(1))
                     ->from('machine_events as recent')
@@ -140,7 +142,7 @@ class ArchiveService
                     ->where('recent.created_at', '>=', $cutoffDate);
             });
 
-        // Apply cooldown logic - exclude recently restored machines
+        // Apply cooldown logic - exclude recently restored instances
         $cooldownHours = $this->config['restore_cooldown_hours'] ?? 24;
         if ($cooldownHours > 0) {
             $cooldownCutoff = Carbon::now()->subHours($cooldownHours);
@@ -214,8 +216,10 @@ class ArchiveService
     }
 
     /**
-     * Batch archive multiple machines.
+     * Batch archive multiple machine instances.
      * Events are always moved to archive (removed from active table after successful archival).
+     *
+     * @param  array<string>  $rootEventIds  Array of root_event_ids to archive
      */
     public function batchArchive(array $rootEventIds, ?int $compressionLevel = null): array
     {
