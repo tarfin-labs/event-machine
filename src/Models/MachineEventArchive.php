@@ -27,8 +27,8 @@ use Tarfinlabs\EventMachine\Support\CompressionManager;
  * @property int $compressed_size The size after compression (bytes).
  * @property int $compression_level The compression level used (0-9).
  * @property Carbon $archived_at The timestamp when the events were archived.
- * @property Carbon $first_event_at The timestamp of the first event in this machine.
- * @property Carbon $last_event_at The timestamp of the last event in this machine.
+ * @property Carbon $first_event_at The timestamp of the first event in this archive.
+ * @property Carbon $last_event_at The timestamp of the last event in this archive.
  * @property int $restore_count The number of times this archive was restored.
  * @property Carbon|null $last_restored_at The timestamp when this archive was last restored.
  */
@@ -144,33 +144,5 @@ class MachineEventArchive extends Model
         }
 
         return $this->compressed_size / $this->original_size;
-    }
-
-    /**
-     * Get compression savings percentage (0-100%).
-     */
-    protected function getSavingsPercentAttribute(): float
-    {
-        if ($this->original_size === 0) {
-            return 0.0;
-        }
-
-        return (($this->original_size - $this->compressed_size) / $this->original_size) * 100;
-    }
-
-    /**
-     * Scope to filter by machine ID.
-     */
-    protected function scopeForMachine($query, string $machineId)
-    {
-        return $query->where('machine_id', $machineId);
-    }
-
-    /**
-     * Scope to filter by archived date range.
-     */
-    protected function scopeArchivedBetween($query, Carbon $from, Carbon $to)
-    {
-        return $query->whereBetween('archived_at', [$from, $to]);
     }
 }

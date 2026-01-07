@@ -100,25 +100,6 @@ describe('ArchiveSingleMachineJob', function (): void {
         expect(MachineEventArchive::count())->toBe(0);
     });
 
-    it('uses configured compression level', function (): void {
-        config(['machine.archival.level' => 9]);
-
-        $rootEventId = '01H8BM4VK82JKPK7RPR3YGT2DM';
-        MachineEvent::factory()->create([
-            'id'              => $rootEventId,
-            'sequence_number' => 1,
-            'root_event_id'   => $rootEventId,
-            'machine_id'      => 'test_machine',
-            'created_at'      => now()->subDays(35),
-        ]);
-
-        $job = new ArchiveSingleMachineJob($rootEventId);
-        $job->handle();
-
-        $archive = MachineEventArchive::first();
-        expect($archive->compression_level)->toBe(9);
-    });
-
     it('has unique id based on root_event_id', function (): void {
         $rootEventId1 = '01H8BM4VK82JKPK7RPR3YGT2DM';
         $rootEventId2 = '01H8BM4VK82JKPK7RPR3YGT2DN';

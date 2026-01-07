@@ -130,34 +130,4 @@ describe('CompressionManager (Archival)', function (): void {
         $result = CompressionManager::decompress($jsonData);
         expect($result)->toEqual($data);
     });
-
-    it('provides compression statistics', function (): void {
-        $data = ['test' => str_repeat('test_data_', 50)];
-
-        $stats = CompressionManager::getCompressionStats($data);
-
-        expect($stats)->toHaveKey('original_size');
-        expect($stats)->toHaveKey('compressed_size');
-        expect($stats)->toHaveKey('compression_ratio');
-        expect($stats)->toHaveKey('savings_percent');
-        expect($stats)->toHaveKey('compressed');
-
-        expect($stats['original_size'])->toBeGreaterThan(0);
-        expect($stats['compressed_size'])->toBeGreaterThan(0);
-        expect($stats['compression_ratio'])->toBeLessThan(1.0);
-        expect($stats['savings_percent'])->toBeGreaterThan(0.0);
-        expect($stats['compressed'])->toBeTrue();
-    });
-
-    it('handles small data in compression statistics', function (): void {
-        config(['machine.archival.threshold' => 1000]);
-
-        $smallData = ['test' => 'small'];
-        $stats     = CompressionManager::getCompressionStats($smallData);
-
-        expect($stats['compression_ratio'])->toBe(1.0);
-        expect($stats['savings_percent'])->toBe(0.0);
-        expect($stats['compressed'])->toBeFalse();
-        expect($stats['original_size'])->toBe($stats['compressed_size']);
-    });
 });

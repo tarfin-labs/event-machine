@@ -16,15 +16,15 @@ return new class extends Migration
             $table->unsignedBigInteger('original_size'); // Size before compression (bytes)
             $table->unsignedBigInteger('compressed_size'); // Size after compression (bytes)
             $table->unsignedTinyInteger('compression_level'); // Compression level used (0-9)
-            $table->dateTime('archived_at')->index();
-            $table->dateTime('first_event_at'); // Timestamp of first event in this machine
-            $table->dateTime('last_event_at'); // Timestamp of last event in this machine
-            
+            $table->dateTime('archived_at'); // When the events were archived
+            $table->dateTime('first_event_at'); // Timestamp of first event in this archive
+            $table->dateTime('last_event_at'); // Timestamp of last event in this archive
+
             // Restore tracking fields
             $table->unsignedInteger('restore_count')->default(0); // How many times this archive was restored
             $table->dateTime('last_restored_at')->nullable(); // When this archive was last restored
-            
-            $table->index(['machine_id', 'archived_at']);
+
+            $table->index(['archived_at']);
             $table->index(['last_restored_at']);
         });
     }

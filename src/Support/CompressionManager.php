@@ -160,36 +160,4 @@ class CompressionManager
 
         return $decoded;
     }
-
-    /**
-     * Get compression statistics for data.
-     *
-     * @throws \JsonException
-     */
-    public static function getCompressionStats(mixed $data): array
-    {
-        $originalJson = json_encode($data, JSON_THROW_ON_ERROR);
-        $originalSize = strlen($originalJson);
-
-        if ($originalSize < self::getThreshold()) {
-            return [
-                'original_size'     => $originalSize,
-                'compressed_size'   => $originalSize,
-                'compression_ratio' => 1.0,
-                'savings_percent'   => 0.0,
-                'compressed'        => false,
-            ];
-        }
-
-        $compressed     = gzcompress($originalJson, self::getLevel());
-        $compressedSize = $compressed !== false ? strlen($compressed) : $originalSize;
-
-        return [
-            'original_size'     => $originalSize,
-            'compressed_size'   => $compressedSize,
-            'compression_ratio' => $compressedSize / $originalSize,
-            'savings_percent'   => (($originalSize - $compressedSize) / $originalSize) * 100,
-            'compressed'        => $compressed !== false && $compressedSize < $originalSize,
-        ];
-    }
 }

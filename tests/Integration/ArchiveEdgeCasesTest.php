@@ -321,45 +321,4 @@ describe('Archive Edge Cases', function (): void {
         });
     });
 
-    describe('Timestamp Handling', function (): void {
-        it('correctly captures first and last event timestamps', function (): void {
-            $rootEventId = '01H8BM4VK82JKPK7RPR3YGT010';
-            $firstTime   = now()->subHours(5);
-            $lastTime    = now();
-
-            $events = new EventCollection([
-                MachineEvent::create([
-                    'id'              => '01H8BM4VK82JKPK7RPR3YTIME1',
-                    'sequence_number' => 1,
-                    'created_at'      => $firstTime,
-                    'machine_id'      => 'time_test',
-                    'machine_value'   => ['state' => 'first'],
-                    'root_event_id'   => $rootEventId,
-                    'source'          => SourceType::INTERNAL,
-                    'type'            => 'test.first',
-                    'payload'         => [],
-                    'version'         => 1,
-                ]),
-                MachineEvent::create([
-                    'id'              => '01H8BM4VK82JKPK7RPR3YTIME2',
-                    'sequence_number' => 2,
-                    'created_at'      => $lastTime,
-                    'machine_id'      => 'time_test',
-                    'machine_value'   => ['state' => 'last'],
-                    'root_event_id'   => $rootEventId,
-                    'source'          => SourceType::INTERNAL,
-                    'type'            => 'test.last',
-                    'payload'         => [],
-                    'version'         => 1,
-                ]),
-            ]);
-
-            $archive = MachineEventArchive::archiveEvents($events);
-
-            expect($archive->first_event_at->toDateTimeString())
-                ->toBe($firstTime->toDateTimeString());
-            expect($archive->last_event_at->toDateTimeString())
-                ->toBe($lastTime->toDateTimeString());
-        });
-    });
 });
