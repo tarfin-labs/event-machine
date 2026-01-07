@@ -18,8 +18,10 @@ parameters:
         # Mockery return type issues
         - identifier: return.type
           path: src/Traits/Fakeable.php
-        # Collection performance hints - not critical
-        - identifier: larastan.noUnnecessaryCollectionCall
+        # Collection performance hints - not critical (may not always match)
+        -
+            identifier: larastan.noUnnecessaryCollectionCall
+            reportUnmatched: false
         # Match expression exhaustive checks - intentional default cases
         - identifier: match.unhandled
         # Strict comparison always true/false - defensive coding
