@@ -61,7 +61,7 @@ class TransitionBranch
                 ->getNearestStateDefinitionByString($this->transitionBranchConfig);
 
             // If the target state definition is not found, throw an exception
-            if ($targetStateDefinition === null) {
+            if (!$targetStateDefinition instanceof StateDefinition) {
                 throw NoStateDefinitionFoundException::build(
                     from: $this->transitionDefinition->source->id,
                     to: $this->transitionBranchConfig,
@@ -75,7 +75,7 @@ class TransitionBranch
         }
 
         if (is_array($this->transitionBranchConfig)) {
-            if (empty($this->target)) {
+            if (!isset($this->target) || !$this->target instanceof StateDefinition) {
                 $this->target = null;
             }
 
@@ -85,7 +85,7 @@ class TransitionBranch
                     ->machine
                     ->getNearestStateDefinitionByString($this->transitionBranchConfig['target']);
 
-                if ($targetStateDefinition === null) {
+                if (!$targetStateDefinition instanceof StateDefinition) {
                     throw NoStateDefinitionFoundException::build(
                         from: $this->transitionDefinition->source->id,
                         to: $this->transitionBranchConfig['target'],
@@ -166,8 +166,8 @@ class TransitionBranch
     {
         foreach ($inlineBehaviors as $behavior) {
             // If the behavior contains a colon, it means that it has a parameter.
-            if (str_contains($behavior, ':')) {
-                $behavior = explode(':', $behavior)[0];
+            if (str_contains((string) $behavior, ':')) {
+                $behavior = explode(':', (string) $behavior)[0];
             }
 
             // If the behavior is class of a known behavior type (e.g., Guard, Action, etc.),

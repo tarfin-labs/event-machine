@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine;
 
 use InvalidArgumentException;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
 class StateConfigValidator
 {
@@ -79,7 +80,7 @@ class StateConfigValidator
             self::ALLOWED_ROOT_KEYS
         );
 
-        if (!empty($invalidRootKeys)) {
+        if ($invalidRootKeys !== []) {
             throw new InvalidArgumentException(
                 message: 'Invalid root level configuration keys: '.implode(separator: ', ', array: $invalidRootKeys).
                 '. Allowed keys are: '.implode(separator: ', ', array: self::ALLOWED_ROOT_KEYS)
@@ -119,7 +120,7 @@ class StateConfigValidator
 
         // Validate state keys
         $invalidKeys = array_diff(array_keys($stateConfig), self::ALLOWED_STATE_KEYS);
-        if (!empty($invalidKeys)) {
+        if ($invalidKeys !== []) {
             throw new InvalidArgumentException(
                 message: "State '{$path}' has invalid keys: ".implode(separator: ', ', array: $invalidKeys).
                 '. Allowed keys are: '.implode(separator: ', ', array: self::ALLOWED_STATE_KEYS)
@@ -305,7 +306,7 @@ class StateConfigValidator
     ): void {
         // Validate allowed keys
         $invalidKeys = array_diff(array_keys($transitionConfig), self::ALLOWED_TRANSITION_KEYS);
-        if (!empty($invalidKeys)) {
+        if ($invalidKeys !== []) {
             throw new InvalidArgumentException(
                 message: "State '{$path}' has invalid keys in transition config for event '{$eventName}': ".
                     implode(separator: ', ', array: $invalidKeys).
@@ -350,7 +351,7 @@ class StateConfigValidator
      */
     private static function validateGuardedTransitions(array $conditions, string $path, string $eventName): void
     {
-        if (empty($conditions)) {
+        if ($conditions === []) {
             throw new InvalidArgumentException(
                 message: "State '{$path}' has empty conditions array for event '{$eventName}'. ".
                          'Guarded transitions must have at least one condition.'

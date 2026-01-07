@@ -20,9 +20,9 @@ class MachineConfigValidatorCommand extends Command
 {
     protected $signature   = 'machine:validate {machine?*} {--all : Validate all machines in the project}';
     protected $description = 'Validate machine configuration for potential issues';
-    private Parser $parser;
-    private NodeTraverser $traverser;
-    private MachineClassVisitor $visitor;
+    private readonly Parser $parser;
+    private readonly NodeTraverser $traverser;
+    private readonly MachineClassVisitor $visitor;
 
     public function __construct()
     {
@@ -115,14 +115,14 @@ class MachineConfigValidatorCommand extends Command
             ? $this->getPackageDevelopmentPaths()
             : $this->getProjectPaths();
 
-        if (empty($paths)) {
+        if ($paths === []) {
             throw new RuntimeException(
                 message: 'No valid search paths found for Machine classes. '.
                 'If you are using event-machine package, please ensure your Machine classes are in the app/ directory.'
             );
         }
 
-        return array_filter($paths, callback: 'is_dir');
+        return array_filter($paths, callback: is_dir(...));
     }
 
     protected function isInPackageDevelopment(): bool
@@ -145,10 +145,10 @@ class MachineConfigValidatorCommand extends Command
                 continue;
             }
 
-            foreach ($composerJson[$autoloadType]['psr-4'] as $namespace => $path) {
+            foreach ($composerJson[$autoloadType]['psr-4'] as $path) {
                 $namespacePaths = (array) $path;
                 foreach ($namespacePaths as $namespacePath) {
-                    $absolutePath = $this->getPackageRootPath().'/'.trim($namespacePath, characters: '/');
+                    $absolutePath = $this->getPackageRootPath().'/'.trim((string) $namespacePath, characters: '/');
                     if (is_dir($absolutePath)) {
                         $paths[] = $absolutePath;
                     }

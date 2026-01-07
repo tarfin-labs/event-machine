@@ -9,4 +9,6 @@ testbench.yaml
 vendor
 node_modules
 .DS_Store
-.claude
+docs/.vitepress/cache
+/.claude/
+thoughts/

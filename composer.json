@@ -16,21 +16,24 @@
         }
     ],
     "require": {
-        "php": "^8.2|^8.3|^8.4",
+        "php": "^8.2|^8.3|^8.4|^8.5",
+        "ext-zlib": "*",
         "illuminate/contracts": "^10.48.4|^11.0.8|^12.0",
         "nikic/php-parser": "^5.4",
         "spatie/laravel-data": "^4.13.0",
         "spatie/laravel-package-tools": "^1.14.0"
     },
     "require-dev": {
-        "infection/infection": "^0.29.6",
-        "laravel/pint": "^1.0",
+        "driftingly/rector-laravel": "^2.1",
         "larastan/larastan": "^3.1.0",
+        "laravel/pint": "^1.0",
+        "nunomaduro/larastan": "^3.8",
         "orchestra/testbench": "^8.23.1|^9.0|^10.0",
-        "pestphp/pest": "^3.0",
-        "pestphp/pest-plugin-arch": "^3.0",
-        "pestphp/pest-plugin-laravel": "^3.0",
-        "pestphp/pest-plugin-type-coverage": "^3.0"
+        "pestphp/pest": "^4.0",
+        "pestphp/pest-plugin-arch": "^4.0",
+        "pestphp/pest-plugin-laravel": "^4.0",
+        "pestphp/pest-plugin-type-coverage": "^4.0",
+        "rector/rector": "^2.0"
     },
     "autoload": {
         "psr-4": {
@@ -45,18 +48,23 @@
     },
     "scripts": {
         "post-autoload-dump": "@php ./vendor/bin/testbench package:discover --ansi",
-        "larastan": "vendor/bin/phpstan analyse --configuration=phpstan.neon.dist",
-        "pest": "vendor/bin/pest --colors=always --order-by=random --configuration=phpunit.xml.dist",
-        "test": "@pest",
-        "testp": "vendor/bin/pest --parallel --colors=always --order-by=random --configuration=phpunit.xml.dist",
-        "type": "vendor/bin/pest --type-coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
-        "profile": "vendor/bin/pest --profile --colors=always --order-by=random --configuration=phpunit.xml.dist",
-        "coverage": "vendor/bin/pest --coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
-        "coveragep": "vendor/bin/pest --parallel --coverage --colors=always --order-by=random --configuration=phpunit.xml.dist",
-        "pint": "vendor/bin/pint --config=pint.json",
-        "lint": "@pint",
-        "lintc": "vendor/bin/pint && (git diff-index --quiet HEAD || (git add . && git commit -m 'chore: Fix styling'))",
-        "infection": "vendor/bin/pest --mutate --parallel --everything"
+        "rector": "rector",
+        "pint": "pint --config=pint.json",
+        "test:rector": "rector --dry-run",
+        "test:pint": "pint --config=pint.json --test",
+        "test:phpstan": "phpstan analyse --configuration=phpstan.neon.dist --ansi",
+        "test:unit": "pest --parallel --colors=always --order-by=random",
+        "test:types": "pest --type-coverage --colors=always",
+        "test:coverage": "pest --coverage --colors=always --min=80",
+        "test:profile": "pest --profile --colors=always --order-by=random",
+        "test:mutation": "pest --mutate --parallel --everything",
+        "test": [
+            "@test:rector",
+            "@test:pint",
+            "@test:phpstan",
+            "@test:unit",
+            "@test:types"
+        ]
     },
     "config": {
         "sort-packages": true,

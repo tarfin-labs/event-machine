@@ -29,9 +29,9 @@ it('can be computed context methods defined', function (): void {
 class TestBehaviorWithRequiredContext extends InvokableBehavior
 {
     public static array $requiredContext = [
-        'user.id'          => 'integer',
+        'user.id'          => 'int',
         'user.name'        => 'string',
-        'settings.enabled' => 'boolean',
+        'settings.enabled' => 'bool',
     ];
 
     public function __invoke(): void {}
@@ -46,7 +46,7 @@ class TestBehaviorWithNestedRequiredContext extends InvokableBehavior
 {
     public static array $requiredContext = [
         'deeply.nested.value'   => 'string',
-        'another.nested.number' => 'integer',
+        'another.nested.number' => 'int',
     ];
 
     public function __invoke(): void {}

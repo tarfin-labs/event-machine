@@ -19,7 +19,7 @@ trait ResolvesBehaviors
      */
     public static function getBehavior(string $path): callable|EventBehavior
     {
-        $behaviors = static::definition()?->behavior ?? [];
+        $behaviors = static::definition()->behavior ?? [];
 
         [$type, $name] = explode('.', $path);
 

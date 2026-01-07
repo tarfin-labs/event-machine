@@ -156,7 +156,7 @@ it('can check existence by its type', function (): void {
     expect($machine->state->context->has(key: 'stringKey', type: 'string'))->toBe(true);
 
     $machine->state->context->set('intKey', 1);
-    expect($machine->state->context->has(key: 'intKey', type: 'integer'))->toBe(true);
+    expect($machine->state->context->has(key: 'intKey', type: 'int'))->toBe(true);
 
     $machine->state->context->set('arrayKey', []);
     expect($machine->state->context->has(key: 'arrayKey', type: 'array'))->toBe(true);
