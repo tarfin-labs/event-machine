@@ -36,11 +36,12 @@ return [
 
         // Advanced settings for enterprise environments
         'advanced' => [
-            // Batch size for archival processing (per transaction)
-            'batch_size' => env('MACHINE_EVENTS_ARCHIVAL_BATCH_SIZE', 100),
+            // Max workflows (unique root_event_ids) to dispatch per scheduler run
+            'dispatch_limit' => env('MACHINE_EVENTS_ARCHIVAL_DISPATCH_LIMIT', 50),
 
-            // Queue name for archival jobs (use dedicated queue for large datasets)
-            'queue' => env('MACHINE_EVENTS_ARCHIVAL_QUEUE', 'default'),
+            // Queue name for archival jobs (null = default queue)
+            // For high-volume archival, use a dedicated queue with its own workers
+            'queue' => env('MACHINE_EVENTS_ARCHIVAL_QUEUE'),
         ],
 
         // Machine-specific overrides (can be set per machine type)
