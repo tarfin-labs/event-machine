@@ -79,7 +79,7 @@ class ArchiveSingleMachineJob implements ShouldBeUnique, ShouldQueue
     protected function archiveMachine(array $config): void
     {
         $archiveService   = new ArchiveService($config);
-        $compressionLevel = $config['level'] ?? 6;
+        $compressionLevel = (int) ($config['level'] ?? 6);
         $archive          = $archiveService->archiveMachine($this->rootEventId, $compressionLevel);
 
         if ($archive instanceof \Tarfinlabs\EventMachine\Models\MachineEventArchive) {
