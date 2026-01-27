@@ -49,7 +49,7 @@ class ArchiveService
         }
 
         $eventCollection = new EventCollection($events->all());
-        $compressionLevel ??= $this->config['level'] ?? 6;
+        $compressionLevel ??= (int) ($this->config['level'] ?? 6);
 
         return DB::transaction(function () use ($eventCollection, $compressionLevel, $rootEventId): MachineEventArchive {
             try {
@@ -123,7 +123,7 @@ class ArchiveService
             return collect();
         }
 
-        $daysInactive = $this->config['days_inactive'] ?? 30;
+        $daysInactive = (int) ($this->config['days_inactive'] ?? 30);
         $cutoffDate   = Carbon::now()->subDays($daysInactive);
 
         $query = MachineEvent::query()
@@ -135,7 +135,7 @@ class ArchiveService
             });
 
         // Apply cooldown logic - exclude recently restored instances
-        $cooldownHours = $this->config['restore_cooldown_hours'] ?? 24;
+        $cooldownHours = (int) ($this->config['restore_cooldown_hours'] ?? 24);
         if ($cooldownHours > 0) {
             $cooldownCutoff = Carbon::now()->subHours($cooldownHours);
             $query->whereNotIn('root_event_id', function ($subQuery) use ($cooldownCutoff): void {
@@ -168,7 +168,7 @@ class ArchiveService
             return true;
         }
 
-        $cooldownHours = $this->config['restore_cooldown_hours'] ?? 24;
+        $cooldownHours = (int) ($this->config['restore_cooldown_hours'] ?? 24);
 
         return $archive->last_restored_at->addHours($cooldownHours)->isPast();
     }
