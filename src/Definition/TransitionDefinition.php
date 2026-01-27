@@ -156,7 +156,7 @@ class TransitionDefinition
 
             $guardsPassed = true;
             foreach ($branch->guards as $guardDefinition) {
-                [$guardDefinition, $guardArguments] = array_pad(explode(':', $guardDefinition, 2), 2, null);
+                [$guardDefinition, $guardArguments] = array_pad(explode(':', (string) $guardDefinition, 2), 2, null);
                 $guardArguments                     = $guardArguments === null ? [] : explode(',', $guardArguments);
 
                 $guardBehavior = $this->source->machine->getInvokableBehavior(
@@ -214,7 +214,7 @@ class TransitionDefinition
                 );
             }
 
-            if ($guardsPassed === true) {
+            if ($guardsPassed) {
                 return $branch;
             }
         }
@@ -232,12 +232,12 @@ class TransitionDefinition
         EventBehavior $eventBehavior,
         TransitionBranch $branch,
     ): bool {
-        if (!isset($branch->calculators)) {
+        if ($branch->calculators === null) {
             return true;
         }
 
         foreach ($branch->calculators as $calculatorDefinition) {
-            [$calculatorDefinition, $calculatorArguments] = array_pad(explode(':', $calculatorDefinition, 2), 2, null);
+            [$calculatorDefinition, $calculatorArguments] = array_pad(explode(':', (string) $calculatorDefinition, 2), 2, null);
             $calculatorArguments                          = $calculatorArguments === null ? [] : explode(',', $calculatorArguments);
 
             $calculatorBehavior = $this->source->machine->getInvokableBehavior(

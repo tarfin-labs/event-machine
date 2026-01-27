@@ -1,0 +1,34 @@
+# Git Mailmap - Canonical author names and emails
+# Format: Canonical Name <canonical@email> Commit Name <commit@email>
+
+# Yunus Emre Deligöz
+Yunus Emre Deligöz <ye@deligoz.me>
+Yunus Emre Deligöz <ye@deligoz.me> <3030815+deligoez@users.noreply.github.com>
+Yunus Emre Deligöz <ye@deligoz.me> deligoez <deligoez@users.noreply.github.com>
+Yunus Emre Deligöz <ye@deligoz.me> deligoez <3030815+deligoez@users.noreply.github.com>
+
+# Fatih Aydın
+Fatih Aydın <fatih.aydin@tarfin.com>
+Fatih Aydın <fatih.aydin@tarfin.com> Fatih AYDIN <fatih.aydin@tarfin.com>
+Fatih Aydın <fatih.aydin@tarfin.com> aydinfatih <aydinfatih@users.noreply.github.com>
+Fatih Aydın <fatih.aydin@tarfin.com> Fatih AYDIN <aydinfatih52@gmail.com>
+
+# Yunus Emre Nalbant
+Yunus Emre Nalbant <yunus.nalbant0@gmail.com>
+Yunus Emre Nalbant <yunus.nalbant0@gmail.com> YunusEmreNalbant <YunusEmreNalbant@users.noreply.github.com>
+
+# Faruk Can
+Faruk Can <faruk.can@tarfin.com>
+Faruk Can <faruk.can@tarfin.com> frkcn <faruk.can@tarfin.com>
+Faruk Can <faruk.can@tarfin.com> frkcn <374634+frkcn@users.noreply.github.com>
+Faruk Can <faruk.can@tarfin.com> Faruk Can <faarukcan@gmail.com>
+
+# Turan Karatuğ
+Turan Karatuğ <tkaratug@hotmail.com.tr>
+Turan Karatuğ <tkaratug@hotmail.com.tr> tkaratug <tkaratug@users.noreply.github.com>
+
+# Yılmaz Demir
+Yılmaz Demir <demiriy@gmail.com>
+
+# Bots
+dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>

@@ -58,7 +58,7 @@ class StateDefinition
      *
      * @var null|array<\Tarfinlabs\EventMachine\Definition\TransitionDefinition>
      */
-    public ?array $transitionDefinitions;
+    public ?array $transitionDefinitions = null;
 
     /**
      * The events that can be accepted by this state definition.
@@ -145,7 +145,7 @@ class StateDefinition
      */
     protected function buildPath(): array
     {
-        return $this->parent
+        return $this->parent instanceof StateDefinition
             ? array_merge($this->parent->path, [$this->key])
             : [];
     }
@@ -391,7 +391,7 @@ class StateDefinition
         // If there are transitions defined for the current state definition,
         // add the event names to the events array.
         if (isset($this->config['on']) && is_array($this->config['on'])) {
-            foreach ($this->config['on'] as $eventName => $transitionConfig) {
+            foreach (array_keys($this->config['on']) as $eventName) {
                 if (is_subclass_of($eventName, EventBehavior::class)) {
                     $eventName = $eventName::getType();
                 }

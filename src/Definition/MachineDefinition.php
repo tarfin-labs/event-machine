@@ -189,7 +189,7 @@ class MachineDefinition
      */
     protected function createScenarioStateDefinitions(): void
     {
-        if (!empty($this->scenarios)) {
+        if ($this->scenarios !== null && $this->scenarios !== []) {
             foreach ($this->scenarios as $name => $scenarios) {
                 $parentStateDefinition = reset($this->idMap);
                 $state                 = new StateDefinition(
@@ -475,7 +475,7 @@ class MachineDefinition
      */
     public function getNearestStateDefinitionByString(string $stateDefinitionId): ?StateDefinition
     {
-        if (empty($stateDefinitionId)) {
+        if ($stateDefinitionId === '' || $stateDefinitionId === '0') {
             return null;
         }
 
@@ -562,7 +562,7 @@ class MachineDefinition
         EventBehavior|array $event,
         ?State $state = null
     ): State {
-        if ($state !== null) {
+        if ($state instanceof State) {
             $state = $this->getScenarioStateIfAvailable(state: $state, eventBehavior: $event);
         } else {
             // Use the initial state if no state is provided

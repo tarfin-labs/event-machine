@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Actor;
 
 use Symfony\Component\Uid\Ulid;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\EventCollection;
@@ -36,7 +35,7 @@ class State
      * @param  ContextManager  $context  The context manager instance.
      * @param  StateDefinition|null  $currentStateDefinition  The current state definition, or null if not set.
      * @param  EventBehavior|null  $currentEventBehavior  The current event behavior, or null if not set.
-     * @param  Collection|null  $history  The history collection, or null if not set.
+     * @param  EventCollection|null  $history  The history collection, or null if not set.
      */
     public function __construct(
         public ContextManager $context,
@@ -132,7 +131,7 @@ class State
             ])
         );
 
-        if ($shouldLog === true) {
+        if ($shouldLog) {
             Log::debug("[{$rootEventId}] {$currentEventBehavior->type}");
         }
 

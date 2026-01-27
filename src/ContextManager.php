@@ -40,7 +40,7 @@ class ContextManager extends Data
     public function get(string $key): mixed
     {
         return match (true) {
-            get_class($this) === self::class   => Arr::get($this->data, $key),
+            static::class === self::class      => Arr::get($this->data, $key),
             is_subclass_of($this, self::class) => $this->$key,
         };
     }
@@ -64,7 +64,7 @@ class ContextManager extends Data
         }
 
         match (true) {
-            get_class($this) === self::class   => $this->data[$key] = $value,
+            static::class === self::class      => $this->data[$key] = $value,
             is_subclass_of($this, self::class) => $this->$key       = $value,
         };
 
@@ -89,7 +89,7 @@ class ContextManager extends Data
     public function has(string $key, ?string $type = null): bool
     {
         $hasKey = match (true) {
-            get_class($this) === self::class   => Arr::has($this->data, $key),
+            static::class === self::class      => Arr::has($this->data, $key),
             is_subclass_of($this, self::class) => property_exists($this, $key),
         };
 
@@ -98,7 +98,7 @@ class ContextManager extends Data
         }
 
         $value     = $this->get($key);
-        $valueType = is_object($value) ? get_class($value) : gettype($value);
+        $valueType = get_debug_type($value);
 
         return $valueType === $type;
     }

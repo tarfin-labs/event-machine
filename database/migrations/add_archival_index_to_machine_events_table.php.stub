@@ -1,0 +1,29 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+/**
+ * Add composite index for archival query optimization.
+ *
+ * This index enables efficient NOT EXISTS queries used by the archival job:
+ *   WHERE recent.root_event_id = machine_events.root_event_id
+ *     AND recent.created_at >= :cutoffDate
+ */
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('machine_events', function (Blueprint $table) {
+            $table->index(['root_event_id', 'created_at'], 'machine_events_archival_idx');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('machine_events', function (Blueprint $table) {
+            $table->dropIndex('machine_events_archival_idx');
+        });
+    }
+};

@@ -58,13 +58,13 @@ class GenerateUmlCommand extends Command
         $this->addTransition(from: '[*]', to: $machine->definition->initialStateDefinition->id);
         foreach ($machine->definition->stateDefinitions as $stateDefinition) {
             if ($stateDefinition->stateDefinitions !== null) {
-                $this->colors[$stateDefinition->id] = '#'.substr(dechex(crc32($stateDefinition->id)), 0, 6);
+                $this->colors[$stateDefinition->id] = '#'.substr(dechex(crc32((string) $stateDefinition->id)), 0, 6);
             }
 
             $this->handleStateDefinition(stateDefinition: $stateDefinition);
         }
 
-        foreach ($this->colors as $state => $color) {
+        foreach (array_keys($this->colors) as $state) {
             $this->lines[] = "state {$state}";
         }
 
@@ -135,18 +135,18 @@ class GenerateUmlCommand extends Command
         $to   = $to?->id ?? $to ?? $from;
 
         foreach ($this->colors as $id => $transitionColor) {
-            if (str_starts_with($to, $id)) {
+            if (str_starts_with($to, (string) $id)) {
                 $attributes[] = $transitionColor;
                 break;
             }
         }
 
         $attributeString = '';
-        if (!empty($attributes)) {
+        if ($attributes !== []) {
             $attributeString = '['.implode(',', $attributes).']';
         }
 
-        if (empty($eventName)) {
+        if (in_array($eventName, [null, '', '0'], true)) {
             $this->lines[] = "{$from} -{$attributeString}$direction$arrow> {$to}";
         } else {
             $this->lines[] = "{$from} -{$attributeString}$direction$arrow> {$to} : <color:green>[{$eventName}]</color>";

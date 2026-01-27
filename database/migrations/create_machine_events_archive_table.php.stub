@@ -1,0 +1,36 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('machine_event_archives', function (Blueprint $table) {
+            $table->ulid('root_event_id')->primary();
+            $table->string('machine_id')->index();
+            $table->longText('events_data')->charset('binary'); // Compressed LONGBLOB containing all events
+            $table->unsignedInteger('event_count');
+            $table->unsignedBigInteger('original_size'); // Size before compression (bytes)
+            $table->unsignedBigInteger('compressed_size'); // Size after compression (bytes)
+            $table->unsignedTinyInteger('compression_level'); // Compression level used (0-9)
+            $table->dateTime('archived_at'); // When the events were archived
+            $table->dateTime('first_event_at'); // Timestamp of first event in this archive
+            $table->dateTime('last_event_at'); // Timestamp of last event in this archive
+
+            // Restore tracking fields
+            $table->unsignedInteger('restore_count')->default(0); // How many times this archive was restored
+            $table->dateTime('last_restored_at')->nullable(); // When this archive was last restored
+
+            $table->index(['archived_at']);
+            $table->index(['last_restored_at']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('machine_event_archives');
+    }
+};

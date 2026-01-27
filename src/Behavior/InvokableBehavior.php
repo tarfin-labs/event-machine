@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Behavior;
 
 use ReflectionMethod;
 use ReflectionFunction;
+use ReflectionNamedType;
 use ReflectionUnionType;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
@@ -40,7 +41,7 @@ abstract class InvokableBehavior
      */
     public function __construct(protected ?Collection $eventQueue = null)
     {
-        if ($this->eventQueue === null) {
+        if (!$this->eventQueue instanceof Collection) {
             $this->eventQueue = new Collection();
         }
     }
@@ -70,7 +71,7 @@ abstract class InvokableBehavior
     public static function hasMissingContext(ContextManager $context): ?string
     {
         // Check if the requiredContext property is an empty array
-        if (empty(static::$requiredContext)) {
+        if (static::$requiredContext === []) {
             return null;
         }
 
@@ -153,14 +154,17 @@ abstract class InvokableBehavior
         foreach ($invocableBehaviorReflection->getParameters() as $parameter) {
             $parameterType = $parameter->getType();
 
-            $typeName = $parameterType instanceof ReflectionUnionType
-                ? $parameterType->getTypes()[0]->getName()
-                : $parameterType->getName();
+            $typeName = match (true) {
+                $parameterType instanceof ReflectionUnionType => $parameterType->getTypes()[0]->getName(),
+                $parameterType instanceof ReflectionNamedType => $parameterType->getName(),
+                default                                       => null,
+            };
 
             $value = match (true) {
+                $typeName === null                                                                                                           => null,
                 is_a($typeName, class: ContextManager::class, allow_string: true) || is_subclass_of($typeName, class: ContextManager::class) => $state->context,    // ContextManager
                 is_a($typeName, class: EventBehavior::class, allow_string: true) || is_subclass_of($typeName, class: EventBehavior::class)   => $eventBehavior,     // EventBehavior
-                is_a($state, $typeName)                                                                                                      => $state,             // State
+                $state instanceof $typeName                                                                                                  => $state,             // State
                 is_a($state->history, $typeName)                                                                                             => $state->history,    // EventCollection
                 $typeName === 'array'                                                                                                        => $actionArguments,   // Behavior Arguments
                 default                                                                                                                      => null,
