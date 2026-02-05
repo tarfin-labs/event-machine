@@ -293,12 +293,19 @@ class Machine implements Castable, JsonSerializable, Stringable
 
         $lastMachineEvent = $machineEvents->last();
 
-        return new State(
+        $state = new State(
             context: $this->restoreContext($lastMachineEvent->context),
             currentStateDefinition: $this->restoreCurrentStateDefinition($lastMachineEvent->machine_value),
             currentEventBehavior: $this->restoreCurrentEventBehavior($lastMachineEvent),
             history: $machineEvents,
         );
+
+        // For parallel states, restore the actual multi-value state
+        if (count($lastMachineEvent->machine_value) > 1) {
+            $state->setValues($lastMachineEvent->machine_value);
+        }
+
+        return $state;
     }
 
     /**
@@ -345,16 +352,70 @@ class Machine implements Castable, JsonSerializable, Stringable
     /**
      * Restores the current state definition based on the given machine value.
      *
-     * This method retrieves the current state definition from the machine's
-     * definition ID map using the provided machine value.
+     * For parallel states (multiple values), finds the common parallel ancestor.
+     * For non-parallel states (single value), returns the state definition directly.
      *
-     * @param  array  $machineValue  The machine value containing the ID of the state definition.
+     * @param  array  $machineValue  The machine value containing the ID(s) of the state definition(s).
      *
      * @return StateDefinition The restored current state definition.
      */
     protected function restoreCurrentStateDefinition(array $machineValue): StateDefinition
     {
-        return $this->definition->idMap[$machineValue[0]];
+        // Single value - non-parallel state
+        if (count($machineValue) === 1) {
+            return $this->definition->idMap[$machineValue[0]];
+        }
+
+        // Multiple values - parallel state, find common parallel ancestor
+        return $this->findCommonParallelAncestor($machineValue);
+    }
+
+    /**
+     * Find the common parallel ancestor for multiple active states.
+     *
+     * @param  array  $machineValue  Array of active state IDs.
+     *
+     * @return StateDefinition The common parallel ancestor.
+     */
+    protected function findCommonParallelAncestor(array $machineValue): StateDefinition
+    {
+        if (count($machineValue) === 0) {
+            return $this->definition->root;
+        }
+
+        // Get the first state and find its parallel ancestor
+        $firstState = $this->definition->idMap[$machineValue[0]] ?? null;
+
+        if ($firstState === null) {
+            return $this->definition->root;
+        }
+
+        // Walk up the tree to find a parallel ancestor
+        $current = $firstState->parent;
+
+        while ($current !== null) {
+            if ($current->type === StateDefinitionType::PARALLEL) {
+                // Verify all machine values are descendants of this parallel state
+                $allDescendants = true;
+
+                foreach ($machineValue as $stateId) {
+                    if (!str_starts_with($stateId, $current->id)) {
+                        $allDescendants = false;
+
+                        break;
+                    }
+                }
+
+                if ($allDescendants) {
+                    return $current;
+                }
+            }
+
+            $current = $current->parent;
+        }
+
+        // Fallback to root if no common parallel ancestor found
+        return $this->definition->root;
     }
 
     /**
