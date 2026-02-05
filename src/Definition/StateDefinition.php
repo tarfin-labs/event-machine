@@ -331,10 +331,14 @@ class StateDefinition
     {
         $initialStates = [];
 
-        // If this is not a parallel state, return the single initial state
+        // If this is not a parallel state, find the initial state and drill down if needed
         if ($this->type !== StateDefinitionType::PARALLEL) {
             $initial = $this->findInitialStateDefinition();
             if ($initial instanceof self) {
+                // If the initial state is itself a parallel state, recursively find its initials
+                if ($initial->type === StateDefinitionType::PARALLEL) {
+                    return $initial->findAllInitialStateDefinitions();
+                }
                 $initialStates[] = $initial;
             }
 
