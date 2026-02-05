@@ -334,7 +334,7 @@ class StateDefinition
         // If this is not a parallel state, return the single initial state
         if ($this->type !== StateDefinitionType::PARALLEL) {
             $initial = $this->findInitialStateDefinition();
-            if ($initial instanceof \Tarfinlabs\EventMachine\Definition\StateDefinition) {
+            if ($initial instanceof self) {
                 $initialStates[] = $initial;
             }
 
@@ -525,7 +525,7 @@ class StateDefinition
             );
         }
 
-        // Record state entry start event
+        // Record state entry finish event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_ENTRY_FINISH,
             placeholder: $state->currentStateDefinition->route,
