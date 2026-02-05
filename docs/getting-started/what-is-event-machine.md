@@ -106,7 +106,7 @@ Now the workflow is:
 A state represents a distinct phase in your workflow. An order is either `pending`, `paid`, `shipped`, etc. - never something in between.
 
 ### Events
-Events trigger transitions between states. When you `send` a `PAY` event to a `pending` order, it transitions to `paid`.
+Events trigger transitions between states. When you `send()` a `PAY` event to a `pending` order, it transitions to `paid`.
 
 ### Transitions
 Transitions define how states connect. The arrow from `pending` to `paid` when `PAY` happens is a transition.
@@ -151,6 +151,10 @@ $rootEventId = $machine->state->history->first()->root_event_id;
 $restored = OrderMachine::create(state: $rootEventId);
 $restored->state->matches('shipped'); // true
 ```
+
+::: info What is `root_event_id`?
+The `root_event_id` is a unique identifier (UUID) that links all events belonging to the same machine instance. Think of it as a session ID for the machine - every event recorded during that machine's lifecycle shares the same `root_event_id`. When you restore a machine using this ID, EventMachine replays all events to reconstruct the exact state.
+:::
 
 ## Why EventMachine?
 
