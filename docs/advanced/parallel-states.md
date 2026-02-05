@@ -243,11 +243,14 @@ MachineDefinition::define(
 
 ### Exit Action Execution Order
 
-Exit actions fire in **reverse order** - deepest states first, then up the hierarchy:
+Exit actions fire for leaf states and the parallel state itself:
 
-1. **Leaf state exit** - The active leaf state in each region (deepest)
-2. **Region exit** - The region's exit action
-3. **Parallel state exit** - The parallel state's own exit action (last)
+1. **Leaf state exits** - Exit actions for each active leaf state (in definition order)
+2. **Parallel state exit** - The parallel state's own exit action (last)
+
+::: warning Region Exit Actions
+Region (compound state) exit actions are **not** automatically invoked when leaving a parallel state. Only leaf states and the parallel state itself run exit actions.
+:::
 
 ```php
 MachineDefinition::define(
@@ -257,23 +260,21 @@ MachineDefinition::define(
         'states' => [
             'active' => [
                 'type' => 'parallel',
-                'exit' => 'logParallelExit',  // 5. Fires last
+                'exit' => 'logParallelExit',  // 3. Fires last
                 'states' => [
                     'region1' => [
                         'initial' => 'a',
-                        'exit' => 'logRegion1Exit',  // 2. Fires second
                         'states' => [
                             'a' => [
-                                'exit' => 'logStateAExit',  // 1. Fires first (deepest)
+                                'exit' => 'logStateAExit',  // 1. Fires first
                             ],
                         ],
                     ],
                     'region2' => [
                         'initial' => 'b',
-                        'exit' => 'logRegion2Exit',  // 4. Fires fourth
                         'states' => [
                             'b' => [
-                                'exit' => 'logStateBExit',  // 3. Fires third
+                                'exit' => 'logStateBExit',  // 2. Fires second
                             ],
                         ],
                     ],
@@ -285,27 +286,21 @@ MachineDefinition::define(
     behavior: [
         'actions' => [
             'logStateAExit' => fn () => Log::info('1. Exiting state a'),
-            'logRegion1Exit' => fn () => Log::info('2. Exiting region 1'),
-            'logStateBExit' => fn () => Log::info('3. Exiting state b'),
-            'logRegion2Exit' => fn () => Log::info('4. Exiting region 2'),
-            'logParallelExit' => fn () => Log::info('5. Exiting parallel state'),
+            'logStateBExit' => fn () => Log::info('2. Exiting state b'),
+            'logParallelExit' => fn () => Log::info('3. Exiting parallel state'),
         ],
     ]
 );
 
 // When transitioning from 'active' to 'inactive', log output:
 // 1. Exiting state a
-// 2. Exiting region 1
-// 3. Exiting state b
-// 4. Exiting region 2
-// 5. Exiting parallel state
+// 2. Exiting state b
+// 3. Exiting parallel state
 ```
 
 ::: tip Action Order Summary
-**Entry**: Outside → Inside (parallel → regions → leaf states)
-**Exit**: Inside → Outside (leaf states → regions → parallel)
-
-This follows the principle that resources should be acquired before use (entry) and released after use (exit).
+**Entry**: Outside → Inside (parallel → leaf states in each region)
+**Exit**: Leaf states first → Parallel state last
 :::
 
 ## Shared Context
