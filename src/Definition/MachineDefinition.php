@@ -823,12 +823,34 @@ class MachineDefinition
             $currentValues = $state->value;
             $regionIndex   = array_search($sourceState->id, $currentValues, true);
             if ($regionIndex !== false) {
-                $currentValues[$regionIndex] = $targetState->id;
-                $state->setValues($currentValues);
-            }
+                // If target is a parallel state, expand to all its initial leaf states
+                if ($targetState->type === StateDefinitionType::PARALLEL) {
+                    $initialStates = $targetState->findAllInitialStateDefinitions();
+                    // Remove the source state and insert all initial states at that position
+                    array_splice($currentValues, (int) $regionIndex, 1, array_map(
+                        fn (StateDefinition $s): string => $s->id,
+                        $initialStates
+                    ));
+                    $state->setValues($currentValues);
 
-            // Execute entry actions for the target state
-            $targetState->runEntryActions($state, $eventBehavior);
+                    // Run entry actions for the parallel state itself first
+                    $targetState->runEntryActions($state, $eventBehavior);
+
+                    // Then run entry actions for each initial state in the parallel regions
+                    foreach ($initialStates as $initialState) {
+                        $initialState->runEntryActions($state, $eventBehavior);
+                    }
+                } else {
+                    $currentValues[$regionIndex] = $targetState->id;
+                    $state->setValues($currentValues);
+
+                    // Execute entry actions for the target state
+                    $targetState->runEntryActions($state, $eventBehavior);
+                }
+            } else {
+                // Execute entry actions for the target state (no state value update needed)
+                $targetState->runEntryActions($state, $eventBehavior);
+            }
         }
 
         // Record transition finish with updated state values
