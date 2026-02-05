@@ -93,13 +93,13 @@ Use the `matches()` method to check if a specific state is active:
 $state->matches('active.document.editing');  // true
 $state->matches('active.format.normal');     // true
 
-// Check multiple states at once
+// Check multiple states at once with `matchesAll()`
 $state->matchesAll([
     'active.document.editing',
     'active.format.bold',
 ]);  // false - format is in 'normal', not 'bold'
 
-// Check if currently in a parallel state
+// Check if currently in a parallel state with `isInParallelState()`
 $state->isInParallelState();  // true
 ```
 
@@ -355,7 +355,7 @@ MachineDefinition::define(
 ```
 
 ::: warning Context Conflicts
-When multiple regions modify the same context key in response to the same event, the last region (in definition order) wins. Design your context structure to avoid conflicts or use separate keys per region.
+When multiple regions modify the same context key in response to the same event, the last region (in definition order) wins. Design your context structure to avoid conflicts or use separate keys per region. Use `set()` and `get()` methods for context access.
 :::
 
 ## Final States and onDone
@@ -600,7 +600,7 @@ $state->value;
 The `matches()` method checks for exact matches against active leaf states. You must provide the full path from the machine's initial state:
 
 ```php
-// Check specific leaf states - must be full path
+// Check specific leaf states with `matches()` - must be full path
 $state->matches('root.branch1.leaf.subleaf1.a');  // true
 $state->matches('root.branch1.leaf.subleaf2.x');  // true
 $state->matches('root.branch2.waiting');          // true
@@ -616,7 +616,7 @@ $state->matches('subleaf1.a');         // false - missing full path
 ```
 
 ::: warning Full Paths Required
-Always use the complete path from the initial state to the leaf. For example, use `root.branch1.leaf.subleaf1.a` instead of just `subleaf1.a`.
+Always use the complete path from the initial state to the leaf when calling `matches()`. For example, use `root.branch1.leaf.subleaf1.a` instead of just `subleaf1.a`.
 :::
 
 ::: tip Deep Nesting Best Practices
@@ -923,7 +923,7 @@ MachineDefinition::define(
     behavior: [
         'guards' => [
             'isRegion2Ready' => fn (ContextManager $ctx, EventBehavior $event, State $state)
-                => $state->matches('parallel.region2.ready'),
+                => $state->matches('parallel.region2.ready'),  // Using `matches()` to check other region
         ],
     ]
 );
