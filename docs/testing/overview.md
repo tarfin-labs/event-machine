@@ -276,7 +276,7 @@ afterEach(function () {
 });
 ```
 
-### ResolvesBehaviors Trait
+### `ResolvesBehaviors` Trait
 
 Access behavior definitions directly for testing and debugging:
 
@@ -319,7 +319,7 @@ it('guard checks items correctly', function () {
 ```
 
 ::: tip
-`getBehavior()` throws `BehaviorNotFoundException` if the behavior doesn't exist, making it easy to catch configuration errors in tests.
+The `getBehavior()` method throws `BehaviorNotFoundException` if the behavior doesn't exist, making it easy to catch configuration errors in tests.
 :::
 
 ### Create Machine with Context
