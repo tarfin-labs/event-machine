@@ -399,7 +399,7 @@ class Machine implements Castable, JsonSerializable, Stringable
                 $allDescendants = true;
 
                 foreach ($machineValue as $stateId) {
-                    if (!str_starts_with($stateId, $current->id)) {
+                    if (!str_starts_with((string) $stateId, $current->id)) {
                         $allDescendants = false;
 
                         break;

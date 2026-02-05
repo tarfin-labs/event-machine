@@ -55,8 +55,6 @@ abstract class EventBehavior extends Data
      * @param  mixed  $actor  Actor performing the event. Default is null.
      * @param  int|Optional  $version  The version number of the object. Default is 1.
      * @param  SourceType  $source  The source type of the object. Default is SourceType::EXTERNAL.
-     *
-     * @return void
      */
     public function __construct(
         public null|string|Optional $type = null,

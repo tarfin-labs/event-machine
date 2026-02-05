@@ -12,9 +12,9 @@ use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
-use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 
 /**
  * Class State.

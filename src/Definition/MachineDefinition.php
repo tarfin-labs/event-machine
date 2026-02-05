@@ -672,10 +672,10 @@ class MachineDefinition
         foreach ($this->getActiveAtomicStates($state) as $atomicState) {
             $transitionDef = $this->findTransitionDefinitionOrNull($atomicState, $eventBehavior);
 
-            if ($transitionDef !== null) {
+            if ($transitionDef instanceof \Tarfinlabs\EventMachine\Definition\TransitionDefinition) {
                 $branch = $transitionDef->getFirstValidTransitionBranch($eventBehavior, $state);
 
-                if ($branch !== null) {
+                if ($branch instanceof \Tarfinlabs\EventMachine\Definition\TransitionBranch) {
                     $transitions[] = $branch;
                 }
             }
@@ -736,7 +736,7 @@ class MachineDefinition
     {
         $current = $stateDefinition->parent;
 
-        while ($current !== null) {
+        while ($current instanceof \Tarfinlabs\EventMachine\Definition\StateDefinition) {
             if ($current->type === StateDefinitionType::PARALLEL) {
                 return $current;
             }

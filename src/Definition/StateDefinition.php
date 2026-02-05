@@ -334,7 +334,7 @@ class StateDefinition
         // If this is not a parallel state, return the single initial state
         if ($this->type !== StateDefinitionType::PARALLEL) {
             $initial = $this->findInitialStateDefinition();
-            if ($initial !== null) {
+            if ($initial instanceof \Tarfinlabs\EventMachine\Definition\StateDefinition) {
                 $initialStates[] = $initial;
             }
 
