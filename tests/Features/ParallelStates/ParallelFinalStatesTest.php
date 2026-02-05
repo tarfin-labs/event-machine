@@ -196,3 +196,106 @@ test('three regions workflow completes correctly', function (): void {
     expect($deliveryState->type)->toBe(StateDefinitionType::FINAL);
     expect($invoiceState->type)->toBe(StateDefinitionType::FINAL);
 });
+
+test('onDone transitions to next state when all regions are final', function (): void {
+    $definition = MachineDefinition::define([
+        'id'      => 'workflow',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'type'   => 'parallel',
+                'onDone' => 'completed',
+                'states' => [
+                    'taskA' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working' => [
+                                'on' => [
+                                    'FINISH_A' => 'done',
+                                ],
+                            ],
+                            'done' => ['type' => 'final'],
+                        ],
+                    ],
+                    'taskB' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working' => [
+                                'on' => [
+                                    'FINISH_B' => 'done',
+                                ],
+                            ],
+                            'done' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'completed' => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $definition->getInitialState();
+
+    // Initially in parallel processing state
+    expect($state->matches('processing.taskA.working'))->toBeTrue();
+    expect($state->matches('processing.taskB.working'))->toBeTrue();
+
+    // Complete task A - still in processing
+    $state = $definition->transition(['type' => 'FINISH_A'], $state);
+    expect($state->matches('processing.taskA.done'))->toBeTrue();
+    expect($state->matches('processing.taskB.working'))->toBeTrue();
+
+    // Complete task B - should automatically transition to 'completed' via onDone
+    $state = $definition->transition(['type' => 'FINISH_B'], $state);
+    expect($state->matches('completed'))->toBeTrue();
+    expect($state->currentStateDefinition->type)->toBe(StateDefinitionType::FINAL);
+});
+
+test('onDone works with array configuration', function (): void {
+    $definition = MachineDefinition::define([
+        'id'      => 'workflow',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'type'   => 'parallel',
+                'onDone' => [
+                    'target' => 'finished',
+                ],
+                'states' => [
+                    'regionA' => [
+                        'initial' => 'active',
+                        'states'  => [
+                            'active' => [
+                                'on' => [
+                                    'DONE_A' => 'complete',
+                                ],
+                            ],
+                            'complete' => ['type' => 'final'],
+                        ],
+                    ],
+                    'regionB' => [
+                        'initial' => 'active',
+                        'states'  => [
+                            'active' => [
+                                'on' => [
+                                    'DONE_B' => 'complete',
+                                ],
+                            ],
+                            'complete' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'finished' => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $definition->getInitialState();
+
+    // Complete both regions
+    $state = $definition->transition(['type' => 'DONE_A'], $state);
+    $state = $definition->transition(['type' => 'DONE_B'], $state);
+
+    // Should transition to finished state
+    expect($state->matches('finished'))->toBeTrue();
+});
