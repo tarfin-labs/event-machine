@@ -238,10 +238,15 @@ $machine->send(['type' => 'DIV', 'payload' => ['value' => 2]]);
 expect($machine->state->context->result)->toBe(5);
 expect($machine->state->context->history)->toBe(['+10', '/2']);
 
-// Divide by zero is blocked
+// Divide by zero is blocked by guard
 $machine->send(['type' => 'DIV', 'payload' => ['value' => 0]]);
-// No transition - guard failed, result unchanged
+// Guard returned false - transition blocked silently (no exception thrown)
+// Machine stays in current state with result unchanged
 expect($machine->state->context->result)->toBe(5);
+
+::: tip Guard Behavior
+When a guard returns `false`, no transition occurs and no exception is thrown. The machine silently stays in its current state. If you need user feedback on failed guards, use [Validation Guards](/behaviors/validation-guards) which can provide error messages.
+:::
 
 // Clear
 $machine->send(['type' => 'CLEAR']);
