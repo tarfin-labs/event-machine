@@ -823,9 +823,7 @@ class MachineDefinition
             placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
         );
 
-        // Process each transition and collect new state values
-        $newValues = $state->value;
-
+        // Process each transition - update state values immediately after each region
         foreach ($transitions as $transitionBranch) {
             /** @var TransitionBranch $transitionBranch */
             $sourceState = $transitionBranch->transitionDefinition->source;
@@ -841,27 +839,27 @@ class MachineDefinition
             // Execute exit actions for the source state
             $sourceState->runExitActions($state);
 
-            // Update the state value for this region
-            $regionIndex = array_search($sourceState->id, $newValues, true);
+            // Update the state value for this region immediately
+            // This ensures entry actions and subsequent events see the correct value
+            $currentValues = $state->value;
+            $regionIndex   = array_search($sourceState->id, $currentValues, true);
             if ($regionIndex !== false) {
-                $newValues[$regionIndex] = $targetState->id;
+                $currentValues[$regionIndex] = $targetState->id;
+                $state->setValues($currentValues);
             }
 
             // Execute entry actions for the target state
             $targetState->runEntryActions($state, $eventBehavior);
         }
 
-        // Record transition finish
+        // Record transition finish with updated state values
         $state->setInternalEventBehavior(
             type: InternalEvent::TRANSITION_FINISH,
             placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
         );
 
-        // Update the state values
-        $state->setValues($newValues);
-
         // Check for always transitions in new states
-        foreach ($newValues as $stateId) {
+        foreach ($state->value as $stateId) {
             $stateDefinition = $this->idMap[$stateId] ?? null;
             if ($stateDefinition?->transitionDefinitions !== null) {
                 foreach ($stateDefinition->transitionDefinitions as $transition) {
