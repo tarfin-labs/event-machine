@@ -284,8 +284,11 @@ Mix validation guards with regular guards:
 ],
 ```
 
-::: tip
-Regular guards fail silently (no transition occurs). Validation guards throw exceptions with messages. Use regular guards for flow control and validation guards for user feedback.
+::: tip When to Use Each Type
+- **Regular Guards:** Return `false` to block transition without throwing an exception. Best for flow control where the caller doesn't need to know why.
+- **Validation Guards:** Return `false` and throw `MachineValidationException` with a user-facing error message. Best for user input validation where feedback is needed.
+
+Both types block the transition when they return `false`. The difference is whether the caller receives an exception with a message.
 :::
 
 ## Testing Validation Guards
