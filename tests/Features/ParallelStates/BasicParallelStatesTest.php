@@ -227,7 +227,7 @@ test('parallel state cannot have initial property', function (): void {
                 ],
             ],
         ],
-    ]))->toThrow(InvalidArgumentException::class);
+    ]))->toThrow(\Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException::class);
 });
 
 test('parallel state must have at least one region', function (): void {
