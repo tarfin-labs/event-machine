@@ -61,6 +61,19 @@ class OrderResultBehavior extends ResultBehavior
 ],
 ```
 
+### Return Types
+
+Results can return any type:
+
+```php
+public function __invoke(ContextManager $context): array { ... }   // Array (most common)
+public function __invoke(ContextManager $context): Order { ... }   // Eloquent Model
+public function __invoke(ContextManager $context): int { ... }     // Scalar value
+public function __invoke(ContextManager $context): mixed { ... }   // Any type
+```
+
+The return value of `$machine->result()` matches whatever your result behavior returns.
+
 ## Accessing Results
 
 ```php
@@ -77,6 +90,28 @@ $result = $machine->result();
 echo $result['orderId'];
 echo $result['total'];
 ```
+
+::: warning Result Availability
+`result()` only returns a value when the machine is in a **final state** with a `result` behavior defined. If called before reaching a final state, or if the final state has no result defined, it returns `null`.
+
+```php
+// Safe pattern
+if ($machine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
+    $result = $machine->result();
+}
+```
+:::
+
+## When to Use Results
+
+Results are useful when you need to:
+
+1. **Format output** - Transform context into API responses or display formats
+2. **Compute derived values** - Calculate values from final state without modifying context
+3. **Different outputs per final state** - Return different data structures for success vs. failure states
+4. **Hide implementation details** - Expose only relevant data, not the entire context
+
+If you just need the context data as-is, access `$state->context` directly instead.
 
 ## Different Results for Different Final States
 
