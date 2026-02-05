@@ -29,7 +29,7 @@ class OrderMachineTest extends TestCase
 
 ## Database Assertions
 
-### assertDatabaseHas
+### `assertDatabaseHas()`
 
 ```php
 it('persists events to database', function () {
@@ -44,7 +44,7 @@ it('persists events to database', function () {
 });
 ```
 
-### assertDatabaseCount
+### `assertDatabaseCount()`
 
 ```php
 it('creates expected number of events', function () {
@@ -61,7 +61,7 @@ it('creates expected number of events', function () {
 });
 ```
 
-### assertDatabaseMissing
+### `assertDatabaseMissing()`
 
 ```php
 it('does not persist when disabled', function () {
