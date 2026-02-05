@@ -129,9 +129,9 @@ abstract class EventBehavior extends Data
      * Delegate to parent's static collect() from Spatie Data class.
      * The trait's non-static collect() is aliased as 'collection' to avoid conflict.
      */
-    public static function collect(...$args): array|DataCollection|PaginatedDataCollection|CursorPaginatedDataCollection|Enumerable|AbstractPaginator|PaginatorContract|AbstractCursorPaginator|CursorPaginatorContract|LazyCollection|Collection
+    public static function collect(mixed $items, ?string $into = null): array|DataCollection|PaginatedDataCollection|CursorPaginatedDataCollection|Enumerable|AbstractPaginator|PaginatorContract|AbstractCursorPaginator|CursorPaginatorContract|LazyCollection|Collection
     {
-        return parent::collect(...$args);
+        return parent::collect($items, $into);
     }
 
     /**
