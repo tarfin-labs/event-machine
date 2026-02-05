@@ -242,7 +242,7 @@ it('can mock guard to always pass', function () {
 
 Six months later, compliance asks about order #12847? One line brings the entire machine back with full context and history.
 
-[Archival & restoration &rarr;](/laravel-integration/archival-compression)
+[Archival & restoration &rarr;](/laravel-integration/archival)
 
 </div>
 <div class="feature-code">
@@ -330,7 +330,7 @@ $order->state->context->status;       // enum
 
 When all parallel regions complete, `onDone` triggers the next step. No polling, no callbacks, no coordination code.
 
-[Learn parallel states &rarr;](/advanced/parallel-states)
+[Learn parallel states &rarr;](/advanced/parallel-states/)
 
 </div>
 <div class="feature-code">
