@@ -138,15 +138,28 @@ Pass arguments to behaviors:
 
 ```php
 // In configuration
-'actions' => 'addValue:10,20',  // Passes [10, 20]
+'actions' => 'addValue:10,20',  // Passes ['10', '20']
 
 // In behavior
 public function __invoke(ContextManager $context, array $arguments): void
 {
     [$amount, $multiplier] = $arguments;
-    $context->total += $amount * $multiplier;
+    $context->total += (int) $amount * (int) $multiplier;
 }
 ```
+
+### Argument Parsing Rules
+
+Arguments are parsed from the behavior string using this format: `behaviorName:arg1,arg2,arg3`
+
+- Arguments are split by commas
+- **All arguments are passed as strings** - cast them in your behavior if needed
+- No escaping mechanism (commas and colons cannot be in arguments)
+- Whitespace is preserved
+
+::: tip Complex Arguments
+For complex arguments (arrays, objects, or values containing commas), use dependency injection or read from context instead of inline arguments.
+:::
 
 ## Required Context
 
