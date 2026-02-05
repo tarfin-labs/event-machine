@@ -99,6 +99,7 @@ export default withMermaid(
             { text: 'Introduction', link: '/patterns/introduction' },
             { text: 'Traffic Light', link: '/patterns/traffic-light' },
             { text: 'Order Processing', link: '/patterns/order-processing' },
+            { text: 'Parallel Workflow', link: '/patterns/parallel-workflow' },
             { text: 'Calculator', link: '/patterns/calculator' },
             { text: 'Elevator', link: '/patterns/elevator' },
             { text: 'Guarded Transitions', link: '/patterns/guarded-transitions' }
@@ -120,6 +121,7 @@ export default withMermaid(
           collapsed: true,
           items: [
             { text: 'Hierarchical States', link: '/advanced/hierarchical-states' },
+            { text: 'Parallel States', link: '/advanced/parallel-states' },
             { text: '@always Transitions', link: '/advanced/always-transitions' },
             { text: 'Raised Events', link: '/advanced/raised-events' },
             { text: 'Entry/Exit Actions', link: '/advanced/entry-exit-actions' },
