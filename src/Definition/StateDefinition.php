@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
 class StateDefinition
 {
@@ -272,10 +273,18 @@ class StateDefinition
      * Finds the initial `StateDefinition` based on the `initial`
      * configuration key or the first state definition found.
      *
+     * For parallel states, returns null as all regions are entered simultaneously.
+     * Use findAllInitialStateDefinitions() for parallel states.
+     *
      * @return StateDefinition|null The `StateDefinition` object for the initial state or `null` if not found.
      */
     public function findInitialStateDefinition(): ?StateDefinition
     {
+        // Parallel states don't have a single initial state - all regions enter simultaneously
+        if ($this->type === StateDefinitionType::PARALLEL) {
+            return null;
+        }
+
         // Try to find the initial state definition key in the configuration.
         // If not found, try to find the first state definition key.
         $initialStateDefinitionKey = $this->config['initial']
@@ -306,6 +315,39 @@ class StateDefinition
         )
             ? $initialStateDefinition->findInitialStateDefinition()
             : $initialStateDefinition;
+    }
+
+    /**
+     * Finds all initial state definitions for parallel states.
+     *
+     * For parallel states, all regions are entered simultaneously, so this returns
+     * the initial state of each region.
+     *
+     * @return array<StateDefinition> An array of initial state definitions for all regions.
+     */
+    public function findAllInitialStateDefinitions(): array
+    {
+        $initialStates = [];
+
+        // If this is not a parallel state, return the single initial state
+        if ($this->type !== StateDefinitionType::PARALLEL) {
+            $initial = $this->findInitialStateDefinition();
+            if ($initial !== null) {
+                $initialStates[] = $initial;
+            }
+
+            return $initialStates;
+        }
+
+        // For parallel states, find the initial state of each region
+        if ($this->stateDefinitions !== null) {
+            foreach ($this->stateDefinitions as $region) {
+                $regionInitials = $region->findAllInitialStateDefinitions();
+                $initialStates  = array_merge($initialStates, $regionInitials);
+            }
+        }
+
+        return $initialStates;
     }
 
     /**
@@ -349,6 +391,14 @@ class StateDefinition
             }
 
             return StateDefinitionType::FINAL;
+        }
+
+        if (!empty($this->config['type']) && $this->config['type'] === 'parallel') {
+            if ($this->stateDefinitions === null) {
+                throw InvalidParallelStateDefinitionException::requiresChildStates($this->id);
+            }
+
+            return StateDefinitionType::PARALLEL;
         }
 
         if ($this->stateDefinitions === null) {
