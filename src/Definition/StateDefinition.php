@@ -273,16 +273,18 @@ class StateDefinition
      * Finds the initial `StateDefinition` based on the `initial`
      * configuration key or the first state definition found.
      *
-     * For parallel states, returns null as all regions are entered simultaneously.
-     * Use findAllInitialStateDefinitions() for parallel states.
+     * For parallel states, returns the parallel state itself since all regions
+     * are entered simultaneously. Use findAllInitialStateDefinitions() to get
+     * the initial states of all regions.
      *
      * @return StateDefinition|null The `StateDefinition` object for the initial state or `null` if not found.
      */
     public function findInitialStateDefinition(): ?StateDefinition
     {
-        // Parallel states don't have a single initial state - all regions enter simultaneously
+        // Parallel states return themselves as the initial state
+        // (all regions are entered simultaneously via enterParallelState)
         if ($this->type === StateDefinitionType::PARALLEL) {
-            return null;
+            return $this;
         }
 
         // Try to find the initial state definition key in the configuration.
