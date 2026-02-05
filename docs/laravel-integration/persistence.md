@@ -2,7 +2,7 @@
 
 EventMachine provides full event sourcing with automatic persistence to the database.
 
-## MachineEvent Model
+## `MachineEvent` Model
 
 All events are stored in the `machine_events` table:
 
@@ -35,7 +35,7 @@ $events = MachineEvent::where('machine_id', 'order')
 
 ## Automatic Persistence
 
-Events are automatically persisted when using `Machine->send()`:
+Events are automatically persisted when using the `Machine->send()` method:
 
 ```php
 $machine = OrderMachine::create();
@@ -144,6 +144,35 @@ Context is stored incrementally to minimize database size:
 ```
 
 During restoration, context is reconstructed by merging all changes.
+
+### Context Merge Strategy
+
+EventMachine uses **deep merge** for context reconstruction:
+
+1. Start with initial context (first event)
+2. For each subsequent event, merge context changes recursively
+3. **Arrays are replaced, not merged** - use nested objects for partial updates
+
+```php
+// Event 1: Initial context
+{ "items": [{"id": 1}], "meta": {"created": "2024-01-01"} }
+
+// Event 2: Add item, update meta
+{ "items": [{"id": 1}, {"id": 2}], "meta": {"updated": "2024-01-02"} }
+
+// Final merged context:
+{
+    "items": [{"id": 1}, {"id": 2}],   // Array replaced entirely
+    "meta": {
+        "created": "2024-01-01",        // Old key preserved
+        "updated": "2024-01-02"         // New key added
+    }
+}
+```
+
+::: warning Array Replacement
+Arrays are **replaced**, not merged. If you need to append items, always include the full array in the context change, or store items in a nested object structure.
+:::
 
 ## Transactional Events
 
