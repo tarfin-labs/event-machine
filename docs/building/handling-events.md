@@ -375,6 +375,13 @@ $failedGuards = $machine->state->history
 Internal events have `source = SourceType::INTERNAL`. They're recorded for observability but don't trigger transitions.
 :::
 
+::: warning Storage Impact
+With persistence enabled, internal events are stored in the `machine_events` table. A single transition can generate 10+ internal events (enter, exit, guard, action lifecycle events). For long-running machines or high-frequency state changes, consider:
+- Archiving old events periodically with `php artisan machine:archive-events`
+- Disabling persistence for ephemeral machines (`'should_persist' => false`)
+- Querying external events only when displaying history to users
+:::
+
 ## Reserved Events
 
 The `@always` event is reserved for automatic transitions:
