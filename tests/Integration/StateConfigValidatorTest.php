@@ -207,12 +207,12 @@ test('validates state type values', function (): void {
         'initial' => 'state_a',
         'states'  => [
             'state_a' => [
-                'type' => 'invalid_type', // Type should be 'atomic', 'compound', or 'final'
+                'type' => 'invalid_type', // Type should be 'atomic', 'compound', 'parallel', or 'final'
             ],
         ],
     ]))->toThrow(
         exception: InvalidArgumentException::class,
-        exceptionMessage: "State 'state_a' has invalid type: invalid_type. Allowed types are: atomic, compound, final"
+        exceptionMessage: "State 'state_a' has invalid type: invalid_type. Allowed types are: atomic, compound, parallel, final"
     );
 });
 
