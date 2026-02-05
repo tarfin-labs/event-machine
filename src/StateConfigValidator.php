@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine;
 
 use InvalidArgumentException;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
 class StateConfigValidator
 {
@@ -214,10 +215,7 @@ class StateConfigValidator
     private static function validateParallelState(array $stateConfig, string $path): void
     {
         if (isset($stateConfig['initial'])) {
-            throw new InvalidArgumentException(
-                message: "Parallel state '{$path}' cannot have an 'initial' property. ".
-                'All regions are entered simultaneously.'
-            );
+            throw InvalidParallelStateDefinitionException::cannotHaveInitial($path);
         }
 
         if (!isset($stateConfig['states']) || !is_array($stateConfig['states']) || $stateConfig['states'] === []) {
