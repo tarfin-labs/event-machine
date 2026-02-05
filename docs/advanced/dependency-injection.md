@@ -30,7 +30,7 @@ class ProcessOrderAction extends ActionBehavior
 
 ## Parameter Injection
 
-The `__invoke` method receives injected parameters:
+The `__invoke()` method receives injected parameters:
 
 ```php
 public function __invoke(
