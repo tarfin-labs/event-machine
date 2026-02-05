@@ -524,18 +524,63 @@ class MachineDefinition
      * Retrieves the nearest `StateDefinition` by string.
      *
      * @param  string  $stateDefinitionId  The state string.
+     * @param  StateDefinition|null  $source  The source state to resolve relative to.
      *
      * @return StateDefinition|null The nearest StateDefinition or null if it is not found.
      */
-    public function getNearestStateDefinitionByString(string $stateDefinitionId): ?StateDefinition
+    public function getNearestStateDefinitionByString(string $stateDefinitionId, ?StateDefinition $source = null): ?StateDefinition
     {
         if ($stateDefinitionId === '' || $stateDefinitionId === '0') {
             return null;
         }
 
-        $stateDefinitionId = $this->id.$this->delimiter.$stateDefinitionId;
+        // If source is provided, try to resolve relative to it first
+        if ($source instanceof StateDefinition) {
+            $resolved = $this->resolveStateRelativeToSource($stateDefinitionId, $source);
+            if ($resolved instanceof StateDefinition) {
+                return $resolved;
+            }
+        }
 
-        return $this->idMap[$stateDefinitionId] ?? null;
+        // Fallback to absolute path from machine root
+        $absoluteId = $this->id.$this->delimiter.$stateDefinitionId;
+
+        return $this->idMap[$absoluteId] ?? null;
+    }
+
+    /**
+     * Resolves a state definition ID relative to a source state.
+     *
+     * Searches up the hierarchy from the source state to find the target.
+     * First tries sibling states, then parent's siblings, etc.
+     *
+     * @param  string  $targetId  The target state ID (can be relative).
+     * @param  StateDefinition  $source  The source state to resolve from.
+     *
+     * @return StateDefinition|null The resolved StateDefinition or null if not found.
+     */
+    protected function resolveStateRelativeToSource(string $targetId, StateDefinition $source): ?StateDefinition
+    {
+        // If the target already contains the machine ID, it's absolute
+        if (str_starts_with($targetId, $this->id.$this->delimiter)) {
+            return $this->idMap[$targetId] ?? null;
+        }
+
+        // Start from the source's parent and search up the hierarchy
+        $current = $source->parent;
+
+        while ($current instanceof StateDefinition) {
+            // Try to find target as a descendant of current state
+            $candidateId = $current->id.$this->delimiter.$targetId;
+            if (isset($this->idMap[$candidateId])) {
+                return $this->idMap[$candidateId];
+            }
+
+            // Move up to parent
+            $current = $current->parent;
+        }
+
+        return null;
     }
 
     /**
@@ -746,6 +791,112 @@ class MachineDefinition
         return null;
     }
 
+    /**
+     * Transition a parallel state by broadcasting the event to all active regions.
+     *
+     * For parallel states, events are sent to all active atomic states.
+     * Each region independently evaluates if it can handle the event.
+     *
+     * @param  State  $state  The current state with multiple active regions.
+     * @param  EventBehavior  $eventBehavior  The event to process.
+     *
+     * @return State The new state after transitions.
+     *
+     * @throws NoTransitionDefinitionFoundException If no region can handle the event.
+     */
+    protected function transitionParallelState(State $state, EventBehavior $eventBehavior): State
+    {
+        // Find transitions for all active atomic states
+        $transitions = $this->selectTransitions($eventBehavior, $state);
+
+        // If no transitions found, throw exception
+        if ($transitions === []) {
+            throw NoTransitionDefinitionFoundException::build(
+                $eventBehavior->type,
+                $state->currentStateDefinition->id
+            );
+        }
+
+        // Record transition start
+        $state->setInternalEventBehavior(
+            type: InternalEvent::TRANSITION_START,
+            placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
+        );
+
+        // Process each transition and collect new state values
+        $newValues = $state->value;
+
+        foreach ($transitions as $transitionBranch) {
+            /** @var TransitionBranch $transitionBranch */
+            $sourceState = $transitionBranch->transitionDefinition->source;
+
+            // Get the target state, resolving to initial state if needed
+            $targetState = $transitionBranch->target?->findInitialStateDefinition()
+                ?? $transitionBranch->target
+                ?? $sourceState;
+
+            // Execute transition actions
+            $transitionBranch->runActions($state, $eventBehavior);
+
+            // Execute exit actions for the source state
+            $sourceState->runExitActions($state);
+
+            // Update the state value for this region
+            $regionIndex = array_search($sourceState->id, $newValues, true);
+            if ($regionIndex !== false) {
+                $newValues[$regionIndex] = $targetState->id;
+            }
+
+            // Execute entry actions for the target state
+            $targetState->runEntryActions($state, $eventBehavior);
+        }
+
+        // Record transition finish
+        $state->setInternalEventBehavior(
+            type: InternalEvent::TRANSITION_FINISH,
+            placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
+        );
+
+        // Update the state values
+        $state->setValues($newValues);
+
+        // Check for always transitions in new states
+        foreach ($newValues as $stateId) {
+            $stateDefinition = $this->idMap[$stateId] ?? null;
+            if ($stateDefinition?->transitionDefinitions !== null) {
+                foreach ($stateDefinition->transitionDefinitions as $transition) {
+                    if ($transition->isAlways === true) {
+                        return $this->transition(
+                            event: [
+                                'type'  => TransitionProperty::Always->value,
+                                'actor' => $eventBehavior->actor($state->context),
+                            ],
+                            state: $state
+                        );
+                    }
+                }
+            }
+        }
+
+        // Check for parallel completion (all regions in final states)
+        if ($this->areAllRegionsFinal($state->currentStateDefinition, $state)) {
+            $state->setInternalEventBehavior(
+                type: InternalEvent::PARALLEL_DONE,
+                placeholder: $state->currentStateDefinition->route,
+            );
+        }
+
+        // Process event queue
+        if ($this->eventQueue->isNotEmpty()) {
+            $firstEvent    = $this->eventQueue->shift();
+            $eventBehavior = $this->initializeEvent($firstEvent, $state);
+
+            return $this->transition($eventBehavior, $state);
+        }
+
+        return $state;
+    }
+
     // endregion
 
     // region Public Methods
@@ -776,6 +927,11 @@ class MachineDefinition
         $eventBehavior->selfValidate();
 
         $state->setCurrentEventBehavior($eventBehavior);
+
+        // For parallel states, find transitions across all active atomic states
+        if ($state->isInParallelState()) {
+            return $this->transitionParallelState($state, $eventBehavior);
+        }
 
         /**
          * Get the transition definition for the current event type.
