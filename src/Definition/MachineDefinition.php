@@ -209,6 +209,8 @@ class MachineDefinition
     /**
      * Build the initial state for the machine.
      *
+     * For parallel states, enters all regions simultaneously.
+     *
      * @return ?State The initial state of the machine.
      */
     public function getInitialState(EventBehavior|array|null $event = null): ?State
@@ -230,17 +232,22 @@ class MachineDefinition
         // Record the internal machine init event.
         $initialState->setInternalEventBehavior(type: InternalEvent::MACHINE_START);
 
-        // Record the internal initial state init event.
-        $initialState->setInternalEventBehavior(
-            type: InternalEvent::STATE_ENTER,
-            placeholder: $initialState->currentStateDefinition->route,
-        );
+        // Handle parallel state initialization - enter all regions
+        if ($this->initialStateDefinition->type === StateDefinitionType::PARALLEL) {
+            $this->enterParallelState($initialState, $this->initialStateDefinition, $initialState->currentEventBehavior);
+        } else {
+            // Record the internal initial state init event.
+            $initialState->setInternalEventBehavior(
+                type: InternalEvent::STATE_ENTER,
+                placeholder: $initialState->currentStateDefinition->route,
+            );
 
-        // Run entry actions on the initial state definition
-        $this->initialStateDefinition->runEntryActions(
-            state: $initialState,
-            eventBehavior: $initialState->currentEventBehavior,
-        );
+            // Run entry actions on the initial state definition
+            $this->initialStateDefinition->runEntryActions(
+                state: $initialState,
+                eventBehavior: $initialState->currentEventBehavior,
+            );
+        }
 
         if ($this->initialStateDefinition?->transitionDefinitions !== null) {
             foreach ($this->initialStateDefinition->transitionDefinitions as $transition) {
@@ -273,6 +280,53 @@ class MachineDefinition
         }
 
         return $initialState;
+    }
+
+    /**
+     * Enter a parallel state and all its regions.
+     *
+     * @param  State  $state  The current state.
+     * @param  StateDefinition  $parallelState  The parallel state to enter.
+     * @param  EventBehavior|null  $eventBehavior  The triggering event.
+     */
+    protected function enterParallelState(
+        State $state,
+        StateDefinition $parallelState,
+        ?EventBehavior $eventBehavior = null
+    ): void {
+        // Record entering the parallel state
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_ENTER,
+            placeholder: $parallelState->route,
+        );
+
+        // Run entry actions on the parallel state itself
+        $parallelState->runEntryActions($state, $eventBehavior);
+
+        // Collect all initial states from all regions
+        $initialStates = $parallelState->findAllInitialStateDefinitions();
+        $state->setValues(array_map(fn (StateDefinition $s): string => $s->id, $initialStates));
+
+        // Enter each region
+        if ($parallelState->stateDefinitions !== null) {
+            foreach ($parallelState->stateDefinitions as $region) {
+                // Record region entry
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::PARALLEL_REGION_ENTER,
+                    placeholder: $region->route,
+                );
+
+                // Find and run entry actions for the initial state of this region
+                $regionInitial = $region->findInitialStateDefinition();
+                if ($regionInitial !== null) {
+                    $state->setInternalEventBehavior(
+                        type: InternalEvent::STATE_ENTER,
+                        placeholder: $regionInitial->route,
+                    );
+                    $regionInitial->runEntryActions($state, $eventBehavior);
+                }
+            }
+        }
     }
 
     /**
@@ -544,6 +598,152 @@ class MachineDefinition
         }
 
         return $transitionDefinition;
+    }
+
+    /**
+     * Find a transition definition without throwing an exception if not found.
+     *
+     * Used for parallel states where an event might not be handled by all regions.
+     *
+     * @param  \Tarfinlabs\EventMachine\Definition\StateDefinition  $currentStateDefinition  The current state definition.
+     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior  $eventBehavior  The event behavior.
+     *
+     * @return \Tarfinlabs\EventMachine\Definition\TransitionDefinition|null The found transition definition, or null if none is found.
+     */
+    protected function findTransitionDefinitionOrNull(
+        StateDefinition $currentStateDefinition,
+        EventBehavior $eventBehavior,
+    ): ?TransitionDefinition {
+        $transitionDefinition = $currentStateDefinition->transitionDefinitions[$eventBehavior->type] ?? null;
+
+        // If no transition definition is found, and the current state definition has a parent,
+        // recursively search for the transition definition in the parent state definition.
+        if (
+            $transitionDefinition === null &&
+            $currentStateDefinition->order !== 0
+        ) {
+            return $this->findTransitionDefinitionOrNull(
+                currentStateDefinition: $currentStateDefinition->parent,
+                eventBehavior: $eventBehavior,
+            );
+        }
+
+        return $transitionDefinition;
+    }
+
+    /**
+     * Get all active atomic (leaf) states from the current state value.
+     *
+     * For non-parallel states, returns a single-element array.
+     * For parallel states, returns all active leaf states across all regions.
+     *
+     * @param  State  $state  The current state.
+     *
+     * @return array<StateDefinition> Array of active atomic state definitions.
+     */
+    protected function getActiveAtomicStates(State $state): array
+    {
+        $atomicStates = [];
+
+        foreach ($state->value as $stateId) {
+            if (isset($this->idMap[$stateId])) {
+                $atomicStates[] = $this->idMap[$stateId];
+            }
+        }
+
+        return $atomicStates;
+    }
+
+    /**
+     * Select transitions for all active regions based on the event.
+     *
+     * For parallel states, an event is broadcast to all active atomic states.
+     * Each region independently evaluates guards and selects a transition.
+     *
+     * @param  EventBehavior  $eventBehavior  The event behavior.
+     * @param  State  $state  The current state.
+     *
+     * @return array<TransitionBranch> Array of valid transition branches.
+     */
+    protected function selectTransitions(EventBehavior $eventBehavior, State $state): array
+    {
+        $transitions = [];
+
+        foreach ($this->getActiveAtomicStates($state) as $atomicState) {
+            $transitionDef = $this->findTransitionDefinitionOrNull($atomicState, $eventBehavior);
+
+            if ($transitionDef !== null) {
+                $branch = $transitionDef->getFirstValidTransitionBranch($eventBehavior, $state);
+
+                if ($branch !== null) {
+                    $transitions[] = $branch;
+                }
+            }
+        }
+
+        return $transitions;
+    }
+
+    /**
+     * Check if all regions of a parallel state have reached their final states.
+     *
+     * When all regions are final, the parallel state itself is considered complete
+     * and can transition via its onDone handler.
+     *
+     * @param  StateDefinition  $parallelState  The parallel state definition.
+     * @param  State  $state  The current state.
+     *
+     * @return bool True if all regions are in final states.
+     */
+    protected function areAllRegionsFinal(StateDefinition $parallelState, State $state): bool
+    {
+        if ($parallelState->type !== StateDefinitionType::PARALLEL || $parallelState->stateDefinitions === null) {
+            return false;
+        }
+
+        foreach ($parallelState->stateDefinitions as $region) {
+            $regionIsFinal = false;
+
+            // Check if any of the active states belong to this region and are final
+            foreach ($state->value as $activeStateId) {
+                if (str_starts_with($activeStateId, $region->id)) {
+                    $activeState = $this->idMap[$activeStateId] ?? null;
+
+                    if ($activeState !== null && $activeState->type === StateDefinitionType::FINAL) {
+                        $regionIsFinal = true;
+
+                        break;
+                    }
+                }
+            }
+
+            if (!$regionIsFinal) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Find the parallel state ancestor of a given state definition.
+     *
+     * @param  StateDefinition  $stateDefinition  The state definition to search from.
+     *
+     * @return StateDefinition|null The parallel state ancestor, or null if none found.
+     */
+    protected function findParallelAncestor(StateDefinition $stateDefinition): ?StateDefinition
+    {
+        $current = $stateDefinition->parent;
+
+        while ($current !== null) {
+            if ($current->type === StateDefinitionType::PARALLEL) {
+                return $current;
+            }
+            $current = $current->parent;
+        }
+
+        return null;
     }
 
     // endregion
