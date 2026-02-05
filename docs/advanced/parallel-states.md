@@ -103,8 +103,8 @@ $state->matchesAll([
 $state->isInParallelState();  // true
 ```
 
-::: tip Partial Path Matching
-The `matches()` method supports partial paths. You can check `active.document` to verify you're in the document region without specifying the exact leaf state.
+::: warning Full Path Required
+The `matches()` method requires the full path to the leaf state. Partial paths (like `active.document` without the leaf state) will return false. Always specify the complete path to the active leaf state.
 :::
 
 ## Event Handling
@@ -597,25 +597,27 @@ $state->value;
 
 ### Using `matches()` with Deep Nesting
 
-The `matches()` method works with any level of the hierarchy:
+The `matches()` method checks for exact matches against active leaf states. You must provide the full path from the machine's initial state:
 
 ```php
-// Check specific leaf state
+// Check specific leaf states - must be full path
 $state->matches('root.branch1.leaf.subleaf1.a');  // true
+$state->matches('root.branch1.leaf.subleaf2.x');  // true
+$state->matches('root.branch2.waiting');          // true
 
-// Check intermediate parallel state
-$state->matches('root.branch1.leaf');  // true (we're in this parallel)
+// Intermediate paths do NOT match
+$state->matches('root.branch1.leaf');  // false - not a leaf state
+$state->matches('root.branch1');       // false - not a leaf state
+$state->matches('root');               // false - not a leaf state
 
-// Check region
-$state->matches('root.branch1');  // true
-
-// Check outer parallel
-$state->matches('root');  // true
-
-// Partial paths work at any level
-$state->matches('branch2.waiting');  // true
-$state->matches('subleaf1.a');  // true
+// Partial paths (without machine id prefix) also don't work
+$state->matches('branch2.waiting');    // false - missing 'root' prefix
+$state->matches('subleaf1.a');         // false - missing full path
 ```
+
+::: warning Full Paths Required
+Always use the complete path from the initial state to the leaf. For example, use `root.branch1.leaf.subleaf1.a` instead of just `subleaf1.a`.
+:::
 
 ::: tip Deep Nesting Best Practices
 - Keep nesting to 3 levels or fewer when possible for maintainability
