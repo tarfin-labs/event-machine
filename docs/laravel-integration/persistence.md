@@ -344,7 +344,7 @@ For high-volume machines, enable archival:
 ],
 ```
 
-See [Archival & Compression](/laravel-integration/archival-compression) for details.
+See [Archival](/laravel-integration/archival) for details.
 
 ## Best Practices
 
