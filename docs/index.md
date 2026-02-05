@@ -324,6 +324,57 @@ $order->state->context->status;       // enum
 <div class="feature-section">
 <div class="feature-text">
 
+## Parallel States
+
+**Run concurrent workflows.** Multiple independent processes can be active simultaneously in a single machine. Payment, shipping, and document generation - all tracked together.
+
+When all parallel regions complete, `onDone` triggers the next step. No polling, no callbacks, no coordination code.
+
+[Learn parallel states &rarr;](/advanced/parallel-states)
+
+</div>
+<div class="feature-code">
+
+```php
+'processing' => [
+    'type' => 'parallel',
+    'onDone' => 'fulfilled',  // When ALL regions complete
+    'states' => [
+        'payment' => [
+            'initial' => 'pending',
+            'states' => [
+                'pending' => ['on' => ['PAID' => 'done']],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+        'shipping' => [
+            'initial' => 'preparing',
+            'states' => [
+                'preparing' => ['on' => ['SHIPPED' => 'done']],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+    ],
+],
+```
+
+```php
+// Both regions active simultaneously
+$state->matches('processing.payment.pending');   // true
+$state->matches('processing.shipping.preparing'); // true
+
+// Events handled by their respective regions
+$machine->send(['type' => 'PAID']);    // payment → done
+$machine->send(['type' => 'SHIPPED']); // shipping → done
+// All final → auto-transitions to 'fulfilled'
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
 ## Laravel Native
 
 **Built for Laravel, not bolted on.** Eloquent integration, dependency injection, service providers, Artisan commands - everything you expect.
