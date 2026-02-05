@@ -120,6 +120,9 @@ Behaviors are the actions, guards, and calculations that happen during transitio
 - **Guards** - conditions that must be true for a transition
 - **Calculators** - compute values before guards run
 
+### Parallel States
+Parallel states (orthogonal states) allow multiple independent regions to be active simultaneously. For example, an order fulfillment might have payment, shipping, and document generation happening concurrently - each with their own states and transitions.
+
 ## Event Sourcing Built-In
 
 Every state transition is automatically persisted as an event:
