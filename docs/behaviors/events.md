@@ -76,13 +76,23 @@ class AddItemEvent extends EventBehavior
     }
 }
 
-// Usage
+// Usage - constructor
 $machine->send(new AddItemEvent(
     productId: 123,
     quantity: 2,
     customPrice: 29.99,
 ));
+
+// Usage - from() static method (via Spatie Laravel Data)
+$machine->send(AddItemEvent::from([
+    'productId' => 123,
+    'quantity' => 2,
+]));
 ```
+
+::: info The `from()` Method
+The `from()` static method is provided by Spatie's Laravel Data package, which `EventBehavior` extends. It creates an instance from an array, handling type casting and validation automatically. You can use either the constructor or `from()` based on your preference.
+:::
 
 ## Event Validation
 
@@ -247,6 +257,18 @@ use Tarfinlabs\EventMachine\Enums\SourceType;
 $event->source; // SourceType::EXTERNAL (user-sent)
                 // SourceType::INTERNAL (system-generated)
 ```
+
+::: info Event Sources Explained
+- **`external`**: Events sent via `$machine->send()` - user actions, API calls, webhook triggers
+- **`internal`**: System-generated events like state entry/exit, machine initialization, action completion, raised events from actions
+
+You can filter events by source when querying history:
+```php
+$userEvents = $machine->state->history->filter(
+    fn($event) => $event->source === SourceType::EXTERNAL
+);
+```
+:::
 
 ### `version`
 
