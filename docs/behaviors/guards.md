@@ -49,7 +49,7 @@ class HasItemsGuard extends GuardBehavior
 
 ## Multiple Guards (AND Logic)
 
-All guards must pass for the transition to occur:
+All guards must pass for the transition to occur. Guards evaluate in order and **short-circuit** on the first failure:
 
 ```php
 'on' => [
@@ -59,6 +59,12 @@ All guards must pass for the transition to occur:
     ],
 ],
 ```
+
+If `hasItems` returns `false`, `hasValidPayment` and `hasShippingAddress` never execute.
+
+::: tip Performance
+Place fastest or most likely to fail guards first to minimize unnecessary evaluations.
+:::
 
 ```mermaid
 flowchart TD
@@ -119,15 +125,9 @@ class AmountGuard extends GuardBehavior
 }
 ```
 
-### Available Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$context` | `ContextManager` | Current machine context |
-| `$event` | `EventBehavior` | Triggering event |
-| `$state` | `State` | Current machine state |
-| `$history` | `EventCollection` | Event history |
-| `$arguments` | `array` | Guard arguments |
+::: tip Available Parameters
+See [Parameter Injection](/behaviors/introduction#parameter-injection) for the full list of injectable parameters (`ContextManager`, `EventBehavior`, `State`, `EventCollection`, `array`).
+:::
 
 ## Guard Arguments
 
