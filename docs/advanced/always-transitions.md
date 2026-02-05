@@ -17,6 +17,10 @@
 
 When the machine enters `checking`, it immediately transitions to `nextState`.
 
+::: warning Infinite Loop Risk
+`@always` transitions can create infinite loops if two states always transition to each other. Always ensure at least one path leads to a state without `@always`, or use guards that will eventually fail. See [Avoiding Infinite Loops](#avoiding-infinite-loops) for details.
+:::
+
 ## Guarded @always Transitions
 
 Use guards to conditionally route:
@@ -58,7 +62,7 @@ sequenceDiagram
     Transition->>Target: Enter state
     Target->>Entry: Execute entry actions
     Entry->>Always: Check @always transitions
-    alt @always matches
+    alt @always matches()
         Always->>Transition: Trigger new transition
     else No @always
         Always->>Target: Stay in state
