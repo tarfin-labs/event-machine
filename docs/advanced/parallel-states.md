@@ -757,11 +757,14 @@ Parallel state values are automatically persisted to the database. The `machine_
 
 ```php
 // State is persisted with all active regions
-$machine = new Machine(OrderWorkflowMachine::class);
+$machine = OrderWorkflowMachine::create();
 $machine->send(['type' => 'START']);
 
-// Later, restore from database
-$machine = Machine::restore(OrderWorkflowMachine::class, $rootEventId);
+// Get the root event ID for later restoration
+$rootEventId = $machine->state->history->first()->root_event_id;
+
+// Later, restore from database using the root event ID
+$machine = OrderWorkflowMachine::create(state: $rootEventId);
 $state = $machine->state;
 
 // All parallel regions are restored
