@@ -17,7 +17,7 @@ class StateConfigValidator
     ];
 
     private const ALLOWED_STATE_KEYS = [
-        'id', 'on', 'states', 'initial', 'type', 'meta', 'entry', 'exit', 'description', 'result',
+        'id', 'on', 'states', 'initial', 'type', 'meta', 'entry', 'exit', 'description', 'result', 'onDone',
     ];
 
     private const ALLOWED_TRANSITION_KEYS = [
@@ -26,7 +26,7 @@ class StateConfigValidator
 
     /** Valid state types matching StateDefinitionType enum */
     private const VALID_STATE_TYPES = [
-        'atomic', 'compound', 'final',
+        'atomic', 'compound', 'parallel', 'final',
     ];
 
     /**
@@ -140,6 +140,11 @@ class StateConfigValidator
             self::validateFinalState(stateConfig: $stateConfig, path: $path);
         }
 
+        // Parallel state validations
+        if (isset($stateConfig['type']) && $stateConfig['type'] === 'parallel') {
+            self::validateParallelState(stateConfig: $stateConfig, path: $path);
+        }
+
         // Process nested states first to ensure proper context
         if (isset($stateConfig['states'])) {
             if (!is_array($stateConfig['states'])) {
@@ -197,6 +202,27 @@ class StateConfigValidator
         if (isset($stateConfig['states'])) {
             throw new InvalidArgumentException(
                 message: "Final state '{$path}' cannot have child states"
+            );
+        }
+    }
+
+    /**
+     * Validates parallel state constraints.
+     *
+     * @throws InvalidArgumentException
+     */
+    private static function validateParallelState(array $stateConfig, string $path): void
+    {
+        if (isset($stateConfig['initial'])) {
+            throw new InvalidArgumentException(
+                message: "Parallel state '{$path}' cannot have an 'initial' property. ".
+                'All regions are entered simultaneously.'
+            );
+        }
+
+        if (!isset($stateConfig['states']) || !is_array($stateConfig['states']) || $stateConfig['states'] === []) {
+            throw new InvalidArgumentException(
+                message: "Parallel state '{$path}' must have at least one region defined in 'states'."
             );
         }
     }
