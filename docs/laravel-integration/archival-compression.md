@@ -226,7 +226,7 @@ After auto-restore, the machine won't be eligible for re-archival until the cool
 
 ## Programmatic Archival
 
-### Archive Service
+### `ArchiveService`
 
 ```php
 use Tarfinlabs\EventMachine\Services\ArchiveService;
