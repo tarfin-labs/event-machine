@@ -127,15 +127,9 @@ class ProcessAction extends ActionBehavior
 }
 ```
 
-### Available Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$context` | `ContextManager` | Current machine context |
-| `$event` | `EventBehavior` | Triggering event with payload |
-| `$state` | `State` | Current machine state |
-| `$history` | `EventCollection` | Event history |
-| `$arguments` | `array` | Arguments from behavior string |
+::: tip Available Parameters
+See [Parameter Injection](/behaviors/introduction#parameter-injection) for the full list of injectable parameters (`ContextManager`, `EventBehavior`, `State`, `EventCollection`, `array`).
+:::
 
 ## Action Arguments
 
