@@ -229,10 +229,11 @@ class OrderFulfillmentMachine extends Machine
 ```php
 use App\Machines\OrderFulfillmentMachine;
 
-// Create with order context
-$machine = OrderFulfillmentMachine::create([
-    'order_id' => $order->id,
-]);
+// Create the machine
+$machine = OrderFulfillmentMachine::create();
+
+// Set the order_id in context
+$machine->state->context->set('order_id', $order->id);
 
 // Check initial state - all three regions are active
 $state = $machine->state;
@@ -357,7 +358,8 @@ MachineDefinition::define(
 use App\Machines\OrderFulfillmentMachine;
 
 test('order fulfillment completes when all regions are final', function () {
-    $machine = OrderFulfillmentMachine::create(['order_id' => 1]);
+    $machine = OrderFulfillmentMachine::create();
+    $machine->state->context->set('order_id', 1);
 
     // Complete all three tracks
     $machine->send(['type' => 'PAYMENT_SUCCESS', 'payload' => ['payment_id' => 'pay_1']]);
@@ -370,7 +372,8 @@ test('order fulfillment completes when all regions are final', function () {
 });
 
 test('cancellation works from any state', function () {
-    $machine = OrderFulfillmentMachine::create(['order_id' => 1]);
+    $machine = OrderFulfillmentMachine::create();
+    $machine->state->context->set('order_id', 1);
 
     // Progress shipping
     $machine->send(['type' => 'PICKED']);
@@ -382,7 +385,8 @@ test('cancellation works from any state', function () {
 });
 
 test('payment failure does not block other regions', function () {
-    $machine = OrderFulfillmentMachine::create(['order_id' => 1]);
+    $machine = OrderFulfillmentMachine::create();
+    $machine->state->context->set('order_id', 1);
 
     $machine->send(['type' => 'PAYMENT_FAILED', 'payload' => ['error' => 'Declined']]);
 
