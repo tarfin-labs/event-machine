@@ -14,6 +14,7 @@ use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 
 /**
  * Class State.
@@ -50,10 +51,21 @@ class State
 
     /**
      * Updates the machine value based on the current state definition.
+     *
+     * For parallel states, collects all active leaf state IDs into the array.
+     * For non-parallel states, uses a single-element array.
      */
     protected function updateMachineValueFromState(): void
     {
-        $this->value = [$this->currentStateDefinition->id];
+        if ($this->currentStateDefinition->type === StateDefinitionType::PARALLEL) {
+            // For parallel states, collect all initial states from all regions
+            $this->value = array_map(
+                fn (StateDefinition $state): string => $state->id,
+                $this->currentStateDefinition->findAllInitialStateDefinitions()
+            );
+        } else {
+            $this->value = [$this->currentStateDefinition->id];
+        }
     }
 
     /**
@@ -120,7 +132,7 @@ class State
                 'sequence_number' => $count,
                 'created_at'      => now(),
                 'machine_id'      => $this->currentStateDefinition->machine->id,
-                'machine_value'   => [$this->currentStateDefinition->id],
+                'machine_value'   => $this->value,
                 'root_event_id'   => $rootEventId,
                 'source'          => $currentEventBehavior->source,
                 'type'            => $currentEventBehavior->type,
@@ -139,11 +151,13 @@ class State
     }
 
     /**
-     * Checks if the given value matches the current state's value.
+     * Checks if the given value matches any of the current state's values.
+     *
+     * For parallel states, checks if the value is in any of the active regions.
      *
      * @param  string  $value  The value to be checked.
      *
-     * @return bool Returns true if the value matches the current state's value; otherwise, returns false.
+     * @return bool Returns true if the value matches any of the current state's values; otherwise, returns false.
      */
     public function matches(string $value): bool
     {
@@ -153,6 +167,56 @@ class State
             $value = $machineId.'.'.$value;
         }
 
-        return $this->value[0] === $value;
+        return in_array($value, $this->value, true);
+    }
+
+    /**
+     * Checks if all the given values match the current state's values.
+     *
+     * Useful for verifying multiple regions in parallel states are in expected states.
+     *
+     * @param  array<string>  $values  The values to be checked.
+     *
+     * @return bool Returns true if all values match; otherwise, returns false.
+     */
+    public function matchesAll(array $values): bool
+    {
+        $machineId = $this->currentStateDefinition->machine->id;
+
+        foreach ($values as $value) {
+            if (!str_starts_with($value, $machineId)) {
+                $value = $machineId.'.'.$value;
+            }
+
+            if (!in_array($value, $this->value, true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Checks if the current state is within a parallel state.
+     *
+     * @return bool Returns true if the machine is currently in a parallel state.
+     */
+    public function isInParallelState(): bool
+    {
+        return count($this->value) > 1;
+    }
+
+    /**
+     * Sets multiple state values for parallel states.
+     *
+     * @param  array<string>  $values  The state IDs to set.
+     *
+     * @return self The current object instance.
+     */
+    public function setValues(array $values): self
+    {
+        $this->value = $values;
+
+        return $this;
     }
 }
