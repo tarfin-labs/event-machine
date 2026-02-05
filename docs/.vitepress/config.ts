@@ -36,7 +36,7 @@ export default withMermaid(
 
       nav: [
         { text: 'Guide', link: '/getting-started/what-is-event-machine' },
-        { text: 'Patterns', link: '/patterns/introduction' },
+        { text: 'Examples', link: '/examples/quick-start' },
         {
           text: 'v3.x',
           items: [
@@ -93,16 +93,11 @@ export default withMermaid(
           ]
         },
         {
-          text: 'Patterns',
+          text: 'Examples',
           collapsed: true,
           items: [
-            { text: 'Introduction', link: '/patterns/introduction' },
-            { text: 'Traffic Light', link: '/patterns/traffic-light' },
-            { text: 'Order Processing', link: '/patterns/order-processing' },
-            { text: 'Parallel Workflow', link: '/patterns/parallel-workflow' },
-            { text: 'Calculator', link: '/patterns/calculator' },
-            { text: 'Elevator', link: '/patterns/elevator' },
-            { text: 'Guarded Transitions', link: '/patterns/guarded-transitions' }
+            { text: 'Quick Start', link: '/examples/quick-start' },
+            { text: 'Real World', link: '/examples/real-world' }
           ]
         },
         {
@@ -112,7 +107,8 @@ export default withMermaid(
             { text: 'Overview', link: '/laravel-integration/overview' },
             { text: 'Eloquent Integration', link: '/laravel-integration/eloquent-integration' },
             { text: 'Persistence', link: '/laravel-integration/persistence' },
-            { text: 'Archival & Compression', link: '/laravel-integration/archival-compression' },
+            { text: 'Archival', link: '/laravel-integration/archival' },
+            { text: 'Compression', link: '/laravel-integration/compression' },
             { text: 'Artisan Commands', link: '/laravel-integration/artisan-commands' }
           ]
         },
@@ -121,7 +117,15 @@ export default withMermaid(
           collapsed: true,
           items: [
             { text: 'Hierarchical States', link: '/advanced/hierarchical-states' },
-            { text: 'Parallel States', link: '/advanced/parallel-states' },
+            {
+              text: 'Parallel States',
+              collapsed: true,
+              items: [
+                { text: 'Overview', link: '/advanced/parallel-states/' },
+                { text: 'Event Handling', link: '/advanced/parallel-states/event-handling' },
+                { text: 'Persistence', link: '/advanced/parallel-states/persistence' }
+              ]
+            },
             { text: '@always Transitions', link: '/advanced/always-transitions' },
             { text: 'Raised Events', link: '/advanced/raised-events' },
             { text: 'Entry/Exit Actions', link: '/advanced/entry-exit-actions' },
