@@ -175,13 +175,16 @@ $state->matches('active.status.unsaved');    // true
 
 ## Entry and Exit Actions
 
-Entry and exit actions fire for each region during transitions.
+Entry and exit actions fire for each region during transitions. Understanding the execution order is important for proper state initialization and cleanup.
 
-### Initial Entry
+### Entry Action Execution Order
 
-When entering a parallel state, entry actions fire for:
-1. The parallel state itself
-2. Each region's initial state
+When entering a parallel state, entry actions fire in this specific order:
+
+1. **Parallel state entry** - The parallel state's own entry action
+2. **Region 1 initial state entry** - First region's initial state
+3. **Region 2 initial state entry** - Second region's initial state
+4. *(continues for all regions in definition order)*
 
 ```php
 MachineDefinition::define(
@@ -191,13 +194,13 @@ MachineDefinition::define(
         'states' => [
             'active' => [
                 'type' => 'parallel',
-                'entry' => 'logParallelEntry',  // Fires first
+                'entry' => 'logParallelEntry',  // 1. Fires first
                 'states' => [
                     'region1' => [
                         'initial' => 'a',
                         'states' => [
                             'a' => [
-                                'entry' => 'logRegion1Entry',  // Fires second
+                                'entry' => 'logRegion1Entry',  // 2. Fires second
                             ],
                         ],
                     ],
@@ -205,7 +208,15 @@ MachineDefinition::define(
                         'initial' => 'b',
                         'states' => [
                             'b' => [
-                                'entry' => 'logRegion2Entry',  // Fires third
+                                'entry' => 'logRegion2Entry',  // 3. Fires third
+                            ],
+                        ],
+                    ],
+                    'region3' => [
+                        'initial' => 'c',
+                        'states' => [
+                            'c' => [
+                                'entry' => 'logRegion3Entry',  // 4. Fires fourth
                             ],
                         ],
                     ],
@@ -215,29 +226,87 @@ MachineDefinition::define(
     ],
     behavior: [
         'actions' => [
-            'logParallelEntry' => fn () => Log::info('Entering parallel state'),
-            'logRegion1Entry' => fn () => Log::info('Entering region 1'),
-            'logRegion2Entry' => fn () => Log::info('Entering region 2'),
+            'logParallelEntry' => fn () => Log::info('1. Entering parallel state'),
+            'logRegion1Entry' => fn () => Log::info('2. Entering region 1'),
+            'logRegion2Entry' => fn () => Log::info('3. Entering region 2'),
+            'logRegion3Entry' => fn () => Log::info('4. Entering region 3'),
         ],
     ]
 );
+
+// Log output:
+// 1. Entering parallel state
+// 2. Entering region 1
+// 3. Entering region 2
+// 4. Entering region 3
 ```
 
-### Exit Actions
+### Exit Action Execution Order
 
-Exit actions fire in reverse order - deepest states first:
+Exit actions fire in **reverse order** - deepest states first, then up the hierarchy:
+
+1. **Leaf state exit** - The active leaf state in each region (deepest)
+2. **Region exit** - The region's exit action
+3. **Parallel state exit** - The parallel state's own exit action (last)
 
 ```php
-'region1' => [
-    'initial' => 'a',
-    'exit' => 'logRegion1Exit',  // Fires when leaving region
-    'states' => [
-        'a' => [
-            'exit' => 'logStateAExit',  // Fires first (deepest)
+MachineDefinition::define(
+    config: [
+        'id' => 'machine',
+        'initial' => 'active',
+        'states' => [
+            'active' => [
+                'type' => 'parallel',
+                'exit' => 'logParallelExit',  // 5. Fires last
+                'states' => [
+                    'region1' => [
+                        'initial' => 'a',
+                        'exit' => 'logRegion1Exit',  // 2. Fires second
+                        'states' => [
+                            'a' => [
+                                'exit' => 'logStateAExit',  // 1. Fires first (deepest)
+                            ],
+                        ],
+                    ],
+                    'region2' => [
+                        'initial' => 'b',
+                        'exit' => 'logRegion2Exit',  // 4. Fires fourth
+                        'states' => [
+                            'b' => [
+                                'exit' => 'logStateBExit',  // 3. Fires third
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            'inactive' => [],
         ],
     ],
-],
+    behavior: [
+        'actions' => [
+            'logStateAExit' => fn () => Log::info('1. Exiting state a'),
+            'logRegion1Exit' => fn () => Log::info('2. Exiting region 1'),
+            'logStateBExit' => fn () => Log::info('3. Exiting state b'),
+            'logRegion2Exit' => fn () => Log::info('4. Exiting region 2'),
+            'logParallelExit' => fn () => Log::info('5. Exiting parallel state'),
+        ],
+    ]
+);
+
+// When transitioning from 'active' to 'inactive', log output:
+// 1. Exiting state a
+// 2. Exiting region 1
+// 3. Exiting state b
+// 4. Exiting region 2
+// 5. Exiting parallel state
 ```
+
+::: tip Action Order Summary
+**Entry**: Outside → Inside (parallel → regions → leaf states)
+**Exit**: Inside → Outside (leaf states → regions → parallel)
+
+This follows the principle that resources should be acquired before use (entry) and released after use (exit).
+:::
 
 ## Shared Context
 
@@ -407,9 +476,27 @@ Parallel states can be nested within compound states, and compound states can be
 ],
 ```
 
-### Deep Nesting
+### Deep Nesting (3+ Levels)
 
-You can create complex hierarchies with multiple levels of nesting:
+You can create complex hierarchies with multiple levels of nesting. EventMachine recursively resolves all leaf states regardless of nesting depth.
+
+**Structure: Parallel → Compound → Parallel → Leaf**
+
+```
+deep (machine)
+└── root (PARALLEL)
+    ├── branch1 (compound)
+    │   └── leaf (PARALLEL)
+    │       ├── subleaf1 (compound)
+    │       │   ├── a ← active leaf
+    │       │   └── b
+    │       └── subleaf2 (compound)
+    │           ├── x ← active leaf
+    │           └── y
+    └── branch2 (compound)
+        ├── waiting ← active leaf
+        └── finished
+```
 
 ```php
 MachineDefinition::define([
@@ -417,18 +504,18 @@ MachineDefinition::define([
     'initial' => 'root',
     'states' => [
         'root' => [
-            'type' => 'parallel',
+            'type' => 'parallel',  // Level 1: Outer parallel
             'states' => [
                 'branch1' => [
-                    'initial' => 'leaf',
+                    'initial' => 'leaf',  // Level 2: Compound region
                     'states' => [
                         'leaf' => [
-                            'type' => 'parallel',  // Nested parallel
+                            'type' => 'parallel',  // Level 3: Nested parallel
                             'states' => [
                                 'subleaf1' => [
-                                    'initial' => 'a',
+                                    'initial' => 'a',  // Level 4: Inner compound
                                     'states' => [
-                                        'a' => ['on' => ['GO1' => 'b']],
+                                        'a' => ['on' => ['GO1' => 'b']],  // Level 5: Leaf
                                         'b' => [],
                                     ],
                                 ],
@@ -454,19 +541,98 @@ MachineDefinition::define([
         ],
     ],
 ]);
+```
 
+### State Value in Deep Nesting
+
+The `$state->value` array always contains the fully-qualified IDs of all active **leaf** states:
+
+```php
 $state = $definition->getInitialState();
-// State value includes all leaf states:
+
+// State value includes ALL leaf states from ALL nesting levels:
+$state->value;
 // [
-//     'deep.root.branch1.leaf.subleaf1.a',
-//     'deep.root.branch1.leaf.subleaf2.x',
-//     'deep.root.branch2.waiting',
+//     'deep.root.branch1.leaf.subleaf1.a',  // From nested parallel, region 1
+//     'deep.root.branch1.leaf.subleaf2.x',  // From nested parallel, region 2
+//     'deep.root.branch2.waiting',          // From outer parallel, region 2
+// ]
+
+// Note: 3 active states because:
+// - Outer parallel (root) has 2 regions: branch1, branch2
+// - branch1's initial (leaf) is itself parallel with 2 regions: subleaf1, subleaf2
+// - Total: 2 (from nested) + 1 (from outer) = 3 leaf states
+```
+
+### Transitions in Deep Nesting
+
+Each region independently handles events at its own level:
+
+```php
+$state = $definition->getInitialState();
+// branch1.leaf.subleaf1.a, branch1.leaf.subleaf2.x, branch2.waiting
+
+// Event handled by nested parallel region subleaf1
+$state = $definition->transition(['type' => 'GO1'], $state);
+$state->value;
+// [
+//     'deep.root.branch1.leaf.subleaf1.b',  // Changed: a → b
+//     'deep.root.branch1.leaf.subleaf2.x',  // Unchanged
+//     'deep.root.branch2.waiting',          // Unchanged
+// ]
+
+// Event handled by nested parallel region subleaf2
+$state = $definition->transition(['type' => 'GO2'], $state);
+$state->value;
+// [
+//     'deep.root.branch1.leaf.subleaf1.b',  // Unchanged
+//     'deep.root.branch1.leaf.subleaf2.y',  // Changed: x → y
+//     'deep.root.branch2.waiting',          // Unchanged
+// ]
+
+// Event handled by outer parallel region branch2
+$state = $definition->transition(['type' => 'DONE'], $state);
+$state->value;
+// [
+//     'deep.root.branch1.leaf.subleaf1.b',  // Unchanged
+//     'deep.root.branch1.leaf.subleaf2.y',  // Unchanged
+//     'deep.root.branch2.finished',         // Changed: waiting → finished
 // ]
 ```
 
+### Using `matches()` with Deep Nesting
+
+The `matches()` method works with any level of the hierarchy:
+
+```php
+// Check specific leaf state
+$state->matches('root.branch1.leaf.subleaf1.a');  // true
+
+// Check intermediate parallel state
+$state->matches('root.branch1.leaf');  // true (we're in this parallel)
+
+// Check region
+$state->matches('root.branch1');  // true
+
+// Check outer parallel
+$state->matches('root');  // true
+
+// Partial paths work at any level
+$state->matches('branch2.waiting');  // true
+$state->matches('subleaf1.a');  // true
+```
+
+::: tip Deep Nesting Best Practices
+- Keep nesting to 3 levels or fewer when possible for maintainability
+- Use meaningful names that indicate the hierarchy level (e.g., `region`, `subregion`)
+- Consider breaking very deep structures into separate machines that communicate via events
+:::
+
 ## Transitioning Into Parallel States
 
-When a transition targets a parallel state, all of its regions are automatically entered:
+When a transition targets a parallel state, all of its regions are automatically entered.
+
+### From Non-Parallel to Parallel
 
 ```php
 MachineDefinition::define([
@@ -506,6 +672,84 @@ $state = $definition->transition(['type' => 'START'], $state);
 $state->matches('processing.task1.pending');  // true
 $state->matches('processing.task2.pending');  // true
 ```
+
+### Transitioning Into Nested Parallel (Within Parallel Region)
+
+When you're already in a parallel state and a region transitions to a state that is itself parallel, all nested regions are properly initialized:
+
+```php
+MachineDefinition::define([
+    'id' => 'nested',
+    'initial' => 'active',
+    'states' => [
+        'active' => [
+            'type' => 'parallel',
+            'states' => [
+                'outer1' => [
+                    'initial' => 'off',
+                    'states' => [
+                        'off' => [
+                            'on' => ['ACTIVATE' => 'on'],
+                        ],
+                        'on' => [
+                            'type' => 'parallel',  // Target is parallel!
+                            'states' => [
+                                'inner1' => [
+                                    'initial' => 'idle',
+                                    'states' => [
+                                        'idle' => ['on' => ['WORK1' => 'working']],
+                                        'working' => [],
+                                    ],
+                                ],
+                                'inner2' => [
+                                    'initial' => 'idle',
+                                    'states' => [
+                                        'idle' => ['on' => ['WORK2' => 'working']],
+                                        'working' => [],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+                'outer2' => [
+                    'initial' => 'waiting',
+                    'states' => [
+                        'waiting' => ['on' => ['PROCEED' => 'done']],
+                        'done' => [],
+                    ],
+                ],
+            ],
+        ],
+    ],
+]);
+
+$state = $definition->getInitialState();
+// Initial: outer1.off, outer2.waiting
+$state->value;
+// ['nested.active.outer1.off', 'nested.active.outer2.waiting']
+
+// Transition to 'on' which is a parallel state
+$state = $definition->transition(['type' => 'ACTIVATE'], $state);
+
+// The nested parallel is fully expanded - both inner regions entered!
+$state->value;
+// [
+//     'nested.active.outer1.on.inner1.idle',  // Nested region 1
+//     'nested.active.outer1.on.inner2.idle',  // Nested region 2
+//     'nested.active.outer2.waiting',         // Outer region unchanged
+// ]
+
+$state->matches('active.outer1.on.inner1.idle');  // true
+$state->matches('active.outer1.on.inner2.idle');  // true
+$state->matches('active.outer2.waiting');         // true
+```
+
+::: info Entry Actions When Entering Nested Parallel
+When transitioning into a nested parallel state, entry actions fire in order:
+1. The parallel state's entry action (`on`)
+2. Each nested region's initial state entry action (`inner1.idle`, `inner2.idle`)
+:::
 
 ## Persistence
 
