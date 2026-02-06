@@ -2,7 +2,7 @@
 
 EventMachine integrates with Eloquent models through the `HasMachines` trait and `MachineCast`.
 
-## HasMachines Trait
+## `HasMachines` Trait
 
 Add the trait to your model:
 
@@ -18,7 +18,7 @@ class Order extends Model
 
 ## Defining Machines
 
-### Via machines() Method
+### Via `machines()` Method
 
 ```php
 class Order extends Model
@@ -133,7 +133,7 @@ $order->status->state->matches('pending'); // true
 
 ### Controlling Initialization
 
-Override `shouldInitializeMachine()` to control when machines initialize:
+Override the `shouldInitializeMachine()` method to control when machines initialize:
 
 ```php
 class Order extends Model

@@ -36,8 +36,6 @@ abstract class InvokableBehavior
      * Constructs a new instance of the class.
      *
      * @param  Collection|null  $eventQueue  The event queue collection. Default is null.
-     *
-     * @return void
      */
     public function __construct(protected ?Collection $eventQueue = null)
     {

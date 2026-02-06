@@ -4,7 +4,7 @@ Complete guide to asserting machine state in your tests.
 
 ## State Matching
 
-### matches()
+### `matches()`
 
 Check if machine is in a specific state:
 
@@ -61,14 +61,14 @@ expect($machine->state->context->total)->toBe(100);
 expect($machine->state->context->orderId)->not->toBeNull();
 ```
 
-### Using get()
+### Using `get()`
 
 ```php
 expect($machine->state->context->get('items'))->toHaveCount(1);
 expect($machine->state->context->get('user.email'))->toBe('test@example.com');
 ```
 
-### Using has()
+### Using `has()`
 
 ```php
 expect($machine->state->context->has('orderId'))->toBeTrue();

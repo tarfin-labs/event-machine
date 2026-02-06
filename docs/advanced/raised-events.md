@@ -310,7 +310,7 @@ class TransitionAction extends ActionBehavior
 }
 
 // Order of execution:
-// 1. transition action (raises NEXT)
+// 1. transition action (calls raise())
 // 2. target state entry action
 // 3. NEXT event processed
 ```
@@ -417,6 +417,6 @@ class MyAction extends ActionBehavior
 
 // Doesn't work - inline function
 'actions' => [
-    'myAction' => fn($ctx) => $this->raise(['type' => 'EVENT']), // Error!
+    'myAction' => fn($ctx) => $this->raise(['type' => 'EVENT']), // Error! `raise()` not available
 ],
 ```

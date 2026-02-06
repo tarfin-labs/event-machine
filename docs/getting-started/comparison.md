@@ -13,6 +13,7 @@ EventMachine isn't the only state machine library out there. Here's how it compa
 | **Guards** | Yes | Yes | Yes | Yes | Yes |
 | **Actions** | Yes | Yes | Yes | Yes | Yes |
 | **Hierarchical States** | Yes | No | No | Yes | Yes |
+| **Parallel States** | Yes | No | No | Yes | Yes |
 | **Multiple Fields** | Yes | No | Yes | Yes | Yes |
 | **Laravel Native** | Yes | Yes | Yes | Adapter | No |
 

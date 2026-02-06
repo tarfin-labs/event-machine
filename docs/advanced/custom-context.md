@@ -184,7 +184,7 @@ class CartContext extends ContextManager
 'actions' => [
     'applyDiscount' => function (CartContext $ctx, EventBehavior $event) {
         $ctx->discountPercent = $event->payload['percent'];
-        // total() will automatically reflect the discount
+        // `total()` will automatically reflect the discount
     },
 ],
 ```

@@ -287,8 +287,15 @@ class CalculateDeliveryDateCalculator extends CalculatorBehavior
 
 ## Calculator Failure Behavior
 
-::: warning Critical
-If a calculator throws an exception, the **entire transition is aborted**. The exception is caught, a `machine.calculator.{name}.fail` internal event is recorded, and the transition returns `false`.
+::: warning Calculator Failures Abort Transitions
+If a calculator throws an exception:
+1. The exception is caught internally
+2. A `machine.calculator.{name}.fail` internal event is recorded
+3. **The entire transition is aborted** - the machine stays in its current state
+4. No guards or actions execute
+5. The `send()` method returns the current state unchanged
+
+To prevent silent failures, wrap risky operations in try/catch (see example below).
 :::
 
 ```php

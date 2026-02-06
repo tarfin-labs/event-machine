@@ -415,13 +415,20 @@ MachineDefinition::define(
 $machine = WizardMachine::create();
 $machine->send(['type' => 'NEXT']); // Go to step 2
 
-// Check nested state
-$machine->state->matches('filling');           // true
-$machine->state->matches('filling.step2');     // true
+// Check nested state with `matches()` - requires full path from initial state
+$machine->state->matches('filling.step2');     // true (full path)
+
+// Partial paths return false
+$machine->state->matches('filling');           // false - not a leaf state
+$machine->state->matches('step2');             // false - missing parent path
 
 // State value shows full path
 $machine->state->value; // ['wizard.filling.step2']
 ```
+
+::: warning Full Path Required
+The `matches()` method requires the full path to the leaf state. Partial paths or just the leaf state name will return `false`. Always specify the complete path from the machine's initial state.
+:::
 
 ## Best Practices
 

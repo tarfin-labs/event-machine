@@ -58,7 +58,10 @@ class TransitionBranch
                 ->transitionDefinition
                 ->source
                 ->machine
-                ->getNearestStateDefinitionByString($this->transitionBranchConfig);
+                ->getNearestStateDefinitionByString(
+                    $this->transitionBranchConfig,
+                    $this->transitionDefinition->source
+                );
 
             // If the target state definition is not found, throw an exception
             if (!$targetStateDefinition instanceof StateDefinition) {
@@ -83,7 +86,10 @@ class TransitionBranch
                 $targetStateDefinition = $this->transitionDefinition
                     ->source
                     ->machine
-                    ->getNearestStateDefinitionByString($this->transitionBranchConfig['target']);
+                    ->getNearestStateDefinitionByString(
+                        $this->transitionBranchConfig['target'],
+                        $this->transitionDefinition->source
+                    );
 
                 if (!$targetStateDefinition instanceof StateDefinition) {
                     throw NoStateDefinitionFoundException::build(

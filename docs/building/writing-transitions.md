@@ -224,6 +224,16 @@ Stay in the same state without triggering entry/exit actions:
 ::: info Internal vs Self Transitions
 - **Internal**: No target, entry/exit actions skipped
 - **Self**: Target equals current state, entry/exit actions run
+
+**When to use Internal Transitions:**
+- Updating context without re-initializing state (heartbeats, counter increments)
+- Handling events that shouldn't trigger expensive entry/exit actions
+- Refreshing data without losing current state setup
+
+**When to use Self Transitions:**
+- Resetting state (re-running initialization logic)
+- Reloading data from scratch
+- Restarting a process within the same state
 :::
 
 ## Forbidden Transitions
