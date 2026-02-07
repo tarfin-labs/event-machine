@@ -210,7 +210,7 @@ Compression: 85% saved (1.02 GB)
 
 Add commands to your scheduler:
 
-```php
+```php ignore
 // app/Console/Kernel.php
 protected function schedule(Schedule $schedule): void
 {
@@ -234,7 +234,7 @@ protected function schedule(Schedule $schedule): void
 
 Create custom commands for your machines:
 
-```php
+```php no_run
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
