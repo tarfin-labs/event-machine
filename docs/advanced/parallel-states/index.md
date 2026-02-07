@@ -20,6 +20,8 @@ Parallel states are useful when:
 Define a parallel state by setting `type` to `'parallel'`:
 
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
 MachineDefinition::define([
     'id' => 'editor',
     'initial' => 'active',
@@ -77,7 +79,7 @@ stateDiagram-v2
 
 In parallel states, `$state->value` is a flat array containing all active leaf state IDs:
 
-```php
+```php no_run
 $state = $definition->getInitialState();
 
 // State value contains both active regions
@@ -92,7 +94,7 @@ $state->value;
 
 Use the `matches()` method to check if a specific state is active:
 
-```php
+```php no_run
 // Check individual states
 $state->matches('active.document.editing');  // true
 $state->matches('active.format.normal');     // true
@@ -115,8 +117,10 @@ The `matches()` method requires the full path to the leaf state. Partial paths (
 
 A word processor with independent formatting toggles:
 
-```php
-MachineDefinition::define([
+```php no_run
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
+$definition = MachineDefinition::define([
     'id' => 'word',
     'initial' => 'editing',
     'states' => [
@@ -193,7 +197,7 @@ Parallel states have specific validation rules:
 2. **Cannot have `initial` property**: Unlike compound states, parallel states cannot specify an initial state (all regions enter simultaneously)
 3. **Regions must have `initial`**: Each region (child of parallel) must be a compound state with its own `initial` property
 
-```php
+```php ignore
 // Invalid - parallel with no children
 'invalid' => [
     'type' => 'parallel',
@@ -214,7 +218,7 @@ Parallel states have specific validation rules:
 
 Name regions after what they represent, not their position:
 
-```php
+```php ignore
 // Good
 'states' => [
     'playback' => [...],
@@ -236,7 +240,7 @@ Design regions to be as independent as possible. If regions frequently need to k
 
 When you need to check another region's state before transitioning:
 
-```php
+```php ignore
 MachineDefinition::define(
     config: [
         'states' => [
