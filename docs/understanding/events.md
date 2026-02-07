@@ -6,13 +6,13 @@ Events are the triggers that cause your state machine to transition from one sta
 
 The basic way to send an event:
 
-```php
+```php no_run
 $machine->send(['type' => 'PAY']);
 ```
 
 With payload data:
 
-```php
+```php no_run
 $machine->send([
     'type' => 'PAY',
     'amount' => 99.99,
@@ -24,7 +24,7 @@ $machine->send([
 
 Every event has a `type` that matches transitions:
 
-```php
+```php ignore
 // This event...
 $machine->send(['type' => 'PAY']);
 
@@ -43,6 +43,10 @@ Everything else in the event array is **payload** - data that actions and guards
 Actions receive the event:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\ContextManager;
+
 class ProcessPaymentAction extends ActionBehavior
 {
     public function __invoke(
@@ -60,7 +64,7 @@ class ProcessPaymentAction extends ActionBehavior
 
 If you send an event with no matching transition, EventMachine throws `NoTransitionDefinitionFoundException`:
 
-```php
+```php no_run
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
 try {
