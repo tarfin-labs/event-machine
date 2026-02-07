@@ -4,7 +4,7 @@ Context is the data that travels with your state machine. While states describe 
 
 ## Quick Overview
 
-```php
+```php ignore
 MachineDefinition::define(
     config: [
         'initial' => 'idle',
@@ -20,7 +20,7 @@ MachineDefinition::define(
 
 ## Reading Context
 
-```php
+```php no_run
 $state = $machine->state;
 
 // Get a value
@@ -38,6 +38,10 @@ $data = $state->context->toArray();
 Actions modify context during transitions:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\ContextManager;
+
 class AddItemAction extends ActionBehavior
 {
     public function __invoke(
@@ -56,6 +60,9 @@ class AddItemAction extends ActionBehavior
 Guards read context to control transitions:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
+use Tarfinlabs\EventMachine\ContextManager;
+
 class HasItemsGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
