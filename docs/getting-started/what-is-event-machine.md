@@ -13,7 +13,7 @@ Consider an order processing system. An order can be:
 
 Without a state machine, you might write code like this:
 
-```php
+```php no_run
 class Order extends Model
 {
     public function pay(): void
@@ -55,6 +55,9 @@ This approach has problems:
 EventMachine models your workflow as an explicit state machine:
 
 ```php
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
 class OrderMachine extends Machine
 {
     public static function definition(): MachineDefinition
@@ -127,7 +130,7 @@ Parallel states (orthogonal states) allow multiple independent regions to be act
 
 Every state transition is automatically persisted as an event:
 
-```php
+```php no_run
 $machine = OrderMachine::create();
 $machine->send(['type' => 'PAY', 'amount' => 99.99]);
 $machine->send(['type' => 'SHIP', 'tracking' => 'ABC123']);
@@ -143,7 +146,7 @@ This creates a complete audit trail:
 
 You can restore the exact state at any point:
 
-```php
+```php no_run
 // Get the root event ID
 $rootEventId = $machine->state->history->first()->root_event_id;
 
