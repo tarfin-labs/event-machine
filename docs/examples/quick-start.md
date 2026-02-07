@@ -6,7 +6,7 @@ Simple examples you can copy and adapt.
 
 A single-state machine with inline actions and event payloads.
 
-```php
+```php no_run
 <?php
 
 namespace App\Machines;
@@ -46,13 +46,13 @@ class CalculatorMachine extends Machine
                         => $e->payload['value'] !== 0,
                 ],
                 'actions' => [
-                    'additionAction' => fn(ContextManager $c, EventDefinition $e): void
+                    'additionAction' => fn(ContextManager $c, EventDefinition $e)
                         => $c->result += $e->payload['value'],
-                    'subtractionAction' => fn(ContextManager $c, EventDefinition $e): void
+                    'subtractionAction' => fn(ContextManager $c, EventDefinition $e)
                         => $c->result -= $e->payload['value'],
-                    'multiplicationAction' => fn(ContextManager $c, EventDefinition $e): void
+                    'multiplicationAction' => fn(ContextManager $c, EventDefinition $e)
                         => $c->result *= $e->payload['value'],
-                    'divisionAction' => fn(ContextManager $c, EventDefinition $e): void
+                    'divisionAction' => fn(ContextManager $c, EventDefinition $e)
                         => $c->result /= $e->payload['value'],
                 ],
             ],
@@ -63,7 +63,7 @@ class CalculatorMachine extends Machine
 
 ### Usage
 
-```php
+```php no_run
 $machine = CalculatorMachine::create();
 
 $machine->send(['type' => 'ADD', 'payload' => ['value' => 10]]);
@@ -81,7 +81,7 @@ A counter with typed context, validation guards, and event classes.
 
 ### Context Class
 
-```php
+```php no_run
 <?php
 
 namespace App\Machines\TrafficLights;
@@ -108,7 +108,7 @@ class TrafficLightsContext extends ContextManager
 
 ### Machine Definition
 
-```php
+```php no_run
 <?php
 
 namespace App\Machines\TrafficLights;
@@ -171,7 +171,7 @@ class TrafficLightsMachine extends Machine
 
 ### Usage
 
-```php
+```php no_run
 $machine = TrafficLightsMachine::create();
 
 $machine->send(['type' => 'INC']); // count = 1
