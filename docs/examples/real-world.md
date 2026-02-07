@@ -16,7 +16,7 @@ stateDiagram-v2
     paid --> [*]
 ```
 
-```php
+```php no_run
 <?php
 
 namespace App\Machines;
@@ -114,8 +114,9 @@ class OrderMachine extends Machine
                         $item = $e->payload['item'];
                         $c->items[$item['id']] = $item;
                     },
-                    'removeItem' => fn(ContextManager $c, EventDefinition $e)
-                        => unset($c->items[$e->payload['id']]),
+                    'removeItem' => function (ContextManager $c, EventDefinition $e): void {
+                        unset($c->items[$e->payload['id']]);
+                    },
                     'recalculateTotal' => fn(ContextManager $c)
                         => $c->total = $c->subtotal + $c->tax - $c->discount,
                     'generateOrderId' => fn(ContextManager $c)
@@ -131,7 +132,7 @@ class OrderMachine extends Machine
 
 ### Usage
 
-```php
+```php no_run
 $order = OrderMachine::create();
 
 // Add items
@@ -187,7 +188,7 @@ stateDiagram-v2
     processing --> fulfilled : all final
 ```
 
-```php
+```php no_run
 <?php
 
 namespace App\Machines;
@@ -299,7 +300,7 @@ class OrderFulfillmentMachine extends Machine
 
 ### Usage
 
-```php
+```php no_run
 $machine = OrderFulfillmentMachine::create();
 $machine->state->context->set('order_id', $order->id);
 
@@ -316,7 +317,7 @@ expect($machine->state->matches('fulfilled'))->toBeTrue();
 
 ### Check Region Status
 
-```php
+```php no_run
 // Check individual regions
 $state->matches('processing.payment.charged');   // true
 $state->matches('processing.shipping.packing');  // true
