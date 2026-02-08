@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
+import { transformerHideLines } from 'shiki-hide-lines'
 
 export default withMermaid(
   defineConfig({
@@ -174,7 +175,10 @@ export default withMermaid(
       theme: {
         light: 'github-light',
         dark: 'github-dark'
-      }
+      },
+      codeTransformers: [
+        transformerHideLines()
+      ]
     },
 
     mermaid: {
