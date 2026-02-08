@@ -5,7 +5,7 @@ Event behaviors define the structure, validation, and metadata for events sent t
 ## Basic Event Class
 
 ```php
-use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 
 class SubmitOrderEvent extends EventBehavior
 {
@@ -20,7 +20,7 @@ class SubmitOrderEvent extends EventBehavior
 
 Register event classes in the behavior configuration:
 
-```php
+```php no_run
 MachineDefinition::define(
     config: [
         'states' => [
@@ -43,7 +43,7 @@ MachineDefinition::define(
 
 ## Sending Events
 
-```php
+```php no_run
 // As array
 $machine->send(['type' => 'SUBMIT_ORDER']);
 
@@ -59,7 +59,7 @@ $machine->send(new SubmitOrderEvent());
 
 ## Event with Typed Properties
 
-```php
+```php no_run
 class AddItemEvent extends EventBehavior
 {
     public function __construct(
@@ -99,6 +99,8 @@ The `from()` static method is provided by Spatie's Laravel Data package, which `
 ### Using Laravel Rules
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+
 class SubmitOrderEvent extends EventBehavior
 {
     public static function getType(): string
@@ -128,7 +130,7 @@ class SubmitOrderEvent extends EventBehavior
 
 ### Validation in Action
 
-```php
+```php no_run
 try {
     $machine->send([
         'type' => 'SUBMIT_ORDER',
@@ -144,7 +146,7 @@ try {
 
 ### Using Spatie Data Attributes
 
-```php
+```php no_run
 use Spatie\LaravelData\Attributes\Validation\Min;
 use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\IntegerType;
@@ -178,7 +180,7 @@ class TransferEvent extends EventBehavior
 
 The event identifier:
 
-```php
+```php ignore
 public static function getType(): string
 {
     return 'ORDER_SUBMITTED';
@@ -189,7 +191,7 @@ public static function getType(): string
 
 Event data passed through arrays:
 
-```php
+```php no_run
 $machine->send([
     'type' => 'ADD_ITEM',
     'payload' => [
@@ -207,6 +209,8 @@ $event->payload['productId'];
 Whether to wrap the transition in a database transaction:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+
 class CriticalEvent extends EventBehavior
 {
     public bool $isTransactional = true; // Default
@@ -233,6 +237,9 @@ class FastEvent extends EventBehavior
 Track who triggered the event:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class SubmitEvent extends EventBehavior
 {
     public static function getType(): string
@@ -251,7 +258,7 @@ class SubmitEvent extends EventBehavior
 
 Event origin (set automatically):
 
-```php
+```php no_run
 use Tarfinlabs\EventMachine\Enums\SourceType;
 
 $event->source; // SourceType::EXTERNAL (user-sent)
@@ -263,7 +270,7 @@ $event->source; // SourceType::EXTERNAL (user-sent)
 - **`internal`**: System-generated events like state entry/exit, machine initialization, action completion, raised events from actions
 
 You can filter events by source when querying history:
-```php
+```php no_run
 $userEvents = $machine->state->history->filter(
     fn($event) => $event->source === SourceType::EXTERNAL
 );
@@ -274,7 +281,9 @@ $userEvents = $machine->state->history->filter(
 
 Event versioning for schema evolution:
 
-```php
+```php no_run
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+
 class SubmitEventV2 extends EventBehavior
 {
     public int $version = 2;
@@ -291,6 +300,8 @@ class SubmitEventV2 extends EventBehavior
 ### E-commerce Events
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+
 class AddToCartEvent extends EventBehavior
 {
     public static function getType(): string
@@ -328,6 +339,9 @@ class CheckoutEvent extends EventBehavior
 ### Financial Events
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class TransferFundsEvent extends EventBehavior
 {
     public bool $isTransactional = true;
@@ -360,6 +374,9 @@ class TransferFundsEvent extends EventBehavior
 ### Workflow Events
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class ApproveRequestEvent extends EventBehavior
 {
     public static function getType(): string
@@ -406,7 +423,7 @@ class RejectRequestEvent extends EventBehavior
 
 Events can specify scenarios:
 
-```php
+```php ignore
 $machine->send([
     'type' => 'SUBMIT',
     'payload' => [
@@ -423,6 +440,10 @@ See [Scenarios](/advanced/scenarios) for details.
 Access event data in behaviors:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class ProcessOrderAction extends ActionBehavior
 {
     public function __invoke(
@@ -445,7 +466,7 @@ class ProcessOrderAction extends ActionBehavior
 
 ## Testing Events
 
-```php
+```php no_run
 it('validates event payload', function () {
     $machine = OrderMachine::create();
 
@@ -473,7 +494,7 @@ it('processes valid event', function () {
 
 ### 1. Use Descriptive Event Names
 
-```php
+```php ignore
 // Good
 'ORDER_SUBMITTED'
 'PAYMENT_PROCESSED'
@@ -487,7 +508,9 @@ it('processes valid event', function () {
 
 ### 2. Validate at Event Level
 
-```php
+```php no_run
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+
 class SubmitEvent extends EventBehavior
 {
     public static function rules(): array
@@ -501,7 +524,7 @@ class SubmitEvent extends EventBehavior
 
 ### 3. Use Classes for Complex Events
 
-```php
+```php no_run
 // Simple event - array is fine
 $machine->send(['type' => 'CANCEL']);
 
@@ -514,7 +537,7 @@ $machine->send(new TransferEvent(
 
 ### 4. Include Actor Information
 
-```php
+```php ignore
 public function actor(ContextManager $context): mixed
 {
     return auth()->user() ?? 'anonymous';
