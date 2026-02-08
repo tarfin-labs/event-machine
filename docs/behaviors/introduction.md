@@ -19,7 +19,7 @@ This section covers all behavior types in depth. If you're just getting started,
 
 Register behaviors in the `behavior` parameter:
 
-```php
+```php ignore
 MachineDefinition::define(
     config: [...],
     behavior: [
@@ -48,7 +48,7 @@ MachineDefinition::define(
 
 All behavior classes extend `InvokableBehavior`:
 
-```php
+```php ignore
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 
 abstract class InvokableBehavior
@@ -76,7 +76,7 @@ abstract class InvokableBehavior
 
 Quick and simple:
 
-```php
+```php ignore
 'actions' => [
     'increment' => fn(ContextManager $context) => $context->count++,
 ],
@@ -90,7 +90,7 @@ Quick and simple:
 
 For complex logic or dependency injection:
 
-```php
+```php no_run
 class ProcessOrderAction extends ActionBehavior
 {
     public function __construct(
@@ -110,7 +110,7 @@ class ProcessOrderAction extends ActionBehavior
 
 Behaviors receive parameters through dependency injection:
 
-```php
+```php ignore
 public function __invoke(
     ContextManager $context,      // Current context
     EventBehavior $event,         // Current event
@@ -136,7 +136,7 @@ public function __invoke(
 
 Pass arguments to behaviors:
 
-```php
+```php ignore
 // In configuration
 'actions' => 'addValue:10,20',  // Passes ['10', '20']
 
@@ -166,6 +166,9 @@ For complex arguments (arrays, objects, or values containing commas), use depend
 Declare required context keys:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class ProcessOrderAction extends ActionBehavior
 {
     public static array $requiredContext = [
@@ -209,6 +212,9 @@ sequenceDiagram
 Enable logging for debugging:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class DebugAction extends ActionBehavior
 {
     public bool $shouldLog = true;
@@ -225,6 +231,9 @@ class DebugAction extends ActionBehavior
 Behaviors can queue events:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class ProcessAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -243,7 +252,7 @@ See [Raised Events](/advanced/raised-events) for details.
 
 For testing, behaviors can be faked:
 
-```php
+```php no_run
 // In test
 ProcessOrderAction::fake();
 
@@ -267,6 +276,9 @@ See [Fakeable Behaviors](/testing/fakeable-behaviors) for details.
 ### 1. Keep Behaviors Focused
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 // Good - single responsibility
 class IncrementCountAction extends ActionBehavior
 {
@@ -291,7 +303,7 @@ class DoEverythingAction extends ActionBehavior
 
 ### 2. Use Classes for Complex Logic
 
-```php
+```php ignore
 // Simple - inline is fine
 'guards' => [
     'isPositive' => fn($ctx) => $ctx->count > 0,
@@ -306,6 +318,8 @@ class DoEverythingAction extends ActionBehavior
 ### 3. Declare Required Context
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+
 class RequireContextAction extends ActionBehavior
 {
     public static array $requiredContext = [
@@ -317,7 +331,7 @@ class RequireContextAction extends ActionBehavior
 
 ### 4. Use Dependency Injection
 
-```php
+```php no_run
 class SendNotificationAction extends ActionBehavior
 {
     public function __construct(
