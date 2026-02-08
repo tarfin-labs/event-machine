@@ -8,7 +8,7 @@ Events are the triggers that cause state machines to transition. This guide cove
 
 The simplest way to send an event:
 
-```php
+```php no_run
 $machine = OrderMachine::create();
 
 $state = $machine->send([
@@ -20,7 +20,7 @@ $state = $machine->send([
 
 Include data with your event:
 
-```php
+```php no_run
 $state = $machine->send([
     'type' => 'ADD_ITEM',
     'payload' => [
@@ -35,7 +35,7 @@ $state = $machine->send([
 
 Track who triggered the event:
 
-```php
+```php no_run
 $state = $machine->send([
     'type' => 'APPROVE',
     'actor' => $currentUser->id,
@@ -46,7 +46,7 @@ $state = $machine->send([
 
 For complex events, create dedicated classes:
 
-```php
+```php no_run
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\Min;
@@ -74,7 +74,7 @@ class AddItemEvent extends EventBehavior
 
 ### Using Custom Events
 
-```php
+```php ignore
 // In transition definition
 'on' => [
     AddItemEvent::class => [
@@ -93,7 +93,7 @@ $state = $machine->send(AddItemEvent::from([
 
 Custom events are validated automatically:
 
-```php
+```php no_run
 class PaymentEvent extends EventBehavior
 {
     public function __construct(
@@ -118,7 +118,7 @@ class PaymentEvent extends EventBehavior
 
 Invalid events throw `MachineEventValidationException`:
 
-```php
+```php no_run
 // This will throw validation exception
 $machine->send(PaymentEvent::from([
     'paymentMethod' => 'card',
@@ -131,6 +131,10 @@ $machine->send(PaymentEvent::from([
 ### From Array Events
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class AddItemAction extends ActionBehavior
 {
     public function __invoke(
@@ -147,7 +151,7 @@ class AddItemAction extends ActionBehavior
 
 ### From Custom Event Classes
 
-```php
+```php no_run
 class AddItemAction extends ActionBehavior
 {
     public function __invoke(
@@ -166,7 +170,7 @@ class AddItemAction extends ActionBehavior
 
 Register event classes in the behavior array:
 
-```php
+```php ignore
 MachineDefinition::define(
     config: [...],
     behavior: [
@@ -181,7 +185,7 @@ MachineDefinition::define(
 
 Or reference classes directly in transitions:
 
-```php
+```php ignore
 'on' => [
     AddItemEvent::class => ['actions' => 'addItem'],
     RemoveItemEvent::class => ['actions' => 'removeItem'],
@@ -193,6 +197,9 @@ Or reference classes directly in transitions:
 Actions can raise events that are processed after the current transition:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class ProcessOrderAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -225,7 +232,7 @@ The `raise()` method is inherited from `InvokableBehavior` and queues events to 
 
 By default, events are wrapped in database transactions:
 
-```php
+```php ignore
 class PaymentEvent extends EventBehavior
 {
     public bool $isTransactional = true;  // Default
@@ -236,7 +243,7 @@ class PaymentEvent extends EventBehavior
 
 Disable for events that shouldn't roll back:
 
-```php
+```php ignore
 class LogEvent extends EventBehavior
 {
     public bool $isTransactional = false;
@@ -247,7 +254,7 @@ class LogEvent extends EventBehavior
 
 Or per-event:
 
-```php
+```php no_run
 $machine->send([
     'type' => 'LOG',
     'isTransactional' => false,
@@ -258,7 +265,7 @@ $machine->send([
 
 Events can track who triggered them:
 
-```php
+```php no_run
 $machine->send([
     'type' => 'APPROVE',
     'actor' => auth()->id(),
@@ -267,7 +274,7 @@ $machine->send([
 
 Custom logic in event classes:
 
-```php
+```php no_run
 class ApprovalEvent extends EventBehavior
 {
     public function actor(ContextManager $context): mixed
@@ -282,7 +289,7 @@ class ApprovalEvent extends EventBehavior
 
 Events have a `source` property indicating where they originated:
 
-```php
+```php no_run
 use Tarfinlabs\EventMachine\Enums\SourceType;
 
 // SourceType::EXTERNAL - Events sent by your code
@@ -294,7 +301,7 @@ $machine->send(['type' => 'PAY']);  // source = EXTERNAL
 
 Query events by source:
 
-```php
+```php no_run
 // Get only user-triggered events
 $userEvents = $machine->state->history
     ->filter(fn($event) => $event->source === SourceType::EXTERNAL);
@@ -333,7 +340,7 @@ EventMachine fires internal events throughout the machine lifecycle. These are r
 
 ### Example Event History
 
-```php
+```php no_run
 $machine = OrderMachine::create();
 $machine->send(['type' => 'SUBMIT']);
 
@@ -360,7 +367,7 @@ $machine->state->history->pluck('type')->toArray();
 
 ### Filtering Internal Events
 
-```php
+```php no_run
 // Get only transition events
 $transitions = $machine->state->history
     ->filter(fn($e) => str_contains($e->type, '.transition.'));
@@ -386,7 +393,7 @@ With persistence enabled, internal events are stored in the `machine_events` tab
 
 The `@always` event is reserved for automatic transitions:
 
-```php
+```php ignore
 'on' => [
     '@always' => [
         'target' => 'nextState',
@@ -397,7 +404,7 @@ The `@always` event is reserved for automatic transitions:
 
 ## Complete Example
 
-```php
+```php ignore
 // Event class
 class CheckoutEvent extends EventBehavior
 {
