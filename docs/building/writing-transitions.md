@@ -6,7 +6,7 @@ Transitions define how your machine moves between states in response to events.
 
 The simplest transition maps an event to a target state:
 
-```php
+```php ignore
 'pending' => [
     'on' => [
         'SUBMIT' => 'processing',  // SUBMIT event -> go to processing
@@ -20,13 +20,13 @@ EventMachine supports several syntax forms for flexibility:
 
 ### String Target (Simple)
 
-```php
+```php ignore
 'SUBMIT' => 'processing',
 ```
 
 ### Array with Target
 
-```php
+```php ignore
 'SUBMIT' => [
     'target' => 'processing',
 ],
@@ -34,7 +34,7 @@ EventMachine supports several syntax forms for flexibility:
 
 ### Array with Actions
 
-```php
+```php ignore
 'SUBMIT' => [
     'target' => 'processing',
     'actions' => 'logSubmission',
@@ -43,7 +43,7 @@ EventMachine supports several syntax forms for flexibility:
 
 ### Array with Multiple Options
 
-```php
+```php ignore
 'SUBMIT' => [
     'target' => 'processing',
     'actions' => ['validateInput', 'logSubmission'],
@@ -55,7 +55,7 @@ EventMachine supports several syntax forms for flexibility:
 
 ### Null (Forbidden)
 
-```php
+```php ignore
 'CANCEL' => null,  // Block this event
 ```
 
@@ -73,7 +73,7 @@ EventMachine supports several syntax forms for flexibility:
 
 Guards control whether a transition can occur:
 
-```php
+```php ignore
 'pending' => [
     'on' => [
         'PAY' => [
@@ -90,7 +90,7 @@ If the guard returns `false`, the transition doesn't happen.
 
 All guards must pass for the transition to proceed:
 
-```php
+```php ignore
 'PAY' => [
     'target' => 'paid',
     'guards' => ['hasValidPayment', 'hasStock', 'notExpired'],
@@ -101,7 +101,7 @@ All guards must pass for the transition to proceed:
 
 Route to different states based on conditions:
 
-```php
+```php ignore
 'pending' => [
     'on' => [
         'PAY' => [
@@ -131,7 +131,7 @@ Always put more specific guards first. A branch without guards acts as the defau
 
 Execute code during a transition:
 
-```php
+```php ignore
 'pending' => [
     'on' => [
         'PAY' => [
@@ -144,7 +144,7 @@ Execute code during a transition:
 
 ### Multiple Actions
 
-```php
+```php ignore
 'PAY' => [
     'target' => 'paid',
     'actions' => [
@@ -162,7 +162,7 @@ Actions execute in the order listed.
 
 Pass arguments to actions using colon syntax:
 
-```php
+```php ignore
 'actions' => 'notify:email,sms',  // Calls notify with ['email', 'sms']
 ```
 
@@ -170,7 +170,7 @@ Pass arguments to actions using colon syntax:
 
 Calculators run before guards to prepare context data:
 
-```php
+```php ignore
 'CHECKOUT' => [
     'target' => 'processing',
     'calculators' => 'computeTotal',
@@ -190,7 +190,7 @@ If a calculator fails (throws an exception), the transition aborts.
 
 Transition to the same state, triggering exit and entry actions:
 
-```php
+```php ignore
 'active' => [
     'entry' => 'logEntry',
     'exit' => 'logExit',
@@ -209,7 +209,7 @@ This triggers: exit actions -> transition actions -> entry actions.
 
 Stay in the same state without triggering entry/exit actions:
 
-```php
+```php ignore
 'active' => [
     'entry' => 'logEntry',    // NOT called on HEARTBEAT
     'exit' => 'logExit',      // NOT called on HEARTBEAT
@@ -240,7 +240,7 @@ Stay in the same state without triggering entry/exit actions:
 
 Block specific events by setting the transition target to `null`:
 
-```php
+```php ignore
 'checkout' => [
     'initial' => 'payment',
     'on' => [
@@ -268,7 +268,7 @@ When `CANCEL` is sent while in `confirmation` state:
 ### Use Cases
 
 **Override parent transitions:**
-```php
+```php ignore
 'parent' => [
     'on' => [
         'RESET' => 'initial',  // Available to all children
@@ -284,7 +284,7 @@ When `CANCEL` is sent while in `confirmation` state:
 ```
 
 **Disable events in specific states:**
-```php
+```php ignore
 'states' => [
     'processing' => [
         'on' => [
@@ -304,7 +304,7 @@ When `CANCEL` is sent while in `confirmation` state:
 
 Transitions that evaluate immediately after entering a state:
 
-```php
+```php ignore
 'processing' => [
     'entry' => 'processData',
     'on' => [
@@ -327,7 +327,7 @@ The `@always` key is a reserved event that fires automatically.
 
 Transitions in compound states:
 
-```php
+```php ignore
 'checkout' => [
     'initial' => 'cart',
     'states' => [
@@ -363,7 +363,7 @@ Parent transitions are inherited by child states.
 
 Reference event classes directly:
 
-```php
+```php ignore
 use App\Events\PaymentReceived;
 
 'pending' => [
@@ -378,7 +378,7 @@ use App\Events\PaymentReceived;
 
 ## Complete Example
 
-```php
+```php ignore
 MachineDefinition::define(
     config: [
         'id' => 'order',
