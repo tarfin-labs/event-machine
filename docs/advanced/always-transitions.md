@@ -355,6 +355,7 @@ Always ensure at least one branch leads to a state without `@always`, or use gua
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 it('automatically routes based on condition', function () {
     $machine = MachineDefinition::define(
         config: [
