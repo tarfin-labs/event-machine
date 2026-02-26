@@ -4,7 +4,6 @@ Validation guards extend regular guards with the ability to provide error messag
 
 ## Basic Usage
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -68,7 +67,6 @@ Guards are evaluated in order. The first failing guard throws an exception.
 
 ### Form Field Validation
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -96,7 +94,6 @@ class ValidateEmailGuard extends ValidationGuardBehavior
 
 ### Amount Validation
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
