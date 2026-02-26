@@ -165,7 +165,6 @@ For complex arguments (arrays, objects, or values containing commas), use depend
 
 Declare required context keys:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -212,7 +211,6 @@ sequenceDiagram
 
 Enable logging for debugging:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -232,7 +230,6 @@ class DebugAction extends ActionBehavior
 
 Behaviors can queue events:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -278,7 +275,6 @@ See [Fakeable Behaviors](/testing/fakeable-behaviors) for details.
 
 ### 1. Keep Behaviors Focused
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -321,7 +317,6 @@ class DoEverythingAction extends ActionBehavior
 
 ### 3. Declare Required Context
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 
