@@ -239,6 +239,27 @@ use App\Events\SubmitEvent;
 ],
 ```
 
+#### Event Introspection API
+
+Check if the current state can handle an event before sending it:
+
+<!-- doctest-attr: ignore -->
+```php
+$machine = OrderMachine::create();
+
+// Check by type string, class, or instance
+$machine->can('SUBMIT');              // true
+$machine->can(SubmitEvent::class);    // true
+$machine->can($event);               // true
+
+// Get all accepted events for the current state
+$machine->getAcceptedEvents();
+// ['SUBMIT' => SubmitEvent::class, ...]
+
+// Get all registered events (regardless of state)
+$machine->definition->getAcceptedEvents();
+```
+
 #### Improved Type Safety
 
 Custom context classes with full validation:
