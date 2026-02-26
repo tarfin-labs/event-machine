@@ -6,7 +6,6 @@ This guide shows you how to define states in your machine configuration.
 
 Every state is defined as a key in the `states` array:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 
@@ -172,7 +171,6 @@ $state->currentStateDefinition->description;
 
 States are identified by their path from the root:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 
