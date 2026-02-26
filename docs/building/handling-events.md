@@ -130,7 +130,6 @@ $machine->send(PaymentEvent::from([
 
 ### From Array Events
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
@@ -197,7 +196,6 @@ Or reference classes directly in transitions:
 
 Actions can raise events that are processed after the current transition:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -234,10 +232,13 @@ The `raise()` method is inherited from `InvokableBehavior` and queues events to 
 
 By default, events are wrapped in database transactions:
 
-```php ignore
+```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+
 class PaymentEvent extends EventBehavior
 {
     public bool $isTransactional = true;  // Default
+    public static function getType(): string { return 'PAYMENT'; } // [!code hide]
 
     // ...
 }
@@ -245,10 +246,13 @@ class PaymentEvent extends EventBehavior
 
 Disable for events that shouldn't roll back:
 
-```php ignore
+```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+
 class LogEvent extends EventBehavior
 {
     public bool $isTransactional = false;
+    public static function getType(): string { return 'LOG'; } // [!code hide]
 
     // ...
 }
