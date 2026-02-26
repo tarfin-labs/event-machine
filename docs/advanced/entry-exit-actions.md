@@ -94,6 +94,8 @@ When `GO` is sent:
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class StartProcessingAction extends ActionBehavior
 {
     public function __construct(
@@ -117,6 +119,8 @@ class StartProcessingAction extends ActionBehavior
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class ValidateOnEntryAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -163,6 +167,8 @@ class ValidateOnEntryAction extends ActionBehavior
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class ReleaseResourcesAction extends ActionBehavior
 {
     public function __construct(
@@ -402,6 +408,7 @@ When `RESET` is sent:
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 it('executes entry actions on state entry', function () {
     $executionLog = [];
 
@@ -471,8 +478,9 @@ it('executes entry actions on state entry', function () {
 
 ### 4. Handle Errors in Entry Actions
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class SafeEntryAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
