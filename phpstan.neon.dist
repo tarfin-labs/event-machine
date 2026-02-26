@@ -32,7 +32,9 @@ parameters:
         # is_subclass_of checks - intentional for polymorphism
         - identifier: function.impossibleType
         # Static method on dynamic types
-        - identifier: staticMethod.nonObject
+        -
+            identifier: staticMethod.nonObject
+            reportUnmatched: false
         - identifier: staticMethod.notFound
         # Dynamic property access from raw queries
         - identifier: property.notFound
