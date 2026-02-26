@@ -4,6 +4,7 @@ Results define the output of a state machine when it reaches a final state. They
 
 ## Basic Result
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -161,6 +162,7 @@ If you just need the context data as-is, access `$state->context` directly inste
 
 Results receive injected parameters:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -288,6 +290,7 @@ class LoanRejectionResult extends ResultBehavior
 
 ### Workflow Result
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -327,6 +330,7 @@ class WorkflowCompletedResult extends ResultBehavior
 
 ### Quiz/Game Result
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]

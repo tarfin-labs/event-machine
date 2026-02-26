@@ -34,7 +34,9 @@ No more scattered if/else chains. No more inconsistent state checks. Your busine
 </div>
 <div class="feature-code">
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'initial' => 'draft',
@@ -72,7 +74,28 @@ Know exactly what happened, when, and why. Compliance-ready from day one. Debug 
 </div>
 <div class="feature-code">
 
+<!-- doctest-attr: bootstrap="laravel,db" -->
 ```php
+// [!code hide:start]
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
+$order = Machine::create(
+    definition: MachineDefinition::define(
+        config: [
+            'id' => 'order',
+            'initial' => 'draft',
+            'context' => [],
+            'states' => [
+                'draft'    => ['on' => ['SUBMIT' => 'review']],
+                'review'   => ['on' => ['APPROVE' => 'approved']],
+                'approved' => ['type' => 'final'],
+            ],
+        ],
+    ),
+);
+// [!code hide:end]
 // Send an event
 $order->send(['type' => 'SUBMIT']);
 
@@ -108,6 +131,7 @@ Regulatory audit? Legal discovery? Customer dispute? Your machine history is que
 </div>
 <div class="feature-code">
 
+<!-- doctest-attr: ignore -->
 ```php
 // Find all approval events in date range
 MachineEvent::where('root_event_id', $rootEventId)
@@ -146,6 +170,7 @@ Every behavior is a single-responsibility class. Compose them freely to build co
 </div>
 <div class="feature-code">
 
+<!-- doctest-attr: ignore -->
 ```php
 'CHECKOUT' => [
     'target'      => 'processing',
@@ -155,6 +180,7 @@ Every behavior is a single-responsibility class. Compose them freely to build co
 ],
 ```
 
+<!-- doctest-attr: ignore -->
 ```php
 class PriceCalculator extends CalculatorBehavior
 {
@@ -165,6 +191,7 @@ class PriceCalculator extends CalculatorBehavior
 }
 ```
 
+<!-- doctest-attr: ignore -->
 ```php
 class MinimumOrderGuard extends GuardBehavior
 {
@@ -175,6 +202,7 @@ class MinimumOrderGuard extends GuardBehavior
 }
 ```
 
+<!-- doctest-attr: ignore -->
 ```php
 class SendReceiptAction extends ActionBehavior
 {
@@ -202,6 +230,7 @@ Use `shouldReturn()` to mock guards, `shouldRun()` to verify actions. Assert beh
 </div>
 <div class="feature-code">
 
+<!-- doctest-attr: ignore -->
 ```php
 it('blocks checkout with insufficient total', function () {
     $context = new ContextManager(['total' => 50]);
@@ -210,6 +239,7 @@ it('blocks checkout with insufficient total', function () {
 });
 ```
 
+<!-- doctest-attr: ignore -->
 ```php
 it('sends receipt on checkout', function () {
     SendReceiptAction::shouldRun()->once();
@@ -220,6 +250,7 @@ it('sends receipt on checkout', function () {
 });
 ```
 
+<!-- doctest-attr: ignore -->
 ```php
 it('can mock guard to always pass', function () {
     MinimumOrderGuard::shouldReturn(true);
@@ -255,6 +286,7 @@ php artisan machine:archive-events
 # Storage: 2.3 MB → 127 KB
 ```
 
+<!-- doctest-attr: ignore -->
 ```php
 // Months later: restore the entire machine
 $archive = MachineEventArchive::where(
@@ -287,6 +319,7 @@ No more `$context['total']` typos. No more missing validation. IDE autocompletio
 </div>
 <div class="feature-code">
 
+<!-- doctest-attr: ignore -->
 ```php
 class OrderContext extends ContextManager
 {
@@ -311,6 +344,7 @@ class OrderContext extends ContextManager
 }
 ```
 
+<!-- doctest-attr: ignore -->
 ```php
 // Type-safe access everywhere
 $order->state->context->total;        // int
@@ -335,6 +369,7 @@ When all parallel regions complete, `onDone` triggers the next step. No polling,
 </div>
 <div class="feature-code">
 
+<!-- doctest-attr: ignore -->
 ```php
 'processing' => [
     'type' => 'parallel',
@@ -358,6 +393,7 @@ When all parallel regions complete, `onDone` triggers the next step. No polling,
 ],
 ```
 
+<!-- doctest-attr: ignore -->
 ```php
 // Both regions active simultaneously
 $state->matches('processing.payment.pending');   // true
@@ -386,6 +422,7 @@ Attach machines to models. Inject services into behaviors. Validate with Artisan
 </div>
 <div class="feature-code">
 
+<!-- doctest-attr: ignore -->
 ```php
 // Attach to Eloquent models
 class Order extends Model
@@ -398,6 +435,7 @@ class Order extends Model
 }
 ```
 
+<!-- doctest-attr: ignore -->
 ```php
 // Dependency injection in behaviors
 class ProcessPaymentAction extends ActionBehavior

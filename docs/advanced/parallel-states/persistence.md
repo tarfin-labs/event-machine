@@ -11,6 +11,7 @@ How parallel states are stored in the database and restored.
 
 Parallel state values are automatically persisted to the database. The `machine_value` column stores the array of active state IDs as JSON:
 
+<!-- doctest-attr: ignore -->
 ```php
 // State is persisted with all active regions
 $machine = OrderWorkflowMachine::create();
@@ -51,6 +52,7 @@ When restored, EventMachine reconstructs the parallel state by:
 
 Context changes within parallel states are persisted incrementally. Each event stores only the context delta (what changed), not the full context:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Event 1: Payment succeeds
 $machine->send([
@@ -77,6 +79,7 @@ $machine->send([
 
 Restore a machine to its exact state from any point:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Actor\Machine;
 
@@ -100,6 +103,7 @@ $machine->state->context->payment_id;  // 'pay_123'
 
 For automatic persistence with Eloquent models:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Casts\MachineCast;
 
@@ -124,6 +128,7 @@ $order->fulfillment_state->state->matches('processing.payment.charged');  // tru
 
 Find machines in specific parallel state combinations:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 
@@ -141,6 +146,7 @@ $events = MachineEvent::query()
 
 Query for specific combinations across regions:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Orders ready to ship (payment charged, docs ready, shipping packed)
 $readyToShip = MachineEvent::query()
@@ -174,6 +180,7 @@ WHERE machine_id = 'orderFulfillment';
 
 For complex parallel structures, store summary flags in context:
 
+<!-- doctest-attr: ignore -->
 ```php
 'actions' => [
     'markPaymentComplete' => function (ContextManager $ctx): void {
@@ -187,6 +194,7 @@ For complex parallel structures, store summary flags in context:
 
 Then query by context instead of state value:
 
+<!-- doctest-attr: ignore -->
 ```php
 MachineEvent::query()
     ->where('machine_id', 'orderFulfillment')

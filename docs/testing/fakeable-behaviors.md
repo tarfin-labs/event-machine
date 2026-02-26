@@ -6,6 +6,7 @@ All EventMachine behaviors include the `Fakeable` trait, allowing you to mock an
 
 ### Create a Fake
 
+<!-- doctest-attr: ignore -->
 ```php
 use App\Machines\Actions\ProcessOrderAction;
 
@@ -14,12 +15,14 @@ ProcessOrderAction::fake();
 
 ### Check if Faked
 
+<!-- doctest-attr: ignore -->
 ```php
 ProcessOrderAction::isFaked(); // true
 ```
 
 ### Get the Fake
 
+<!-- doctest-attr: ignore -->
 ```php
 $fake = ProcessOrderAction::getFake(); // Mockery mock instance
 ```
@@ -28,6 +31,7 @@ $fake = ProcessOrderAction::getFake(); // Mockery mock instance
 
 ### Basic Expectations
 
+<!-- doctest-attr: ignore -->
 ```php
 ProcessOrderAction::fake();
 
@@ -46,6 +50,7 @@ ProcessOrderAction::shouldRun()->never();
 
 ### With Arguments
 
+<!-- doctest-attr: ignore -->
 ```php
 ProcessOrderAction::fake();
 
@@ -58,6 +63,7 @@ ProcessOrderAction::shouldRun()
 
 ### With Return Values
 
+<!-- doctest-attr: ignore -->
 ```php
 ProcessOrderAction::fake();
 
@@ -77,6 +83,7 @@ ProcessOrderAction::shouldRun()
 
 ### Assert Ran
 
+<!-- doctest-attr: ignore -->
 ```php
 ProcessOrderAction::fake();
 
@@ -90,6 +97,7 @@ ProcessOrderAction::assertRan();
 
 ### Assert Not Ran
 
+<!-- doctest-attr: ignore -->
 ```php
 ProcessOrderAction::fake();
 
@@ -104,12 +112,14 @@ ProcessOrderAction::assertNotRan();
 
 ### Reset Single Behavior
 
+<!-- doctest-attr: ignore -->
 ```php
 ProcessOrderAction::resetFakes();
 ```
 
 ### Reset All Fakes
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Facades\EventMachine;
 
@@ -118,6 +128,7 @@ EventMachine::resetAllFakes();
 
 ### In Test Teardown
 
+<!-- doctest-attr: ignore -->
 ```php
 afterEach(function () {
     EventMachine::resetAllFakes();
@@ -126,6 +137,7 @@ afterEach(function () {
 
 ## Complete Example
 
+<!-- doctest-attr: ignore -->
 ```php
 use App\Machines\OrderMachine;
 use App\Machines\Actions\ProcessOrderAction;
@@ -192,6 +204,7 @@ it('rejects order when validation fails', function () {
 
 ## Faking Guards
 
+<!-- doctest-attr: ignore -->
 ```php
 use App\Machines\Guards\HasPermissionGuard;
 
@@ -214,6 +227,7 @@ HasPermissionGuard::shouldRun()
 
 ## Faking Validation Guards
 
+<!-- doctest-attr: ignore -->
 ```php
 use App\Machines\Guards\ValidateAmountGuard;
 
@@ -228,6 +242,7 @@ ValidateAmountGuard::shouldRun()->andReturn(false);
 
 ## Faking Calculators
 
+<!-- doctest-attr: ignore -->
 ```php
 use App\Machines\Calculators\CalculateTotalCalculator;
 
@@ -246,6 +261,7 @@ CalculateTotalCalculator::shouldRun()
 
 When behaviors have constructor dependencies, faking bypasses them:
 
+<!-- doctest-attr: ignore -->
 ```php
 class ProcessOrderAction extends ActionBehavior
 {
@@ -261,6 +277,7 @@ ProcessOrderAction::shouldRun()->once();
 
 ## Multiple Calls
 
+<!-- doctest-attr: ignore -->
 ```php
 ProcessOrderAction::fake();
 
@@ -279,6 +296,7 @@ ProcessOrderAction::shouldRun()
 
 ## Testing Raised Events
 
+<!-- doctest-attr: ignore -->
 ```php
 class ProcessAction extends ActionBehavior
 {
@@ -304,6 +322,7 @@ ProcessAction::shouldRun()
 
 ### Unit Testing (with Fakes)
 
+<!-- doctest-attr: ignore -->
 ```php
 // Fast, isolated
 ProcessOrderAction::fake();
@@ -317,6 +336,7 @@ ProcessOrderAction::assertRan();
 
 ### Integration Testing (without Fakes)
 
+<!-- doctest-attr: ignore -->
 ```php
 // Slower, tests real behavior
 $machine = OrderMachine::create();
@@ -330,6 +350,7 @@ $this->assertDatabaseHas('orders', ['id' => $machine->state->context->orderId]);
 
 ### 1. Reset Fakes Between Tests
 
+<!-- doctest-attr: ignore -->
 ```php
 afterEach(function () {
     EventMachine::resetAllFakes();
@@ -338,6 +359,7 @@ afterEach(function () {
 
 ### 2. Be Explicit About Expectations
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good - explicit expectation
 ProcessAction::shouldRun()->once();
@@ -348,6 +370,7 @@ ProcessAction::fake();
 
 ### 3. Test Both Success and Failure Paths
 
+<!-- doctest-attr: ignore -->
 ```php
 it('processes when valid', function () {
     ValidateGuard::fake()->shouldRun()->andReturn(true);

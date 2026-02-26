@@ -4,6 +4,7 @@ Custom context classes provide type safety, validation, and computed methods for
 
 ## Basic Custom Context
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\ContextManager;
 
@@ -22,6 +23,7 @@ class OrderContext extends ContextManager
 
 ## Using Custom Context
 
+<!-- doctest-attr: ignore -->
 ```php
 MachineDefinition::define(
     config: [
@@ -34,6 +36,7 @@ MachineDefinition::define(
 
 ## Type-Safe Access
 
+<!-- doctest-attr: ignore -->
 ```php
 // In behaviors, you get typed context
 class ProcessAction extends ActionBehavior
@@ -54,6 +57,7 @@ class ProcessAction extends ActionBehavior
 
 Use Spatie Laravel Data validation:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Spatie\LaravelData\Attributes\Validation\Min;
 use Spatie\LaravelData\Attributes\Validation\Max;
@@ -92,6 +96,7 @@ class OrderContext extends ContextManager
 
 Use `Optional` for fields that may not be set:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Spatie\LaravelData\Optional;
 
@@ -117,6 +122,7 @@ class UserContext extends ContextManager
 
 Add methods for complex calculations:
 
+<!-- doctest-attr: ignore -->
 ```php
 class CartContext extends ContextManager
 {
@@ -173,6 +179,7 @@ class CartContext extends ContextManager
 
 ### Using Computed Methods
 
+<!-- doctest-attr: ignore -->
 ```php
 // In guards
 'guards' => [
@@ -193,6 +200,7 @@ class CartContext extends ContextManager
 
 Handle Eloquent models in context:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Spatie\LaravelData\Attributes\WithTransformer;
 
@@ -221,6 +229,7 @@ The transformer handles:
 
 Add initialization in the constructor:
 
+<!-- doctest-attr: ignore -->
 ```php
 class GameContext extends ContextManager
 {
@@ -250,6 +259,7 @@ class GameContext extends ContextManager
 
 ## Self-Validation
 
+<!-- doctest-attr: ignore -->
 ```php
 $context = new OrderContext(
     orderId: 'order-123',
@@ -261,6 +271,7 @@ $context->selfValidate(); // Throws MachineContextValidationException
 
 ## Validation and Creation
 
+<!-- doctest-attr: ignore -->
 ```php
 // Create with validation
 $context = OrderContext::validateAndCreate([
@@ -279,6 +290,7 @@ $context = OrderContext::validateAndCreate([
 
 ### E-commerce Order Context
 
+<!-- doctest-attr: ignore -->
 ```php
 class EcommerceContext extends ContextManager
 {
@@ -342,6 +354,7 @@ class EcommerceContext extends ContextManager
 
 ### Loan Application Context
 
+<!-- doctest-attr: ignore -->
 ```php
 class LoanApplicationContext extends ContextManager
 {
@@ -410,6 +423,7 @@ class LoanApplicationContext extends ContextManager
 
 ### Workflow Context
 
+<!-- doctest-attr: ignore -->
 ```php
 class WorkflowContext extends ContextManager
 {
@@ -468,6 +482,7 @@ class WorkflowContext extends ContextManager
 
 ### 1. Use Appropriate Types
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good - specific types
 public string $orderId;
@@ -480,6 +495,7 @@ public mixed $data;
 
 ### 2. Initialize Optional Values
 
+<!-- doctest-attr: ignore -->
 ```php
 public function __construct(
     public int|Optional $count = 0,
@@ -494,6 +510,7 @@ public function __construct(
 
 ### 3. Add Computed Methods
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good - encapsulated logic
 public function isEligible(): bool
@@ -509,6 +526,7 @@ public function isEligible(): bool
 
 ### 4. Validate at Boundaries
 
+<!-- doctest-attr: ignore -->
 ```php
 // Validate on creation
 $context = OrderContext::validateAndCreate($input);

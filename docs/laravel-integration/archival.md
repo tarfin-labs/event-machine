@@ -14,6 +14,7 @@ The archival system:
 
 ## Configuration
 
+<!-- doctest-attr: ignore -->
 ```php
 // config/machine.php
 return [
@@ -90,6 +91,7 @@ php artisan machine:archive-status --restore=01HXYZ...
 
 Archived events are stored in `machine_events_archive`:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 
@@ -108,6 +110,7 @@ $archive->last_restored_at;  // Last restore time
 
 ### Compression Statistics
 
+<!-- doctest-attr: ignore -->
 ```php
 $archive->compression_ratio;  // e.g., 0.15 (15% of original size)
 
@@ -119,6 +122,7 @@ $savingsPercent = (1 - $archive->compression_ratio) * 100;  // e.g., 85% savings
 
 When you access an archived machine, events are restored in-memory without modifying the database:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Events were archived 60 days ago
 $machine = Machine::withDefinition(OrderMachine::definition());
@@ -144,6 +148,7 @@ When new events are created for an archived machine, EventMachine automatically 
 
 ### How It Works
 
+<!-- doctest-attr: ignore -->
 ```php
 // Machine was archived 60 days ago with 100 events
 // Archive exists, machine_events is empty for this root_event_id
@@ -202,6 +207,7 @@ $machine->send(['type' => 'PAYMENT_RECEIVED', 'amount' => 500]);
 
 Auto-restore is always enabled when archival is enabled. No additional configuration needed.
 
+<!-- doctest-attr: ignore -->
 ```php
 // config/machine.php
 'archival' => [
@@ -213,6 +219,7 @@ Auto-restore is always enabled when archival is enabled. No additional configura
 
 After auto-restore, the machine won't be eligible for re-archival until the cooldown period passes and the inactivity threshold is met again.
 
+<!-- doctest-attr: ignore -->
 ```php
 'archival' => [
     'days_inactive' => 30,              // 30 days before archival
@@ -230,6 +237,7 @@ After auto-restore, the machine won't be eligible for re-archival until the cool
 
 ### `ArchiveService`
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Services\ArchiveService;
 
@@ -253,6 +261,7 @@ $isArchived = MachineEventArchive::where('root_event_id', $rootId)->exists();
 
 ### Archive Job
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Jobs\ArchiveSingleMachineJob;
 
@@ -268,6 +277,7 @@ ArchiveSingleMachineJob::dispatch($rootEventId)
 
 ### Archive Statistics
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 
@@ -290,6 +300,7 @@ $recent = MachineEventArchive::where('archived_at', '>=', now()->subDay())
 
 ### Event Distribution
 
+<!-- doctest-attr: ignore -->
 ```php
 // Events per machine type
 $distribution = MachineEvent::selectRaw('machine_id, COUNT(*) as count')
@@ -307,6 +318,7 @@ $candidates = MachineEvent::selectRaw('root_event_id, MAX(created_at) as last_ac
 
 Add to your scheduler:
 
+<!-- doctest-attr: ignore -->
 ```php
 // app/Console/Kernel.php
 protected function schedule(Schedule $schedule): void
@@ -342,6 +354,7 @@ php artisan queue:work --queue=archival --tries=3
 
 ### 1. Start with Conservative Settings
 
+<!-- doctest-attr: ignore -->
 ```php
 'days_inactive' => 30,
 'compression_level' => 6,
@@ -367,6 +380,7 @@ php artisan queue:work --queue=archival
 
 For e-commerce systems with thousands of orders daily:
 
+<!-- doctest-attr: ignore -->
 ```php
 // config/machine.php
 'days_inactive' => 14,       // Archive completed orders after 2 weeks
@@ -382,6 +396,7 @@ For e-commerce systems with thousands of orders daily:
 
 Different archival strategies per tenant tier:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Dynamic configuration based on tenant
 $tenantConfig = match ($tenant->plan) {
@@ -397,6 +412,7 @@ $service = new ArchiveService($tenantConfig);
 
 When multiple services share the event store:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Schedule different services at different times
 $schedule->command('machine:archive-events')
@@ -415,11 +431,13 @@ ArchiveSingleMachineJob::dispatch($rootEventId)
 ### Events Not Archiving
 
 1. Check if archival is enabled:
+<!-- doctest-attr: ignore -->
    ```php
    dd(config('machine.archival.enabled'));
    ```
 
 2. Verify `days_inactive` setting:
+<!-- doctest-attr: ignore -->
    ```php
    $service = new ArchiveService();
    $eligible = $service->getEligibleInstances();
@@ -464,6 +482,7 @@ ArchiveSingleMachineJob::dispatch($rootEventId)
 
 If machines are being archived and restored repeatedly:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Increase cooldown period
 'restore_cooldown_hours' => 72, // 3 days

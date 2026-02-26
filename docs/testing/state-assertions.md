@@ -8,6 +8,7 @@ Complete guide to asserting machine state in your tests.
 
 Check if machine is in a specific state:
 
+<!-- doctest-attr: ignore -->
 ```php
 $machine = OrderMachine::create();
 
@@ -23,6 +24,7 @@ expect($machine->state->matches('checkout.payment'))->toBeTrue();
 
 Check the full state value array:
 
+<!-- doctest-attr: ignore -->
 ```php
 $machine = OrderMachine::create();
 
@@ -38,6 +40,7 @@ expect($machine->state->value)->toBe(['order.processing']);
 
 Access the current state definition:
 
+<!-- doctest-attr: ignore -->
 ```php
 $stateDef = $machine->state->currentStateDefinition;
 
@@ -51,6 +54,7 @@ expect($stateDef->description)->toBe('Order is being processed');
 
 ### Direct Access
 
+<!-- doctest-attr: ignore -->
 ```php
 $machine = OrderMachine::create();
 $machine->send(['type' => 'ADD_ITEM', 'payload' => ['item' => $item]]);
@@ -63,6 +67,7 @@ expect($machine->state->context->orderId)->not->toBeNull();
 
 ### Using `get()`
 
+<!-- doctest-attr: ignore -->
 ```php
 expect($machine->state->context->get('items'))->toHaveCount(1);
 expect($machine->state->context->get('user.email'))->toBe('test@example.com');
@@ -70,6 +75,7 @@ expect($machine->state->context->get('user.email'))->toBe('test@example.com');
 
 ### Using `has()`
 
+<!-- doctest-attr: ignore -->
 ```php
 expect($machine->state->context->has('orderId'))->toBeTrue();
 expect($machine->state->context->has('deletedAt'))->toBeFalse();
@@ -80,6 +86,7 @@ expect($machine->state->context->has('total', 'numeric'))->toBeTrue();
 
 ### Custom Context Class
 
+<!-- doctest-attr: ignore -->
 ```php
 // With typed context
 expect($machine->state->context)->toBeInstanceOf(OrderContext::class);
@@ -91,6 +98,7 @@ expect($machine->state->context->calculateTotal())->toBe(150.00);
 
 ### Event Count
 
+<!-- doctest-attr: ignore -->
 ```php
 $machine = OrderMachine::create();
 $machine->send(['type' => 'SUBMIT']);
@@ -106,6 +114,7 @@ expect($external)->toHaveCount(2);
 
 ### Event Types
 
+<!-- doctest-attr: ignore -->
 ```php
 $types = $machine->state->history->pluck('type')->toArray();
 
@@ -116,6 +125,7 @@ expect($types)->toContain('order.machine.start');
 
 ### Event Order
 
+<!-- doctest-attr: ignore -->
 ```php
 $external = $machine->state->history
     ->where('source', 'external')
@@ -127,6 +137,7 @@ expect($external[1]->type)->toBe('APPROVE');
 
 ### Event Payload
 
+<!-- doctest-attr: ignore -->
 ```php
 $submitEvent = $machine->state->history
     ->firstWhere('type', 'SUBMIT');
@@ -136,6 +147,7 @@ expect($submitEvent->payload)->toBe(['express' => true]);
 
 ### First and Last Events
 
+<!-- doctest-attr: ignore -->
 ```php
 expect($machine->state->history->first()->type)->toBe('order.machine.start');
 expect($machine->state->history->last()->type)->toBe('order.state.approved.enter');
@@ -145,6 +157,7 @@ expect($machine->state->history->last()->type)->toBe('order.state.approved.enter
 
 ### Guard Pass/Fail
 
+<!-- doctest-attr: ignore -->
 ```php
 it('blocks transition when guard fails', function () {
     $machine = OrderMachine::create();
@@ -169,6 +182,7 @@ it('allows transition when guard passes', function () {
 
 ### Invalid Event
 
+<!-- doctest-attr: ignore -->
 ```php
 it('ignores invalid events', function () {
     $machine = OrderMachine::create();
@@ -183,6 +197,7 @@ it('ignores invalid events', function () {
 
 ### Multi-Step Transitions
 
+<!-- doctest-attr: ignore -->
 ```php
 it('completes full order flow', function () {
     $machine = OrderMachine::create();
@@ -208,6 +223,7 @@ it('completes full order flow', function () {
 
 ### Validation Exception
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 
@@ -223,6 +239,7 @@ it('throws on invalid input', function () {
 
 ### Error Message
 
+<!-- doctest-attr: ignore -->
 ```php
 it('provides helpful error message', function () {
     $machine = OrderMachine::create();
@@ -243,6 +260,7 @@ it('provides helpful error message', function () {
 
 ### Check Final State
 
+<!-- doctest-attr: ignore -->
 ```php
 it('reaches final state', function () {
     $machine = OrderMachine::create();
@@ -257,6 +275,7 @@ it('reaches final state', function () {
 
 ### Check Result
 
+<!-- doctest-attr: ignore -->
 ```php
 it('returns correct result', function () {
     $machine = OrderMachine::create();
@@ -273,6 +292,7 @@ it('returns correct result', function () {
 
 ### Multiple Conditions
 
+<!-- doctest-attr: ignore -->
 ```php
 it('updates order correctly', function () {
     $machine = OrderMachine::create();
@@ -293,6 +313,7 @@ it('updates order correctly', function () {
 
 ### State and Context Together
 
+<!-- doctest-attr: ignore -->
 ```php
 it('processes payment correctly', function () {
     $machine = OrderMachine::create();
@@ -308,6 +329,7 @@ it('processes payment correctly', function () {
 
 ### Nested State Assertions
 
+<!-- doctest-attr: ignore -->
 ```php
 it('handles checkout flow', function () {
     $machine = CheckoutMachine::create();
@@ -330,6 +352,7 @@ it('handles checkout flow', function () {
 
 Create test helpers for common assertions:
 
+<!-- doctest-attr: ignore -->
 ```php
 // tests/Helpers.php
 function expectState($machine, string $state): void
@@ -358,6 +381,7 @@ expectContext($machine, [
 
 ### 1. Test State Transitions
 
+<!-- doctest-attr: ignore -->
 ```php
 // Always verify state after sending events
 $machine->send(['type' => 'SUBMIT']);
@@ -366,6 +390,7 @@ expect($machine->state->matches('submitted'))->toBeTrue();
 
 ### 2. Test Context Changes
 
+<!-- doctest-attr: ignore -->
 ```php
 // Verify context is updated correctly
 $before = $machine->state->context->count;
@@ -375,6 +400,7 @@ expect($machine->state->context->count)->toBe($before + 1);
 
 ### 3. Test Guard Behavior
 
+<!-- doctest-attr: ignore -->
 ```php
 // Test both pass and fail cases
 it('guards prevent invalid transitions', function () { ... });
@@ -383,6 +409,7 @@ it('guards allow valid transitions', function () { ... });
 
 ### 4. Test Error Cases
 
+<!-- doctest-attr: ignore -->
 ```php
 // Verify validation errors
 expect(fn() => $machine->send([...]))->toThrow(MachineValidationException::class);

@@ -53,6 +53,7 @@ MachineDefinition::define(
 
 ### Class-Based Calculator
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -144,6 +145,7 @@ class CalculateTaxCalculator extends CalculatorBehavior
 
 ### Order Total Calculation
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -224,6 +226,7 @@ class CalculateEligibilityCalculator extends CalculatorBehavior
 
 ### Pricing Calculation
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]

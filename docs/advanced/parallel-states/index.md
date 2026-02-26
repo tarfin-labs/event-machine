@@ -19,6 +19,7 @@ Parallel states are useful when:
 
 Define a parallel state by setting `type` to `'parallel'`:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 

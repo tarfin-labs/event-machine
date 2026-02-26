@@ -17,6 +17,7 @@ Level 6 (default) provides a good balance of compression and speed.
 
 ## Configuration
 
+<!-- doctest-attr: ignore -->
 ```php
 // config/machine.php
 'archival' => [
@@ -46,6 +47,7 @@ Level 6 (default) provides a good balance of compression and speed.
 
 The `dispatch_limit` controls how many workflows (unique root_event_ids) are found and dispatched per scheduler run:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Conservative - fewer jobs per run, more runs
 'dispatch_limit' => 25,   // Memory-constrained environments
@@ -74,6 +76,7 @@ ON machine_event_archives (machine_id, archived_at);
 
 ### Query Optimization for Large Tables
 
+<!-- doctest-attr: ignore -->
 ```php
 // Instead of loading all eligible machines at once
 $service = new ArchiveService();
@@ -93,6 +96,7 @@ while ($eligible->isNotEmpty()) {
 
 ### Calculate Current Storage
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Support\CompressionManager;
@@ -130,6 +134,7 @@ echo "Potential savings: " . round((1 - $ratio) * 100) . "%";
 
 ### Project Future Storage
 
+<!-- doctest-attr: ignore -->
 ```php
 // Current stats
 $currentEvents = MachineEvent::count();
@@ -151,6 +156,7 @@ echo "30-day projection with archival: " .
 
 Query archive statistics to monitor compression effectiveness:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 
@@ -173,6 +179,7 @@ foreach ($stats as $stat) {
 
 If certain machine types compress poorly or are frequently accessed:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Services\ArchiveService;
 

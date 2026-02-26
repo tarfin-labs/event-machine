@@ -12,6 +12,7 @@ In this tutorial, you'll build a complete traffic light state machine. By the en
 
 A traffic light has three states: `green`, `yellow`, and `red`. Let's start simple:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Actor\Machine;
 
@@ -42,6 +43,7 @@ $light = Machine::create([
 
 Test it:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Start in green
 $state = $light->state;
@@ -64,6 +66,7 @@ $state->matches('green'); // true
 
 Let's track how many cycles the light has completed:
 
+<!-- doctest-attr: ignore -->
 ```php
 $light = Machine::create([
     'config' => [
@@ -105,6 +108,7 @@ $light = Machine::create([
 
 Now every time the light goes from red to green, the cycle count increases:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Complete one cycle: green -> yellow -> red -> green
 $light->send(['type' => 'TIMER']); // yellow
@@ -125,6 +129,7 @@ $light->state->context->get('cycles'); // 2
 
 Let's add a `POWER_SAVE` event that only works at night (after 10 PM):
 
+<!-- doctest-attr: ignore -->
 ```php
 $light = Machine::create([
     'config' => [
@@ -180,6 +185,7 @@ $light = Machine::create([
 
 Now `POWER_SAVE` only works at night:
 
+<!-- doctest-attr: ignore -->
 ```php
 // During the day
 $light->send(['type' => 'POWER_SAVE']);
@@ -194,6 +200,7 @@ $light->state->matches('flashing'); // true - guard allowed transition
 
 For production use, define machines as classes:
 
+<!-- doctest-attr: ignore -->
 ```php
 namespace App\Machines;
 
@@ -256,6 +263,7 @@ class TrafficLightMachine extends Machine
 
 Create the action class:
 
+<!-- doctest-attr: ignore -->
 ```php
 namespace App\Machines\Actions;
 
@@ -273,6 +281,7 @@ class IncrementCyclesAction extends ActionBehavior
 
 Create the guard class:
 
+<!-- doctest-attr: ignore -->
 ```php
 namespace App\Machines\Guards;
 
@@ -289,6 +298,7 @@ class IsNightTimeGuard extends GuardBehavior
 
 Use it:
 
+<!-- doctest-attr: ignore -->
 ```php
 $light = TrafficLightMachine::create();
 $light->send(['type' => 'TIMER']);
@@ -298,6 +308,7 @@ $light->send(['type' => 'TIMER']);
 
 Every event is automatically persisted:
 
+<!-- doctest-attr: ignore -->
 ```php
 $light = TrafficLightMachine::create();
 $light->send(['type' => 'TIMER']); // yellow
@@ -311,6 +322,7 @@ $rootEventId = $light->state->history->first()->root_event_id;
 
 Later, restore the exact state:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Restore from the root event ID
 $restored = TrafficLightMachine::create(state: $rootEventId);
@@ -327,6 +339,7 @@ $restored->state->context->get('cycles'); // 1
 
 Attach the machine to a model:
 
+<!-- doctest-attr: ignore -->
 ```php
 namespace App\Models;
 
@@ -347,6 +360,7 @@ class Intersection extends Model
 
 Now the machine is a property of the model:
 
+<!-- doctest-attr: ignore -->
 ```php
 $intersection = Intersection::create(['name' => 'Main & 5th']);
 

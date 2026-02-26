@@ -24,6 +24,7 @@ MachineDefinition::define(
 
 ### In Actions
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -40,6 +41,7 @@ class IncrementCountAction extends ActionBehavior
 
 ### In Guards
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -230,6 +232,7 @@ $machine->send([
 
 Access event payload in actions:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
@@ -252,6 +255,7 @@ class UpdateSettingsAction extends ActionBehavior
 
 Declare required context keys for behaviors:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]

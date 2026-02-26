@@ -109,6 +109,7 @@ stateDiagram-v2
 
 Guards receive injected parameters:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
@@ -178,6 +179,7 @@ class HasPermissionGuard extends GuardBehavior
 
 Declare required context:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -200,6 +202,7 @@ class HasBalanceGuard extends GuardBehavior
 
 ### Simple Condition
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -215,6 +218,7 @@ class IsEvenGuard extends GuardBehavior
 
 ### Complex Validation
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -302,6 +306,7 @@ class WithinBusinessHoursGuard extends GuardBehavior
 
 ### Event Payload Validation
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
@@ -346,6 +351,7 @@ sequenceDiagram
 
 Enable logging for debugging:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -442,6 +448,7 @@ Guards should only read, never modify:
 
 For guards that should return error messages, use [Validation Guards](/behaviors/validation-guards):
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]

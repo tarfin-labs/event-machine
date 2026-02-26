@@ -4,6 +4,7 @@ Entry and exit actions are lifecycle hooks that execute when entering or leaving
 
 ## Basic Syntax
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'loading' => [
@@ -18,6 +19,7 @@ Entry and exit actions are lifecycle hooks that execute when entering or leaving
 
 ## Multiple Actions
 
+<!-- doctest-attr: ignore -->
 ```php
 'loading' => [
     'entry' => ['showSpinner', 'logEntry', 'startTimer'],
@@ -45,6 +47,7 @@ sequenceDiagram
 
 ### Complete Example
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'stateA' => [
@@ -71,6 +74,7 @@ When `GO` is sent:
 
 ### Setup and Initialization
 
+<!-- doctest-attr: ignore -->
 ```php
 'loading' => [
     'entry' => 'initializeLoader',
@@ -88,6 +92,7 @@ When `GO` is sent:
 
 ### Class-Based Entry Action
 
+<!-- doctest-attr: ignore -->
 ```php
 class StartProcessingAction extends ActionBehavior
 {
@@ -110,6 +115,7 @@ class StartProcessingAction extends ActionBehavior
 
 ### Entry Action with Raised Event
 
+<!-- doctest-attr: ignore -->
 ```php
 class ValidateOnEntryAction extends ActionBehavior
 {
@@ -138,6 +144,7 @@ class ValidateOnEntryAction extends ActionBehavior
 
 ### Cleanup
 
+<!-- doctest-attr: ignore -->
 ```php
 'editing' => [
     'exit' => 'saveProgress',
@@ -154,6 +161,7 @@ class ValidateOnEntryAction extends ActionBehavior
 
 ### Resource Release
 
+<!-- doctest-attr: ignore -->
 ```php
 class ReleaseResourcesAction extends ActionBehavior
 {
@@ -178,6 +186,7 @@ class ReleaseResourcesAction extends ActionBehavior
 
 Entry and exit actions respect hierarchy:
 
+<!-- doctest-attr: ignore -->
 ```php
 'order' => [
     'entry' => 'logOrderStart',
@@ -222,6 +231,7 @@ When transitioning from `validating` to outside `order`:
 
 ### Loading State
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'idle' => [
@@ -244,6 +254,7 @@ When transitioning from `validating` to outside `order`:
 
 ### Form Wizard
 
+<!-- doctest-attr: ignore -->
 ```php
 'wizard' => [
     'initial' => 'step1',
@@ -276,6 +287,7 @@ When transitioning from `validating` to outside `order`:
 
 ### Session Management
 
+<!-- doctest-attr: ignore -->
 ```php
 'authenticated' => [
     'entry' => [
@@ -308,6 +320,7 @@ When transitioning from `validating` to outside `order`:
 
 ### Order Processing
 
+<!-- doctest-attr: ignore -->
 ```php
 'processing' => [
     'entry' => ['reserveInventory', 'notifyWarehouse'],
@@ -335,6 +348,7 @@ When transitioning from `validating` to outside `order`:
 
 Entry actions complete before `@always` transitions check:
 
+<!-- doctest-attr: ignore -->
 ```php
 'checking' => [
     'entry' => 'performCheck',  // Runs first
@@ -361,6 +375,7 @@ Entry actions complete before `@always` transitions check:
 
 Self-transitions trigger exit and entry actions:
 
+<!-- doctest-attr: ignore -->
 ```php
 'counting' => [
     'entry' => 'logEntry',
@@ -385,6 +400,7 @@ When `RESET` is sent:
 
 ## Testing Entry/Exit Actions
 
+<!-- doctest-attr: ignore -->
 ```php
 it('executes entry actions on state entry', function () {
     $executionLog = [];
@@ -420,6 +436,7 @@ it('executes entry actions on state entry', function () {
 
 ### 1. Use Entry for Setup
 
+<!-- doctest-attr: ignore -->
 ```php
 'processing' => [
     'entry' => [
@@ -431,6 +448,7 @@ it('executes entry actions on state entry', function () {
 
 ### 2. Use Exit for Cleanup
 
+<!-- doctest-attr: ignore -->
 ```php
 'processing' => [
     'exit' => [
@@ -442,6 +460,7 @@ it('executes entry actions on state entry', function () {
 
 ### 3. Keep Actions Focused
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good - single responsibility
 'entry' => ['logEntry', 'startTimer', 'loadData'],
@@ -452,6 +471,7 @@ it('executes entry actions on state entry', function () {
 
 ### 4. Handle Errors in Entry Actions
 
+<!-- doctest-attr: ignore -->
 ```php
 class SafeEntryAction extends ActionBehavior
 {
@@ -471,6 +491,7 @@ class SafeEntryAction extends ActionBehavior
 
 Exit actions should be reliable:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good - unlikely to fail
 'exit' => 'clearLocalState',

@@ -6,6 +6,7 @@ Raised events allow actions to queue additional events for processing after the 
 
 Use `$this->raise()` in an action to queue an event:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
@@ -50,6 +51,7 @@ sequenceDiagram
 
 ## Raise with Payload
 
+<!-- doctest-attr: ignore -->
 ```php
 class CalculateAction extends ActionBehavior
 {
@@ -70,6 +72,7 @@ class CalculateAction extends ActionBehavior
 
 ## Multiple Raised Events
 
+<!-- doctest-attr: ignore -->
 ```php
 class ProcessAction extends ActionBehavior
 {
@@ -95,6 +98,7 @@ Events are processed in the order they were raised.
 
 ### Order Processing Chain
 
+<!-- doctest-attr: ignore -->
 ```php
 class StartProcessingAction extends ActionBehavior
 {
@@ -124,6 +128,7 @@ class ValidateOrderAction extends ActionBehavior
 
 ### Workflow with Notifications
 
+<!-- doctest-attr: ignore -->
 ```php
 class ApproveRequestAction extends ActionBehavior
 {
@@ -148,6 +153,7 @@ class ApproveRequestAction extends ActionBehavior
 
 ### Conditional Event Raising
 
+<!-- doctest-attr: ignore -->
 ```php
 class ProcessPaymentAction extends ActionBehavior
 {
@@ -180,6 +186,7 @@ class ProcessPaymentAction extends ActionBehavior
 
 ### State Machine with Raised Events
 
+<!-- doctest-attr: ignore -->
 ```php
 MachineDefinition::define(
     config: [
@@ -231,6 +238,7 @@ MachineDefinition::define(
 
 ### Chained Actions with Events
 
+<!-- doctest-attr: ignore -->
 ```php
 class XAction extends ActionBehavior
 {
@@ -275,6 +283,7 @@ class YAction extends ActionBehavior
 
 Raised events appear in the event history:
 
+<!-- doctest-attr: ignore -->
 ```php
 $machine = OrderMachine::create();
 $machine->send(['type' => 'SUBMIT']);
@@ -291,6 +300,7 @@ $history = $machine->state->history;
 
 Important: Entry actions complete before raised events are processed.
 
+<!-- doctest-attr: ignore -->
 ```php
 class EntryAction extends ActionBehavior
 {
@@ -317,6 +327,7 @@ class TransitionAction extends ActionBehavior
 
 ## Testing Raised Events
 
+<!-- doctest-attr: ignore -->
 ```php
 it('processes raised events in order', function () {
     $machine = MachineDefinition::define(
@@ -351,6 +362,7 @@ it('processes raised events in order', function () {
 
 ### 1. Use for Workflow Progression
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good - clear workflow progression
 $this->raise(['type' => 'VALIDATION_COMPLETE']);
@@ -363,6 +375,7 @@ $this->raise(['type' => 'DONE']);
 
 ### 2. Include Relevant Payload
 
+<!-- doctest-attr: ignore -->
 ```php
 $this->raise([
     'type' => 'ITEM_PROCESSED',
@@ -376,6 +389,7 @@ $this->raise([
 
 ### 3. Handle Failures Explicitly
 
+<!-- doctest-attr: ignore -->
 ```php
 try {
     $result = $this->process();
@@ -390,6 +404,7 @@ try {
 
 ### 4. Avoid Raising Too Many Events
 
+<!-- doctest-attr: ignore -->
 ```php
 // Avoid - too many events
 foreach ($items as $item) {
@@ -405,6 +420,7 @@ $this->raise(['type' => 'ALL_ITEMS_PROCESSED']);
 
 Raised events require `$this->raise()`, which is only available in class-based actions:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Works - class-based action
 class MyAction extends ActionBehavior

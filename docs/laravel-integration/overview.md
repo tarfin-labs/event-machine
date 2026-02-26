@@ -6,6 +6,7 @@ EventMachine is designed as a Laravel-first package with deep integration into t
 
 EventMachine automatically registers through Laravel's package auto-discovery:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Registered automatically via composer.json
 Tarfinlabs\EventMachine\MachineServiceProvider::class
@@ -20,6 +21,7 @@ The service provider:
 
 Access EventMachine functionality via the facade:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Facades\EventMachine;
 
@@ -56,6 +58,7 @@ Creates:
 
 Attach machines to models:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Traits\HasMachines;
 
@@ -79,6 +82,7 @@ $order->status->send(['type' => 'SUBMIT']);
 
 Laravel's container injects dependencies into behaviors:
 
+<!-- doctest-attr: ignore -->
 ```php
 class ProcessOrderAction extends ActionBehavior
 {
@@ -92,6 +96,7 @@ class ProcessOrderAction extends ActionBehavior
 
 Events are automatically persisted to the database:
 
+<!-- doctest-attr: ignore -->
 ```php
 $machine = OrderMachine::create();
 $machine->send(['type' => 'SUBMIT']);
@@ -120,6 +125,7 @@ php artisan machine:archive-events --queue
 
 EventMachine uses Laravel's cache-based locking to prevent concurrent event processing:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Behind the scenes
 Cache::lock("machine:{$rootEventId}", 60)->block(5, function () {
@@ -131,6 +137,7 @@ Cache::lock("machine:{$rootEventId}", 60)->block(5, function () {
 
 Events can be wrapped in database transactions:
 
+<!-- doctest-attr: ignore -->
 ```php
 class CriticalEvent extends EventBehavior
 {

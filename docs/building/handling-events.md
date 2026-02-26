@@ -130,6 +130,7 @@ $machine->send(PaymentEvent::from([
 
 ### From Array Events
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
@@ -196,6 +197,7 @@ Or reference classes directly in transitions:
 
 Actions can raise events that are processed after the current transition:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]

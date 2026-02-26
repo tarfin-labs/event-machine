@@ -14,6 +14,7 @@ Events are broadcast to all active regions. Each region independently evaluates 
 
 When an event is only defined in one region, only that region transitions:
 
+<!-- doctest-attr: ignore -->
 ```php
 $state = $definition->getInitialState();
 // document: editing, format: normal
@@ -27,6 +28,7 @@ $state = $definition->transition(['type' => 'BOLD'], $state);
 
 The same event can trigger transitions in multiple regions simultaneously:
 
+<!-- doctest-attr: ignore -->
 ```php
 MachineDefinition::define([
     'id' => 'editor',
@@ -85,6 +87,7 @@ When entering a parallel state, entry actions fire in this specific order:
 3. **Region 2 initial state entry** - Second region's initial state
 4. *(continues for all regions in definition order)*
 
+<!-- doctest-attr: ignore -->
 ```php
 MachineDefinition::define(
     config: [
@@ -151,6 +154,7 @@ Exit actions fire for leaf states and the parallel state itself:
 Region (compound state) exit actions are **not** automatically invoked when leaving a parallel state. Only leaf states and the parallel state itself run exit actions.
 :::
 
+<!-- doctest-attr: ignore -->
 ```php
 MachineDefinition::define(
     config: [
@@ -206,6 +210,7 @@ MachineDefinition::define(
 
 All regions share the same `ContextManager`. Actions in any region can read and modify the context:
 
+<!-- doctest-attr: ignore -->
 ```php
 MachineDefinition::define(
     config: [
@@ -261,6 +266,7 @@ When multiple regions modify the same context key in response to the same event,
 
 When all regions of a parallel state reach their final states, the parallel state is considered complete. Use `onDone` to transition when this happens:
 
+<!-- doctest-attr: ignore -->
 ```php
 MachineDefinition::define([
     'id' => 'checkout',
@@ -310,6 +316,7 @@ $state->matches('complete');  // true
 
 You can also specify actions to run when the parallel state completes:
 
+<!-- doctest-attr: ignore -->
 ```php
 'processing' => [
     'type' => 'parallel',
@@ -327,6 +334,7 @@ Parallel states can be nested within compound states, and compound states can be
 
 ### Parallel Inside Compound
 
+<!-- doctest-attr: ignore -->
 ```php
 'active' => [
     'initial' => 'loading',
@@ -347,6 +355,7 @@ Parallel states can be nested within compound states, and compound states can be
 
 ### Compound Inside Parallel Region
 
+<!-- doctest-attr: ignore -->
 ```php
 'player' => [
     'type' => 'parallel',
@@ -392,6 +401,7 @@ deep (machine)
         └── finished
 ```
 
+<!-- doctest-attr: ignore -->
 ```php
 MachineDefinition::define([
     'id' => 'deep',
@@ -441,6 +451,7 @@ MachineDefinition::define([
 
 The `$state->value` array always contains the fully-qualified IDs of all active **leaf** states:
 
+<!-- doctest-attr: ignore -->
 ```php
 $state = $definition->getInitialState();
 
@@ -462,6 +473,7 @@ $state->value;
 
 Each region independently handles events at its own level:
 
+<!-- doctest-attr: ignore -->
 ```php
 $state = $definition->getInitialState();
 // branch1.leaf.subleaf1.a, branch1.leaf.subleaf2.x, branch2.waiting
@@ -498,6 +510,7 @@ $state->value;
 
 The `matches()` method checks for exact matches against active leaf states. You must provide the full path from the machine's initial state:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Check specific leaf states with matches() - must be full path
 $state->matches('root.branch1.leaf.subleaf1.a');  // true
@@ -530,6 +543,7 @@ When a transition targets a parallel state, all of its regions are automatically
 
 ### From Non-Parallel to Parallel
 
+<!-- doctest-attr: ignore -->
 ```php
 MachineDefinition::define([
     'id' => 'app',
@@ -573,6 +587,7 @@ $state->matches('processing.task2.pending');  // true
 
 When you're already in a parallel state and a region transitions to a state that is itself parallel, all nested regions are properly initialized:
 
+<!-- doctest-attr: ignore -->
 ```php
 MachineDefinition::define([
     'id' => 'nested',

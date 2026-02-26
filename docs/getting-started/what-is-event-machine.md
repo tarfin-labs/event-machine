@@ -54,6 +54,7 @@ This approach has problems:
 
 EventMachine models your workflow as an explicit state machine:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;

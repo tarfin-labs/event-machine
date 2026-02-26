@@ -6,6 +6,7 @@ EventMachine uses Laravel's service container for dependency injection in behavi
 
 Class-based behaviors support constructor injection:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
@@ -32,6 +33,7 @@ class ProcessOrderAction extends ActionBehavior
 
 The `__invoke()` method receives injected parameters:
 
+<!-- doctest-attr: ignore -->
 ```php
 public function __invoke(
     ContextManager $context,      // Current context
@@ -58,6 +60,7 @@ public function __invoke(
 
 Only declare the parameters you need:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Only context needed
 public function __invoke(ContextManager $context): void
@@ -88,6 +91,7 @@ public function __invoke(
 
 Custom context classes are automatically injected:
 
+<!-- doctest-attr: ignore -->
 ```php
 class OrderContext extends ContextManager
 {
@@ -108,6 +112,7 @@ class ProcessOrderAction extends ActionBehavior
 
 ## Guard with Dependencies
 
+<!-- doctest-attr: ignore -->
 ```php
 class HasPermissionGuard extends GuardBehavior
 {
@@ -124,6 +129,7 @@ class HasPermissionGuard extends GuardBehavior
 
 ## Calculator with Dependencies
 
+<!-- doctest-attr: ignore -->
 ```php
 class CalculateTaxCalculator extends CalculatorBehavior
 {
@@ -145,6 +151,7 @@ class CalculateTaxCalculator extends CalculatorBehavior
 
 ## Event Behavior with Dependencies
 
+<!-- doctest-attr: ignore -->
 ```php
 class SubmitOrderEvent extends EventBehavior
 {
@@ -168,6 +175,7 @@ class SubmitOrderEvent extends EventBehavior
 
 ## Result with Dependencies
 
+<!-- doctest-attr: ignore -->
 ```php
 class OrderResultBehavior extends ResultBehavior
 {
@@ -193,6 +201,7 @@ class OrderResultBehavior extends ResultBehavior
 
 ### Complete Action with Multiple Services
 
+<!-- doctest-attr: ignore -->
 ```php
 class CompleteCheckoutAction extends ActionBehavior
 {
@@ -244,6 +253,7 @@ class CompleteCheckoutAction extends ActionBehavior
 
 ### Guard with External Service
 
+<!-- doctest-attr: ignore -->
 ```php
 class CheckInventoryGuard extends GuardBehavior
 {
@@ -265,6 +275,7 @@ class CheckInventoryGuard extends GuardBehavior
 
 ### Validation Guard with Repository
 
+<!-- doctest-attr: ignore -->
 ```php
 class ValidateUserGuard extends ValidationGuardBehavior
 {
@@ -302,6 +313,7 @@ class ValidateUserGuard extends ValidationGuardBehavior
 
 ### In Service Provider
 
+<!-- doctest-attr: ignore -->
 ```php
 // app/Providers/AppServiceProvider.php
 public function register(): void
@@ -318,6 +330,7 @@ public function register(): void
 
 ### Environment-Based Binding
 
+<!-- doctest-attr: ignore -->
 ```php
 public function register(): void
 {
@@ -335,6 +348,7 @@ public function register(): void
 
 ### Mock Dependencies
 
+<!-- doctest-attr: ignore -->
 ```php
 it('processes order with mocked services', function () {
     $orderService = Mockery::mock(OrderService::class);
@@ -353,6 +367,7 @@ it('processes order with mocked services', function () {
 
 ### Using Fake Behaviors
 
+<!-- doctest-attr: ignore -->
 ```php
 it('uses fake behavior for testing', function () {
     ProcessOrderAction::fake();
@@ -375,6 +390,7 @@ it('uses fake behavior for testing', function () {
 
 ### 1. Use Interface Bindings
 
+<!-- doctest-attr: ignore -->
 ```php
 // Define interface
 interface PaymentGatewayInterface
@@ -393,6 +409,7 @@ public function __construct(
 
 ### 2. Keep Dependencies Minimal
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good - focused dependencies
 public function __construct(
@@ -415,6 +432,7 @@ public function __construct(
 
 ### 3. Use Readonly Properties
 
+<!-- doctest-attr: ignore -->
 ```php
 public function __construct(
     private readonly OrderService $orders,  // readonly prevents reassignment
@@ -423,6 +441,7 @@ public function __construct(
 
 ### 4. Inject Interfaces, Not Implementations
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good
 public function __construct(
