@@ -30,6 +30,7 @@ The same event can trigger transitions in multiple regions simultaneously:
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define([
     'id' => 'editor',
     'initial' => 'active',
@@ -87,8 +88,8 @@ When entering a parallel state, entry actions fire in this specific order:
 3. **Region 2 initial state entry** - Second region's initial state
 4. *(continues for all regions in definition order)*
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'id' => 'machine',
@@ -154,8 +155,8 @@ Exit actions fire for leaf states and the parallel state itself:
 Region (compound state) exit actions are **not** automatically invoked when leaving a parallel state. Only leaf states and the parallel state itself run exit actions.
 :::
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'id' => 'machine',
@@ -210,8 +211,9 @@ MachineDefinition::define(
 
 All regions share the same `ContextManager`. Actions in any region can read and modify the context:
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 MachineDefinition::define(
     config: [
         'id' => 'counter',
@@ -268,6 +270,7 @@ When all regions of a parallel state reach their final states, the parallel stat
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define([
     'id' => 'checkout',
     'initial' => 'processing',
@@ -401,8 +404,8 @@ deep (machine)
         └── finished
 ```
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define([
     'id' => 'deep',
     'initial' => 'root',
@@ -545,6 +548,7 @@ When a transition targets a parallel state, all of its regions are automatically
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define([
     'id' => 'app',
     'initial' => 'idle',
@@ -589,6 +593,7 @@ When you're already in a parallel state and a region transitions to a state that
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define([
     'id' => 'nested',
     'initial' => 'active',
