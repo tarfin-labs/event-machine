@@ -20,7 +20,6 @@ php artisan vendor:publish --tag="machine-config"
 
 This creates `config/machine.php`:
 
-<!-- doctest-attr: ignore -->
 ```php
 return [
     'archival' => [
