@@ -26,7 +26,6 @@ sequenceDiagram
 
 ### Inline Functions
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -111,7 +110,6 @@ class IncrementAction extends ActionBehavior
 
 Actions receive injected parameters:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
@@ -193,7 +191,6 @@ class ProcessOrderAction extends ActionBehavior
 
 Actions can queue events for processing:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -247,7 +244,6 @@ class ChargePaymentAction extends ActionBehavior
 
 Enable execution logging:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -267,7 +263,6 @@ class ImportantAction extends ActionBehavior
 
 ### Updating Context
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
