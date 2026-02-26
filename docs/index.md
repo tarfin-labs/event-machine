@@ -34,7 +34,6 @@ No more scattered if/else chains. No more inconsistent state checks. Your busine
 </div>
 <div class="feature-code">
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
@@ -180,8 +179,10 @@ Every behavior is a single-responsibility class. Compose them freely to build co
 ],
 ```
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class PriceCalculator extends CalculatorBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -191,8 +192,10 @@ class PriceCalculator extends CalculatorBehavior
 }
 ```
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class MinimumOrderGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
@@ -202,8 +205,10 @@ class MinimumOrderGuard extends GuardBehavior
 }
 ```
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class SendReceiptAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -319,8 +324,10 @@ No more `$context['total']` typos. No more missing validation. IDE autocompletio
 </div>
 <div class="feature-code">
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+enum OrderStatus { case Draft; } // [!code hide]
+
 class OrderContext extends ContextManager
 {
     public function __construct(
@@ -422,8 +429,11 @@ Attach machines to models. Inject services into behaviors. Validate with Artisan
 </div>
 <div class="feature-code">
 
-<!-- doctest-attr: ignore -->
 ```php
+use Illuminate\Database\Eloquent\Model; // [!code hide]
+use Tarfinlabs\EventMachine\Traits\HasMachines; // [!code hide]
+use Tarfinlabs\EventMachine\Casts\MachineCast; // [!code hide]
+
 // Attach to Eloquent models
 class Order extends Model
 {
@@ -435,8 +445,9 @@ class Order extends Model
 }
 ```
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+
 // Dependency injection in behaviors
 class ProcessPaymentAction extends ActionBehavior
 {
