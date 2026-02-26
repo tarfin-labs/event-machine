@@ -122,6 +122,10 @@ jobs:
         if: matrix.php == '8.3'
         run: composer remove --dev testflowlabs/doctest --no-update
 
+      - name: Remove Laravel 11+ only packages
+        if: matrix.laravel == 10
+        run: composer remove --dev larastan/larastan nunomaduro/larastan --no-update
+
       - name: Install dependencies
         run: composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress --with="illuminate/contracts:^${{ matrix.laravel }}"
 
