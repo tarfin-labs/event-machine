@@ -14,8 +14,8 @@ Guide for upgrading between EventMachine versions.
 #### 1. Behavior Parameter Injection
 
 **Before (v2.x):**
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 class MyAction extends ActionBehavior
 {
     public function __invoke($context, $event): void
@@ -26,8 +26,10 @@ class MyAction extends ActionBehavior
 ```
 
 **After (v3.x):**
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 class MyAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): void
@@ -112,8 +114,9 @@ Using event classes as transition keys is now supported.
 #### 5. Calculator Behavior
 
 **New in v3.x:**
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class CalculateTotalCalculator extends CalculatorBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -240,8 +243,8 @@ use App\Events\SubmitEvent;
 
 Custom context classes with full validation:
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class OrderContext extends ContextManager
 {
     public function __construct(
