@@ -8,6 +8,7 @@ Scenarios allow you to define alternative state machine configurations that can 
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'initial' => 'stateA',
@@ -141,6 +142,7 @@ Scenarios can override:
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'id' => 'checkout',
@@ -198,6 +200,7 @@ $machine->send([
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'scenarios_enabled' => true,
@@ -238,6 +241,7 @@ $machine->send([
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'scenarios_enabled' => true,
@@ -279,6 +283,7 @@ $machine->send([
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'id' => 'approval',
@@ -318,6 +323,8 @@ $scenario = $tenant->requiresDualApproval() ? 'tenant_enterprise' : null;
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Actor\Machine; // [!code hide]
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 class OrderMachine extends Machine
 {
     public static function definition(): MachineDefinition
