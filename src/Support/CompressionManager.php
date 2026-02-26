@@ -44,7 +44,7 @@ class CompressionManager
      */
     public static function getLevel(): int
     {
-        $level = self::getConfig()['level'];
+        $level = (int) (self::getConfig()['level'] ?? 6);
 
         if ($level < 0 || $level > 9) {
             throw new InvalidArgumentException('Compression level must be between 0 and 9');
