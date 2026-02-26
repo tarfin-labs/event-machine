@@ -37,7 +37,6 @@ $data = $state->context->toArray();
 
 Actions modify context during transitions:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
@@ -60,7 +59,6 @@ class AddItemAction extends ActionBehavior
 
 Guards read context to control transitions:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\ContextManager;
