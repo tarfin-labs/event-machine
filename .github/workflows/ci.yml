@@ -1,0 +1,174 @@
+name: CI
+
+on:
+  push:
+    branches: [main, '*.x']
+  pull_request:
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Tier 1: Lint (parallel) — fast code style checks
+  # ──────────────────────────────────────────────
+  pint:
+    name: Pint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Check code style
+        run: composer test:pint
+
+  rector:
+    name: Rector
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Check Rector
+        run: composer test:rector
+
+  # ──────────────────────────────────────────────
+  # Tier 2: Analysis & Tests (parallel, after lint)
+  # ──────────────────────────────────────────────
+  larastan:
+    name: Larastan
+    needs: [pint, rector]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Run PHPStan
+        run: ./vendor/bin/phpstan analyse --error-format=github
+        continue-on-error: true
+
+  pest-types:
+    name: Pest Types
+    needs: [pint, rector]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Execute type coverage
+        run: vendor/bin/pest --type-coverage --min=100 --colors=always
+
+  pest:
+    name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.stability }}
+    needs: [pint, rector]
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+      matrix:
+        php: [8.3, 8.4, 8.5]
+        laravel: [10, 11, 12]
+        stability: [prefer-lowest, prefer-stable]
+        exclude:
+          - php: 8.4
+            laravel: 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo
+          coverage: xdebug
+          ini-values: xdebug.mode=coverage
+
+      - name: Setup problem matchers
+        run: |
+          echo "::add-matcher::${{ runner.tool_cache }}/php.json"
+          echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
+
+      - name: Remove PHP 8.4+ only packages
+        if: matrix.php == '8.3'
+        run: composer remove --dev testflowlabs/doctest --no-update
+
+      - name: Install dependencies
+        run: composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress --with="illuminate/contracts:^${{ matrix.laravel }}"
+
+      - name: List Installed Dependencies
+        run: composer show -D
+
+      - name: Execute tests
+        run: vendor/bin/pest --coverage --colors=always --order-by=random
+
+  doctest:
+    name: DocTest
+    needs: [pint, rector]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Run DocTest
+        run: composer test:doc
+
+  # ──────────────────────────────────────────────
+  # Tier 3: Mutation Testing (after tests pass)
+  # ──────────────────────────────────────────────
+  infection:
+    name: Infection
+    needs: [pest]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: pcov
+
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Run Infection
+        run: composer test:mutation
+        continue-on-error: true
