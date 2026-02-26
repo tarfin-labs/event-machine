@@ -4,6 +4,7 @@ on:
   push:
     branches: [main, '*.x']
   pull_request:
+  workflow_dispatch:
 
 jobs:
   # ──────────────────────────────────────────────
@@ -146,3 +147,26 @@ jobs:
 
       - name: Run DocTest
         run: composer test:doc
+
+  # ──────────────────────────────────────────────
+  # Tier 3: Mutation Testing (manual trigger only)
+  # ──────────────────────────────────────────────
+  infection:
+    name: Infection
+    if: github.event_name == 'workflow_dispatch'
+    needs: [pest]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: pcov
+
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Run Infection
+        run: composer test:mutation
