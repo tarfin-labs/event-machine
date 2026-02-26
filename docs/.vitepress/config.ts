@@ -1,6 +1,15 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import { transformerHideLines } from 'shiki-hide-lines'
+import { execSync } from 'node:child_process'
+
+const gitTag = (() => {
+  try {
+    return execSync('git describe --tags --abbrev=0', { encoding: 'utf-8' }).trim()
+  } catch {
+    return 'dev'
+  }
+})()
 
 export default withMermaid(
   defineConfig({
@@ -26,7 +35,7 @@ export default withMermaid(
       ['meta', { property: 'og:type', content: 'website' }],
       ['meta', { property: 'og:title', content: 'EventMachine' }],
       ['meta', { property: 'og:description', content: 'Event-driven state machine library for Laravel inspired by XState' }],
-      ['meta', { property: 'og:url', content: 'https://tarfin-labs.github.io/event-machine/' }],
+      ['meta', { property: 'og:url', content: 'https://eventmachine.dev' }],
     ],
 
     themeConfig: {
@@ -39,7 +48,7 @@ export default withMermaid(
         { text: 'Guide', link: '/getting-started/what-is-event-machine' },
         { text: 'Examples', link: '/examples/quick-start' },
         {
-          text: 'v3.x',
+          text: `v${gitTag}`,
           items: [
             { text: 'Changelog', link: 'https://github.com/tarfin-labs/event-machine/releases' },
             { text: 'Contributing', link: 'https://github.com/tarfin-labs/event-machine/blob/main/CONTRIBUTING.md' }
