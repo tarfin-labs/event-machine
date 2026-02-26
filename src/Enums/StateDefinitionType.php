@@ -13,5 +13,6 @@ enum StateDefinitionType: string
 {
     case ATOMIC   = 'atomic';
     case COMPOUND = 'compound';
+    case PARALLEL = 'parallel';
     case FINAL    = 'final';
 }

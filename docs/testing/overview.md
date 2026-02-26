@@ -6,6 +6,7 @@ EventMachine provides full testing support through the Fakeable trait, state ass
 
 ### Pest / PHPUnit Configuration
 
+<!-- doctest-attr: ignore -->
 ```php
 // tests/TestCase.php
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,7 +43,9 @@ For fast tests, use SQLite in-memory:
 
 Test state machine logic without persistence:
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 it('transitions from pending to processing', function () {
     $machine = MachineDefinition::define(
         config: [
@@ -68,6 +71,7 @@ it('transitions from pending to processing', function () {
 
 Test with persistence:
 
+<!-- doctest-attr: ignore -->
 ```php
 it('persists events to database', function () {
     $machine = OrderMachine::create();
@@ -87,6 +91,7 @@ it('persists events to database', function () {
 
 Test with mocked behaviors:
 
+<!-- doctest-attr: ignore -->
 ```php
 it('uses faked action', function () {
     ProcessOrderAction::fake();
@@ -106,6 +111,7 @@ it('uses faked action', function () {
 
 ### State Assertions
 
+<!-- doctest-attr: ignore -->
 ```php
 // Check current state
 expect($machine->state->matches('processing'))->toBeTrue();
@@ -120,6 +126,7 @@ expect($machine->state->currentStateDefinition->key)->toBe('processing');
 
 ### Context Assertions
 
+<!-- doctest-attr: ignore -->
 ```php
 // Check context values
 expect($machine->state->context->orderId)->toBe('order-123');
@@ -129,6 +136,7 @@ expect($machine->state->context->items)->toHaveCount(3);
 
 ### History Assertions
 
+<!-- doctest-attr: ignore -->
 ```php
 // Check event history
 expect($machine->state->history)->toHaveCount(5);
@@ -141,6 +149,7 @@ expect($external)->toHaveCount(2);
 
 ### Database Assertions
 
+<!-- doctest-attr: ignore -->
 ```php
 // Check events in database
 $this->assertDatabaseHas('machine_events', [
@@ -154,7 +163,9 @@ $this->assertDatabaseCount('machine_events', 10);
 
 ## Testing Guards
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 it('blocks transition when guard fails', function () {
     $machine = MachineDefinition::define(
         config: [
@@ -192,6 +203,7 @@ it('blocks transition when guard fails', function () {
 
 ## Testing Validation Guards
 
+<!-- doctest-attr: ignore -->
 ```php
 it('throws validation exception with message', function () {
     $machine = OrderMachine::create();
@@ -208,6 +220,7 @@ it('throws validation exception with message', function () {
 
 ## Testing Actions
 
+<!-- doctest-attr: ignore -->
 ```php
 it('executes action and updates context', function () {
     $machine = CounterMachine::create();
@@ -222,6 +235,7 @@ it('executes action and updates context', function () {
 
 ## Testing Event Payloads
 
+<!-- doctest-attr: ignore -->
 ```php
 it('uses event payload in action', function () {
     $machine = CalculatorMachine::create();
@@ -244,6 +258,7 @@ it('uses event payload in action', function () {
 
 ## Testing State Restoration
 
+<!-- doctest-attr: ignore -->
 ```php
 it('restores state from root event id', function () {
     $machine = OrderMachine::create();
@@ -267,6 +282,7 @@ it('restores state from root event id', function () {
 
 ### Reset Fakes
 
+<!-- doctest-attr: ignore -->
 ```php
 afterEach(function () {
     ProcessOrderAction::resetFakes();
@@ -276,10 +292,11 @@ afterEach(function () {
 });
 ```
 
-### ResolvesBehaviors Trait
+### `ResolvesBehaviors` Trait
 
 Access behavior definitions directly for testing and debugging:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Traits\ResolvesBehaviors;
 
@@ -292,6 +309,7 @@ class OrderMachine extends Machine
 
 Available methods:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Get any behavior by path
 $behavior = OrderMachine::getBehavior('guards.hasItems');
@@ -306,6 +324,7 @@ $event = OrderMachine::getEvent('SUBMIT');
 
 Useful for testing behaviors in isolation:
 
+<!-- doctest-attr: ignore -->
 ```php
 it('guard checks items correctly', function () {
     $guard = OrderMachine::getGuard('hasItems');
@@ -319,12 +338,14 @@ it('guard checks items correctly', function () {
 ```
 
 ::: tip
-`getBehavior()` throws `BehaviorNotFoundException` if the behavior doesn't exist, making it easy to catch configuration errors in tests.
+The `getBehavior()` method throws `BehaviorNotFoundException` if the behavior doesn't exist, making it easy to catch configuration errors in tests.
 :::
 
 ### Create Machine with Context
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 it('starts with custom context', function () {
     $machine = MachineDefinition::define(
         config: [
@@ -343,6 +364,7 @@ it('starts with custom context', function () {
 
 ### 1. Test State Transitions
 
+<!-- doctest-attr: ignore -->
 ```php
 it('follows expected state flow', function () {
     $machine = OrderMachine::create();
@@ -359,6 +381,7 @@ it('follows expected state flow', function () {
 
 ### 2. Test Guard Conditions
 
+<!-- doctest-attr: ignore -->
 ```php
 it('requires valid data to proceed', function () {
     $machine = OrderMachine::create();
@@ -378,6 +401,7 @@ it('requires valid data to proceed', function () {
 
 ### 3. Test Context Updates
 
+<!-- doctest-attr: ignore -->
 ```php
 it('updates context correctly', function () {
     $machine = CartMachine::create();
@@ -394,6 +418,7 @@ it('updates context correctly', function () {
 
 ### 4. Test Error Cases
 
+<!-- doctest-attr: ignore -->
 ```php
 it('handles invalid transitions gracefully', function () {
     $machine = OrderMachine::create();

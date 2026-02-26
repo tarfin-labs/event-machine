@@ -23,7 +23,7 @@ Calculators run first, so guards and actions can use the calculated values.
 
 ### Inline Calculator
 
-```php
+```php no_run
 MachineDefinition::define(
     config: [
         'states' => [
@@ -54,7 +54,8 @@ MachineDefinition::define(
 ### Class-Based Calculator
 
 ```php
-use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior;
+use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 class CalculateTotalCalculator extends CalculatorBehavior
 {
@@ -82,7 +83,7 @@ class CalculateTotalCalculator extends CalculatorBehavior
 
 Chain calculators for complex computations:
 
-```php
+```php ignore
 'on' => [
     'CHECKOUT' => [
         'target' => 'processing',
@@ -100,7 +101,7 @@ Chain calculators for complex computations:
 
 ## Calculator Parameters
 
-```php
+```php no_run
 class DiscountCalculator extends CalculatorBehavior
 {
     public function __invoke(
@@ -120,7 +121,7 @@ class DiscountCalculator extends CalculatorBehavior
 
 ## Dependency Injection
 
-```php
+```php no_run
 class CalculateTaxCalculator extends CalculatorBehavior
 {
     public function __construct(
@@ -144,6 +145,9 @@ class CalculateTaxCalculator extends CalculatorBehavior
 ### Order Total Calculation
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class CalculateOrderTotalCalculator extends CalculatorBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -191,7 +195,7 @@ class CalculateOrderTotalCalculator extends CalculatorBehavior
 
 ### User Eligibility Calculation
 
-```php
+```php no_run
 class CalculateEligibilityCalculator extends CalculatorBehavior
 {
     public function __construct(
@@ -221,6 +225,10 @@ class CalculateEligibilityCalculator extends CalculatorBehavior
 ### Pricing Calculation
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class CalculatePricingCalculator extends CalculatorBehavior
 {
     public function __invoke(
@@ -261,7 +269,7 @@ class CalculatePricingCalculator extends CalculatorBehavior
 
 ### Date/Time Calculations
 
-```php
+```php no_run
 class CalculateDeliveryDateCalculator extends CalculatorBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -287,11 +295,18 @@ class CalculateDeliveryDateCalculator extends CalculatorBehavior
 
 ## Calculator Failure Behavior
 
-::: warning Critical
-If a calculator throws an exception, the **entire transition is aborted**. The exception is caught, a `machine.calculator.{name}.fail` internal event is recorded, and the transition returns `false`.
+::: warning Calculator Failures Abort Transitions
+If a calculator throws an exception:
+1. The exception is caught internally
+2. A `machine.calculator.{name}.fail` internal event is recorded
+3. **The entire transition is aborted** - the machine stays in its current state
+4. No guards or actions execute
+5. The `send()` method returns the current state unchanged
+
+To prevent silent failures, wrap risky operations in try/catch (see example below).
 :::
 
-```php
+```php no_run
 class RiskyCalculator extends CalculatorBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -305,7 +320,7 @@ class RiskyCalculator extends CalculatorBehavior
 
 Handle potential failures gracefully:
 
-```php
+```php no_run
 class SafeCalculator extends CalculatorBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -324,7 +339,7 @@ class SafeCalculator extends CalculatorBehavior
 
 The internal event recorded on failure:
 
-```php
+```php ignore
 // Event type: {machine}.calculator.{calculatorName}.fail
 // Payload: ['error' => 'Calculator failed: {exception message}']
 ```
@@ -354,7 +369,7 @@ The internal event recorded on failure:
 
 ## Testing Calculators
 
-```php
+```php no_run
 it('calculates order total correctly', function () {
     $machine = MachineDefinition::define(
         config: [
@@ -397,7 +412,7 @@ it('calculates order total correctly', function () {
 
 Calculate values, don't trigger side effects:
 
-```php
+```php ignore
 // Good - only calculates
 $context->total = collect($context->items)->sum('price');
 
@@ -407,7 +422,7 @@ $this->analytics->track('total_calculated', $context->total);
 
 ### 2. Order Calculators Logically
 
-```php
+```php ignore
 'calculators' => [
     'calculateSubtotal',    // First: base calculation
     'applyDiscounts',       // Second: depends on subtotal
@@ -418,7 +433,7 @@ $this->analytics->track('total_calculated', $context->total);
 
 ### 3. Use Descriptive Names
 
-```php
+```php ignore
 // Good
 'calculators' => [
     'calculateOrderSubtotal',
@@ -432,7 +447,7 @@ $this->analytics->track('total_calculated', $context->total);
 
 ### 4. Handle Edge Cases
 
-```php
+```php ignore
 public function __invoke(ContextManager $context): void
 {
     $items = $context->items ?? [];

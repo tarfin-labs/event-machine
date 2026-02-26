@@ -13,6 +13,7 @@ EventMachine isn't the only state machine library out there. Here's how it compa
 | **Guards** | Yes | Yes | Yes | Yes | Yes |
 | **Actions** | Yes | Yes | Yes | Yes | Yes |
 | **Hierarchical States** | Yes | No | No | Yes | Yes |
+| **Parallel States** | Yes | No | No | Yes | Yes |
 | **Multiple Fields** | Yes | No | Yes | Yes | Yes |
 | **Laravel Native** | Yes | Yes | Yes | Adapter | No |
 
@@ -22,7 +23,7 @@ EventMachine isn't the only state machine library out there. Here's how it compa
 
 [spatie/laravel-model-states](https://github.com/spatie/laravel-model-states) is the most popular choice with 4.6M+ installs. It combines the state pattern with state machines, representing each state as a class.
 
-```php
+```php no_run
 // Spatie: States are classes
 class PendingState extends PaymentState
 {
@@ -54,7 +55,7 @@ $payment->state->transitionTo(PaidState::class);
 
 [asantibanez/laravel-eloquent-state-machines](https://github.com/asantibanez/laravel-eloquent-state-machines) adds history tracking and responsible party recording.
 
-```php
+```php no_run
 // Asantibanez: Transition with metadata
 $order->status()->transitionTo(
     'approved',
@@ -87,7 +88,7 @@ $order->status()->timesWas('rejected'); // 2
 
 [symfony/workflow](https://symfony.com/doc/current/components/workflow.html) provides powerful workflow and state machine capabilities, available in Laravel via [zerodahero/laravel-workflow](https://github.com/zerodahero/laravel-workflow).
 
-```php
+```php no_run
 // Symfony: Configuration-based
 $definition = $definitionBuilder
     ->addPlaces(['draft', 'reviewed', 'published'])
@@ -118,7 +119,7 @@ $workflow->apply($article, 'to_review');
 
 EventMachine combines the best of all worlds: XState-inspired design, event sourcing, and Laravel-native integration.
 
-```php
+```php ignore
 // EventMachine: Declarative + Event Sourced
 MachineDefinition::define(
     config: [

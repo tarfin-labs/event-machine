@@ -6,6 +6,7 @@ Testing EventMachine's database persistence and event sourcing capabilities.
 
 ### RefreshDatabase Trait
 
+<!-- doctest-attr: ignore -->
 ```php
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -29,8 +30,9 @@ class OrderMachineTest extends TestCase
 
 ## Database Assertions
 
-### assertDatabaseHas
+### `assertDatabaseHas()`
 
+<!-- doctest-attr: ignore -->
 ```php
 it('persists events to database', function () {
     $machine = OrderMachine::create();
@@ -44,8 +46,9 @@ it('persists events to database', function () {
 });
 ```
 
-### assertDatabaseCount
+### `assertDatabaseCount()`
 
+<!-- doctest-attr: ignore -->
 ```php
 it('creates expected number of events', function () {
     $machine = OrderMachine::create();
@@ -61,9 +64,11 @@ it('creates expected number of events', function () {
 });
 ```
 
-### assertDatabaseMissing
+### `assertDatabaseMissing()`
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 it('does not persist when disabled', function () {
     $machine = MachineDefinition::define(
         config: [
@@ -88,6 +93,7 @@ it('does not persist when disabled', function () {
 
 ### Check Event Order
 
+<!-- doctest-attr: ignore -->
 ```php
 it('records events in correct order', function () {
     $machine = OrderMachine::create();
@@ -108,6 +114,7 @@ it('records events in correct order', function () {
 
 ### Check Event Payload
 
+<!-- doctest-attr: ignore -->
 ```php
 it('stores event payload correctly', function () {
     $machine = OrderMachine::create();
@@ -131,6 +138,7 @@ it('stores event payload correctly', function () {
 
 ### Check Context Storage
 
+<!-- doctest-attr: ignore -->
 ```php
 it('stores context incrementally', function () {
     $machine = OrderMachine::create();
@@ -158,6 +166,7 @@ it('stores context incrementally', function () {
 
 ### Basic Restoration
 
+<!-- doctest-attr: ignore -->
 ```php
 it('restores state from root event id', function () {
     $machine = OrderMachine::create();
@@ -179,6 +188,7 @@ it('restores state from root event id', function () {
 
 ### Context Reconstruction
 
+<!-- doctest-attr: ignore -->
 ```php
 it('reconstructs context from incremental changes', function () {
     $machine = OrderMachine::create();
@@ -202,6 +212,7 @@ it('reconstructs context from incremental changes', function () {
 
 ### Continue After Restoration
 
+<!-- doctest-attr: ignore -->
 ```php
 it('can continue from restored state', function () {
     $machine = OrderMachine::create();
@@ -227,6 +238,7 @@ it('can continue from restored state', function () {
 
 ### Rollback on Failure
 
+<!-- doctest-attr: ignore -->
 ```php
 it('rolls back on exception with transactional event', function () {
     $machine = OrderMachine::create();
@@ -250,7 +262,9 @@ it('rolls back on exception with transactional event', function () {
 
 ### Non-Transactional Events
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 it('persists non-transactional events on failure', function () {
     // Define non-transactional event
     $machine = MachineDefinition::define(
@@ -270,6 +284,7 @@ it('persists non-transactional events on failure', function () {
 
 ### Model Machine Testing
 
+<!-- doctest-attr: ignore -->
 ```php
 it('initializes machine on model creation', function () {
     $order = Order::create(['name' => 'Test Order']);
@@ -283,6 +298,7 @@ it('initializes machine on model creation', function () {
 
 ### Model State Persistence
 
+<!-- doctest-attr: ignore -->
 ```php
 it('persists machine state with model', function () {
     $order = Order::create(['name' => 'Test Order']);
@@ -298,6 +314,7 @@ it('persists machine state with model', function () {
 
 ### Multiple Machine Models
 
+<!-- doctest-attr: ignore -->
 ```php
 it('handles multiple machines on model', function () {
     $order = Order::create(['name' => 'Test Order']);
@@ -314,6 +331,7 @@ it('handles multiple machines on model', function () {
 
 ## Concurrent Access Testing
 
+<!-- doctest-attr: ignore -->
 ```php
 it('handles concurrent access with locking', function () {
     $machine = OrderMachine::create();
@@ -337,6 +355,7 @@ it('handles concurrent access with locking', function () {
 
 ## Archive Testing
 
+<!-- doctest-attr: ignore -->
 ```php
 it('archives and restores events', function () {
     $machine = OrderMachine::create();
@@ -361,6 +380,7 @@ it('archives and restores events', function () {
 
 ### 1. Use RefreshDatabase
 
+<!-- doctest-attr: ignore -->
 ```php
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -372,6 +392,7 @@ class MyTest extends TestCase
 
 ### 2. Test State Restoration
 
+<!-- doctest-attr: ignore -->
 ```php
 it('restores correctly', function () {
     // Create, modify, save root ID
@@ -381,6 +402,7 @@ it('restores correctly', function () {
 
 ### 3. Test Incremental Context
 
+<!-- doctest-attr: ignore -->
 ```php
 it('handles context changes', function () {
     // Make multiple changes
@@ -390,6 +412,7 @@ it('handles context changes', function () {
 
 ### 4. Test Edge Cases
 
+<!-- doctest-attr: ignore -->
 ```php
 it('handles empty context', function () { ... });
 it('handles large payloads', function () { ... });

@@ -20,7 +20,7 @@
         }
     ],
     "require": {
-        "php": "^8.2|^8.3|^8.4|^8.5",
+        "php": "^8.3|^8.4|^8.5",
         "ext-zlib": "*",
         "illuminate/contracts": "^10.48.4|^11.0.8|^12.0",
         "nikic/php-parser": "^5.4",
@@ -37,7 +37,8 @@
         "pestphp/pest-plugin-arch": "^4.0",
         "pestphp/pest-plugin-laravel": "^4.0",
         "pestphp/pest-plugin-type-coverage": "^4.0",
-        "rector/rector": "^2.0"
+        "rector/rector": "^2.0",
+        "testflowlabs/doctest": "^1.0"
     },
     "autoload": {
         "psr-4": {
@@ -62,12 +63,14 @@
         "test:coverage": "pest --coverage --colors=always --min=80",
         "test:profile": "pest --profile --colors=always --order-by=random",
         "test:mutation": "pest --mutate --parallel --everything",
+        "test:doc": "doctest --parallel",
         "test": [
             "@test:rector",
             "@test:pint",
             "@test:phpstan",
             "@test:unit",
-            "@test:types"
+            "@test:types",
+            "@test:doc"
         ]
     },
     "config": {

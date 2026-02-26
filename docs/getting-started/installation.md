@@ -61,7 +61,7 @@ This creates the `machine_events` table for event sourcing.
 
 Create a simple test machine:
 
-```php
+```php no_run
 use Tarfinlabs\EventMachine\Actor\Machine;
 
 $machine = Machine::create([

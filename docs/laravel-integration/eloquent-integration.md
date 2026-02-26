@@ -2,7 +2,7 @@
 
 EventMachine integrates with Eloquent models through the `HasMachines` trait and `MachineCast`.
 
-## HasMachines Trait
+## `HasMachines` Trait
 
 Add the trait to your model:
 
@@ -18,8 +18,9 @@ class Order extends Model
 
 ## Defining Machines
 
-### Via machines() Method
+### Via `machines()` Method
 
+<!-- doctest-attr: ignore -->
 ```php
 class Order extends Model
 {
@@ -37,6 +38,7 @@ class Order extends Model
 
 ### Via $machines Property
 
+<!-- doctest-attr: ignore -->
 ```php
 class Order extends Model
 {
@@ -50,6 +52,7 @@ class Order extends Model
 
 ### Via $casts Property
 
+<!-- doctest-attr: ignore -->
 ```php
 class Order extends Model
 {
@@ -65,6 +68,7 @@ class Order extends Model
 
 The syntax `MachineClass::class . ':contextKey'` injects the model:
 
+<!-- doctest-attr: ignore -->
 ```php
 'status' => OrderStatusMachine::class . ':order',
 //                                       ^^^^^^
@@ -74,6 +78,8 @@ The syntax `MachineClass::class . ':contextKey'` injects the model:
 In behaviors:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class ProcessOrderAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -89,6 +95,7 @@ class ProcessOrderAction extends ActionBehavior
 
 Each machine stores its `root_event_id` in a column:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Migration
 Schema::create('orders', function (Blueprint $table) {
@@ -103,6 +110,7 @@ Schema::create('orders', function (Blueprint $table) {
 
 ### Basic Usage
 
+<!-- doctest-attr: ignore -->
 ```php
 // Create order - machine automatically initializes
 $order = Order::create(['name' => 'Order #1']);
@@ -121,6 +129,7 @@ $order->status->state->context->orderId;
 
 When a model is created, machines are automatically initialized:
 
+<!-- doctest-attr: ignore -->
 ```php
 $order = Order::create();
 
@@ -133,8 +142,9 @@ $order->status->state->matches('pending'); // true
 
 ### Controlling Initialization
 
-Override `shouldInitializeMachine()` to control when machines initialize:
+Override the `shouldInitializeMachine()` method to control when machines initialize:
 
+<!-- doctest-attr: ignore -->
 ```php
 class Order extends Model
 {
@@ -152,6 +162,7 @@ class Order extends Model
 
 When you access a machine attribute, it's automatically restored:
 
+<!-- doctest-attr: ignore -->
 ```php
 // First access
 $order = Order::find(1);
@@ -166,6 +177,7 @@ $order->status->state->matches('submitted'); // true
 
 A model can have multiple machines:
 
+<!-- doctest-attr: ignore -->
 ```php
 class Order extends Model
 {
@@ -200,6 +212,7 @@ $order->fulfillment->send(['type' => 'SHIP']);
 
 ### Order Model
 
+<!-- doctest-attr: ignore -->
 ```php
 namespace App\Models;
 
@@ -253,6 +266,7 @@ class Order extends Model
 
 ### Order Machine
 
+<!-- doctest-attr: ignore -->
 ```php
 namespace App\Machines;
 
@@ -303,6 +317,7 @@ class OrderStatusMachine extends Machine
 
 ### Controller Usage
 
+<!-- doctest-attr: ignore -->
 ```php
 namespace App\Http\Controllers;
 
@@ -339,6 +354,7 @@ class OrderController extends Controller
 
 For more control, use `MachineCast` directly:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Casts\MachineCast;
 
@@ -354,6 +370,7 @@ class Order extends Model
 
 Since state is stored as a `root_event_id`, you need to join with `machine_events`:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 
@@ -374,6 +391,7 @@ $orders = Order::whereIn('status', function ($query) {
 
 ### 1. Use Descriptive Attribute Names
 
+<!-- doctest-attr: ignore -->
 ```php
 'order_status' => OrderStatusMachine::class,  // Clear
 'status' => OrderStatusMachine::class,        // OK
@@ -383,6 +401,7 @@ $orders = Order::whereIn('status', function ($query) {
 ### 2. Create Helper Methods
 
 ```php
+use Illuminate\Database\Eloquent\Model; // [!code hide]
 class Order extends Model
 {
     public function isEditable(): bool
@@ -402,6 +421,7 @@ class Order extends Model
 
 ### 3. Handle Machine Errors in Controllers
 
+<!-- doctest-attr: ignore -->
 ```php
 public function submit(Order $order)
 {

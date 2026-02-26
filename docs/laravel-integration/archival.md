@@ -1,6 +1,8 @@
-# Archival & Compression
+# Event Archival
 
-EventMachine includes a sophisticated event archival system to manage database growth and optimize performance.
+EventMachine includes an event archival system to manage database growth and optimize performance.
+
+**Related:** [Compression](/laravel-integration/compression) - Compression levels and performance tuning
 
 ## Overview
 
@@ -12,6 +14,7 @@ The archival system:
 
 ## Configuration
 
+<!-- doctest-attr: ignore -->
 ```php
 // config/machine.php
 return [
@@ -88,6 +91,7 @@ php artisan machine:archive-status --restore=01HXYZ...
 
 Archived events are stored in `machine_events_archive`:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 
@@ -106,6 +110,7 @@ $archive->last_restored_at;  // Last restore time
 
 ### Compression Statistics
 
+<!-- doctest-attr: ignore -->
 ```php
 $archive->compression_ratio;  // e.g., 0.15 (15% of original size)
 
@@ -117,6 +122,7 @@ $savingsPercent = (1 - $archive->compression_ratio) * 100;  // e.g., 85% savings
 
 When you access an archived machine, events are restored in-memory without modifying the database:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Events were archived 60 days ago
 $machine = Machine::withDefinition(OrderMachine::definition());
@@ -136,12 +142,13 @@ $state->matches('completed'); // Works normally
 Transparent restoration reads from the archive but doesn't write events back to `machine_events`. The archive stays intact, allowing repeated access without data duplication.
 :::
 
-## Auto-Restore (v3)
+## Auto-Restore
 
 When new events are created for an archived machine, EventMachine automatically restores all archived events and deletes the archive. This eliminates "split state" where some events are archived and some are active.
 
 ### How It Works
 
+<!-- doctest-attr: ignore -->
 ```php
 // Machine was archived 60 days ago with 100 events
 // Archive exists, machine_events is empty for this root_event_id
@@ -200,6 +207,7 @@ $machine->send(['type' => 'PAYMENT_RECEIVED', 'amount' => 500]);
 
 Auto-restore is always enabled when archival is enabled. No additional configuration needed.
 
+<!-- doctest-attr: ignore -->
 ```php
 // config/machine.php
 'archival' => [
@@ -211,6 +219,7 @@ Auto-restore is always enabled when archival is enabled. No additional configura
 
 After auto-restore, the machine won't be eligible for re-archival until the cooldown period passes and the inactivity threshold is met again.
 
+<!-- doctest-attr: ignore -->
 ```php
 'archival' => [
     'days_inactive' => 30,              // 30 days before archival
@@ -226,8 +235,9 @@ After auto-restore, the machine won't be eligible for re-archival until the cool
 
 ## Programmatic Archival
 
-### Archive Service
+### `ArchiveService`
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Services\ArchiveService;
 
@@ -251,6 +261,7 @@ $isArchived = MachineEventArchive::where('root_event_id', $rootId)->exists();
 
 ### Archive Job
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Jobs\ArchiveSingleMachineJob;
 
@@ -262,21 +273,11 @@ ArchiveSingleMachineJob::dispatch($rootEventId)
     ->onQueue('archival');
 ```
 
-## Compression Levels
-
-| Level | Compression | Speed | Use Case |
-|-------|-------------|-------|----------|
-| 0 | None | Fastest | Testing |
-| 1-3 | Low | Fast | Real-time archival |
-| 4-6 | Medium | Balanced | Most use cases |
-| 7-9 | High | Slow | Storage-constrained |
-
-Level 6 (default) provides a good balance of compression and speed.
-
 ## Monitoring
 
 ### Archive Statistics
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 
@@ -299,6 +300,7 @@ $recent = MachineEventArchive::where('archived_at', '>=', now()->subDay())
 
 ### Event Distribution
 
+<!-- doctest-attr: ignore -->
 ```php
 // Events per machine type
 $distribution = MachineEvent::selectRaw('machine_id, COUNT(*) as count')
@@ -316,6 +318,7 @@ $candidates = MachineEvent::selectRaw('root_event_id, MAX(created_at) as last_ac
 
 Add to your scheduler:
 
+<!-- doctest-attr: ignore -->
 ```php
 // app/Console/Kernel.php
 protected function schedule(Schedule $schedule): void
@@ -351,6 +354,7 @@ php artisan queue:work --queue=archival --tries=3
 
 ### 1. Start with Conservative Settings
 
+<!-- doctest-attr: ignore -->
 ```php
 'days_inactive' => 30,
 'compression_level' => 6,
@@ -376,6 +380,7 @@ php artisan queue:work --queue=archival
 
 For e-commerce systems with thousands of orders daily:
 
+<!-- doctest-attr: ignore -->
 ```php
 // config/machine.php
 'days_inactive' => 14,       // Archive completed orders after 2 weeks
@@ -391,6 +396,7 @@ For e-commerce systems with thousands of orders daily:
 
 Different archival strategies per tenant tier:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Dynamic configuration based on tenant
 $tenantConfig = match ($tenant->plan) {
@@ -406,6 +412,7 @@ $service = new ArchiveService($tenantConfig);
 
 When multiple services share the event store:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Schedule different services at different times
 $schedule->command('machine:archive-events')
@@ -419,133 +426,18 @@ ArchiveSingleMachineJob::dispatch($rootEventId)
     ->onQueue('archival-low-priority');
 ```
 
-## Performance Tuning
-
-### Compression Level Selection
-
-| Scenario | Recommended Level | Rationale |
-|----------|------------------|-----------|
-| Real-time archival | 1-3 | Speed matters more than size |
-| Nightly batch jobs | 6 | Good balance (default) |
-| Storage-constrained | 9 | Maximum compression |
-| SSD storage | 4-6 | Fast I/O compensates |
-| HDD storage | 7-9 | Minimize disk usage |
-
-### Dispatch Limit Optimization
-
-The `dispatch_limit` controls how many workflows (unique root_event_ids) are found and dispatched per scheduler run:
-
-```php
-// Conservative - fewer jobs per run, more runs
-'dispatch_limit' => 25,   // Memory-constrained environments
-
-// Aggressive - more jobs per run, faster archival
-'dispatch_limit' => 200,  // High-capacity environments
-```
-
-**Throughput estimation:**
-- dispatch_limit × runs_per_hour × workers = workflows/hour
-- Example: 50 × 12 × 4 = 2400 workflows/hour
-
-### Index Strategy
-
-Ensure these indexes exist for optimal performance:
-
-```sql
--- For finding archival candidates
-CREATE INDEX idx_machine_events_last_activity
-ON machine_events (root_event_id, created_at);
-
--- For archive lookups
-CREATE INDEX idx_archives_machine_archived
-ON machine_event_archives (machine_id, archived_at);
-```
-
-### Query Optimization for Large Tables
-
-```php
-// Instead of loading all eligible machines at once
-$service = new ArchiveService();
-
-// Process in chunks
-$eligible = $service->getEligibleInstances(limit: 100);
-
-while ($eligible->isNotEmpty()) {
-    $rootIds = $eligible->pluck('root_event_id')->toArray();
-    $service->batchArchive($rootIds);
-
-    $eligible = $service->getEligibleInstances(limit: 100);
-}
-```
-
-## Storage Estimation
-
-### Calculate Current Storage
-
-```php
-use Tarfinlabs\EventMachine\Models\MachineEvent;
-use Tarfinlabs\EventMachine\Support\CompressionManager;
-
-// Sample 100 machines for estimation
-$samples = MachineEvent::selectRaw('root_event_id, COUNT(*) as count')
-    ->groupBy('root_event_id')
-    ->limit(100)
-    ->get();
-
-$totalOriginal = 0;
-$totalCompressed = 0;
-
-foreach ($samples as $sample) {
-    $events = MachineEvent::where('root_event_id', $sample->root_event_id)
-        ->get()
-        ->toArray();
-
-    $jsonData = json_encode($events);
-    $originalSize = strlen($jsonData);
-    $totalOriginal += $originalSize;
-
-    if (CompressionManager::shouldCompress($jsonData)) {
-        $compressed = CompressionManager::compressJson($jsonData);
-        $totalCompressed += strlen($compressed);
-    } else {
-        $totalCompressed += $originalSize;
-    }
-}
-
-$ratio = $totalCompressed / $totalOriginal;
-echo "Estimated compression ratio: " . round($ratio * 100) . "%";
-echo "Potential savings: " . round((1 - $ratio) * 100) . "%";
-```
-
-### Project Future Storage
-
-```php
-// Current stats
-$currentEvents = MachineEvent::count();
-$avgEventSize = 500; // bytes, estimate from sampling
-$growthRate = 10000; // events per day
-
-// Project 30 days
-$futureEvents = $currentEvents + ($growthRate * 30);
-$uncompressedSize = $futureEvents * $avgEventSize;
-$compressedSize = $uncompressedSize * 0.15; // 85% compression
-
-echo "30-day projection without archival: " .
-    round($uncompressedSize / 1024 / 1024 / 1024, 2) . " GB";
-echo "30-day projection with archival: " .
-    round($compressedSize / 1024 / 1024 / 1024, 2) . " GB";
-```
-
 ## Troubleshooting
 
 ### Events Not Archiving
 
 1. Check if archival is enabled:
+<!-- doctest-attr: ignore -->
    ```php
    dd(config('machine.archival.enabled'));
    ```
 
 2. Verify `days_inactive` setting:
+<!-- doctest-attr: ignore -->
    ```php
    $service = new ArchiveService();
    $eligible = $service->getEligibleInstances();
@@ -590,6 +482,7 @@ echo "30-day projection with archival: " .
 
 If machines are being archived and restored repeatedly:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Increase cooldown period
 'restore_cooldown_hours' => 72, // 3 days
@@ -604,4 +497,3 @@ Original events are deleted after archival, but:
 1. MySQL may not immediately reclaim space - run `OPTIMIZE TABLE machine_events`
 2. Check if transactions are holding locks
 3. Verify archival completed successfully in logs
-

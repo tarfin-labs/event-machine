@@ -30,8 +30,9 @@ class ProcessOrderAction extends ActionBehavior
 
 ## Parameter Injection
 
-The `__invoke` method receives injected parameters:
+The `__invoke()` method receives injected parameters:
 
+<!-- doctest-attr: ignore -->
 ```php
 public function __invoke(
     ContextManager $context,      // Current context
@@ -58,6 +59,7 @@ public function __invoke(
 
 Only declare the parameters you need:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Only context needed
 public function __invoke(ContextManager $context): void
@@ -88,7 +90,9 @@ public function __invoke(
 
 Custom context classes are automatically injected:
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class OrderContext extends ContextManager
 {
     public string $orderId = '';
@@ -109,6 +113,8 @@ class ProcessOrderAction extends ActionBehavior
 ## Guard with Dependencies
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class HasPermissionGuard extends GuardBehavior
 {
     public function __construct(
@@ -125,6 +131,8 @@ class HasPermissionGuard extends GuardBehavior
 ## Calculator with Dependencies
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class CalculateTaxCalculator extends CalculatorBehavior
 {
     public function __construct(
@@ -146,6 +154,8 @@ class CalculateTaxCalculator extends CalculatorBehavior
 ## Event Behavior with Dependencies
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class SubmitOrderEvent extends EventBehavior
 {
     public function __construct(
@@ -169,6 +179,8 @@ class SubmitOrderEvent extends EventBehavior
 ## Result with Dependencies
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class OrderResultBehavior extends ResultBehavior
 {
     public function __construct(
@@ -194,6 +206,8 @@ class OrderResultBehavior extends ResultBehavior
 ### Complete Action with Multiple Services
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 class CompleteCheckoutAction extends ActionBehavior
 {
     public function __construct(
@@ -245,6 +259,8 @@ class CompleteCheckoutAction extends ActionBehavior
 ### Guard with External Service
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class CheckInventoryGuard extends GuardBehavior
 {
     public function __construct(
@@ -266,6 +282,8 @@ class CheckInventoryGuard extends GuardBehavior
 ### Validation Guard with Repository
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class ValidateUserGuard extends ValidationGuardBehavior
 {
     public ?string $errorMessage = null;
@@ -302,6 +320,7 @@ class ValidateUserGuard extends ValidationGuardBehavior
 
 ### In Service Provider
 
+<!-- doctest-attr: ignore -->
 ```php
 // app/Providers/AppServiceProvider.php
 public function register(): void
@@ -318,6 +337,7 @@ public function register(): void
 
 ### Environment-Based Binding
 
+<!-- doctest-attr: ignore -->
 ```php
 public function register(): void
 {
@@ -335,6 +355,7 @@ public function register(): void
 
 ### Mock Dependencies
 
+<!-- doctest-attr: ignore -->
 ```php
 it('processes order with mocked services', function () {
     $orderService = Mockery::mock(OrderService::class);
@@ -353,6 +374,7 @@ it('processes order with mocked services', function () {
 
 ### Using Fake Behaviors
 
+<!-- doctest-attr: ignore -->
 ```php
 it('uses fake behavior for testing', function () {
     ProcessOrderAction::fake();
@@ -375,6 +397,7 @@ it('uses fake behavior for testing', function () {
 
 ### 1. Use Interface Bindings
 
+<!-- doctest-attr: ignore -->
 ```php
 // Define interface
 interface PaymentGatewayInterface
@@ -393,6 +416,7 @@ public function __construct(
 
 ### 2. Keep Dependencies Minimal
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good - focused dependencies
 public function __construct(
@@ -415,6 +439,7 @@ public function __construct(
 
 ### 3. Use Readonly Properties
 
+<!-- doctest-attr: ignore -->
 ```php
 public function __construct(
     private readonly OrderService $orders,  // readonly prevents reassignment
@@ -423,6 +448,7 @@ public function __construct(
 
 ### 4. Inject Interfaces, Not Implementations
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good
 public function __construct(

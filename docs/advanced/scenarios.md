@@ -6,7 +6,9 @@ Scenarios allow you to define alternative state machine configurations that can 
 
 ### Enabling Scenarios
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'initial' => 'stateA',
@@ -44,6 +46,7 @@ MachineDefinition::define(
 
 Include `scenarioType` in the event payload:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Normal flow
 $machine->send(['type' => 'EVENT']);
@@ -70,6 +73,7 @@ Scenarios can override:
 
 ### Transitions
 
+<!-- doctest-attr: ignore -->
 ```php
 'scenarios' => [
     'express' => [
@@ -84,6 +88,7 @@ Scenarios can override:
 
 ### Actions
 
+<!-- doctest-attr: ignore -->
 ```php
 'scenarios' => [
     'debug' => [
@@ -101,6 +106,7 @@ Scenarios can override:
 
 ### Entry/Exit Actions
 
+<!-- doctest-attr: ignore -->
 ```php
 'scenarios' => [
     'monitoring' => [
@@ -114,6 +120,7 @@ Scenarios can override:
 
 ### Guards
 
+<!-- doctest-attr: ignore -->
 ```php
 'scenarios' => [
     'lenient' => [
@@ -133,7 +140,9 @@ Scenarios can override:
 
 ### A/B Testing
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'id' => 'checkout',
@@ -189,7 +198,9 @@ $machine->send([
 
 ### Feature Flags
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'scenarios_enabled' => true,
@@ -228,7 +239,9 @@ $machine->send([
 
 ### Environment-Specific Behavior
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'scenarios_enabled' => true,
@@ -268,7 +281,9 @@ $machine->send([
 
 ### Multi-Tenant Customization
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'id' => 'approval',
@@ -306,7 +321,10 @@ $scenario = $tenant->requiresDualApproval() ? 'tenant_enterprise' : null;
 
 ## Complete Example
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Actor\Machine; // [!code hide]
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 class OrderMachine extends Machine
 {
     public static function definition(): MachineDefinition
@@ -374,6 +392,7 @@ $testMachine->send([
 
 ## Testing with Scenarios
 
+<!-- doctest-attr: ignore -->
 ```php
 it('uses test scenario when specified', function () {
     $machine = OrderMachine::create();
@@ -401,6 +420,7 @@ it('uses default flow without scenario', function () {
 
 ### 1. Use Descriptive Scenario Names
 
+<!-- doctest-attr: ignore -->
 ```php
 'scenarios' => [
     'ab_test_checkout_v2' => [...],
@@ -411,6 +431,7 @@ it('uses default flow without scenario', function () {
 
 ### 2. Document Scenario Differences
 
+<!-- doctest-attr: ignore -->
 ```php
 'scenarios' => [
     // Skips validation for testing
@@ -426,6 +447,7 @@ it('uses default flow without scenario', function () {
 
 Override only what's necessary:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good - minimal override
 'scenarios' => [
@@ -441,6 +463,7 @@ Override only what's necessary:
 
 ### 4. Use Scenarios for Testing
 
+<!-- doctest-attr: ignore -->
 ```php
 // In tests
 $machine->send([

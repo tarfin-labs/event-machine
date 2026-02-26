@@ -35,6 +35,7 @@ No more scattered if/else chains. No more inconsistent state checks. Your busine
 <div class="feature-code">
 
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'initial' => 'draft',
@@ -72,7 +73,28 @@ Know exactly what happened, when, and why. Compliance-ready from day one. Debug 
 </div>
 <div class="feature-code">
 
+<!-- doctest-attr: bootstrap="laravel,db" -->
 ```php
+// [!code hide:start]
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
+$order = Machine::create(
+    definition: MachineDefinition::define(
+        config: [
+            'id' => 'order',
+            'initial' => 'draft',
+            'context' => [],
+            'states' => [
+                'draft'    => ['on' => ['SUBMIT' => 'review']],
+                'review'   => ['on' => ['APPROVE' => 'approved']],
+                'approved' => ['type' => 'final'],
+            ],
+        ],
+    ),
+);
+// [!code hide:end]
 // Send an event
 $order->send(['type' => 'SUBMIT']);
 
@@ -108,6 +130,7 @@ Regulatory audit? Legal discovery? Customer dispute? Your machine history is que
 </div>
 <div class="feature-code">
 
+<!-- doctest-attr: ignore -->
 ```php
 // Find all approval events in date range
 MachineEvent::where('root_event_id', $rootEventId)
@@ -146,6 +169,7 @@ Every behavior is a single-responsibility class. Compose them freely to build co
 </div>
 <div class="feature-code">
 
+<!-- doctest-attr: ignore -->
 ```php
 'CHECKOUT' => [
     'target'      => 'processing',
@@ -156,6 +180,9 @@ Every behavior is a single-responsibility class. Compose them freely to build co
 ```
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class PriceCalculator extends CalculatorBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -166,6 +193,9 @@ class PriceCalculator extends CalculatorBehavior
 ```
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class MinimumOrderGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
@@ -176,6 +206,9 @@ class MinimumOrderGuard extends GuardBehavior
 ```
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class SendReceiptAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -202,6 +235,7 @@ Use `shouldReturn()` to mock guards, `shouldRun()` to verify actions. Assert beh
 </div>
 <div class="feature-code">
 
+<!-- doctest-attr: ignore -->
 ```php
 it('blocks checkout with insufficient total', function () {
     $context = new ContextManager(['total' => 50]);
@@ -210,6 +244,7 @@ it('blocks checkout with insufficient total', function () {
 });
 ```
 
+<!-- doctest-attr: ignore -->
 ```php
 it('sends receipt on checkout', function () {
     SendReceiptAction::shouldRun()->once();
@@ -220,6 +255,7 @@ it('sends receipt on checkout', function () {
 });
 ```
 
+<!-- doctest-attr: ignore -->
 ```php
 it('can mock guard to always pass', function () {
     MinimumOrderGuard::shouldReturn(true);
@@ -242,7 +278,7 @@ it('can mock guard to always pass', function () {
 
 Six months later, compliance asks about order #12847? One line brings the entire machine back with full context and history.
 
-[Archival & restoration &rarr;](/laravel-integration/archival-compression)
+[Archival & restoration &rarr;](/laravel-integration/archival)
 
 </div>
 <div class="feature-code">
@@ -255,6 +291,7 @@ php artisan machine:archive-events
 # Storage: 2.3 MB → 127 KB
 ```
 
+<!-- doctest-attr: ignore -->
 ```php
 // Months later: restore the entire machine
 $archive = MachineEventArchive::where(
@@ -288,6 +325,9 @@ No more `$context['total']` typos. No more missing validation. IDE autocompletio
 <div class="feature-code">
 
 ```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+enum OrderStatus { case Draft; } // [!code hide]
+
 class OrderContext extends ContextManager
 {
     public function __construct(
@@ -311,11 +351,65 @@ class OrderContext extends ContextManager
 }
 ```
 
+<!-- doctest-attr: ignore -->
 ```php
 // Type-safe access everywhere
 $order->state->context->total;        // int
 $order->state->context->itemCount();  // method calls work
 $order->state->context->status;       // enum
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
+## Parallel States
+
+**Run concurrent workflows.** Multiple independent processes can be active simultaneously in a single machine. Payment, shipping, and document generation - all tracked together.
+
+When all parallel regions complete, `onDone` triggers the next step. No polling, no callbacks, no coordination code.
+
+[Learn parallel states &rarr;](/advanced/parallel-states/)
+
+</div>
+<div class="feature-code">
+
+<!-- doctest-attr: ignore -->
+```php
+'processing' => [
+    'type' => 'parallel',
+    'onDone' => 'fulfilled',  // When ALL regions complete
+    'states' => [
+        'payment' => [
+            'initial' => 'pending',
+            'states' => [
+                'pending' => ['on' => ['PAID' => 'done']],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+        'shipping' => [
+            'initial' => 'preparing',
+            'states' => [
+                'preparing' => ['on' => ['SHIPPED' => 'done']],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+    ],
+],
+```
+
+<!-- doctest-attr: ignore -->
+```php
+// Both regions active simultaneously
+$state->matches('processing.payment.pending');   // true
+$state->matches('processing.shipping.preparing'); // true
+
+// Events handled by their respective regions
+$machine->send(['type' => 'PAID']);    // payment → done
+$machine->send(['type' => 'SHIPPED']); // shipping → done
+// All final → auto-transitions to 'fulfilled'
 ```
 
 </div>
@@ -336,6 +430,10 @@ Attach machines to models. Inject services into behaviors. Validate with Artisan
 <div class="feature-code">
 
 ```php
+use Illuminate\Database\Eloquent\Model; // [!code hide]
+use Tarfinlabs\EventMachine\Traits\HasMachines; // [!code hide]
+use Tarfinlabs\EventMachine\Casts\MachineCast; // [!code hide]
+
 // Attach to Eloquent models
 class Order extends Model
 {
@@ -348,6 +446,8 @@ class Order extends Model
 ```
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+
 // Dependency injection in behaviors
 class ProcessPaymentAction extends ActionBehavior
 {

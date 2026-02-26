@@ -15,6 +15,7 @@ Guide for upgrading between EventMachine versions.
 
 **Before (v2.x):**
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 class MyAction extends ActionBehavior
 {
     public function __invoke($context, $event): void
@@ -26,6 +27,9 @@ class MyAction extends ActionBehavior
 
 **After (v3.x):**
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 class MyAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): void
@@ -40,11 +44,13 @@ Parameters are now injected based on type hints, not position. Ensure all behavi
 #### 2. ContextManager Changes
 
 **Before (v2.x):**
+<!-- doctest-attr: ignore -->
 ```php
 $context->data['key'] = 'value';
 ```
 
 **After (v3.x):**
+<!-- doctest-attr: ignore -->
 ```php
 $context->set('key', 'value');
 // or
@@ -56,11 +62,13 @@ Direct array access is deprecated. Use `get()`, `set()`, and magic methods.
 #### 3. State Matching
 
 **Before (v2.x):**
+<!-- doctest-attr: ignore -->
 ```php
 $machine->state->value === 'pending';
 ```
 
 **After (v3.x):**
+<!-- doctest-attr: ignore -->
 ```php
 $machine->state->matches('pending');
 ```
@@ -70,6 +78,7 @@ The `matches()` method handles machine ID prefixing automatically.
 #### 4. Event Class Registration
 
 **Before (v2.x):**
+<!-- doctest-attr: ignore -->
 ```php
 'on' => [
     'SUBMIT' => [...],
@@ -82,6 +91,7 @@ The `matches()` method handles machine ID prefixing automatically.
 ```
 
 **After (v3.x):**
+<!-- doctest-attr: ignore -->
 ```php
 // Option 1: Event class as key (auto-registered)
 'on' => [
@@ -105,6 +115,8 @@ Using event classes as transition keys is now supported.
 
 **New in v3.x:**
 ```php
+use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class CalculateTotalCalculator extends CalculatorBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -134,6 +146,7 @@ New columns may be added to the `machine_events` table.
 
 #### Step 3: Update Behavior Type Hints
 
+<!-- doctest-attr: ignore -->
 ```php
 // Before
 public function __invoke($context, $event): void
@@ -144,6 +157,7 @@ public function __invoke(ContextManager $context, EventBehavior $event): void
 
 #### Step 4: Update State Checks
 
+<!-- doctest-attr: ignore -->
 ```php
 // Before
 if ($machine->state->value === 'order.pending') {
@@ -154,6 +168,7 @@ if ($machine->state->matches('pending')) {
 
 #### Step 5: Update Context Access
 
+<!-- doctest-attr: ignore -->
 ```php
 // Before
 $machine->state->context->data['orderId']
@@ -168,6 +183,7 @@ $machine->state->context->get('orderId')
 
 Consider moving context modifications from guards to calculators:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Before (v2.x) - guard modifying context
 'guards' => [
@@ -196,6 +212,7 @@ Consider moving context modifications from guards to calculators:
 
 Run before guards to modify context:
 
+<!-- doctest-attr: ignore -->
 ```php
 'on' => [
     'SUBMIT' => [
@@ -211,6 +228,7 @@ Run before guards to modify context:
 
 Use event classes directly as transition keys:
 
+<!-- doctest-attr: ignore -->
 ```php
 use App\Events\SubmitEvent;
 
@@ -226,6 +244,7 @@ use App\Events\SubmitEvent;
 Custom context classes with full validation:
 
 ```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class OrderContext extends ContextManager
 {
     public function __construct(
@@ -257,11 +276,13 @@ php artisan machine:archive-events
 #### State Value Format
 
 **Before (v1.x):**
+<!-- doctest-attr: ignore -->
 ```php
 $machine->state->value; // 'pending'
 ```
 
 **After (v2.x):**
+<!-- doctest-attr: ignore -->
 ```php
 $machine->state->value; // ['machine.pending']
 ```
@@ -271,12 +292,14 @@ State values are now arrays containing the full path.
 #### Machine Creation
 
 **Before (v1.x):**
+<!-- doctest-attr: ignore -->
 ```php
 $machine = new OrderMachine();
 $machine->start();
 ```
 
 **After (v2.x):**
+<!-- doctest-attr: ignore -->
 ```php
 $machine = OrderMachine::create();
 ```
@@ -286,11 +309,13 @@ Use the static `create()` method.
 #### Event Sending
 
 **Before (v1.x):**
+<!-- doctest-attr: ignore -->
 ```php
 $machine->dispatch('SUBMIT', ['key' => 'value']);
 ```
 
 **After (v2.x):**
+<!-- doctest-attr: ignore -->
 ```php
 $machine->send([
     'type' => 'SUBMIT',

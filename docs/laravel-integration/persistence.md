@@ -2,10 +2,11 @@
 
 EventMachine provides full event sourcing with automatic persistence to the database.
 
-## MachineEvent Model
+## `MachineEvent` Model
 
 All events are stored in the `machine_events` table:
 
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 
@@ -35,8 +36,9 @@ $events = MachineEvent::where('machine_id', 'order')
 
 ## Automatic Persistence
 
-Events are automatically persisted when using `Machine->send()`:
+Events are automatically persisted when using the `Machine->send()` method:
 
+<!-- doctest-attr: ignore -->
 ```php
 $machine = OrderMachine::create();
 
@@ -51,7 +53,9 @@ $machine->send(['type' => 'APPROVE']);
 
 For ephemeral machines or testing:
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'should_persist' => false,
@@ -65,6 +69,7 @@ MachineDefinition::define(
 
 Access history through the state:
 
+<!-- doctest-attr: ignore -->
 ```php
 $history = $machine->state->history;
 
@@ -80,6 +85,7 @@ $history->where('source', 'external');
 
 The `root_event_id` links all events in a machine instance:
 
+<!-- doctest-attr: ignore -->
 ```php
 $machine = OrderMachine::create();
 
@@ -100,6 +106,7 @@ $events->count(); // 3 (plus internal events)
 
 Restore a machine from its root event ID:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Save root ID somewhere (e.g., model attribute)
 $rootId = $machine->state->history->first()->root_event_id;
@@ -116,6 +123,7 @@ $restored->state->context->orderId; // Original value
 
 Context is stored incrementally to minimize database size:
 
+<!-- doctest-attr: ignore -->
 ```php
 // First event: Full context
 {
@@ -145,11 +153,42 @@ Context is stored incrementally to minimize database size:
 
 During restoration, context is reconstructed by merging all changes.
 
+### Context Merge Strategy
+
+EventMachine uses **deep merge** for context reconstruction:
+
+1. Start with initial context (first event)
+2. For each subsequent event, merge context changes recursively
+3. **Arrays are replaced, not merged** - use nested objects for partial updates
+
+<!-- doctest-attr: ignore -->
+```php
+// Event 1: Initial context
+{ "items": [{"id": 1}], "meta": {"created": "2024-01-01"} }
+
+// Event 2: Add item, update meta
+{ "items": [{"id": 1}, {"id": 2}], "meta": {"updated": "2024-01-02"} }
+
+// Final merged context:
+{
+    "items": [{"id": 1}, {"id": 2}],   // Array replaced entirely
+    "meta": {
+        "created": "2024-01-01",        // Old key preserved
+        "updated": "2024-01-02"         // New key added
+    }
+}
+```
+
+::: warning Array Replacement
+Arrays are **replaced**, not merged. If you need to append items, always include the full array in the context change, or store items in a nested object structure.
+:::
+
 ## Transactional Events
 
 Events can be wrapped in database transactions:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 class CriticalEvent extends EventBehavior
 {
     public bool $isTransactional = true; // Default
@@ -163,6 +202,7 @@ class CriticalEvent extends EventBehavior
 
 If any action fails, all database changes roll back:
 
+<!-- doctest-attr: ignore -->
 ```php
 try {
     $machine->send(new CriticalEvent());
@@ -175,7 +215,9 @@ try {
 
 For performance-critical operations:
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 class FastEvent extends EventBehavior
 {
     public bool $isTransactional = false;
@@ -190,6 +232,7 @@ Non-transactional events won't roll back on failure. Use with caution.
 
 EventMachine uses distributed locking to prevent concurrent modifications:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Machine A
 $machineA = OrderMachine::create(state: $rootId);
@@ -211,6 +254,7 @@ try {
 
 Lock timeout is 60 seconds with a 5-second wait:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Behind the scenes
 Cache::lock("machine:{$rootEventId}", 60)->block(5, function () {
@@ -222,6 +266,7 @@ Cache::lock("machine:{$rootEventId}", 60)->block(5, function () {
 
 EventMachine generates internal events for tracking:
 
+<!-- doctest-attr: ignore -->
 ```php
 $history = $machine->state->history;
 
@@ -240,6 +285,7 @@ $internal = $history->where('source', 'internal');
 
 ### By Machine Instance
 
+<!-- doctest-attr: ignore -->
 ```php
 $events = MachineEvent::where('root_event_id', $rootId)
     ->orderBy('sequence_number')
@@ -248,6 +294,7 @@ $events = MachineEvent::where('root_event_id', $rootId)
 
 ### By Machine Type
 
+<!-- doctest-attr: ignore -->
 ```php
 $events = MachineEvent::where('machine_id', 'order')
     ->latest()
@@ -257,6 +304,7 @@ $events = MachineEvent::where('machine_id', 'order')
 
 ### By Event Type
 
+<!-- doctest-attr: ignore -->
 ```php
 $submits = MachineEvent::where('type', 'SUBMIT')
     ->where('source', 'external')
@@ -265,6 +313,7 @@ $submits = MachineEvent::where('type', 'SUBMIT')
 
 ### By Date Range
 
+<!-- doctest-attr: ignore -->
 ```php
 $events = MachineEvent::whereBetween('created_at', [$start, $end])
     ->get();
@@ -272,6 +321,7 @@ $events = MachineEvent::whereBetween('created_at', [$start, $end])
 
 ### External Events Only
 
+<!-- doctest-attr: ignore -->
 ```php
 $external = MachineEvent::where('root_event_id', $rootId)
     ->where('source', 'external')
@@ -282,7 +332,9 @@ $external = MachineEvent::where('root_event_id', $rootId)
 
 For MachineDefinition (without Machine class):
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 $definition = MachineDefinition::define([...]);
 $state = $definition->getInitialState();
 
@@ -306,6 +358,7 @@ The migration creates indexes on:
 
 For high-volume machines, enable archival:
 
+<!-- doctest-attr: ignore -->
 ```php
 // config/machine.php
 'archival' => [
@@ -315,13 +368,14 @@ For high-volume machines, enable archival:
 ],
 ```
 
-See [Archival & Compression](/laravel-integration/archival-compression) for details.
+See [Archival](/laravel-integration/archival) for details.
 
 ## Best Practices
 
 ### 1. Store Root Event ID
 
 ```php
+use Illuminate\Database\Eloquent\Model; // [!code hide]
 class Order extends Model
 {
     protected function machines(): array
@@ -337,7 +391,9 @@ class Order extends Model
 
 ### 2. Use Transactions for Critical Operations
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 class PaymentEvent extends EventBehavior
 {
     public bool $isTransactional = true;
@@ -346,6 +402,7 @@ class PaymentEvent extends EventBehavior
 
 ### 3. Query Efficiently
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good - indexed query
 MachineEvent::where('root_event_id', $id)->get();

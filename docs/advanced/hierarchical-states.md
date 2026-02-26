@@ -5,6 +5,7 @@ Hierarchical (nested/compound) states allow you to organize complex state machin
 ## Basic Structure
 
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'initial' => 'active',
@@ -46,6 +47,7 @@ stateDiagram-v2
 
 Leaf states with no children:
 
+<!-- doctest-attr: ignore -->
 ```php
 'idle' => [
     'on' => ['START' => 'running'],
@@ -56,6 +58,7 @@ Leaf states with no children:
 
 Parent states with children:
 
+<!-- doctest-attr: ignore -->
 ```php
 'active' => [
     'initial' => 'idle',  // Required for compound states
@@ -70,6 +73,7 @@ Parent states with children:
 
 Terminal states:
 
+<!-- doctest-attr: ignore -->
 ```php
 'completed' => [
     'type' => 'final',
@@ -80,6 +84,7 @@ Terminal states:
 
 Child states inherit transitions from ancestors:
 
+<!-- doctest-attr: ignore -->
 ```php
 'active' => [
     'states' => [
@@ -97,6 +102,7 @@ Child states inherit transitions from ancestors:
 
 Child transitions take priority over parent transitions:
 
+<!-- doctest-attr: ignore -->
 ```php
 'active' => [
     'on' => ['SUBMIT' => 'submitted'],  // Default
@@ -111,6 +117,7 @@ Child transitions take priority over parent transitions:
 
 ## Deep Nesting
 
+<!-- doctest-attr: ignore -->
 ```php
 'order' => [
     'initial' => 'draft',
@@ -172,6 +179,7 @@ stateDiagram-v2
 
 ### Automatic ID Generation
 
+<!-- doctest-attr: ignore -->
 ```php
 // Given this structure:
 'id' => 'order',
@@ -190,6 +198,7 @@ stateDiagram-v2
 
 ### Targeting Nested States
 
+<!-- doctest-attr: ignore -->
 ```php
 // Target using full path
 'on' => [
@@ -206,6 +215,7 @@ stateDiagram-v2
 
 Use `#` to target any state by ID:
 
+<!-- doctest-attr: ignore -->
 ```php
 'review' => [
     'states' => [
@@ -223,6 +233,7 @@ Use `#` to target any state by ID:
 
 Compound states must specify an initial child:
 
+<!-- doctest-attr: ignore -->
 ```php
 'processing' => [
     'initial' => 'validating',  // Required
@@ -239,6 +250,7 @@ When entering `processing`, it automatically enters `validating`.
 
 Actions execute at each level:
 
+<!-- doctest-attr: ignore -->
 ```php
 'order' => [
     'entry' => 'logOrderEntry',  // Runs when entering order
@@ -278,7 +290,9 @@ When leaving from `validating` to outside `order`:
 
 ### Multi-Step Form
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'id' => 'wizard',
@@ -350,6 +364,7 @@ MachineDefinition::define(
 
 ### E-commerce Order
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'cart' => [
@@ -411,22 +426,31 @@ MachineDefinition::define(
 
 ## Checking Current State
 
+<!-- doctest-attr: ignore -->
 ```php
 $machine = WizardMachine::create();
 $machine->send(['type' => 'NEXT']); // Go to step 2
 
-// Check nested state
-$machine->state->matches('filling');           // true
-$machine->state->matches('filling.step2');     // true
+// Check nested state with `matches()` - requires full path from initial state
+$machine->state->matches('filling.step2');     // true (full path)
+
+// Partial paths return false
+$machine->state->matches('filling');           // false - not a leaf state
+$machine->state->matches('step2');             // false - missing parent path
 
 // State value shows full path
 $machine->state->value; // ['wizard.filling.step2']
 ```
 
+::: warning Full Path Required
+The `matches()` method requires the full path to the leaf state. Partial paths or just the leaf state name will return `false`. Always specify the complete path from the machine's initial state.
+:::
+
 ## Best Practices
 
 ### 1. Use Hierarchy for Related States
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good - related states grouped
 'checkout' => [
@@ -441,6 +465,7 @@ $machine->state->value; // ['wizard.filling.step2']
 
 ### 2. Keep Nesting Shallow
 
+<!-- doctest-attr: ignore -->
 ```php
 // Prefer 2-3 levels max
 'order' => [
@@ -457,6 +482,7 @@ $machine->state->value; // ['wizard.filling.step2']
 
 ### 3. Use ID Targeting Sparingly
 
+<!-- doctest-attr: ignore -->
 ```php
 // Use for breaking out of hierarchy
 'approved' => [
@@ -471,6 +497,7 @@ $machine->state->value; // ['wizard.filling.step2']
 
 ### 4. Share Common Transitions at Parent Level
 
+<!-- doctest-attr: ignore -->
 ```php
 'checkout' => [
     'on' => [

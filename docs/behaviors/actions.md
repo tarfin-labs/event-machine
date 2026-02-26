@@ -27,6 +27,9 @@ sequenceDiagram
 ### Inline Functions
 
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 MachineDefinition::define(
     config: [
         'states' => [
@@ -49,7 +52,7 @@ MachineDefinition::define(
 
 ### Class-Based Actions
 
-```php
+```php ignore
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
 class IncrementAction extends ActionBehavior
@@ -68,7 +71,7 @@ class IncrementAction extends ActionBehavior
 
 ### Direct Class Reference
 
-```php
+```php ignore
 'on' => [
     'INCREMENT' => [
         'actions' => IncrementAction::class,
@@ -80,7 +83,7 @@ class IncrementAction extends ActionBehavior
 
 ### Array of Actions
 
-```php
+```php ignore
 'on' => [
     'SUBMIT' => [
         'target' => 'submitted',
@@ -91,7 +94,7 @@ class IncrementAction extends ActionBehavior
 
 ### Entry/Exit Actions
 
-```php
+```php ignore
 'states' => [
     'loading' => [
         'entry' => ['startSpinner', 'logEntry'],
@@ -108,6 +111,11 @@ class IncrementAction extends ActionBehavior
 Actions receive injected parameters:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Actor\State; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class ProcessAction extends ActionBehavior
 {
     public function __invoke(
@@ -127,21 +135,15 @@ class ProcessAction extends ActionBehavior
 }
 ```
 
-### Available Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$context` | `ContextManager` | Current machine context |
-| `$event` | `EventBehavior` | Triggering event with payload |
-| `$state` | `State` | Current machine state |
-| `$history` | `EventCollection` | Event history |
-| `$arguments` | `array` | Arguments from behavior string |
+::: tip Available Parameters
+See [Parameter Injection](/behaviors/introduction#parameter-injection) for the full list of injectable parameters (`ContextManager`, `EventBehavior`, `State`, `EventCollection`, `array`).
+:::
 
 ## Action Arguments
 
 Pass arguments using colon syntax:
 
-```php
+```php ignore
 // Configuration
 'actions' => 'addValue:100',
 
@@ -165,7 +167,7 @@ class AddValueAction extends ActionBehavior
 
 Class actions support constructor injection:
 
-```php
+```php no_run
 class ProcessOrderAction extends ActionBehavior
 {
     public function __construct(
@@ -190,6 +192,9 @@ class ProcessOrderAction extends ActionBehavior
 Actions can queue events for processing:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class ProcessAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -214,7 +219,7 @@ Raised events are processed after the current transition and all entry actions c
 
 Declare required context keys:
 
-```php
+```php no_run
 class ChargePaymentAction extends ActionBehavior
 {
     public static array $requiredContext = [
@@ -240,6 +245,9 @@ class ChargePaymentAction extends ActionBehavior
 Enable execution logging:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class ImportantAction extends ActionBehavior
 {
     public bool $shouldLog = true;
@@ -256,6 +264,10 @@ class ImportantAction extends ActionBehavior
 ### Updating Context
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class AddItemAction extends ActionBehavior
 {
     public function __invoke(
@@ -273,7 +285,7 @@ class AddItemAction extends ActionBehavior
 
 ### External Service Call
 
-```php
+```php no_run
 class SendEmailAction extends ActionBehavior
 {
     public function __construct(
@@ -297,7 +309,7 @@ class SendEmailAction extends ActionBehavior
 
 ### Database Operation
 
-```php
+```php no_run
 class CreateOrderAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -316,7 +328,7 @@ class CreateOrderAction extends ActionBehavior
 
 ### Conditional Logic
 
-```php
+```php no_run
 class ProcessPaymentAction extends ActionBehavior
 {
     public function __construct(
@@ -343,7 +355,7 @@ class ProcessPaymentAction extends ActionBehavior
 
 ### Chained Actions
 
-```php
+```php ignore
 'on' => [
     'CHECKOUT' => [
         'target' => 'processing',
@@ -360,7 +372,7 @@ class ProcessPaymentAction extends ActionBehavior
 
 ## Testing Actions
 
-```php
+```php no_run
 use Tests\Stubs\Actions\IncrementAction;
 
 it('increments the count', function () {
@@ -386,7 +398,7 @@ it('increments the count', function () {
 
 One action, one responsibility:
 
-```php
+```php ignore
 // Good
 class IncrementCountAction extends ActionBehavior { ... }
 class SendNotificationAction extends ActionBehavior { ... }
@@ -397,7 +409,7 @@ class DoEverythingAction extends ActionBehavior { ... }
 
 ### 2. Use Dependency Injection
 
-```php
+```php no_run
 class ProcessOrderAction extends ActionBehavior
 {
     public function __construct(
@@ -408,7 +420,7 @@ class ProcessOrderAction extends ActionBehavior
 
 ### 3. Handle Errors Gracefully
 
-```php
+```php no_run
 class ExternalApiAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -426,7 +438,7 @@ class ExternalApiAction extends ActionBehavior
 
 ### 4. Use Raised Events for Flow Control
 
-```php
+```php no_run
 class ValidateAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void

@@ -6,7 +6,10 @@ Guards are conditions that control whether a transition can occur. They evaluate
 
 ### Inline Guard
 
-```php
+```php no_run
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 MachineDefinition::define(
     config: [
         'states' => [
@@ -30,7 +33,7 @@ MachineDefinition::define(
 
 ### Class-Based Guard
 
-```php
+```php ignore
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 
 class HasItemsGuard extends GuardBehavior
@@ -49,9 +52,9 @@ class HasItemsGuard extends GuardBehavior
 
 ## Multiple Guards (AND Logic)
 
-All guards must pass for the transition to occur:
+All guards must pass for the transition to occur. Guards evaluate in order and **short-circuit** on the first failure:
 
-```php
+```php ignore
 'on' => [
     'SUBMIT' => [
         'target' => 'submitted',
@@ -59,6 +62,12 @@ All guards must pass for the transition to occur:
     ],
 ],
 ```
+
+If `hasItems` returns `false`, `hasValidPayment` and `hasShippingAddress` never execute.
+
+::: tip Performance
+Place fastest or most likely to fail guards first to minimize unnecessary evaluations.
+:::
 
 ```mermaid
 flowchart TD
@@ -75,7 +84,7 @@ flowchart TD
 
 Use multiple transition branches:
 
-```php
+```php ignore
 'on' => [
     'CHECK' => [
         ['target' => 'approved', 'guards' => 'isAutoApprovable'],
@@ -101,6 +110,11 @@ stateDiagram-v2
 Guards receive injected parameters:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Actor\State; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class AmountGuard extends GuardBehavior
 {
     public function __invoke(
@@ -119,21 +133,15 @@ class AmountGuard extends GuardBehavior
 }
 ```
 
-### Available Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$context` | `ContextManager` | Current machine context |
-| `$event` | `EventBehavior` | Triggering event |
-| `$state` | `State` | Current machine state |
-| `$history` | `EventCollection` | Event history |
-| `$arguments` | `array` | Guard arguments |
+::: tip Available Parameters
+See [Parameter Injection](/behaviors/introduction#parameter-injection) for the full list of injectable parameters (`ContextManager`, `EventBehavior`, `State`, `EventCollection`, `array`).
+:::
 
 ## Guard Arguments
 
 Pass arguments to guards:
 
-```php
+```php ignore
 // Configuration
 'guards' => 'minimumAmount:100',
 
@@ -152,7 +160,7 @@ class MinimumAmountGuard extends GuardBehavior
 
 ## Dependency Injection
 
-```php
+```php no_run
 class HasPermissionGuard extends GuardBehavior
 {
     public function __construct(
@@ -171,6 +179,9 @@ class HasPermissionGuard extends GuardBehavior
 Declare required context:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class HasBalanceGuard extends GuardBehavior
 {
     public static array $requiredContext = [
@@ -190,6 +201,9 @@ class HasBalanceGuard extends GuardBehavior
 ### Simple Condition
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class IsEvenGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
@@ -202,6 +216,9 @@ class IsEvenGuard extends GuardBehavior
 ### Complex Validation
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class CanCheckoutGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
@@ -233,7 +250,7 @@ class CanCheckoutGuard extends GuardBehavior
 
 ### External Service Check
 
-```php
+```php no_run
 class InventoryAvailableGuard extends GuardBehavior
 {
     public function __construct(
@@ -254,7 +271,7 @@ class InventoryAvailableGuard extends GuardBehavior
 
 ### User Permission Check
 
-```php
+```php ignore
 class HasRoleGuard extends GuardBehavior
 {
     public function __invoke(
@@ -272,7 +289,7 @@ class HasRoleGuard extends GuardBehavior
 
 ### Time-Based Guard
 
-```php
+```php no_run
 class WithinBusinessHoursGuard extends GuardBehavior
 {
     public function __invoke(): bool
@@ -286,6 +303,9 @@ class WithinBusinessHoursGuard extends GuardBehavior
 ### Event Payload Validation
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+
 class ValidPayloadGuard extends GuardBehavior
 {
     public function __invoke(EventBehavior $event): bool
@@ -327,6 +347,9 @@ sequenceDiagram
 Enable logging for debugging:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class DebugGuard extends GuardBehavior
 {
     public bool $shouldLog = true;
@@ -341,7 +364,7 @@ class DebugGuard extends GuardBehavior
 
 ## Testing Guards
 
-```php
+```php no_run
 it('blocks transition when guard fails', function () {
     $machine = MachineDefinition::define(
         config: [
@@ -383,7 +406,7 @@ it('blocks transition when guard fails', function () {
 
 Guards should only read, never modify:
 
-```php
+```php ignore
 // Good - only reads context
 'guards' => [
     'hasItems' => fn($ctx) => count($ctx->items) > 0,
@@ -397,7 +420,7 @@ Guards should only read, never modify:
 
 ### 2. Use Descriptive Names
 
-```php
+```php ignore
 // Good
 'guards' => ['hasMinimumBalance', 'isWithinLimit', 'hasValidPayment'],
 
@@ -407,7 +430,7 @@ Guards should only read, never modify:
 
 ### 3. Combine Simple Guards
 
-```php
+```php ignore
 // Multiple simple guards
 'guards' => ['isPositive', 'isWithinLimit'],
 
@@ -420,6 +443,9 @@ Guards should only read, never modify:
 For guards that should return error messages, use [Validation Guards](/behaviors/validation-guards):
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class ValidateAmountGuard extends ValidationGuardBehavior
 {
     public ?string $errorMessage = null;

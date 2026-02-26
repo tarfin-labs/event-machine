@@ -6,7 +6,7 @@ This guide covers all configuration options for defining state machines.
 
 The `config` array defines your machine's structure:
 
-```php
+```php ignore
 MachineDefinition::define(
     config: [
         'id' => 'order',
@@ -39,7 +39,7 @@ MachineDefinition::define(
 
 Identifies the machine for persistence and debugging:
 
-```php
+```php ignore
 'id' => 'checkout-flow',
 ```
 
@@ -51,7 +51,7 @@ State IDs are prefixed with the machine ID:
 
 Track machine versions for migrations:
 
-```php
+```php ignore
 'version' => '2.0.0',
 ```
 
@@ -59,7 +59,7 @@ Track machine versions for migrations:
 
 Specify which state the machine starts in:
 
-```php
+```php ignore
 'initial' => 'idle',
 ```
 
@@ -69,7 +69,7 @@ If not specified, the first state in the `states` array is used.
 
 Customize the path separator for nested state IDs:
 
-```php
+```php ignore
 'delimiter' => '/',  // Results in: order/checkout/payment
 ```
 
@@ -79,7 +79,7 @@ Default is `.` (dot): `order.checkout.payment`
 
 The `behavior` array maps names to implementations:
 
-```php
+```php ignore
 MachineDefinition::define(
     config: [...],
     behavior: [
@@ -120,7 +120,7 @@ MachineDefinition::define(
 
 Both approaches work:
 
-```php
+```php ignore
 'actions' => [
     // Class reference
     'sendEmail' => SendEmailAction::class,
@@ -148,7 +148,7 @@ Each state supports these keys:
 | `meta` | array | Custom metadata |
 | `description` | string | Human-readable description |
 
-```php
+```php ignore
 'processing' => [
     'description' => 'Order is being processed',
     'entry' => 'startProcessing',
@@ -173,7 +173,7 @@ Transitions can be simple strings or detailed arrays:
 | `calculators` | string\|array | Pre-guard computations |
 | `description` | string | Human-readable description |
 
-```php
+```php ignore
 'SUBMIT' => [
     'target' => 'submitted',
     'guards' => ['isValid', 'canSubmit'],
@@ -189,7 +189,7 @@ Transitions can be simple strings or detailed arrays:
 
 For ephemeral machines:
 
-```php
+```php ignore
 'should_persist' => false,
 ```
 
@@ -209,7 +209,7 @@ With `should_persist => true` (default):
 
 Enable dynamic state branching:
 
-```php
+```php no_run
 MachineDefinition::define(
     config: [
         'id' => 'payment',
@@ -246,7 +246,7 @@ MachineDefinition::define(
 
 Select scenario via event payload:
 
-```php
+```php no_run
 $machine->send([
     'type' => 'PAY',
     'payload' => [
@@ -261,21 +261,21 @@ EventMachine validates your configuration at definition time:
 
 ### Invalid Keys
 
-```php
+```php ignore
 // Throws: Invalid root level configuration keys: invalid_key
 'invalid_key' => 'value',
 ```
 
 ### Invalid State Type
 
-```php
+```php ignore
 // Throws: State 'foo' has invalid type: invalid
 'foo' => ['type' => 'invalid'],
 ```
 
 ### Final State Constraints
 
-```php
+```php ignore
 // Throws: Final state 'done' cannot have transitions
 'done' => [
     'type' => 'final',
@@ -285,7 +285,7 @@ EventMachine validates your configuration at definition time:
 
 ### Guarded Transition Order
 
-```php
+```php ignore
 // Throws: Default condition must be last
 'PAY' => [
     ['target' => 'failed'],           // No guard - must be last!
@@ -295,7 +295,7 @@ EventMachine validates your configuration at definition time:
 
 ## Complete Configuration Example
 
-```php
+```php no_run
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 MachineDefinition::define(

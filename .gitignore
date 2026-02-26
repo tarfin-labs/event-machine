@@ -11,4 +11,7 @@ node_modules
 .DS_Store
 docs/.vitepress/cache
 /.claude/
+AGENTS.md
+.perles
 thoughts/
+.beads/

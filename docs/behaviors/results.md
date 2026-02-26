@@ -5,7 +5,8 @@ Results define the output of a state machine when it reaches a final state. They
 ## Basic Result
 
 ```php
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
+use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 class OrderResultBehavior extends ResultBehavior
 {
@@ -24,7 +25,7 @@ class OrderResultBehavior extends ResultBehavior
 
 ### In State Configuration
 
-```php
+```php ignore
 'states' => [
     'processing' => [
         'on' => ['COMPLETE' => 'completed'],
@@ -43,7 +44,7 @@ class OrderResultBehavior extends ResultBehavior
 
 ### Direct Class Reference
 
-```php
+```php ignore
 'completed' => [
     'type' => 'final',
     'result' => OrderResultBehavior::class,
@@ -52,7 +53,7 @@ class OrderResultBehavior extends ResultBehavior
 
 ### Inline Result
 
-```php
+```php ignore
 'results' => [
     'getOrderResult' => fn(ContextManager $ctx) => [
         'orderId' => $ctx->orderId,
@@ -61,9 +62,22 @@ class OrderResultBehavior extends ResultBehavior
 ],
 ```
 
+### Return Types
+
+Results can return any type:
+
+```php ignore
+public function __invoke(ContextManager $context): array { ... }   // Array (most common)
+public function __invoke(ContextManager $context): Order { ... }   // Eloquent Model
+public function __invoke(ContextManager $context): int { ... }     // Scalar value
+public function __invoke(ContextManager $context): mixed { ... }   // Any type
+```
+
+The return value of `$machine->result()` matches whatever your result behavior returns.
+
 ## Accessing Results
 
-```php
+```php no_run
 $machine = OrderMachine::create();
 
 // Process to final state
@@ -78,9 +92,31 @@ echo $result['orderId'];
 echo $result['total'];
 ```
 
+::: warning Result Availability
+`result()` only returns a value when the machine is in a **final state** with a `result` behavior defined. If called before reaching a final state, or if the final state has no result defined, it returns `null`.
+
+```php no_run
+// Safe pattern
+if ($machine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
+    $result = $machine->result();
+}
+```
+:::
+
+## When to Use Results
+
+Results are useful when you need to:
+
+1. **Format output** - Transform context into API responses or display formats
+2. **Compute derived values** - Calculate values from final state without modifying context
+3. **Different outputs per final state** - Return different data structures for success vs. failure states
+4. **Hide implementation details** - Expose only relevant data, not the entire context
+
+If you just need the context data as-is, access `$state->context` directly instead.
+
 ## Different Results for Different Final States
 
-```php
+```php ignore
 'states' => [
     'processing' => [
         'on' => [
@@ -126,6 +162,11 @@ echo $result['total'];
 Results receive injected parameters:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+use Tarfinlabs\EventMachine\Actor\State; // [!code hide]
+use Tarfinlabs\EventMachine\EventCollection; // [!code hide]
+
 class ComplexResultBehavior extends ResultBehavior
 {
     public function __invoke(
@@ -152,7 +193,7 @@ class ComplexResultBehavior extends ResultBehavior
 
 ## Dependency Injection
 
-```php
+```php no_run
 class OrderResultBehavior extends ResultBehavior
 {
     public function __construct(
@@ -178,7 +219,7 @@ class OrderResultBehavior extends ResultBehavior
 
 ### Order Completion Result
 
-```php
+```php no_run
 class OrderCompletedResult extends ResultBehavior
 {
     public function __invoke(ContextManager $context): array
@@ -201,7 +242,7 @@ class OrderCompletedResult extends ResultBehavior
 
 ### Loan Application Result
 
-```php
+```php no_run
 class LoanApprovalResult extends ResultBehavior
 {
     public function __invoke(ContextManager $context): array
@@ -248,6 +289,10 @@ class LoanRejectionResult extends ResultBehavior
 ### Workflow Result
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+use Tarfinlabs\EventMachine\EventCollection; // [!code hide]
+
 class WorkflowCompletedResult extends ResultBehavior
 {
     public function __invoke(
@@ -283,6 +328,9 @@ class WorkflowCompletedResult extends ResultBehavior
 ### Quiz/Game Result
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class QuizResultBehavior extends ResultBehavior
 {
     public function __invoke(ContextManager $context): array
@@ -319,7 +367,7 @@ class QuizResultBehavior extends ResultBehavior
 
 Pass arguments to results:
 
-```php
+```php ignore
 'completed' => [
     'type' => 'final',
     'result' => 'formatResult:detailed',
@@ -343,7 +391,7 @@ Pass arguments to results:
 
 ## Testing Results
 
-```php
+```php ignore
 it('returns correct result when completed', function () {
     $machine = OrderMachine::create();
 
@@ -375,7 +423,7 @@ it('returns different result when cancelled', function () {
 
 ### 1. Include All Relevant Data
 
-```php
+```php ignore
 return [
     'orderId' => $context->orderId,
     'status' => 'completed',
@@ -388,7 +436,7 @@ return [
 
 ### 2. Format for API Response
 
-```php
+```php ignore
 return [
     'data' => [
         'id' => $context->orderId,
@@ -402,7 +450,7 @@ return [
 
 ### 3. Handle Missing Data
 
-```php
+```php ignore
 return [
     'orderId' => $context->orderId ?? 'unknown',
     'total' => $context->total ?? 0,
@@ -412,7 +460,7 @@ return [
 
 ### 4. Use Different Results for Different Outcomes
 
-```php
+```php ignore
 'success' => ['type' => 'final', 'result' => SuccessResult::class],
 'failed' => ['type' => 'final', 'result' => FailureResult::class],
 'cancelled' => ['type' => 'final', 'result' => CancelledResult::class],

@@ -4,6 +4,7 @@
 
 ## Basic Syntax
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'checking' => [
@@ -17,10 +18,15 @@
 
 When the machine enters `checking`, it immediately transitions to `nextState`.
 
+::: warning Infinite Loop Risk
+`@always` transitions can create infinite loops if two states always transition to each other. Always ensure at least one path leads to a state without `@always`, or use guards that will eventually fail. See [Avoiding Infinite Loops](#avoiding-infinite-loops) for details.
+:::
+
 ## Guarded @always Transitions
 
 Use guards to conditionally route:
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'checking' => [
@@ -58,7 +64,7 @@ sequenceDiagram
     Transition->>Target: Enter state
     Target->>Entry: Execute entry actions
     Entry->>Always: Check @always transitions
-    alt @always matches
+    alt @always matches()
         Always->>Transition: Trigger new transition
     else No @always
         Always->>Target: Stay in state
@@ -76,6 +82,7 @@ sequenceDiagram
 
 Route based on context without requiring an event:
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'processing' => [
@@ -94,6 +101,7 @@ Route based on context without requiring an event:
 
 ### Validation Routing
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'validating' => [
@@ -110,6 +118,7 @@ Route based on context without requiring an event:
 
 ### Breaking Out of Nested States
 
+<!-- doctest-attr: ignore -->
 ```php
 'review' => [
     'states' => [
@@ -130,6 +139,7 @@ Route based on context without requiring an event:
 
 Ensure consistent state entry:
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'init' => [
@@ -144,6 +154,7 @@ Ensure consistent state entry:
 
 ### Computed Transitions
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'scoring' => [
@@ -162,6 +173,7 @@ Ensure consistent state entry:
 
 ## With Actions
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'checking' => [
@@ -184,6 +196,7 @@ Ensure consistent state entry:
 
 ## With Calculators
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'evaluating' => [
@@ -206,6 +219,8 @@ Ensure consistent state entry:
 ### Order Routing
 
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+
 MachineDefinition::define(
     config: [
         'id' => 'order',
@@ -252,6 +267,7 @@ MachineDefinition::define(
 
 ### Approval Workflow
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'submitted' => [
@@ -283,6 +299,7 @@ MachineDefinition::define(
 
 ### Quiz Scoring
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'calculating' => [
@@ -305,6 +322,7 @@ MachineDefinition::define(
 Be careful not to create infinite loops:
 :::
 
+<!-- doctest-attr: ignore -->
 ```php
 // DON'T DO THIS - infinite loop!
 'stateA' => [
@@ -319,6 +337,7 @@ Be careful not to create infinite loops:
 Always ensure at least one branch leads to a state without `@always`, or use guards that will eventually fail.
 :::
 
+<!-- doctest-attr: ignore -->
 ```php
 // Safe - guards prevent infinite loop
 'retry' => [
@@ -334,7 +353,9 @@ Always ensure at least one branch leads to a state without `@always`, or use gua
 
 ## Testing @always Transitions
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 it('automatically routes based on condition', function () {
     $machine = MachineDefinition::define(
         config: [
@@ -371,6 +392,7 @@ it('automatically routes based on condition', function () {
 
 ### 1. Always Include a Fallback
 
+<!-- doctest-attr: ignore -->
 ```php
 '@always' => [
     ['target' => 'a', 'guards' => 'guardA'],
@@ -381,6 +403,7 @@ it('automatically routes based on condition', function () {
 
 ### 2. Use for Routing, Not Logic
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good - routing based on existing data
 '@always' => [
@@ -394,6 +417,7 @@ it('automatically routes based on condition', function () {
 
 ### 3. Keep Guards Simple
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good - simple condition
 'guards' => fn($ctx) => $ctx->total > 1000,
@@ -404,6 +428,7 @@ it('automatically routes based on condition', function () {
 
 ### 4. Document the Routing Logic
 
+<!-- doctest-attr: ignore -->
 ```php
 'checking' => [
     'description' => 'Routes orders based on value and membership',

@@ -32,6 +32,7 @@ Understanding the complete lifecycle of an EventMachine helps you build correct 
 
 When you create a machine:
 
+<!-- doctest-attr: ignore -->
 ```php
 $machine = OrderMachine::create();
 ```
@@ -43,6 +44,7 @@ What happens:
 
 With existing state:
 
+<!-- doctest-attr: ignore -->
 ```php
 $machine = OrderMachine::create(state: $rootEventId);
 ```
@@ -56,6 +58,7 @@ What happens:
 
 The first time you interact with the machine, it enters the initial state:
 
+<!-- doctest-attr: ignore -->
 ```php
 $state = $machine->state;  // Or $machine->send(...)
 ```
@@ -65,6 +68,7 @@ What happens:
 2. Initial state's entry actions run
 3. First event is persisted (if persistence enabled)
 
+<!-- doctest-attr: ignore -->
 ```php
 'initial' => 'pending',
 'states' => [
@@ -77,6 +81,7 @@ What happens:
 
 ## 3. Sending Events
 
+<!-- doctest-attr: ignore -->
 ```php
 $state = $machine->send(['type' => 'PAY', 'amount' => 99.99]);
 ```
@@ -124,6 +129,7 @@ When an event is sent, here's exactly what happens:
 
 ### Example Walkthrough
 
+<!-- doctest-attr: ignore -->
 ```php
 // Machine definition
 'states' => [
@@ -172,6 +178,7 @@ When `PAY` event is sent:
 
 Every state change is automatically persisted:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Sends PAY event
 $machine->send(['type' => 'PAY', 'amount' => 99.99]);
@@ -192,6 +199,7 @@ $machine->send(['type' => 'PAY', 'amount' => 99.99]);
 For testing or calculations:
 
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'should_persist' => false,
@@ -204,6 +212,7 @@ MachineDefinition::define(
 
 Restore a machine from any point in its history:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Get the root event ID
 $rootEventId = $machine->state->history->first()->root_event_id;
@@ -222,6 +231,7 @@ What happens:
 
 Restoration does NOT re-run actions. It only rebuilds state:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Original: runs sendEmail action
 $machine->send(['type' => 'CONFIRM']);
@@ -235,6 +245,7 @@ $restored = OrderMachine::create(state: $rootEventId);
 
 When a machine reaches a final state:
 
+<!-- doctest-attr: ignore -->
 ```php
 'delivered' => [
     'type' => 'final',
@@ -250,6 +261,7 @@ What happens:
 
 Check if done:
 
+<!-- doctest-attr: ignore -->
 ```php
 $state = $machine->state;
 $state->currentStateDefinition->type === StateDefinitionType::FINAL;
@@ -259,6 +271,7 @@ $state->currentStateDefinition->type === StateDefinitionType::FINAL;
 
 EventMachine prevents concurrent modifications:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Process A
 $machine->send(['type' => 'PAY']);
@@ -270,6 +283,7 @@ $machine->send(['type' => 'CANCEL']);
 
 Implemented via cache locks:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Lock key format: "machine:{root_event_id}"
 // Lock duration: configurable, default 30 seconds
@@ -279,6 +293,7 @@ Implemented via cache locks:
 
 ### Entry/Exit Actions
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'active' => [
@@ -297,6 +312,7 @@ Implemented via cache locks:
 
 ## State History Access
 
+<!-- doctest-attr: ignore -->
 ```php
 $state = $machine->state;
 
@@ -325,6 +341,7 @@ foreach ($history as $event) {
 Actions should be quick. For slow operations:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 class ProcessPaymentAction extends ActionBehavior
 {
     public function __invoke($context, $event): void
@@ -342,6 +359,7 @@ class ProcessPaymentAction extends ActionBehavior
 
 Design actions to be safe to run multiple times:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Bad: not idempotent
 $context->set('count', $context->get('count') + 1);
@@ -354,6 +372,7 @@ $context->set('processed', true);
 ### Handle Failures Gracefully
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 class SendEmailAction extends ActionBehavior
 {
     public function __invoke($context, $event): void

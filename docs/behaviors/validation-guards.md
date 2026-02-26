@@ -5,7 +5,8 @@ Validation guards extend regular guards with the ability to provide error messag
 ## Basic Usage
 
 ```php
-use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 class ValidateOrderGuard extends ValidationGuardBehavior
 {
@@ -32,7 +33,7 @@ class ValidateOrderGuard extends ValidationGuardBehavior
 
 When a validation guard fails, `MachineValidationException` is thrown:
 
-```php
+```php no_run
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 
 try {
@@ -47,7 +48,7 @@ try {
 
 Chain multiple validation guards:
 
-```php
+```php ignore
 'on' => [
     'CHECKOUT' => [
         'target' => 'processing',
@@ -67,6 +68,9 @@ Guards are evaluated in order. The first failing guard throws an exception.
 ### Form Field Validation
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class ValidateEmailGuard extends ValidationGuardBehavior
 {
     public ?string $errorMessage = null;
@@ -91,6 +95,10 @@ class ValidateEmailGuard extends ValidationGuardBehavior
 ### Amount Validation
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class ValidateAmountGuard extends ValidationGuardBehavior
 {
     public ?string $errorMessage = null;
@@ -126,7 +134,7 @@ class ValidateAmountGuard extends ValidationGuardBehavior
 
 ### Business Rule Validation
 
-```php
+```php no_run
 class ValidateBusinessHoursGuard extends ValidationGuardBehavior
 {
     public ?string $errorMessage = null;
@@ -156,7 +164,7 @@ class ValidateBusinessHoursGuard extends ValidationGuardBehavior
 
 ### Inventory Validation
 
-```php
+```php no_run
 class ValidateInventoryGuard extends ValidationGuardBehavior
 {
     public ?string $errorMessage = null;
@@ -188,7 +196,7 @@ class ValidateInventoryGuard extends ValidationGuardBehavior
 
 ### User Permission Validation
 
-```php
+```php ignore
 class ValidatePermissionGuard extends ValidationGuardBehavior
 {
     public ?string $errorMessage = null;
@@ -223,7 +231,7 @@ class ValidatePermissionGuard extends ValidationGuardBehavior
 
 Use Laravel's translation:
 
-```php
+```php no_run
 class ValidateOrderGuard extends ValidationGuardBehavior
 {
     public ?string $errorMessage = null;
@@ -242,7 +250,7 @@ class ValidateOrderGuard extends ValidationGuardBehavior
 
 ## Integration with Laravel Forms
 
-```php
+```php ignore
 // In Controller
 public function submit(Request $request)
 {
@@ -268,7 +276,7 @@ public function submit(Request $request)
 
 Mix validation guards with regular guards:
 
-```php
+```php ignore
 'on' => [
     'SUBMIT' => [
         'target' => 'submitted',
@@ -284,13 +292,16 @@ Mix validation guards with regular guards:
 ],
 ```
 
-::: tip
-Regular guards fail silently (no transition occurs). Validation guards throw exceptions with messages. Use regular guards for flow control and validation guards for user feedback.
+::: tip When to Use Each Type
+- **Regular Guards:** Return `false` to block transition without throwing an exception. Best for flow control where the caller doesn't need to know why.
+- **Validation Guards:** Return `false` and throw `MachineValidationException` with a user-facing error message. Best for user input validation where feedback is needed.
+
+Both types block the transition when they return `false`. The difference is whether the caller receives an exception with a message.
 :::
 
 ## Testing Validation Guards
 
-```php
+```php no_run
 it('shows validation error when amount is too high', function () {
     $machine = TransferMachine::create();
     $machine->state->context->balance = 100;
@@ -321,7 +332,7 @@ it('passes validation with valid amount', function () {
 
 ### 1. Be Specific with Error Messages
 
-```php
+```php ignore
 // Good - actionable message
 $this->errorMessage = 'Email is invalid. Please use format: name@example.com';
 
@@ -331,7 +342,7 @@ $this->errorMessage = 'Invalid input';
 
 ### 2. Validate Early
 
-```php
+```php ignore
 // Check required fields first
 if (empty($context->email)) {
     $this->errorMessage = 'Email is required';
@@ -347,7 +358,7 @@ if (!filter_var($context->email, FILTER_VALIDATE_EMAIL)) {
 
 ### 3. Include Context in Messages
 
-```php
+```php ignore
 $this->errorMessage = sprintf(
     'Cannot transfer $%.2f. Maximum allowed: $%.2f',
     $requestedAmount,
@@ -357,7 +368,7 @@ $this->errorMessage = sprintf(
 
 ### 4. Use Separate Guards for Separate Concerns
 
-```php
+```php ignore
 // Good - separate guards
 'guards' => [
     ValidateEmailGuard::class,

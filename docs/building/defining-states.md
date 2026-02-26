@@ -7,6 +7,8 @@ This guide shows you how to define states in your machine configuration.
 Every state is defined as a key in the `states` array:
 
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+
 MachineDefinition::define(
     config: [
         'initial' => 'pending',
@@ -43,7 +45,7 @@ EventMachine supports three state types:
 
 Simple states with no children. Most states are atomic:
 
-```php
+```php ignore
 'pending' => [
     'on' => [
         'SUBMIT' => 'processing',
@@ -55,7 +57,7 @@ Simple states with no children. Most states are atomic:
 
 States containing nested child states:
 
-```php
+```php ignore
 'active' => [
     'initial' => 'idle',
     'states' => [
@@ -78,7 +80,7 @@ When entering a compound state, the machine automatically enters its initial chi
 
 Terminal states that end the machine's execution:
 
-```php
+```php ignore
 'completed' => [
     'type' => 'final',
     'result' => 'calculateResult',  // Optional result behavior
@@ -87,7 +89,7 @@ Terminal states that end the machine's execution:
 
 Final states cannot have outgoing transitions:
 
-```php
+```php ignore
 // This will throw InvalidFinalStateDefinitionException
 'done' => [
     'type' => 'final',
@@ -101,7 +103,7 @@ Final states cannot have outgoing transitions:
 
 Execute code when entering or leaving a state:
 
-```php
+```php ignore
 'processing' => [
     'entry' => 'startProcessing',           // Single action
     'exit' => ['cleanup', 'logCompletion'], // Multiple actions
@@ -125,7 +127,7 @@ Target State Entry Actions
 
 Attach custom data to states:
 
-```php
+```php ignore
 'pending_approval' => [
     'meta' => [
         'description' => 'Waiting for manager approval',
@@ -141,7 +143,7 @@ Attach custom data to states:
 
 Access metadata from state:
 
-```php
+```php no_run
 $state->currentStateDefinition->meta['timeout']; // 86400
 ```
 
@@ -149,7 +151,7 @@ $state->currentStateDefinition->meta['timeout']; // 86400
 
 Add human-readable descriptions:
 
-```php
+```php ignore
 'awaiting_payment' => [
     'description' => 'Order is waiting for customer payment',
     'on' => [
@@ -161,7 +163,7 @@ Add human-readable descriptions:
 
 Access via:
 
-```php
+```php no_run
 $state->currentStateDefinition->description;
 ```
 
@@ -170,6 +172,8 @@ $state->currentStateDefinition->description;
 States are identified by their path from the root:
 
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+
 MachineDefinition::define(
     config: [
         'id' => 'order',
@@ -198,13 +202,13 @@ State IDs follow the pattern `{machine_id}.{path}`:
 
 You can customize the delimiter:
 
-```php
+```php ignore
 'delimiter' => '/',  // Results in: order/checkout/cart
 ```
 
 ## Complete Example
 
-```php
+```php no_run
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 MachineDefinition::define(
@@ -279,7 +283,7 @@ MachineDefinition::define(
 
 ## State Definition Reference
 
-```php
+```php ignore
 'stateName' => [
     // Transitions (see Writing Transitions)
     'on' => [

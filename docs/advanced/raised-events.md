@@ -51,6 +51,8 @@ sequenceDiagram
 ## Raise with Payload
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class CalculateAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -71,6 +73,8 @@ class CalculateAction extends ActionBehavior
 ## Multiple Raised Events
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class ProcessAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -96,6 +100,8 @@ Events are processed in the order they were raised.
 ### Order Processing Chain
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class StartProcessingAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -125,6 +131,8 @@ class ValidateOrderAction extends ActionBehavior
 ### Workflow with Notifications
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class ApproveRequestAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -149,6 +157,8 @@ class ApproveRequestAction extends ActionBehavior
 ### Conditional Event Raising
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class ProcessPaymentAction extends ActionBehavior
 {
     public function __construct(
@@ -181,6 +191,7 @@ class ProcessPaymentAction extends ActionBehavior
 ### State Machine with Raised Events
 
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'id' => 'order',
@@ -231,7 +242,10 @@ MachineDefinition::define(
 
 ### Chained Actions with Events
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class XAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -275,6 +289,7 @@ class YAction extends ActionBehavior
 
 Raised events appear in the event history:
 
+<!-- doctest-attr: ignore -->
 ```php
 $machine = OrderMachine::create();
 $machine->send(['type' => 'SUBMIT']);
@@ -292,6 +307,8 @@ $history = $machine->state->history;
 Important: Entry actions complete before raised events are processed.
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class EntryAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -310,14 +327,16 @@ class TransitionAction extends ActionBehavior
 }
 
 // Order of execution:
-// 1. transition action (raises NEXT)
+// 1. transition action (calls raise())
 // 2. target state entry action
 // 3. NEXT event processed
 ```
 
 ## Testing Raised Events
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 it('processes raised events in order', function () {
     $machine = MachineDefinition::define(
         config: [
@@ -351,6 +370,7 @@ it('processes raised events in order', function () {
 
 ### 1. Use for Workflow Progression
 
+<!-- doctest-attr: ignore -->
 ```php
 // Good - clear workflow progression
 $this->raise(['type' => 'VALIDATION_COMPLETE']);
@@ -363,6 +383,7 @@ $this->raise(['type' => 'DONE']);
 
 ### 2. Include Relevant Payload
 
+<!-- doctest-attr: ignore -->
 ```php
 $this->raise([
     'type' => 'ITEM_PROCESSED',
@@ -376,6 +397,7 @@ $this->raise([
 
 ### 3. Handle Failures Explicitly
 
+<!-- doctest-attr: ignore -->
 ```php
 try {
     $result = $this->process();
@@ -390,6 +412,7 @@ try {
 
 ### 4. Avoid Raising Too Many Events
 
+<!-- doctest-attr: ignore -->
 ```php
 // Avoid - too many events
 foreach ($items as $item) {
@@ -405,7 +428,9 @@ $this->raise(['type' => 'ALL_ITEMS_PROCESSED']);
 
 Raised events require `$this->raise()`, which is only available in class-based actions:
 
+<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 // Works - class-based action
 class MyAction extends ActionBehavior
 {
@@ -417,6 +442,6 @@ class MyAction extends ActionBehavior
 
 // Doesn't work - inline function
 'actions' => [
-    'myAction' => fn($ctx) => $this->raise(['type' => 'EVENT']), // Error!
+    'myAction' => fn($ctx) => $this->raise(['type' => 'EVENT']), // Error! `raise()` not available
 ],
 ```

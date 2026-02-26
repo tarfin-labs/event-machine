@@ -55,8 +55,6 @@ abstract class EventBehavior extends Data
      * @param  mixed  $actor  Actor performing the event. Default is null.
      * @param  int|Optional  $version  The version number of the object. Default is 1.
      * @param  SourceType  $source  The source type of the object. Default is SourceType::EXTERNAL.
-     *
-     * @return void
      */
     public function __construct(
         public null|string|Optional $type = null,
@@ -131,9 +129,9 @@ abstract class EventBehavior extends Data
      * Delegate to parent's static collect() from Spatie Data class.
      * The trait's non-static collect() is aliased as 'collection' to avoid conflict.
      */
-    public static function collect(...$args): array|DataCollection|PaginatedDataCollection|CursorPaginatedDataCollection|Enumerable|AbstractPaginator|PaginatorContract|AbstractCursorPaginator|CursorPaginatorContract|LazyCollection|Collection
+    public static function collect(mixed $items, ?string $into = null): array|DataCollection|PaginatedDataCollection|CursorPaginatedDataCollection|Enumerable|AbstractPaginator|PaginatorContract|AbstractCursorPaginator|CursorPaginatorContract|LazyCollection|Collection
     {
-        return parent::collect(...$args);
+        return parent::collect($items, $into);
     }
 
     /**

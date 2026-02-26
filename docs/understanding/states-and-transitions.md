@@ -11,6 +11,7 @@ Think of it like a traffic light:
 - Never two colors at once
 - Never "kind of green" or "between yellow and red"
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'pending' => [...],    // Order is waiting
@@ -24,6 +25,7 @@ Think of it like a traffic light:
 
 Each state can have:
 
+<!-- doctest-attr: ignore -->
 ```php
 'pending' => [
     'on' => [                    // Transitions from this state
@@ -41,6 +43,7 @@ Each state can have:
 
 The `State` object provides several ways to inspect the current state:
 
+<!-- doctest-attr: ignore -->
 ```php
 $machine = OrderMachine::create();
 $state = $machine->state;
@@ -65,6 +68,7 @@ $state->history;  // EventCollection
 
 Use `matches()` to check the current state:
 
+<!-- doctest-attr: ignore -->
 ```php
 // Simple state check
 $state->matches('pending');  // Checks for 'order.pending'
@@ -84,6 +88,7 @@ EventMachine uses dot notation for state IDs: `{machineId}.{stateName}`. When yo
 
 A **final state** is a terminal state - no transitions out:
 
+<!-- doctest-attr: ignore -->
 ```php
 'delivered' => [
     'type' => 'final',
@@ -108,6 +113,7 @@ A **transition** is the movement from one state to another, triggered by an even
 
 The simplest transition:
 
+<!-- doctest-attr: ignore -->
 ```php
 'pending' => [
     'on' => [
@@ -120,6 +126,7 @@ The simplest transition:
 
 Execute code during transition:
 
+<!-- doctest-attr: ignore -->
 ```php
 'pending' => [
     'on' => [
@@ -133,6 +140,7 @@ Execute code during transition:
 
 Multiple actions:
 
+<!-- doctest-attr: ignore -->
 ```php
 'PAY' => [
     'target' => 'paid',
@@ -144,6 +152,7 @@ Multiple actions:
 
 Only transition if a condition is true:
 
+<!-- doctest-attr: ignore -->
 ```php
 'pending' => [
     'on' => [
@@ -161,6 +170,7 @@ If the guard returns `false`, the transition doesn't happen. The machine stays i
 
 Different outcomes based on conditions:
 
+<!-- doctest-attr: ignore -->
 ```php
 'pending' => [
     'on' => [
@@ -187,6 +197,7 @@ Guards are evaluated in order. First matching guard wins.
 
 Stay in the same state but trigger actions:
 
+<!-- doctest-attr: ignore -->
 ```php
 'active' => [
     'on' => [
@@ -202,6 +213,7 @@ Stay in the same state but trigger actions:
 
 Like self transitions, but don't trigger entry/exit actions:
 
+<!-- doctest-attr: ignore -->
 ```php
 'active' => [
     'on' => [
@@ -229,6 +241,7 @@ When a transition happens, actions execute in this order:
 
 Example:
 
+<!-- doctest-attr: ignore -->
 ```php
 'pending' => [
     'exit' => ['logLeavingPending'],
@@ -269,6 +282,7 @@ stateDiagram-v2
 
 ### Sequential States
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'step1' => ['on' => ['NEXT' => 'step2']],
@@ -280,6 +294,7 @@ stateDiagram-v2
 
 ### Parallel Approval
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'pending' => [
@@ -298,6 +313,7 @@ stateDiagram-v2
 
 ### Retry Pattern
 
+<!-- doctest-attr: ignore -->
 ```php
 'states' => [
     'processing' => [
@@ -316,6 +332,7 @@ stateDiagram-v2
 
 ## State Definition Reference
 
+<!-- doctest-attr: ignore -->
 ```php
 'stateName' => [
     // Transitions

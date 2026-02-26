@@ -6,7 +6,7 @@ Context is the data that accompanies your state machine throughout its lifecycle
 
 Set initial context values in your machine configuration:
 
-```php
+```php ignore
 MachineDefinition::define(
     config: [
         'initial' => 'idle',
@@ -25,8 +25,8 @@ MachineDefinition::define(
 ### In Actions
 
 ```php
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
-use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 class IncrementCountAction extends ActionBehavior
 {
@@ -41,8 +41,8 @@ class IncrementCountAction extends ActionBehavior
 ### In Guards
 
 ```php
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
-use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 class HasItemsGuard extends GuardBehavior
 {
@@ -56,7 +56,7 @@ class HasItemsGuard extends GuardBehavior
 
 ### From State Object
 
-```php
+```php no_run
 $machine = OrderMachine::create();
 $state = $machine->send(['type' => 'ADD_ITEM', 'item' => $item]);
 
@@ -68,7 +68,7 @@ $items = $state->context->get('items');
 
 ### Using `set()`
 
-```php
+```php no_run
 $context->set('count', 5);
 $context->set('user', $userData);
 $context->set('items', [...$items, $newItem]);
@@ -78,7 +78,7 @@ $context->set('items', [...$items, $newItem]);
 
 The ContextManager supports magic property access:
 
-```php
+```php no_run
 // Reading
 $count = $context->count;
 
@@ -97,7 +97,7 @@ $context->count = 5;
 
 ### Checking Existence
 
-```php
+```php no_run
 if ($context->has('user')) {
     // Key exists
 }
@@ -112,7 +112,7 @@ if ($context->has('user', User::class)) {
 
 For type safety and validation, create a custom ContextManager:
 
-```php
+```php no_run
 use Tarfinlabs\EventMachine\ContextManager;
 use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\Min;
@@ -139,7 +139,7 @@ class OrderContext extends ContextManager
 
 Reference it in your configuration:
 
-```php
+```php ignore
 MachineDefinition::define(
     config: [
         'initial' => 'cart',
@@ -160,7 +160,7 @@ MachineDefinition::define(
 
 With custom context classes, access properties directly:
 
-```php
+```php no_run
 class AddItemAction extends ActionBehavior
 {
     public function __invoke(OrderContext $context): void
@@ -184,7 +184,7 @@ If validation fails, a `MachineContextValidationException` is thrown.
 
 ### Manual Validation
 
-```php
+```php no_run
 $context->selfValidate();  // Throws on failure
 ```
 
@@ -192,7 +192,7 @@ $context->selfValidate();  // Throws on failure
 
 Using Laravel Data attributes:
 
-```php
+```php no_run
 use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\Min;
 use Spatie\LaravelData\Attributes\Validation\Max;
@@ -217,7 +217,7 @@ class UserContext extends ContextManager
 
 Events can carry payload that updates context:
 
-```php
+```php no_run
 // Sending an event with payload
 $machine->send([
     'type' => 'UPDATE_SETTINGS',
@@ -231,6 +231,10 @@ $machine->send([
 Access event payload in actions:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class UpdateSettingsAction extends ActionBehavior
 {
     public function __invoke(
@@ -249,6 +253,9 @@ class UpdateSettingsAction extends ActionBehavior
 Declare required context keys for behaviors:
 
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class ProcessPaymentAction extends ActionBehavior
 {
     public static array $requiredContext = [
@@ -271,7 +278,7 @@ If required context is missing, an exception is thrown before the behavior execu
 
 Context changes are persisted to the database with each transition:
 
-```php
+```php no_run
 // Initial state
 $machine = OrderMachine::create();
 // Context: { count: 0 }
@@ -287,7 +294,7 @@ $machine = OrderMachine::create(state: $rootEventId);
 
 ## Complete Example
 
-```php
+```php ignore
 // Context class
 class ShoppingCartContext extends ContextManager
 {
