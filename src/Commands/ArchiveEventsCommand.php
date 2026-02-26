@@ -8,6 +8,7 @@ use Exception;
 use Illuminate\Support\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
+use Illuminate\Database\Query\Builder;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Jobs\ArchiveSingleMachineJob;
 
@@ -76,7 +77,7 @@ class ArchiveEventsCommand extends Command
         return MachineEvent::query()
             ->select('root_event_id')
             // Exclude already archived
-            ->whereNotIn('root_event_id', function ($subQuery): void {
+            ->whereNotIn('root_event_id', function (Builder $subQuery): void {
                 $subQuery->select('root_event_id')
                     ->from('machine_event_archives');
             })
@@ -125,7 +126,7 @@ class ArchiveEventsCommand extends Command
         $this->info('Dry Run - Would dispatch:');
         $this->table(
             ['#', 'Root Event ID'],
-            $machines->map(fn ($id, $i): array => [$i + 1, $id])->all()
+            $machines->map(fn (string $id, int $i): array => [$i + 1, $id])->all()
         );
 
         $this->newLine();
