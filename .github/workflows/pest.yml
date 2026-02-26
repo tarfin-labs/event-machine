@@ -40,6 +40,10 @@ jobs:
           echo "::add-matcher::${{ runner.tool_cache }}/php.json"
           echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
 
+      - name: Remove PHP 8.4+ only packages
+        if: matrix.php == '8.3'
+        run: composer remove --dev testflowlabs/doctest --no-update
+
       - name: Install dependencies
         run: |
           composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts:^${{ matrix.laravel }}"
