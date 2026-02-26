@@ -10,6 +10,7 @@
     executionOrder="random"
     failOnWarning="true"
     failOnRisky="true"
+    failOnDeprecation="false"
     failOnEmptyTestSuite="true"
     beStrictAboutOutputDuringTests="true"
     cacheDirectory=".phpunit.cache"
