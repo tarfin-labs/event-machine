@@ -55,6 +55,7 @@ For ephemeral machines or testing:
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'should_persist' => false,
@@ -186,8 +187,8 @@ Arrays are **replaced**, not merged. If you need to append items, always include
 
 Events can be wrapped in database transactions:
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 class CriticalEvent extends EventBehavior
 {
     public bool $isTransactional = true; // Default
@@ -216,6 +217,7 @@ For performance-critical operations:
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 class FastEvent extends EventBehavior
 {
     public bool $isTransactional = false;
@@ -332,6 +334,7 @@ For MachineDefinition (without Machine class):
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 $definition = MachineDefinition::define([...]);
 $state = $definition->getInitialState();
 
@@ -371,8 +374,8 @@ See [Archival](/laravel-integration/archival) for details.
 
 ### 1. Store Root Event ID
 
-<!-- doctest-attr: ignore -->
 ```php
+use Illuminate\Database\Eloquent\Model; // [!code hide]
 class Order extends Model
 {
     protected function machines(): array
@@ -390,6 +393,7 @@ class Order extends Model
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 class PaymentEvent extends EventBehavior
 {
     public bool $isTransactional = true;
