@@ -18,12 +18,12 @@ describe('Archive Concurrency Safety', function (): void {
     });
 
     it('handles multiple rapid event creations for same archived machine', function (): void {
-        $rootEventId = Str::ulid()->toString();
+        $rootEventId = (string) Str::ulid();
         $machineId   = 'concurrency_test_machine';
 
         // Create and archive an event
         $archivedEvent = new MachineEvent([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 1,
             'created_at'      => now()->subDays(60),
             'machine_id'      => $machineId,
@@ -45,7 +45,7 @@ describe('Archive Concurrency Safety', function (): void {
         $eventIds = [];
         for ($i = 2; $i <= 5; $i++) {
             $event = MachineEvent::create([
-                'id'              => Str::ulid()->toString(),
+                'id'              => (string) Str::ulid(),
                 'sequence_number' => $i,
                 'created_at'      => now(),
                 'machine_id'      => $machineId,
@@ -74,7 +74,7 @@ describe('Archive Concurrency Safety', function (): void {
     });
 
     it('does not fail when restoreAndDelete is called for non-existent archive', function (): void {
-        $rootEventId = Str::ulid()->toString();
+        $rootEventId = (string) Str::ulid();
 
         $service = new ArchiveService();
 
@@ -85,12 +85,12 @@ describe('Archive Concurrency Safety', function (): void {
     });
 
     it('handles event creation when no archive exists', function (): void {
-        $rootEventId = Str::ulid()->toString();
+        $rootEventId = (string) Str::ulid();
         $machineId   = 'no_archive_machine';
 
         // No archive exists - event creation should work normally
         $event = MachineEvent::create([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 1,
             'created_at'      => now(),
             'machine_id'      => $machineId,
@@ -111,7 +111,7 @@ describe('Archive Concurrency Safety', function (): void {
     it('handles event creation without root_event_id', function (): void {
         // Some edge cases may have null root_event_id - should not trigger restore
         $event = MachineEvent::create([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 1,
             'created_at'      => now(),
             'machine_id'      => 'null_root_machine',
