@@ -82,8 +82,9 @@ $order->status->send(['type' => 'SUBMIT']);
 
 Laravel's container injects dependencies into behaviors:
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+
 class ProcessOrderAction extends ActionBehavior
 {
     public function __construct(
@@ -137,10 +138,12 @@ Cache::lock("machine:{$rootEventId}", 60)->block(5, function () {
 
 Events can be wrapped in database transactions:
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+
 class CriticalEvent extends EventBehavior
 {
     public bool $isTransactional = true; // Default
+    public static function getType(): string { return 'CRITICAL'; } // [!code hide]
 }
 ```
