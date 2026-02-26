@@ -486,13 +486,12 @@ class MachineDefinition
     }
 
     /**
-     * Initialize an EventDefinition instance from the given event and state.
+     * Initialize an event for the state machine using type-string-based resolution.
      *
-     * If the $event argument is already an EventDefinition instance,
-     * return it directly. Otherwise, create an EventDefinition instance
-     * by invoking the behavior for the corresponding event type in the given
-     * state. If no behavior is defined for the event type, a default
-     * EventDefinition instance is returned.
+     * Resolves the event using the machine's own event registry. When an EventBehavior
+     * instance is received, it checks if the machine has a different class registered
+     * for the same type string and re-instantiates if needed. This ensures the machine's
+     * authority over its own event definitions.
      *
      * @param  EventBehavior|array  $event  The event to initialize.
      * @param  State  $state  The state in which the event is occurring.
@@ -503,20 +502,35 @@ class MachineDefinition
         EventBehavior|array $event,
         State $state
     ): EventBehavior {
+        // Extract type string regardless of input format
+        $type = $event instanceof EventBehavior ? $event->type : ($event['type'] ?? null);
+
+        // Look up machine's own registered class for this type
+        $registeredClass = $state->currentStateDefinition->machine
+            ->behavior[BehaviorType::Event->value][$type] ?? null;
+
+        // EventBehavior instance received
         if ($event instanceof EventBehavior) {
-            return $event;
+            // Same class or not in registry -> return as-is (backward compatible)
+            if ($registeredClass === null || $event instanceof $registeredClass) {
+                return $event;
+            }
+
+            // Different class, same type -> re-instantiate with machine's own class
+            return $registeredClass::from([
+                'type'    => $type,
+                'payload' => $event->payload,
+                'version' => $event->version,
+                'source'  => $event->source,
+            ]);
         }
 
-        if (isset($state->currentStateDefinition->machine->behavior[BehaviorType::Event->value][$event['type']])) {
-            /** @var EventBehavior $eventDefinitionClass */
-            $eventDefinitionClass = $state
-                ->currentStateDefinition
-                ->machine
-                ->behavior[BehaviorType::Event->value][$event['type']];
-
-            return $eventDefinitionClass::validateAndCreate($event);
+        // Array received - resolve from registry
+        if ($registeredClass !== null) {
+            return $registeredClass::validateAndCreate($event);
         }
 
+        // Fallback - generic EventDefinition
         return EventDefinition::from($event);
     }
 
