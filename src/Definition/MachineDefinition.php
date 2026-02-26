@@ -970,6 +970,28 @@ class MachineDefinition
     // region Public Methods
 
     /**
+     * Returns the registered event types and their classes.
+     *
+     * When a StateDefinition is provided, only events that have transitions
+     * in that state are returned. Otherwise, all registered events are returned.
+     *
+     * @param  StateDefinition|null  $stateDefinition  Optional state to filter events by.
+     *
+     * @return array<string, class-string<EventBehavior>> Map of type strings to event classes.
+     */
+    public function getAcceptedEvents(?StateDefinition $stateDefinition = null): array
+    {
+        $registry = $this->behavior[BehaviorType::Event->value] ?? [];
+
+        if ($stateDefinition === null) {
+            return $registry;
+        }
+
+        // Filter to only events with transitions in the given state
+        return array_intersect_key($registry, $stateDefinition->transitionDefinitions ?? []);
+    }
+
+    /**
      * Transition the state machine to a new state based on an event.
      *
      * @param  EventBehavior|array  $event  The event that triggers the transition.
