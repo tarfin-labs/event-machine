@@ -6,7 +6,6 @@ EventMachine uses Laravel's service container for dependency injection in behavi
 
 Class-based behaviors support constructor injection:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
@@ -93,6 +92,7 @@ Custom context classes are automatically injected:
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class OrderContext extends ContextManager
 {
     public string $orderId = '';
@@ -112,8 +112,9 @@ class ProcessOrderAction extends ActionBehavior
 
 ## Guard with Dependencies
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class HasPermissionGuard extends GuardBehavior
 {
     public function __construct(
@@ -129,8 +130,9 @@ class HasPermissionGuard extends GuardBehavior
 
 ## Calculator with Dependencies
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class CalculateTaxCalculator extends CalculatorBehavior
 {
     public function __construct(
@@ -151,8 +153,9 @@ class CalculateTaxCalculator extends CalculatorBehavior
 
 ## Event Behavior with Dependencies
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class SubmitOrderEvent extends EventBehavior
 {
     public function __construct(
@@ -175,8 +178,9 @@ class SubmitOrderEvent extends EventBehavior
 
 ## Result with Dependencies
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class OrderResultBehavior extends ResultBehavior
 {
     public function __construct(
@@ -201,8 +205,9 @@ class OrderResultBehavior extends ResultBehavior
 
 ### Complete Action with Multiple Services
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 class CompleteCheckoutAction extends ActionBehavior
 {
     public function __construct(
@@ -253,8 +258,9 @@ class CompleteCheckoutAction extends ActionBehavior
 
 ### Guard with External Service
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class CheckInventoryGuard extends GuardBehavior
 {
     public function __construct(
@@ -275,8 +281,9 @@ class CheckInventoryGuard extends GuardBehavior
 
 ### Validation Guard with Repository
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class ValidateUserGuard extends ValidationGuardBehavior
 {
     public ?string $errorMessage = null;
