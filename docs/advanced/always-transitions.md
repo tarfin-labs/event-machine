@@ -218,8 +218,9 @@ Ensure consistent state entry:
 
 ### Order Routing
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+
 MachineDefinition::define(
     config: [
         'id' => 'order',
