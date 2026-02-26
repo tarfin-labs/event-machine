@@ -4,7 +4,6 @@ Custom context classes provide type safety, validation, and computed methods for
 
 ## Basic Custom Context
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\ContextManager;
 
@@ -25,6 +24,7 @@ class OrderContext extends ContextManager
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'initial' => 'pending',
@@ -36,8 +36,8 @@ MachineDefinition::define(
 
 ## Type-Safe Access
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 // In behaviors, you get typed context
 class ProcessAction extends ActionBehavior
 {
@@ -122,8 +122,8 @@ class UserContext extends ContextManager
 
 Add methods for complex calculations:
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class CartContext extends ContextManager
 {
     public function __construct(
@@ -229,8 +229,8 @@ The transformer handles:
 
 Add initialization in the constructor:
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class GameContext extends ContextManager
 {
     public function __construct(
@@ -290,8 +290,8 @@ $context = OrderContext::validateAndCreate([
 
 ### E-commerce Order Context
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class EcommerceContext extends ContextManager
 {
     public function __construct(
@@ -354,8 +354,8 @@ class EcommerceContext extends ContextManager
 
 ### Loan Application Context
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class LoanApplicationContext extends ContextManager
 {
     public function __construct(
@@ -423,8 +423,8 @@ class LoanApplicationContext extends ContextManager
 
 ### Workflow Context
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class WorkflowContext extends ContextManager
 {
     public function __construct(
