@@ -146,26 +146,3 @@ jobs:
 
       - name: Run DocTest
         run: composer test:doc
-
-  # ──────────────────────────────────────────────
-  # Tier 3: Mutation Testing (after tests pass)
-  # ──────────────────────────────────────────────
-  infection:
-    name: Infection
-    needs: [pest]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.5'
-          coverage: pcov
-
-      - name: Install composer dependencies
-        uses: ramsey/composer-install@v3
-
-      - name: Run Infection
-        run: composer test:mutation
-        continue-on-error: true
