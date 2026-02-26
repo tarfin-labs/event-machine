@@ -6,9 +6,12 @@ use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
+use Tarfinlabs\EventMachine\Support\CompressionManager;
 
 describe('ArchiveService', function (): void {
     beforeEach(function (): void {
+        CompressionManager::clearCache();
+
         config([
             'machine.archival.enabled'                => true,
             'machine.archival.level'                  => 6,
