@@ -6,7 +6,6 @@ EventMachine integrates with Eloquent models through the `HasMachines` trait and
 
 Add the trait to your model:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Illuminate\Database\Eloquent\Model;
 use Tarfinlabs\EventMachine\Traits\HasMachines;
@@ -78,8 +77,9 @@ The syntax `MachineClass::class . ':contextKey'` injects the model:
 
 In behaviors:
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class ProcessOrderAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
@@ -400,8 +400,8 @@ $orders = Order::whereIn('status', function ($query) {
 
 ### 2. Create Helper Methods
 
-<!-- doctest-attr: ignore -->
 ```php
+use Illuminate\Database\Eloquent\Model; // [!code hide]
 class Order extends Model
 {
     public function isEditable(): bool
