@@ -4,7 +4,6 @@ Event behaviors define the structure, validation, and metadata for events sent t
 
 ## Basic Event Class
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 
@@ -99,7 +98,6 @@ The `from()` static method is provided by Spatie's Laravel Data package, which `
 
 ### Using Laravel Rules
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 
@@ -210,7 +208,6 @@ $event->payload['productId'];
 
 Whether to wrap the transition in a database transaction:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 
@@ -239,7 +236,6 @@ class FastEvent extends EventBehavior
 
 Track who triggered the event:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -303,7 +299,6 @@ class SubmitEventV2 extends EventBehavior
 
 ### E-commerce Events
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 
@@ -343,7 +338,6 @@ class CheckoutEvent extends EventBehavior
 
 ### Financial Events
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -379,7 +373,6 @@ class TransferFundsEvent extends EventBehavior
 
 ### Workflow Events
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -446,7 +439,6 @@ See [Scenarios](/advanced/scenarios) for details.
 
 Access event data in behaviors:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
