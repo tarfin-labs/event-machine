@@ -6,9 +6,12 @@ use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
+use Tarfinlabs\EventMachine\Support\CompressionManager;
 
 describe('MachineEventArchive', function (): void {
     beforeEach(function (): void {
+        CompressionManager::clearCache();
+
         // Enable archival for tests
         config([
             'machine.archival.enabled'   => true,
