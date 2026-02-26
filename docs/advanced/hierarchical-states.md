@@ -4,8 +4,8 @@ Hierarchical (nested/compound) states allow you to organize complex state machin
 
 ## Basic Structure
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'initial' => 'active',
@@ -292,6 +292,7 @@ When leaving from `validating` to outside `order`:
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'id' => 'wizard',
