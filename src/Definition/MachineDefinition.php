@@ -983,7 +983,7 @@ class MachineDefinition
     {
         $registry = $this->behavior[BehaviorType::Event->value] ?? [];
 
-        if ($stateDefinition === null) {
+        if (!$stateDefinition instanceof \Tarfinlabs\EventMachine\Definition\StateDefinition) {
             return $registry;
         }
 
