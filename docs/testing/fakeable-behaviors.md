@@ -263,6 +263,7 @@ When behaviors have constructor dependencies, faking bypasses them:
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 class ProcessOrderAction extends ActionBehavior
 {
     public function __construct(
@@ -298,6 +299,8 @@ ProcessOrderAction::shouldRun()
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class ProcessAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void

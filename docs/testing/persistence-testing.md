@@ -68,6 +68,7 @@ it('creates expected number of events', function () {
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 it('does not persist when disabled', function () {
     $machine = MachineDefinition::define(
         config: [
@@ -263,6 +264,7 @@ it('rolls back on exception with transactional event', function () {
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 it('persists non-transactional events on failure', function () {
     // Define non-transactional event
     $machine = MachineDefinition::define(

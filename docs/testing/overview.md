@@ -45,6 +45,7 @@ Test state machine logic without persistence:
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 it('transitions from pending to processing', function () {
     $machine = MachineDefinition::define(
         config: [
@@ -164,6 +165,7 @@ $this->assertDatabaseCount('machine_events', 10);
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 it('blocks transition when guard fails', function () {
     $machine = MachineDefinition::define(
         config: [
@@ -343,6 +345,7 @@ The `getBehavior()` method throws `BehaviorNotFoundException` if the behavior do
 
 <!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 it('starts with custom context', function () {
     $machine = MachineDefinition::define(
         config: [
