@@ -177,7 +177,9 @@ export default withMermaid(
         dark: 'github-dark'
       },
       codeTransformers: [
-        transformerHideLines()
+        transformerHideLines({
+          reveal: true,
+        })
       ]
     },
 
