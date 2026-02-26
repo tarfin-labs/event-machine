@@ -29,12 +29,12 @@ describe('Auto-Restore on Event Save', function (): void {
     });
 
     it('automatically restores archived events when new event is saved', function (): void {
-        $rootEventId = Str::ulid()->toString();
+        $rootEventId = (string) Str::ulid();
         $machineId   = 'auto_restore_test_machine';
 
         // Create an archived event (simulate old archived machine)
         $archivedEvent = new MachineEvent([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 1,
             'created_at'      => now()->subDays(60),
             'machine_id'      => $machineId,
@@ -59,7 +59,7 @@ describe('Auto-Restore on Event Save', function (): void {
         // Now save a new event for the same root_event_id
         // This should trigger auto-restore
         MachineEvent::create([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 2,
             'created_at'      => now(),
             'machine_id'      => $machineId,
@@ -90,7 +90,7 @@ describe('Auto-Restore on Event Save', function (): void {
     });
 
     it('does nothing when no archive exists for root_event_id', function (): void {
-        $rootEventId = Str::ulid()->toString();
+        $rootEventId = (string) Str::ulid();
         $machineId   = 'no_archive_test_machine';
 
         // Verify no archive exists
@@ -98,7 +98,7 @@ describe('Auto-Restore on Event Save', function (): void {
 
         // Create a new event - should work normally without any restore
         $event = MachineEvent::create([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 1,
             'created_at'      => now(),
             'machine_id'      => $machineId,
@@ -121,13 +121,13 @@ describe('Auto-Restore on Event Save', function (): void {
     });
 
     it('restores only once when multiple events are saved in batch for same root_event_id', function (): void {
-        $rootEventId = Str::ulid()->toString();
+        $rootEventId = (string) Str::ulid();
         $machineId   = 'batch_test_machine';
 
         // Create and archive initial events
         $archivedEvents = collect([
             new MachineEvent([
-                'id'              => Str::ulid()->toString(),
+                'id'              => (string) Str::ulid(),
                 'sequence_number' => 1,
                 'created_at'      => now()->subDays(60),
                 'machine_id'      => $machineId,
@@ -141,7 +141,7 @@ describe('Auto-Restore on Event Save', function (): void {
                 'version'         => 1,
             ]),
             new MachineEvent([
-                'id'              => Str::ulid()->toString(),
+                'id'              => (string) Str::ulid(),
                 'sequence_number' => 2,
                 'created_at'      => now()->subDays(60)->addMinutes(1),
                 'machine_id'      => $machineId,
@@ -165,7 +165,7 @@ describe('Auto-Restore on Event Save', function (): void {
         // Now create multiple new events one by one (simulating batch)
         // First event triggers restore, subsequent events should not
         MachineEvent::create([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 3,
             'created_at'      => now(),
             'machine_id'      => $machineId,
@@ -184,7 +184,7 @@ describe('Auto-Restore on Event Save', function (): void {
 
         // Create second new event - should not try to restore (archive already deleted)
         MachineEvent::create([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 4,
             'created_at'      => now()->addSecond(),
             'machine_id'      => $machineId,
@@ -211,13 +211,13 @@ describe('Auto-Restore on Event Save', function (): void {
     });
 
     it('handles different root_event_ids independently', function (): void {
-        $rootEventId1 = Str::ulid()->toString();
-        $rootEventId2 = Str::ulid()->toString();
+        $rootEventId1 = (string) Str::ulid();
+        $rootEventId2 = (string) Str::ulid();
         $machineId    = 'independent_test_machine';
 
         // Archive events for root_event_id_1 only
         $archivedEvent = new MachineEvent([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 1,
             'created_at'      => now()->subDays(60),
             'machine_id'      => $machineId,
@@ -238,7 +238,7 @@ describe('Auto-Restore on Event Save', function (): void {
 
         // Create event for root_event_id_2 (no archive) - should work normally
         MachineEvent::create([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 1,
             'created_at'      => now(),
             'machine_id'      => $machineId,
@@ -258,7 +258,7 @@ describe('Auto-Restore on Event Save', function (): void {
 
         // Now create event for root_event_id_1 - should trigger restore
         MachineEvent::create([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 2,
             'created_at'      => now(),
             'machine_id'      => $machineId,
@@ -296,7 +296,7 @@ describe('Auto-Restore Full Lifecycle', function (): void {
     });
 
     it('completes full lifecycle: archive → transparent read → new event → auto-restore → re-archive eligible', function (): void {
-        $rootEventId = Str::ulid()->toString();
+        $rootEventId = (string) Str::ulid();
         $machineId   = 'full_lifecycle_machine';
 
         // ============================================
@@ -305,7 +305,7 @@ describe('Auto-Restore Full Lifecycle', function (): void {
         $oldDate = now()->subDays(60);
 
         MachineEvent::create([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 1,
             'created_at'      => $oldDate,
             'machine_id'      => $machineId,
@@ -320,7 +320,7 @@ describe('Auto-Restore Full Lifecycle', function (): void {
         ]);
 
         MachineEvent::create([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 2,
             'created_at'      => $oldDate->copy()->addMinutes(5),
             'machine_id'      => $machineId,
@@ -378,7 +378,7 @@ describe('Auto-Restore Full Lifecycle', function (): void {
         // PHASE 4: New event arrives → Auto-restore triggered
         // ============================================
         MachineEvent::create([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 3,
             'created_at'      => now(),
             'machine_id'      => $machineId,
@@ -431,7 +431,7 @@ describe('Auto-Restore Full Lifecycle', function (): void {
     });
 
     it('preserves event data integrity through archive → auto-restore cycle', function (): void {
-        $rootEventId = Str::ulid()->toString();
+        $rootEventId = (string) Str::ulid();
         $machineId   = 'data_integrity_machine';
 
         // Create event with complex payload
@@ -461,7 +461,7 @@ describe('Auto-Restore Full Lifecycle', function (): void {
         ];
 
         $originalEvent = MachineEvent::create([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 1,
             'created_at'      => now()->subDays(60),
             'machine_id'      => $machineId,
@@ -486,7 +486,7 @@ describe('Auto-Restore Full Lifecycle', function (): void {
 
         // Trigger auto-restore by creating new event
         MachineEvent::create([
-            'id'              => Str::ulid()->toString(),
+            'id'              => (string) Str::ulid(),
             'sequence_number' => 2,
             'created_at'      => now(),
             'machine_id'      => $machineId,
