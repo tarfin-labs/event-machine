@@ -42,7 +42,6 @@ Everything else in the event array is **payload** - data that actions and guards
 
 Actions receive the event:
 
-<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
