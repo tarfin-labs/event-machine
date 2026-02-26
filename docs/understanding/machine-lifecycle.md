@@ -198,8 +198,8 @@ $machine->send(['type' => 'PAY', 'amount' => 99.99]);
 
 For testing or calculations:
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
         'should_persist' => false,
@@ -340,8 +340,8 @@ foreach ($history as $event) {
 
 Actions should be quick. For slow operations:
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 class ProcessPaymentAction extends ActionBehavior
 {
     public function __invoke($context, $event): void
@@ -371,8 +371,8 @@ $context->set('processed', true);
 
 ### Handle Failures Gracefully
 
-<!-- doctest-attr: ignore -->
 ```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 class SendEmailAction extends ActionBehavior
 {
     public function __invoke($context, $event): void
