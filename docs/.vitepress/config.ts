@@ -4,11 +4,21 @@ import { transformerHideLines } from 'shiki-hide-lines'
 import { execSync } from 'node:child_process'
 
 const gitTag = (() => {
+  // Try local git tags first (works in full clones)
   try {
     return execSync('git describe --tags --abbrev=0', { encoding: 'utf-8' }).trim()
-  } catch {
-    return 'dev'
-  }
+  } catch { /* shallow clone - no tags available */ }
+
+  // Fallback: fetch latest release from GitHub API (works in Cloudflare Pages)
+  try {
+    const json = execSync(
+      'curl -sf https://api.github.com/repos/tarfin-labs/event-machine/releases/latest',
+      { encoding: 'utf-8', timeout: 5000 }
+    )
+    return JSON.parse(json).tag_name
+  } catch { /* offline or API error */ }
+
+  return 'dev'
 })()
 
 export default withMermaid(
