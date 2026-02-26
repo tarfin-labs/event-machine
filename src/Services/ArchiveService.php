@@ -8,6 +8,7 @@ use Exception;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Query\Builder;
 use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
@@ -129,7 +130,7 @@ class ArchiveService
         $query = MachineEvent::query()
             ->select('root_event_id', DB::raw('MAX(machine_id) as machine_id'))
             // Exclude already archived
-            ->whereNotIn('root_event_id', function ($subQuery): void {
+            ->whereNotIn('root_event_id', function (Builder $subQuery): void {
                 $subQuery->select('root_event_id')
                     ->from('machine_event_archives');
             });
@@ -138,7 +139,7 @@ class ArchiveService
         $cooldownHours = (int) ($this->config['restore_cooldown_hours'] ?? 24);
         if ($cooldownHours > 0) {
             $cooldownCutoff = Carbon::now()->subHours($cooldownHours);
-            $query->whereNotIn('root_event_id', function ($subQuery) use ($cooldownCutoff): void {
+            $query->whereNotIn('root_event_id', function (Builder $subQuery) use ($cooldownCutoff): void {
                 $subQuery->select('root_event_id')
                     ->from('machine_event_archives')
                     ->where('last_restored_at', '>', $cooldownCutoff);
@@ -257,7 +258,7 @@ class ArchiveService
             // Use getAttributes() to get raw database-ready values:
             // - datetime fields stay in MySQL format (not ISO8601)
             // - JSON fields stay as JSON strings (not PHP arrays)
-            $insertData = $events->map(fn ($event) => $event->getAttributes())->all();
+            $insertData = $events->map(fn (MachineEvent $event): array => $event->getAttributes())->all();
 
             MachineEvent::insert($insertData);
 
