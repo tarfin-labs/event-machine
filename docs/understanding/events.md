@@ -60,6 +60,31 @@ class ProcessPaymentAction extends ActionBehavior
 }
 ```
 
+## Checking Event Availability
+
+Before sending an event, you can check if the current state can handle it:
+
+<!-- doctest-attr: ignore -->
+```php
+// Check by type string
+$machine->can('PAY');  // true if PAY transition exists in current state
+
+// Check by event class
+$machine->can(PaymentEvent::class);  // resolves the class to its type string
+
+// Check with an event instance
+$machine->can(new PaymentEvent(...));  // uses the instance's type
+```
+
+You can also query which events the current state accepts:
+
+<!-- doctest-attr: ignore -->
+```php
+// Get all event types available in the current state
+$events = $machine->getAcceptedEvents();
+// ['PAY' => PaymentEvent::class, 'CANCEL' => CancelEvent::class]
+```
+
 ## Invalid Events
 
 If you send an event with no matching transition, EventMachine throws `NoTransitionDefinitionFoundException`:
@@ -73,6 +98,10 @@ try {
     // Handle invalid event
 }
 ```
+
+::: tip
+Use `can()` to check before sending if you want to avoid exceptions. This is useful for conditionally showing UI elements like buttons or menu items.
+:::
 
 ## Internal Events
 
@@ -92,6 +121,7 @@ For complete events documentation including:
 - Raised events from actions
 - Transactional events
 - Actor tracking
+- Event introspection (`can()` and `getAcceptedEvents()`)
 - Complete internal events reference (18 events)
 - Event source types (INTERNAL vs EXTERNAL)
 
