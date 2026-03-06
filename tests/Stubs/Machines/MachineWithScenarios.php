@@ -14,34 +14,34 @@ class MachineWithScenarios extends Machine
     {
         return MachineDefinition::define(
             config: [
-                'initial'           => 'stateA',
+                'initial'           => 'state_a',
                 'scenarios_enabled' => true,
                 'context'           => [
                     'count' => 1,
                 ],
                 'states' => [
-                    'stateA' => [
+                    'state_a' => [
                         'on' => [
                             'EVENT_B' => [
-                                'target'  => 'stateB',
+                                'target'  => 'state_b',
                                 'actions' => 'incrementAction',
                             ],
                         ],
                     ],
-                    'stateB' => [
+                    'state_b' => [
                         'on' => [
-                            'EVENT_C' => 'stateC',
+                            'EVENT_C' => 'state_c',
                         ],
                     ],
-                    'stateC' => [
+                    'state_c' => [
                         'on' => [
                             'EVENT_D' => [
-                                'target'  => 'stateD',
+                                'target'  => 'state_d',
                                 'actions' => 'incrementAction',
                             ],
                         ],
                     ],
-                    'stateD' => [],
+                    'state_d' => [],
                 ],
             ],
             behavior: [
@@ -56,10 +56,10 @@ class MachineWithScenarios extends Machine
             ],
             scenarios: [
                 'test' => [
-                    'stateA' => [
+                    'state_a' => [
                         'on' => [
                             'EVENT_B' => [
-                                'target'  => 'stateC',
+                                'target'  => 'state_c',
                                 'actions' => 'decrementAction',
                             ],
                         ],
@@ -67,13 +67,13 @@ class MachineWithScenarios extends Machine
                             'decrementAction',
                         ],
                     ],
-                    'stateC' => [
+                    'state_c' => [
                         'entry' => [
                             'decrementAction',
                         ],
                         'on' => [
                             'EVENT_D' => [
-                                'target'  => 'stateA',
+                                'target'  => 'state_a',
                                 'actions' => 'decrementAction',
                             ],
                         ],

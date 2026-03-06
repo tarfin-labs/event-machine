@@ -202,19 +202,19 @@ test('context values can be required for guards and actions inside machine', fun
             ],
         ],
         'states' => [
-            'stateA' => [
+            'state_a' => [
                 'on' => [
                     'EVENT' => [
-                        'target' => 'stateB',
+                        'target' => 'state_b',
                         'guards' => IsValidatedOddGuard::class,
                     ],
                     'EVENT2' => [
-                        'target'  => 'stateB',
+                        'target'  => 'state_b',
                         'actions' => IsOddAction::class,
                     ],
                 ],
             ],
-            'stateB' => [],
+            'state_b' => [],
         ],
     ]);
 

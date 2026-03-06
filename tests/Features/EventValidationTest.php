@@ -12,20 +12,20 @@ test('an event payload can be validated', function (): void {
 
     $machine = MachineDefinition::define(
         config: [
-            'initial' => 'stateA',
+            'initial' => 'state_a',
             'context' => [
                 'value' => $randomMachineValue,
             ],
             'states' => [
-                'stateA' => [
+                'state_a' => [
                     'on' => [
                         ValidatedEvent::class => [
-                            'target'  => 'stateB',
+                            'target'  => 'state_b',
                             'actions' => 'updateContext',
                         ],
                     ],
                 ],
-                'stateB' => [],
+                'state_b' => [],
             ],
         ],
         behavior: [
@@ -52,20 +52,20 @@ test('an event payload can be validated', function (): void {
 test('an event validator can stopping on the first validation failure', function (): void {
     $machine = MachineDefinition::define(
         config: [
-            'initial' => 'stateA',
+            'initial' => 'state_a',
             'context' => [
                 'value' => 'test',
             ],
             'states' => [
-                'stateA' => [
+                'state_a' => [
                     'on' => [
                         ValidatedEvent::class => [
-                            'target'  => 'stateB',
+                            'target'  => 'state_b',
                             'actions' => 'updateContext',
                         ],
                     ],
                 ],
-                'stateB' => [],
+                'state_b' => [],
             ],
         ],
         behavior: [

@@ -18,12 +18,12 @@ class AsdMachine extends Machine
     public static function definition(): MachineDefinition
     {
         return MachineDefinition::define(config: [
-            'initial' => 'stateA',
+            'initial' => 'state_a',
             'states'  => [
-                'stateA' => [
+                'state_a' => [
                     'on' => [
                         SEvent::class => [
-                            'target'  => 'stateS',
+                            'target'  => 'state_s',
                             'actions' => [AAction::class],
                         ],
                         EEvent::class => [
@@ -31,18 +31,18 @@ class AsdMachine extends Machine
                         ],
                     ],
                 ],
-                'stateS' => [
+                'state_s' => [
                     'on' => [
                         '@always' => [
-                            'target'  => 'stateD',
+                            'target'  => 'state_d',
                             'actions' => [SAction::class],
                         ],
                     ],
                 ],
-                'stateD' => [
+                'state_d' => [
                     'entry' => [DAction::class],
                 ],
-                'stateE' => [],
+                'state_e' => [],
             ],
         ]);
     }

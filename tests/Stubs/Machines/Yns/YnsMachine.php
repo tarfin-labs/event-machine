@@ -15,17 +15,17 @@ class YnsMachine extends Machine
     {
         return MachineDefinition::define(config: [
             'should_persist' => false,
-            'initial'        => 'stateY',
+            'initial'        => 'state_y',
             'states'         => [
-                'stateY' => [
+                'state_y' => [
                     'on' => [
                         SEvent::class => [
-                            'target'  => 'stateS',
+                            'target'  => 'state_s',
                             'actions' => [YAction::class],
                         ],
                     ],
                 ],
-                'stateS' => [],
+                'state_s' => [],
             ],
         ]);
     }

@@ -12,23 +12,23 @@ class AbcMachine extends Machine
     public static function definition(): MachineDefinition
     {
         return MachineDefinition::define(config: [
-            'initial' => 'stateB',
+            'initial' => 'state_b',
             'context' => [
-                'modelA' => null,
-                'value'  => 4,
+                'model_a' => null,
+                'value'   => 4,
             ],
             'states' => [
-                'stateA' => [
+                'state_a' => [
                     'on' => [
-                        'EVENT' => 'stateB',
+                        'EVENT' => 'state_b',
                     ],
                 ],
-                'stateB' => [
+                'state_b' => [
                     'on' => [
-                        '@always' => 'stateC',
+                        '@always' => 'state_c',
                     ],
                 ],
-                'stateC' => [],
+                'state_c' => [],
             ],
         ]);
     }
