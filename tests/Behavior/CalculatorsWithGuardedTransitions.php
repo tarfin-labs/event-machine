@@ -212,9 +212,9 @@ test('multiple calculators are executed in sequence and stop on first failure', 
                             [
                                 'target'      => 'state_b',
                                 'calculators' => [
-                                    'calculator1',
+                                    'calculator1Calculator',
                                     'failingCalculator',
-                                    'calculator3',
+                                    'calculator3Calculator',
                                 ],
                                 'guards'  => 'someGuard',
                                 'actions' => 'someAction',
@@ -231,14 +231,14 @@ test('multiple calculators are executed in sequence and stop on first failure', 
         ],
         'behavior' => [
             'calculators' => [
-                'calculator1' => function () use (&$calculator1Executed): void {
+                'calculator1Calculator' => function () use (&$calculator1Executed): void {
                     $calculator1Executed = true;
                 },
                 'failingCalculator' => function () use (&$calculator2Executed): void {
                     $calculator2Executed = true;
                     throw new RuntimeException('Calculator 2 failed');
                 },
-                'calculator3' => function () use (&$calculator3Executed): void {
+                'calculator3Calculator' => function () use (&$calculator3Executed): void {
                     $calculator3Executed = true;
                 },
             ],

@@ -48,7 +48,7 @@ test('a guard can have multiple arguments', function (): void {
                 'active' => [
                     'on' => [
                         'ADD_VALUE' => [
-                            'guards'  => 'biggerThan:5',
+                            'guards'  => 'biggerThanGuard:5',
                             'actions' => 'additionAction:10',
                         ],
                     ],
@@ -62,7 +62,7 @@ test('a guard can have multiple arguments', function (): void {
                 },
             ],
             'guards' => [
-                'biggerThan' => function (ContextManager $context, EventDefinition $eventDefinition, ?array $arguments = null): bool {
+                'biggerThanGuard' => function (ContextManager $context, EventDefinition $eventDefinition, ?array $arguments = null): bool {
                     return $context->count > $arguments[0];
                 },
             ],

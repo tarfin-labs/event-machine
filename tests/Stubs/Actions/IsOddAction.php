@@ -10,11 +10,11 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 class IsOddAction extends ActionBehavior
 {
     public static array $requiredContext = [
-        'counts.oddCount' => 'integer',
+        'counts.odd_count' => 'integer',
     ];
 
     public function __invoke(ContextManager $context): void
     {
-        $context->set('counts.oddCount', 1);
+        $context->set('counts.odd_count', 1);
     }
 }
