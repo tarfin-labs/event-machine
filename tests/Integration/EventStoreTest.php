@@ -72,7 +72,7 @@ it('stores internal action events', function (): void {
             'states' => [
                 'active' => [
                     'on' => [
-                        'ADD' => [
+                        'ADD_VALUE' => [
                             'actions' => 'additionAction',
                         ],
                     ],
@@ -89,7 +89,7 @@ it('stores internal action events', function (): void {
     );
 
     $newState = $machine->transition(event: [
-        'type'    => 'ADD',
+        'type'    => 'ADD_VALUE',
         'payload' => [
             'value' => 37,
         ],
@@ -101,11 +101,11 @@ it('stores internal action events', function (): void {
             'm.state.active.enter',
             'm.state.active.entry.start',
             'm.state.active.entry.finish',
-            'ADD',
-            'm.transition.active.ADD.start',
+            'ADD_VALUE',
+            'm.transition.active.ADD_VALUE.start',
             'm.action.additionAction.start',
             'm.action.additionAction.finish',
-            'm.transition.active.ADD.finish',
+            'm.transition.active.ADD_VALUE.finish',
             'm.state.active.exit.start',
             'm.state.active.exit.finish',
             'm.state.active.exit',
@@ -124,7 +124,7 @@ it('stores internal guard events', function (): void {
             'states' => [
                 'active' => [
                     'on' => [
-                        'MUT' => [
+                        'MULTIPLY' => [
                             'guards'  => 'isEvenGuard',
                             'actions' => 'multiplyByTwoAction',
                         ],
@@ -146,7 +146,7 @@ it('stores internal guard events', function (): void {
         ],
     );
 
-    $newState = $machine->transition(event: ['type' => 'MUT']);
+    $newState = $machine->transition(event: ['type' => 'MULTIPLY']);
 
     expect($newState->history->pluck('type')->toArray())
         ->toEqual([
@@ -154,10 +154,10 @@ it('stores internal guard events', function (): void {
             'in.state.active.enter',
             'in.state.active.entry.start',
             'in.state.active.entry.finish',
-            'MUT',
-            'in.transition.active.MUT.start',
+            'MULTIPLY',
+            'in.transition.active.MULTIPLY.start',
             'in.guard.isEvenGuard.fail',
-            'in.transition.active.MUT.fail',
+            'in.transition.active.MULTIPLY.fail',
         ]);
 });
 

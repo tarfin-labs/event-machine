@@ -16,7 +16,7 @@ test('an action can have multiple arguments', function (): void {
             'states' => [
                 'active' => [
                     'on' => [
-                        'ADD' => [
+                        'ADD_VALUE' => [
                             'actions' => 'additionAction:5,4,3,2,1',
                         ],
                     ],
@@ -32,7 +32,7 @@ test('an action can have multiple arguments', function (): void {
         ],
     );
 
-    $state = $machine->transition(event: ['type' => 'ADD']);
+    $state = $machine->transition(event: ['type' => 'ADD_VALUE']);
 
     expect($state->context->count)->toBe(15);
 });
@@ -47,7 +47,7 @@ test('a guard can have multiple arguments', function (): void {
             'states' => [
                 'active' => [
                     'on' => [
-                        'ADD' => [
+                        'ADD_VALUE' => [
                             'guards'  => 'biggerThan:5',
                             'actions' => 'additionAction:10',
                         ],
@@ -69,7 +69,7 @@ test('a guard can have multiple arguments', function (): void {
         ],
     );
 
-    $state = $machine->transition(event: ['type' => 'ADD']);
+    $state = $machine->transition(event: ['type' => 'ADD_VALUE']);
 
     expect($state->context->count)->toBe(0);
 });

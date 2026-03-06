@@ -127,7 +127,7 @@ test('TrafficLightsMachine transitions between states using EventMachine', funct
     $machineDefinition = TrafficLightsMachine::definition();
 
     $machineDefinition->transition(event: [
-        'type'    => 'SUB_VALUE',
+        'type'    => 'SUBTRACT_VALUE',
         'payload' => ['value' => 100],
     ]);
 })->throws(MachineContextValidationException::class);

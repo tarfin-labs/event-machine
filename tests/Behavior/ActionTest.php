@@ -19,10 +19,10 @@ it('can update context using actions defined in transition definitions', functio
             'states' => [
                 'active' => [
                     'on' => [
-                        'ADD' => ['actions' => 'additionAction'],
-                        'SUB' => ['actions' => 'subtractionAction'],
-                        'INC' => ['actions' => 'incrementAction'],
-                        'DEC' => ['actions' => 'decrementAction'],
+                        'ADD_VALUE'      => ['actions' => 'additionAction'],
+                        'SUBTRACT_VALUE' => ['actions' => 'subtractionAction'],
+                        'INCREASE'       => ['actions' => 'incrementAction'],
+                        'DECREASE'       => ['actions' => 'decrementAction'],
                     ],
                 ],
             ],
@@ -46,7 +46,7 @@ it('can update context using actions defined in transition definitions', functio
     );
 
     $addState = $machine->transition(event: [
-        'type'    => 'ADD',
+        'type'    => 'ADD_VALUE',
         'payload' => [
             'value' => 37,
         ],
@@ -57,7 +57,7 @@ it('can update context using actions defined in transition definitions', functio
         ->and($addState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active']);
 
     $subState = $machine->transition(event: [
-        'type'    => 'SUB',
+        'type'    => 'SUBTRACT_VALUE',
         'payload' => [
             'value' => 17,
         ],
@@ -69,7 +69,7 @@ it('can update context using actions defined in transition definitions', functio
         ->and($subState->context->get('count'))->toBe(20);
 
     $incState = $machine->transition(event: [
-        'type' => 'INC',
+        'type' => 'INCREASE',
     ], state: $subState);
 
     expect($incState)
@@ -78,7 +78,7 @@ it('can update context using actions defined in transition definitions', functio
         ->and($incState->context->get('count'))->toBe(21);
 
     $decState = $machine->transition(event: [
-        'type' => 'DEC',
+        'type' => 'DECREASE',
     ], state: $incState);
 
     expect($decState)
@@ -100,7 +100,7 @@ test('result actions can return', function (): void {
 
     // 2. Act
     $result = $multipleWithItselfAction::run(EventDefinition::from([
-        'type'    => 'ADD',
+        'type'    => 'ADD_VALUE',
         'payload' => [
             'value' => $value,
         ],
