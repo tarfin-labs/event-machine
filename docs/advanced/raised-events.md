@@ -410,7 +410,27 @@ try {
 }
 ```
 
-### 4. Avoid Raising Too Many Events
+### 4. Avoid Infinite Loops
+
+Raised events are processed within the same macrostep. If an action raises an event that transitions to a state whose entry action raises an event back, this creates an infinite loop. EventMachine will throw a `MaxTransitionDepthExceededException` after 100 recursive transitions.
+
+<!-- doctest-attr: ignore -->
+```php
+// DON'T DO THIS - infinite raise() loop!
+'stateA' => [
+    'entry' => 'raiseGoB',      // raises GO_B
+    'on'    => ['GO_B' => 'stateB'],
+],
+'stateB' => [
+    'entry' => 'raiseGoA',      // raises GO_A → back to stateA
+    'on'    => ['GO_A' => 'stateA'],
+],
+```
+
+See [@always Transitions — Infinite Loop Protection](/advanced/always-transitions#infinite-loop-protection) for details.
+
+### 5. Avoid Raising Too Many Events
+
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -424,7 +444,7 @@ $this->processAllItems($context->items);
 $this->raise(['type' => 'ALL_ITEMS_PROCESSED']);
 ```
 
-### 5. Use Class-Based Actions
+### 6. Use Class-Based Actions
 
 Raised events require `$this->raise()`, which is only available in class-based actions:
 
