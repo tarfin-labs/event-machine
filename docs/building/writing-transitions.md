@@ -37,7 +37,7 @@ EventMachine supports several syntax forms for flexibility:
 ```php ignore
 'SUBMIT' => [
     'target' => 'processing',
-    'actions' => 'logSubmission',
+    'actions' => 'logSubmissionAction',
 ],
 ```
 
@@ -46,9 +46,9 @@ EventMachine supports several syntax forms for flexibility:
 ```php ignore
 'SUBMIT' => [
     'target' => 'processing',
-    'actions' => ['validateInput', 'logSubmission'],
-    'guards' => 'canSubmit',
-    'calculators' => 'computeMetrics',
+    'actions' => ['validateInputAction', 'logSubmissionAction'],
+    'guards' => 'canSubmitGuard',
+    'calculators' => 'computeMetricsCalculator',
     'description' => 'Submit for processing',
 ],
 ```
@@ -78,7 +78,7 @@ Guards control whether a transition can occur:
     'on' => [
         'PAY' => [
             'target' => 'paid',
-            'guards' => 'hasValidPayment',
+            'guards' => 'hasValidPaymentGuard',
         ],
     ],
 ],
@@ -93,7 +93,7 @@ All guards must pass for the transition to proceed:
 ```php ignore
 'PAY' => [
     'target' => 'paid',
-    'guards' => ['hasValidPayment', 'hasStock', 'notExpired'],
+    'guards' => ['hasValidPaymentGuard', 'hasStockGuard', 'notExpiredGuard'],
 ],
 ```
 
@@ -107,11 +107,11 @@ Route to different states based on conditions:
         'PAY' => [
             [
                 'target' => 'paid',
-                'guards' => 'isFullPayment',
+                'guards' => 'isFullPaymentGuard',
             ],
             [
                 'target' => 'partial',
-                'guards' => 'isPartialPayment',
+                'guards' => 'isPartialPaymentGuard',
             ],
             [
                 'target' => 'failed',  // Default fallback
@@ -136,7 +136,7 @@ Execute code during a transition:
     'on' => [
         'PAY' => [
             'target' => 'paid',
-            'actions' => 'processPayment',
+            'actions' => 'processPaymentAction',
         ],
     ],
 ],
@@ -148,10 +148,10 @@ Execute code during a transition:
 'PAY' => [
     'target' => 'paid',
     'actions' => [
-        'validatePayment',
-        'deductBalance',
-        'sendReceipt',
-        'notifyWarehouse',
+        'validatePaymentAction',
+        'deductBalanceAction',
+        'sendReceiptAction',
+        'notifyWarehouseAction',
     ],
 ],
 ```
@@ -163,7 +163,7 @@ Actions execute in the order listed.
 Pass arguments to actions using colon syntax:
 
 ```php ignore
-'actions' => 'notify:email,sms',  // Calls notify with ['email', 'sms']
+'actions' => 'notifyAction:email,sms',  // Calls notifyAction with ['email', 'sms']
 ```
 
 ## Calculators
@@ -173,9 +173,9 @@ Calculators run before guards to prepare context data:
 ```php ignore
 'CHECKOUT' => [
     'target' => 'processing',
-    'calculators' => 'computeTotal',
-    'guards' => 'hasSufficientFunds',
-    'actions' => 'processCheckout',
+    'calculators' => 'computeTotalCalculator',
+    'guards' => 'hasSufficientFundsGuard',
+    'actions' => 'processCheckoutAction',
 ],
 ```
 
@@ -192,12 +192,12 @@ Transition to the same state, triggering exit and entry actions:
 
 ```php ignore
 'active' => [
-    'entry' => 'logEntry',
-    'exit' => 'logExit',
+    'entry' => 'logEntryAction',
+    'exit' => 'logExitAction',
     'on' => [
         'REFRESH' => [
             'target' => 'active',  // Same state
-            'actions' => 'reloadData',
+            'actions' => 'reloadDataAction',
         ],
     ],
 ],
@@ -211,11 +211,11 @@ Stay in the same state without triggering entry/exit actions:
 
 ```php ignore
 'active' => [
-    'entry' => 'logEntry',    // NOT called on HEARTBEAT
-    'exit' => 'logExit',      // NOT called on HEARTBEAT
+    'entry' => 'logEntryAction',    // NOT called on HEARTBEAT
+    'exit' => 'logExitAction',      // NOT called on HEARTBEAT
     'on' => [
         'HEARTBEAT' => [
-            'actions' => 'updateTimestamp',  // No target = internal
+            'actions' => 'updateTimestampAction',  // No target = internal
         ],
     ],
 ],
@@ -306,12 +306,12 @@ Transitions that evaluate immediately after entering a state:
 
 ```php ignore
 'processing' => [
-    'entry' => 'processData',
+    'entry' => 'processDataAction',
     'on' => [
         '@always' => [
             [
                 'target' => 'success',
-                'guards' => 'isProcessingComplete',
+                'guards' => 'isProcessingCompleteGuard',
             ],
             [
                 'target' => 'processing',  // Stay and retry
@@ -387,44 +387,44 @@ MachineDefinition::define(
             'cart' => [
                 'on' => [
                     'ADD_ITEM' => [
-                        'actions' => 'addToCart',
+                        'actions' => 'addToCartAction',
                     ],
                     'REMOVE_ITEM' => [
-                        'actions' => 'removeFromCart',
+                        'actions' => 'removeFromCartAction',
                     ],
                     'CHECKOUT' => [
                         'target' => 'checkout',
-                        'guards' => 'hasItems',
+                        'guards' => 'hasItemsGuard',
                     ],
                 ],
             ],
             'checkout' => [
-                'entry' => 'calculateTotals',
+                'entry' => 'calculateTotalsAction',
                 'on' => [
                     'APPLY_COUPON' => [
-                        'calculators' => 'validateCoupon',
-                        'actions' => 'applyCoupon',
+                        'calculators' => 'validateCouponCalculator',
+                        'actions' => 'applyCouponAction',
                     ],
                     'PAY' => [
                         [
                             'target' => 'paid',
-                            'guards' => ['hasStock', 'paymentValid'],
-                            'actions' => ['processPayment', 'reserveStock'],
+                            'guards' => ['hasStockGuard', 'paymentValidGuard'],
+                            'actions' => ['processPaymentAction', 'reserveStockAction'],
                         ],
                         [
                             'target' => 'payment_failed',
-                            'actions' => 'logFailure',
+                            'actions' => 'logFailureAction',
                         ],
                     ],
                     'BACK' => 'cart',
                 ],
             ],
             'paid' => [
-                'entry' => 'sendConfirmation',
+                'entry' => 'sendConfirmationAction',
                 'on' => [
                     'SHIP' => [
                         'target' => 'shipped',
-                        'actions' => 'createShipment',
+                        'actions' => 'createShipmentAction',
                     ],
                 ],
             ],
@@ -441,7 +441,7 @@ MachineDefinition::define(
             ],
             'delivered' => [
                 'type' => 'final',
-                'result' => 'orderSummary',
+                'result' => 'orderSummaryResult',
             ],
             'cancelled' => [
                 'type' => 'final',

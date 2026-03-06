@@ -327,12 +327,12 @@ MachineDefinition::define(
         'states' => [
             'browsing' => [
                 'on' => [
-                    'ADD_ITEM' => ['actions' => 'addItem'],
-                    'REMOVE_ITEM' => ['actions' => 'removeItem'],
-                    'APPLY_COUPON' => ['actions' => 'applyCoupon'],
+                    'ADD_ITEM' => ['actions' => 'addItemAction'],
+                    'REMOVE_ITEM' => ['actions' => 'removeItemAction'],
+                    'APPLY_COUPON' => ['actions' => 'applyCouponAction'],
                     'CHECKOUT' => [
                         'target' => 'checkout',
-                        'guards' => 'hasItems',
+                        'guards' => 'hasItemsGuard',
                     ],
                 ],
             ],
@@ -341,12 +341,12 @@ MachineDefinition::define(
     ],
     behavior: [
         'actions' => [
-            'addItem' => AddItemAction::class,
-            'removeItem' => RemoveItemAction::class,
-            'applyCoupon' => ApplyCouponAction::class,
+            'addItemAction' => AddItemAction::class,
+            'removeItemAction' => RemoveItemAction::class,
+            'applyCouponAction' => ApplyCouponAction::class,
         ],
         'guards' => [
-            'hasItems' => HasItemsGuard::class,
+            'hasItemsGuard' => HasItemsGuard::class,
         ],
     ],
 );

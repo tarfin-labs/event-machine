@@ -84,21 +84,21 @@ MachineDefinition::define(
     config: [...],
     behavior: [
         'actions' => [
-            'sendEmail' => SendEmailAction::class,
-            'logEvent' => fn (ContextManager $context) => logger()->info('Event'),
+            'sendEmailAction' => SendEmailAction::class,
+            'logEventAction' => fn (ContextManager $context) => logger()->info('Event'),
         ],
         'guards' => [
-            'isAuthenticated' => IsAuthenticatedGuard::class,
-            'hasPermission' => fn (ContextManager $context) => $context->get('role') === 'admin',
+            'isAuthenticatedGuard' => IsAuthenticatedGuard::class,
+            'hasPermissionGuard' => fn (ContextManager $context) => $context->get('role') === 'admin',
         ],
         'calculators' => [
-            'computeTotal' => ComputeTotalCalculator::class,
+            'computeTotalCalculator' => ComputeTotalCalculator::class,
         ],
         'events' => [
             'ADD_ITEM' => AddItemEvent::class,
         ],
         'results' => [
-            'orderSummary' => OrderSummaryResult::class,
+            'orderSummaryResult' => OrderSummaryResult::class,
         ],
         'context' => OrderContext::class,
     ],
@@ -123,10 +123,10 @@ Both approaches work:
 ```php ignore
 'actions' => [
     // Class reference
-    'sendEmail' => SendEmailAction::class,
+    'sendEmailAction' => SendEmailAction::class,
 
     // Inline closure
-    'logEvent' => function (ContextManager $context): void {
+    'logEventAction' => function (ContextManager $context): void {
         logger()->info('Event logged');
     },
 ],
@@ -151,8 +151,8 @@ Each state supports these keys:
 ```php ignore
 'processing' => [
     'description' => 'Order is being processed',
-    'entry' => 'startProcessing',
-    'exit' => 'cleanup',
+    'entry' => 'startProcessingAction',
+    'exit' => 'cleanupAction',
     'meta' => ['timeout' => 3600],
     'on' => [
         'COMPLETE' => 'done',
@@ -176,9 +176,9 @@ Transitions can be simple strings or detailed arrays:
 ```php ignore
 'SUBMIT' => [
     'target' => 'submitted',
-    'guards' => ['isValid', 'canSubmit'],
-    'calculators' => 'prepareData',
-    'actions' => ['validate', 'save', 'notify'],
+    'guards' => ['isValidGuard', 'canSubmitGuard'],
+    'calculators' => 'prepareDataCalculator',
+    'actions' => ['validateAction', 'saveAction', 'notifyAction'],
     'description' => 'Submit the form for review',
 ],
 ```
@@ -312,10 +312,10 @@ MachineDefinition::define(
                 'description' => 'Shopping cart',
                 'meta' => ['icon' => 'shopping-cart'],
                 'on' => [
-                    'ADD_ITEM' => ['actions' => 'addItem'],
+                    'ADD_ITEM' => ['actions' => 'addItemAction'],
                     'CHECKOUT' => [
                         'target' => 'checkout',
-                        'guards' => 'hasItems',
+                        'guards' => 'hasItemsGuard',
                     ],
                 ],
             ],
@@ -323,27 +323,27 @@ MachineDefinition::define(
                 'initial' => 'shipping',
                 'states' => [
                     'shipping' => [
-                        'entry' => 'loadShippingOptions',
+                        'entry' => 'loadShippingOptionsAction',
                         'on' => [
-                            'SET_ADDRESS' => ['actions' => 'setAddress'],
+                            'SET_ADDRESS' => ['actions' => 'setAddressAction'],
                             'CONTINUE' => [
                                 'target' => 'payment',
-                                'guards' => 'hasAddress',
+                                'guards' => 'hasAddressGuard',
                             ],
                         ],
                     ],
                     'payment' => [
-                        'entry' => 'loadPaymentMethods',
+                        'entry' => 'loadPaymentMethodsAction',
                         'on' => [
                             'PAY' => [
                                 [
                                     'target' => 'confirmed',
-                                    'guards' => 'paymentValid',
-                                    'actions' => ['processPayment', 'reserveStock'],
+                                    'guards' => 'paymentValidGuard',
+                                    'actions' => ['processPaymentAction', 'reserveStockAction'],
                                 ],
                                 [
                                     'target' => 'payment',
-                                    'actions' => 'showPaymentError',
+                                    'actions' => 'showPaymentErrorAction',
                                 ],
                             ],
                             'BACK' => 'shipping',
@@ -356,21 +356,21 @@ MachineDefinition::define(
                 ],
             ],
             'processing' => [
-                'entry' => 'startFulfillment',
+                'entry' => 'startFulfillmentAction',
                 'on' => [
                     'SHIP' => 'shipped',
                 ],
             ],
             'shipped' => [
-                'entry' => 'sendTrackingEmail',
+                'entry' => 'sendTrackingEmailAction',
                 'on' => [
                     'DELIVER' => 'delivered',
                 ],
             ],
             'delivered' => [
                 'type' => 'final',
-                'entry' => 'sendDeliveryConfirmation',
-                'result' => 'orderSummary',
+                'entry' => 'sendDeliveryConfirmationAction',
+                'result' => 'orderSummaryResult',
                 'meta' => ['completed' => true],
             ],
         ],
@@ -383,24 +383,24 @@ MachineDefinition::define(
             'PAY' => PaymentEvent::class,
         ],
         'actions' => [
-            'addItem' => AddItemAction::class,
-            'setAddress' => SetAddressAction::class,
-            'processPayment' => ProcessPaymentAction::class,
-            'reserveStock' => ReserveStockAction::class,
-            'startFulfillment' => StartFulfillmentAction::class,
-            'sendTrackingEmail' => SendTrackingEmailAction::class,
-            'sendDeliveryConfirmation' => SendDeliveryConfirmationAction::class,
-            'loadShippingOptions' => LoadShippingOptionsAction::class,
-            'loadPaymentMethods' => LoadPaymentMethodsAction::class,
-            'showPaymentError' => ShowPaymentErrorAction::class,
+            'addItemAction' => AddItemAction::class,
+            'setAddressAction' => SetAddressAction::class,
+            'processPaymentAction' => ProcessPaymentAction::class,
+            'reserveStockAction' => ReserveStockAction::class,
+            'startFulfillmentAction' => StartFulfillmentAction::class,
+            'sendTrackingEmailAction' => SendTrackingEmailAction::class,
+            'sendDeliveryConfirmationAction' => SendDeliveryConfirmationAction::class,
+            'loadShippingOptionsAction' => LoadShippingOptionsAction::class,
+            'loadPaymentMethodsAction' => LoadPaymentMethodsAction::class,
+            'showPaymentErrorAction' => ShowPaymentErrorAction::class,
         ],
         'guards' => [
-            'hasItems' => HasItemsGuard::class,
-            'hasAddress' => HasAddressGuard::class,
-            'paymentValid' => PaymentValidGuard::class,
+            'hasItemsGuard' => HasItemsGuard::class,
+            'hasAddressGuard' => HasAddressGuard::class,
+            'paymentValidGuard' => PaymentValidGuard::class,
         ],
         'results' => [
-            'orderSummary' => OrderSummaryResult::class,
+            'orderSummaryResult' => OrderSummaryResult::class,
         ],
     ],
 );

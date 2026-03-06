@@ -32,13 +32,13 @@ class OrderResultBehavior extends ResultBehavior
     ],
     'completed' => [
         'type' => 'final',
-        'result' => 'getOrderResult',
+        'result' => 'getOrderResultResult',
     ],
 ],
 
 // In behavior
 'results' => [
-    'getOrderResult' => OrderResultBehavior::class,
+    'getOrderResultResult' => OrderResultBehavior::class,
 ],
 ```
 
@@ -55,7 +55,7 @@ class OrderResultBehavior extends ResultBehavior
 
 ```php ignore
 'results' => [
-    'getOrderResult' => fn(ContextManager $ctx) => [
+    'getOrderResultResult' => fn(ContextManager $ctx) => [
         'orderId' => $ctx->orderId,
         'total' => $ctx->total,
     ],
@@ -127,29 +127,29 @@ If you just need the context data as-is, access `$state->context` directly inste
     ],
     'success' => [
         'type' => 'final',
-        'result' => 'getSuccessResult',
+        'result' => 'getSuccessResultResult',
     ],
     'cancelled' => [
         'type' => 'final',
-        'result' => 'getCancelledResult',
+        'result' => 'getCancelledResultResult',
     ],
     'failed' => [
         'type' => 'final',
-        'result' => 'getFailedResult',
+        'result' => 'getFailedResultResult',
     ],
 ],
 
 'results' => [
-    'getSuccessResult' => fn($ctx) => [
+    'getSuccessResultResult' => fn($ctx) => [
         'status' => 'success',
         'orderId' => $ctx->orderId,
         'message' => 'Order completed successfully',
     ],
-    'getCancelledResult' => fn($ctx) => [
+    'getCancelledResultResult' => fn($ctx) => [
         'status' => 'cancelled',
         'reason' => $ctx->cancellationReason,
     ],
-    'getFailedResult' => fn($ctx) => [
+    'getFailedResultResult' => fn($ctx) => [
         'status' => 'failed',
         'error' => $ctx->errorMessage,
         'retryable' => true,
@@ -370,11 +370,11 @@ Pass arguments to results:
 ```php ignore
 'completed' => [
     'type' => 'final',
-    'result' => 'formatResult:detailed',
+    'result' => 'formatResultResult:detailed',
 ],
 
 'results' => [
-    'formatResult' => function (
+    'formatResultResult' => function (
         ContextManager $context,
         array $arguments,
     ) {

@@ -36,7 +36,7 @@ MachineDefinition::define(
             'idle' => [
                 'on' => [
                     'INCREMENT' => [
-                        'actions' => 'incrementCount',
+                        'actions' => 'incrementCountAction',
                     ],
                 ],
             ],
@@ -44,7 +44,7 @@ MachineDefinition::define(
     ],
     behavior: [
         'actions' => [
-            'incrementCount' => fn(ContextManager $context) => $context->count++,
+            'incrementCountAction' => fn(ContextManager $context) => $context->count++,
         ],
     ],
 );
@@ -65,7 +65,7 @@ class IncrementAction extends ActionBehavior
 
 // Registration
 'actions' => [
-    'incrementCount' => IncrementAction::class,
+    'incrementCountAction' => IncrementAction::class,
 ],
 ```
 
@@ -87,7 +87,7 @@ class IncrementAction extends ActionBehavior
 'on' => [
     'SUBMIT' => [
         'target' => 'submitted',
-        'actions' => ['validateInput', 'saveData', 'sendNotification'],
+        'actions' => ['validateInputAction', 'saveDataAction', 'sendNotificationAction'],
     ],
 ],
 ```
@@ -97,8 +97,8 @@ class IncrementAction extends ActionBehavior
 ```php ignore
 'states' => [
     'loading' => [
-        'entry' => ['startSpinner', 'logEntry'],
-        'exit' => ['stopSpinner', 'logExit'],
+        'entry' => ['startSpinnerAction', 'logEntryAction'],
+        'exit' => ['stopSpinnerAction', 'logExitAction'],
         'on' => [
             'LOADED' => 'success',
         ],
@@ -145,10 +145,10 @@ Pass arguments using colon syntax:
 
 ```php ignore
 // Configuration
-'actions' => 'addValue:100',
+'actions' => 'addValueAction:100',
 
 // Multiple arguments
-'actions' => 'multiply:2,10',
+'actions' => 'multiplyAction:2,10',
 
 // In action
 class AddValueAction extends ActionBehavior

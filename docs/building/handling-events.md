@@ -78,7 +78,7 @@ class AddItemEvent extends EventBehavior
 // In transition definition
 'on' => [
     AddItemEvent::class => [
-        'actions' => 'addItemToCart',
+        'actions' => 'addItemToCartAction',
     ],
 ],
 
@@ -187,8 +187,8 @@ Or reference classes directly in transitions:
 
 ```php ignore
 'on' => [
-    AddItemEvent::class => ['actions' => 'addItem'],
-    RemoveItemEvent::class => ['actions' => 'removeItem'],
+    AddItemEvent::class => ['actions' => 'addItemAction'],
+    RemoveItemEvent::class => ['actions' => 'removeItemAction'],
 ],
 ```
 
@@ -403,7 +403,7 @@ The `@always` event is reserved for automatic transitions:
 'on' => [
     '@always' => [
         'target' => 'nextState',
-        'guards' => 'shouldTransition',
+        'guards' => 'shouldTransitionGuard',
     ],
 ],
 ```
@@ -440,19 +440,19 @@ MachineDefinition::define(
         'states' => [
             'browsing' => [
                 'on' => [
-                    'ADD_ITEM' => ['actions' => 'addItem'],
+                    'ADD_ITEM' => ['actions' => 'addItemAction'],
                     CheckoutEvent::class => [
                         'target' => 'processing',
-                        'guards' => 'hasItems',
-                        'actions' => ['validateAddress', 'startCheckout'],
+                        'guards' => 'hasItemsGuard',
+                        'actions' => ['validateAddressAction', 'startCheckoutAction'],
                     ],
                 ],
             ],
             'processing' => [
-                'entry' => 'processOrder',
+                'entry' => 'processOrderAction',
                 'on' => [
                     '@always' => [
-                        ['target' => 'completed', 'guards' => 'isProcessed'],
+                        ['target' => 'completed', 'guards' => 'isProcessedGuard'],
                         ['target' => 'failed'],
                     ],
                 ],
