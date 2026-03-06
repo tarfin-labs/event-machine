@@ -204,7 +204,7 @@ class OrderFulfillmentMachine extends Machine
     {
         return MachineDefinition::define(
             config: [
-                'id' => 'orderFulfillment',
+                'id' => 'order_fulfillment',
                 'initial' => 'processing',
                 'context' => [
                     'order_id' => null,
