@@ -90,7 +90,7 @@ $light = Machine::create([
                 'on' => [
                     'TIMER' => [
                         'target' => 'green',
-                        'actions' => 'incrementCycles',
+                        'actions' => 'incrementCyclesAction',
                     ],
                 ],
             ],
@@ -98,7 +98,7 @@ $light = Machine::create([
     ],
     'behavior' => [
         'actions' => [
-            'incrementCycles' => function ($context) {
+            'incrementCyclesAction' => function ($context) {
                 $context->set('cycles', $context->get('cycles') + 1);
             },
         ],
@@ -144,7 +144,7 @@ $light = Machine::create([
                     'TIMER' => 'yellow',
                     'POWER_SAVE' => [
                         'target' => 'flashing',
-                        'guards' => 'isNightTime',
+                        'guards' => 'isNightTimeGuard',
                     ],
                 ],
             ],
@@ -157,7 +157,7 @@ $light = Machine::create([
                 'on' => [
                     'TIMER' => [
                         'target' => 'green',
-                        'actions' => 'incrementCycles',
+                        'actions' => 'incrementCyclesAction',
                     ],
                 ],
             ],
@@ -170,12 +170,12 @@ $light = Machine::create([
     ],
     'behavior' => [
         'actions' => [
-            'incrementCycles' => function ($context) {
+            'incrementCyclesAction' => function ($context) {
                 $context->set('cycles', $context->get('cycles') + 1);
             },
         ],
         'guards' => [
-            'isNightTime' => function () {
+            'isNightTimeGuard' => function () {
                 return now()->hour >= 22 || now()->hour < 6;
             },
         ],
@@ -224,7 +224,7 @@ class TrafficLightMachine extends Machine
                             'TIMER' => 'yellow',
                             'POWER_SAVE' => [
                                 'target' => 'flashing',
-                                'guards' => 'isNightTime',
+                                'guards' => 'isNightTimeGuard',
                             ],
                         ],
                     ],
@@ -237,7 +237,7 @@ class TrafficLightMachine extends Machine
                         'on' => [
                             'TIMER' => [
                                 'target' => 'green',
-                                'actions' => 'incrementCycles',
+                                'actions' => 'incrementCyclesAction',
                             ],
                         ],
                     ],
@@ -250,10 +250,10 @@ class TrafficLightMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'incrementCycles' => IncrementCyclesAction::class,
+                    'incrementCyclesAction' => IncrementCyclesAction::class,
                 ],
                 'guards' => [
-                    'isNightTime' => IsNightTimeGuard::class,
+                    'isNightTimeGuard' => IsNightTimeGuard::class,
                 ],
             ],
         );

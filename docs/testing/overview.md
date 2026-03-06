@@ -176,7 +176,7 @@ it('blocks transition when guard fails', function () {
                     'on' => [
                         'SUBMIT' => [
                             'target' => 'submitted',
-                            'guards' => 'hasPositiveCount',
+                            'guards' => 'hasPositiveCountGuard',
                         ],
                     ],
                 ],
@@ -185,7 +185,7 @@ it('blocks transition when guard fails', function () {
         ],
         behavior: [
             'guards' => [
-                'hasPositiveCount' => fn($ctx) => $ctx->count > 0,
+                'hasPositiveCountGuard' => fn($ctx) => $ctx->count > 0,
             ],
         ],
     );

@@ -11,28 +11,28 @@ Scenarios allow you to define alternative state machine configurations that can 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
     config: [
-        'initial' => 'stateA',
+        'initial' => 'state_a',
         'scenarios_enabled' => true,  // Enable scenarios
         'states' => [
-            'stateA' => [
-                'on' => ['EVENT' => 'stateB'],
+            'state_a' => [
+                'on' => ['EVENT' => 'state_b'],
             ],
-            'stateB' => [],
+            'state_b' => [],
         ],
     ],
     scenarios: [
         'test' => [
-            'stateA' => [
+            'state_a' => [
                 'on' => [
-                    'EVENT' => 'stateC',  // Different target in 'test' scenario
+                    'EVENT' => 'state_c',  // Different target in 'test' scenario
                 ],
             ],
         ],
         'beta' => [
-            'stateA' => [
+            'state_a' => [
                 'on' => [
                     'EVENT' => [
-                        'target' => 'stateB',
+                        'target' => 'state_b',
                         'actions' => 'betaAction',  // Additional action
                     ],
                 ],
@@ -50,21 +50,21 @@ Include `scenarioType` in the event payload:
 ```php
 // Normal flow
 $machine->send(['type' => 'EVENT']);
-// Goes to stateB
+// Goes to state_b
 
 // Test scenario
 $machine->send([
     'type' => 'EVENT',
     'payload' => ['scenarioType' => 'test'],
 ]);
-// Goes to stateC
+// Goes to state_c
 
 // Beta scenario
 $machine->send([
     'type' => 'EVENT',
     'payload' => ['scenarioType' => 'beta'],
 ]);
-// Goes to stateB with betaAction
+// Goes to state_b with betaAction
 ```
 
 ## Scenario Configuration
