@@ -62,7 +62,7 @@ it('should apply the given state\'s context data to the machine\'s context when 
             'states' => [
                 'active' => [
                     'on' => [
-                        'INC' => ['actions' => 'incrementAction'],
+                        'INCREASE' => ['actions' => 'incrementAction'],
                     ],
                 ],
             ],
@@ -80,7 +80,7 @@ it('should apply the given state\'s context data to the machine\'s context when 
     $initialState->context->set('count', 5);
 
     $newState = $machine->transition(event: [
-        'type' => 'INC',
+        'type' => 'INCREASE',
     ], state: $initialState);
 
     expect($newState)
@@ -240,13 +240,13 @@ test('Top-Level Transitions', function (): void {
             ],
             'on' => [
                 '@event' => [
-                    'actions' => 'increaseValue',
+                    'actions' => 'increaseValueAction',
                 ],
             ],
         ],
         'behavior' => [
             'actions' => [
-                'increaseValue' => function (ContextManager $context): void {
+                'increaseValueAction' => function (ContextManager $context): void {
                     $context->value++;
                 },
             ],

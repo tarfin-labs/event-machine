@@ -143,12 +143,12 @@ it('should run the guarded action when the guards are passed', function (): void
             'states' => [
                 'active' => [
                     'on' => [
-                        'MUT' => [
+                        'MULTIPLY' => [
                             'guards'  => 'isEvenGuard',
                             'actions' => 'multiplyByTwoAction',
                         ],
-                        'INC' => ['actions' => 'incrementAction'],
-                        'DEC' => ['actions' => 'decrementAction'],
+                        'INCREASE' => ['actions' => 'incrementAction'],
+                        'DECREASE' => ['actions' => 'decrementAction'],
                     ],
                 ],
             ],
@@ -173,18 +173,18 @@ it('should run the guarded action when the guards are passed', function (): void
         ],
     );
 
-    $newState = $machine->transition(event: ['type' => 'MUT']);
+    $newState = $machine->transition(event: ['type' => 'MULTIPLY']);
 
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
         ->and($newState->context->data)->toBe(['count' => 1]);
 
-    $newState = $machine->transition(event: ['type' => 'INC'], state: $newState);
+    $newState = $machine->transition(event: ['type' => 'INCREASE'], state: $newState);
     expect($newState->context->data)->toBe(['count' => 2]);
 
     $newState = $machine->transition(event: [
-        'type' => 'MUT',
+        'type' => 'MULTIPLY',
     ], state: $newState);
 
     expect($newState)
@@ -203,12 +203,12 @@ it('should not run the guarded action when the guards are not passed', function 
             'states' => [
                 'active' => [
                     'on' => [
-                        'MUT' => [
+                        'MULTIPLY' => [
                             'guards'  => 'isEvenGuard',
                             'actions' => 'multiplyByTwoAction',
                         ],
-                        'INC' => ['actions' => 'incrementAction'],
-                        'DEC' => ['actions' => 'decrementAction'],
+                        'INCREASE' => ['actions' => 'incrementAction'],
+                        'DECREASE' => ['actions' => 'decrementAction'],
                     ],
                 ],
             ],
@@ -233,21 +233,21 @@ it('should not run the guarded action when the guards are not passed', function 
         ],
     );
 
-    $newState = $machine->transition(event: ['type' => 'MUT']);
+    $newState = $machine->transition(event: ['type' => 'MULTIPLY']);
 
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
         ->and($newState->context->data)->toBe(['count' => 1]);
 
-    $newState = $machine->transition(event: ['type' => 'INC'], state: $newState);
+    $newState = $machine->transition(event: ['type' => 'INCREASE'], state: $newState);
     expect($newState->context->data)->toBe(['count' => 2]);
 
-    $newState = $machine->transition(event: ['type' => 'DEC'], state: $newState);
+    $newState = $machine->transition(event: ['type' => 'DECREASE'], state: $newState);
     expect($newState->context->data)->toBe(['count' => 1]);
 
     $newState = $machine->transition(event: [
-        'type' => 'MUT',
+        'type' => 'MULTIPLY',
     ], state: $newState);
 
     expect($newState)
@@ -347,7 +347,7 @@ it('should prevent infinite loops when no guards evaluate to true for @always tr
                     'on' => [
                         '@always' => [
                             'target' => 'red',
-                            'guards' => 'guard1',
+                            'guards' => 'guard1Guard',
                         ],
                     ],
                 ],
@@ -356,7 +356,7 @@ it('should prevent infinite loops when no guards evaluate to true for @always tr
         ],
         behavior: [
             'guards' => [
-                'guard1' => fn (): bool => false,
+                'guard1Guard' => fn (): bool => false,
             ],
         ],
     );

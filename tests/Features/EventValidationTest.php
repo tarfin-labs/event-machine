@@ -21,7 +21,7 @@ test('an event payload can be validated', function (): void {
                     'on' => [
                         ValidatedEvent::class => [
                             'target'  => 'state_b',
-                            'actions' => 'updateContext',
+                            'actions' => 'updateContextAction',
                         ],
                     ],
                 ],
@@ -30,7 +30,7 @@ test('an event payload can be validated', function (): void {
         ],
         behavior: [
             'actions' => [
-                'updateContext' => function (ContextManager $context, ValidatedEvent $event) {
+                'updateContextAction' => function (ContextManager $context, ValidatedEvent $event) {
                     return $context->set('value', $context->get('value') + $event->payload['attribute']);
                 },
             ],
@@ -61,7 +61,7 @@ test('an event validator can stopping on the first validation failure', function
                     'on' => [
                         ValidatedEvent::class => [
                             'target'  => 'state_b',
-                            'actions' => 'updateContext',
+                            'actions' => 'updateContextAction',
                         ],
                     ],
                 ],

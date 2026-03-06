@@ -19,7 +19,7 @@ it('it can inject requested parameters', function (): void {
             'states'  => [
                 'ready' => [
                     'on' => [
-                        'CTX' => ['actions' => 'contextAction'],
+                        'CONTEXT' => ['actions' => 'contextAction'],
                     ],
                 ],
             ],
@@ -36,7 +36,7 @@ it('it can inject requested parameters', function (): void {
                     expect($c->value)->toBe(1);
 
                     expect($e)->toBeInstanceOf(EventBehavior::class);
-                    expect($e->type)->toBe('CTX');
+                    expect($e->type)->toBe('CONTEXT');
 
                     expect($s)->toBeInstanceOf(State::class);
                     expect($s->value)->toBe(['machine.ready']);
@@ -48,5 +48,5 @@ it('it can inject requested parameters', function (): void {
         ],
     ));
 
-    $machine->send(['type' => 'CTX']);
+    $machine->send(['type' => 'CONTEXT']);
 });

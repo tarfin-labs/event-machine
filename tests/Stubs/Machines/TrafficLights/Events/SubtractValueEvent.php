@@ -10,6 +10,6 @@ class SubtractValueEvent extends EventBehavior
 {
     public static function getType(): string
     {
-        return 'SUB_VALUE';
+        return 'SUBTRACT_VALUE';
     }
 }
