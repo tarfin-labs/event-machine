@@ -103,6 +103,15 @@ All behaviors should extend appropriate base classes:
 - PHPStan level 7 analysis
 - All classes use declare(strict_types=1)
 
+### Naming Conventions
+All code, tests, and documentation **must** follow the naming conventions defined in [`docs/building/conventions.md`](docs/building/conventions.md). Key rules:
+- **Event types**: `SCREAMING_SNAKE_CASE`, no abbreviations (`ORDER_SUBMITTED`, not `ORD_SUB`)
+- **State names**: `snake_case` adjective/participle, must pass the "is" test (`awaiting_payment`, not `awaitPayment`)
+- **Machine IDs**: `snake_case` (`order_workflow`, not `orderWorkflow`)
+- **Inline behavior keys**: `camelCase` with type suffix (`sendEmailAction`, `isValidGuard`, `orderTotalCalculator`)
+- **Context array keys**: `snake_case` (`total_amount`, not `totalAmount`)
+- **Class names**: PascalCase with type suffix (`SendEmailAction`, `IsPaymentValidGuard`)
+
 ## Package Structure
 
 - `src/Actor/` - Runtime machine and state classes
