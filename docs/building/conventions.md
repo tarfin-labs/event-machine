@@ -47,7 +47,7 @@ The pattern is straightforward:
 - **Event type** → SCREAMING_SNAKE_CASE derived from meaning (`ORDER_SUBMITTED`)
 - **Machine ID** → snake_case derived from domain name (`order_workflow`)
 
-```php
+```php no_run
 MachineDefinition::define(
     config: [
         'id'      => 'order_workflow',                    // snake_case
@@ -77,7 +77,7 @@ MachineDefinition::define(
 
 ::: tip Why Keep the Suffix in Inline Keys?
 When you see `'sendEmail'` in a config, it's unclear whether it's an action, a guard, or an event handler. But `'sendEmailAction'` immediately tells you its role. The suffix adds clarity, especially in `entry`, `exit`, and `cond` fields where different behavior types can appear:
-```php
+```php ignore
 'entry'   => 'initializeOrderAction',   // clearly an action
 'cond'    => 'hasItemsGuard',           // clearly a guard
 ```
@@ -89,7 +89,7 @@ Events represent **things that have happened** — they are facts, not commands.
 
 ### Event Classes
 
-```php
+```php ignore
 // Class name: {Subject}{PastVerb}Event — PascalCase
 class OrderSubmittedEvent extends EventBehavior { ... }
 class PaymentReceivedEvent extends EventBehavior { ... }
@@ -99,7 +99,7 @@ class ItemAddedToCartEvent extends EventBehavior { ... }
 
 The `getType()` method should return the event type in `SCREAMING_SNAKE_CASE`, derived from the full class meaning — not abbreviated:
 
-```php
+```php no_run
 class OrderSubmittedEvent extends EventBehavior
 {
     public function getType(): string
@@ -117,7 +117,7 @@ Don't abbreviate event types. Use `ORDER_SUBMITTED` instead of `ORD_SUB` or `OS`
 
 When referencing events as string keys in the machine config, use `SCREAMING_SNAKE_CASE`:
 
-```php
+```php ignore
 'on' => [
     'ORDER_SUBMITTED'    => 'processing',
     'PAYMENT_RECEIVED'   => 'paid',
@@ -140,7 +140,7 @@ For events with multiple words, ensure every word is clearly separated:
 
 Raised events follow the same naming rules. When an action raises an event internally, use `SCREAMING_SNAKE_CASE`:
 
-```php
+```php no_run
 class ProcessPaymentAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): void
@@ -154,7 +154,7 @@ class ProcessPaymentAction extends ActionBehavior
 
 In machine configuration, raised event targets use the same `SCREAMING_SNAKE_CASE`:
 
-```php
+```php ignore
 'on' => [
     'PAYMENT_PROCESSED'   => 'paid',
     'VALIDATION_COMPLETED' => 'verified',
@@ -193,7 +193,7 @@ State names fall into three categories, each serving a specific purpose:
 
 For states where the system is at rest, waiting, or in a steady condition:
 
-```php
+```php ignore
 'idle'      => [...],   // "The order is idle"
 'active'    => [...],   // "The user is active"
 'ready'     => [...],   // "The document is ready"
@@ -206,7 +206,7 @@ For states where the system is at rest, waiting, or in a steady condition:
 
 For states entered after an action has completed. This is the most common form and naturally pairs with the event that caused the transition:
 
-```php
+```php ignore
 'submitted' => [...],   // entered via ORDER_SUBMITTED
 'paid'      => [...],   // entered via PAYMENT_RECEIVED
 'shipped'   => [...],   // entered via SHIPMENT_DISPATCHED
@@ -219,7 +219,7 @@ For states entered after an action has completed. This is the most common form a
 
 For states where the system is actively doing something and will transition out when the process finishes:
 
-```php
+```php ignore
 'processing'  => [...],   // actively working on something
 'validating'  => [...],   // validation in progress
 'retrying'    => [...],   // retry attempt in progress
@@ -245,7 +245,7 @@ A powerful pattern is to **derive the state name from the event** that causes en
 | `DOCUMENTS_UPLOADED` | `awaiting_verification` |
 | `ORDER_COMPLETED` | `completed` |
 
-```php
+```php ignore
 'states' => [
     'idle' => [
         'on' => [
@@ -271,7 +271,7 @@ This pattern makes your machine self-documenting — you can read the event-to-s
 
 Always use `snake_case`. Combine participles with nouns or prepositions for clarity:
 
-```php
+```php ignore
 // Participle + noun
 'awaiting_payment'     => [...],   // "The order is awaiting payment"
 'pending_approval'     => [...],   // "The request is pending approval"
@@ -288,7 +288,7 @@ Always use `snake_case`. Combine participles with nouns or prepositions for clar
 
 ### What to Avoid
 
-```php
+```php ignore
 // Imperative verbs — states are conditions, not commands
 'process'   // → 'processing' or 'processed'
 'submit'    // → 'submitted'
@@ -317,7 +317,7 @@ Always use `snake_case`. Combine participles with nouns or prepositions for clar
 
 Final states represent the end of a machine's lifecycle. Use **past participles** that imply completion or termination:
 
-```php
+```php ignore
 'states' => [
     'completed'  => ['type' => 'final'],   // successful completion
     'cancelled'  => ['type' => 'final'],   // cancelled by user/system
@@ -331,7 +331,7 @@ Final states represent the end of a machine's lifecycle. Use **past participles*
 
 Parent states serve as **namespaces** — they group related child states. This is the **one exception** where nouns are acceptable, because the parent isn't describing a condition; it's categorizing a phase of the workflow:
 
-```php
+```php ignore
 'states' => [
     // Parent: noun (namespace) — OK here
     'payment' => [
@@ -361,7 +361,7 @@ Notice how the "is" test adapts naturally: **"The {parent} is {child}"** — "Th
 
 Parallel state regions follow the same rule as compound parents — use **nouns** as region names:
 
-```php
+```php ignore
 'fulfillment' => [
     'type'   => 'parallel',
     'states' => [
@@ -395,7 +395,7 @@ Parallel state regions follow the same rule as compound parents — use **nouns*
 
 When targeting states across machine boundaries or deep hierarchies, use the `#` prefix with the machine ID:
 
-```php
+```php ignore
 // Target a state by its absolute ID
 'on' => [
     'REVIEW_APPROVED' => '#order_workflow.approved',
@@ -412,7 +412,7 @@ The ID after `#` is the **machine ID** (snake_case), followed by a dot and the *
 
 Here is an order workflow that demonstrates all the patterns:
 
-```php
+```php ignore
 'states' => [
     // Adjective — stable resting state
     'idle' => [
@@ -461,7 +461,7 @@ Actions represent **side effects** — things the machine does. Name them as **v
 
 ### Action Classes
 
-```php
+```php ignore
 // Class name: {Verb}{Object}Action — PascalCase
 class SendNotificationAction extends ActionBehavior { ... }
 class UpdateInventoryAction extends ActionBehavior { ... }
@@ -473,7 +473,7 @@ class GenerateInvoicePdfAction extends ActionBehavior { ... }
 
 When registering actions in behavior arrays, use `camelCase` with the type suffix:
 
-```php
+```php ignore
 'behavior' => [
     'actions' => [
         'sendNotificationAction'    => SendNotificationAction::class,
@@ -487,7 +487,7 @@ When registering actions in behavior arrays, use `camelCase` with the type suffi
 
 Entry actions typically use verbs that describe **initialization or setup**. Exit actions use verbs that describe **cleanup or teardown**:
 
-```php
+```php ignore
 'states' => [
     'processing' => [
         'entry' => 'startProcessingAction',    // initialize, start, load, notify
@@ -531,7 +531,7 @@ Guards represent **conditions** — boolean checks that determine whether a tran
 
 ### Guard Classes
 
-```php
+```php ignore
 // Class name: {Prefix}{Condition}Guard — PascalCase
 class IsPaymentValidGuard extends GuardBehavior { ... }
 class HasSufficientBalanceGuard extends GuardBehavior { ... }
@@ -543,7 +543,7 @@ class ShouldRetryPaymentGuard extends GuardBehavior { ... }
 
 For guards that perform Laravel validation, use `ValidationGuard` suffix:
 
-```php
+```php ignore
 // Class name: {Prefix}{Condition}ValidationGuard — PascalCase
 class IsAmountValidValidationGuard extends ValidationGuardBehavior { ... }
 class IsEmailFormatValidValidationGuard extends ValidationGuardBehavior { ... }
@@ -551,7 +551,7 @@ class IsEmailFormatValidValidationGuard extends ValidationGuardBehavior { ... }
 
 ### Inline Behavior Keys
 
-```php
+```php ignore
 'behavior' => [
     'guards' => [
         'isPaymentValidGuard'       => IsPaymentValidGuard::class,
@@ -565,7 +565,7 @@ class IsEmailFormatValidValidationGuard extends ValidationGuardBehavior { ... }
 
 Calculators compute values for the context. Name them with a **descriptive noun** and a `Calculator` suffix.
 
-```php
+```php ignore
 // Class name: {Subject}{Noun}Calculator — PascalCase
 class OrderTotalCalculator extends CalculatorBehavior { ... }
 class ShippingCostCalculator extends CalculatorBehavior { ... }
@@ -575,7 +575,7 @@ class WeightedAverageCalculator extends CalculatorBehavior { ... }
 
 Inline keys:
 
-```php
+```php ignore
 'behavior' => [
     'calculators' => [
         'orderTotalCalculator'   => OrderTotalCalculator::class,
@@ -588,7 +588,7 @@ Inline keys:
 
 Results compute the final output of a state machine. Name them with a **descriptive noun** and a `Result` suffix.
 
-```php
+```php ignore
 // Class name: {Subject}{Noun}Result — PascalCase
 class InvoiceSummaryResult extends ResultBehavior { ... }
 class OrderConfirmationResult extends ResultBehavior { ... }
@@ -599,7 +599,7 @@ class RiskAssessmentResult extends ResultBehavior { ... }
 
 ### Machine Classes
 
-```php
+```php ignore
 // Class name: {Domain}Machine — PascalCase
 class OrderWorkflowMachine extends MachineDefinition { ... }
 class PaymentProcessingMachine extends MachineDefinition { ... }
@@ -610,7 +610,7 @@ class UserOnboardingMachine extends MachineDefinition { ... }
 
 Use `snake_case` for machine IDs in configuration. The ID is derived from the domain name without the `Machine` suffix:
 
-```php
+```php no_run
 MachineDefinition::define(
     config: [
         'id' => 'order_workflow',      // snake_case, no Machine suffix
@@ -638,7 +638,7 @@ order_workflow.guard.isPaymentValidGuard.pass
 
 When using `MachineCast`, column names should use `snake_case` with an `_mre` suffix (Machine Root Event):
 
-```php
+```php ignore
 // Column name: {domain}_mre — snake_case
 protected $casts = [
     'order_workflow_mre'      => MachineCast::class,
@@ -654,7 +654,7 @@ The `_mre` suffix makes it clear that the column stores a machine root event ref
 
 When defining context as an inline array, use `snake_case`:
 
-```php
+```php ignore
 'context' => [
     'total_amount'     => 0,
     'items_count'      => 0,
@@ -669,7 +669,7 @@ When defining context as an inline array, use `snake_case`:
 
 When using a custom `ContextManager` subclass, properties follow **PHP convention** — `camelCase`:
 
-```php
+```php no_run
 class OrderWorkflowContext extends ContextManager
 {
     public int $totalAmount = 0;
@@ -687,7 +687,7 @@ Array keys use `snake_case` to match PHP array and Laravel conventions. Typed cl
 
 ### What to Avoid
 
-```php
+```php ignore
 // Don't use abbreviations
 'amt'           // → 'amount'
 'qty'           // → 'quantity'
@@ -703,7 +703,7 @@ Array keys use `snake_case` to match PHP array and Laravel conventions. Typed cl
 
 Scenario names use `snake_case` with descriptive, domain-specific identifiers:
 
-```php
+```php no_run
 MachineDefinition::define(
     config: [
         'scenarios_enabled' => true,
@@ -729,7 +729,7 @@ MachineDefinition::define(
 
 Good scenario names describe the **business variant**, not technical details:
 
-```php
+```php ignore
 // Descriptive business variants
 'express_checkout'      // fast-track order flow
 'enterprise_onboarding' // multi-step enterprise setup
@@ -744,7 +744,7 @@ Good scenario names describe the **business variant**, not technical details:
 
 All configuration keys should use `snake_case`:
 
-```php
+```php ignore
 MachineDefinition::define(
     config: [
         'id'                => 'order_workflow',
