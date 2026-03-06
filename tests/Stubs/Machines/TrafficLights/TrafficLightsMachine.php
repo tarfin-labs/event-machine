@@ -16,7 +16,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\MultiplyEv
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\AddValueAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\DecrementAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\IncrementAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\SubtactValueEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\SubtractValueEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\MultiplyByTwoAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\SubtractValueAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\AddAnotherValueEvent;
@@ -34,32 +34,32 @@ class TrafficLightsMachine extends Machine
                 'states'  => [
                     'active' => [
                         'on' => [
-                            'MUT' => [
+                            'MULTIPLY' => [
                                 'guards'  => IsEvenGuard::class,
                                 'actions' => [
                                     MultiplyByTwoAction::class,
                                     'doNothingAction',
-                                    'doNothingAction2',
+                                    'doNothing2Action',
                                     'doNothingInsideClassAction',
                                 ],
                             ],
                             IncreaseEvent::class        => ['actions' => IncrementAction::class],
-                            'DEX'                       => ['actions' => DecrementAction::class],
+                            'DECREASE'                  => ['actions' => DecrementAction::class],
                             AddValueEvent::class        => ['actions' => AddValueAction::class],
                             AddAnotherValueEvent::class => ['actions' => AddAnotherValueAction::class],
-                            SubtactValueEvent::class    => ['actions' => SubtractValueAction::class],
+                            SubtractValueEvent::class   => ['actions' => SubtractValueAction::class],
                         ],
                     ],
                 ],
             ],
             behavior: [
                 'events' => [
-                    'MUT' => MultiplyEvent::class,
-                    'DEX' => DecreaseEvent::class,
+                    'MULTIPLY' => MultiplyEvent::class,
+                    'DECREASE' => DecreaseEvent::class,
                 ],
                 'actions' => [
                     'doNothingAction'            => function (): void {},
-                    'doNothingAction2'           => function (ContextManager $context, EventBehavior $eventBehavior): void {},
+                    'doNothing2Action'           => function (ContextManager $context, EventBehavior $eventBehavior): void {},
                     'doNothingInsideClassAction' => DoNothingInsideClassAction::class,
                 ],
             ],

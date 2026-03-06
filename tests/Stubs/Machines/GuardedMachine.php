@@ -31,7 +31,7 @@ class GuardedMachine extends Machine
                                     'target' => 'processed',
                                 ],
                             ],
-                            'INC' => [
+                            'INCREASE' => [
                                 'actions' => 'incrementAction',
                             ],
                         ],

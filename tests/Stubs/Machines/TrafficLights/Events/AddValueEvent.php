@@ -10,6 +10,6 @@ class AddValueEvent extends EventBehavior
 {
     public static function getType(): string
     {
-        return 'ADD';
+        return 'ADD_VALUE';
     }
 }

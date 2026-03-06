@@ -10,6 +10,6 @@ class IncreaseEvent extends EventBehavior
 {
     public static function getType(): string
     {
-        return 'INC';
+        return 'INCREASE';
     }
 }
