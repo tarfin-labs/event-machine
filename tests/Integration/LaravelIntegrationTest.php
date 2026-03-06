@@ -44,9 +44,9 @@ it('can persist the machine state', function (): void {
         'value' => 'some value',
     ]);
 
-    $modelA->traffic_mre->send(['type' => 'INC']);
-    $modelA->traffic_mre->send(['type' => 'INC']);
-    $modelA->traffic_mre->send(['type' => 'INC']);
+    $modelA->traffic_mre->send(['type' => 'INCREASE']);
+    $modelA->traffic_mre->send(['type' => 'INCREASE']);
+    $modelA->traffic_mre->send(['type' => 'INCREASE']);
 
     $modelA->traffic_mre->persist();
 

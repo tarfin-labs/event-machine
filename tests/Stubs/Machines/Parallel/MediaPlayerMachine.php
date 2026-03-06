@@ -18,7 +18,7 @@ class MediaPlayerMachine extends Machine
     {
         return MachineDefinition::define(
             config: [
-                'id'      => 'mediaPlayer',
+                'id'      => 'media_player',
                 'initial' => 'active',
                 'states'  => [
                     'active' => [

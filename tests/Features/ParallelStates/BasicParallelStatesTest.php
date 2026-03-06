@@ -245,7 +245,7 @@ test('parallel state must have at least one region', function (): void {
 
 test('three parallel regions initialize correctly', function (): void {
     $definition = MachineDefinition::define([
-        'id'      => 'orderWorkflow',
+        'id'      => 'order_workflow',
         'initial' => 'processing',
         'states'  => [
             'processing' => [
