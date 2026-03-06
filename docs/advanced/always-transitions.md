@@ -32,8 +32,8 @@ Use guards to conditionally route:
     'checking' => [
         'on' => [
             '@always' => [
-                ['target' => 'approved', 'guards' => 'isApproved'],
-                ['target' => 'rejected', 'guards' => 'isRejected'],
+                ['target' => 'approved', 'guards' => 'isApprovedGuard'],
+                ['target' => 'rejected', 'guards' => 'isRejectedGuard'],
                 ['target' => 'review'],  // Fallback
             ],
         ],
@@ -86,10 +86,10 @@ Route based on context without requiring an event:
 ```php
 'states' => [
     'processing' => [
-        'entry' => 'processOrder',
+        'entry' => 'processOrderAction',
         'on' => [
             '@always' => [
-                ['target' => 'express', 'guards' => 'isExpressShipping'],
+                ['target' => 'express', 'guards' => 'isExpressShippingGuard'],
                 ['target' => 'standard'],
             ],
         ],
@@ -105,10 +105,10 @@ Route based on context without requiring an event:
 ```php
 'states' => [
     'validating' => [
-        'entry' => 'runValidation',
+        'entry' => 'runValidationAction',
         'on' => [
             '@always' => [
-                ['target' => 'valid', 'guards' => 'isValid'],
+                ['target' => 'valid', 'guards' => 'isValidGuard'],
                 ['target' => 'invalid'],
             ],
         ],
@@ -143,7 +143,7 @@ Ensure consistent state entry:
 ```php
 'states' => [
     'init' => [
-        'entry' => 'loadConfiguration',
+        'entry' => 'loadConfigurationAction',
         'on' => [
             '@always' => 'ready',
         ],
@@ -158,12 +158,12 @@ Ensure consistent state entry:
 ```php
 'states' => [
     'scoring' => [
-        'entry' => 'calculateScore',
+        'entry' => 'calculateScoreAction',
         'on' => [
             '@always' => [
-                ['target' => 'excellent', 'guards' => 'scoreAbove90'],
-                ['target' => 'good', 'guards' => 'scoreAbove70'],
-                ['target' => 'passing', 'guards' => 'scoreAbove50'],
+                ['target' => 'excellent', 'guards' => 'scoreAbove90Guard'],
+                ['target' => 'good', 'guards' => 'scoreAbove70Guard'],
+                ['target' => 'passing', 'guards' => 'scoreAbove50Guard'],
                 ['target' => 'failing'],
             ],
         ],
@@ -181,12 +181,12 @@ Ensure consistent state entry:
             '@always' => [
                 [
                     'target' => 'approved',
-                    'guards' => 'isAutoApprovable',
-                    'actions' => 'logAutoApproval',
+                    'guards' => 'isAutoApprovableGuard',
+                    'actions' => 'logAutoApprovalAction',
                 ],
                 [
                     'target' => 'review',
-                    'actions' => 'notifyReviewer',
+                    'actions' => 'notifyReviewerAction',
                 ],
             ],
         ],
@@ -204,8 +204,8 @@ Ensure consistent state entry:
             '@always' => [
                 [
                     'target' => 'approved',
-                    'calculators' => 'calculateRiskScore',
-                    'guards' => 'isLowRisk',
+                    'calculators' => 'calculateRiskScoreCalculator',
+                    'guards' => 'isLowRiskGuard',
                 ],
                 ['target' => 'manual_review'],
             ],
@@ -232,34 +232,34 @@ MachineDefinition::define(
         ],
         'states' => [
             'received' => [
-                'entry' => 'calculateTotal',
+                'entry' => 'calculateTotalAction',
                 'on' => [
                     '@always' => [
                         [
                             'target' => 'vip_processing',
-                            'guards' => 'isVipMember',
+                            'guards' => 'isVipMemberGuard',
                         ],
                         [
                             'target' => 'priority_processing',
-                            'guards' => 'isLargeOrder',
+                            'guards' => 'isLargeOrderGuard',
                         ],
                         ['target' => 'standard_processing'],
                     ],
                 ],
             ],
             'vip_processing' => [
-                'entry' => 'assignVipHandler',
+                'entry' => 'assignVipHandlerAction',
             ],
             'priority_processing' => [
-                'entry' => 'assignPriorityHandler',
+                'entry' => 'assignPriorityHandlerAction',
             ],
             'standard_processing' => [],
         ],
     ],
     behavior: [
         'guards' => [
-            'isVipMember' => fn($ctx) => $ctx->membershipLevel === 'vip',
-            'isLargeOrder' => fn($ctx) => $ctx->total > 1000,
+            'isVipMemberGuard' => fn($ctx) => $ctx->membershipLevel === 'vip',
+            'isLargeOrderGuard' => fn($ctx) => $ctx->total > 1000,
         ],
     ],
 );
@@ -271,17 +271,17 @@ MachineDefinition::define(
 ```php
 'states' => [
     'submitted' => [
-        'entry' => ['validateSubmission', 'checkEligibility'],
+        'entry' => ['validateSubmissionAction', 'checkEligibilityAction'],
         'on' => [
             '@always' => [
                 [
                     'target' => 'auto_approved',
-                    'guards' => ['isUnderAutoApprovalLimit', 'hasNoRiskFlags'],
-                    'actions' => 'logAutoApproval',
+                    'guards' => ['isUnderAutoApprovalLimitGuard', 'hasNoRiskFlagsGuard'],
+                    'actions' => 'logAutoApprovalAction',
                 ],
                 [
                     'target' => 'pending_first_approval',
-                    'guards' => 'requiresSingleApproval',
+                    'guards' => 'requiresSingleApprovalGuard',
                 ],
                 [
                     'target' => 'pending_dual_approval',
@@ -303,12 +303,12 @@ MachineDefinition::define(
 ```php
 'states' => [
     'calculating' => [
-        'entry' => 'computeFinalScore',
+        'entry' => 'computeFinalScoreAction',
         'on' => [
             '@always' => [
-                ['target' => 'passed.withHonors', 'guards' => 'scoreAbove95'],
-                ['target' => 'passed.standard', 'guards' => 'scoreAbove70'],
-                ['target' => 'failed.canRetry', 'guards' => 'hasRetriesLeft'],
+                ['target' => 'passed.withHonors', 'guards' => 'scoreAbove95Guard'],
+                ['target' => 'passed.standard', 'guards' => 'scoreAbove70Guard'],
+                ['target' => 'failed.canRetry', 'guards' => 'hasRetriesLeftGuard'],
                 ['target' => 'failed.final'],
             ],
         ],
@@ -346,7 +346,7 @@ MachineDefinition::define(
                                 'on' => [
                                     // Region waits for sibling to pass policy check
                                     '@always' => [
-                                        ['target' => 'payment_options', 'guards' => 'isApprovalPassed'],
+                                        ['target' => 'payment_options', 'guards' => 'isApprovalPassedGuard'],
                                     ],
                                 ],
                             ],
@@ -375,7 +375,7 @@ MachineDefinition::define(
     ],
     behavior: [
         'guards' => [
-            'isApprovalPassed' => fn (ContextManager $ctx, EventBehavior $event, State $state)
+            'isApprovalPassedGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state)
                 => $state->matches('processing.customer.approved')
                 || $state->matches('processing.customer.customer_done'),
         ],
@@ -416,10 +416,10 @@ Instead of checking sibling state, you can use context flags:
 <!-- doctest-attr: ignore -->
 ```php
 'guards' => [
-    'isApproved' => fn (ContextManager $ctx) => $ctx->get('approved') === true,
+    'isApprovedGuard' => fn (ContextManager $ctx) => $ctx->get('approved') === true,
 ],
 'actions' => [
-    'setApproved' => fn (ContextManager $ctx) => $ctx->set('approved', true),
+    'setApprovedAction' => fn (ContextManager $ctx) => $ctx->set('approved', true),
 ],
 ```
 
@@ -450,10 +450,10 @@ Always ensure at least one branch leads to a state without `@always`, or use gua
 ```php
 // Safe - guards prevent infinite loop
 'retry' => [
-    'entry' => 'incrementAttempts',
+    'entry' => 'incrementAttemptsAction',
     'on' => [
         '@always' => [
-            ['target' => 'processing', 'guards' => 'canRetry'],
+            ['target' => 'processing', 'guards' => 'canRetryGuard'],
             ['target' => 'failed'],  // Exit when can't retry
         ],
     ],
@@ -474,7 +474,7 @@ it('automatically routes based on condition', function () {
                 'checking' => [
                     'on' => [
                         '@always' => [
-                            ['target' => 'passed', 'guards' => 'isPassing'],
+                            ['target' => 'passed', 'guards' => 'isPassingGuard'],
                             ['target' => 'failed'],
                         ],
                     ],
@@ -485,7 +485,7 @@ it('automatically routes based on condition', function () {
         ],
         behavior: [
             'guards' => [
-                'isPassing' => fn($ctx) => $ctx->score >= 70,
+                'isPassingGuard' => fn($ctx) => $ctx->score >= 70,
             ],
         ],
     );
@@ -504,8 +504,8 @@ it('automatically routes based on condition', function () {
 <!-- doctest-attr: ignore -->
 ```php
 '@always' => [
-    ['target' => 'a', 'guards' => 'guardA'],
-    ['target' => 'b', 'guards' => 'guardB'],
+    ['target' => 'a', 'guards' => 'guardAGuard'],
+    ['target' => 'b', 'guards' => 'guardBGuard'],
     ['target' => 'default'],  // Always have a fallback
 ],
 ```
@@ -516,7 +516,7 @@ it('automatically routes based on condition', function () {
 ```php
 // Good - routing based on existing data
 '@always' => [
-    ['target' => 'express', 'guards' => 'isExpress'],
+    ['target' => 'express', 'guards' => 'isExpressGuard'],
     ['target' => 'standard'],
 ],
 
@@ -545,7 +545,7 @@ it('automatically routes based on condition', function () {
         '@always' => [
             [
                 'target' => 'vip',
-                'guards' => 'isVip',
+                'guards' => 'isVipGuard',
                 'description' => 'VIP members get priority',
             ],
             ['target' => 'standard'],

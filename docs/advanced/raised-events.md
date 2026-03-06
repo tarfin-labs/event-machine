@@ -201,19 +201,19 @@ MachineDefinition::define(
                 'on' => [
                     'SUBMIT' => [
                         'target' => 'validating',
-                        'actions' => 'startValidation',
+                        'actions' => 'startValidationAction',
                     ],
                 ],
             ],
             'validating' => [
-                'entry' => 'validateOrder',
+                'entry' => 'validateOrderAction',
                 'on' => [
                     'VALIDATION_PASSED' => 'processing',
                     'VALIDATION_FAILED' => 'rejected',
                 ],
             ],
             'processing' => [
-                'entry' => 'processPayment',
+                'entry' => 'processPaymentAction',
                 'on' => [
                     'PAYMENT_SUCCESS' => 'confirmed',
                     'PAYMENT_DECLINED' => 'payment_failed',
@@ -221,7 +221,7 @@ MachineDefinition::define(
                 ],
             ],
             'confirmed' => [
-                'entry' => 'sendConfirmation',
+                'entry' => 'sendConfirmationAction',
             ],
             'rejected' => [],
             'payment_failed' => [
@@ -232,9 +232,9 @@ MachineDefinition::define(
     ],
     behavior: [
         'actions' => [
-            'validateOrder' => ValidateOrderAction::class,
-            'processPayment' => ProcessPaymentAction::class,
-            'sendConfirmation' => SendConfirmationAction::class,
+            'validateOrderAction' => ValidateOrderAction::class,
+            'processPaymentAction' => ProcessPaymentAction::class,
+            'sendConfirmationAction' => SendConfirmationAction::class,
         ],
     ],
 );
@@ -344,22 +344,22 @@ it('processes raised events in order', function () {
             'context' => ['log' => []],
             'states' => [
                 'a' => [
-                    'entry' => 'logAndRaise',
+                    'entry' => 'logAndRaiseAction',
                     'on' => ['NEXT' => 'b'],
                 ],
                 'b' => [
-                    'entry' => 'logB',
+                    'entry' => 'logBAction',
                 ],
             ],
         ],
         behavior: [
             'actions' => [
-                'logAndRaise' => function ($context) {
+                'logAndRaiseAction' => function ($context) {
                     $context->log[] = 'a';
                     // Can't use $this->raise() in inline function
                     // Use class-based action instead
                 },
-                'logB' => fn($ctx) => $ctx->log[] = 'b',
+                'logBAction' => fn($ctx) => $ctx->log[] = 'b',
             ],
         ],
     );
@@ -442,6 +442,6 @@ class MyAction extends ActionBehavior
 
 // Doesn't work - inline function
 'actions' => [
-    'doSomething' => fn($ctx) => $this->raise(['type' => 'EVENT']), // Error! `raise()` not available
+    'doSomethingAction' => fn($ctx) => $this->raise(['type' => 'EVENT']), // Error! `raise()` not available
 ],
 ```

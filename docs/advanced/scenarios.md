@@ -33,7 +33,7 @@ MachineDefinition::define(
                 'on' => [
                     'EVENT' => [
                         'target' => 'stateB',
-                        'actions' => 'betaActionAction',  // Additional action
+                        'actions' => 'betaAction',  // Additional action
                     ],
                 ],
             ],
@@ -96,7 +96,7 @@ Scenarios can override:
             'on' => [
                 'COMPLETE' => [
                     'target' => 'completed',
-                    'actions' => ['logDebug', 'sendNotification'],
+                    'actions' => ['logDebugAction', 'sendNotificationAction'],
                 ],
             ],
         ],
@@ -111,8 +111,8 @@ Scenarios can override:
 'scenarios' => [
     'monitoring' => [
         'active' => [
-            'entry' => ['defaultEntry', 'recordMetrics'],
-            'exit' => ['defaultExit', 'flushMetrics'],
+            'entry' => ['defaultEntryAction', 'recordMetricsAction'],
+            'exit' => ['defaultExitAction', 'flushMetricsAction'],
         ],
     ],
 ],
@@ -128,7 +128,7 @@ Scenarios can override:
             'on' => [
                 'SUBMIT' => [
                     'target' => 'submitted',
-                    'guards' => 'lenientValidation',  // Less strict
+                    'guards' => 'lenientValidationGuard',  // Less strict
                 ],
             ],
         ],
@@ -177,7 +177,7 @@ MachineDefinition::define(
                 'on' => [
                     'PAY' => [
                         'target' => 'confirmation',
-                        'actions' => 'showUpsellOffer',
+                        'actions' => 'showUpsellOfferAction',
                     ],
                 ],
             ],
@@ -212,7 +212,7 @@ MachineDefinition::define(
             ],
             'legacy_completion' => ['type' => 'final'],
             'new_completion' => [
-                'entry' => 'enhancedCompletionFlow',
+                'entry' => 'enhancedCompletionFlowAction',
                 'type' => 'final',
             ],
         ],
@@ -247,7 +247,7 @@ MachineDefinition::define(
         'scenarios_enabled' => true,
         'states' => [
             'sending' => [
-                'entry' => 'sendEmail',
+                'entry' => 'sendEmailAction',
                 'on' => ['SENT' => 'completed'],
             ],
         ],
@@ -255,12 +255,12 @@ MachineDefinition::define(
     scenarios: [
         'testing' => [
             'sending' => [
-                'entry' => 'mockSendEmail',  // Don't actually send
+                'entry' => 'mockSendEmailAction',  // Don't actually send
             ],
         ],
         'staging' => [
             'sending' => [
-                'entry' => ['sendEmail', 'logToSlack'],  // Extra logging
+                'entry' => ['sendEmailAction', 'logToSlackAction'],  // Extra logging
             ],
         ],
     ],
@@ -302,7 +302,7 @@ MachineDefinition::define(
                 'on' => [
                     'APPROVE' => [
                         'target' => 'awaiting_second_approval',
-                        'guards' => 'isFirstApproval',
+                        'guards' => 'isFirstApprovalGuard',
                     ],
                 ],
             ],
@@ -340,7 +340,7 @@ class OrderMachine extends Machine
                         'on' => [
                             'SUBMIT' => [
                                 'target' => 'processing',
-                                'actions' => 'increment',
+                                'actions' => 'incrementAction',
                             ],
                         ],
                     ],
@@ -353,8 +353,8 @@ class OrderMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'increment' => fn($ctx) => $ctx->count++,
-                    'decrement' => fn($ctx) => $ctx->count--,
+                    'incrementAction' => fn($ctx) => $ctx->count++,
+                    'decrementAction' => fn($ctx) => $ctx->count--,
                 ],
             ],
             scenarios: [
@@ -363,10 +363,10 @@ class OrderMachine extends Machine
                         'on' => [
                             'SUBMIT' => [
                                 'target' => 'fast_completed',  // Skip processing
-                                'actions' => 'decrement', // Different action
+                                'actions' => 'decrementAction', // Different action
                             ],
                         ],
-                        'exit' => ['decrement'],  // Additional exit action
+                        'exit' => ['decrementAction'],  // Additional exit action
                     ],
                 ],
             ],

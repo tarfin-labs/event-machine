@@ -183,13 +183,13 @@ class CartContext extends ContextManager
 ```php
 // In guards
 'guards' => [
-    'hasMinimumTotal' => fn(CartContext $ctx) => $ctx->total() >= 10,
-    'isNotEmpty' => fn(CartContext $ctx) => !$ctx->isEmpty(),
+    'hasMinimumTotalGuard' => fn(CartContext $ctx) => $ctx->total() >= 10,
+    'isNotEmptyGuard' => fn(CartContext $ctx) => !$ctx->isEmpty(),
 ],
 
 // In actions
 'actions' => [
-    'applyDiscount' => function (CartContext $ctx, EventBehavior $event) {
+    'applyDiscountAction' => function (CartContext $ctx, EventBehavior $event) {
         $ctx->discountPercent = $event->payload['percent'];
         // `total()` will automatically reflect the discount
     },
@@ -520,7 +520,7 @@ public function isEligible(): bool
 
 // Use in guards
 'guards' => [
-    'checkEligibility' => fn($ctx) => $ctx->isEligible(),
+    'checkEligibilityGuard' => fn($ctx) => $ctx->isEligible(),
 ],
 ```
 
