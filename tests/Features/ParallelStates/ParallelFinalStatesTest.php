@@ -13,7 +13,7 @@ test('parallel state detects when all regions are final', function (): void {
             'processing' => [
                 'type'   => 'parallel',
                 'states' => [
-                    'regionA' => [
+                    'region_a' => [
                         'initial' => 'working',
                         'states'  => [
                             'working' => [
@@ -24,7 +24,7 @@ test('parallel state detects when all regions are final', function (): void {
                             'done' => ['type' => 'final'],
                         ],
                     ],
-                    'regionB' => [
+                    'region_b' => [
                         'initial' => 'working',
                         'states'  => [
                             'working' => [
@@ -43,18 +43,18 @@ test('parallel state detects when all regions are final', function (): void {
     $state = $definition->getInitialState();
 
     // Initially neither region is final
-    expect($state->matches('processing.regionA.working'))->toBeTrue();
-    expect($state->matches('processing.regionB.working'))->toBeTrue();
+    expect($state->matches('processing.region_a.working'))->toBeTrue();
+    expect($state->matches('processing.region_b.working'))->toBeTrue();
 
     // Complete region A
     $state = $definition->transition(['type' => 'COMPLETE_A'], $state);
-    expect($state->matches('processing.regionA.done'))->toBeTrue();
-    expect($state->matches('processing.regionB.working'))->toBeTrue();
+    expect($state->matches('processing.region_a.done'))->toBeTrue();
+    expect($state->matches('processing.region_b.working'))->toBeTrue();
 
     // Complete region B
     $state = $definition->transition(['type' => 'COMPLETE_B'], $state);
-    expect($state->matches('processing.regionA.done'))->toBeTrue();
-    expect($state->matches('processing.regionB.done'))->toBeTrue();
+    expect($state->matches('processing.region_a.done'))->toBeTrue();
+    expect($state->matches('processing.region_b.done'))->toBeTrue();
 });
 
 test('regions can complete in any order', function (): void {
@@ -262,7 +262,7 @@ test('onDone works with array configuration', function (): void {
                     'target' => 'finished',
                 ],
                 'states' => [
-                    'regionA' => [
+                    'region_a' => [
                         'initial' => 'active',
                         'states'  => [
                             'active' => [
@@ -273,7 +273,7 @@ test('onDone works with array configuration', function (): void {
                             'complete' => ['type' => 'final'],
                         ],
                     ],
-                    'regionB' => [
+                    'region_b' => [
                         'initial' => 'active',
                         'states'  => [
                             'active' => [

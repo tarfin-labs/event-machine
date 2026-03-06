@@ -26,14 +26,14 @@ test('same event can trigger transitions in multiple regions simultaneously', fu
                                     'on' => [
                                         'CHANGE' => [
                                             'target'  => 'modified',
-                                            'actions' => 'updateValue',
+                                            'actions' => 'updateValueAction',
                                         ],
                                     ],
                                 ],
                                 'modified' => [
                                     'on' => [
                                         'CHANGE' => [
-                                            'actions' => 'updateValue',
+                                            'actions' => 'updateValueAction',
                                         ],
                                     ],
                                 ],
@@ -60,7 +60,7 @@ test('same event can trigger transitions in multiple regions simultaneously', fu
         ],
         behavior: [
             'actions' => [
-                'updateValue' => function (ContextManager $ctx): void {
+                'updateValueAction' => function (ContextManager $ctx): void {
                     $ctx->set('value', 'changed');
                 },
             ],
@@ -174,7 +174,7 @@ test('entry actions fire in all parallel regions on initial state', function ():
 
     $definition = MachineDefinition::define(
         config: [
-            'id'      => 'entryTest',
+            'id'      => 'entry_test',
             'initial' => 'active',
             'states'  => [
                 'active' => [
@@ -184,7 +184,7 @@ test('entry actions fire in all parallel regions on initial state', function ():
                             'initial' => 'a',
                             'states'  => [
                                 'a' => [
-                                    'entry' => 'logRegion1Entry',
+                                    'entry' => 'logRegion1EntryAction',
                                 ],
                             ],
                         ],
@@ -192,7 +192,7 @@ test('entry actions fire in all parallel regions on initial state', function ():
                             'initial' => 'b',
                             'states'  => [
                                 'b' => [
-                                    'entry' => 'logRegion2Entry',
+                                    'entry' => 'logRegion2EntryAction',
                                 ],
                             ],
                         ],
@@ -200,7 +200,7 @@ test('entry actions fire in all parallel regions on initial state', function ():
                             'initial' => 'c',
                             'states'  => [
                                 'c' => [
-                                    'entry' => 'logRegion3Entry',
+                                    'entry' => 'logRegion3EntryAction',
                                 ],
                             ],
                         ],
@@ -210,13 +210,13 @@ test('entry actions fire in all parallel regions on initial state', function ():
         ],
         behavior: [
             'actions' => [
-                'logRegion1Entry' => function () use (&$actionsExecuted): void {
+                'logRegion1EntryAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'region1';
                 },
-                'logRegion2Entry' => function () use (&$actionsExecuted): void {
+                'logRegion2EntryAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'region2';
                 },
-                'logRegion3Entry' => function () use (&$actionsExecuted): void {
+                'logRegion3EntryAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'region3';
                 },
             ],
@@ -375,7 +375,7 @@ test('transition entering parallel state initializes all nested parallel regions
     // When transitioning INTO a state that contains a nested parallel,
     // all regions of that nested parallel should be entered
     $definition = MachineDefinition::define([
-        'id'      => 'transitionToParallel',
+        'id'      => 'transition_to_parallel',
         'initial' => 'idle',
         'states'  => [
             'idle' => [

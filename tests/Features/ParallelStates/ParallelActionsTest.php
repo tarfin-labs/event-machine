@@ -17,19 +17,19 @@ test('entry actions fire when entering parallel regions', function (): void {
                 'active' => [
                     'type'   => 'parallel',
                     'states' => [
-                        'regionA' => [
+                        'region_a' => [
                             'initial' => 'a1',
                             'states'  => [
                                 'a1' => [
-                                    'entry' => 'logEntryA1',
+                                    'entry' => 'logEntryA1Action',
                                 ],
                             ],
                         ],
-                        'regionB' => [
+                        'region_b' => [
                             'initial' => 'b1',
                             'states'  => [
                                 'b1' => [
-                                    'entry' => 'logEntryB1',
+                                    'entry' => 'logEntryB1Action',
                                 ],
                             ],
                         ],
@@ -39,10 +39,10 @@ test('entry actions fire when entering parallel regions', function (): void {
         ],
         behavior: [
             'actions' => [
-                'logEntryA1' => function (ContextManager $ctx) use (&$actionsExecuted): void {
+                'logEntryA1Action' => function (ContextManager $ctx) use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'entryA1';
                 },
-                'logEntryB1' => function (ContextManager $ctx) use (&$actionsExecuted): void {
+                'logEntryB1Action' => function (ContextManager $ctx) use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'entryB1';
                 },
             ],
@@ -74,7 +74,7 @@ test('transition actions fire during parallel region transitions', function (): 
                                     'on' => [
                                         'PLAY' => [
                                             'target'  => 'playing',
-                                            'actions' => 'logPlay',
+                                            'actions' => 'logPlayAction',
                                         ],
                                     ],
                                 ],
@@ -94,7 +94,7 @@ test('transition actions fire during parallel region transitions', function (): 
         ],
         behavior: [
             'actions' => [
-                'logPlay' => function (ContextManager $ctx) use (&$actionsExecuted): void {
+                'logPlayAction' => function (ContextManager $ctx) use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'play';
                 },
             ],
@@ -123,13 +123,13 @@ test('exit actions fire during parallel region transitions', function (): void {
                             'initial' => 'paused',
                             'states'  => [
                                 'paused' => [
-                                    'exit' => 'logExitPaused',
+                                    'exit' => 'logExitPausedAction',
                                     'on'   => [
                                         'PLAY' => 'playing',
                                     ],
                                 ],
                                 'playing' => [
-                                    'entry' => 'logEntryPlaying',
+                                    'entry' => 'logEntryPlayingAction',
                                 ],
                             ],
                         ],
@@ -145,10 +145,10 @@ test('exit actions fire during parallel region transitions', function (): void {
         ],
         behavior: [
             'actions' => [
-                'logExitPaused' => function (ContextManager $ctx) use (&$actionsExecuted): void {
+                'logExitPausedAction' => function (ContextManager $ctx) use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'exitPaused';
                 },
-                'logEntryPlaying' => function (ContextManager $ctx) use (&$actionsExecuted): void {
+                'logEntryPlayingAction' => function (ContextManager $ctx) use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'entryPlaying';
                 },
             ],
@@ -172,19 +172,19 @@ test('context is shared across all parallel regions', function (): void {
                 'active' => [
                     'type'   => 'parallel',
                     'states' => [
-                        'regionA' => [
+                        'region_a' => [
                             'initial' => 'a1',
                             'states'  => [
                                 'a1' => [
-                                    'entry' => 'incrementCount',
+                                    'entry' => 'incrementCountAction',
                                 ],
                             ],
                         ],
-                        'regionB' => [
+                        'region_b' => [
                             'initial' => 'b1',
                             'states'  => [
                                 'b1' => [
-                                    'entry' => 'incrementCount',
+                                    'entry' => 'incrementCountAction',
                                 ],
                             ],
                         ],
@@ -194,7 +194,7 @@ test('context is shared across all parallel regions', function (): void {
         ],
         behavior: [
             'actions' => [
-                'incrementCount' => function (ContextManager $ctx): void {
+                'incrementCountAction' => function (ContextManager $ctx): void {
                     $ctx->set('count', $ctx->get('count') + 1);
                 },
             ],

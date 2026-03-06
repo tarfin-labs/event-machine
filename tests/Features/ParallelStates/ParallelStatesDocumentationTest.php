@@ -165,7 +165,7 @@ test('docs example: multiple region handling - same event triggers both regions'
                                 'on' => [
                                     'CHANGE' => [
                                         'target'  => 'modified',
-                                        'actions' => 'updateValue',
+                                        'actions' => 'updateValueAction',
                                     ],
                                 ],
                             ],
@@ -188,7 +188,7 @@ test('docs example: multiple region handling - same event triggers both regions'
         ],
     ], [
         'actions' => [
-            'updateValue' => function (ContextManager $ctx, EventBehavior $event): void {
+            'updateValueAction' => function (ContextManager $ctx, EventBehavior $event): void {
                 $ctx->set('value', $event->payload['value'] ?? 'changed');
             },
         ],
@@ -215,13 +215,13 @@ test('docs example: entry action execution order', function (): void {
             'states'  => [
                 'active' => [
                     'type'   => 'parallel',
-                    'entry'  => 'logParallelEntry',
+                    'entry'  => 'logParallelEntryAction',
                     'states' => [
                         'region1' => [
                             'initial' => 'a',
                             'states'  => [
                                 'a' => [
-                                    'entry' => 'logRegion1Entry',
+                                    'entry' => 'logRegion1EntryAction',
                                 ],
                             ],
                         ],
@@ -229,7 +229,7 @@ test('docs example: entry action execution order', function (): void {
                             'initial' => 'b',
                             'states'  => [
                                 'b' => [
-                                    'entry' => 'logRegion2Entry',
+                                    'entry' => 'logRegion2EntryAction',
                                 ],
                             ],
                         ],
@@ -237,7 +237,7 @@ test('docs example: entry action execution order', function (): void {
                             'initial' => 'c',
                             'states'  => [
                                 'c' => [
-                                    'entry' => 'logRegion3Entry',
+                                    'entry' => 'logRegion3EntryAction',
                                 ],
                             ],
                         ],
@@ -247,16 +247,16 @@ test('docs example: entry action execution order', function (): void {
         ],
         behavior: [
             'actions' => [
-                'logParallelEntry' => function () use (&$actionsExecuted): void {
+                'logParallelEntryAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = '1. Entering parallel state';
                 },
-                'logRegion1Entry' => function () use (&$actionsExecuted): void {
+                'logRegion1EntryAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = '2. Entering region 1';
                 },
-                'logRegion2Entry' => function () use (&$actionsExecuted): void {
+                'logRegion2EntryAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = '3. Entering region 2';
                 },
-                'logRegion3Entry' => function () use (&$actionsExecuted): void {
+                'logRegion3EntryAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = '4. Entering region 3';
                 },
             ],
@@ -287,14 +287,14 @@ test('docs example: exit action execution order', function (): void {
             'states'  => [
                 'active' => [
                     'type'   => 'parallel',
-                    'exit'   => 'logParallelExit',
+                    'exit'   => 'logParallelExitAction',
                     'onDone' => 'inactive',
                     'states' => [
                         'region1' => [
                             'initial' => 'a',
                             'states'  => [
                                 'a' => [
-                                    'exit' => 'logStateAExit',
+                                    'exit' => 'logStateAExitAction',
                                     'on'   => ['DONE1' => 'final1'],
                                 ],
                                 'final1' => ['type' => 'final'],
@@ -304,7 +304,7 @@ test('docs example: exit action execution order', function (): void {
                             'initial' => 'b',
                             'states'  => [
                                 'b' => [
-                                    'exit' => 'logStateBExit',
+                                    'exit' => 'logStateBExitAction',
                                     'on'   => ['DONE2' => 'final2'],
                                 ],
                                 'final2' => ['type' => 'final'],
@@ -317,13 +317,13 @@ test('docs example: exit action execution order', function (): void {
         ],
         behavior: [
             'actions' => [
-                'logStateAExit' => function () use (&$actionsExecuted): void {
+                'logStateAExitAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = '1. Exiting state a';
                 },
-                'logStateBExit' => function () use (&$actionsExecuted): void {
+                'logStateBExitAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = '2. Exiting state b';
                 },
-                'logParallelExit' => function () use (&$actionsExecuted): void {
+                'logParallelExitAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = '3. Exiting parallel state';
                 },
             ],
@@ -363,7 +363,7 @@ test('docs example: shared context across regions', function (): void {
                                 'ready' => [
                                     'on' => [
                                         'INCREMENT' => [
-                                            'actions' => 'increment',
+                                            'actions' => 'incrementAction',
                                         ],
                                     ],
                                 ],
@@ -375,7 +375,7 @@ test('docs example: shared context across regions', function (): void {
                                 'ready' => [
                                     'on' => [
                                         'DECREMENT' => [
-                                            'actions' => 'decrement',
+                                            'actions' => 'decrementAction',
                                         ],
                                     ],
                                 ],
@@ -387,10 +387,10 @@ test('docs example: shared context across regions', function (): void {
         ],
         behavior: [
             'actions' => [
-                'increment' => function (ContextManager $ctx): void {
+                'incrementAction' => function (ContextManager $ctx): void {
                     $ctx->set('count', $ctx->get('count') + 1);
                 },
-                'decrement' => function (ContextManager $ctx): void {
+                'decrementAction' => function (ContextManager $ctx): void {
                     $ctx->set('count', $ctx->get('count') - 1);
                 },
             ],
@@ -667,7 +667,7 @@ test('docs example: guards checking cross-region state', function (): void {
                                     'on' => [
                                         'PROCEED' => [
                                             'target' => 'done',
-                                            'guards' => 'isRegion2Ready',
+                                            'guards' => 'isRegion2ReadyGuard',
                                         ],
                                     ],
                                 ],
@@ -689,7 +689,7 @@ test('docs example: guards checking cross-region state', function (): void {
         ],
         behavior: [
             'guards' => [
-                'isRegion2Ready' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('parallel.region2.ready'),
+                'isRegion2ReadyGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('parallel.region2.ready'),
             ],
         ]
     );

@@ -18,26 +18,26 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 test('always transition with guard in parallel state does not throw when guard fails', function (): void {
     $definition = MachineDefinition::define(
         config: [
-            'id'      => 'crossRegion',
+            'id'      => 'cross_region',
             'initial' => 'processing',
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
                     'states' => [
-                        'regionA' => [
+                        'region_a' => [
                             'initial' => 'waiting',
                             'states'  => [
                                 'waiting' => [
                                     'on' => [
                                         '@always' => [
-                                            ['target' => 'done', 'guards' => 'isRegionBReady'],
+                                            ['target' => 'done', 'guards' => 'isRegionBReadyGuard'],
                                         ],
                                     ],
                                 ],
                                 'done' => ['type' => 'final'],
                             ],
                         ],
-                        'regionB' => [
+                        'region_b' => [
                             'initial' => 'pending',
                             'states'  => [
                                 'pending' => [
@@ -54,22 +54,22 @@ test('always transition with guard in parallel state does not throw when guard f
         ],
         behavior: [
             'guards' => [
-                'isRegionBReady' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.regionB.ready'),
+                'isRegionBReadyGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.region_b.ready'),
             ],
         ]
     );
 
-    // Initial state — regionA has @always but guard should fail (regionB not ready)
+    // Initial state — region_a has @always but guard should fail (region_b not ready)
     $state = $definition->getInitialState();
 
-    expect($state->matches('processing.regionA.waiting'))->toBeTrue();
-    expect($state->matches('processing.regionB.pending'))->toBeTrue();
+    expect($state->matches('processing.region_a.waiting'))->toBeTrue();
+    expect($state->matches('processing.region_b.pending'))->toBeTrue();
 });
 
 test('always transition fires when cross-region guard becomes satisfied', function (): void {
     $definition = MachineDefinition::define(
         config: [
-            'id'      => 'crossRegionSync',
+            'id'      => 'cross_region_sync',
             'initial' => 'processing',
             'states'  => [
                 'processing' => [
@@ -81,22 +81,22 @@ test('always transition fires when cross-region guard becomes satisfied', functi
                             'states'  => [
                                 'pricing' => [
                                     'on' => [
-                                        'PRICING_DONE' => 'awaitingApproval',
+                                        'PRICING_DONE' => 'awaiting_approval',
                                     ],
                                 ],
-                                'awaitingApproval' => [
+                                'awaiting_approval' => [
                                     'on' => [
                                         '@always' => [
-                                            ['target' => 'paymentOptions', 'guards' => 'isPreApprovalPassed'],
+                                            ['target' => 'payment_options', 'guards' => 'isPreApprovalPassedGuard'],
                                         ],
                                     ],
                                 ],
-                                'paymentOptions' => [
+                                'payment_options' => [
                                     'on' => [
-                                        'PAYMENT_SELECTED' => 'dealerDone',
+                                        'PAYMENT_SELECTED' => 'dealer_done',
                                     ],
                                 ],
-                                'dealerDone' => ['type' => 'final'],
+                                'dealer_done' => ['type' => 'final'],
                             ],
                         ],
                         'customer' => [
@@ -104,20 +104,20 @@ test('always transition fires when cross-region guard becomes satisfied', functi
                             'states'  => [
                                 'consent' => [
                                     'on' => [
-                                        'CONSENT_GIVEN' => 'policyCheck',
+                                        'CONSENT_GIVEN' => 'policy_check',
                                     ],
                                 ],
-                                'policyCheck' => [
+                                'policy_check' => [
                                     'on' => [
-                                        'POLICY_APPROVED' => 'personalDetails',
+                                        'POLICY_APPROVED' => 'personal_details',
                                     ],
                                 ],
-                                'personalDetails' => [
+                                'personal_details' => [
                                     'on' => [
-                                        'DETAILS_SUBMITTED' => 'customerDone',
+                                        'DETAILS_SUBMITTED' => 'customer_done',
                                     ],
                                 ],
-                                'customerDone' => ['type' => 'final'],
+                                'customer_done' => ['type' => 'final'],
                             ],
                         ],
                     ],
@@ -127,8 +127,8 @@ test('always transition fires when cross-region guard becomes satisfied', functi
         ],
         behavior: [
             'guards' => [
-                'isPreApprovalPassed' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.customer.personalDetails')
-                    || $state->matches('processing.customer.customerDone'),
+                'isPreApprovalPassedGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.customer.personal_details')
+                    || $state->matches('processing.customer.customer_done'),
             ],
         ]
     );
@@ -137,31 +137,31 @@ test('always transition fires when cross-region guard becomes satisfied', functi
 
     // Scenario: Dealer finishes pricing first, customer not ready yet
     $state = $definition->transition(['type' => 'PRICING_DONE'], $state);
-    expect($state->matches('processing.dealer.awaitingApproval'))->toBeTrue()
+    expect($state->matches('processing.dealer.awaiting_approval'))->toBeTrue()
         ->and($state->matches('processing.customer.consent'))->toBeTrue();
 
-    // Customer gives consent → policyCheck
+    // Customer gives consent → policy_check
     $state = $definition->transition(['type' => 'CONSENT_GIVEN'], $state);
-    expect($state->matches('processing.dealer.awaitingApproval'))->toBeTrue()
-        ->and($state->matches('processing.customer.policyCheck'))->toBeTrue();
+    expect($state->matches('processing.dealer.awaiting_approval'))->toBeTrue()
+        ->and($state->matches('processing.customer.policy_check'))->toBeTrue();
 
-    // Customer policy approved → personalDetails
+    // Customer policy approved → personal_details
     // This should trigger dealer's @always guard to pass
     $state = $definition->transition(['type' => 'POLICY_APPROVED'], $state);
-    expect($state->matches('processing.dealer.paymentOptions'))->toBeTrue()
-        ->and($state->matches('processing.customer.personalDetails'))->toBeTrue();
+    expect($state->matches('processing.dealer.payment_options'))->toBeTrue()
+        ->and($state->matches('processing.customer.personal_details'))->toBeTrue();
 });
 
 test('always transition fires when region enters awaiting after sibling is already ready', function (): void {
     $definition = MachineDefinition::define(
         config: [
-            'id'      => 'reverseOrder',
+            'id'      => 'reverse_order',
             'initial' => 'processing',
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
                     'states' => [
-                        'regionA' => [
+                        'region_a' => [
                             'initial' => 'working',
                             'states'  => [
                                 'working' => [
@@ -172,14 +172,14 @@ test('always transition fires when region enters awaiting after sibling is alrea
                                 'awaiting' => [
                                     'on' => [
                                         '@always' => [
-                                            ['target' => 'synced', 'guards' => 'isRegionBReady'],
+                                            ['target' => 'synced', 'guards' => 'isRegionBReadyGuard'],
                                         ],
                                     ],
                                 ],
                                 'synced' => ['type' => 'final'],
                             ],
                         ],
-                        'regionB' => [
+                        'region_b' => [
                             'initial' => 'working',
                             'states'  => [
                                 'working' => [
@@ -196,7 +196,7 @@ test('always transition fires when region enters awaiting after sibling is alrea
         ],
         behavior: [
             'guards' => [
-                'isRegionBReady' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.regionB.ready'),
+                'isRegionBReadyGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.region_b.ready'),
             ],
         ]
     );
@@ -205,13 +205,13 @@ test('always transition fires when region enters awaiting after sibling is alrea
 
     // Scenario: Region B finishes first
     $state = $definition->transition(['type' => 'B_DONE'], $state);
-    expect($state->matches('processing.regionA.working'))->toBeTrue()
-        ->and($state->matches('processing.regionB.ready'))->toBeTrue();
+    expect($state->matches('processing.region_a.working'))->toBeTrue()
+        ->and($state->matches('processing.region_b.ready'))->toBeTrue();
 
     // Region A finishes → enters awaiting → @always guard passes immediately
     $state = $definition->transition(['type' => 'A_DONE'], $state);
-    expect($state->matches('processing.regionA.synced'))->toBeTrue()
-        ->and($state->matches('processing.regionB.ready'))->toBeTrue();
+    expect($state->matches('processing.region_a.synced'))->toBeTrue()
+        ->and($state->matches('processing.region_b.ready'))->toBeTrue();
 });
 
 test('mutual cross-region always transitions resolve in sequence', function (): void {
@@ -224,7 +224,7 @@ test('mutual cross-region always transitions resolve in sequence', function (): 
                 'processing' => [
                     'type'   => 'parallel',
                     'states' => [
-                        'regionA' => [
+                        'region_a' => [
                             'initial' => 'a1',
                             'states'  => [
                                 'a1' => [
@@ -235,14 +235,14 @@ test('mutual cross-region always transitions resolve in sequence', function (): 
                                 'a2' => [
                                     'on' => [
                                         '@always' => [
-                                            ['target' => 'a3', 'guards' => 'isBAtB2'],
+                                            ['target' => 'a3', 'guards' => 'isBAtB2Guard'],
                                         ],
                                     ],
                                 ],
                                 'a3' => [],
                             ],
                         ],
-                        'regionB' => [
+                        'region_b' => [
                             'initial' => 'b1',
                             'states'  => [
                                 'b1' => [
@@ -259,7 +259,7 @@ test('mutual cross-region always transitions resolve in sequence', function (): 
         ],
         behavior: [
             'guards' => [
-                'isBAtB2' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.regionB.b2'),
+                'isBAtB2Guard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.region_b.b2'),
             ],
         ]
     );
@@ -269,41 +269,41 @@ test('mutual cross-region always transitions resolve in sequence', function (): 
     // START event transitions both regions: A→a2, B→b2
     // After both transition, @always in a2 should fire because B is at b2
     $state = $definition->transition(['type' => 'START'], $state);
-    expect($state->matches('processing.regionA.a3'))->toBeTrue()
-        ->and($state->matches('processing.regionB.b2'))->toBeTrue();
+    expect($state->matches('processing.region_a.a3'))->toBeTrue()
+        ->and($state->matches('processing.region_b.b2'))->toBeTrue();
 });
 
 test('always transition with context flag guard in parallel state', function (): void {
     $definition = MachineDefinition::define(
         config: [
-            'id'      => 'contextFlag',
+            'id'      => 'context_flag',
             'initial' => 'processing',
             'context' => ['approved' => false],
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
                     'states' => [
-                        'regionA' => [
+                        'region_a' => [
                             'initial' => 'waiting',
                             'states'  => [
                                 'waiting' => [
                                     'on' => [
                                         '@always' => [
-                                            ['target' => 'done', 'guards' => 'isApproved'],
+                                            ['target' => 'done', 'guards' => 'isApprovedGuard'],
                                         ],
                                     ],
                                 ],
                                 'done' => ['type' => 'final'],
                             ],
                         ],
-                        'regionB' => [
+                        'region_b' => [
                             'initial' => 'checking',
                             'states'  => [
                                 'checking' => [
                                     'on' => [
                                         'APPROVE' => [
                                             'target'  => 'approved',
-                                            'actions' => 'setApproved',
+                                            'actions' => 'setApprovedAction',
                                         ],
                                     ],
                                 ],
@@ -316,47 +316,47 @@ test('always transition with context flag guard in parallel state', function ():
         ],
         behavior: [
             'guards' => [
-                'isApproved' => fn (ContextManager $ctx) => $ctx->get('approved') === true,
+                'isApprovedGuard' => fn (ContextManager $ctx) => $ctx->get('approved') === true,
             ],
             'actions' => [
-                'setApproved' => fn (ContextManager $ctx) => $ctx->set('approved', true),
+                'setApprovedAction' => fn (ContextManager $ctx) => $ctx->set('approved', true),
             ],
         ]
     );
 
     $state = $definition->getInitialState();
-    expect($state->matches('processing.regionA.waiting'))->toBeTrue()
-        ->and($state->matches('processing.regionB.checking'))->toBeTrue();
+    expect($state->matches('processing.region_a.waiting'))->toBeTrue()
+        ->and($state->matches('processing.region_b.checking'))->toBeTrue();
 
-    // APPROVE → sets context flag → regionA's @always should fire
+    // APPROVE → sets context flag → region_a's @always should fire
     $state = $definition->transition(['type' => 'APPROVE'], $state);
-    expect($state->matches('processing.regionA.done'))->toBeTrue()
-        ->and($state->matches('processing.regionB.approved'))->toBeTrue();
+    expect($state->matches('processing.region_a.done'))->toBeTrue()
+        ->and($state->matches('processing.region_b.approved'))->toBeTrue();
 });
 
 test('always guard failure in parallel does not affect other regions', function (): void {
     $definition = MachineDefinition::define(
         config: [
-            'id'      => 'isolatedFailure',
+            'id'      => 'isolated_failure',
             'initial' => 'processing',
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
                     'states' => [
-                        'regionA' => [
+                        'region_a' => [
                             'initial' => 'waiting',
                             'states'  => [
                                 'waiting' => [
                                     'on' => [
                                         '@always' => [
-                                            ['target' => 'done', 'guards' => 'neverTrue'],
+                                            ['target' => 'done', 'guards' => 'neverTrueGuard'],
                                         ],
                                     ],
                                 ],
                                 'done' => ['type' => 'final'],
                             ],
                         ],
-                        'regionB' => [
+                        'region_b' => [
                             'initial' => 'step1',
                             'states'  => [
                                 'step1' => [
@@ -378,49 +378,49 @@ test('always guard failure in parallel does not affect other regions', function 
         ],
         behavior: [
             'guards' => [
-                'neverTrue' => fn () => false,
+                'neverTrueGuard' => fn () => false,
             ],
         ]
     );
 
     $state = $definition->getInitialState();
-    expect($state->matches('processing.regionA.waiting'))->toBeTrue()
-        ->and($state->matches('processing.regionB.step1'))->toBeTrue();
+    expect($state->matches('processing.region_a.waiting'))->toBeTrue()
+        ->and($state->matches('processing.region_b.step1'))->toBeTrue();
 
-    // Region B can progress freely even though regionA has a failing @always guard
+    // Region B can progress freely even though region_a has a failing @always guard
     $state = $definition->transition(['type' => 'NEXT'], $state);
-    expect($state->matches('processing.regionA.waiting'))->toBeTrue()
-        ->and($state->matches('processing.regionB.step2'))->toBeTrue();
+    expect($state->matches('processing.region_a.waiting'))->toBeTrue()
+        ->and($state->matches('processing.region_b.step2'))->toBeTrue();
 
     $state = $definition->transition(['type' => 'NEXT'], $state);
-    expect($state->matches('processing.regionA.waiting'))->toBeTrue()
-        ->and($state->matches('processing.regionB.step3'))->toBeTrue();
+    expect($state->matches('processing.region_a.waiting'))->toBeTrue()
+        ->and($state->matches('processing.region_b.step3'))->toBeTrue();
 });
 
 test('cross-region always with onDone completes when all regions reach final', function (): void {
     $definition = MachineDefinition::define(
         config: [
-            'id'      => 'crossRegionOnDone',
+            'id'      => 'cross_region_on_done',
             'initial' => 'processing',
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
                     'onDone' => 'completed',
                     'states' => [
-                        'regionA' => [
+                        'region_a' => [
                             'initial' => 'waiting',
                             'states'  => [
                                 'waiting' => [
                                     'on' => [
                                         '@always' => [
-                                            ['target' => 'done', 'guards' => 'isRegionBDone'],
+                                            ['target' => 'done', 'guards' => 'isRegionBDoneGuard'],
                                         ],
                                     ],
                                 ],
                                 'done' => ['type' => 'final'],
                             ],
                         ],
-                        'regionB' => [
+                        'region_b' => [
                             'initial' => 'working',
                             'states'  => [
                                 'working' => [
@@ -438,15 +438,15 @@ test('cross-region always with onDone completes when all regions reach final', f
         ],
         behavior: [
             'guards' => [
-                'isRegionBDone' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.regionB.done'),
+                'isRegionBDoneGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.region_b.done'),
             ],
         ]
     );
 
     $state = $definition->getInitialState();
-    expect($state->matches('processing.regionA.waiting'))->toBeTrue();
+    expect($state->matches('processing.region_a.waiting'))->toBeTrue();
 
-    // FINISH → regionB done → @always fires → regionA done → onDone → completed
+    // FINISH → region_b done → @always fires → region_a done → onDone → completed
     $state = $definition->transition(['type' => 'FINISH'], $state);
     expect($state->matches('completed'))->toBeTrue();
 });

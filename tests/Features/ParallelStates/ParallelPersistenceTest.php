@@ -10,7 +10,7 @@ uses(RefreshDatabase::class);
 
 test('parallel state can be restored from database', function (): void {
     $definition = MachineDefinition::define([
-        'id'      => 'parallelMachine',
+        'id'      => 'parallel_machine',
         'initial' => 'active',
         'context' => ['value' => 0],
         'states'  => [
@@ -64,19 +64,19 @@ test('parallel state can be restored from database', function (): void {
 
 test('parallel state value is correctly stored in machine events', function (): void {
     $definition = MachineDefinition::define([
-        'id'      => 'parallelMachine',
+        'id'      => 'parallel_machine',
         'initial' => 'active',
         'states'  => [
             'active' => [
                 'type'   => 'parallel',
                 'states' => [
-                    'regionA' => [
+                    'region_a' => [
                         'initial' => 'a1',
                         'states'  => [
                             'a1' => [],
                         ],
                     ],
-                    'regionB' => [
+                    'region_b' => [
                         'initial' => 'b1',
                         'states'  => [
                             'b1' => [],
@@ -93,8 +93,8 @@ test('parallel state value is correctly stored in machine events', function (): 
     // The machine_value should be an array with both region states
     expect($lastEvent->machine_value)->toBeArray();
     expect($lastEvent->machine_value)->toHaveCount(2);
-    expect($lastEvent->machine_value)->toContain('parallelMachine.active.regionA.a1');
-    expect($lastEvent->machine_value)->toContain('parallelMachine.active.regionB.b1');
+    expect($lastEvent->machine_value)->toContain('parallel_machine.active.region_a.a1');
+    expect($lastEvent->machine_value)->toContain('parallel_machine.active.region_b.b1');
 });
 
 test('parallel state restoration after multiple transitions', function (): void {

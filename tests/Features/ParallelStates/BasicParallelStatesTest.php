@@ -13,14 +13,14 @@ test('parallel state type is correctly detected', function (): void {
             'active' => [
                 'type'   => 'parallel',
                 'states' => [
-                    'regionA' => [
+                    'region_a' => [
                         'initial' => 'a1',
                         'states'  => [
                             'a1' => [],
                             'a2' => [],
                         ],
                     ],
-                    'regionB' => [
+                    'region_b' => [
                         'initial' => 'b1',
                         'states'  => [
                             'b1' => [],
@@ -45,13 +45,13 @@ test('parallel state enters all regions simultaneously', function (): void {
             'active' => [
                 'type'   => 'parallel',
                 'states' => [
-                    'regionA' => [
+                    'region_a' => [
                         'initial' => 'a1',
                         'states'  => [
                             'a1' => [],
                         ],
                     ],
-                    'regionB' => [
+                    'region_b' => [
                         'initial' => 'b1',
                         'states'  => [
                             'b1' => [],
@@ -66,8 +66,8 @@ test('parallel state enters all regions simultaneously', function (): void {
 
     // Both regions should be in their initial states
     expect($state->value)->toHaveCount(2);
-    expect($state->value)->toContain('test.active.regionA.a1');
-    expect($state->value)->toContain('test.active.regionB.b1');
+    expect($state->value)->toContain('test.active.region_a.a1');
+    expect($state->value)->toContain('test.active.region_b.b1');
 });
 
 test('state value contains all active region states', function (): void {
@@ -187,13 +187,13 @@ test('isInParallelState returns true for parallel states', function (): void {
             'active' => [
                 'type'   => 'parallel',
                 'states' => [
-                    'regionA' => [
+                    'region_a' => [
                         'initial' => 'a1',
                         'states'  => [
                             'a1' => [],
                         ],
                     ],
-                    'regionB' => [
+                    'region_b' => [
                         'initial' => 'b1',
                         'states'  => [
                             'b1' => [],
@@ -216,9 +216,9 @@ test('parallel state cannot have initial property', function (): void {
         'states'  => [
             'parallel' => [
                 'type'    => 'parallel',
-                'initial' => 'regionA', // Invalid - parallel cannot have initial
+                'initial' => 'region_a', // Invalid - parallel cannot have initial
                 'states'  => [
-                    'regionA' => [
+                    'region_a' => [
                         'initial' => 'a1',
                         'states'  => [
                             'a1' => [],
