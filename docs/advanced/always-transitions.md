@@ -316,6 +316,115 @@ MachineDefinition::define(
 ],
 ```
 
+## Cross-Region Synchronization in Parallel States
+
+`@always` transitions can be used to synchronize regions in parallel states. A region can wait for a sibling region to reach a certain state using a guard that checks the sibling's state:
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
+MachineDefinition::define(
+    config: [
+        'id' => 'workflow',
+        'initial' => 'processing',
+        'states' => [
+            'processing' => [
+                'type' => 'parallel',
+                'onDone' => 'completed',
+                'states' => [
+                    'dealer' => [
+                        'initial' => 'pricing',
+                        'states' => [
+                            'pricing' => [
+                                'on' => ['PRICING_DONE' => 'awaitingApproval'],
+                            ],
+                            'awaitingApproval' => [
+                                'on' => [
+                                    // Region waits for sibling to pass policy check
+                                    '@always' => [
+                                        ['target' => 'paymentOptions', 'guards' => 'isApprovalPassed'],
+                                    ],
+                                ],
+                            ],
+                            'paymentOptions' => [
+                                'on' => ['PAYMENT_DONE' => 'dealerDone'],
+                            ],
+                            'dealerDone' => ['type' => 'final'],
+                        ],
+                    ],
+                    'customer' => [
+                        'initial' => 'consent',
+                        'states' => [
+                            'consent' => [
+                                'on' => ['CONSENT_GIVEN' => 'approved'],
+                            ],
+                            'approved' => [
+                                'on' => ['SUBMITTED' => 'customerDone'],
+                            ],
+                            'customerDone' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'completed' => ['type' => 'final'],
+        ],
+    ],
+    behavior: [
+        'guards' => [
+            'isApprovalPassed' => fn (ContextManager $ctx, EventBehavior $event, State $state)
+                => $state->matches('processing.customer.approved')
+                || $state->matches('processing.customer.customerDone'),
+        ],
+    ]
+);
+```
+
+```mermaid
+stateDiagram-v2
+    state processing {
+        state dealer {
+            [*] --> pricing
+            pricing --> awaitingApproval : PRICING_DONE
+            awaitingApproval --> paymentOptions : @always [isApprovalPassed]
+            paymentOptions --> dealerDone : PAYMENT_DONE
+        }
+        --
+        state customer {
+            [*] --> consent
+            consent --> approved : CONSENT_GIVEN
+            approved --> customerDone : SUBMITTED
+        }
+    }
+```
+
+### How It Works
+
+1. When a region transitions, `@always` guards in **all active regions** are re-evaluated
+2. If the guard passes, the waiting region transitions automatically
+3. If the guard fails, the region stays in its current state (no exception thrown)
+
+This follows the SCXML specification: *"By using `in` guards it is possible to coordinate the different regions."*
+
+### Alternative: Context Flags
+
+Instead of checking sibling state, you can use context flags:
+
+<!-- doctest-attr: ignore -->
+```php
+'guards' => [
+    'isApproved' => fn (ContextManager $ctx) => $ctx->get('approved') === true,
+],
+'actions' => [
+    'setApproved' => fn (ContextManager $ctx) => $ctx->set('approved', true),
+],
+```
+
+Both approaches work. State checking is more declarative; context flags are simpler.
+
 ## Avoiding Infinite Loops
 
 ::: danger

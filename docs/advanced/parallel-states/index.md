@@ -279,6 +279,77 @@ MachineDefinition::define(
 
 Use `onDone` instead of complex guards when you need to wait for all regions to complete.
 
-### 5. Document Region Dependencies
+### 5. Use `@always` for Cross-Region Synchronization
+
+When one region needs to wait for a sibling region to reach a certain state, use `@always` transitions with a guard that checks the sibling's state:
+
+```php ignore
+use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
+MachineDefinition::define(
+    config: [
+        'id' => 'workflow',
+        'initial' => 'processing',
+        'states' => [
+            'processing' => [
+                'type' => 'parallel',
+                'onDone' => 'completed',
+                'states' => [
+                    'dealer' => [
+                        'initial' => 'pricing',
+                        'states' => [
+                            'pricing' => [
+                                'on' => ['PRICING_DONE' => 'awaitingApproval'],
+                            ],
+                            'awaitingApproval' => [
+                                'on' => [
+                                    '@always' => [
+                                        ['target' => 'paymentOptions', 'guards' => 'isApprovalPassed'],
+                                    ],
+                                ],
+                            ],
+                            'paymentOptions' => [
+                                'on' => ['PAYMENT_DONE' => 'dealerDone'],
+                            ],
+                            'dealerDone' => ['type' => 'final'],
+                        ],
+                    ],
+                    'customer' => [
+                        'initial' => 'consent',
+                        'states' => [
+                            'consent' => [
+                                'on' => ['CONSENT_GIVEN' => 'approved'],
+                            ],
+                            'approved' => [
+                                'on' => ['SUBMITTED' => 'customerDone'],
+                            ],
+                            'customerDone' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'completed' => ['type' => 'final'],
+        ],
+    ],
+    behavior: [
+        'guards' => [
+            'isApprovalPassed' => fn (ContextManager $ctx, EventBehavior $event, State $state)
+                => $state->matches('processing.customer.approved')
+                || $state->matches('processing.customer.customerDone'),
+        ],
+    ]
+);
+```
+
+When a region transitions, `@always` guards in **all active regions** are re-evaluated. If the guard passes, the waiting region transitions automatically. If the guard fails, the region simply stays in its current state.
+
+This follows the SCXML specification: *"By using `in` guards it is possible to coordinate the different regions."*
+
+For more details and examples, see [@always Transitions — Cross-Region Synchronization](../always-transitions.md#cross-region-synchronization-in-parallel-states).
+
+### 6. Document Region Dependencies
 
 If regions have implicit dependencies (e.g., one region writes context that another reads), document this clearly in your machine definition.

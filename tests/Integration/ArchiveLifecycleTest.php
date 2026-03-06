@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
+use Tarfinlabs\EventMachine\Support\CompressionManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 /*
@@ -24,6 +25,8 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
  */
 describe('Archive Lifecycle', function (): void {
     beforeEach(function (): void {
+        CompressionManager::clearCache();
+
         config([
             'machine.archival.enabled'                => true,
             'machine.archival.level'                  => 6,
