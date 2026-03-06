@@ -10,6 +10,6 @@ class DecreaseEvent extends EventBehavior
 {
     public static function getType(): string
     {
-        return 'DEC';
+        return 'DECREASE';
     }
 }

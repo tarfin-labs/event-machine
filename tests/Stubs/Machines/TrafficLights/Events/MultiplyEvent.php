@@ -10,6 +10,6 @@ class MultiplyEvent extends EventBehavior
 {
     public static function getType(): string
     {
-        return 'MUT';
+        return 'MULTIPLY';
     }
 }

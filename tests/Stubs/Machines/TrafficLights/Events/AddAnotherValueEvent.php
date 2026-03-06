@@ -16,6 +16,6 @@ class AddAnotherValueEvent extends EventBehavior
 
     public static function getType(): string
     {
-        return 'ADD2';
+        return 'ADD_ANOTHER_VALUE';
     }
 }

@@ -21,19 +21,19 @@ test('TrafficLightsMachine definition returns a MachineDefinition instance', fun
 test('TrafficLightsMachine transitions between states using Machine', function (): void {
     $machine = TrafficLightsMachine::create();
 
-    $newState = $machine->send(event: ['type' => 'MUT']);
+    $newState = $machine->send(event: ['type' => 'MULTIPLY']);
 
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
         ->and($newState->context->count)->toBe(0);
 
-    $newState = $machine->send(event: ['type' => 'INC']);
-    $newState = $machine->send(event: ['type' => 'INC']);
+    $newState = $machine->send(event: ['type' => 'INCREASE']);
+    $newState = $machine->send(event: ['type' => 'INCREASE']);
 
     expect($newState->context->count)->toBe(2);
 
-    $newState = $machine->send(event: ['type' => 'MUT']);
+    $newState = $machine->send(event: ['type' => 'MULTIPLY']);
 
     expect($newState)
         ->toBeInstanceOf(State::class)
@@ -41,7 +41,7 @@ test('TrafficLightsMachine transitions between states using Machine', function (
         ->and($newState->context->count)->toBe(4);
 
     $newState = $machine->send(event: [
-        'type'    => 'ADD',
+        'type'    => 'ADD_VALUE',
         'payload' => [
             'value' => 16,
         ],
@@ -82,7 +82,7 @@ test('TrafficLightsMachineCompact can be build', function (): void {
 test('TrafficLightsMachine can be started', function (): void {
     $machine = TrafficLightsMachine::create();
 
-    $state = $machine->send(['type' => 'INC']);
+    $state = $machine->send(['type' => 'INCREASE']);
 
     expect($state)
         ->toBeInstanceOf(State::class)
