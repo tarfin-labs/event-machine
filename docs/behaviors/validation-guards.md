@@ -224,7 +224,7 @@ class ValidatePermissionGuard extends ValidationGuardBehavior
 }
 
 // Usage
-'guards' => 'validatePermission:approve_orders',
+'guards' => 'validatePermissionGuard:approve_orders',
 ```
 
 ## Localized Messages
@@ -282,7 +282,7 @@ Mix validation guards with regular guards:
         'target' => 'submitted',
         'guards' => [
             // Regular guard - silent failure
-            'hasItems',
+            'hasItemsGuard',
             // Validation guard - throws with message
             ValidatePaymentGuard::class,
             // Another validation guard

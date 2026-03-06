@@ -31,8 +31,8 @@ MachineDefinition::define(
                 'on' => [
                     'CHECKOUT' => [
                         'target' => 'checkout',
-                        'calculators' => 'calculateTotal',
-                        'guards' => 'hasMinimumTotal',
+                        'calculators' => 'calculateTotalCalculator',
+                        'guards' => 'hasMinimumTotalGuard',
                     ],
                 ],
             ],
@@ -40,12 +40,12 @@ MachineDefinition::define(
     ],
     behavior: [
         'calculators' => [
-            'calculateTotal' => function (ContextManager $context) {
+            'calculateTotalCalculator' => function (ContextManager $context) {
                 $context->total = collect($context->items)->sum('price');
             },
         ],
         'guards' => [
-            'hasMinimumTotal' => fn($ctx) => $ctx->total >= 10,
+            'hasMinimumTotalGuard' => fn($ctx) => $ctx->total >= 10,
         ],
     ],
 );
@@ -88,13 +88,13 @@ Chain calculators for complex computations:
     'CHECKOUT' => [
         'target' => 'processing',
         'calculators' => [
-            'calculateSubtotal',
-            'applyDiscounts',
-            'calculateTax',
-            'calculateShipping',
-            'calculateFinalTotal',
+            'calculateSubtotalCalculator',
+            'applyDiscountsCalculator',
+            'calculateTaxCalculator',
+            'calculateShippingCalculator',
+            'calculateFinalTotalCalculator',
         ],
-        'guards' => 'hasValidTotal',
+        'guards' => 'hasValidTotalGuard',
     ],
 ],
 ```
@@ -384,7 +384,7 @@ it('calculates order total correctly', function () {
                 'cart' => [
                     'on' => [
                         'CALCULATE' => [
-                            'calculators' => 'calculateTotal',
+                            'calculators' => 'calculateTotalCalculator',
                         ],
                     ],
                 ],
@@ -392,7 +392,7 @@ it('calculates order total correctly', function () {
         ],
         behavior: [
             'calculators' => [
-                'calculateTotal' => function ($ctx) {
+                'calculateTotalCalculator' => function ($ctx) {
                     $ctx->total = collect($ctx->items)
                         ->sum(fn($i) => $i['price'] * $i['quantity']);
                 },
@@ -424,10 +424,10 @@ $this->analytics->track('total_calculated', $context->total);
 
 ```php ignore
 'calculators' => [
-    'calculateSubtotal',    // First: base calculation
-    'applyDiscounts',       // Second: depends on subtotal
-    'calculateTax',         // Third: depends on discounted amount
-    'calculateTotal',       // Last: combines all values
+    'calculateSubtotalCalculator',    // First: base calculation
+    'applyDiscountsCalculator',       // Second: depends on subtotal
+    'calculateTaxCalculator',         // Third: depends on discounted amount
+    'calculateTotalCalculator',       // Last: combines all values
 ],
 ```
 
@@ -436,13 +436,13 @@ $this->analytics->track('total_calculated', $context->total);
 ```php ignore
 // Good
 'calculators' => [
-    'calculateOrderSubtotal',
-    'calculateShippingCost',
-    'applyMembershipDiscount',
+    'calculateOrderSubtotalCalculator',
+    'calculateShippingCostCalculator',
+    'applyMembershipDiscountCalculator',
 ],
 
 // Avoid
-'calculators' => ['calc1', 'calc2', 'doStuff'],
+'calculators' => ['calc1Calculator', 'calc2Calculator', 'doStuffCalculator'],
 ```
 
 ### 4. Handle Edge Cases

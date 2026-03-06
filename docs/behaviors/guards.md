@@ -17,7 +17,7 @@ MachineDefinition::define(
                 'on' => [
                     'SUBMIT' => [
                         'target' => 'submitted',
-                        'guards' => 'hasItems',
+                        'guards' => 'hasItemsGuard',
                     ],
                 ],
             ],
@@ -25,7 +25,7 @@ MachineDefinition::define(
     ],
     behavior: [
         'guards' => [
-            'hasItems' => fn(ContextManager $context) => count($context->items) > 0,
+            'hasItemsGuard' => fn(ContextManager $context) => count($context->items) > 0,
         ],
     ],
 );
@@ -46,7 +46,7 @@ class HasItemsGuard extends GuardBehavior
 
 // Registration
 'guards' => [
-    'hasItems' => HasItemsGuard::class,
+    'hasItemsGuard' => HasItemsGuard::class,
 ],
 ```
 
@@ -58,7 +58,7 @@ All guards must pass for the transition to occur. Guards evaluate in order and *
 'on' => [
     'SUBMIT' => [
         'target' => 'submitted',
-        'guards' => ['hasItems', 'hasValidPayment', 'hasShippingAddress'],
+        'guards' => ['hasItemsGuard', 'hasValidPaymentGuard', 'hasShippingAddressGuard'],
     ],
 ],
 ```
@@ -87,9 +87,9 @@ Use multiple transition branches:
 ```php ignore
 'on' => [
     'CHECK' => [
-        ['target' => 'approved', 'guards' => 'isAutoApprovable'],
-        ['target' => 'review', 'guards' => 'needsReview'],
-        ['target' => 'rejected', 'guards' => 'isBlacklisted'],
+        ['target' => 'approved', 'guards' => 'isAutoApprovableGuard'],
+        ['target' => 'review', 'guards' => 'needsReviewGuard'],
+        ['target' => 'rejected', 'guards' => 'isBlacklistedGuard'],
         ['target' => 'manual'],  // Fallback
     ],
 ],
@@ -143,7 +143,7 @@ Pass arguments to guards:
 
 ```php ignore
 // Configuration
-'guards' => 'minimumAmount:100',
+'guards' => 'minimumAmountGuard:100',
 
 // Guard implementation
 class MinimumAmountGuard extends GuardBehavior
@@ -284,7 +284,7 @@ class HasRoleGuard extends GuardBehavior
 }
 
 // Usage
-'guards' => 'hasRole:admin',
+'guards' => 'hasRoleGuard:admin',
 ```
 
 ### Time-Based Guard
@@ -375,7 +375,7 @@ it('blocks transition when guard fails', function () {
                     'on' => [
                         'CHECK' => [
                             'target' => 'passed',
-                            'guards' => 'isAboveTen',
+                            'guards' => 'isAboveTenGuard',
                         ],
                     ],
                 ],
@@ -384,7 +384,7 @@ it('blocks transition when guard fails', function () {
         ],
         behavior: [
             'guards' => [
-                'isAboveTen' => fn($ctx) => $ctx->count > 10,
+                'isAboveTenGuard' => fn($ctx) => $ctx->count > 10,
             ],
         ],
     );
@@ -409,12 +409,12 @@ Guards should only read, never modify:
 ```php ignore
 // Good - only reads context
 'guards' => [
-    'hasItems' => fn($ctx) => count($ctx->items) > 0,
+    'hasItemsGuard' => fn($ctx) => count($ctx->items) > 0,
 ],
 
 // Bad - modifies context
 'guards' => [
-    'hasItems' => fn($ctx) => ($ctx->itemCount = count($ctx->items)) > 0,
+    'hasItemsGuard' => fn($ctx) => ($ctx->itemCount = count($ctx->items)) > 0,
 ],
 ```
 
@@ -422,7 +422,7 @@ Guards should only read, never modify:
 
 ```php ignore
 // Good
-'guards' => ['hasMinimumBalance', 'isWithinLimit', 'hasValidPayment'],
+'guards' => ['hasMinimumBalanceGuard', 'isWithinLimitGuard', 'hasValidPaymentGuard'],
 
 // Avoid
 'guards' => ['check1', 'validate', 'ok'],
@@ -432,10 +432,10 @@ Guards should only read, never modify:
 
 ```php ignore
 // Multiple simple guards
-'guards' => ['isPositive', 'isWithinLimit'],
+'guards' => ['isPositiveGuard', 'isWithinLimitGuard'],
 
 // Instead of one complex guard
-'guards' => 'isValidAmount',
+'guards' => 'isValidAmountGuard',
 ```
 
 ### 4. Use Validation Guards for User Input

@@ -83,7 +83,7 @@ Terminal states that end the machine's execution:
 ```php ignore
 'completed' => [
     'type' => 'final',
-    'result' => 'calculateResult',  // Optional result behavior
+    'result' => 'calculateResultResult',  // Optional result behavior
 ],
 ```
 
@@ -105,8 +105,8 @@ Execute code when entering or leaving a state:
 
 ```php ignore
 'processing' => [
-    'entry' => 'startProcessing',           // Single action
-    'exit' => ['cleanup', 'logCompletion'], // Multiple actions
+    'entry' => 'startProcessingAction',           // Single action
+    'exit' => ['cleanupAction', 'logCompletionAction'], // Multiple actions
     'on' => [
         'COMPLETE' => 'done',
     ],
@@ -218,7 +218,7 @@ MachineDefinition::define(
         'states' => [
             'draft' => [
                 'description' => 'Document is being edited',
-                'entry' => 'initializeDraft',
+                'entry' => 'initializeDraftAction',
                 'on' => [
                     'SUBMIT' => 'review',
                     'DELETE' => 'deleted',
@@ -229,31 +229,31 @@ MachineDefinition::define(
                 'initial' => 'pending',
                 'states' => [
                     'pending' => [
-                        'entry' => 'notifyReviewers',
+                        'entry' => 'notifyReviewersAction',
                         'on' => [
                             'APPROVE' => 'approved',
                             'REJECT' => 'rejected',
                         ],
                     ],
                     'approved' => [
-                        'exit' => 'logApproval',
+                        'exit' => 'logApprovalAction',
                     ],
                     'rejected' => [
-                        'exit' => 'logRejection',
+                        'exit' => 'logRejectionAction',
                     ],
                 ],
                 'on' => [
                     'PUBLISH' => [
                         'target' => 'published',
-                        'guards' => 'isApproved',
+                        'guards' => 'isApprovedGuard',
                     ],
                     'REVISE' => 'draft',
                 ],
             ],
             'published' => [
                 'type' => 'final',
-                'entry' => 'notifyPublished',
-                'result' => 'getPublishedDocument',
+                'entry' => 'notifyPublishedAction',
+                'result' => 'getPublishedDocumentResult',
                 'meta' => [
                     'public' => true,
                 ],
@@ -265,17 +265,17 @@ MachineDefinition::define(
     ],
     behavior: [
         'actions' => [
-            'initializeDraft' => InitializeDraftAction::class,
-            'notifyReviewers' => NotifyReviewersAction::class,
-            'notifyPublished' => NotifyPublishedAction::class,
-            'logApproval' => LogApprovalAction::class,
-            'logRejection' => LogRejectionAction::class,
+            'initializeDraftAction' => InitializeDraftAction::class,
+            'notifyReviewersAction' => NotifyReviewersAction::class,
+            'notifyPublishedAction' => NotifyPublishedAction::class,
+            'logApprovalAction' => LogApprovalAction::class,
+            'logRejectionAction' => LogRejectionAction::class,
         ],
         'guards' => [
-            'isApproved' => IsApprovedGuard::class,
+            'isApprovedGuard' => IsApprovedGuard::class,
         ],
         'results' => [
-            'getPublishedDocument' => GetPublishedDocumentResult::class,
+            'getPublishedDocumentResult' => GetPublishedDocumentResult::class,
         ],
     ],
 );
@@ -291,14 +291,14 @@ MachineDefinition::define(
     ],
 
     // Lifecycle actions
-    'entry' => 'actionName',              // or ['action1', 'action2']
-    'exit' => 'actionName',               // or ['action1', 'action2']
+    'entry' => 'actionNameAction',              // or ['action1Action', 'action2Action']
+    'exit' => 'actionNameAction',               // or ['action1Action', 'action2Action']
 
     // State type
     'type' => 'final',                    // Only for terminal states
 
     // Final state result
-    'result' => 'resultBehaviorName',
+    'result' => 'resultBehaviorNameResult',
 
     // Hierarchy
     'initial' => 'childStateName',        // Initial child state

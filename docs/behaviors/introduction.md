@@ -24,21 +24,21 @@ MachineDefinition::define(
     config: [...],
     behavior: [
         'actions' => [
-            'incrementCount' => IncrementAction::class,
-            'logEvent' => fn($ctx) => logger()->info('Action executed'),
+            'incrementCountAction' => IncrementAction::class,
+            'logEventAction' => fn($ctx) => logger()->info('Action executed'),
         ],
         'guards' => [
-            'isValid' => IsValidGuard::class,
-            'canProceed' => fn($ctx) => $ctx->count > 0,
+            'isValidGuard' => IsValidGuard::class,
+            'canProceedGuard' => fn($ctx) => $ctx->count > 0,
         ],
         'calculators' => [
-            'calculateTotal' => CalculateTotalCalculator::class,
+            'calculateTotalCalculator' => CalculateTotalCalculator::class,
         ],
         'events' => [
             'SUBMIT' => SubmitEvent::class,
         ],
         'results' => [
-            'getFinalResult' => FinalResultBehavior::class,
+            'getFinalResultResult' => FinalResultBehavior::class,
         ],
     ],
 );
@@ -78,11 +78,11 @@ Quick and simple:
 
 ```php ignore
 'actions' => [
-    'increment' => fn(ContextManager $context) => $context->count++,
+    'incrementAction' => fn(ContextManager $context) => $context->count++,
 ],
 
 'guards' => [
-    'isPositive' => fn(ContextManager $context) => $context->count > 0,
+    'isPositiveGuard' => fn(ContextManager $context) => $context->count > 0,
 ],
 ```
 
@@ -138,7 +138,7 @@ Pass arguments to behaviors:
 
 ```php ignore
 // In configuration
-'actions' => 'addValue:10,20',  // Passes ['10', '20']
+'actions' => 'addValueAction:10,20',  // Passes ['10', '20']
 
 // In behavior
 public function __invoke(ContextManager $context, array $arguments): void
@@ -306,12 +306,12 @@ class DoEverythingAction extends ActionBehavior
 ```php ignore
 // Simple - inline is fine
 'guards' => [
-    'isPositive' => fn($ctx) => $ctx->count > 0,
+    'isPositiveGuard' => fn($ctx) => $ctx->count > 0,
 ],
 
 // Complex - use a class
 'guards' => [
-    'isValidOrder' => ValidateOrderGuard::class,
+    'isValidOrderGuard' => ValidateOrderGuard::class,
 ],
 ```
 
