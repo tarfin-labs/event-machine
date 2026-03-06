@@ -25,7 +25,7 @@ MachineDefinition::define(
     behavior: [
         'actions' => [
             'incrementCount' => IncrementAction::class,
-            'logAction' => fn($ctx) => logger()->info('Action executed'),
+            'logEvent' => fn($ctx) => logger()->info('Action executed'),
         ],
         'guards' => [
             'isValid' => IsValidGuard::class,

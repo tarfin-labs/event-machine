@@ -216,7 +216,7 @@ MachineDefinition::define(
                 'entry' => 'processPayment',
                 'on' => [
                     'PAYMENT_SUCCESS' => 'confirmed',
-                    'PAYMENT_DECLINED' => 'paymentFailed',
+                    'PAYMENT_DECLINED' => 'payment_failed',
                     'PAYMENT_ERROR' => 'error',
                 ],
             ],
@@ -224,7 +224,7 @@ MachineDefinition::define(
                 'entry' => 'sendConfirmation',
             ],
             'rejected' => [],
-            'paymentFailed' => [
+            'payment_failed' => [
                 'on' => ['RETRY' => 'processing'],
             ],
             'error' => [],
@@ -442,6 +442,6 @@ class MyAction extends ActionBehavior
 
 // Doesn't work - inline function
 'actions' => [
-    'myAction' => fn($ctx) => $this->raise(['type' => 'EVENT']), // Error! `raise()` not available
+    'doSomething' => fn($ctx) => $this->raise(['type' => 'EVENT']), // Error! `raise()` not available
 ],
 ```

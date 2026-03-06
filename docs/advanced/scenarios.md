@@ -33,7 +33,7 @@ MachineDefinition::define(
                 'on' => [
                     'EVENT' => [
                         'target' => 'stateB',
-                        'actions' => 'betaAction',  // Additional action
+                        'actions' => 'betaActionAction',  // Additional action
                     ],
                 ],
             ],
@@ -340,7 +340,7 @@ class OrderMachine extends Machine
                         'on' => [
                             'SUBMIT' => [
                                 'target' => 'processing',
-                                'actions' => 'incrementAction',
+                                'actions' => 'increment',
                             ],
                         ],
                     ],
@@ -353,8 +353,8 @@ class OrderMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'incrementAction' => fn($ctx) => $ctx->count++,
-                    'decrementAction' => fn($ctx) => $ctx->count--,
+                    'increment' => fn($ctx) => $ctx->count++,
+                    'decrement' => fn($ctx) => $ctx->count--,
                 ],
             ],
             scenarios: [
@@ -363,10 +363,10 @@ class OrderMachine extends Machine
                         'on' => [
                             'SUBMIT' => [
                                 'target' => 'fast_completed',  // Skip processing
-                                'actions' => 'decrementAction', // Different action
+                                'actions' => 'decrement', // Different action
                             ],
                         ],
-                        'exit' => ['decrementAction'],  // Additional exit action
+                        'exit' => ['decrement'],  // Additional exit action
                     ],
                 ],
             ],

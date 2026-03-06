@@ -29,11 +29,11 @@ class CalculatorMachine extends Machine
                 'states' => [
                     'ready' => [
                         'on' => [
-                            'ADD' => ['actions' => 'additionAction'],
-                            'SUB' => ['actions' => 'subtractionAction'],
-                            'MUL' => ['actions' => 'multiplicationAction'],
-                            'DIV' => [
-                                'guards'  => 'notDivideByZero',
+                            'ADD'      => ['actions' => 'additionAction'],
+                            'SUBTRACT' => ['actions' => 'subtractionAction'],
+                            'MULTIPLY' => ['actions' => 'multiplicationAction'],
+                            'DIVIDE'   => [
+                                'guards'  => 'notDivideByZeroGuard',
                                 'actions' => 'divisionAction',
                             ],
                         ],
@@ -42,7 +42,7 @@ class CalculatorMachine extends Machine
             ],
             behavior: [
                 'guards' => [
-                    'notDivideByZero' => fn(ContextManager $c, EventDefinition $e): bool
+                    'notDivideByZeroGuard' => fn(ContextManager $c, EventDefinition $e): bool
                         => $e->payload['value'] !== 0,
                 ],
                 'actions' => [
@@ -67,8 +67,8 @@ class CalculatorMachine extends Machine
 $machine = CalculatorMachine::create();
 
 $machine->send(['type' => 'ADD', 'payload' => ['value' => 10]]);
-$machine->send(['type' => 'MUL', 'payload' => ['value' => 3]]);
-$machine->send(['type' => 'SUB', 'payload' => ['value' => 5]]);
+$machine->send(['type' => 'MULTIPLY', 'payload' => ['value' => 3]]);
+$machine->send(['type' => 'SUBTRACT', 'payload' => ['value' => 5]]);
 
 expect($machine->state->context->result)->toBe(25);
 ```
@@ -155,8 +155,8 @@ class TrafficLightsMachine extends Machine
                 'states'  => [
                     'active' => [
                         'on' => [
-                            'INC' => ['actions' => IncrementAction::class],
-                            'MUT' => [
+                            'INCREMENT' => ['actions' => IncrementAction::class],
+                            'MULTIPLY'  => [
                                 'guards'  => IsEvenGuard::class,
                                 'actions' => MultiplyByTwoAction::class,
                             ],
@@ -174,14 +174,14 @@ class TrafficLightsMachine extends Machine
 ```php no_run
 $machine = TrafficLightsMachine::create();
 
-$machine->send(['type' => 'INC']); // count = 1
-$machine->send(['type' => 'INC']); // count = 2
-$machine->send(['type' => 'MUT']); // count = 4 (2 is even, multiply passes)
+$machine->send(['type' => 'INCREMENT']); // count = 1
+$machine->send(['type' => 'INCREMENT']); // count = 2
+$machine->send(['type' => 'MULTIPLY']);  // count = 4 (2 is even, multiply passes)
 
 expect($machine->state->context->count)->toBe(4);
 
 // Guard blocks when count is odd
-$machine->send(['type' => 'INC']); // count = 5
-expect(fn() => $machine->send(['type' => 'MUT']))
+$machine->send(['type' => 'INCREMENT']); // count = 5
+expect(fn() => $machine->send(['type' => 'MULTIPLY']))
     ->toThrow(MachineValidationException::class);
 ```

@@ -302,19 +302,19 @@ MachineDefinition::define(
                         'initial' => 'pricing',
                         'states' => [
                             'pricing' => [
-                                'on' => ['PRICING_DONE' => 'awaitingApproval'],
+                                'on' => ['PRICING_DONE' => 'awaiting_approval'],
                             ],
-                            'awaitingApproval' => [
+                            'awaiting_approval' => [
                                 'on' => [
                                     '@always' => [
-                                        ['target' => 'paymentOptions', 'guards' => 'isApprovalPassed'],
+                                        ['target' => 'payment_options', 'guards' => 'isApprovalPassed'],
                                     ],
                                 ],
                             ],
-                            'paymentOptions' => [
-                                'on' => ['PAYMENT_DONE' => 'dealerDone'],
+                            'payment_options' => [
+                                'on' => ['PAYMENT_DONE' => 'dealer_done'],
                             ],
-                            'dealerDone' => ['type' => 'final'],
+                            'dealer_done' => ['type' => 'final'],
                         ],
                     ],
                     'customer' => [
@@ -324,9 +324,9 @@ MachineDefinition::define(
                                 'on' => ['CONSENT_GIVEN' => 'approved'],
                             ],
                             'approved' => [
-                                'on' => ['SUBMITTED' => 'customerDone'],
+                                'on' => ['SUBMITTED' => 'customer_done'],
                             ],
-                            'customerDone' => ['type' => 'final'],
+                            'customer_done' => ['type' => 'final'],
                         ],
                     ],
                 ],
@@ -338,7 +338,7 @@ MachineDefinition::define(
         'guards' => [
             'isApprovalPassed' => fn (ContextManager $ctx, EventBehavior $event, State $state)
                 => $state->matches('processing.customer.approved')
-                || $state->matches('processing.customer.customerDone'),
+                || $state->matches('processing.customer.customer_done'),
         ],
     ]
 );

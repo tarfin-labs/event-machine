@@ -250,9 +250,9 @@ class OrderFulfillmentMachine extends Machine
                                         'on' => ['PICKED' => 'packing'],
                                     ],
                                     'packing' => [
-                                        'on' => ['PACKED' => 'readyToShip'],
+                                        'on' => ['PACKED' => 'ready_to_ship'],
                                     ],
-                                    'readyToShip' => [
+                                    'ready_to_ship' => [
                                         'on' => [
                                             'SHIPPED' => [
                                                 'target' => 'shipped',
