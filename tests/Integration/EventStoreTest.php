@@ -175,7 +175,7 @@ it('stores incremental context', function (): void {
                     'on' => [
                         'GREEN_TIMER' => [
                             'target'  => 'yellow',
-                            'actions' => 'changeCount',
+                            'actions' => 'changeCountAction',
                         ],
                     ],
                 ],
@@ -183,7 +183,7 @@ it('stores incremental context', function (): void {
                     'on' => [
                         'RED_TIMER' => [
                             'target'  => 'red',
-                            'actions' => 'changeValue',
+                            'actions' => 'changeValueAction',
                         ],
                     ],
                 ],
@@ -192,10 +192,10 @@ it('stores incremental context', function (): void {
         ],
         'behavior' => [
             'actions' => [
-                'changeCount' => function (ContextManager $context): void {
+                'changeCountAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') + 1);
                 },
-                'changeValue' => function (ContextManager $context): void {
+                'changeValueAction' => function (ContextManager $context): void {
                     $context->set('value', 'retry');
                 },
             ],
@@ -213,13 +213,13 @@ it('stores incremental context', function (): void {
     expect($newState->history)
         ->whereNotIn('type', [
             'traffic_light.start',
-            'traffic_light.action.changeCount.finish',
-            'traffic_light.action.changeValue.finish',
+            'traffic_light.action.changeCountAction.finish',
+            'traffic_light.action.changeValueAction.finish',
             'traffic_light.state.red.entry.finish',
         ])->each(fn ($event) => $event->context->toEqual([]))
         ->first()->context->toEqual(['data' => ['count' => 1, 'value' => 'test']])
-        ->where('type', 'traffic_light.action.changeCount.finish')->first()->context->toEqual(['data' => ['count' => 2]])
-        ->where('type', 'traffic_light.action.changeValue.finish')->first()->context->toEqual(['data' => ['value' => 'retry']])
+        ->where('type', 'traffic_light.action.changeCountAction.finish')->first()->context->toEqual(['data' => ['count' => 2]])
+        ->where('type', 'traffic_light.action.changeValueAction.finish')->first()->context->toEqual(['data' => ['value' => 'retry']])
         ->last()->context->toEqual(['data' => ['count' => 2, 'value' => 'retry']]);
 
 });
