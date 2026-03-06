@@ -9,14 +9,14 @@
 'states' => [
     'checking' => [
         'on' => [
-            '@always' => 'nextState',
+            '@always' => 'next_state',
         ],
     ],
-    'nextState' => [],
+    'next_state' => [],
 ],
 ```
 
-When the machine enters `checking`, it immediately transitions to `nextState`.
+When the machine enters `checking`, it immediately transitions to `next_state`.
 
 ::: warning Infinite Loop Risk
 `@always` transitions can create infinite loops if two states always transition to each other. Always ensure at least one path leads to a state without `@always`, or use guards that will eventually fail. See [Avoiding Infinite Loops](#avoiding-infinite-loops) for details.
@@ -207,7 +207,7 @@ Ensure consistent state entry:
                     'calculators' => 'calculateRiskScore',
                     'guards' => 'isLowRisk',
                 ],
-                ['target' => 'manualReview'],
+                ['target' => 'manual_review'],
             ],
         ],
     ],
@@ -236,24 +236,24 @@ MachineDefinition::define(
                 'on' => [
                     '@always' => [
                         [
-                            'target' => 'vipProcessing',
+                            'target' => 'vip_processing',
                             'guards' => 'isVipMember',
                         ],
                         [
-                            'target' => 'priorityProcessing',
+                            'target' => 'priority_processing',
                             'guards' => 'isLargeOrder',
                         ],
-                        ['target' => 'standardProcessing'],
+                        ['target' => 'standard_processing'],
                     ],
                 ],
             ],
-            'vipProcessing' => [
+            'vip_processing' => [
                 'entry' => 'assignVipHandler',
             ],
-            'priorityProcessing' => [
+            'priority_processing' => [
                 'entry' => 'assignPriorityHandler',
             ],
-            'standardProcessing' => [],
+            'standard_processing' => [],
         ],
     ],
     behavior: [
@@ -275,25 +275,25 @@ MachineDefinition::define(
         'on' => [
             '@always' => [
                 [
-                    'target' => 'autoApproved',
+                    'target' => 'auto_approved',
                     'guards' => ['isUnderAutoApprovalLimit', 'hasNoRiskFlags'],
                     'actions' => 'logAutoApproval',
                 ],
                 [
-                    'target' => 'pendingFirstApproval',
+                    'target' => 'pending_first_approval',
                     'guards' => 'requiresSingleApproval',
                 ],
                 [
-                    'target' => 'pendingDualApproval',
+                    'target' => 'pending_dual_approval',
                 ],
             ],
         ],
     ],
-    'autoApproved' => [
+    'auto_approved' => [
         'on' => ['@always' => '#processing'],
     ],
-    'pendingFirstApproval' => [...],
-    'pendingDualApproval' => [...],
+    'pending_first_approval' => [...],
+    'pending_dual_approval' => [...],
 ],
 ```
 
@@ -340,20 +340,20 @@ MachineDefinition::define(
                         'initial' => 'pricing',
                         'states' => [
                             'pricing' => [
-                                'on' => ['PRICING_DONE' => 'awaitingApproval'],
+                                'on' => ['PRICING_DONE' => 'awaiting_approval'],
                             ],
-                            'awaitingApproval' => [
+                            'awaiting_approval' => [
                                 'on' => [
                                     // Region waits for sibling to pass policy check
                                     '@always' => [
-                                        ['target' => 'paymentOptions', 'guards' => 'isApprovalPassed'],
+                                        ['target' => 'payment_options', 'guards' => 'isApprovalPassed'],
                                     ],
                                 ],
                             ],
-                            'paymentOptions' => [
-                                'on' => ['PAYMENT_DONE' => 'dealerDone'],
+                            'payment_options' => [
+                                'on' => ['PAYMENT_DONE' => 'dealer_done'],
                             ],
-                            'dealerDone' => ['type' => 'final'],
+                            'dealer_done' => ['type' => 'final'],
                         ],
                     ],
                     'customer' => [
@@ -363,9 +363,9 @@ MachineDefinition::define(
                                 'on' => ['CONSENT_GIVEN' => 'approved'],
                             ],
                             'approved' => [
-                                'on' => ['SUBMITTED' => 'customerDone'],
+                                'on' => ['SUBMITTED' => 'customer_done'],
                             ],
-                            'customerDone' => ['type' => 'final'],
+                            'customer_done' => ['type' => 'final'],
                         ],
                     ],
                 ],
@@ -377,7 +377,7 @@ MachineDefinition::define(
         'guards' => [
             'isApprovalPassed' => fn (ContextManager $ctx, EventBehavior $event, State $state)
                 => $state->matches('processing.customer.approved')
-                || $state->matches('processing.customer.customerDone'),
+                || $state->matches('processing.customer.customer_done'),
         ],
     ]
 );
@@ -388,15 +388,15 @@ stateDiagram-v2
     state processing {
         state dealer {
             [*] --> pricing
-            pricing --> awaitingApproval : PRICING_DONE
-            awaitingApproval --> paymentOptions : @always [isApprovalPassed]
-            paymentOptions --> dealerDone : PAYMENT_DONE
+            pricing --> awaiting_approval : PRICING_DONE
+            awaiting_approval --> payment_options : @always [isApprovalPassed]
+            payment_options --> dealer_done : PAYMENT_DONE
         }
         --
         state customer {
             [*] --> consent
             consent --> approved : CONSENT_GIVEN
-            approved --> customerDone : SUBMITTED
+            approved --> customer_done : SUBMITTED
         }
     }
 ```
