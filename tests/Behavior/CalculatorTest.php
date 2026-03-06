@@ -87,7 +87,7 @@ test('inline calculator functions work correctly', function (): void {
                     'on' => [
                         'CALCULATE' => [
                             'target'      => 'calculated',
-                            'calculators' => 'calculateSum',
+                            'calculators' => 'calculateSumCalculator',
                         ],
                     ],
                 ],
@@ -96,7 +96,7 @@ test('inline calculator functions work correctly', function (): void {
         ],
         'behavior' => [
             'calculators' => [
-                'calculateSum' => function (ContextManager $context): void {
+                'calculateSumCalculator' => function (ContextManager $context): void {
                     $numbers = $context->get('numbers');
                     $context->set('sum', array_sum($numbers));
                 },
@@ -157,9 +157,9 @@ test('calculators run before guards and actions', function (): void {
                     'on' => [
                         'CHECK' => [
                             'target'      => 'end',
-                            'calculators' => 'calculateStuff',
-                            'guards'      => 'checkStuff',
-                            'actions'     => 'doStuff',
+                            'calculators' => 'calculateStuffCalculator',
+                            'guards'      => 'checkStuffGuard',
+                            'actions'     => 'doStuffAction',
                         ],
                     ],
                 ],
@@ -168,19 +168,19 @@ test('calculators run before guards and actions', function (): void {
         ],
         'behavior' => [
             'calculators' => [
-                'calculateStuff' => function () use (&$executionOrder) {
+                'calculateStuffCalculator' => function () use (&$executionOrder) {
                     return $executionOrder[] = 'calculator';
                 },
             ],
             'guards' => [
-                'checkStuff' => function () use (&$executionOrder) {
+                'checkStuffGuard' => function () use (&$executionOrder) {
                     $executionOrder[] = 'guard';
 
                     return true;
                 },
             ],
             'actions' => [
-                'doStuff' => function () use (&$executionOrder): void {
+                'doStuffAction' => function () use (&$executionOrder): void {
                     $executionOrder[] = 'action';
                 },
             ],
@@ -208,9 +208,9 @@ test('calculator failures prevent guard and action execution', function (): void
                     'on' => [
                         'PROCESS' => [
                             'target'      => 'processed',
-                            'calculators' => 'problematicCalculation',
-                            'guards'      => 'checkValue',
-                            'actions'     => 'recordValue',
+                            'calculators' => 'problematicCalculationCalculator',
+                            'guards'      => 'checkValueGuard',
+                            'actions'     => 'recordValueAction',
                         ],
                     ],
                 ],
@@ -219,19 +219,19 @@ test('calculator failures prevent guard and action execution', function (): void
         ],
         'behavior' => [
             'calculators' => [
-                'problematicCalculation' => function (): void {
+                'problematicCalculationCalculator' => function (): void {
                     throw new RuntimeException();
                 },
             ],
             'guards' => [
-                'checkValue' => function () use (&$guardExecuted) {
+                'checkValueGuard' => function () use (&$guardExecuted) {
                     $guardExecuted = true;
 
                     return true;
                 },
             ],
             'actions' => [
-                'recordValue' => function () use (&$actionExecuted): void {
+                'recordValueAction' => function () use (&$actionExecuted): void {
                     $actionExecuted = true;
                 },
             ],
@@ -250,7 +250,7 @@ test('calculator failures prevent guard and action execution', function (): void
     expect($actionExecuted)->toBeFalse();
 
     // Should have recorded a calculator fail event
-    expect($state->history->pluck('type')->contains('machine.calculator.problematicCalculation.fail'))->toBeTrue();
+    expect($state->history->pluck('type')->contains('machine.calculator.problematicCalculationCalculator.fail'))->toBeTrue();
 });
 
 test('calculators can use event data', function (): void {
@@ -264,7 +264,7 @@ test('calculators can use event data', function (): void {
                     'on' => [
                         'MULTIPLY' => [
                             'target'      => 'end',
-                            'calculators' => 'multiplyNumbers',
+                            'calculators' => 'multiplyNumbersCalculator',
                         ],
                     ],
                 ],
@@ -273,7 +273,7 @@ test('calculators can use event data', function (): void {
         ],
         'behavior' => [
             'calculators' => [
-                'multiplyNumbers' => function (ContextManager $context, EventBehavior $event): void {
+                'multiplyNumbersCalculator' => function (ContextManager $context, EventBehavior $event): void {
                     $numbers = $event->payload['numbers'] ?? [];
                     $context->set('result', array_product($numbers));
                 },
@@ -306,7 +306,7 @@ test('calculator can have parameters', function (): void {
                     'on' => [
                         'APPLY_TAX' => [
                             'target'      => 'taxed',
-                            'calculators' => 'calculateTax:0.2', // 20% tax rate
+                            'calculators' => 'calculateTaxCalculator:0.2', // 20% tax rate
                         ],
                     ],
                 ],
@@ -315,7 +315,7 @@ test('calculator can have parameters', function (): void {
         ],
         'behavior' => [
             'calculators' => [
-                'calculateTax' => function (
+                'calculateTaxCalculator' => function (
                     ContextManager $context,
                     EventBehavior $event,
                     ?array $args = null

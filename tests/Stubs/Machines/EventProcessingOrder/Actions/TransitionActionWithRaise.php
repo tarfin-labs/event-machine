@@ -11,9 +11,9 @@ class TransitionActionWithRaise extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $order   = $context->get('executionOrder');
+        $order   = $context->get('execution_order');
         $order[] = 'transition_action';
-        $context->set('executionOrder', $order);
+        $context->set('execution_order', $order);
         $this->raise(['type' => 'NEXT']);
     }
 }

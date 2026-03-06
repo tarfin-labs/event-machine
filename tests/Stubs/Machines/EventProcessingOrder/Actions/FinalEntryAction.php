@@ -11,8 +11,8 @@ class FinalEntryAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $order   = $context->get('executionOrder');
+        $order   = $context->get('execution_order');
         $order[] = 'C_entry';
-        $context->set('executionOrder', $order);
+        $context->set('execution_order', $order);
     }
 }
