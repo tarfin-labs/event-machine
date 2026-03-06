@@ -788,8 +788,15 @@ class MachineDefinition
         // Find transitions for all active atomic states
         $transitions = $this->selectTransitions($eventBehavior, $state);
 
-        // If no transitions found, throw exception
+        // If no transitions found for a real event, throw exception.
+        // For @always transitions, guard failure is expected (e.g., cross-region
+        // sync where a region waits for a sibling to reach a certain state).
+        // In that case, return the current state without transitioning.
         if ($transitions === []) {
+            if ($eventBehavior->type === TransitionProperty::Always->value) {
+                return $state;
+            }
+
             throw NoTransitionDefinitionFoundException::build(
                 $eventBehavior->type,
                 $state->currentStateDefinition->id
