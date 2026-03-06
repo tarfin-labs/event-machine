@@ -408,6 +408,53 @@ The `@always` event is reserved for automatic transitions:
 ],
 ```
 
+## Event Introspection
+
+### Checking if an Event Can Be Handled
+
+Use `can()` to check if the current state has a transition for a given event:
+
+<!-- doctest-attr: ignore -->
+```php
+$machine = OrderMachine::create();
+
+// By type string
+$machine->can('SUBMIT');  // true - pending state handles SUBMIT
+
+// By event class
+$machine->can(SubmitEvent::class);  // resolves getType() automatically
+
+// By event instance
+$event = SubmitEvent::from(['orderId' => 123]);
+$machine->can($event);  // uses $event->type
+```
+
+This is useful for:
+- Conditionally showing action buttons in the UI
+- API responses that include available actions
+- Preventing unnecessary exception handling
+
+### Querying Accepted Events
+
+Get a map of all event types the current state can handle:
+
+<!-- doctest-attr: ignore -->
+```php
+$machine = OrderMachine::create();
+
+// Events available in the current state
+$events = $machine->getAcceptedEvents();
+// ['SUBMIT' => SubmitEvent::class, 'CANCEL' => CancelEvent::class]
+
+// All events registered in the machine (regardless of state)
+$allEvents = $machine->definition->getAcceptedEvents();
+// ['SUBMIT' => SubmitEvent::class, 'CANCEL' => CancelEvent::class, 'SHIP' => ShipEvent::class, ...]
+```
+
+::: tip
+`getAcceptedEvents()` on `Machine` returns events for the current state. `getAcceptedEvents()` on `MachineDefinition` returns all registered events, or events for a specific state if you pass a `StateDefinition`.
+:::
+
 ## Complete Example
 
 ```php ignore

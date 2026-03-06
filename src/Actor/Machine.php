@@ -206,6 +206,37 @@ class Machine implements Castable, JsonSerializable, Stringable
         return $this->state;
     }
 
+    /**
+     * Checks if the current state can handle the given event.
+     *
+     * Accepts a type string, an EventBehavior class string, or an EventBehavior instance.
+     *
+     * @param  string|EventBehavior  $event  The event type, class string, or instance to check.
+     *
+     * @return bool True if a transition exists for this event in the current state.
+     */
+    public function can(string|EventBehavior $event): bool
+    {
+        $type = $event instanceof EventBehavior ? $event->type : $event;
+
+        // If the string is an EventBehavior class, resolve its type
+        if (is_string($type) && is_subclass_of($type, EventBehavior::class)) {
+            $type = $type::getType();
+        }
+
+        return isset($this->state->currentStateDefinition->transitionDefinitions[$type]);
+    }
+
+    /**
+     * Returns the registered event types that the current state can accept.
+     *
+     * @return array<string, class-string<EventBehavior>> Map of type strings to event classes.
+     */
+    public function getAcceptedEvents(): array
+    {
+        return $this->definition->getAcceptedEvents($this->state->currentStateDefinition);
+    }
+
     // endregion
 
     // region Recording State
