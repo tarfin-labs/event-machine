@@ -9,16 +9,16 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMach
 test('state value can be matched', function (): void {
     $machine = MachineDefinition::define(config: [
         'id'      => 'machine',
-        'initial' => 'stateA',
+        'initial' => 'state_a',
         'states'  => [
-            'stateA' => [
+            'state_a' => [
                 'on' => [
-                    'EVENT' => 'stateB.subStateOfB',
+                    'EVENT' => 'state_b.sub_state_of_b',
                 ],
             ],
-            'stateB' => [
+            'state_b' => [
                 'states' => [
-                    'subStateOfB' => [],
+                    'sub_state_of_b' => [],
                 ],
             ],
         ],
@@ -26,13 +26,13 @@ test('state value can be matched', function (): void {
 
     $initialState = $machine->getInitialState();
 
-    expect($initialState->matches('stateA'))->toBe(true);
-    expect($initialState->matches('machine.stateA'))->toBe(true);
+    expect($initialState->matches('state_a'))->toBe(true);
+    expect($initialState->matches('machine.state_a'))->toBe(true);
 
     $newState = $machine->transition(event: ['type' => 'EVENT']);
 
-    expect($newState->matches('stateB.subStateOfB'))->toBe(true);
-    expect($newState->matches('machine.stateB.subStateOfB'))->toBe(true);
+    expect($newState->matches('state_b.sub_state_of_b'))->toBe(true);
+    expect($newState->matches('machine.state_b.sub_state_of_b'))->toBe(true);
 });
 
 test('Logs if log writing is turned on', function (): void {
@@ -40,7 +40,7 @@ test('Logs if log writing is turned on', function (): void {
 
     Log::shouldReceive('debug')->times(3);
 
-    $machine->send(event: ['type' => 'MUT']);
+    $machine->send(event: ['type' => 'MULTIPLY']);
 });
 
 test('sequence numbers are always count of history at time of creation', function (): void {

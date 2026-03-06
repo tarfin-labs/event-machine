@@ -240,12 +240,12 @@ test('a state definition can have transitions', function (): void {
                     'FORBIDDEN_EVENT_WITH_ACTIONS' => [
                         'target' => null,
                         'guards' => [
-                            'guardSomething1',
-                            'guardSomething2',
+                            'guardSomething1Guard',
+                            'guardSomething2Guard',
                         ],
                         'actions' => [
-                            'doSomething1',
-                            'doSomething2',
+                            'doSomething1Action',
+                            'doSomething2Action',
                         ],
                     ],
                 ],

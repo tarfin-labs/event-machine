@@ -107,14 +107,14 @@ test('search unique child states by string', function (): void {
 it('can transition to a child state', function (): void {
     $machine = MachineDefinition::define(config: [
         'states' => [
-            'stateA' => [
+            'state_a' => [
                 'on' => [
-                    'EVENT' => 'stateB.subStateOfB',
+                    'EVENT' => 'state_b.sub_state_of_b',
                 ],
             ],
-            'stateB' => [
+            'state_b' => [
                 'states' => [
-                    'subStateOfB' => [],
+                    'sub_state_of_b' => [],
                 ],
             ],
         ],
@@ -124,22 +124,22 @@ it('can transition to a child state', function (): void {
         'type' => 'EVENT',
     ]);
 
-    expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'stateB.subStateOfB']);
+    expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'state_b.sub_state_of_b']);
 });
 
 it('can transition to a child state, targets as arrays', function (): void {
     $machine = MachineDefinition::define(config: [
         'states' => [
-            'stateA' => [
+            'state_a' => [
                 'on' => [
                     'EVENT' => [
-                        'target' => 'stateB.subStateOfB',
+                        'target' => 'state_b.sub_state_of_b',
                     ],
                 ],
             ],
-            'stateB' => [
+            'state_b' => [
                 'states' => [
-                    'subStateOfB' => [],
+                    'sub_state_of_b' => [],
                 ],
             ],
         ],
@@ -149,19 +149,19 @@ it('can transition to a child state, targets as arrays', function (): void {
         'type' => 'EVENT',
     ]);
 
-    expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'stateB.subStateOfB']);
+    expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'state_b.sub_state_of_b']);
 });
 
 it('can transition from a child state', function (): void {
     $machine = MachineDefinition::define(config: [
-        'initial' => 'stateB.subStateOfB',
+        'initial' => 'state_b.sub_state_of_b',
         'states'  => [
-            'stateA' => [],
-            'stateB' => [
+            'state_a' => [],
+            'state_b' => [
                 'states' => [
-                    'subStateOfB' => [
+                    'sub_state_of_b' => [
                         'on' => [
-                            'EVENT' => 'stateA',
+                            'EVENT' => 'state_a',
                         ],
                     ],
                 ],
@@ -173,20 +173,20 @@ it('can transition from a child state', function (): void {
         'type' => 'EVENT',
     ]);
 
-    expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'stateA']);
+    expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'state_a']);
 });
 
 it('can transition from a child state, targets as arrays', function (): void {
     $machine = MachineDefinition::define(config: [
-        'initial' => 'stateB.subStateOfB',
+        'initial' => 'state_b.sub_state_of_b',
         'states'  => [
-            'stateA' => [],
-            'stateB' => [
+            'state_a' => [],
+            'state_b' => [
                 'states' => [
-                    'subStateOfB' => [
+                    'sub_state_of_b' => [
                         'on' => [
                             'EVENT' => [
-                                'target' => 'stateA',
+                                'target' => 'state_a',
                             ],
                         ],
                     ],
@@ -199,5 +199,5 @@ it('can transition from a child state, targets as arrays', function (): void {
         'type' => 'EVENT',
     ]);
 
-    expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'stateA']);
+    expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'state_a']);
 });
