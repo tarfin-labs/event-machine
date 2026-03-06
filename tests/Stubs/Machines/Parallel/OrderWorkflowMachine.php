@@ -21,11 +21,11 @@ class OrderWorkflowMachine extends Machine
     {
         return MachineDefinition::define(
             config: [
-                'id'      => 'orderWorkflow',
+                'id'      => 'order_workflow',
                 'initial' => 'processing',
                 'context' => [
-                    'orderId'     => null,
-                    'totalAmount' => 0,
+                    'order_id'     => null,
+                    'total_amount' => 0,
                 ],
                 'states' => [
                     'processing' => [

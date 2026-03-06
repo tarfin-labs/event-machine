@@ -419,7 +419,7 @@ test('guarded transitions can run actions without changing state when no target 
     $machine = GuardedMachine::create();
 
     // 2.2. Act
-    $machine->send(['type' => 'INC']);
+    $machine->send(['type' => 'INCREASE']);
     $state = $machine->send(['type' => 'CHECK']);
 
     // 2.3. Assert

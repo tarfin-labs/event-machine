@@ -12,9 +12,9 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMach
 it('can persist the machine state', function (): void {
     $machine = TrafficLightsMachine::create();
 
-    $machine->send(['type' => 'INC']);
-    $machine->send(['type' => 'INC']);
-    $machine->send(['type' => 'INC']);
+    $machine->send(['type' => 'INCREASE']);
+    $machine->send(['type' => 'INCREASE']);
+    $machine->send(['type' => 'INCREASE']);
 
     $eventIds = $machine->state->history
         ->pluck('id')
@@ -29,9 +29,9 @@ it('can persist the machine state', function (): void {
 it('can restore the persisted state', function (): void {
     $machine = TrafficLightsMachine::create();
 
-    $machine->send(['type' => 'INC']);
-    $machine->send(['type' => 'INC']);
-    $machine->send(['type' => 'INC']);
+    $machine->send(['type' => 'INCREASE']);
+    $machine->send(['type' => 'INCREASE']);
+    $machine->send(['type' => 'INCREASE']);
 
     $state = $machine->state;
 
@@ -62,7 +62,7 @@ it('can restore the persisted state', function (): void {
 it('can auto persist after an event', function (): void {
     $machine = TrafficLightsMachine::create();
 
-    $machine->send(['type' => 'INC']);
+    $machine->send(['type' => 'INCREASE']);
 
     $eventIds = $machine->state->history
         ->pluck('id')

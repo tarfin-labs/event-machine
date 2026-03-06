@@ -107,7 +107,7 @@ test('regions can complete in any order', function (): void {
 
 test('three regions workflow completes correctly', function (): void {
     $definition = MachineDefinition::define([
-        'id'      => 'orderWorkflow',
+        'id'      => 'order_workflow',
         'initial' => 'processing',
         'states'  => [
             'processing' => [
