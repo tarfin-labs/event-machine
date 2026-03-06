@@ -50,25 +50,25 @@ sequenceDiagram
 <!-- doctest-attr: ignore -->
 ```php
 'states' => [
-    'stateA' => [
+    'state_a' => [
         'exit' => 'exitAAction',
         'on' => [
             'GO' => [
-                'target' => 'stateB',
+                'target' => 'state_b',
                 'actions' => 'transitionAction',
             ],
         ],
     ],
-    'stateB' => [
+    'state_b' => [
         'entry' => 'enterBAction',
     ],
 ],
 ```
 
 When `GO` is sent:
-1. `exitA` runs (leaving stateA)
+1. `exitA` runs (leaving state_a)
 2. `transitionAction` runs (during transition)
-3. `enterB` runs (entering stateB)
+3. `enterB` runs (entering state_b)
 
 ## Entry Actions
 

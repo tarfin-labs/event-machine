@@ -434,11 +434,11 @@ Be careful not to create infinite loops:
 <!-- doctest-attr: ignore -->
 ```php
 // DON'T DO THIS - infinite loop!
-'stateA' => [
-    'on' => ['@always' => 'stateB'],
+'state_a' => [
+    'on' => ['@always' => 'state_b'],
 ],
-'stateB' => [
-    'on' => ['@always' => 'stateA'],
+'state_b' => [
+    'on' => ['@always' => 'state_a'],
 ],
 ```
 

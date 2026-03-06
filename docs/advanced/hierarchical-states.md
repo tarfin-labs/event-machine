@@ -298,7 +298,7 @@ MachineDefinition::define(
         'id' => 'wizard',
         'initial' => 'filling',
         'context' => [
-            'currentStep' => 1,
+            'current_step' => 1,
             'data' => [],
         ],
         'states' => [
