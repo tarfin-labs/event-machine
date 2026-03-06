@@ -11,8 +11,8 @@ class NextTransitionAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $order   = $context->get('executionOrder');
+        $order   = $context->get('execution_order');
         $order[] = 'next_transition';
-        $context->set('executionOrder', $order);
+        $context->set('execution_order', $order);
     }
 }
