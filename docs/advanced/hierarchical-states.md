@@ -253,15 +253,15 @@ Actions execute at each level:
 <!-- doctest-attr: ignore -->
 ```php
 'order' => [
-    'entry' => 'logOrderEntry',  // Runs when entering order
-    'exit' => 'logOrderExit',    // Runs when leaving order
+    'entry' => 'logOrderEntryAction',  // Runs when entering order
+    'exit' => 'logOrderExitAction',    // Runs when leaving order
     'states' => [
         'processing' => [
-            'entry' => 'startProcessing',  // Runs when entering processing
-            'exit' => 'stopProcessing',    // Runs when leaving processing
+            'entry' => 'startProcessingAction',  // Runs when entering processing
+            'exit' => 'stopProcessingAction',    // Runs when leaving processing
             'states' => [
                 'validating' => [
-                    'entry' => 'startValidation',
+                    'entry' => 'startValidationAction',
                     'on' => ['VALID' => 'charging'],
                 ],
             ],
@@ -309,8 +309,8 @@ MachineDefinition::define(
                         'on' => [
                             'NEXT' => [
                                 'target' => 'step2',
-                                'guards' => 'step1Valid',
-                                'actions' => 'saveStep1',
+                                'guards' => 'step1ValidGuard',
+                                'actions' => 'saveStep1Action',
                             ],
                         ],
                     ],
@@ -319,8 +319,8 @@ MachineDefinition::define(
                             'BACK' => 'step1',
                             'NEXT' => [
                                 'target' => 'step3',
-                                'guards' => 'step2Valid',
-                                'actions' => 'saveStep2',
+                                'guards' => 'step2ValidGuard',
+                                'actions' => 'saveStep2Action',
                             ],
                         ],
                     ],
@@ -329,8 +329,8 @@ MachineDefinition::define(
                             'BACK' => 'step2',
                             'SUBMIT' => [
                                 'target' => '#reviewing',
-                                'guards' => 'step3Valid',
-                                'actions' => 'saveStep3',
+                                'guards' => 'step3ValidGuard',
+                                'actions' => 'saveStep3Action',
                             ],
                         ],
                     ],
@@ -346,7 +346,7 @@ MachineDefinition::define(
                 ],
             ],
             'submitting' => [
-                'entry' => 'submitForm',
+                'entry' => 'submitFormAction',
                 'on' => [
                     'SUCCESS' => 'completed',
                     'FAILURE' => 'error',
@@ -377,8 +377,8 @@ MachineDefinition::define(
                 'on' => [
                     'SUBMIT_SHIPPING' => [
                         'target' => 'payment',
-                        'guards' => 'validShipping',
-                        'actions' => 'saveShipping',
+                        'guards' => 'validShippingGuard',
+                        'actions' => 'saveShippingAction',
                     ],
                 ],
             ],
@@ -387,8 +387,8 @@ MachineDefinition::define(
                     'BACK' => 'shipping',
                     'SUBMIT_PAYMENT' => [
                         'target' => 'review',
-                        'guards' => 'validPayment',
-                        'actions' => 'savePayment',
+                        'guards' => 'validPaymentGuard',
+                        'actions' => 'savePaymentAction',
                     ],
                 ],
             ],
@@ -407,14 +407,14 @@ MachineDefinition::define(
         'initial' => 'authorizing',
         'states' => [
             'authorizing' => [
-                'entry' => 'authorizePayment',
+                'entry' => 'authorizePaymentAction',
                 'on' => [
                     'AUTHORIZED' => 'fulfilling',
                     'DECLINED' => '#declined',
                 ],
             ],
             'fulfilling' => [
-                'entry' => 'reserveInventory',
+                'entry' => 'reserveInventoryAction',
                 'on' => ['FULFILLED' => '#completed'],
             ],
         ],

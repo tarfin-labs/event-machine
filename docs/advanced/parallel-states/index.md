@@ -254,7 +254,7 @@ MachineDefinition::define(
                                 'on' => [
                                     'PROCEED' => [
                                         'target' => 'done',
-                                        'guards' => 'isRegion2Ready',
+                                        'guards' => 'isRegion2ReadyGuard',
                                     ],
                                 ],
                             ],
@@ -268,7 +268,7 @@ MachineDefinition::define(
     ],
     behavior: [
         'guards' => [
-            'isRegion2Ready' => fn (ContextManager $ctx, EventBehavior $event, State $state)
+            'isRegion2ReadyGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state)
                 => $state->matches('parallel.region2.ready'),
         ],
     ]
@@ -307,7 +307,7 @@ MachineDefinition::define(
                             'awaiting_approval' => [
                                 'on' => [
                                     '@always' => [
-                                        ['target' => 'payment_options', 'guards' => 'isApprovalPassed'],
+                                        ['target' => 'payment_options', 'guards' => 'isApprovalPassedGuard'],
                                     ],
                                 ],
                             ],
@@ -336,7 +336,7 @@ MachineDefinition::define(
     ],
     behavior: [
         'guards' => [
-            'isApprovalPassed' => fn (ContextManager $ctx, EventBehavior $event, State $state)
+            'isApprovalPassedGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state)
                 => $state->matches('processing.customer.approved')
                 || $state->matches('processing.customer.customer_done'),
         ],

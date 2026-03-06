@@ -36,9 +36,9 @@ The persisted state value is stored as a JSON array of fully-qualified state IDs
 ```json
 {
   "machine_value": [
-    "orderFulfillment.processing.payment.validating",
-    "orderFulfillment.processing.shipping.picking",
-    "orderFulfillment.processing.documents.generating"
+    "order_fulfillment.processing.payment.validating",
+    "order_fulfillment.processing.shipping.picking",
+    "order_fulfillment.processing.documents.generating"
   ]
 }
 ```
@@ -134,9 +134,9 @@ use Tarfinlabs\EventMachine\Models\MachineEvent;
 
 // Find all orders where payment is charged but shipping is still picking
 $events = MachineEvent::query()
-    ->where('machine_id', 'orderFulfillment')
-    ->whereJsonContains('machine_value', 'orderFulfillment.processing.payment.charged')
-    ->whereJsonContains('machine_value', 'orderFulfillment.processing.shipping.picking')
+    ->where('machine_id', 'order_fulfillment')
+    ->whereJsonContains('machine_value', 'order_fulfillment.processing.payment.charged')
+    ->whereJsonContains('machine_value', 'order_fulfillment.processing.shipping.picking')
     ->latest()
     ->get()
     ->unique('root_event_id');
@@ -149,11 +149,11 @@ Query for specific combinations across regions:
 <!-- doctest-attr: ignore -->
 ```php
 // Orders ready to ship (payment charged, docs ready, shipping packed)
-$readyToShip = MachineEvent::query()
-    ->where('machine_id', 'orderFulfillment')
-    ->whereJsonContains('machine_value', 'orderFulfillment.processing.payment.charged')
-    ->whereJsonContains('machine_value', 'orderFulfillment.processing.documents.ready')
-    ->whereJsonContains('machine_value', 'orderFulfillment.processing.shipping.readyToShip')
+$ready_to_ship = MachineEvent::query()
+    ->where('machine_id', 'order_fulfillment')
+    ->whereJsonContains('machine_value', 'order_fulfillment.processing.payment.charged')
+    ->whereJsonContains('machine_value', 'order_fulfillment.processing.documents.ready')
+    ->whereJsonContains('machine_value', 'order_fulfillment.processing.shipping.ready_to_ship')
     ->latest()
     ->get()
     ->unique('root_event_id');
@@ -173,7 +173,7 @@ ON machine_events ((machine_value::jsonb));
 -- Partial index for specific machine types
 CREATE INDEX idx_order_fulfillment_states
 ON machine_events ((machine_value::jsonb))
-WHERE machine_id = 'orderFulfillment';
+WHERE machine_id = 'order_fulfillment';
 ```
 
 ### State Summarization
@@ -183,10 +183,10 @@ For complex parallel structures, store summary flags in context:
 <!-- doctest-attr: ignore -->
 ```php
 'actions' => [
-    'markPaymentComplete' => function (ContextManager $ctx): void {
+    'markPaymentCompleteAction' => function (ContextManager $ctx): void {
         $ctx->set('payment_complete', true);
     },
-    'markShippingComplete' => function (ContextManager $ctx): void {
+    'markShippingCompleteAction' => function (ContextManager $ctx): void {
         $ctx->set('shipping_complete', true);
     },
 ],
@@ -197,7 +197,7 @@ Then query by context instead of state value:
 <!-- doctest-attr: ignore -->
 ```php
 MachineEvent::query()
-    ->where('machine_id', 'orderFulfillment')
+    ->where('machine_id', 'order_fulfillment')
     ->whereJsonContains('context', ['payment_complete' => true])
     ->whereJsonContains('context', ['shipping_complete' => false])
     ->get();

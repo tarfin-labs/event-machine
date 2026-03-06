@@ -46,7 +46,7 @@ MachineDefinition::define([
                             'on' => [
                                 'CHANGE' => [
                                     'target' => 'modified',
-                                    'actions' => 'updateValue',
+                                    'actions' => 'updateValueAction',
                                 ],
                             ],
                         ],
@@ -97,13 +97,13 @@ MachineDefinition::define(
         'states' => [
             'active' => [
                 'type' => 'parallel',
-                'entry' => 'logParallelEntry',  // 1. Fires first
+                'entry' => 'logParallelEntryAction',  // 1. Fires first
                 'states' => [
                     'region1' => [
                         'initial' => 'a',
                         'states' => [
                             'a' => [
-                                'entry' => 'logRegion1Entry',  // 2. Fires second
+                                'entry' => 'logRegion1EntryAction',  // 2. Fires second
                             ],
                         ],
                     ],
@@ -111,7 +111,7 @@ MachineDefinition::define(
                         'initial' => 'b',
                         'states' => [
                             'b' => [
-                                'entry' => 'logRegion2Entry',  // 3. Fires third
+                                'entry' => 'logRegion2EntryAction',  // 3. Fires third
                             ],
                         ],
                     ],
@@ -119,7 +119,7 @@ MachineDefinition::define(
                         'initial' => 'c',
                         'states' => [
                             'c' => [
-                                'entry' => 'logRegion3Entry',  // 4. Fires fourth
+                                'entry' => 'logRegion3EntryAction',  // 4. Fires fourth
                             ],
                         ],
                     ],
@@ -129,10 +129,10 @@ MachineDefinition::define(
     ],
     behavior: [
         'actions' => [
-            'logParallelEntry' => fn () => Log::info('1. Entering parallel state'),
-            'logRegion1Entry' => fn () => Log::info('2. Entering region 1'),
-            'logRegion2Entry' => fn () => Log::info('3. Entering region 2'),
-            'logRegion3Entry' => fn () => Log::info('4. Entering region 3'),
+            'logParallelEntryAction' => fn () => Log::info('1. Entering parallel state'),
+            'logRegion1EntryAction' => fn () => Log::info('2. Entering region 1'),
+            'logRegion2EntryAction' => fn () => Log::info('3. Entering region 2'),
+            'logRegion3EntryAction' => fn () => Log::info('4. Entering region 3'),
         ],
     ]
 );
@@ -164,13 +164,13 @@ MachineDefinition::define(
         'states' => [
             'active' => [
                 'type' => 'parallel',
-                'exit' => 'logParallelExit',  // 3. Fires last
+                'exit' => 'logParallelExitAction',  // 3. Fires last
                 'states' => [
                     'region1' => [
                         'initial' => 'a',
                         'states' => [
                             'a' => [
-                                'exit' => 'logStateAExit',  // 1. Fires first
+                                'exit' => 'logStateAExitAction',  // 1. Fires first
                             ],
                         ],
                     ],
@@ -178,7 +178,7 @@ MachineDefinition::define(
                         'initial' => 'b',
                         'states' => [
                             'b' => [
-                                'exit' => 'logStateBExit',  // 2. Fires second
+                                'exit' => 'logStateBExitAction',  // 2. Fires second
                             ],
                         ],
                     ],
@@ -189,9 +189,9 @@ MachineDefinition::define(
     ],
     behavior: [
         'actions' => [
-            'logStateAExit' => fn () => Log::info('1. Exiting state a'),
-            'logStateBExit' => fn () => Log::info('2. Exiting state b'),
-            'logParallelExit' => fn () => Log::info('3. Exiting parallel state'),
+            'logStateAExitAction' => fn () => Log::info('1. Exiting state a'),
+            'logStateBExitAction' => fn () => Log::info('2. Exiting state b'),
+            'logParallelExitAction' => fn () => Log::info('3. Exiting parallel state'),
         ],
     ]
 );
@@ -229,7 +229,7 @@ MachineDefinition::define(
                             'ready' => [
                                 'on' => [
                                     'INCREMENT' => [
-                                        'actions' => 'increment',
+                                        'actions' => 'incrementAction',
                                     ],
                                 ],
                             ],
@@ -241,7 +241,7 @@ MachineDefinition::define(
                             'ready' => [
                                 'on' => [
                                     'DECREMENT' => [
-                                        'actions' => 'decrement',
+                                        'actions' => 'decrementAction',
                                     ],
                                 ],
                             ],
@@ -253,8 +253,8 @@ MachineDefinition::define(
     ],
     behavior: [
         'actions' => [
-            'increment' => fn (ContextManager $ctx) => $ctx->set('count', $ctx->get('count') + 1),
-            'decrement' => fn (ContextManager $ctx) => $ctx->set('count', $ctx->get('count') - 1),
+            'incrementAction' => fn (ContextManager $ctx) => $ctx->set('count', $ctx->get('count') + 1),
+            'decrementAction' => fn (ContextManager $ctx) => $ctx->set('count', $ctx->get('count') - 1),
         ],
     ]
 );
@@ -325,7 +325,7 @@ You can also specify actions to run when the parallel state completes:
     'type' => 'parallel',
     'onDone' => [
         'target' => 'complete',
-        'actions' => 'sendConfirmation',
+        'actions' => 'sendConfirmationAction',
     ],
     'states' => [...],
 ],

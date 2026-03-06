@@ -8,8 +8,8 @@ Entry and exit actions are lifecycle hooks that execute when entering or leaving
 ```php
 'states' => [
     'loading' => [
-        'entry' => 'startLoading',
-        'exit' => 'stopLoading',
+        'entry' => 'startLoadingAction',
+        'exit' => 'stopLoadingAction',
         'on' => [
             'LOADED' => 'ready',
         ],
@@ -22,8 +22,8 @@ Entry and exit actions are lifecycle hooks that execute when entering or leaving
 <!-- doctest-attr: ignore -->
 ```php
 'loading' => [
-    'entry' => ['showSpinner', 'logEntry', 'startTimer'],
-    'exit' => ['hideSpinner', 'logExit', 'stopTimer'],
+    'entry' => ['showSpinnerAction', 'logEntryAction', 'startTimerAction'],
+    'exit' => ['hideSpinnerAction', 'logExitAction', 'stopTimerAction'],
 ],
 ```
 
@@ -51,7 +51,7 @@ sequenceDiagram
 ```php
 'states' => [
     'stateA' => [
-        'exit' => 'exitA',
+        'exit' => 'exitAAction',
         'on' => [
             'GO' => [
                 'target' => 'stateB',
@@ -60,7 +60,7 @@ sequenceDiagram
         ],
     ],
     'stateB' => [
-        'entry' => 'enterB',
+        'entry' => 'enterBAction',
     ],
 ],
 ```
@@ -77,12 +77,12 @@ When `GO` is sent:
 <!-- doctest-attr: ignore -->
 ```php
 'loading' => [
-    'entry' => 'initializeLoader',
+    'entry' => 'initializeLoaderAction',
     'on' => ['COMPLETE' => 'ready'],
 ],
 
 'actions' => [
-    'initializeLoader' => function (ContextManager $context) {
+    'initializeLoaderAction' => function (ContextManager $context) {
         $context->startTime = now();
         $context->attempts = 0;
         $context->isLoading = true;
@@ -151,12 +151,12 @@ class ValidateOnEntryAction extends ActionBehavior
 <!-- doctest-attr: ignore -->
 ```php
 'editing' => [
-    'exit' => 'saveProgress',
+    'exit' => 'saveProgressAction',
     'on' => ['SUBMIT' => 'reviewing'],
 ],
 
 'actions' => [
-    'saveProgress' => function (ContextManager $context) {
+    'saveProgressAction' => function (ContextManager $context) {
         $context->lastSaved = now();
         // Save draft to database
     },
@@ -195,16 +195,16 @@ Entry and exit actions respect hierarchy:
 <!-- doctest-attr: ignore -->
 ```php
 'order' => [
-    'entry' => 'logOrderStart',
-    'exit' => 'logOrderEnd',
+    'entry' => 'logOrderStartAction',
+    'exit' => 'logOrderEndAction',
     'states' => [
         'processing' => [
-            'entry' => 'startProcessing',
-            'exit' => 'stopProcessing',
+            'entry' => 'startProcessingAction',
+            'exit' => 'stopProcessingAction',
             'states' => [
                 'validating' => [
-                    'entry' => 'startValidation',
-                    'exit' => 'stopValidation',
+                    'entry' => 'startValidationAction',
+                    'exit' => 'stopValidationAction',
                 ],
             ],
         ],
@@ -244,8 +244,8 @@ When transitioning from `validating` to outside `order`:
         'on' => ['LOAD' => 'loading'],
     ],
     'loading' => [
-        'entry' => ['showLoadingIndicator', 'fetchData'],
-        'exit' => 'hideLoadingIndicator',
+        'entry' => ['showLoadingIndicatorAction', 'fetchDataAction'],
+        'exit' => 'hideLoadingIndicatorAction',
         'on' => [
             'SUCCESS' => 'loaded',
             'FAILURE' => 'error',
@@ -253,7 +253,7 @@ When transitioning from `validating` to outside `order`:
     ],
     'loaded' => [],
     'error' => [
-        'entry' => 'showErrorMessage',
+        'entry' => 'showErrorMessageAction',
     ],
 ],
 ```
@@ -264,24 +264,24 @@ When transitioning from `validating` to outside `order`:
 ```php
 'wizard' => [
     'initial' => 'step1',
-    'entry' => 'initializeWizard',
-    'exit' => 'cleanupWizard',
+    'entry' => 'initializeWizardAction',
+    'exit' => 'cleanupWizardAction',
     'states' => [
         'step1' => [
-            'entry' => 'loadStep1Data',
-            'exit' => 'saveStep1Data',
+            'entry' => 'loadStep1DataAction',
+            'exit' => 'saveStep1DataAction',
             'on' => ['NEXT' => 'step2'],
         ],
         'step2' => [
-            'entry' => 'loadStep2Data',
-            'exit' => 'saveStep2Data',
+            'entry' => 'loadStep2DataAction',
+            'exit' => 'saveStep2DataAction',
             'on' => [
                 'BACK' => 'step1',
                 'NEXT' => 'step3',
             ],
         ],
         'step3' => [
-            'entry' => 'loadStep3Data',
+            'entry' => 'loadStep3DataAction',
             'on' => [
                 'BACK' => 'step2',
                 'SUBMIT' => '#submitted',
@@ -297,24 +297,24 @@ When transitioning from `validating` to outside `order`:
 ```php
 'authenticated' => [
     'entry' => [
-        'startSessionTimer',
-        'logLogin',
-        'loadUserPreferences',
+        'startSessionTimerAction',
+        'logLoginAction',
+        'loadUserPreferencesAction',
     ],
     'exit' => [
-        'stopSessionTimer',
-        'logLogout',
-        'clearSessionData',
+        'stopSessionTimerAction',
+        'logLogoutAction',
+        'clearSessionDataAction',
     ],
     'states' => [
         'active' => [
             'on' => [
-                'ACTIVITY' => ['actions' => 'resetTimer'],
+                'ACTIVITY' => ['actions' => 'resetTimerAction'],
                 'TIMEOUT' => 'inactive',
             ],
         ],
         'inactive' => [
-            'entry' => 'showTimeoutWarning',
+            'entry' => 'showTimeoutWarningAction',
             'on' => [
                 'ACTIVITY' => 'active',
                 'LOGOUT' => '#loggedOut',
@@ -329,19 +329,19 @@ When transitioning from `validating` to outside `order`:
 <!-- doctest-attr: ignore -->
 ```php
 'processing' => [
-    'entry' => ['reserveInventory', 'notifyWarehouse'],
-    'exit' => 'cleanup',
+    'entry' => ['reserveInventoryAction', 'notifyWarehouseAction'],
+    'exit' => 'cleanupAction',
     'states' => [
         'authorizing' => [
-            'entry' => 'initiatePayment',
+            'entry' => 'initiatePaymentAction',
             'on' => [
                 'AUTHORIZED' => 'fulfilling',
                 'DECLINED' => '#declined',
             ],
         ],
         'fulfilling' => [
-            'entry' => 'startFulfillment',
-            'exit' => 'finalizeFulfillment',
+            'entry' => 'startFulfillmentAction',
+            'exit' => 'finalizeFulfillmentAction',
             'on' => [
                 'SHIPPED' => '#shipped',
             ],
@@ -357,23 +357,23 @@ Entry actions complete before `@always` transitions check:
 <!-- doctest-attr: ignore -->
 ```php
 'checking' => [
-    'entry' => 'performCheck',  // Runs first
+    'entry' => 'performCheckAction',  // Runs first
     'on' => [
         '@always' => [          // Checked after entry
-            ['target' => 'passed', 'guards' => 'checkPassed'],
+            ['target' => 'passed', 'guards' => 'checkPassedGuard'],
             ['target' => 'failed'],
         ],
     ],
 ],
 
 'actions' => [
-    'performCheck' => function ($context) {
+    'performCheckAction' => function ($context) {
         $context->checkResult = performCheck();
     },
 ],
 
 'guards' => [
-    'checkPassed' => fn($ctx) => $ctx->checkResult === 'success',
+    'checkPassedGuard' => fn($ctx) => $ctx->checkResult === 'success',
 ],
 ```
 
@@ -384,16 +384,16 @@ Self-transitions trigger exit and entry actions:
 <!-- doctest-attr: ignore -->
 ```php
 'counting' => [
-    'entry' => 'logEntry',
-    'exit' => 'logExit',
+    'entry' => 'logEntryAction',
+    'exit' => 'logExitAction',
     'on' => [
         'INCREMENT' => [
             // Self-transition (no target = same state)
-            'actions' => 'increment',
+            'actions' => 'incrementAction',
         ],
         'RESET' => [
             'target' => 'counting',  // Explicit self-transition
-            'actions' => 'reset',
+            'actions' => 'resetAction',
         ],
     ],
 ],
@@ -420,13 +420,13 @@ it('executes entry actions on state entry', function () {
                     'on' => ['START' => 'active'],
                 ],
                 'active' => [
-                    'entry' => 'onEnter',
+                    'entry' => 'onEnterAction',
                 ],
             ],
         ],
         behavior: [
             'actions' => [
-                'onEnter' => function () use (&$executionLog) {
+                'onEnterAction' => function () use (&$executionLog) {
                     $executionLog[] = 'entered';
                 },
             ],
@@ -447,8 +447,8 @@ it('executes entry actions on state entry', function () {
 ```php
 'processing' => [
     'entry' => [
-        'initializeResources',
-        'startMonitoring',
+        'initializeResourcesAction',
+        'startMonitoringAction',
     ],
 ],
 ```
@@ -459,8 +459,8 @@ it('executes entry actions on state entry', function () {
 ```php
 'processing' => [
     'exit' => [
-        'releaseResources',
-        'stopMonitoring',
+        'releaseResourcesAction',
+        'stopMonitoringAction',
     ],
 ],
 ```
@@ -470,10 +470,10 @@ it('executes entry actions on state entry', function () {
 <!-- doctest-attr: ignore -->
 ```php
 // Good - single responsibility
-'entry' => ['logEntry', 'startTimer', 'loadData'],
+'entry' => ['logEntryAction', 'startTimerAction', 'loadDataAction'],
 
 // Avoid - one action doing everything
-'entry' => 'doEverything',
+'entry' => 'doEverythingAction',
 ```
 
 ### 4. Handle Errors in Entry Actions
@@ -502,8 +502,8 @@ Exit actions should be reliable:
 <!-- doctest-attr: ignore -->
 ```php
 // Good - unlikely to fail
-'exit' => 'clearLocalState',
+'exit' => 'clearLocalStateAction',
 
 // Risky - external API might fail
-'exit' => 'notifyExternalService',
+'exit' => 'notifyExternalServiceAction',
 ```
