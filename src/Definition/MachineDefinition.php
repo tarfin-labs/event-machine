@@ -15,6 +15,7 @@ use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\MaxTransitionDepthExceededException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
@@ -27,6 +28,9 @@ class MachineDefinition
 
     /** The default delimiter used for constructing the global id by concatenating state definition local IDs. */
     public const STATE_DELIMITER = '.';
+
+    /** The maximum recursive transition depth allowed within a single macrostep (Rhapsody default). */
+    public const DEFAULT_MAX_TRANSITION_DEPTH = 100;
 
     /** The root state definition for this machine definition. */
     public StateDefinition $root;
@@ -257,7 +261,8 @@ class MachineDefinition
                             'type'  => TransitionProperty::Always->value,
                             'actor' => $initialState->currentEventBehavior->actor($context),
                         ],
-                        state: $initialState
+                        state: $initialState,
+                        recursionDepth: 1,
                     );
                 }
             }
@@ -268,7 +273,7 @@ class MachineDefinition
 
             $eventBehavior = $this->initializeEvent($firstEvent, $initialState);
 
-            return $this->transition($eventBehavior, $initialState);
+            return $this->transition($eventBehavior, $initialState, recursionDepth: 1);
         }
 
         // Record the machine finish event if the initial state is a final state.
@@ -783,7 +788,7 @@ class MachineDefinition
      *
      * @throws NoTransitionDefinitionFoundException If no region can handle the event.
      */
-    protected function transitionParallelState(State $state, EventBehavior $eventBehavior): State
+    protected function transitionParallelState(State $state, EventBehavior $eventBehavior, int $recursionDepth = 0): State
     {
         // Find transitions for all active atomic states
         $transitions = $this->selectTransitions($eventBehavior, $state);
@@ -877,7 +882,8 @@ class MachineDefinition
                                 'type'  => TransitionProperty::Always->value,
                                 'actor' => $eventBehavior->actor($state->context),
                             ],
-                            state: $state
+                            state: $state,
+                            recursionDepth: $recursionDepth + 1,
                         );
                     }
                 }
@@ -952,7 +958,7 @@ class MachineDefinition
             $firstEvent    = $this->eventQueue->shift();
             $eventBehavior = $this->initializeEvent($firstEvent, $state);
 
-            return $this->transition($eventBehavior, $state);
+            return $this->transition($eventBehavior, $state, recursionDepth: $recursionDepth + 1);
         }
 
         return $state;
@@ -967,13 +973,24 @@ class MachineDefinition
      *
      * @param  EventBehavior|array  $event  The event that triggers the transition.
      * @param  State|null  $state  The current state or state name, or null to use the initial state.
+     * @param  int  $recursionDepth  The current recursive transition depth within this macrostep.
      *
      * @return State The new state after the transition.
+     *
+     * @throws MaxTransitionDepthExceededException If the recursive transition depth exceeds the configured limit.
      */
     public function transition(
         EventBehavior|array $event,
-        ?State $state = null
+        ?State $state = null,
+        int $recursionDepth = 0,
     ): State {
+        if ($recursionDepth >= self::DEFAULT_MAX_TRANSITION_DEPTH) {
+            throw MaxTransitionDepthExceededException::exceeded(
+                limit: self::DEFAULT_MAX_TRANSITION_DEPTH,
+                route: $state?->currentStateDefinition->route ?? 'unknown',
+            );
+        }
+
         if ($state instanceof State) {
             $state = $this->getScenarioStateIfAvailable(state: $state, eventBehavior: $event);
         } else {
@@ -991,7 +1008,7 @@ class MachineDefinition
 
         // For parallel states, find transitions across all active atomic states
         if ($state->isInParallelState()) {
-            return $this->transitionParallelState($state, $eventBehavior);
+            return $this->transitionParallelState($state, $eventBehavior, $recursionDepth);
         }
 
         /**
@@ -1074,7 +1091,8 @@ class MachineDefinition
                             'type'  => TransitionProperty::Always->value,
                             'actor' => $eventBehavior->actor($newState->context),
                         ],
-                        state: $newState
+                        state: $newState,
+                        recursionDepth: $recursionDepth + 1,
                     );
                 }
             }
@@ -1086,7 +1104,7 @@ class MachineDefinition
 
             $eventBehavior = $this->initializeEvent($firstEvent, $newState);
 
-            return $this->transition($eventBehavior, $newState);
+            return $this->transition($eventBehavior, $newState, recursionDepth: $recursionDepth + 1);
         }
 
         // Record the machine finish event if the initial state is a final state.
