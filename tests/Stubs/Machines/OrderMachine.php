@@ -24,9 +24,9 @@ class OrderMachine extends Machine
                         'on' => [
                             'CREATE_ORDER' => [
                                 'target'      => 'processing',
-                                'calculators' => 'calculateOrderTotal',
-                                'guards'      => 'validateOrder',
-                                'actions'     => 'createOrder',
+                                'calculators' => 'calculateOrderTotalCalculator',
+                                'guards'      => 'validateOrderGuard',
+                                'actions'     => 'createOrderAction',
                             ],
                         ],
                     ],
@@ -35,22 +35,22 @@ class OrderMachine extends Machine
             ],
             behavior: [
                 'calculators' => [
-                    'calculateOrderTotal' => function (ContextManager $context): void {
+                    'calculateOrderTotalCalculator' => function (ContextManager $context): void {
                         $context->items_count *= 10;
                     },
                 ],
                 'guards' => [
-                    'validateOrder' => function (ContextManager $context): bool {
+                    'validateOrderGuard' => function (ContextManager $context): bool {
                         return $context->get('items_count') > 0;
                     },
                 ],
                 'actions' => [
-                    'createOrder' => function (ContextManager $context): void {
+                    'createOrderAction' => function (ContextManager $context): void {
                         $context->set('order_created', true);
                     },
                 ],
                 'events' => [
-                    'orderCreated' => new class() extends EventBehavior {
+                    'orderCreatedEvent' => new class() extends EventBehavior {
                         public static function getType(): string
                         {
                             return 'ORDER_CREATED';

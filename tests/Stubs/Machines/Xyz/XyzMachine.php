@@ -24,19 +24,19 @@ class XyzMachine extends Machine
                 'initial' => '#a',
                 'states'  => [
                     '#a' => [
-                        'entry' => '!x',
+                        'entry' => '!xAction',
                         'on'    => [
                             '@x' => '#x',
                         ],
                     ],
                     '#x' => [
-                        'entry' => '!y',
+                        'entry' => '!yAction',
                         'on'    => [
                             YEvent::class => '#y',
                         ],
                     ],
                     '#y' => [
-                        'entry' => '!z',
+                        'entry' => '!zAction',
                         'on'    => [
                             '@z' => '#z',
                         ],
@@ -46,9 +46,9 @@ class XyzMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    '!x' => XAction::class,
-                    '!y' => YAction::class,
-                    '!z' => ZAction::class,
+                    '!xAction' => XAction::class,
+                    '!yAction' => YAction::class,
+                    '!zAction' => ZAction::class,
                 ],
             ],
         );

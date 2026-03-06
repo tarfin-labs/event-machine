@@ -9,7 +9,7 @@ use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 test('it can get a calculator behavior', function (): void {
     // 1. Arrange
-    $calculator = OrderMachine::getCalculator('calculateOrderTotal');
+    $calculator = OrderMachine::getCalculator('calculateOrderTotalCalculator');
     $context    = new ContextManager(['items_count' => 5]);
 
     // 2. Act
@@ -22,7 +22,7 @@ test('it can get a calculator behavior', function (): void {
 
 test('it can get a guard behavior', function (): void {
     // 1. Arrange
-    $guard          = OrderMachine::getGuard('validateOrder');
+    $guard          = OrderMachine::getGuard('validateOrderGuard');
     $validContext   = new ContextManager(['items_count' => 5]);
     $invalidContext = new ContextManager(['items_count' => 0]);
 
@@ -34,7 +34,7 @@ test('it can get a guard behavior', function (): void {
 
 test('it can get an action behavior', function (): void {
     // 1. Arrange
-    $action  = OrderMachine::getAction('createOrder');
+    $action  = OrderMachine::getAction('createOrderAction');
     $context = new ContextManager();
 
     // 2. Act
@@ -47,7 +47,7 @@ test('it can get an action behavior', function (): void {
 
 test('it can get an event behavior', function (): void {
     // 1. Act
-    $eventBehavior = OrderMachine::getEvent('orderCreated');
+    $eventBehavior = OrderMachine::getEvent('orderCreatedEvent');
 
     // 3. Assert
     expect($eventBehavior)->toBeInstanceOf(EventBehavior::class)
