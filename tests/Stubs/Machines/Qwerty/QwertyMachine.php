@@ -31,7 +31,7 @@ class QwertyMachine extends Machine
                         'on' => [
                             QEvent::class => [
                                 'target'  => '#w',
-                                'actions' => 'log',
+                                'actions' => 'logAction',
                             ],
                         ],
                     ],
@@ -39,7 +39,7 @@ class QwertyMachine extends Machine
                         'on' => [
                             '@always' => [
                                 'target'  => '#e',
-                                'actions' => 'log',
+                                'actions' => 'logAction',
                             ],
                         ],
                     ],
@@ -47,7 +47,7 @@ class QwertyMachine extends Machine
                         'on' => [
                             EEvent::class => [
                                 'target'  => '#r',
-                                'actions' => 'log',
+                                'actions' => 'logAction',
                             ],
                         ],
                     ],
@@ -55,7 +55,7 @@ class QwertyMachine extends Machine
                         'on' => [
                             REvent::class => [
                                 'target'  => '#t',
-                                'actions' => 'log',
+                                'actions' => 'logAction',
                             ],
                         ],
                     ],
@@ -64,18 +64,18 @@ class QwertyMachine extends Machine
                         'on'    => [
                             TEvent::class => [
                                 'target'  => '#y',
-                                'actions' => 'log',
+                                'actions' => 'logAction',
                             ],
                         ],
                     ],
                     '#y' => [
-                        'entry' => 'log',
+                        'entry' => 'logAction',
                     ],
                 ],
             ],
             behavior: [
                 'actions' => [
-                    'log' => function (ContextManager $context, EventBehavior $eventBehavior): void {
+                    'logAction' => function (ContextManager $context, EventBehavior $eventBehavior): void {
                         Log::debug($eventBehavior->actor(context: $context));
 
                         $context->count++;
