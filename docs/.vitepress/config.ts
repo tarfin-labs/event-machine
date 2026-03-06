@@ -96,7 +96,8 @@ export default withMermaid(
             { text: 'Writing Transitions', link: '/building/writing-transitions' },
             { text: 'Working with Context', link: '/building/working-with-context' },
             { text: 'Handling Events', link: '/building/handling-events' },
-            { text: 'Configuration', link: '/building/configuration' }
+            { text: 'Configuration', link: '/building/configuration' },
+            { text: 'Naming Conventions', link: '/building/conventions' }
           ]
         },
         {
