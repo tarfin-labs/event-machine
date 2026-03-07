@@ -486,14 +486,16 @@ class MachineDefinition
     }
 
     /**
-     * Initialize an EventDefinition instance from the given event and state.
-     *
-     * If the $event argument is already an EventDefinition instance,
-     * return it directly. Otherwise, create an EventDefinition instance
-     * by invoking the behavior for the corresponding event type in the given
-     * state. If no behavior is defined for the event type, a default
-     * EventDefinition instance is returned.
-     *
+     * Public proxy for initializing an EventBehavior from raw event data.
+     * Used by ParallelRegionJob to reconstruct the event behavior
+     * for region entry actions.
+     */
+    public function createEventBehavior(array $event, State $state): EventBehavior
+    {
+        return $this->initializeEvent($event, $state);
+    }
+
+    /**
      * @param  EventBehavior|array  $event  The event to initialize.
      * @param  State  $state  The state in which the event is occurring.
      *
@@ -750,7 +752,7 @@ class MachineDefinition
         // to grandparent compounds. In XState, when a child reaches final, only
         // its direct parent's onDone handler fires. If the parent has no onDone,
         // the parent stays "internally done" at the final child state.
-        if ($compoundParent === null || $compoundParent->type === StateDefinitionType::PARALLEL) {
+        if (!$compoundParent instanceof StateDefinition || $compoundParent->type === StateDefinitionType::PARALLEL) {
             return;
         }
 
@@ -815,7 +817,7 @@ class MachineDefinition
      *
      * @return bool True if all regions are in final states.
      */
-    protected function areAllRegionsFinal(StateDefinition $parallelState, State $state): bool
+    public function areAllRegionsFinal(StateDefinition $parallelState, State $state): bool
     {
         if ($parallelState->type !== StateDefinitionType::PARALLEL || $parallelState->stateDefinitions === null) {
             return false;

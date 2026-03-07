@@ -41,4 +41,28 @@ return [
             'queue' => env('MACHINE_EVENTS_ARCHIVAL_QUEUE'),
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Parallel Dispatch Settings
+    |--------------------------------------------------------------------------
+    |
+    | These settings control queue-based parallel execution for parallel state
+    | regions. When enabled, region entry actions are dispatched as separate
+    | Laravel queue jobs, running truly in parallel across queue workers.
+    |
+    */
+    'parallel_dispatch' => [
+        // Enable/disable parallel dispatch globally
+        'enabled' => env('MACHINE_PARALLEL_DISPATCH_ENABLED', false),
+
+        // Queue name for parallel region jobs (null = default queue)
+        'queue' => env('MACHINE_PARALLEL_DISPATCH_QUEUE'),
+
+        // Seconds to wait for database lock acquisition
+        'lock_timeout' => env('MACHINE_PARALLEL_DISPATCH_LOCK_TIMEOUT', 30),
+
+        // Seconds before a lock is considered stale
+        'lock_ttl' => env('MACHINE_PARALLEL_DISPATCH_LOCK_TTL', 60),
+    ],
 ];

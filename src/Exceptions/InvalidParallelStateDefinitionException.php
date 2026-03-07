@@ -38,4 +38,21 @@ class InvalidParallelStateDefinitionException extends LogicException
             'All regions in a parallel state are entered simultaneously.'
         );
     }
+
+    public static function requiresPersistence(): self
+    {
+        return new self(
+            message: 'Parallel dispatch requires persistence (should_persist: true). '.
+                'Queue jobs need the database to coordinate state updates across workers.'
+        );
+    }
+
+    public static function requiresMachineSubclass(): self
+    {
+        return new self(
+            message: 'Parallel dispatch requires a Machine subclass with a definition() method. '.
+                'Queue jobs reconstruct the machine from the class name — the base Machine class cannot be used. '.
+                'Create a class like OrderMachine extends Machine and override definition().'
+        );
+    }
 }

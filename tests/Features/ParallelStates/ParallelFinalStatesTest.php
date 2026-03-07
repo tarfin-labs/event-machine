@@ -598,7 +598,7 @@ test('non-onDone compound parent should NOT propagate to grandparent onDone', fu
                                     'inner' => [
                                         'initial' => 'running',
                                         // NO onDone here — inner is a compound without onDone
-                                        'states'  => [
+                                        'states' => [
                                             'running' => [
                                                 'on' => ['INNER_DONE' => 'inner_final'],
                                             ],
@@ -688,8 +688,12 @@ test('compound parent exit actions fire when onDone transitions', function (): v
         ],
         behavior: [
             'actions' => [
-                'logVerifiedExitAction'    => function () use (&$exitLog): void { $exitLog[] = 'verified_exit'; },
-                'logSubProcessExitAction'  => function () use (&$exitLog): void { $exitLog[] = 'sub_process_exit'; },
+                'logVerifiedExitAction' => function () use (&$exitLog): void {
+                    $exitLog[] = 'verified_exit';
+                },
+                'logSubProcessExitAction' => function () use (&$exitLog): void {
+                    $exitLog[] = 'sub_process_exit';
+                },
             ],
         ]
     );
@@ -736,7 +740,7 @@ test('compound onDone with actions config runs onDone actions', function (): voi
                                         'target'  => 'reviewed',
                                         'actions' => 'logOnDoneTransitionAction',
                                     ],
-                                    'states'  => [
+                                    'states' => [
                                         'checking' => [
                                             'on' => ['CHECK_DONE' => 'verified'],
                                         ],
@@ -756,7 +760,9 @@ test('compound onDone with actions config runs onDone actions', function (): voi
         ],
         behavior: [
             'actions' => [
-                'logOnDoneTransitionAction' => function () use (&$actionLog): void { $actionLog[] = 'ondone_action_fired'; },
+                'logOnDoneTransitionAction' => function () use (&$actionLog): void {
+                    $actionLog[] = 'ondone_action_fired';
+                },
             ],
         ]
     );

@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('machine_locks', function (Blueprint $table): void {
+            $table->ulid('root_event_id')->primary();
+            $table->string('owner_id', 36);
+            $table->dateTime('acquired_at');
+            $table->dateTime('expires_at')->index();
+            $table->string('context', 255)->nullable();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('machine_locks');
+    }
+};

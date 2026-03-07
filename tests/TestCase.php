@@ -31,6 +31,9 @@ class TestCase extends Orchestra
         $archiveMigration = include __DIR__.'/../database/migrations/create_machine_events_archive_table.php.stub';
         $archiveMigration->up();
 
+        $locksMigration = include __DIR__.'/../database/migrations/create_machine_locks_table.php.stub';
+        $locksMigration->up();
+
         Schema::create('model_a_s', function (Blueprint $table): void {
             $table->id();
             $table->string('value')->nullable();
