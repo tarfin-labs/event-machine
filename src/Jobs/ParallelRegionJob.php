@@ -132,7 +132,61 @@ class ParallelRegionJob implements ShouldQueue
 
     public function failed(\Throwable $exception): void
     {
-        // Stub — implemented in bead event-machine-tq4e
+        try {
+            $lockHandle = MachineLockManager::acquire(
+                rootEventId: $this->rootEventId,
+                timeout: (int) config('machine.parallel_dispatch.lock_timeout', 30),
+                ttl: (int) config('machine.parallel_dispatch.lock_ttl', 60),
+                context: "parallel_region_fail:{$this->regionId}",
+            );
+
+            try {
+                $machine = $this->machineClass::create(state: $this->rootEventId);
+
+                if (!$machine->state->isInParallelState()) {
+                    return;
+                }
+
+                $region         = $machine->definition->idMap[$this->regionId] ?? null;
+                $parallelParent = $region?->parent;
+
+                if ($parallelParent === null) {
+                    return;
+                }
+
+                $failEvent = new \Tarfinlabs\EventMachine\Definition\EventDefinition(
+                    type: '@fail',
+                    payload: [
+                        'region_id' => $this->regionId,
+                        'error'     => $exception->getMessage(),
+                        'exception' => $exception::class,
+                        'attempts'  => $this->attempts(),
+                    ],
+                );
+
+                $machine->state = $machine->definition->processParallelOnFail(
+                    $parallelParent,
+                    $machine->state,
+                    $failEvent,
+                );
+
+                $machine->persist();
+            } finally {
+                $lockHandle->release();
+
+                if (isset($machine)) {
+                    $machine->dispatchPendingParallelJobs();
+                }
+            }
+        } catch (\Throwable $e) {
+            logger()->error('ParallelRegionJob: @fail handler also failed', [
+                'machine_class'      => $this->machineClass,
+                'root_event_id'      => $this->rootEventId,
+                'region_id'          => $this->regionId,
+                'original_error'     => $exception->getMessage(),
+                'fail_handler_error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
