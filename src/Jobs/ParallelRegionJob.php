@@ -9,6 +9,8 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Tarfinlabs\EventMachine\Enums\InternalEvent;
+use Tarfinlabs\EventMachine\Locks\MachineLockManager;
 
 class ParallelRegionJob implements ShouldQueue
 {
@@ -30,6 +32,127 @@ class ParallelRegionJob implements ShouldQueue
 
     public function handle(): void
     {
-        // Stub — implemented in subsequent beads
+        // 1. Reconstruct machine from DB
+        $machine    = $this->machineClass::create(state: $this->rootEventId);
+        $definition = $machine->definition;
+
+        // 2. Guard: is machine still in a parallel state?
+        if (!$machine->state->isInParallelState()) {
+            return;
+        }
+
+        // 3. Find region's initial state
+        $region = $definition->idMap[$this->regionId] ?? null;
+        if ($region === null) {
+            return;
+        }
+
+        $regionInitial = $region->findInitialStateDefinition();
+        if ($regionInitial === null || $regionInitial->entry === null || $regionInitial->entry === []) {
+            return;
+        }
+
+        // 4. Guard: is this region still at its initial state?
+        if (!in_array($regionInitial->id, $machine->state->value, true)) {
+            return;
+        }
+
+        // 5. Snapshot context BEFORE entry actions (inner data, not wrapped toArray)
+        $contextBefore = $machine->state->context->data;
+
+        // 6. RUN ENTRY ACTIONS (expensive part — NO LOCK held)
+        $regionInitial->runEntryActions($machine->state);
+
+        // 7. Capture side effects
+        $contextAfter = $machine->state->context->data;
+        $contextDiff  = $this->computeContextDiff($contextBefore, $contextAfter);
+
+        $raisedEvents = [];
+        while ($definition->eventQueue->isNotEmpty()) {
+            $raisedEvents[] = $definition->eventQueue->shift();
+        }
+
+        // 8. ACQUIRE DATABASE LOCK (blocking)
+        $lockHandle = MachineLockManager::acquire(
+            rootEventId: $this->rootEventId,
+            timeout: (int) config('machine.parallel_dispatch.lock_timeout', 30),
+            ttl: (int) config('machine.parallel_dispatch.lock_ttl', 60),
+            context: "parallel_region:{$this->regionId}",
+        );
+
+        try {
+            // 9. Reload FRESH state from DB
+            $freshMachine = $this->machineClass::create(state: $this->rootEventId);
+
+            // 10. Guard: re-check under lock (double-guard pattern)
+            if (!$freshMachine->state->isInParallelState()) {
+                return;
+            }
+
+            $freshRegionInitial = $freshMachine->definition->idMap[$this->initialStateId] ?? null;
+            if ($freshRegionInitial === null || !in_array($freshRegionInitial->id, $freshMachine->state->value, true)) {
+                return;
+            }
+
+            // 11. Apply context diff (merge, not overwrite)
+            foreach ($contextDiff as $key => $value) {
+                $freshMachine->state->context->set($key, $value);
+            }
+
+            // 12. Record region action completion event (captures context snapshot for persist)
+            $freshMachine->state->setInternalEventBehavior(
+                type: InternalEvent::PARALLEL_REGION_ENTER,
+                placeholder: $region->route,
+            );
+
+            // 13. Process raised events
+            foreach ($raisedEvents as $event) {
+                $freshMachine->state = $freshMachine->definition->transition($event, $freshMachine->state);
+            }
+
+            // 14. Check parallel completion
+            $freshRegion    = $freshMachine->definition->idMap[$this->regionId] ?? null;
+            $parallelParent = $freshRegion?->parent;
+
+            if ($parallelParent !== null && $freshMachine->definition->areAllRegionsFinal($parallelParent, $freshMachine->state)) {
+                $freshMachine->state = $freshMachine->definition->processParallelOnDone($parallelParent, $freshMachine->state);
+            }
+
+            // 15. Persist
+            $freshMachine->persist();
+        } finally {
+            $lockHandle->release();
+
+            // 16. Dispatch any new pending parallel jobs (after lock release)
+            if (isset($freshMachine)) {
+                $freshMachine->dispatchPendingParallelJobs();
+            }
+        }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        // Stub — implemented in bead event-machine-tq4e
+    }
+
+    /**
+     * Compute the diff between context before and after entry action execution.
+     *
+     * @param  array<string, mixed>  $before
+     * @param  array<string, mixed>  $after
+     *
+     * @return array<string, mixed>
+     */
+    protected function computeContextDiff(array $before, array $after): array
+    {
+        $diff = [];
+
+        foreach ($after as $key => $value) {
+            if (!array_key_exists($key, $before) || $before[$key] !== $value) {
+                $diff[$key] = $value;
+            }
+        }
+
+        return $diff;
     }
 }
