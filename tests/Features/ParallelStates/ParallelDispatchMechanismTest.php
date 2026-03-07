@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Bus;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
 
@@ -218,4 +220,115 @@ it('sequential mode runs entry actions normally (regression)', function (): void
         'test.parallel_state.region_b.working_b',
     ]);
     expect($definition->pendingParallelDispatches)->toBe([]);
+});
+
+// ============================================================
+// Bead: event-machine-hhjd — dispatchPendingParallelJobs + send() finally block
+// ============================================================
+
+it('dispatches ParallelRegionJob for each pending region', function (): void {
+    Bus::fake();
+    config()->set('machine.parallel_dispatch.enabled', true);
+
+    $machine = AsdMachine::create();
+
+    // Manually populate pendingParallelDispatches to simulate enterParallelState dispatch mode
+    $machine->definition->pendingParallelDispatches = [
+        ['region_id' => 'test.parallel_state.region_a', 'initial_state_id' => 'test.parallel_state.region_a.working_a'],
+        ['region_id' => 'test.parallel_state.region_b', 'initial_state_id' => 'test.parallel_state.region_b.working_b'],
+    ];
+
+    $machine->dispatchPendingParallelJobs();
+
+    Bus::assertDispatched(ParallelRegionJob::class, 2);
+    Bus::assertDispatched(ParallelRegionJob::class, function (ParallelRegionJob $job): bool {
+        return $job->regionId === 'test.parallel_state.region_a'
+            && $job->initialStateId === 'test.parallel_state.region_a.working_a'
+            && $job->machineClass === AsdMachine::class;
+    });
+    Bus::assertDispatched(ParallelRegionJob::class, function (ParallelRegionJob $job): bool {
+        return $job->regionId === 'test.parallel_state.region_b'
+            && $job->initialStateId === 'test.parallel_state.region_b.working_b';
+    });
+});
+
+it('clears pendingParallelDispatches after dispatching', function (): void {
+    Bus::fake();
+    config()->set('machine.parallel_dispatch.enabled', true);
+
+    $machine = AsdMachine::create();
+
+    $machine->definition->pendingParallelDispatches = [
+        ['region_id' => 'test.region_a', 'initial_state_id' => 'test.region_a.working'],
+    ];
+
+    $machine->dispatchPendingParallelJobs();
+
+    expect($machine->definition->pendingParallelDispatches)->toBe([]);
+});
+
+it('does not dispatch when pendingParallelDispatches is empty', function (): void {
+    Bus::fake();
+
+    $machine = AsdMachine::create();
+
+    $machine->dispatchPendingParallelJobs();
+
+    Bus::assertNotDispatched(ParallelRegionJob::class);
+});
+
+it('sets rootEventId from state history', function (): void {
+    Bus::fake();
+    config()->set('machine.parallel_dispatch.enabled', true);
+
+    $machine = AsdMachine::create();
+    $machine->persist();
+
+    $expectedRootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->definition->pendingParallelDispatches = [
+        ['region_id' => 'test.region_a', 'initial_state_id' => 'test.region_a.working'],
+    ];
+
+    $machine->dispatchPendingParallelJobs();
+
+    Bus::assertDispatched(ParallelRegionJob::class, function (ParallelRegionJob $job) use ($expectedRootEventId): bool {
+        return $job->rootEventId === $expectedRootEventId;
+    });
+});
+
+it('sets queue from config when configured', function (): void {
+    Bus::fake();
+    config()->set('machine.parallel_dispatch.enabled', true);
+    config()->set('machine.parallel_dispatch.queue', 'parallel-regions');
+
+    $machine = AsdMachine::create();
+
+    $machine->definition->pendingParallelDispatches = [
+        ['region_id' => 'test.region_a', 'initial_state_id' => 'test.region_a.working'],
+    ];
+
+    $machine->dispatchPendingParallelJobs();
+
+    Bus::assertDispatched(ParallelRegionJob::class, function (ParallelRegionJob $job): bool {
+        return $job->queue === 'parallel-regions';
+    });
+});
+
+it('uses default queue when config queue is null', function (): void {
+    Bus::fake();
+    config()->set('machine.parallel_dispatch.enabled', true);
+    config()->set('machine.parallel_dispatch.queue', null);
+
+    $machine = AsdMachine::create();
+
+    $machine->definition->pendingParallelDispatches = [
+        ['region_id' => 'test.region_a', 'initial_state_id' => 'test.region_a.working'],
+    ];
+
+    $machine->dispatchPendingParallelJobs();
+
+    Bus::assertDispatched(ParallelRegionJob::class, function (ParallelRegionJob $job): bool {
+        return $job->queue === null;
+    });
 });

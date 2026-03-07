@@ -15,6 +15,7 @@ use Tarfinlabs\EventMachine\Casts\MachineCast;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Illuminate\Contracts\Database\Eloquent\Castable;
 use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
@@ -217,9 +218,40 @@ class Machine implements Castable, JsonSerializable, Stringable
             $this->handleValidationGuards($lastPreviousEventNumber);
         } finally {
             $lockHandle?->release();
+            $this->dispatchPendingParallelJobs();
         }
 
         return $this->state;
+    }
+
+    /**
+     * Dispatches pending parallel region jobs after lock release.
+     */
+    public function dispatchPendingParallelJobs(): void
+    {
+        if ($this->definition->pendingParallelDispatches === []) {
+            return;
+        }
+
+        $rootEventId = $this->state->history->first()->root_event_id;
+        $queue       = config('machine.parallel_dispatch.queue');
+
+        foreach ($this->definition->pendingParallelDispatches as $dispatch) {
+            $job = new ParallelRegionJob(
+                machineClass: $this->definition->machineClass,
+                rootEventId: $rootEventId,
+                regionId: $dispatch['region_id'],
+                initialStateId: $dispatch['initial_state_id'],
+            );
+
+            if ($queue !== null) {
+                $job->onQueue($queue);
+            }
+
+            dispatch($job);
+        }
+
+        $this->definition->pendingParallelDispatches = [];
     }
 
     // endregion
