@@ -17,6 +17,7 @@ use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
 class MachineDefinition
 {
@@ -91,6 +92,10 @@ class MachineDefinition
 
         $this->shouldPersist = $this->config['should_persist'] ?? $this->shouldPersist;
 
+        if (config('machine.parallel_dispatch.enabled', false)) {
+            $this->validateParallelDispatchConfig();
+        }
+
         $this->root = $this->createRootStateDefinition($config);
 
         // Checks if the scenario is enabled, and if true, creates scenario state definitions.
@@ -110,6 +115,13 @@ class MachineDefinition
         $this->initialStateDefinition = $this->root->initialStateDefinition;
 
         $this->setupContextManager();
+    }
+
+    protected function validateParallelDispatchConfig(): void
+    {
+        if (!$this->shouldPersist) {
+            throw InvalidParallelStateDefinitionException::requiresPersistence();
+        }
     }
 
     // endregion

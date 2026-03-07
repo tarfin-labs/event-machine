@@ -137,6 +137,62 @@ it('builds MachineLockTimeoutException with holder info', function (): void {
 });
 
 // ============================================================
+// Bead: event-machine-utgx — Validate parallel dispatch + persistence
+// ============================================================
+
+it('throws when parallel_dispatch enabled but should_persist is false', function (): void {
+    config()->set('machine.parallel_dispatch.enabled', true);
+
+    MachineDefinition::define(config: [
+        'id'             => 'test',
+        'initial'        => 'idle',
+        'should_persist' => false,
+        'states'         => [
+            'idle' => [
+                'on' => ['GO' => 'done'],
+            ],
+            'done' => ['type' => 'final'],
+        ],
+    ]);
+})->throws(InvalidParallelStateDefinitionException::class, 'should_persist: true');
+
+it('does not throw when parallel_dispatch enabled and should_persist is true', function (): void {
+    config()->set('machine.parallel_dispatch.enabled', true);
+
+    $machine = MachineDefinition::define(config: [
+        'id'             => 'test',
+        'initial'        => 'idle',
+        'should_persist' => true,
+        'states'         => [
+            'idle' => [
+                'on' => ['GO' => 'done'],
+            ],
+            'done' => ['type' => 'final'],
+        ],
+    ]);
+
+    expect($machine)->toBeInstanceOf(MachineDefinition::class);
+});
+
+it('skips validation when parallel_dispatch is disabled', function (): void {
+    config()->set('machine.parallel_dispatch.enabled', false);
+
+    $machine = MachineDefinition::define(config: [
+        'id'             => 'test',
+        'initial'        => 'idle',
+        'should_persist' => false,
+        'states'         => [
+            'idle' => [
+                'on' => ['GO' => 'done'],
+            ],
+            'done' => ['type' => 'final'],
+        ],
+    ]);
+
+    expect($machine)->toBeInstanceOf(MachineDefinition::class);
+});
+
+// ============================================================
 // Bead: event-machine-lhyn — createEventBehavior proxy
 // ============================================================
 
