@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Facades\Cache;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Locks\MachineLockManager;
 use Tarfinlabs\EventMachine\Tests\Stubs\Models\ModelA;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
@@ -122,19 +122,16 @@ it('If the machine is already running, it will throw exception', function (): vo
     $machine = AsdMachine::create();
     $machine->persist();
 
-    $rootEventId = 'mre:'.$machine->state->history->first()->root_event_id;
+    $rootEventId = $machine->state->history->first()->root_event_id;
 
-    Cache::shouldReceive('lock')
-        ->once()
-        ->with($rootEventId, 60)
-        ->andReturnSelf();
+    // Hold a lock so send() cannot acquire it
+    $handle = MachineLockManager::acquire($rootEventId);
 
-    Cache::shouldReceive('get')
-        ->once()
-        ->withAnyArgs()
-        ->andReturn(false);
-
-    $machine->send(new EEvent());
+    try {
+        $machine->send(new EEvent());
+    } finally {
+        $handle->release();
+    }
 })->throws(MachineAlreadyRunningException::class);
 
 // === Forbidden Transition Tests ===

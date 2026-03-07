@@ -8,7 +8,6 @@ use Exception;
 use Stringable;
 use JsonSerializable;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
@@ -18,6 +17,7 @@ use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Illuminate\Contracts\Database\Eloquent\Castable;
 use Tarfinlabs\EventMachine\Services\ArchiveService;
+use Tarfinlabs\EventMachine\Locks\MachineLockManager;
 use Tarfinlabs\EventMachine\Traits\ResolvesBehaviors;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
@@ -26,6 +26,7 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
+use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
 use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
 use Tarfinlabs\EventMachine\Exceptions\MachineDefinitionNotFoundException;
 
@@ -167,12 +168,21 @@ class Machine implements Castable, JsonSerializable, Stringable
     public function send(
         EventBehavior|array|string $event,
     ): State {
-        if ($this->state instanceof State) {
-            $lock = Cache::lock('mre:'.$this->state->history->first()->root_event_id, 60);
-        }
+        $lockHandle = null;
 
-        if (isset($lock) && !$lock->get()) {
-            throw MachineAlreadyRunningException::build($this->state->history->first()->root_event_id);
+        if ($this->state instanceof State) {
+            $rootEventId = $this->state->history->first()->root_event_id;
+
+            try {
+                $lockHandle = MachineLockManager::acquire(
+                    rootEventId: $rootEventId,
+                    timeout: 0,
+                    ttl: (int) config('machine.parallel_dispatch.lock_ttl', 60),
+                    context: 'send',
+                );
+            } catch (MachineLockTimeoutException) {
+                throw MachineAlreadyRunningException::build($rootEventId);
+            }
         }
 
         try {
@@ -195,12 +205,8 @@ class Machine implements Castable, JsonSerializable, Stringable
             }
 
             $this->handleValidationGuards($lastPreviousEventNumber);
-        } catch (Exception $exception) {
-            throw $exception;
         } finally {
-            if (isset($lock)) {
-                $lock->release();
-            }
+            $lockHandle?->release();
         }
 
         return $this->state;
