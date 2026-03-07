@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Definition;
 
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
@@ -304,12 +305,36 @@ class MachineDefinition
     }
 
     /**
-     * Enter a parallel state and all its regions.
-     *
-     * @param  State  $state  The current state.
-     * @param  StateDefinition  $parallelState  The parallel state to enter.
-     * @param  EventBehavior|null  $eventBehavior  The triggering event.
+     * Determine if parallel regions should be dispatched as queue jobs.
      */
+    protected function shouldDispatchParallel(StateDefinition $parallelState): bool
+    {
+        if (!config('machine.parallel_dispatch.enabled', false)) {
+            return false;
+        }
+
+        if (!$this->shouldPersist) {
+            return false;
+        }
+
+        if ($this->machineClass === null || $this->machineClass === Machine::class) {
+            return false;
+        }
+
+        // Count regions with entry actions — need at least 2 for parallelism gain
+        $regionsWithEntryActions = 0;
+        if ($parallelState->stateDefinitions !== null) {
+            foreach ($parallelState->stateDefinitions as $region) {
+                $regionInitial = $region->findInitialStateDefinition();
+                if ($regionInitial !== null && isset($regionInitial->config['entry'])) {
+                    $regionsWithEntryActions++;
+                }
+            }
+        }
+
+        return $regionsWithEntryActions >= 2;
+    }
+
     protected function enterParallelState(
         State $state,
         StateDefinition $parallelState,
@@ -328,7 +353,42 @@ class MachineDefinition
         $initialStates = $parallelState->findAllInitialStateDefinitions();
         $state->setValues(array_map(fn (StateDefinition $s): string => $s->id, $initialStates));
 
-        // Enter each region
+        // Dispatch mode: queue region entry actions for parallel execution
+        if ($this->shouldDispatchParallel($parallelState)) {
+            if ($parallelState->stateDefinitions !== null) {
+                foreach ($parallelState->stateDefinitions as $region) {
+                    $regionInitial = $region->findInitialStateDefinition();
+
+                    // Record region entry event
+                    $state->setInternalEventBehavior(
+                        type: InternalEvent::PARALLEL_REGION_ENTER,
+                        placeholder: $region->route,
+                    );
+
+                    if ($regionInitial !== null) {
+                        $state->setInternalEventBehavior(
+                            type: InternalEvent::STATE_ENTER,
+                            placeholder: $regionInitial->route,
+                        );
+
+                        // Mark regions with entry actions for dispatch
+                        if (isset($regionInitial->config['entry'])) {
+                            $this->pendingParallelDispatches[] = [
+                                'region_id'        => $region->id,
+                                'initial_state_id' => $regionInitial->id,
+                            ];
+                        } else {
+                            // No entry actions — nothing to dispatch
+                            $regionInitial->runEntryActions($state, $eventBehavior);
+                        }
+                    }
+                }
+            }
+
+            return;
+        }
+
+        // Sequential mode: run region entry actions inline
         if ($parallelState->stateDefinitions !== null) {
             foreach ($parallelState->stateDefinitions as $region) {
                 // Record region entry
