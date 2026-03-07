@@ -2,6 +2,22 @@
 
 All notable changes to `event-machine` will be documented in this file.
 
+## [4.0.2] - 2026-03-07
+
+### Fixed
+- `areAllRegionsFinal()` incorrectly counted deeply nested final states as region-level completion — only direct children of a parallel region now count as region-final
+- Added `processCompoundOnDone()` for compound state `onDone` transitions within parallel regions (XState parity):
+  - Only the immediate compound parent's `onDone` fires (no grandparent propagation)
+  - Compound parent exit actions now run during `onDone` transitions
+  - `onDone` actions config supported (`onDone: {target, actions}`)
+  - Recursive chaining for auto-final initial states
+
+## [4.0.1] - 2026-03-03
+
+### Fixed
+- `@always` guard exception in parallel states — cross-region synchronization guards no longer throw when evaluating to `false`
+- Flaky `ArchiveLifecycleTest` — cleared `CompressionManager` static cache in `beforeEach`
+
 ## [4.0.0] - 2026-02-26
 
 ### Added
