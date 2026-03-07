@@ -394,7 +394,7 @@ class Machine implements Castable, JsonSerializable, Stringable
             return $contextClass::validateAndCreate($persistedContext);
         }
 
-        return ContextManager::validateAndCreate(['data' => $persistedContext]);
+        return ContextManager::validateAndCreate($persistedContext);
     }
 
     /**
