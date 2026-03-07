@@ -865,6 +865,83 @@ class MachineDefinition
     }
 
     /**
+     * Process the onDone transition for a parallel state when all regions are final.
+     *
+     * Records the PARALLEL_DONE internal event, exits all active child states and the
+     * parallel state itself, then transitions to the onDone target.
+     *
+     * @param  StateDefinition  $parallelState  The parallel state whose regions are all final.
+     * @param  State  $state  The current state.
+     * @param  EventBehavior|null  $eventBehavior  The triggering event (null when called from ParallelRegionJob).
+     */
+    public function processParallelOnDone(
+        StateDefinition $parallelState,
+        State $state,
+        ?EventBehavior $eventBehavior = null,
+    ): State {
+        $state->setInternalEventBehavior(
+            type: InternalEvent::PARALLEL_DONE,
+            placeholder: $parallelState->route,
+        );
+
+        if (!isset($parallelState->config['onDone'])) {
+            return $state;
+        }
+
+        $onDoneConfig = $parallelState->config['onDone'];
+        $targetId     = is_array($onDoneConfig) ? ($onDoneConfig['target'] ?? null) : $onDoneConfig;
+
+        if ($targetId === null) {
+            return $state;
+        }
+
+        $targetState = $this->getNearestStateDefinitionByString($targetId, $parallelState);
+
+        if (!$targetState instanceof StateDefinition) {
+            return $state;
+        }
+
+        // Run exit actions on all active states and record region exits
+        foreach ($state->value as $activeStateId) {
+            $activeState = $this->idMap[$activeStateId] ?? null;
+            $activeState?->runExitActions($state);
+
+            // Find and record region exit
+            $regionParent = $activeState?->parent;
+            while ($regionParent !== null && $regionParent->parent !== $parallelState) {
+                $regionParent = $regionParent->parent;
+            }
+            if ($regionParent !== null) {
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::PARALLEL_REGION_EXIT,
+                    placeholder: $regionParent->route,
+                );
+            }
+        }
+
+        // Run exit action on parallel state itself
+        $parallelState->runExitActions($state);
+
+        // Transition to the target state (use target itself if atomic/final)
+        $initialState                  = $targetState->findInitialStateDefinition() ?? $targetState;
+        $state->currentStateDefinition = $initialState;
+        $state->value                  = [$state->currentStateDefinition->id];
+
+        // Run entry actions on target state (and initial if different)
+        $targetState->runEntryActions($state, $eventBehavior);
+        if ($initialState !== $targetState) {
+            $initialState->runEntryActions($state, $eventBehavior);
+        }
+
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_ENTRY_FINISH,
+            placeholder: $state->currentStateDefinition->route,
+        );
+
+        return $state;
+    }
+
+    /**
      * Transition a parallel state by broadcasting the event to all active regions.
      *
      * For parallel states, events are sent to all active atomic states.
@@ -987,65 +1064,7 @@ class MachineDefinition
 
         // Check for parallel completion (all regions in final states)
         if ($this->areAllRegionsFinal($state->currentStateDefinition, $state)) {
-            $state->setInternalEventBehavior(
-                type: InternalEvent::PARALLEL_DONE,
-                placeholder: $state->currentStateDefinition->route,
-            );
-
-            // Execute onDone transition if defined
-            if (isset($state->currentStateDefinition->config['onDone'])) {
-                $onDoneConfig = $state->currentStateDefinition->config['onDone'];
-                $targetId     = is_array($onDoneConfig) ? ($onDoneConfig['target'] ?? null) : $onDoneConfig;
-
-                if ($targetId !== null) {
-                    $targetState = $this->getNearestStateDefinitionByString(
-                        $targetId,
-                        $state->currentStateDefinition
-                    );
-
-                    if ($targetState instanceof StateDefinition) {
-                        // Run exit actions on all active states and record region exits
-                        $parallelState = $state->currentStateDefinition;
-                        foreach ($state->value as $activeStateId) {
-                            $activeState = $this->idMap[$activeStateId] ?? null;
-                            $activeState?->runExitActions($state);
-
-                            // Find and record region exit
-                            $regionParent = $activeState?->parent;
-                            while ($regionParent !== null && $regionParent->parent !== $parallelState) {
-                                $regionParent = $regionParent->parent;
-                            }
-                            if ($regionParent !== null) {
-                                $state->setInternalEventBehavior(
-                                    type: InternalEvent::PARALLEL_REGION_EXIT,
-                                    placeholder: $regionParent->route,
-                                );
-                            }
-                        }
-
-                        // Run exit action on parallel state itself
-                        $parallelState->runExitActions($state);
-
-                        // Transition to the target state (use target itself if atomic/final)
-                        $initialState                  = $targetState->findInitialStateDefinition() ?? $targetState;
-                        $state->currentStateDefinition = $initialState;
-                        $state->value                  = [$state->currentStateDefinition->id];
-
-                        // Run entry actions on target state (and initial if different)
-                        $targetState->runEntryActions($state, $eventBehavior);
-                        if ($initialState !== $targetState) {
-                            $initialState->runEntryActions($state, $eventBehavior);
-                        }
-
-                        $state->setInternalEventBehavior(
-                            type: InternalEvent::STATE_ENTRY_FINISH,
-                            placeholder: $state->currentStateDefinition->route,
-                        );
-
-                        return $state;
-                    }
-                }
-            }
+            return $this->processParallelOnDone($state->currentStateDefinition, $state, $eventBehavior);
         }
 
         // Process event queue
