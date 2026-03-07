@@ -65,6 +65,15 @@ class MachineDefinition
     /** machine-based variable that determines whether to persist the state change. */
     public bool $shouldPersist = true;
 
+    /** Machine class name for job reconstruction (set by Machine::start). */
+    public ?string $machineClass = null;
+
+    /** Root event ID for state restoration (set by Machine::start). */
+    public ?string $rootEventId = null;
+
+    /** Pending parallel region dispatches (consumed by Machine::send after persist). */
+    public array $pendingParallelDispatches = [];
+
     // endregion
 
     // region Constructor

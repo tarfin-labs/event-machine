@@ -5,10 +5,13 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\StateConfigValidator;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
 use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
+
+uses(RefreshDatabase::class);
 
 afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
@@ -239,6 +242,40 @@ it('skips subclass validation when parallel_dispatch is disabled', function (): 
     ]);
 
     expect($machine)->toBeInstanceOf(Machine::class);
+});
+
+// ============================================================
+// Bead: event-machine-q3bi — MachineDefinition properties + Machine::start() wiring
+// ============================================================
+
+it('sets machineClass on definition after Machine::start()', function (): void {
+    $machine = AsdMachine::create();
+
+    expect($machine->definition->machineClass)->toBe(AsdMachine::class);
+});
+
+it('sets rootEventId on definition after Machine::start() with persisted state', function (): void {
+    $machine = AsdMachine::create();
+    $machine->persist();
+
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // Restore from root event ID — rootEventId should be set
+    $restored = AsdMachine::create(state: $rootEventId);
+
+    expect($restored->definition->rootEventId)->toBe($rootEventId);
+});
+
+it('has empty pendingParallelDispatches by default', function (): void {
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'test',
+        'initial' => 'idle',
+        'states'  => [
+            'idle' => ['type' => 'final'],
+        ],
+    ]);
+
+    expect($definition->pendingParallelDispatches)->toBe([]);
 });
 
 // ============================================================

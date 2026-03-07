@@ -128,7 +128,8 @@ class Machine implements Castable, JsonSerializable, Stringable
             );
         }
 
-        $machine = new self(definition: $definition ?? static::definition());
+        $machine                           = new self(definition: $definition ?? static::definition());
+        $machine->definition->machineClass = static::class;
 
         $machine->start($state);
 
@@ -153,6 +154,10 @@ class Machine implements Castable, JsonSerializable, Stringable
             $state instanceof State => $state,
             is_string($state)       => $this->restoreStateFromRootEventId($state),
         };
+
+        if ($this->state instanceof State && $this->state->history?->first() !== null) {
+            $this->definition->rootEventId = $this->state->history->first()->root_event_id;
+        }
 
         return $this;
     }
