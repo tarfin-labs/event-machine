@@ -2,11 +2,17 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
 use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
+
+afterEach(function (): void {
+    config()->set('machine.parallel_dispatch.enabled', false);
+});
 
 // ============================================================
 // Bead: event-machine-44mp — Config
@@ -190,6 +196,49 @@ it('skips validation when parallel_dispatch is disabled', function (): void {
     ]);
 
     expect($machine)->toBeInstanceOf(MachineDefinition::class);
+});
+
+// ============================================================
+// Bead: event-machine-4l6g — Validate Machine subclass requirement
+// ============================================================
+
+it('throws when parallel_dispatch enabled and using base Machine::class', function (): void {
+    config()->set('machine.parallel_dispatch.enabled', true);
+
+    Machine::create([
+        'config' => [
+            'id'             => 'test',
+            'initial'        => 'idle',
+            'should_persist' => true,
+            'states'         => [
+                'idle' => ['type' => 'final'],
+            ],
+        ],
+    ]);
+})->throws(InvalidParallelStateDefinitionException::class, 'Machine subclass');
+
+it('does not throw when parallel_dispatch enabled and using Machine subclass', function (): void {
+    config()->set('machine.parallel_dispatch.enabled', true);
+
+    $machine = AsdMachine::create();
+
+    expect($machine)->toBeInstanceOf(Machine::class);
+});
+
+it('skips subclass validation when parallel_dispatch is disabled', function (): void {
+    config()->set('machine.parallel_dispatch.enabled', false);
+
+    $machine = Machine::create([
+        'config' => [
+            'id'      => 'test',
+            'initial' => 'idle',
+            'states'  => [
+                'idle' => ['type' => 'final'],
+            ],
+        ],
+    ]);
+
+    expect($machine)->toBeInstanceOf(Machine::class);
 });
 
 // ============================================================

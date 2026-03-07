@@ -29,6 +29,7 @@ use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
 use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
 use Tarfinlabs\EventMachine\Exceptions\MachineDefinitionNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
 class Machine implements Castable, JsonSerializable, Stringable
 {
@@ -116,6 +117,10 @@ class Machine implements Castable, JsonSerializable, Stringable
         MachineDefinition|array|null $definition = null,
         State|string|null $state = null,
     ): self {
+        if (config('machine.parallel_dispatch.enabled', false) && static::class === self::class) {
+            throw InvalidParallelStateDefinitionException::requiresMachineSubclass();
+        }
+
         if (is_array($definition)) {
             $definition = MachineDefinition::define(
                 config: $definition['config'] ?? null,
