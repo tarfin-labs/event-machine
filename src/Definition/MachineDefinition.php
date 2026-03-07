@@ -732,6 +732,81 @@ class MachineDefinition
     /**
      * Check if all regions of a parallel state have reached their final states.
      *
+     * Process compound state onDone transitions.
+     *
+     * When a transition lands on a final state within a compound sub-state,
+     * the compound state's onDone transition should fire. This walks up the
+     * parent chain from the final state, stopping at parallel state boundaries.
+     *
+     * @param  State  $state  The current state.
+     * @param  StateDefinition  $finalState  The final state that was just entered.
+     * @param  EventBehavior  $eventBehavior  The triggering event.
+     */
+    protected function processCompoundOnDone(State $state, StateDefinition $finalState, EventBehavior $eventBehavior): void
+    {
+        $compoundParent = $finalState->parent;
+
+        // Only check the immediate compound parent — onDone does not propagate
+        // to grandparent compounds. In XState, when a child reaches final, only
+        // its direct parent's onDone handler fires. If the parent has no onDone,
+        // the parent stays "internally done" at the final child state.
+        if ($compoundParent === null || $compoundParent->type === StateDefinitionType::PARALLEL) {
+            return;
+        }
+
+        if (!isset($compoundParent->config['onDone'])) {
+            return;
+        }
+
+        $onDoneConfig = $compoundParent->config['onDone'];
+        $targetId     = is_array($onDoneConfig) ? ($onDoneConfig['target'] ?? null) : $onDoneConfig;
+
+        if ($targetId === null) {
+            return;
+        }
+
+        $target = $this->getNearestStateDefinitionByString($targetId, $compoundParent);
+
+        if (!$target instanceof StateDefinition) {
+            return;
+        }
+
+        // Exit the final state and the compound parent
+        $finalState->runExitActions($state);
+        $compoundParent->runExitActions($state);
+
+        // Run onDone transition actions if configured
+        if (is_array($onDoneConfig) && isset($onDoneConfig['actions'])) {
+            $actions = is_array($onDoneConfig['actions']) ? $onDoneConfig['actions'] : [$onDoneConfig['actions']];
+            foreach ($actions as $action) {
+                $this->runAction($action, $state, $eventBehavior);
+            }
+        }
+
+        // Resolve to initial state if the target is a compound state
+        $initialTarget = $target->findInitialStateDefinition() ?? $target;
+
+        // Update state value: replace the final state's id with the onDone target
+        $values = $state->value;
+        $idx    = array_search($finalState->id, $values, true);
+        if ($idx !== false) {
+            $values[$idx] = $initialTarget->id;
+            $state->setValues($values);
+        }
+
+        // Run entry actions on the target state
+        $target->runEntryActions($state, $eventBehavior);
+        if ($initialTarget !== $target) {
+            $initialTarget->runEntryActions($state, $eventBehavior);
+        }
+
+        // Recursively check if the new state is also final within a compound parent
+        if ($initialTarget->type === StateDefinitionType::FINAL) {
+            $this->processCompoundOnDone($state, $initialTarget, $eventBehavior);
+        }
+    }
+
+    /**
      * When all regions are final, the parallel state itself is considered complete
      * and can transition via its onDone handler.
      *
@@ -749,12 +824,17 @@ class MachineDefinition
         foreach ($parallelState->stateDefinitions as $region) {
             $regionIsFinal = false;
 
-            // Check if any of the active states belong to this region and are final
+            // Check if any of the active states belong to this region and are final.
+            // The final state must be a DIRECT child of the region, not a deeply
+            // nested final state within a compound sub-state. For example, if a
+            // region has: consent → verification(checking → report_saved[final]) → completed[final]
+            // only reaching "completed" should count as the region being final,
+            // not "report_saved" which is final only within the verification sub-state.
             foreach ($state->value as $activeStateId) {
                 if (str_starts_with($activeStateId, $region->id)) {
                     $activeState = $this->idMap[$activeStateId] ?? null;
 
-                    if ($activeState !== null && $activeState->type === StateDefinitionType::FINAL) {
+                    if ($activeState !== null && $activeState->type === StateDefinitionType::FINAL && $activeState->parent === $region) {
                         $regionIsFinal = true;
 
                         break;
@@ -857,6 +937,13 @@ class MachineDefinition
             } else {
                 // Execute entry actions for the target state (no state value update needed)
                 $targetState->runEntryActions($state, $eventBehavior);
+            }
+
+            // Process compound state onDone: when a transition lands on a final state
+            // that is a child of a compound sub-state (not a direct child of a parallel
+            // region), fire the compound state's onDone transition.
+            if ($targetState->type === StateDefinitionType::FINAL) {
+                $this->processCompoundOnDone($state, $targetState, $eventBehavior);
             }
         }
 
