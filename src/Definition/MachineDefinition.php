@@ -942,6 +942,92 @@ class MachineDefinition
     }
 
     /**
+     * Process the onFail transition for a parallel state when a region fails.
+     *
+     * Records the PARALLEL_FAIL internal event. If onFail is configured, runs
+     * onFail actions (before exit — can inspect parallel state for error context),
+     * exits all active child states and the parallel state, then transitions to target.
+     *
+     * @param  StateDefinition  $parallelState  The parallel state where a failure occurred.
+     * @param  State  $state  The current state.
+     * @param  EventBehavior|null  $eventBehavior  The triggering event (null when called from ParallelRegionJob).
+     */
+    public function processParallelOnFail(
+        StateDefinition $parallelState,
+        State $state,
+        ?EventBehavior $eventBehavior = null,
+    ): State {
+        $state->setInternalEventBehavior(
+            type: InternalEvent::PARALLEL_FAIL,
+            placeholder: $parallelState->route,
+        );
+
+        if (!isset($parallelState->config['onFail'])) {
+            return $state;
+        }
+
+        $onFailConfig = $parallelState->config['onFail'];
+        $targetId     = is_array($onFailConfig) ? ($onFailConfig['target'] ?? null) : $onFailConfig;
+
+        if ($targetId === null) {
+            return $state;
+        }
+
+        $targetState = $this->getNearestStateDefinitionByString($targetId, $parallelState);
+
+        if (!$targetState instanceof StateDefinition) {
+            return $state;
+        }
+
+        // Run onFail actions BEFORE exit (can inspect parallel state for error context)
+        if (is_array($onFailConfig) && isset($onFailConfig['actions'])) {
+            $actions = is_array($onFailConfig['actions']) ? $onFailConfig['actions'] : [$onFailConfig['actions']];
+            foreach ($actions as $action) {
+                $this->runAction($action, $state, $eventBehavior);
+            }
+        }
+
+        // Run exit actions on all active states and record region exits
+        foreach ($state->value as $activeStateId) {
+            $activeState = $this->idMap[$activeStateId] ?? null;
+            $activeState?->runExitActions($state);
+
+            // Find and record region exit
+            $regionParent = $activeState?->parent;
+            while ($regionParent !== null && $regionParent->parent !== $parallelState) {
+                $regionParent = $regionParent->parent;
+            }
+            if ($regionParent !== null) {
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::PARALLEL_REGION_EXIT,
+                    placeholder: $regionParent->route,
+                );
+            }
+        }
+
+        // Run exit action on parallel state itself
+        $parallelState->runExitActions($state);
+
+        // Transition to the target state (use target itself if atomic/final)
+        $initialState                  = $targetState->findInitialStateDefinition() ?? $targetState;
+        $state->currentStateDefinition = $initialState;
+        $state->value                  = [$state->currentStateDefinition->id];
+
+        // Run entry actions on target state (and initial if different)
+        $targetState->runEntryActions($state, $eventBehavior);
+        if ($initialState !== $targetState) {
+            $initialState->runEntryActions($state, $eventBehavior);
+        }
+
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_ENTRY_FINISH,
+            placeholder: $state->currentStateDefinition->route,
+        );
+
+        return $state;
+    }
+
+    /**
      * Transition a parallel state by broadcasting the event to all active regions.
      *
      * For parallel states, events are sent to all active atomic states.
