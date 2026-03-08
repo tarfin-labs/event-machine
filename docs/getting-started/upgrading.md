@@ -81,14 +81,20 @@ All events are persisted as `MachineEvent` records — durable audit trail, not 
 composer update tarfinlabs/event-machine:^5.0
 ```
 
-2. Publish config if not already done:
+2. Publish and run migrations (adds `machine_locks` table for parallel dispatch locking):
+```bash
+php artisan vendor:publish --tag=machine-migrations
+php artisan migrate
+```
+
+3. Publish config if not already done:
 ```bash
 php artisan vendor:publish --tag=machine-config
 ```
 
-3. Add parallel dispatch keys to your `config/machine.php`
-4. Set `MACHINE_PARALLEL_DISPATCH_ENABLED=true` in `.env` when ready
-5. Ensure your cache and queue drivers are configured
+4. Add parallel dispatch keys to your `config/machine.php`
+5. Set `MACHINE_PARALLEL_DISPATCH_ENABLED=true` in `.env` when ready
+6. Ensure your cache and queue drivers are configured
 
 For full details, see [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch).
 
