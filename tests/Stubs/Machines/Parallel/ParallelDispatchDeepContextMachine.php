@@ -6,8 +6,8 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionADeepContextAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionBDeepContextAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionADeepReportAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBDeepReportAction;
 
 class ParallelDispatchDeepContextMachine extends Machine
 {
@@ -32,7 +32,7 @@ class ParallelDispatchDeepContextMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionADeepContextAction::class,
+                                        'entry' => SetRegionADeepReportAction::class,
                                         'on'    => ['REGION_A_DONE' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
@@ -42,7 +42,7 @@ class ParallelDispatchDeepContextMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionBDeepContextAction::class,
+                                        'entry' => SetRegionBDeepReportAction::class,
                                         'on'    => ['REGION_B_DONE' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
