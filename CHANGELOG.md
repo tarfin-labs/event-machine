@@ -31,7 +31,7 @@ All notable changes to `event-machine` will be documented in this file.
 - Comprehensive documentation for parallel dispatch (configuration, requirements, context merge, stall detection, timeout, best practices, limitations)
 
 ### Changed
-- **BREAKING**: Renamed config keys `onDone` → `@done` and `onFail` → `@fail` for consistency with `@always` convention. All internal framework keys now use the `@` prefix, clearly separating them from user-defined event types (`SCREAMING_SNAKE_CASE`).
+- Internal framework config keys use `@` prefix: `@done`, `@fail` (consistent with existing `@always`). These keys are new in v5.0 — no migration from previous versions needed.
 - `Machine::send()` lock acquisition uses `MachineLockManager` with configurable timeout
 - `Machine::send()` lock guarded behind `parallel_dispatch.enabled` (no DB lock overhead for non-parallel machines)
 - `createEventBehavior()` signature expanded to accept `EventBehavior|array`
