@@ -24,6 +24,7 @@ use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Jobs\ParallelRegionTimeoutJob;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
@@ -247,8 +248,10 @@ class Machine implements Castable, JsonSerializable, Stringable
             return;
         }
 
-        $rootEventId = $this->state->history->first()->root_event_id;
-        $queue       = config('machine.parallel_dispatch.queue');
+        $rootEventId    = $this->state->history->first()->root_event_id;
+        $queue          = config('machine.parallel_dispatch.queue');
+        $regionTimeout  = (int) config('machine.parallel_dispatch.region_timeout', 0);
+        $parallelStates = [];
 
         foreach ($this->definition->pendingParallelDispatches as $dispatch) {
             $job = new ParallelRegionJob(
@@ -264,6 +267,29 @@ class Machine implements Castable, JsonSerializable, Stringable
             }
 
             dispatch($job);
+
+            // Track unique parallel state IDs for timeout dispatch
+            $region = $this->definition->idMap[$dispatch['region_id']] ?? null;
+            if ($region?->parent !== null) {
+                $parallelStates[$region->parent->id] = true;
+            }
+        }
+
+        // Dispatch a single timeout check job per parallel state
+        if ($regionTimeout > 0) {
+            foreach (array_keys($parallelStates) as $parallelStateId) {
+                $timeoutJob = new ParallelRegionTimeoutJob(
+                    machineClass: $this->definition->machineClass,
+                    rootEventId: $rootEventId,
+                    parallelStateId: $parallelStateId,
+                );
+
+                if ($queue !== null) {
+                    $timeoutJob->onQueue($queue);
+                }
+
+                dispatch($timeoutJob)->delay($regionTimeout);
+            }
         }
 
         $this->definition->pendingParallelDispatches = [];
