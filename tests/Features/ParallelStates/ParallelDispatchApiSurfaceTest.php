@@ -42,7 +42,7 @@ it('areAllRegionsFinal returns correct result for various states', function (): 
             'states'  => [
                 'parallel_parent' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'region_a' => [
                             'initial' => 'working',
@@ -134,7 +134,7 @@ it('processParallelOnDone transitions out of parallel state', function (): void 
             'states'  => [
                 'parallel_parent' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'region_a' => [
                             'initial' => 'working',
