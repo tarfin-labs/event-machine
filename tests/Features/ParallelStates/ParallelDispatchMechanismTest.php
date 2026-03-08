@@ -24,7 +24,7 @@ function createDispatchableParallelDefinition(): MachineDefinition
         'states'         => [
             'parallel_state' => [
                 'type'   => 'parallel',
-                'onDone' => 'done',
+                '@done'  => 'done',
                 'states' => [
                     'region_a' => [
                         'initial' => 'working',
@@ -61,7 +61,7 @@ it('does not dispatch when parallel_dispatch config is disabled', function (): v
         'states'  => [
             'parallel_state' => [
                 'type'   => 'parallel',
-                'onDone' => 'done',
+                '@done'  => 'done',
                 'states' => [
                     'region_a' => [
                         'initial' => 'working',
@@ -98,7 +98,7 @@ it('does not dispatch when fewer than 2 regions have entry actions', function ()
         'states'         => [
             'parallel_state' => [
                 'type'   => 'parallel',
-                'onDone' => 'done',
+                '@done'  => 'done',
                 'states' => [
                     'region_a' => [
                         'initial' => 'working',
@@ -187,7 +187,7 @@ it('sequential mode runs entry actions normally (regression)', function (): void
         'states'  => [
             'parallel_state' => [
                 'type'   => 'parallel',
-                'onDone' => 'done',
+                '@done'  => 'done',
                 'states' => [
                     'region_a' => [
                         'initial' => 'working',
