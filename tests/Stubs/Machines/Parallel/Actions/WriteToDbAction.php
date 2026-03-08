@@ -12,7 +12,7 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
  * Entry action that writes to DB (simulates a side-effect like creating an order).
  * Used to test transaction safety in ParallelRegionJob's lock-protected section.
  */
-class DbWriteAction extends ActionBehavior
+class WriteToDbAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
