@@ -6,22 +6,22 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\DbWriteAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionARaiseAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionBEntryAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\WriteToDbAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionAAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBResultAction;
 
 /**
  * Test machine for transaction safety verification.
  *
  * Region A flow:
- *   working (entry: RegionARaiseAction → raises REGION_A_PROCESSED)
- *     → REGION_A_PROCESSED → finished (entry: DbWriteAction → DB INSERT)
+ *   working (entry: ProcessRegionAAction → raises REGION_A_PROCESSED)
+ *     → REGION_A_PROCESSED → finished (entry: WriteToDbAction → DB INSERT)
  *
  * In ParallelRegionJob::handle():
- *   1. RegionARaiseAction runs OUTSIDE lock (line 70)
+ *   1. ProcessRegionAAction runs OUTSIDE lock (line 70)
  *   2. REGION_A_PROCESSED is captured as a raised event
  *   3. Inside lock, transition(REGION_A_PROCESSED) processes the event
- *   4. Target finished's entry action (DbWriteAction) does DB INSERT ← INSIDE LOCK
+ *   4. Target finished's entry action (WriteToDbAction) does DB INSERT ← INSIDE LOCK
  *   5. persist() writes machine_events ← INSIDE LOCK
  *
  * If persist fails at step 5, the INSERT from step 4 should be rolled back (Fix B).
@@ -49,14 +49,14 @@ class ParallelDispatchDbWriteMachine extends Machine
                                 'states'  => [
                                     'working' => [
                                         // Entry action sets context + raises REGION_A_PROCESSED
-                                        'entry' => RegionARaiseAction::class,
+                                        'entry' => ProcessRegionAAction::class,
                                         'on'    => ['REGION_A_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => [
                                         'type' => 'final',
                                         // Entry action does DB INSERT — runs inside lock
                                         // when raised event is processed
-                                        'entry' => DbWriteAction::class,
+                                        'entry' => WriteToDbAction::class,
                                     ],
                                 ],
                             ],
@@ -64,7 +64,7 @@ class ParallelDispatchDbWriteMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionBEntryAction::class,
+                                        'entry' => SetRegionBResultAction::class,
                                         'on'    => ['REGION_B_DONE' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
