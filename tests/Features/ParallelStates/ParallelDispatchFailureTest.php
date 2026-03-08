@@ -25,7 +25,7 @@ it('single region job failure leaves machine in parallel state when no onFail', 
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     // Region B "fails" (no retry, just don't run handle)
@@ -48,8 +48,8 @@ it('job failure does NOT corrupt other region state', function (): void {
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_a',
-        initialStateId: 'parallel_fail.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_fail.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     ))->handle();
 
     // Verify A's context persisted
@@ -60,14 +60,14 @@ it('job failure does NOT corrupt other region state', function (): void {
     $jobB = new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_b',
-        initialStateId: 'parallel_fail.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_with_fail.processing.region_b',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_b.working',
     );
     $jobB->failed(new \RuntimeException('Region B API timeout'));
 
     // Machine transitioned to error, but region A's context is preserved
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($restored->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
     expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
 });
 
@@ -82,25 +82,25 @@ it('all region jobs fail leaves machine in error state with onFail', function ()
     $jobA = new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_a',
-        initialStateId: 'parallel_fail.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_fail.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
     $jobA->failed(new \RuntimeException('Region A failure'));
 
     // Machine in error state
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($restored->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
 
     // Region B also fails — should no-op (machine already left parallel)
     $jobB = new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_b',
-        initialStateId: 'parallel_fail.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_with_fail.processing.region_b',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_b.working',
     );
     $jobB->failed(new \RuntimeException('Region B failure'));
 
     // Still in error state
     $final = ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($final->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($final->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
 });
