@@ -39,11 +39,12 @@ When parallel dispatch is enabled:
 | File | Description |
 |------|-------------|
 | `src/Jobs/ParallelRegionJob.php` | Internal queue job for region entry actions |
+| `src/Jobs/ParallelRegionTimeoutJob.php` | Delayed check job for stuck parallel state detection |
 | `src/Support/MachineLockManager.php` | Database-based lock management |
 
 ### New Internal Events
 
-v4.1 adds six internal events for parallel dispatch observability:
+v4.1 adds seven internal events for parallel dispatch observability:
 
 | Event | Purpose |
 |-------|---------|
@@ -51,6 +52,7 @@ v4.1 adds six internal events for parallel dispatch observability:
 | `PARALLEL_REGION_GUARD_ABORT` | Under-lock guard discarded work (machine moved on) |
 | `PARALLEL_CONTEXT_CONFLICT` | Sibling region overwrote a shared context key (LWW) |
 | `PARALLEL_REGION_STALLED` | Region entry action completed without advancing (no raise) |
+| `PARALLEL_REGION_TIMEOUT` | Parallel state did not complete within `region_timeout` seconds |
 | `PARALLEL_DONE` | All regions reached final, `@done` fired |
 | `PARALLEL_FAIL` | Region job failed after all retries |
 
