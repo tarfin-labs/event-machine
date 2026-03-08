@@ -27,21 +27,21 @@ function createDispatchableParallelDefinition(): MachineDefinition
                 'onDone' => 'done',
                 'states' => [
                     'region_a' => [
-                        'initial' => 'working_a',
+                        'initial' => 'working',
                         'states'  => [
-                            'working_a' => [
+                            'working' => [
                                 'entry' => 'SomeEntryActionA',
                             ],
-                            'finished_a' => ['type' => 'final'],
+                            'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
-                        'initial' => 'working_b',
+                        'initial' => 'working',
                         'states'  => [
-                            'working_b' => [
+                            'working' => [
                                 'entry' => 'SomeEntryActionB',
                             ],
-                            'finished_b' => ['type' => 'final'],
+                            'finished' => ['type' => 'final'],
                         ],
                     ],
                 ],
@@ -64,17 +64,17 @@ it('does not dispatch when parallel_dispatch config is disabled', function (): v
                 'onDone' => 'done',
                 'states' => [
                     'region_a' => [
-                        'initial' => 'working_a',
+                        'initial' => 'working',
                         'states'  => [
-                            'working_a'  => [],
-                            'finished_a' => ['type' => 'final'],
+                            'working'  => [],
+                            'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
-                        'initial' => 'working_b',
+                        'initial' => 'working',
                         'states'  => [
-                            'working_b'  => [],
-                            'finished_b' => ['type' => 'final'],
+                            'working'  => [],
+                            'finished' => ['type' => 'final'],
                         ],
                     ],
                 ],
@@ -101,19 +101,19 @@ it('does not dispatch when fewer than 2 regions have entry actions', function ()
                 'onDone' => 'done',
                 'states' => [
                     'region_a' => [
-                        'initial' => 'working_a',
+                        'initial' => 'working',
                         'states'  => [
-                            'working_a' => [
+                            'working' => [
                                 'entry' => 'SomeEntryActionA', // Only 1 region has entry
                             ],
-                            'finished_a' => ['type' => 'final'],
+                            'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
-                        'initial' => 'working_b',
+                        'initial' => 'working',
                         'states'  => [
-                            'working_b'  => [], // No entry actions
-                            'finished_b' => ['type' => 'final'],
+                            'working'  => [], // No entry actions
+                            'finished' => ['type' => 'final'],
                         ],
                     ],
                 ],
@@ -145,9 +145,9 @@ it('populates pendingParallelDispatches when all conditions met', function (): v
     // In dispatch mode, entry actions are NOT run — they're queued
     expect($definition->pendingParallelDispatches)->toHaveCount(2);
     expect($definition->pendingParallelDispatches[0]['region_id'])->toBe('test.parallel_state.region_a');
-    expect($definition->pendingParallelDispatches[0]['initial_state_id'])->toBe('test.parallel_state.region_a.working_a');
+    expect($definition->pendingParallelDispatches[0]['initial_state_id'])->toBe('test.parallel_state.region_a.working');
     expect($definition->pendingParallelDispatches[1]['region_id'])->toBe('test.parallel_state.region_b');
-    expect($definition->pendingParallelDispatches[1]['initial_state_id'])->toBe('test.parallel_state.region_b.working_b');
+    expect($definition->pendingParallelDispatches[1]['initial_state_id'])->toBe('test.parallel_state.region_b.working');
 });
 
 it('does not dispatch when machineClass is base Machine::class', function (): void {
@@ -173,8 +173,8 @@ it('sets state values correctly in dispatch mode', function (): void {
 
     // Both regions should be at their initial states
     expect($state->value)->toBe([
-        'test.parallel_state.region_a.working_a',
-        'test.parallel_state.region_b.working_b',
+        'test.parallel_state.region_a.working',
+        'test.parallel_state.region_b.working',
     ]);
 });
 
@@ -190,17 +190,17 @@ it('sequential mode runs entry actions normally (regression)', function (): void
                 'onDone' => 'done',
                 'states' => [
                     'region_a' => [
-                        'initial' => 'working_a',
+                        'initial' => 'working',
                         'states'  => [
-                            'working_a'  => [],
-                            'finished_a' => ['type' => 'final'],
+                            'working'  => [],
+                            'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
-                        'initial' => 'working_b',
+                        'initial' => 'working',
                         'states'  => [
-                            'working_b'  => [],
-                            'finished_b' => ['type' => 'final'],
+                            'working'  => [],
+                            'finished' => ['type' => 'final'],
                         ],
                     ],
                 ],
@@ -212,8 +212,8 @@ it('sequential mode runs entry actions normally (regression)', function (): void
     $state = $definition->getInitialState();
 
     expect($state->value)->toBe([
-        'test.parallel_state.region_a.working_a',
-        'test.parallel_state.region_b.working_b',
+        'test.parallel_state.region_a.working',
+        'test.parallel_state.region_b.working',
     ]);
     expect($definition->pendingParallelDispatches)->toBe([]);
 });
@@ -226,8 +226,8 @@ it('dispatches ParallelRegionJob for each pending region', function (): void {
 
     // Manually populate pendingParallelDispatches to simulate enterParallelState dispatch mode
     $machine->definition->pendingParallelDispatches = [
-        ['region_id' => 'test.parallel_state.region_a', 'initial_state_id' => 'test.parallel_state.region_a.working_a'],
-        ['region_id' => 'test.parallel_state.region_b', 'initial_state_id' => 'test.parallel_state.region_b.working_b'],
+        ['region_id' => 'test.parallel_state.region_a', 'initial_state_id' => 'test.parallel_state.region_a.working'],
+        ['region_id' => 'test.parallel_state.region_b', 'initial_state_id' => 'test.parallel_state.region_b.working'],
     ];
 
     $machine->dispatchPendingParallelJobs();
@@ -235,12 +235,12 @@ it('dispatches ParallelRegionJob for each pending region', function (): void {
     Bus::assertDispatched(ParallelRegionJob::class, 2);
     Bus::assertDispatched(ParallelRegionJob::class, function (ParallelRegionJob $job): bool {
         return $job->regionId === 'test.parallel_state.region_a'
-            && $job->initialStateId === 'test.parallel_state.region_a.working_a'
+            && $job->initialStateId === 'test.parallel_state.region_a.working'
             && $job->machineClass === AsdMachine::class;
     });
     Bus::assertDispatched(ParallelRegionJob::class, function (ParallelRegionJob $job): bool {
         return $job->regionId === 'test.parallel_state.region_b'
-            && $job->initialStateId === 'test.parallel_state.region_b.working_b';
+            && $job->initialStateId === 'test.parallel_state.region_b.working';
     });
 });
 
