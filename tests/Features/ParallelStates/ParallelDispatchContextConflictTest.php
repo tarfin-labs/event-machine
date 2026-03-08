@@ -52,7 +52,7 @@ it('does not record context conflict when regions write to different keys', func
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
         contextAtDispatch: $contextAtDispatch,
     ))->handle();
 
@@ -60,7 +60,7 @@ it('does not record context conflict when regions write to different keys', func
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_b',
-        initialStateId: 'parallel_dispatch.processing.region_b.working_b',
+        initialStateId: 'parallel_dispatch.processing.region_b.working',
         contextAtDispatch: $contextAtDispatch,
     ))->handle();
 
@@ -93,7 +93,7 @@ it('records context conflict when second region overwrites scalar key set by fir
         machineClass: E2EContextConflictMachine::class,
         rootEventId: $rootEventId,
         regionId: 'e2e_context_conflict.processing.region_a',
-        initialStateId: 'e2e_context_conflict.processing.region_a.working_a',
+        initialStateId: 'e2e_context_conflict.processing.region_a.working',
         contextAtDispatch: $contextAtDispatch,
     ))->handle();
 
@@ -102,7 +102,7 @@ it('records context conflict when second region overwrites scalar key set by fir
         machineClass: E2EContextConflictMachine::class,
         rootEventId: $rootEventId,
         regionId: 'e2e_context_conflict.processing.region_b',
-        initialStateId: 'e2e_context_conflict.processing.region_b.working_b',
+        initialStateId: 'e2e_context_conflict.processing.region_b.working',
         contextAtDispatch: $contextAtDispatch,
     ))->handle();
 
@@ -133,7 +133,7 @@ it('conflict event payload lists all conflicted keys', function (): void {
         machineClass: E2EContextConflictMachine::class,
         rootEventId: $rootEventId,
         regionId: 'e2e_context_conflict.processing.region_a',
-        initialStateId: 'e2e_context_conflict.processing.region_a.working_a',
+        initialStateId: 'e2e_context_conflict.processing.region_a.working',
         contextAtDispatch: $contextAtDispatch,
     ))->handle();
 
@@ -141,7 +141,7 @@ it('conflict event payload lists all conflicted keys', function (): void {
         machineClass: E2EContextConflictMachine::class,
         rootEventId: $rootEventId,
         regionId: 'e2e_context_conflict.processing.region_b',
-        initialStateId: 'e2e_context_conflict.processing.region_b.working_b',
+        initialStateId: 'e2e_context_conflict.processing.region_b.working',
         contextAtDispatch: $contextAtDispatch,
     ))->handle();
 
@@ -173,7 +173,7 @@ it('first completing region does not report conflict (no prior sibling writes)',
         machineClass: E2EContextConflictMachine::class,
         rootEventId: $rootEventId,
         regionId: 'e2e_context_conflict.processing.region_a',
-        initialStateId: 'e2e_context_conflict.processing.region_a.working_a',
+        initialStateId: 'e2e_context_conflict.processing.region_a.working',
         contextAtDispatch: $contextAtDispatch,
     ))->handle();
 
@@ -200,7 +200,7 @@ it('LWW still applies — second region value wins despite conflict recording', 
         machineClass: E2EContextConflictMachine::class,
         rootEventId: $rootEventId,
         regionId: 'e2e_context_conflict.processing.region_a',
-        initialStateId: 'e2e_context_conflict.processing.region_a.working_a',
+        initialStateId: 'e2e_context_conflict.processing.region_a.working',
         contextAtDispatch: $contextAtDispatch,
     ))->handle();
 
@@ -209,7 +209,7 @@ it('LWW still applies — second region value wins despite conflict recording', 
         machineClass: E2EContextConflictMachine::class,
         rootEventId: $rootEventId,
         regionId: 'e2e_context_conflict.processing.region_b',
-        initialStateId: 'e2e_context_conflict.processing.region_b.working_b',
+        initialStateId: 'e2e_context_conflict.processing.region_b.working',
         contextAtDispatch: $contextAtDispatch,
     ))->handle();
 
