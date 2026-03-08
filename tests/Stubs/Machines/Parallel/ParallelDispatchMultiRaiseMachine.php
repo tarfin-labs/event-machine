@@ -15,7 +15,7 @@ class ParallelDispatchMultiRaiseMachine extends Machine
     {
         return MachineDefinition::define(
             config: [
-                'id'             => 'parallel_multi_raise',
+                'id'             => 'parallel_dispatch_multi_raise',
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
@@ -28,28 +28,28 @@ class ParallelDispatchMultiRaiseMachine extends Machine
                         'onDone' => 'completed',
                         'states' => [
                             'region_a' => [
-                                'initial' => 'step_initial',
+                                'initial' => 'pending',
                                 'states'  => [
-                                    'step_initial' => [
+                                    'pending' => [
                                         'entry' => RegionAMultiRaiseAction::class,
                                         'on'    => [
-                                            'STEP_1_DONE' => 'step_1',
+                                            'STEP_1_DONE' => 'advanced',
                                         ],
                                     ],
-                                    'step_1' => [
-                                        'on' => ['STEP_2_DONE' => 'finished_a'],
+                                    'advanced' => [
+                                        'on' => ['STEP_2_DONE' => 'finished'],
                                     ],
-                                    'finished_a' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                             'region_b' => [
-                                'initial' => 'working_b',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_b' => [
+                                    'working' => [
                                         'entry' => RegionBEntryAction::class,
-                                        'on'    => ['REGION_B_DONE' => 'finished_b'],
+                                        'on'    => ['REGION_B_DONE' => 'finished'],
                                     ],
-                                    'finished_b' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                         ],
