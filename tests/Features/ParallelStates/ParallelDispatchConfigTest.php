@@ -177,10 +177,10 @@ it('skips validation when parallel_dispatch is disabled', function (): void {
     expect($machine)->toBeInstanceOf(MachineDefinition::class);
 });
 
-it('throws when parallel_dispatch enabled and using base Machine::class', function (): void {
+it('falls back to sequential when parallel_dispatch enabled but using base Machine::class', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
-    Machine::create([
+    $machine = Machine::create([
         'config' => [
             'id'             => 'test',
             'initial'        => 'idle',
@@ -190,7 +190,10 @@ it('throws when parallel_dispatch enabled and using base Machine::class', functi
             ],
         ],
     ]);
-})->throws(InvalidParallelStateDefinitionException::class, 'Machine subclass');
+
+    // Should not throw — gracefully falls back to sequential mode
+    expect($machine)->toBeInstanceOf(Machine::class);
+});
 
 it('does not throw when parallel_dispatch enabled and using Machine subclass', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
