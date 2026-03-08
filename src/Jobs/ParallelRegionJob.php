@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Jobs;
 
+use Illuminate\Support\Str;
 use Illuminate\Bus\Queueable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Support\ArrayUtils;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
+use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 
@@ -97,11 +101,15 @@ class ParallelRegionJob implements ShouldQueue
             //     Guards stay OUTSIDE DB::transaction() — return inside a
             //     Closure only exits the Closure, not the parent method.
             if (!$freshMachine->state->isInParallelState()) {
+                $this->recordDoubleGuardAbort($freshMachine, $contextDiff, $raisedEvents, 'machine left parallel state');
+
                 return;
             }
 
             $freshRegionInitial = $freshMachine->definition->idMap[$this->initialStateId] ?? null;
             if ($freshRegionInitial === null || !in_array($freshRegionInitial->id, $freshMachine->state->value, true)) {
+                $this->recordDoubleGuardAbort($freshMachine, $contextDiff, $raisedEvents, 'region already advanced');
+
                 return;
             }
 
@@ -215,6 +223,49 @@ class ParallelRegionJob implements ShouldQueue
                 'fail_handler_error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Record a double-guard abort as a durable internal event in machine_events.
+     *
+     * When entry actions ran without lock but the under-lock guard detects the
+     * machine has moved on, any computed context diff and raised events are
+     * discarded. This method persists an audit trail event so the discard is
+     * observable in the machine's event history.
+     *
+     * @param  array<string, mixed>  $contextDiff
+     * @param  array<mixed>  $raisedEvents
+     */
+    private function recordDoubleGuardAbort(
+        Machine $freshMachine,
+        array $contextDiff,
+        array $raisedEvents,
+        string $reason,
+    ): void {
+        $lastEvent = $freshMachine->state->history->last();
+
+        MachineEvent::create([
+            'id'              => Str::ulid()->toBase32(),
+            'sequence_number' => $lastEvent->sequence_number + 1,
+            'created_at'      => now(),
+            'machine_id'      => $lastEvent->machine_id,
+            'machine_value'   => $freshMachine->state->value,
+            'root_event_id'   => $this->rootEventId,
+            'source'          => SourceType::INTERNAL,
+            'type'            => InternalEvent::PARALLEL_REGION_GUARD_ABORT
+                ->generateInternalEventName(
+                    machineId: $lastEvent->machine_id,
+                    placeholder: $this->regionId,
+                ),
+            'version' => 1,
+            'payload' => [
+                'reason'             => $reason,
+                'discarded_context'  => array_keys($contextDiff),
+                'discarded_events'   => count($raisedEvents),
+                'work_was_discarded' => $contextDiff !== [] || $raisedEvents !== [],
+            ],
+            'context' => $freshMachine->state->context->toArray(),
+        ]);
     }
 
     /**
