@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EBasicMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EChainedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EMultiRaiseMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EDeepContextMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EThreeRegionMachine;
@@ -266,4 +267,57 @@ it('entry action that sets context without raising event keeps region at initial
     // Machine value should still contain region initial states
     expect($restored->state->value)->toContain('parallel_dispatch.processing.region_a.working_a');
     expect($restored->state->value)->toContain('parallel_dispatch.processing.region_b.working_b');
+});
+
+// ============================================================
+// Grup 4: Chained Parallel States
+//
+// Known limitation: exitParallelStateAndTransition() does not
+// call enterParallelState() for parallel targets. After phase_one
+// onDone → phase_two, the second parallel phase won't auto-dispatch.
+// These tests document the current behavior.
+// ============================================================
+
+it('documents that chained parallel onDone transitions to second phase but does not auto-dispatch', function (): void {
+    // E2EChainedMachine: phase_one(A,B) → onDone → phase_two(C,D) → onDone → completed
+    // Phase one dispatches normally (initial=parallel), but onDone→phase_two
+    // goes through exitParallelStateAndTransition which doesn't call enterParallelState()
+    $machine = E2EChainedMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // Phase one: dispatch region jobs → both raise → both final → onDone fires
+    $machine->dispatchPendingParallelJobs();
+
+    $restored = E2EChainedMachine::create(state: $rootEventId);
+
+    // Phase one context should be set (proves phase one jobs ran)
+    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+
+    // Machine should have transitioned to phase_two (onDone fired)
+    // State constructor's updateMachineValueFromState() expands parallel value on restore
+    expect($restored->state->currentStateDefinition->id)->toBe('e2e_chained.phase_two');
+    expect($restored->state->value)->toHaveCount(2);
+    expect($restored->state->value)->toContain('e2e_chained.phase_two.region_c.working_c');
+    expect($restored->state->value)->toContain('e2e_chained.phase_two.region_d.working_d');
+
+    // Phase two context should NOT be set — enterParallelState() was never called
+    // so no jobs dispatched, no region entry actions ran
+    expect($restored->state->context->get('region_c_result'))->toBeNull();
+    expect($restored->state->context->get('region_d_result'))->toBeNull();
+});
+
+it('documents that pendingParallelDispatches is empty after chained onDone', function (): void {
+    // After phase_one completes and onDone transitions to phase_two,
+    // pendingParallelDispatches should be empty because enterParallelState()
+    // was never called for phase_two.
+    $machine = E2EChainedMachine::create();
+    $machine->persist();
+
+    $machine->dispatchPendingParallelJobs();
+
+    // After dispatch completes, pending dispatches should be cleared
+    // (phase_one dispatches consumed, phase_two never queued)
+    expect($machine->definition->pendingParallelDispatches)->toBeEmpty();
 });
