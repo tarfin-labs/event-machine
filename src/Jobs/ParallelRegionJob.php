@@ -30,11 +30,15 @@ class ParallelRegionJob implements ShouldQueue
     public int $tries;
     public int $backoff;
 
+    /**
+     * @param  array<string, mixed>  $contextAtDispatch  Context snapshot at parallel entry (baseline for conflict detection)
+     */
     public function __construct(
         public readonly string $machineClass,
         public readonly string $rootEventId,
         public readonly string $regionId,
         public readonly string $initialStateId,
+        public readonly array $contextAtDispatch = [],
     ) {
         $this->timeout = (int) config('machine.parallel_dispatch.job_timeout', 300);
         $this->tries   = (int) config('machine.parallel_dispatch.job_tries', 3);
@@ -117,14 +121,37 @@ class ParallelRegionJob implements ShouldQueue
             //        If persist (or any action side-effect) fails, everything rolls back.
             DB::transaction(function () use ($freshMachine, $contextDiff, $region, $raisedEvents): void {
                 // 11. Apply context diff (deep merge, not overwrite)
+                $conflictedKeys = [];
+
                 foreach ($contextDiff as $key => $value) {
                     $existingValue = $freshMachine->state->context->data[$key] ?? null;
+
+                    // Detect LWW conflict: compare against baseline (context at dispatch time).
+                    // If the DB value differs from what it was when the parallel state was entered,
+                    // a sibling region already modified this key.
+                    $baselineValue = $this->contextAtDispatch[$key] ?? null;
+
+                    if ($existingValue !== $baselineValue) {
+                        $conflictedKeys[] = $key;
+                    }
 
                     if (is_array($value) && is_array($existingValue)) {
                         $freshMachine->state->context->set($key, ArrayUtils::recursiveMerge($existingValue, $value));
                     } else {
                         $freshMachine->state->context->set($key, $value);
                     }
+                }
+
+                // 11b. Record context conflict if sibling regions wrote to same keys
+                if ($conflictedKeys !== []) {
+                    $freshMachine->state->setInternalEventBehavior(
+                        type: InternalEvent::PARALLEL_CONTEXT_CONFLICT,
+                        placeholder: $region->route,
+                        payload: [
+                            'region_id'       => $this->regionId,
+                            'conflicted_keys' => $conflictedKeys,
+                        ],
+                    );
                 }
 
                 // 12. Record region action completion event (captures context snapshot for persist)
