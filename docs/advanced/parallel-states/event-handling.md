@@ -347,13 +347,13 @@ When using [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch), reg
 'processing' => [
     'type'   => 'parallel',
     'onDone' => 'completed',
-    'onFail' => 'error',       // Transition here when a region job fails
+    'onFail' => 'failed',       // Transition here when a region job fails
     'states' => [
         'findeks' => [...],
         'turmob'  => [...],
     ],
 ],
-'error' => ['type' => 'final'],
+'failed' => ['type' => 'final'],
 ```
 
 When `onFail` is triggered:
