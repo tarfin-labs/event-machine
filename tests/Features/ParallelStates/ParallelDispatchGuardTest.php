@@ -25,13 +25,13 @@ it('job no-ops when machine no longer in parallel state (pre-lock guard)', funct
     $jobA = new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_a',
-        initialStateId: 'parallel_fail.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_fail.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
     $jobA->failed(new \RuntimeException('Trigger onFail'));
 
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($restored->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
 
     $historyBefore = MachineEvent::where('root_event_id', $rootEventId)->count();
 
@@ -39,8 +39,8 @@ it('job no-ops when machine no longer in parallel state (pre-lock guard)', funct
     $jobB = new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_b',
-        initialStateId: 'parallel_fail.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_with_fail.processing.region_b',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_b.working',
     );
     $jobB->handle();
 
@@ -61,7 +61,7 @@ it('job no-ops when region already advanced past initial state', function (): vo
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     // Send event to advance region A to final (past initial)
@@ -70,12 +70,12 @@ it('job no-ops when region already advanced past initial state', function (): vo
 
     $historyBefore = MachineEvent::where('root_event_id', $rootEventId)->count();
 
-    // Late retry — region A is now at finished_a, not working_a
+    // Late retry — region A is now at finished, not working
     (new ParallelRegionJob(
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     // No new events — guard caught: region no longer at initial
@@ -95,7 +95,7 @@ it('job no-ops under lock when machine left parallel between action and lock', f
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     // Run region B
@@ -103,7 +103,7 @@ it('job no-ops under lock when machine left parallel between action and lock', f
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_b',
-        initialStateId: 'parallel_dispatch.processing.region_b.working_b',
+        initialStateId: 'parallel_dispatch.processing.region_b.working',
     ))->handle();
 
     // Transition to completed (machine leaves parallel)
@@ -122,7 +122,7 @@ it('job no-ops under lock when machine left parallel between action and lock', f
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     $historyAfter = MachineEvent::where('root_event_id', $rootEventId)->count();
