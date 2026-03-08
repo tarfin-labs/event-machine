@@ -214,7 +214,7 @@ class OrderFulfillmentMachine extends Machine
                 'states' => [
                     'processing' => [
                         'type' => 'parallel',
-                        'onDone' => [
+                        '@done' => [
                             'target' => 'fulfilled',
                             'actions' => 'sendFulfillmentNotification',
                         ],
