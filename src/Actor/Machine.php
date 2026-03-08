@@ -13,6 +13,7 @@ use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Casts\MachineCast;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
+use Tarfinlabs\EventMachine\Support\ArrayUtils;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
@@ -294,12 +295,12 @@ class Machine implements Castable, JsonSerializable, Stringable
 
                 // If the current machine event is not the last one, compare its context with the incremental context and get the differences.
                 if ($machineEvent->id !== $lastHistoryEvent->id && $index > 0) {
-                    $changes = $this->arrayRecursiveDiff($changes, $incrementalContext);
+                    $changes = ArrayUtils::recursiveDiff($changes, $incrementalContext);
                 }
 
                 // If there are changes, update the incremental context to the current event's context.
                 if (!empty($changes)) {
-                    $incrementalContext = $this->arrayRecursiveMerge($incrementalContext, $machineEvent->context);
+                    $incrementalContext = ArrayUtils::recursiveMerge($incrementalContext, $machineEvent->context);
                 }
 
                 $machineEvent->context = $changes;
@@ -651,46 +652,5 @@ class Machine implements Castable, JsonSerializable, Stringable
     }
 
     // region Private Methods
-    /**
-     * Compares two arrays recursively and returns the difference.
-     */
-    private function arrayRecursiveDiff(array $array1, array $array2): array
-    {
-        $difference = [];
-        foreach ($array1 as $key => $value) {
-            if (is_array($value)) {
-                if (!isset($array2[$key]) || !is_array($array2[$key])) {
-                    $difference[$key] = $value;
-                } else {
-                    $new_diff = $this->arrayRecursiveDiff($value, $array2[$key]);
-                    if ($new_diff !== []) {
-                        $difference[$key] = $new_diff;
-                    }
-                }
-            } elseif (!array_key_exists($key, $array2) || $array2[$key] !== $value) {
-                $difference[$key] = $value;
-            }
-        }
-
-        return $difference;
-    }
-
-    /**
-     * Merges two arrays recursively.
-     */
-    protected function arrayRecursiveMerge(array $array1, array $array2): array
-    {
-        $merged = $array1;
-
-        foreach ($array2 as $key => &$value) {
-            if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
-                $merged[$key] = $this->arrayRecursiveMerge($merged[$key], $value);
-            } else {
-                $merged[$key] = $value;
-            }
-        }
-
-        return $merged;
-    }
     // endregion
 }
