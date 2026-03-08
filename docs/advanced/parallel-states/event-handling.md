@@ -15,7 +15,7 @@ Events are broadcast to all active regions. Each region independently evaluates 
 
 When an event is only defined in one region, only that region transitions:
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel,editor-setup" -->
 ```php
 $state = $definition->getInitialState();
 // document: editing, format: normal
@@ -23,13 +23,15 @@ $state = $definition->getInitialState();
 $state = $definition->transition(['type' => 'BOLD'], $state);
 // document: editing (unchanged)
 // format: bold (transitioned)
+$state->matches('active.document.editing'); // => true // [!code hide]
+$state->matches('active.format.bold');      // => true // [!code hide]
 ```
 
 ### Multiple Region Handling
 
 The same event can trigger transitions in multiple regions simultaneously:
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel,multi-region-setup" -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define([
@@ -89,6 +91,7 @@ When entering a parallel state, entry actions fire in this specific order:
 3. **Region 2 initial state entry** - Second region's initial state
 4. *(continues for all regions in definition order)*
 
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
@@ -156,6 +159,7 @@ Exit actions fire for leaf states and the parallel state itself:
 Region (compound state) exit actions are **not** automatically invoked when leaving a parallel state. Only leaf states and the parallel state itself run exit actions.
 :::
 
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define(
@@ -212,6 +216,7 @@ MachineDefinition::define(
 
 All regions share the same `ContextManager`. Actions in any region can read and modify the context:
 
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -431,6 +436,7 @@ deep (machine)
         └── finished
 ```
 
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define([
@@ -481,11 +487,12 @@ MachineDefinition::define([
 
 The `$state->value` array always contains the fully-qualified IDs of all active **leaf** states:
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel,deep-nesting-setup" -->
 ```php
 $state = $definition->getInitialState();
 
 // State value includes ALL leaf states from ALL nesting levels:
+echo json_encode($state->value, JSON_PRETTY_PRINT); // [!code hide]
 $state->value;
 // [
 //     'deep.root.branch1.leaf.subleaf1.a',  // From nested parallel, region 1
@@ -498,63 +505,56 @@ $state->value;
 // - branch1's initial (leaf) is itself parallel with 2 regions: subleaf1, subleaf2
 // - Total: 2 (from nested) + 1 (from outer) = 3 leaf states
 ```
+<!-- doctest-json: ["deep.root.branch1.leaf.subleaf1.a","deep.root.branch1.leaf.subleaf2.x","deep.root.branch2.waiting"] -->
 
 ### Transitions in Deep Nesting
 
 Each region independently handles events at its own level:
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel,deep-nesting-setup" -->
 ```php
 $state = $definition->getInitialState();
 // branch1.leaf.subleaf1.a, branch1.leaf.subleaf2.x, branch2.waiting
 
 // Event handled by nested parallel region subleaf1
 $state = $definition->transition(['type' => 'GO1'], $state);
-$state->value;
-// [
-//     'deep.root.branch1.leaf.subleaf1.b',  // Changed: a → b
-//     'deep.root.branch1.leaf.subleaf2.x',  // Unchanged
-//     'deep.root.branch2.waiting',          // Unchanged
-// ]
+$state->matches('root.branch1.leaf.subleaf1.b'); // true
+$state->matches('root.branch1.leaf.subleaf2.x'); // true
+$state->matches('root.branch2.waiting');          // true
 
 // Event handled by nested parallel region subleaf2
 $state = $definition->transition(['type' => 'GO2'], $state);
-$state->value;
-// [
-//     'deep.root.branch1.leaf.subleaf1.b',  // Unchanged
-//     'deep.root.branch1.leaf.subleaf2.y',  // Changed: x → y
-//     'deep.root.branch2.waiting',          // Unchanged
-// ]
+$state->matches('root.branch1.leaf.subleaf1.b'); // true
+$state->matches('root.branch1.leaf.subleaf2.y'); // true
+$state->matches('root.branch2.waiting');          // true
 
 // Event handled by outer parallel region branch2
 $state = $definition->transition(['type' => 'DONE'], $state);
-$state->value;
-// [
-//     'deep.root.branch1.leaf.subleaf1.b',  // Unchanged
-//     'deep.root.branch1.leaf.subleaf2.y',  // Unchanged
-//     'deep.root.branch2.finished',         // Changed: waiting → finished
-// ]
+$state->matches('root.branch1.leaf.subleaf1.b'); // => true
+$state->matches('root.branch1.leaf.subleaf2.y'); // => true
+$state->matches('root.branch2.finished');         // => true
 ```
 
 ### Using `matches()` with Deep Nesting
 
 The `matches()` method checks for exact matches against active leaf states. You must provide the full path from the machine's initial state:
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel,deep-nesting-setup" -->
 ```php
+$state = $definition->getInitialState(); // [!code hide]
 // Check specific leaf states with matches() - must be full path
-$state->matches('root.branch1.leaf.subleaf1.a');  // true
-$state->matches('root.branch1.leaf.subleaf2.x');  // true
-$state->matches('root.branch2.waiting');          // true
+$state->matches('root.branch1.leaf.subleaf1.a');  // => true
+$state->matches('root.branch1.leaf.subleaf2.x');  // => true
+$state->matches('root.branch2.waiting');          // => true
 
 // Intermediate paths do NOT match
-$state->matches('root.branch1.leaf');  // false - not a leaf state
-$state->matches('root.branch1');       // false - not a leaf state
-$state->matches('root');               // false - not a leaf state
+$state->matches('root.branch1.leaf');  // => false
+$state->matches('root.branch1');       // => false
+$state->matches('root');               // => false
 
 // Partial paths (without machine id prefix) also don't work
-$state->matches('branch2.waiting');    // false - missing 'root' prefix
-$state->matches('subleaf1.a');         // false - missing full path
+$state->matches('branch2.waiting');    // => false
+$state->matches('subleaf1.a');         // => false
 ```
 
 ::: warning Full Paths Required
@@ -573,9 +573,10 @@ When a transition targets a parallel state, all of its regions are automatically
 
 ### From Non-Parallel to Parallel
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+$definition = // [!code hide]
 MachineDefinition::define([
     'id' => 'app',
     'initial' => 'idle',
@@ -610,17 +611,18 @@ $state->matches('idle');  // true
 
 $state = $definition->transition(['type' => 'START'], $state);
 // Both regions are automatically entered
-$state->matches('processing.task1.pending');  // true
-$state->matches('processing.task2.pending');  // true
+$state->matches('processing.task1.pending');  // => true
+$state->matches('processing.task2.pending');  // => true
 ```
 
 ### Transitioning Into Nested Parallel (Within Parallel Region)
 
 When you're already in a parallel state and a region transitions to a state that is itself parallel, all nested regions are properly initialized:
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+$definition = // [!code hide]
 MachineDefinition::define([
     'id' => 'nested',
     'initial' => 'active',
@@ -683,9 +685,9 @@ $state->value;
 //     'nested.active.outer2.waiting',         // Outer region unchanged
 // ]
 
-$state->matches('active.outer1.on.inner1.idle');  // true
-$state->matches('active.outer1.on.inner2.idle');  // true
-$state->matches('active.outer2.waiting');         // true
+$state->matches('active.outer1.on.inner1.idle');  // => true
+$state->matches('active.outer1.on.inner2.idle');  // => true
+$state->matches('active.outer2.waiting');         // => true
 ```
 
 ::: info Entry Actions When Entering Nested Parallel
