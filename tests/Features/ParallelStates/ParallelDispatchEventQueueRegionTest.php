@@ -81,7 +81,7 @@ it('two regions raise different events → each job processes its own', function
         initialStateId: 'parallel_dispatch_with_raise.processing.region_a.working',
     ))->handle();
 
-    // Job B does NOT raise events (RegionBEntryAction only sets context)
+    // Job B does NOT raise events (SetRegionBResultAction only sets context)
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithRaiseMachine::class,
         rootEventId: $rootEventId,
