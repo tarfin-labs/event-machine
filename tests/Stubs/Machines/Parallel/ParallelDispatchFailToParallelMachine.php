@@ -25,8 +25,8 @@ class ParallelDispatchFailToParallelMachine extends Machine
                 'states' => [
                     'primary_processing' => [
                         'type'   => 'parallel',
-                        'onDone' => 'completed',
-                        'onFail' => 'fallback_processing',
+                        '@done'  => 'completed',
+                        '@fail'  => 'fallback_processing',
                         'states' => [
                             'region_a' => [
                                 'initial' => 'working',
@@ -52,7 +52,7 @@ class ParallelDispatchFailToParallelMachine extends Machine
                     ],
                     'fallback_processing' => [
                         'type'   => 'parallel',
-                        'onDone' => 'completed',
+                        '@done'  => 'completed',
                         'states' => [
                             'fallback_a' => [
                                 'initial' => 'retrying',
