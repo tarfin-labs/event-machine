@@ -567,11 +567,11 @@ class MachineDefinition
     }
 
     /**
-     * Public proxy for initializing an EventBehavior from raw event data.
-     * Used by ParallelRegionJob to reconstruct the event behavior
-     * for region entry actions.
+     * Public proxy for initializing an EventBehavior.
+     * Resolves through the machine's event registry for both
+     * raw event arrays and EventBehavior instances.
      */
-    public function createEventBehavior(array $event, State $state): EventBehavior
+    public function createEventBehavior(EventBehavior|array $event, State $state): EventBehavior
     {
         return $this->initializeEvent($event, $state);
     }
@@ -587,7 +587,7 @@ class MachineDefinition
         State $state
     ): EventBehavior {
         if ($event instanceof EventBehavior) {
-            return $event;
+            return $this->resolveEventBehaviorThroughRegistry($event, $state);
         }
 
         if (isset($state->currentStateDefinition->machine->behavior[BehaviorType::Event->value][$event['type']])) {
@@ -601,6 +601,45 @@ class MachineDefinition
         }
 
         return EventDefinition::from($event);
+    }
+
+    /**
+     * Resolve an EventBehavior instance through the machine's event registry.
+     *
+     * When the caller sends an EventBehavior instance, the machine should
+     * resolve it through its own registry to ensure its own validation and
+     * class are used. This prevents callers from bypassing machine-level
+     * event validation by sending a different EventBehavior subclass.
+     *
+     * @param  EventBehavior  $event  The caller's event instance.
+     * @param  State  $state  The current state.
+     *
+     * @return EventBehavior The resolved event (machine's class or original if not in registry).
+     */
+    protected function resolveEventBehaviorThroughRegistry(EventBehavior $event, State $state): EventBehavior
+    {
+        $typeString      = $event->type;
+        $registeredClass = $state->currentStateDefinition->machine->behavior[BehaviorType::Event->value][$typeString] ?? null;
+
+        // Not in registry — fall back to caller's instance
+        if ($registeredClass === null) {
+            return $event;
+        }
+
+        // Same class — no re-instantiation needed (optimization)
+        if ($event instanceof $registeredClass) {
+            return $event;
+        }
+
+        // Different class — re-instantiate with machine's registered class, preserving metadata
+        return new $registeredClass(
+            type: $typeString,
+            payload: $event->payload instanceof \Spatie\LaravelData\Optional ? null : $event->payload,
+            isTransactional: $event->isTransactional,
+            actor: $event->actor($state->context),
+            version: $event->version instanceof \Spatie\LaravelData\Optional ? 1 : $event->version,
+            source: $event->source,
+        );
     }
 
     /**
