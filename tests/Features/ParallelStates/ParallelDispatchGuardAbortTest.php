@@ -41,7 +41,7 @@ it('generates correct PARALLEL_REGION_GUARD_ABORT event name', function (): void
 // Grup 2: Under-lock guard — "machine left parallel state"
 // ============================================================
 
-it('records guard_abort event when machine exits parallel between action and lock', function (): void {
+it('records parallel_dispatch_guard_abort event when machine exits parallel between action and lock', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
     $machine = ParallelDispatchGuardAbortMachine::create();
@@ -61,10 +61,10 @@ it('records guard_abort event when machine exits parallel between action and loc
             'sequence_number' => $lastEvent->sequence_number + 1,
             'created_at'      => now(),
             'machine_id'      => $lastEvent->machine_id,
-            'machine_value'   => ['guard_abort.completed'],
+            'machine_value'   => ['parallel_dispatch_guard_abort.completed'],
             'root_event_id'   => $rootEventId,
             'source'          => 'internal',
-            'type'            => 'guard_abort.parallel.processing.done',
+            'type'            => 'parallel_dispatch_guard_abort.parallel.processing.done',
             'version'         => 1,
             'payload'         => null,
             'context'         => $lastEvent->context,
@@ -76,8 +76,8 @@ it('records guard_abort event when machine exits parallel between action and loc
     (new ParallelRegionJob(
         machineClass: ParallelDispatchGuardAbortMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'guard_abort.processing.region_a',
-        initialStateId: 'guard_abort.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_guard_abort.processing.region_a',
+        initialStateId: 'parallel_dispatch_guard_abort.processing.region_a.working',
     ))->handle();
 
     // Verify abort event was recorded (concurrent event + abort event = +2)
@@ -97,7 +97,7 @@ it('records guard_abort event when machine exits parallel between action and loc
 // Grup 3: Under-lock guard — "region already advanced"
 // ============================================================
 
-it('records guard_abort event when region advances between action and lock', function (): void {
+it('records parallel_dispatch_guard_abort event when region advances between action and lock', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
     $machine = ParallelDispatchGuardAbortMachine::create();
@@ -105,16 +105,16 @@ it('records guard_abort event when region advances between action and lock', fun
     $rootEventId = $machine->state->history->first()->root_event_id;
 
     // During entry action (lockless phase), simulate a concurrent operation
-    // that advances region A to finished_a.
+    // that advances region A to finished.
     ConcurrentModificationAction::$onExecute = function () use ($rootEventId): void {
         $lastEvent = MachineEvent::where('root_event_id', $rootEventId)
             ->orderBy('sequence_number', 'desc')
             ->first();
 
-        // Machine is still in parallel state, but region A advanced to finished_a
+        // Machine is still in parallel state, but region A advanced to finished
         $currentValue = $lastEvent->machine_value;
         $newValue     = array_map(
-            fn (string $v) => str_replace('working_a', 'finished_a', $v),
+            fn (string $v) => str_replace('working', 'finished', $v),
             $currentValue,
         );
 
@@ -125,7 +125,7 @@ it('records guard_abort event when region advances between action and lock', fun
             'machine_value'   => $newValue,
             'root_event_id'   => $rootEventId,
             'source'          => 'internal',
-            'type'            => 'guard_abort.parallel.processing.region_a.region.enter',
+            'type'            => 'parallel_dispatch_guard_abort.parallel.processing.region_a.region.enter',
             'version'         => 1,
             'payload'         => null,
             'context'         => $lastEvent->context,
@@ -135,8 +135,8 @@ it('records guard_abort event when region advances between action and lock', fun
     (new ParallelRegionJob(
         machineClass: ParallelDispatchGuardAbortMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'guard_abort.processing.region_a',
-        initialStateId: 'guard_abort.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_guard_abort.processing.region_a',
+        initialStateId: 'parallel_dispatch_guard_abort.processing.region_a.working',
     ))->handle();
 
     $abortEvent = MachineEvent::where('root_event_id', $rootEventId)
@@ -169,10 +169,10 @@ it('abort event records discarded raised event count', function (): void {
             'sequence_number' => $lastEvent->sequence_number + 1,
             'created_at'      => now(),
             'machine_id'      => $lastEvent->machine_id,
-            'machine_value'   => ['guard_abort.completed'],
+            'machine_value'   => ['parallel_dispatch_guard_abort.completed'],
             'root_event_id'   => $rootEventId,
             'source'          => 'internal',
-            'type'            => 'guard_abort.parallel.processing.done',
+            'type'            => 'parallel_dispatch_guard_abort.parallel.processing.done',
             'version'         => 1,
             'payload'         => null,
             'context'         => $lastEvent->context,
@@ -182,8 +182,8 @@ it('abort event records discarded raised event count', function (): void {
     (new ParallelRegionJob(
         machineClass: ParallelDispatchGuardAbortMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'guard_abort.processing.region_a',
-        initialStateId: 'guard_abort.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_guard_abort.processing.region_a',
+        initialStateId: 'parallel_dispatch_guard_abort.processing.region_a.working',
     ))->handle();
 
     $abortEvent = MachineEvent::where('root_event_id', $rootEventId)
@@ -215,10 +215,10 @@ it('abort event preserves full context snapshot', function (): void {
             'sequence_number' => $lastEvent->sequence_number + 1,
             'created_at'      => now(),
             'machine_id'      => $lastEvent->machine_id,
-            'machine_value'   => ['guard_abort.completed'],
+            'machine_value'   => ['parallel_dispatch_guard_abort.completed'],
             'root_event_id'   => $rootEventId,
             'source'          => 'internal',
-            'type'            => 'guard_abort.parallel.processing.done',
+            'type'            => 'parallel_dispatch_guard_abort.parallel.processing.done',
             'version'         => 1,
             'payload'         => null,
             'context'         => $lastEvent->context,
@@ -228,8 +228,8 @@ it('abort event preserves full context snapshot', function (): void {
     (new ParallelRegionJob(
         machineClass: ParallelDispatchGuardAbortMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'guard_abort.processing.region_a',
-        initialStateId: 'guard_abort.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_guard_abort.processing.region_a',
+        initialStateId: 'parallel_dispatch_guard_abort.processing.region_a.working',
     ))->handle();
 
     $abortEvent = MachineEvent::where('root_event_id', $rootEventId)
@@ -259,14 +259,14 @@ it('abort event records work_was_discarded=false when entry action had no side e
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     // Now advance region A so a retry would hit the under-lock guard
     $machine = ParallelDispatchMachine::create(state: $rootEventId);
     $machine->send('REGION_A_DONE');
 
-    // Simulate: another job advances region A BACK to working_a AFTER the
+    // Simulate: another job advances region A BACK to working AFTER the
     // pre-lock guard but the initial state check fails under lock.
     // Actually, let's use a simpler approach: directly test the existing
     // guard test behavior — pre-lock guard catches this, not under-lock.
@@ -277,7 +277,7 @@ it('abort event records work_was_discarded=false when entry action had no side e
 // Grup 6: Machine restoration after abort event
 // ============================================================
 
-it('machine can be restored correctly after a guard_abort event exists in history', function (): void {
+it('machine can be restored correctly after a parallel_dispatch_guard_abort event exists in history', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
     $machine = ParallelDispatchGuardAbortMachine::create();
@@ -294,10 +294,10 @@ it('machine can be restored correctly after a guard_abort event exists in histor
             'sequence_number' => $lastEvent->sequence_number + 1,
             'created_at'      => now(),
             'machine_id'      => $lastEvent->machine_id,
-            'machine_value'   => ['guard_abort.completed'],
+            'machine_value'   => ['parallel_dispatch_guard_abort.completed'],
             'root_event_id'   => $rootEventId,
             'source'          => 'internal',
-            'type'            => 'guard_abort.parallel.processing.done',
+            'type'            => 'parallel_dispatch_guard_abort.parallel.processing.done',
             'version'         => 1,
             'payload'         => null,
             'context'         => $lastEvent->context,
@@ -307,8 +307,8 @@ it('machine can be restored correctly after a guard_abort event exists in histor
     (new ParallelRegionJob(
         machineClass: ParallelDispatchGuardAbortMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'guard_abort.processing.region_a',
-        initialStateId: 'guard_abort.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_guard_abort.processing.region_a',
+        initialStateId: 'parallel_dispatch_guard_abort.processing.region_a.working',
     ))->handle();
 
     // Verify abort event exists
@@ -321,7 +321,7 @@ it('machine can be restored correctly after a guard_abort event exists in histor
     $restored = ParallelDispatchGuardAbortMachine::create(state: $rootEventId);
 
     // Machine should be at 'completed' (the state set by concurrent modification)
-    expect($restored->state->currentStateDefinition->id)->toBe('guard_abort.completed');
+    expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_guard_abort.completed');
     expect($restored->state->isInParallelState())->toBeFalse();
 });
 
@@ -341,14 +341,14 @@ it('pre-lock guard no-op does NOT record abort event (no lock, no abort)', funct
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     (new ParallelRegionJob(
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_b',
-        initialStateId: 'parallel_dispatch.processing.region_b.working_b',
+        initialStateId: 'parallel_dispatch.processing.region_b.working',
     ))->handle();
 
     $machine = ParallelDispatchMachine::create(state: $rootEventId);
@@ -365,12 +365,12 @@ it('pre-lock guard no-op does NOT record abort event (no lock, no abort)', funct
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
-    // NO guard_abort event should exist — pre-lock guards don't record
+    // NO parallel_dispatch_guard_abort event should exist — pre-lock guards don't record
     $abortEvents = MachineEvent::where('root_event_id', $rootEventId)
-        ->where('type', 'like', '%guard_abort%')
+        ->where('type', 'like', '%parallel_dispatch_guard_abort%')
         ->count();
     expect($abortEvents)->toBe(0);
 });
