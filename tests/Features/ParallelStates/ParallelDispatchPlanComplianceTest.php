@@ -3,12 +3,11 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchChainedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithFailMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMultiRaiseMachine;
@@ -178,9 +177,9 @@ test('same scalar context key → last writer wins (plan #37)', function (): voi
     expect($report)->toHaveKey('turmob');
 
     // Verify the arrayRecursiveMerge behavior: scalar values under same key = last wins
-    $job       = new ParallelRegionJob('', '', '', '');
-    $mergeRef  = new ReflectionMethod($job, 'arrayRecursiveMerge');
-    $result    = $mergeRef->invoke($job, ['status' => 'a_done'], ['status' => 'b_done']);
+    $job      = new ParallelRegionJob('', '', '', '');
+    $mergeRef = new ReflectionMethod($job, 'arrayRecursiveMerge');
+    $result   = $mergeRef->invoke($job, ['status' => 'a_done'], ['status' => 'b_done']);
     expect($result['status'])->toBe('b_done');
 
     // Nested: deep merge preserves both sub-keys
