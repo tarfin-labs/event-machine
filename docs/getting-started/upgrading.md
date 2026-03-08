@@ -51,7 +51,7 @@ v4.1 adds six internal events for parallel dispatch observability:
 | `PARALLEL_REGION_GUARD_ABORT` | Under-lock guard discarded work (machine moved on) |
 | `PARALLEL_CONTEXT_CONFLICT` | Sibling region overwrote a shared context key (LWW) |
 | `PARALLEL_REGION_STALLED` | Region entry action completed without advancing (no raise) |
-| `PARALLEL_DONE` | All regions reached final, `onDone` fired |
+| `PARALLEL_DONE` | All regions reached final, `@done` fired |
 | `PARALLEL_FAIL` | Region job failed after all retries |
 
 All events are persisted as `MachineEvent` records — durable audit trail, not logs.
