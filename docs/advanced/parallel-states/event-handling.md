@@ -274,9 +274,10 @@ When multiple regions modify the same context key in response to the same event,
 
 When all regions of a parallel state reach their final states, the parallel state is considered complete. Use `onDone` to transition when this happens:
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+$definition = // [!code hide]
 MachineDefinition::define([
     'id' => 'checkout',
     'initial' => 'processing',
@@ -318,7 +319,7 @@ $state = $definition->transition(['type' => 'PAYMENT_SUCCESS'], $state);
 
 $state = $definition->transition(['type' => 'SHIPPED'], $state);
 // Now both regions are final - automatically transitions to 'complete'
-$state->matches('complete');  // true
+$state->matches('complete');  // => true
 ```
 
 ### onDone with Actions
