@@ -34,26 +34,26 @@ class E2EMultiRaiseMachine extends Machine
                         'onDone' => 'completed',
                         'states' => [
                             'region_a' => [
-                                'initial' => 'step_initial',
+                                'initial' => 'pending',
                                 'states'  => [
-                                    'step_initial' => [
+                                    'pending' => [
                                         'entry' => RegionAMultiRaiseAction::class,
-                                        'on'    => ['STEP_1_DONE' => 'step_1'],
+                                        'on'    => ['STEP_1_DONE' => 'advanced'],
                                     ],
-                                    'step_1' => [
-                                        'on' => ['STEP_2_DONE' => 'finished_a'],
+                                    'advanced' => [
+                                        'on' => ['STEP_2_DONE' => 'finished'],
                                     ],
-                                    'finished_a' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                             'region_b' => [
-                                'initial' => 'working_b',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_b' => [
+                                    'working' => [
                                         'entry' => RegionBRaiseAction::class,
-                                        'on'    => ['REGION_B_PROCESSED' => 'finished_b'],
+                                        'on'    => ['REGION_B_PROCESSED' => 'finished'],
                                     ],
-                                    'finished_b' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                         ],
