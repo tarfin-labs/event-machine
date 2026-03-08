@@ -46,7 +46,7 @@ it('records stall event when region entry action completes without raising event
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    // RegionAEntryAction only sets context, never raises events
+    // SetRegionAResultAction only sets context, never raises events
     (new ParallelRegionJob(
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
@@ -75,7 +75,7 @@ it('does not record stall event when entry action raises event that advances reg
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    // RegionARaiseAction raises REGION_A_PROCESSED → transitions to finished
+    // ProcessRegionAAction raises REGION_A_PROCESSED → transitions to finished
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithRaiseMachine::class,
         rootEventId: $rootEventId,
@@ -101,7 +101,7 @@ it('does not record stall event when entry action raises event that advances reg
 it('stall event payload includes context_changed=false when entry action has no side effects', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
-    // RegionBEntryAction sets context → context_changed=true for region B
+    // SetRegionBResultAction sets context → context_changed=true for region B
     // But for this test, we check region_b which DOES set context
     $machine = ParallelDispatchMachine::create();
     $machine->persist();
@@ -134,7 +134,7 @@ it('records separate stall events for each region that does not advance', functi
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    // Both RegionAEntryAction and RegionBEntryAction only set context — no raise
+    // Both SetRegionAResultAction and SetRegionBResultAction only set context — no raise
     (new ParallelRegionJob(
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
