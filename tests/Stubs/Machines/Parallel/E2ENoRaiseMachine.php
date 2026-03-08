@@ -6,8 +6,8 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetContextWithoutRaiseAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionBAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetContextWithoutRaiseAction;
 
 /**
  * Region A sets context but does NOT raise an event.
