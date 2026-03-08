@@ -12,7 +12,7 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
  * Scalar: shared_scalar = 'value_from_b'.
  * Array: shared_array = ['from_b' => true, 'score' => 92].
  */
-class WriteSharedKeyBAction extends ActionBehavior
+class ProcessSharedKeyBAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
