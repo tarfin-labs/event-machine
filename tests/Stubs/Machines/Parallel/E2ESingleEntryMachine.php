@@ -32,19 +32,19 @@ class E2ESingleEntryMachine extends Machine
                         'onDone' => 'completed',
                         'states' => [
                             'region_a' => [
-                                'initial' => 'working_a',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_a' => [
+                                    'working' => [
                                         'entry' => RegionARaiseAction::class,
-                                        'on'    => ['REGION_A_PROCESSED' => 'finished_a'],
+                                        'on'    => ['REGION_A_PROCESSED' => 'finished'],
                                     ],
-                                    'finished_a' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                             'region_b' => [
-                                'initial' => 'done_b',
+                                'initial' => 'completed',
                                 'states'  => [
-                                    'done_b' => ['type' => 'final'],
+                                    'completed' => ['type' => 'final'],
                                 ],
                             ],
                         ],
