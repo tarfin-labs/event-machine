@@ -11,6 +11,8 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EBasicMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EChainedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EMultiRaiseMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EDeepContextMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EMixedRegionMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2ESingleEntryMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EThreeRegionMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithRaiseMachine;
@@ -417,4 +419,63 @@ it('prevents subsequent region jobs from running after onFail transition', funct
     expect($restored->state->context->get('region_b_result'))->toBeNull();
     // Only 1 dispatch happened (A), not 2 — exception interrupted the loop
     // This is implicit: B's context being null proves it never executed
+});
+
+// ============================================================
+// Grup 6: Mixed Regions — dispatch + inline
+//
+// Verifies that regions with entry actions are dispatched while
+// regions without entry actions run inline. Also tests sequential
+// fallback when conditions for dispatch aren't met.
+// ============================================================
+
+it('dispatches regions with entry actions and runs inline region without', function (): void {
+    // E2EMixedRegionMachine: A (entry+raise), B (entry+raise), C (no entry, initial=final)
+    // A and B dispatched, C runs inline → all final → onDone → completed
+    $machine = E2EMixedRegionMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // Only 2 dispatches (A and B), not 3 — C has no entry actions
+    expect($machine->definition->pendingParallelDispatches)->toHaveCount(2);
+
+    $machine->dispatchPendingParallelJobs();
+
+    $restored = E2EMixedRegionMachine::create(state: $rootEventId);
+
+    // All regions completed → onDone fired
+    expect($restored->state->currentStateDefinition->id)->toBe('e2e_mixed.completed');
+    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+});
+
+it('falls back to sequential mode when only one region has entry actions', function (): void {
+    Bus::fake();
+
+    // E2ESingleEntryMachine: region_a has entry action, region_b has no entry (initial=final)
+    // shouldDispatchParallel requires ≥2 regions with entry → false → sequential mode
+    $machine = E2ESingleEntryMachine::create();
+    $machine->persist();
+
+    // No dispatches queued — sequential mode
+    expect($machine->definition->pendingParallelDispatches)->toBeEmpty();
+
+    Bus::assertNotDispatched(ParallelRegionJob::class);
+});
+
+it('falls back to sequential mode when parallel dispatch is disabled', function (): void {
+    Bus::fake();
+
+    // Override: disable dispatch even though machine qualifies
+    config()->set('machine.parallel_dispatch.enabled', false);
+
+    $machine = E2EBasicMachine::create();
+    $machine->persist();
+
+    expect($machine->definition->pendingParallelDispatches)->toBeEmpty();
+
+    Bus::assertNotDispatched(ParallelRegionJob::class);
+
+    // Restore for other tests in this file
+    config()->set('machine.parallel_dispatch.enabled', true);
 });
