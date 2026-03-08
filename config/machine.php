@@ -64,5 +64,10 @@ return [
 
         // Seconds before a lock is considered stale
         'lock_ttl' => env('MACHINE_PARALLEL_DISPATCH_LOCK_TTL', 60),
+
+        // Job configuration for ParallelRegionJob
+        'job_timeout' => env('MACHINE_PARALLEL_DISPATCH_JOB_TIMEOUT', 300),
+        'job_tries'   => env('MACHINE_PARALLEL_DISPATCH_JOB_TRIES', 3),
+        'job_backoff' => env('MACHINE_PARALLEL_DISPATCH_JOB_BACKOFF', 30),
     ],
 ];
