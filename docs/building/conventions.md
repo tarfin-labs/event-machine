@@ -757,8 +757,8 @@ MachineDefinition::define(
 );
 ```
 
-::: info XState-Inherited Keys
-Some keys inherited from XState use `camelCase` by design: `onDone` and `scenarioType`. These are exceptions to the `snake_case` rule and should be kept as-is for consistency with XState conventions.
+::: info Internal Keys — `@` Prefix Convention
+Internal framework keys use the `@` prefix: `@always`, `@done`, `@fail`. These are distinct from user-defined event types (`SCREAMING_SNAKE_CASE`) and state names (`snake_case`). The only remaining XState-inherited camelCase key is `scenarioType`.
 :::
 
 ## File Organization
