@@ -4,7 +4,7 @@ When a machine enters a parallel state, region entry actions normally run sequen
 
 **Related pages:**
 - [Parallel States Overview](./index) - Basic concepts and syntax
-- [Event Handling](./event-handling) - Events, entry/exit actions, `onDone`
+- [Event Handling](./event-handling) - Events, entry/exit actions, `@done`
 - [Persistence](./persistence) - Database storage and restoration
 
 ## What It Does
@@ -46,11 +46,11 @@ Each `ParallelRegionJob` independently:
 4. Reloads fresh state (sees other jobs' changes)
 5. Applies context diff (merge, not overwrite)
 6. Processes raised events
-7. Checks `areAllRegionsFinal()` → fires `onDone` if ready
+7. Checks `areAllRegionsFinal()` → fires `@done` if ready
 8. Persists and releases lock
 
 ### Phase 3 — Continuation
-The **last job to complete** naturally becomes the orchestrator. Its `areAllRegionsFinal()` returns true → `onDone` fires → machine transitions to the next state.
+The **last job to complete** naturally becomes the orchestrator. Its `areAllRegionsFinal()` returns true → `@done` fires → machine transitions to the next state.
 
 ## Configuration
 
@@ -157,21 +157,21 @@ When a job exhausts all retries, Laravel calls the `failed()` method. The job:
 3. Creates a `@fail` event with error details
 4. Calls `processParallelOnFail()` on the parallel parent
 
-### With `onFail` Configured
+### With `@fail` Configured
 
 ```php ignore
 'processing' => [
     'type'   => 'parallel',
-    'onDone' => 'completed',
-    'onFail' => 'failed',      // ← Target state on failure
+    '@done' => 'completed',
+    '@fail' => 'failed',      // ← Target state on failure
     'states' => [...],
 ],
 'failed' => ['type' => 'final'],
 ```
 
-The machine exits the parallel state and transitions to the `onFail` target. Sibling jobs that haven't started will no-op (pre-lock guard). Sibling jobs that completed already have their context preserved.
+The machine exits the parallel state and transitions to the `@fail` target. Sibling jobs that haven't started will no-op (pre-lock guard). Sibling jobs that completed already have their context preserved.
 
-### Without `onFail`
+### Without `@fail`
 
 The machine stays in the parallel state. A `PARALLEL_FAIL` internal event is recorded in history for debugging. The machine remains operable — you can send events manually or wait for retries.
 
@@ -220,15 +220,15 @@ class FindeksApiAction extends ActionBehavior
 }
 ```
 
-### 3. Use `onFail` for Error Handling
+### 3. Use `@fail` for Error Handling
 
-Always define `onFail` on parallel states that use dispatch. This provides a clean error state instead of leaving the machine stuck in parallel:
+Always define `@fail` on parallel states that use dispatch. This provides a clean error state instead of leaving the machine stuck in parallel:
 
 ```php ignore
 'processing' => [
     'type'   => 'parallel',
-    'onDone' => 'completed',
-    'onFail' => 'failed',
+    '@done' => 'completed',
+    '@fail' => 'failed',
     'states' => [...],
 ],
 ```
@@ -243,7 +243,7 @@ The dispatch mechanism records internal events in machine history for full obser
 | `PARALLEL_REGION_GUARD_ABORT` | Under-lock guard discards work | `reason`, `discarded_context`, `discarded_events`, `work_was_discarded` |
 | `PARALLEL_CONTEXT_CONFLICT` | Second region overwrites key set by first | `region_id`, `conflicted_keys` |
 | `PARALLEL_REGION_STALLED` | Entry action completes but region does not advance | `region_id`, `initial_state_id`, `context_changed` |
-| `PARALLEL_DONE` | All regions reach final, `onDone` fires | — |
+| `PARALLEL_DONE` | All regions reach final, `@done` fires | — |
 | `PARALLEL_FAIL` | Job failed after all retries | `region_id`, `error`, `exception`, `attempts` |
 
 Use these events for monitoring and debugging. All events are persisted in `machine_events` as durable audit trail records — they are never lost, unlike log entries.
