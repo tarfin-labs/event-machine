@@ -1042,6 +1042,91 @@ class MachineDefinition
     }
 
     /**
+     * Check if a final state completes a nested parallel state (parallel within a parallel region).
+     *
+     * When a transition lands on a final state inside a nested parallel's sub-region,
+     * check if all sub-regions of that nested parallel are now final. If so, fire
+     * the nested parallel's onDone to transition to its target state.
+     */
+    protected function processNestedParallelCompletion(
+        State $state,
+        StateDefinition $finalState,
+        EventBehavior $eventBehavior,
+    ): void {
+        // Walk up: finalState → region → possible nested parallel
+        $region = $finalState->parent;
+        if ($region === null) {
+            return;
+        }
+
+        $parallelParent = $region->parent;
+        if ($parallelParent === null || $parallelParent->type !== StateDefinitionType::PARALLEL) {
+            return;
+        }
+
+        // Skip if this IS the outermost parallel (handled by the main check at end of transitionParallelState)
+        if ($parallelParent === $state->currentStateDefinition) {
+            return;
+        }
+
+        if (!$this->areAllRegionsFinal($parallelParent, $state)) {
+            return;
+        }
+
+        if (!isset($parallelParent->config['onDone'])) {
+            return;
+        }
+
+        $onDoneConfig = $parallelParent->config['onDone'];
+        $targetId     = is_array($onDoneConfig) ? ($onDoneConfig['target'] ?? null) : $onDoneConfig;
+
+        if ($targetId === null) {
+            return;
+        }
+
+        $target = $this->getNearestStateDefinitionByString($targetId, $parallelParent);
+        if (!$target instanceof StateDefinition) {
+            return;
+        }
+
+        $state->setInternalEventBehavior(
+            type: InternalEvent::PARALLEL_DONE,
+            placeholder: $parallelParent->route,
+        );
+
+        // Replace all nested parallel leaf states with the onDone target
+        $values    = $state->value;
+        $newValues = [];
+        foreach ($values as $v) {
+            $isNested = false;
+            foreach ($parallelParent->stateDefinitions as $r) {
+                if (str_starts_with($v, $r->id)) {
+                    $isNested = true;
+                    break;
+                }
+            }
+            if (!$isNested) {
+                $newValues[] = $v;
+            }
+        }
+
+        $resolvedTarget = $target->findInitialStateDefinition() ?? $target;
+        $newValues[]    = $resolvedTarget->id;
+        $state->setValues($newValues);
+
+        $target->runEntryActions($state, $eventBehavior);
+        if ($resolvedTarget !== $target) {
+            $resolvedTarget->runEntryActions($state, $eventBehavior);
+        }
+
+        // Recurse: the onDone target might itself be final
+        if ($resolvedTarget->type === StateDefinitionType::FINAL) {
+            $this->processCompoundOnDone($state, $resolvedTarget, $eventBehavior);
+            $this->processNestedParallelCompletion($state, $resolvedTarget, $eventBehavior);
+        }
+    }
+
+    /**
      * Exit a parallel state and transition to a target state.
      *
      * Shared logic between processParallelOnDone and processParallelOnFail:
@@ -1215,6 +1300,7 @@ class MachineDefinition
             // region), fire the compound state's onDone transition.
             if ($targetState->type === StateDefinitionType::FINAL) {
                 $this->processCompoundOnDone($state, $targetState, $eventBehavior);
+                $this->processNestedParallelCompletion($state, $targetState, $eventBehavior);
             }
         }
 
