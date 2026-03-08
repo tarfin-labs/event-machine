@@ -44,6 +44,9 @@ class Machine implements Castable, JsonSerializable, Stringable
     /** The current state of the machine */
     public ?State $state = null;
 
+    /** Whether parallel region jobs were dispatched to the queue in this lifecycle */
+    public bool $dispatched = false;
+
     // endregion
 
     // region Constructors
@@ -265,6 +268,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         }
 
         $this->definition->pendingParallelDispatches = [];
+        $this->dispatched                            = true;
     }
 
     // endregion
