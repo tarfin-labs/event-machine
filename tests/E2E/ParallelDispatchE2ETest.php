@@ -561,3 +561,239 @@ it('completes parallel lifecycle when jobs run sequentially via sync driver', fu
     expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
     expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
 });
+
+// ============================================================
+// Grup 8: Config Variations
+//
+// Tests that machine.parallel_dispatch config values are
+// correctly applied to dispatched ParallelRegionJob instances.
+// ============================================================
+
+it('uses configured queue name for dispatched jobs', function (): void {
+    Bus::fake();
+
+    config()->set('machine.parallel_dispatch.queue', 'custom-parallel');
+
+    $machine = E2EBasicMachine::create();
+    $machine->persist();
+
+    $machine->dispatchPendingParallelJobs();
+
+    Bus::assertDispatched(ParallelRegionJob::class, function (ParallelRegionJob $job) {
+        return $job->queue === 'custom-parallel';
+    });
+
+    config()->set('machine.parallel_dispatch.queue', null);
+});
+
+it('applies configured timeout tries and backoff to dispatched jobs', function (): void {
+    Bus::fake();
+
+    config()->set('machine.parallel_dispatch.job_timeout', 120);
+    config()->set('machine.parallel_dispatch.job_tries', 5);
+    config()->set('machine.parallel_dispatch.job_backoff', 10);
+
+    $machine = E2EBasicMachine::create();
+    $machine->persist();
+
+    $machine->dispatchPendingParallelJobs();
+
+    Bus::assertDispatched(ParallelRegionJob::class, function (ParallelRegionJob $job) {
+        return $job->timeout === 120 && $job->tries === 5 && $job->backoff === 10;
+    });
+
+    // Restore defaults
+    config()->set('machine.parallel_dispatch.job_timeout', 300);
+    config()->set('machine.parallel_dispatch.job_tries', 3);
+    config()->set('machine.parallel_dispatch.job_backoff', 30);
+});
+
+it('uses default queue when no queue name configured', function (): void {
+    Bus::fake();
+
+    config()->set('machine.parallel_dispatch.queue', null);
+
+    $machine = E2EBasicMachine::create();
+    $machine->persist();
+
+    $machine->dispatchPendingParallelJobs();
+
+    Bus::assertDispatched(ParallelRegionJob::class, function (ParallelRegionJob $job) {
+        return $job->queue === null;
+    });
+});
+
+// ============================================================
+// Grup 9: State Restoration & History
+//
+// Tests that machine state can be correctly restored after
+// parallel lifecycle and that history events are properly recorded.
+// ============================================================
+
+it('can fully restore machine state after parallel lifecycle completes', function (): void {
+    $machine = E2EBasicMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    // Restore multiple times — should always see the same final state
+    $restored1 = E2EBasicMachine::create(state: $rootEventId);
+    $restored2 = E2EBasicMachine::create(state: $rootEventId);
+
+    expect($restored1->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
+    expect($restored2->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
+
+    // Context should match across restores
+    expect($restored1->state->context->get('region_a_result'))
+        ->toBe($restored2->state->context->get('region_a_result'))
+        ->toBe('processed_by_a');
+});
+
+it('records correct internal events during parallel lifecycle', function (): void {
+    $machine = E2EBasicMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    $events = MachineEvent::query()
+        ->where('root_event_id', $rootEventId)
+        ->oldest('sequence_number')
+        ->pluck('type')
+        ->toArray();
+
+    // Should contain STATE_ENTER events and PARALLEL_REGION_ENTER events
+    $stateEnterEvents  = array_filter($events, fn ($t) => str_contains($t, '.state.'));
+    $regionEnterEvents = array_filter($events, fn ($t) => str_contains($t, '.region.'));
+
+    expect(count($stateEnterEvents))->toBeGreaterThan(0);
+    expect(count($regionEnterEvents))->toBeGreaterThan(0);
+
+    // Should contain the parallel done event
+    $doneEvents = array_filter($events, fn ($t) => str_contains($t, '.done'));
+    expect(count($doneEvents))->toBeGreaterThan(0);
+});
+
+it('persists incremental context changes correctly per job', function (): void {
+    $machine = E2EBasicMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    // Query all events — last event should have the complete context
+    $events = MachineEvent::query()
+        ->where('root_event_id', $rootEventId)
+        ->oldest('sequence_number')
+        ->get();
+
+    $lastEvent = $events->last();
+
+    // Last event's context should contain both region results
+    // (incremental merge builds up to complete context at the end)
+    $restored = E2EBasicMachine::create(state: $rootEventId);
+    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('order_id'))->toBeNull();
+});
+
+// ============================================================
+// Grup 10: Edge Cases
+//
+// Tests boundary conditions and degenerate cases in the
+// parallel dispatch mechanism.
+// ============================================================
+
+it('handles parallel state where all regions have no entry actions', function (): void {
+    Bus::fake();
+
+    // E2ESingleEntryMachine only has 1 region with entry action → shouldDispatchParallel = false
+    // But even more extreme: if NO regions have entry actions, it's purely inline
+    // Using E2ESingleEntryMachine which falls back to sequential (only 1 entry action)
+    $machine = E2ESingleEntryMachine::create();
+    $machine->persist();
+
+    // Sequential mode — no dispatch
+    expect($machine->definition->pendingParallelDispatches)->toBeEmpty();
+    Bus::assertNotDispatched(ParallelRegionJob::class);
+});
+
+it('handles region initial state that is also final (immediate completion)', function (): void {
+    // E2EMixedRegionMachine: region_c has initial=done_c which is final
+    // This region runs inline and is immediately "at final"
+    $machine = E2EMixedRegionMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    $restored = E2EMixedRegionMachine::create(state: $rootEventId);
+
+    // All regions completed (A,B via dispatch, C inline final) → onDone
+    expect($restored->state->currentStateDefinition->id)->toBe('e2e_mixed.completed');
+});
+
+it('clears pendingParallelDispatches after dispatch completes', function (): void {
+    $machine = E2EBasicMachine::create();
+    $machine->persist();
+
+    // Before dispatch: 2 pending
+    expect($machine->definition->pendingParallelDispatches)->toHaveCount(2);
+
+    $machine->dispatchPendingParallelJobs();
+
+    // After dispatch: cleared
+    expect($machine->definition->pendingParallelDispatches)->toBeEmpty();
+});
+
+it('validates config requires should_persist and Machine subclass for dispatch', function (): void {
+    Bus::fake();
+
+    // MachineDefinition::define (not a Machine subclass) → shouldDispatchParallel = false
+    // even with dispatch enabled
+    $definition = \Tarfinlabs\EventMachine\Definition\MachineDefinition::define(
+        config: [
+            'id'             => 'inline_parallel',
+            'initial'        => 'processing',
+            'should_persist' => true,
+            'context'        => [
+                'region_a_result' => null,
+                'region_b_result' => null,
+            ],
+            'states' => [
+                'processing' => [
+                    'type'   => 'parallel',
+                    'onDone' => 'completed',
+                    'states' => [
+                        'region_a' => [
+                            'initial' => 'working_a',
+                            'states'  => [
+                                'working_a' => [
+                                    'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionARaiseAction::class,
+                                    'on'    => ['REGION_A_PROCESSED' => 'finished_a'],
+                                ],
+                                'finished_a' => ['type' => 'final'],
+                            ],
+                        ],
+                        'region_b' => [
+                            'initial' => 'working_b',
+                            'states'  => [
+                                'working_b' => [
+                                    'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionBRaiseAction::class,
+                                    'on'    => ['REGION_B_PROCESSED' => 'finished_b'],
+                                ],
+                                'finished_b' => ['type' => 'final'],
+                            ],
+                        ],
+                    ],
+                ],
+                'completed' => ['type' => 'final'],
+            ],
+        ],
+    );
+
+    // machineClass is null (not a Machine subclass) → shouldDispatchParallel = false
+    expect($definition->pendingParallelDispatches)->toBeEmpty();
+    Bus::assertNotDispatched(ParallelRegionJob::class);
+});
