@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Support\ArrayUtils;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
@@ -176,15 +177,12 @@ test('same scalar context key → last writer wins (plan #37)', function (): voi
     expect($report)->toHaveKey('findeks');
     expect($report)->toHaveKey('turmob');
 
-    // Verify the arrayRecursiveMerge behavior: scalar values under same key = last wins
-    $job      = new ParallelRegionJob('', '', '', '');
-    $mergeRef = new ReflectionMethod($job, 'arrayRecursiveMerge');
-    $result   = $mergeRef->invoke($job, ['status' => 'a_done'], ['status' => 'b_done']);
+    // Verify the ArrayUtils::recursiveMerge behavior: scalar values under same key = last wins
+    $result = ArrayUtils::recursiveMerge(['status' => 'a_done'], ['status' => 'b_done']);
     expect($result['status'])->toBe('b_done');
 
     // Nested: deep merge preserves both sub-keys
-    $result = $mergeRef->invoke(
-        $job,
+    $result = ArrayUtils::recursiveMerge(
         ['report' => ['findeks' => ['score' => 750]]],
         ['report' => ['turmob' => ['status' => 'clean']]],
     );
