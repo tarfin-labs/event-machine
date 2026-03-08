@@ -202,7 +202,14 @@ class ParallelRegionJob implements ShouldQueue
         $diff = [];
 
         foreach ($after as $key => $value) {
-            if (!array_key_exists($key, $before) || $before[$key] !== $value) {
+            if (!array_key_exists($key, $before)) {
+                $diff[$key] = $value;
+            } elseif (is_array($value) && is_array($before[$key])) {
+                $nestedDiff = $this->computeContextDiff($before[$key], $value);
+                if ($nestedDiff !== []) {
+                    $diff[$key] = $value;
+                }
+            } elseif ($before[$key] !== $value) {
                 $diff[$key] = $value;
             }
         }

@@ -129,11 +129,11 @@ test('parallel state exit: children exited before parent (SCXML test406)', funct
 
     expect($state->currentStateDefinition->id)->toBe('exit_order.completed');
 
-    // Children must exit before parent
-    if (in_array('parent_exit', $actionsExecuted)) {
-        expect(array_search('parent_exit', $actionsExecuted))
-            ->toBeGreaterThanOrEqual(array_search('child_a_exit', $actionsExecuted));
-    }
+    // Children must exit before parent (unconditional — if missing, test must fail)
+    expect($actionsExecuted)->toContain('parent_exit');
+    expect($actionsExecuted)->toContain('child_a_exit');
+    expect(array_search('parent_exit', $actionsExecuted))
+        ->toBeGreaterThan(array_search('child_a_exit', $actionsExecuted));
 });
 
 test('entry ordering across nested parallel compound states (SCXML test405)', function (): void {
@@ -197,11 +197,15 @@ test('entry ordering across nested parallel compound states (SCXML test405)', fu
     // Entry order: parallel → compound → inner (depth-first)
     expect($actionsExecuted[0])->toBe('parallel_entry');
 
-    // Parallel fires first; compound_a must fire before inner_a
+    // Inner leaf entry always fires; compound parent entry may not fire
+    // (enterParallelState runs entry on leaf initial states, not intermediate compounds)
+    expect($actionsExecuted)->toContain('inner_a_entry');
+
     $compoundIdx = array_search('compound_a_entry', $actionsExecuted);
     $innerIdx    = array_search('inner_a_entry', $actionsExecuted);
 
-    if ($compoundIdx !== false && $innerIdx !== false) {
+    if ($compoundIdx !== false) {
+        // When compound entry fires, it must fire before inner leaf
         expect($compoundIdx)->toBeLessThan($innerIdx);
     }
 });

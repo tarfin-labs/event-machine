@@ -84,9 +84,13 @@ it('@fail payload contains failure details', function (): void {
 
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
 
-    // Find the PARALLEL_FAIL event
+    // Find the PARALLEL_FAIL event in history
     $failEvent = $restored->state->history->first(
         fn ($e) => str_contains($e->type, 'parallel') && str_contains($e->type, 'fail')
     );
     expect($failEvent)->not->toBeNull();
+
+    // Machine must have transitioned to error state
+    expect($restored->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($restored->state->isInParallelState())->toBeFalse();
 });

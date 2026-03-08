@@ -999,54 +999,7 @@ class MachineDefinition
         $onDoneConfig = $parallelState->config['onDone'];
         $targetId     = is_array($onDoneConfig) ? ($onDoneConfig['target'] ?? null) : $onDoneConfig;
 
-        if ($targetId === null) {
-            return $state;
-        }
-
-        $targetState = $this->getNearestStateDefinitionByString($targetId, $parallelState);
-
-        if (!$targetState instanceof StateDefinition) {
-            return $state;
-        }
-
-        // Run exit actions on all active states and record region exits
-        foreach ($state->value as $activeStateId) {
-            $activeState = $this->idMap[$activeStateId] ?? null;
-            $activeState?->runExitActions($state);
-
-            // Find and record region exit
-            $regionParent = $activeState?->parent;
-            while ($regionParent !== null && $regionParent->parent !== $parallelState) {
-                $regionParent = $regionParent->parent;
-            }
-            if ($regionParent !== null) {
-                $state->setInternalEventBehavior(
-                    type: InternalEvent::PARALLEL_REGION_EXIT,
-                    placeholder: $regionParent->route,
-                );
-            }
-        }
-
-        // Run exit action on parallel state itself
-        $parallelState->runExitActions($state);
-
-        // Transition to the target state (use target itself if atomic/final)
-        $initialState                  = $targetState->findInitialStateDefinition() ?? $targetState;
-        $state->currentStateDefinition = $initialState;
-        $state->value                  = [$state->currentStateDefinition->id];
-
-        // Run entry actions on target state (and initial if different)
-        $targetState->runEntryActions($state, $eventBehavior);
-        if ($initialState !== $targetState) {
-            $initialState->runEntryActions($state, $eventBehavior);
-        }
-
-        $state->setInternalEventBehavior(
-            type: InternalEvent::STATE_ENTRY_FINISH,
-            placeholder: $state->currentStateDefinition->route,
-        );
-
-        return $state;
+        return $this->exitParallelStateAndTransition($parallelState, $state, $targetId, $eventBehavior);
     }
 
     /**
@@ -1077,6 +1030,30 @@ class MachineDefinition
         $onFailConfig = $parallelState->config['onFail'];
         $targetId     = is_array($onFailConfig) ? ($onFailConfig['target'] ?? null) : $onFailConfig;
 
+        // Run onFail actions BEFORE exit (can inspect parallel state for error context)
+        if (is_array($onFailConfig) && isset($onFailConfig['actions'])) {
+            $actions = is_array($onFailConfig['actions']) ? $onFailConfig['actions'] : [$onFailConfig['actions']];
+            foreach ($actions as $action) {
+                $this->runAction($action, $state, $eventBehavior);
+            }
+        }
+
+        return $this->exitParallelStateAndTransition($parallelState, $state, $targetId, $eventBehavior);
+    }
+
+    /**
+     * Exit a parallel state and transition to a target state.
+     *
+     * Shared logic between processParallelOnDone and processParallelOnFail:
+     * runs exit actions on all active child states, records region exits,
+     * exits the parallel state itself, then transitions to the target.
+     */
+    protected function exitParallelStateAndTransition(
+        StateDefinition $parallelState,
+        State $state,
+        ?string $targetId,
+        ?EventBehavior $eventBehavior,
+    ): State {
         if ($targetId === null) {
             return $state;
         }
@@ -1085,14 +1062,6 @@ class MachineDefinition
 
         if (!$targetState instanceof StateDefinition) {
             return $state;
-        }
-
-        // Run onFail actions BEFORE exit (can inspect parallel state for error context)
-        if (is_array($onFailConfig) && isset($onFailConfig['actions'])) {
-            $actions = is_array($onFailConfig['actions']) ? $onFailConfig['actions'] : [$onFailConfig['actions']];
-            foreach ($actions as $action) {
-                $this->runAction($action, $state, $eventBehavior);
-            }
         }
 
         // Run exit actions on all active states and record region exits
