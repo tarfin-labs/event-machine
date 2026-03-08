@@ -41,6 +41,7 @@ enum InternalEvent: string
     case PARALLEL_REGION_ENTER       = '{machine}.parallel.{placeholder}.region.enter';
     case PARALLEL_REGION_EXIT        = '{machine}.parallel.{placeholder}.region.exit';
     case PARALLEL_REGION_GUARD_ABORT = '{machine}.parallel.{placeholder}.region.guard_abort';
+    case PARALLEL_CONTEXT_CONFLICT   = '{machine}.parallel.{placeholder}.context.conflict';
     case PARALLEL_DONE               = '{machine}.parallel.{placeholder}.done';
     case PARALLEL_FAIL               = '{machine}.parallel.{placeholder}.fail';
 
