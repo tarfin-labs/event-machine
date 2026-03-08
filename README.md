@@ -64,6 +64,7 @@ MachineDefinition::define(
 |---------|-------------|
 | **Event Sourced** | Every transition persisted. Full audit trail. Replay history. |
 | **Behaviors** | Guards validate, calculators compute, actions execute. |
+| **Parallel Dispatch** | True parallel execution via Laravel queues. 5s + 2s = 5s, not 7s. |
 | **Testable** | Fake any behavior. Assert states. Verify transitions. |
 | **Type-Safe Context** | Spatie Data powered. Validated. IDE autocompletion. |
 | **Archival** | Compress millions of events. Restore any machine instantly. |
@@ -103,7 +104,7 @@ $order->machine->state->history->count();    // 3 events tracked
 
 ## Documentation
 
-For guards, actions, calculators, hierarchical states, validation, testing, and more:
+For guards, actions, calculators, hierarchical states, parallel dispatch, validation, testing, and more:
 
 **[Read the Documentation →](https://event-machine.tarfin.com)**
 
