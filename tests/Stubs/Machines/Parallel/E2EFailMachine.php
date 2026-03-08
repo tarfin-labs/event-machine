@@ -6,14 +6,14 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\FailingEntryAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionBRaiseAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ThrowRuntimeExceptionAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionBAction;
 
 /**
  * E2E test machine for parallel region failure handling.
  *
- * Region A: FailingEntryAction → throws RuntimeException.
- * Region B: RegionBRaiseAction → normal raise action.
+ * Region A: ThrowRuntimeExceptionAction → throws RuntimeException.
+ * Region B: ProcessRegionBAction → normal raise action.
  * onFail → failed state, onDone → completed state.
  */
 class E2EFailMachine extends Machine
@@ -39,7 +39,7 @@ class E2EFailMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => FailingEntryAction::class,
+                                        'entry' => ThrowRuntimeExceptionAction::class,
                                         'on'    => ['REGION_A_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
@@ -49,7 +49,7 @@ class E2EFailMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionBRaiseAction::class,
+                                        'entry' => ProcessRegionBAction::class,
                                         'on'    => ['REGION_B_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
