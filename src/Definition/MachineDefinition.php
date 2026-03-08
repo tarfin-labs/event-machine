@@ -359,26 +359,24 @@ class MachineDefinition
                 foreach ($parallelState->stateDefinitions as $region) {
                     $regionInitial = $region->findInitialStateDefinition();
 
-                    // Record region entry event
-                    $state->setInternalEventBehavior(
-                        type: InternalEvent::PARALLEL_REGION_ENTER,
-                        placeholder: $region->route,
-                    );
-
                     if ($regionInitial !== null) {
-                        $state->setInternalEventBehavior(
-                            type: InternalEvent::STATE_ENTER,
-                            placeholder: $regionInitial->route,
-                        );
-
                         // Mark regions with entry actions for dispatch
                         if (isset($regionInitial->config['entry'])) {
+                            // Region entry event will be recorded by ParallelRegionJob on completion
                             $this->pendingParallelDispatches[] = [
                                 'region_id'        => $region->id,
                                 'initial_state_id' => $regionInitial->id,
                             ];
                         } else {
-                            // No entry actions — nothing to dispatch
+                            // No entry actions — run inline, record events here
+                            $state->setInternalEventBehavior(
+                                type: InternalEvent::PARALLEL_REGION_ENTER,
+                                placeholder: $region->route,
+                            );
+                            $state->setInternalEventBehavior(
+                                type: InternalEvent::STATE_ENTER,
+                                placeholder: $regionInitial->route,
+                            );
                             $regionInitial->runEntryActions($state, $eventBehavior);
                         }
                     }
@@ -1055,12 +1053,12 @@ class MachineDefinition
     ): void {
         // Walk up: finalState → region → possible nested parallel
         $region = $finalState->parent;
-        if ($region === null) {
+        if (!$region instanceof \Tarfinlabs\EventMachine\Definition\StateDefinition) {
             return;
         }
 
         $parallelParent = $region->parent;
-        if ($parallelParent === null || $parallelParent->type !== StateDefinitionType::PARALLEL) {
+        if (!$parallelParent instanceof \Tarfinlabs\EventMachine\Definition\StateDefinition || $parallelParent->type !== StateDefinitionType::PARALLEL) {
             return;
         }
 
