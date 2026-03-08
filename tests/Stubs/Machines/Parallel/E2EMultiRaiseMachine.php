@@ -6,8 +6,8 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionBRaiseAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionAMultiRaiseAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionBAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionAMultiStepAction;
 
 /**
  * E2E test machine for multiple raised events in a single job.
@@ -37,7 +37,7 @@ class E2EMultiRaiseMachine extends Machine
                                 'initial' => 'pending',
                                 'states'  => [
                                     'pending' => [
-                                        'entry' => RegionAMultiRaiseAction::class,
+                                        'entry' => ProcessRegionAMultiStepAction::class,
                                         'on'    => ['STEP_1_DONE' => 'advanced'],
                                     ],
                                     'advanced' => [
@@ -50,7 +50,7 @@ class E2EMultiRaiseMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionBRaiseAction::class,
+                                        'entry' => ProcessRegionBAction::class,
                                         'on'    => ['REGION_B_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
