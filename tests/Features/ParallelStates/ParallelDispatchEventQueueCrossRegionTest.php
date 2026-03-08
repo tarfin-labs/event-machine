@@ -24,16 +24,16 @@ it('job raised event broadcasts to all regions via transitionParallelState', fun
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithRaiseMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_raise.processing.region_a',
-        initialStateId: 'parallel_raise.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_raise.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_raise.processing.region_a.working',
     ))->handle();
 
     $restored = ParallelDispatchWithRaiseMachine::create(state: $rootEventId);
 
-    // Region A advanced to finished_a (its own raised event)
-    expect($restored->state->value)->toContain('parallel_raise.processing.region_a.finished_a');
+    // Region A advanced to finished (its own raised event)
+    expect($restored->state->value)->toContain('parallel_dispatch_with_raise.processing.region_a.finished');
     // Region B unaffected (no handler for REGION_A_PROCESSED)
-    expect($restored->state->value)->toContain('parallel_raise.processing.region_b.working_b');
+    expect($restored->state->value)->toContain('parallel_dispatch_with_raise.processing.region_b.working');
 });
 
 it('cross-region event advances sibling → sibling job detects stale state', function (): void {
@@ -55,23 +55,23 @@ it('cross-region event advances sibling → sibling job detects stale state', fu
                     'onDone' => 'completed',
                     'states' => [
                         'region_a' => [
-                            'initial' => 'working_a',
+                            'initial' => 'working',
                             'states'  => [
-                                'working_a' => [
+                                'working' => [
                                     'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionAEntryAction::class,
-                                    'on'    => ['DONE_A' => 'finished_a'],
+                                    'on'    => ['DONE_A' => 'finished'],
                                 ],
-                                'finished_a' => ['type' => 'final'],
+                                'finished' => ['type' => 'final'],
                             ],
                         ],
                         'region_b' => [
-                            'initial' => 'working_b',
+                            'initial' => 'working',
                             'states'  => [
-                                'working_b' => [
+                                'working' => [
                                     'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionBEntryAction::class,
-                                    'on'    => ['DONE_B' => 'finished_b'],
+                                    'on'    => ['DONE_B' => 'finished'],
                                 ],
-                                'finished_b' => ['type' => 'final'],
+                                'finished' => ['type' => 'final'],
                             ],
                         ],
                     ],
@@ -107,16 +107,16 @@ it('no race condition when job A finishes before job B starts', function (): voi
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithRaiseMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_raise.processing.region_a',
-        initialStateId: 'parallel_raise.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_raise.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_raise.processing.region_a.working',
     ))->handle();
 
     // Job B starts after Job A finished — sees fresh state
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithRaiseMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_raise.processing.region_b',
-        initialStateId: 'parallel_raise.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_with_raise.processing.region_b',
+        initialStateId: 'parallel_dispatch_with_raise.processing.region_b.working',
     ))->handle();
 
     $restored = ParallelDispatchWithRaiseMachine::create(state: $rootEventId);
@@ -125,7 +125,7 @@ it('no race condition when job A finishes before job B starts', function (): voi
     expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
     expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
 
-    // Region A at finished_a (raised event), Region B at working_b (no raise)
-    expect($restored->state->value)->toContain('parallel_raise.processing.region_a.finished_a');
-    expect($restored->state->value)->toContain('parallel_raise.processing.region_b.working_b');
+    // Region A at finished (raised event), Region B at working (no raise)
+    expect($restored->state->value)->toContain('parallel_dispatch_with_raise.processing.region_a.finished');
+    expect($restored->state->value)->toContain('parallel_dispatch_with_raise.processing.region_b.working');
 });
