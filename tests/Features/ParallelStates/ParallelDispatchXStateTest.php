@@ -18,18 +18,18 @@ test('same event transitions multiple regions simultaneously', function (): void
                             'initial' => 'idle_a',
                             'states'  => [
                                 'idle_a' => [
-                                    'on' => ['GO' => 'done_a'],
+                                    'on' => ['GO' => 'completed'],
                                 ],
-                                'done_a' => ['type' => 'final'],
+                                'completed' => ['type' => 'final'],
                             ],
                         ],
                         'region_b' => [
                             'initial' => 'idle_b',
                             'states'  => [
                                 'idle_b' => [
-                                    'on' => ['GO' => 'done_b'],
+                                    'on' => ['GO' => 'completed'],
                                 ],
-                                'done_b' => ['type' => 'final'],
+                                'completed' => ['type' => 'final'],
                             ],
                         ],
                     ],
