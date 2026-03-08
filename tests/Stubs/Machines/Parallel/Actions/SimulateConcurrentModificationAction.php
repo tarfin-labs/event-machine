@@ -15,7 +15,7 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
  * the machine's DB state — simulating another job or send() completing
  * concurrently. This triggers the under-lock double-guard abort path.
  */
-class ConcurrentModificationAction extends ActionBehavior
+class SimulateConcurrentModificationAction extends ActionBehavior
 {
     public static ?Closure $onExecute = null;
 
