@@ -94,9 +94,15 @@ class ParallelRegionJob implements ShouldQueue
                 return;
             }
 
-            // 11. Apply context diff (merge, not overwrite)
+            // 11. Apply context diff (deep merge, not overwrite)
             foreach ($contextDiff as $key => $value) {
-                $freshMachine->state->context->set($key, $value);
+                $existingValue = $freshMachine->state->context->data[$key] ?? null;
+
+                if (is_array($value) && is_array($existingValue)) {
+                    $freshMachine->state->context->set($key, $this->arrayRecursiveMerge($existingValue, $value));
+                } else {
+                    $freshMachine->state->context->set($key, $value);
+                }
             }
 
             // 12. Record region action completion event (captures context snapshot for persist)
@@ -187,6 +193,32 @@ class ParallelRegionJob implements ShouldQueue
                 'fail_handler_error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Recursively merge two arrays (deep merge).
+     *
+     * When both values for a key are arrays, they are merged recursively.
+     * Otherwise, the value from $array2 overwrites the value from $array1.
+     *
+     * @param  array<string, mixed>  $array1
+     * @param  array<string, mixed>  $array2
+     *
+     * @return array<string, mixed>
+     */
+    protected function arrayRecursiveMerge(array $array1, array $array2): array
+    {
+        $merged = $array1;
+
+        foreach ($array2 as $key => $value) {
+            if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
+                $merged[$key] = $this->arrayRecursiveMerge($merged[$key], $value);
+            } else {
+                $merged[$key] = $value;
+            }
+        }
+
+        return $merged;
     }
 
     /**
