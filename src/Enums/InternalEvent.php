@@ -38,10 +38,11 @@ enum InternalEvent: string
 
     case EVENT_RAISED = '{machine}.event.{placeholder}.raised';
 
-    case PARALLEL_REGION_ENTER = '{machine}.parallel.{placeholder}.region.enter';
-    case PARALLEL_REGION_EXIT  = '{machine}.parallel.{placeholder}.region.exit';
-    case PARALLEL_DONE         = '{machine}.parallel.{placeholder}.done';
-    case PARALLEL_FAIL         = '{machine}.parallel.{placeholder}.fail';
+    case PARALLEL_REGION_ENTER       = '{machine}.parallel.{placeholder}.region.enter';
+    case PARALLEL_REGION_EXIT        = '{machine}.parallel.{placeholder}.region.exit';
+    case PARALLEL_REGION_GUARD_ABORT = '{machine}.parallel.{placeholder}.region.guard_abort';
+    case PARALLEL_DONE               = '{machine}.parallel.{placeholder}.done';
+    case PARALLEL_FAIL               = '{machine}.parallel.{placeholder}.fail';
 
     /**
      * Generate an internal event name based on the machine ID and an optional placeholder.
