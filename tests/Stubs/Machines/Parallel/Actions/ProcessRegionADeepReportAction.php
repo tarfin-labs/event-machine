@@ -11,7 +11,7 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
  * Entry action that sets deep nested context AND raises event for auto-completion.
  * Simulates a Findeks API response being stored in nested report context.
  */
-class RegionADeepRaiseAction extends ActionBehavior
+class ProcessRegionADeepReportAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
