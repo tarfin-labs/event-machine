@@ -204,6 +204,28 @@ MachineEvent::query()
     ->get();
 ```
 
+## Machine Locks Table
+
+When [Parallel Dispatch](./parallel-dispatch) is enabled, concurrent queue jobs coordinate through a dedicated `machine_locks` database table. Publish the migration:
+
+```bash
+php artisan vendor:publish --tag=event-machine-migrations
+php artisan migrate
+```
+
+The `machine_locks` table stores:
+- **`key`** — Unique lock identifier (machine root event ID)
+- **`owner`** — Current lock holder (job UUID)
+- **`expiration`** — TTL-based stale lock cleanup
+
+You can query this table directly for debugging:
+
+```sql
+SELECT * FROM machine_locks WHERE key LIKE 'mre:%';
+```
+
+Stale locks (from crashed workers) are automatically cleaned up when a new lock request detects an expired `expiration` timestamp.
+
 ## Archival Considerations
 
 When archiving parallel state machines, all regions are compressed together. See [Archival](/laravel-integration/archival) for details on:
