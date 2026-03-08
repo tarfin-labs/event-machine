@@ -64,7 +64,7 @@ it('send() does not dispatch pending parallel jobs when persist fails', function
 it('ParallelRegionJob critical section runs inside a DB transaction', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
-    // 1. Create test_side_effects table (DbWriteAction inserts into it)
+    // 1. Create test_side_effects table (WriteToDbAction inserts into it)
     Schema::create('test_side_effects', function ($table): void {
         $table->id();
         $table->string('value');
@@ -75,8 +75,8 @@ it('ParallelRegionJob critical section runs inside a DB transaction', function (
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    // 3. Capture transaction level when DbWriteAction runs inside the lock.
-    //    DbWriteAction is the entry action on finished. It runs when the
+    // 3. Capture transaction level when WriteToDbAction runs inside the lock.
+    //    WriteToDbAction is the entry action on finished. It runs when the
     //    RAISED event (REGION_A_PROCESSED) is processed inside the lock-protected
     //    section via transition().
     $transactionLevelDuringInsert = 0;
