@@ -25,8 +25,8 @@ class ParallelDispatchWithFailMachine extends Machine
                 'states' => [
                     'processing' => [
                         'type'   => 'parallel',
-                        'onDone' => 'completed',
-                        'onFail' => 'failed',
+                        '@done'  => 'completed',
+                        '@fail'  => 'failed',
                         'states' => [
                             'region_a' => [
                                 'initial' => 'working',
