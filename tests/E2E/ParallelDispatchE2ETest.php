@@ -9,12 +9,15 @@ use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EFailMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EBasicMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EChainedMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2ENoRaiseMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EBothFailMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EMultiRaiseMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EDeepContextMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EMixedRegionMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2ESingleEntryMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EThreeRegionMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EContextConflictMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithRaiseMachine;
 
 uses(RefreshDatabase::class);
@@ -796,4 +799,223 @@ it('validates config requires should_persist and Machine subclass for dispatch',
     // machineClass is null (not a Machine subclass) → shouldDispatchParallel = false
     expect($definition->pendingParallelDispatches)->toBeEmpty();
     Bus::assertNotDispatched(ParallelRegionJob::class);
+});
+
+// ============================================================
+// Grup 11: Edge Case — No-raise region (stuck machine)
+//
+// Entry action runs and sets context but does NOT call raise().
+// Region stays in initial state → machine is permanently stuck
+// in parallel state. Validates that:
+// - Context diff IS applied even without raise
+// - areAllRegionsFinal() returns false
+// - Machine does not transition to completed
+// ============================================================
+
+it('stays stuck in parallel state when region entry action does not raise event', function (): void {
+    $machine = E2ENoRaiseMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    $restored = E2ENoRaiseMachine::create(state: $rootEventId);
+
+    // Machine should NOT be in completed — it's stuck
+    expect($restored->state->currentStateDefinition->id)->not->toBe('e2e_no_raise.completed');
+
+    // Still in parallel state (value has >1 element)
+    expect(count($restored->state->value))->toBeGreaterThan(1);
+
+    // Region A's context was applied (even without raise)
+    expect($restored->state->context->get('region_a_context_set'))->toBe('yes_but_no_raise');
+    expect($restored->state->context->get('region_a_pid'))->not->toBeNull();
+
+    // Region B completed normally
+    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+
+    // Value shows: working_a (stuck) + finished_b (completed)
+    $hasWorkingA  = collect($restored->state->value)->contains(fn ($v) => str_contains($v, 'working_a'));
+    $hasFinishedB = collect($restored->state->value)->contains(fn ($v) => str_contains($v, 'finished_b'));
+    expect($hasWorkingA)->toBeTrue();
+    expect($hasFinishedB)->toBeTrue();
+});
+
+it('applies context diff from no-raise region but does not trigger onDone', function (): void {
+    $machine = E2ENoRaiseMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    // Check events — both regions should have PARALLEL_REGION_ENTER
+    $events = MachineEvent::query()
+        ->where('root_event_id', $rootEventId)
+        ->oldest('sequence_number')
+        ->pluck('type')
+        ->toArray();
+
+    $regionEnterEvents = collect($events)->filter(fn ($t) => str_contains($t, '.region.enter'));
+
+    // Both regions dispatched and ran entry actions
+    expect($regionEnterEvents)->toHaveCount(2);
+
+    // No onDone event (machine didn't complete)
+    $hasDoneEvent = collect($events)->contains(fn ($t) => str_ends_with($t, '.done'));
+    expect($hasDoneEvent)->toBeFalse();
+});
+
+// ============================================================
+// Grup 12: Edge Case — Context merge conflict
+//
+// Both regions write to the same context keys. Tests:
+// - Scalar: last-writer-wins (no crash, one value survives)
+// - Array: deep merge (different keys survive, same key LWW)
+// ============================================================
+
+it('handles scalar context conflict with last-writer-wins', function (): void {
+    $machine = E2EContextConflictMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    $restored = E2EContextConflictMachine::create(state: $rootEventId);
+
+    // Machine completed despite conflict
+    expect($restored->state->currentStateDefinition->id)->toBe('e2e_context_conflict.completed');
+
+    // Both regions executed
+    expect($restored->state->context->get('region_a_wrote'))->toBeTrue();
+    expect($restored->state->context->get('region_b_wrote'))->toBeTrue();
+
+    // Scalar: one of the values wins (last-writer-wins, deterministic per run)
+    $sharedScalar = $restored->state->context->get('shared_scalar');
+    expect($sharedScalar)->toBeIn(['value_from_a', 'value_from_b']);
+});
+
+it('deep merges array context from parallel regions preserving different keys', function (): void {
+    $machine = E2EContextConflictMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    $restored    = E2EContextConflictMachine::create(state: $rootEventId);
+    $sharedArray = $restored->state->context->get('shared_array');
+
+    // Both from_a and from_b keys survive (different keys → deep merge)
+    expect($sharedArray['from_a'])->toBeTrue();
+    expect($sharedArray['from_b'])->toBeTrue();
+
+    // Same nested key (score): last-writer-wins (85 or 92)
+    expect($sharedArray['score'])->toBeIn([85, 92]);
+});
+
+// ============================================================
+// Grup 13: Edge Case — Both regions fail (dual-failure)
+//
+// Both regions throw exceptions. Tests:
+// - Double-guard prevents duplicate onFail transition
+// - Only one PARALLEL_FAIL event recorded
+// - Machine reaches error state cleanly
+// ============================================================
+
+it('handles dual region failure with single onFail transition', function (): void {
+    config()->set('machine.parallel_dispatch.job_tries', 1);
+    config()->set('machine.parallel_dispatch.job_backoff', 0);
+
+    $machine = E2EBothFailMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // Sync driver: first failing job's exception is rethrown after failed() handler runs
+    try {
+        $machine->dispatchPendingParallelJobs();
+    } catch (\RuntimeException) {
+        // Expected — sync driver rethrows after calling failed()
+    }
+
+    $restored = E2EBothFailMachine::create(state: $rootEventId);
+
+    // Machine in error state (first job's failed() handler triggered onFail)
+    expect($restored->state->currentStateDefinition->id)->toBe('e2e_both_fail.error');
+
+    // Neither region's result set
+    expect($restored->state->context->get('region_a_result'))->toBeNull();
+    expect($restored->state->context->get('region_b_result'))->toBeNull();
+});
+
+it('records exactly one PARALLEL_FAIL event when both regions fail', function (): void {
+    config()->set('machine.parallel_dispatch.job_tries', 1);
+    config()->set('machine.parallel_dispatch.job_backoff', 0);
+
+    $machine = E2EBothFailMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // Sync driver: first job's exception is rethrown after failed() runs
+    try {
+        $machine->dispatchPendingParallelJobs();
+    } catch (\RuntimeException) {
+        // Expected
+    }
+
+    $events = MachineEvent::query()
+        ->where('root_event_id', $rootEventId)
+        ->oldest('sequence_number')
+        ->pluck('type')
+        ->toArray();
+
+    // At least one PARALLEL_FAIL event recorded
+    // In sync mode: first job fails → onFail fires. Second job may also fail
+    // but the double-guard (isInParallelState check) prevents duplicate onFail.
+    $failEvents = collect($events)->filter(
+        fn ($t) => str_contains($t, '.parallel.') && str_ends_with($t, '.fail')
+    );
+
+    expect($failEvents)->toHaveCount(1);
+});
+
+// ============================================================
+// Grup 14: Edge Case — Instance isolation
+//
+// Two instances of the same machine class dispatched with
+// different root_event_ids. Tests:
+// - Lock isolation (per root_event_id, not per class)
+// - Context isolation (no cross-contamination)
+// - Event isolation (each instance has own event chain)
+// ============================================================
+
+it('isolates parallel dispatch between different machine instances', function (): void {
+    // Instance A
+    $machineA = E2EBasicMachine::create();
+    $machineA->persist();
+    $rootA = $machineA->state->history->first()->root_event_id;
+    $machineA->dispatchPendingParallelJobs();
+
+    // Instance B
+    $machineB = E2EBasicMachine::create();
+    $machineB->persist();
+    $rootB = $machineB->state->history->first()->root_event_id;
+    $machineB->dispatchPendingParallelJobs();
+
+    // Both completed independently
+    $restoredA = E2EBasicMachine::create(state: $rootA);
+    $restoredB = E2EBasicMachine::create(state: $rootB);
+
+    expect($restoredA->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
+    expect($restoredB->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
+
+    // Different root_event_ids
+    expect($rootA)->not->toBe($rootB);
+
+    // Context isolation
+    expect($restoredA->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restoredB->state->context->get('region_a_result'))->toBe('processed_by_a');
+
+    // Event isolation: same count per instance
+    $eventsA = MachineEvent::where('root_event_id', $rootA)->count();
+    $eventsB = MachineEvent::where('root_event_id', $rootB)->count();
+    expect($eventsA)->toBe($eventsB);
 });
