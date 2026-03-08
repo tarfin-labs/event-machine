@@ -34,29 +34,29 @@ class E2EMixedRegionMachine extends Machine
                         'onDone' => 'completed',
                         'states' => [
                             'region_a' => [
-                                'initial' => 'working_a',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_a' => [
+                                    'working' => [
                                         'entry' => RegionARaiseAction::class,
-                                        'on'    => ['REGION_A_PROCESSED' => 'finished_a'],
+                                        'on'    => ['REGION_A_PROCESSED' => 'finished'],
                                     ],
-                                    'finished_a' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                             'region_b' => [
-                                'initial' => 'working_b',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_b' => [
+                                    'working' => [
                                         'entry' => RegionBRaiseAction::class,
-                                        'on'    => ['REGION_B_PROCESSED' => 'finished_b'],
+                                        'on'    => ['REGION_B_PROCESSED' => 'finished'],
                                     ],
-                                    'finished_b' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                             'region_c' => [
-                                'initial' => 'done_c',
+                                'initial' => 'completed',
                                 'states'  => [
-                                    'done_c' => ['type' => 'final'],
+                                    'completed' => ['type' => 'final'],
                                 ],
                             ],
                         ],
