@@ -880,11 +880,11 @@ class MachineDefinition
             return;
         }
 
-        if (!isset($compoundParent->config['onDone'])) {
+        if (!isset($compoundParent->config['@done'])) {
             return;
         }
 
-        $onDoneConfig = $compoundParent->config['onDone'];
+        $onDoneConfig = $compoundParent->config['@done'];
         $targetId     = is_array($onDoneConfig) ? ($onDoneConfig['target'] ?? null) : $onDoneConfig;
 
         if ($targetId === null) {
@@ -996,11 +996,11 @@ class MachineDefinition
             placeholder: $parallelState->route,
         );
 
-        if (!isset($parallelState->config['onDone'])) {
+        if (!isset($parallelState->config['@done'])) {
             return $state;
         }
 
-        $onDoneConfig = $parallelState->config['onDone'];
+        $onDoneConfig = $parallelState->config['@done'];
         $targetId     = is_array($onDoneConfig) ? ($onDoneConfig['target'] ?? null) : $onDoneConfig;
 
         return $this->exitParallelStateAndTransition($parallelState, $state, $targetId, $eventBehavior);
@@ -1027,11 +1027,11 @@ class MachineDefinition
             placeholder: $parallelState->route,
         );
 
-        if (!isset($parallelState->config['onFail'])) {
+        if (!isset($parallelState->config['@fail'])) {
             return $state;
         }
 
-        $onFailConfig = $parallelState->config['onFail'];
+        $onFailConfig = $parallelState->config['@fail'];
         $targetId     = is_array($onFailConfig) ? ($onFailConfig['target'] ?? null) : $onFailConfig;
 
         // Run onFail actions BEFORE exit (can inspect parallel state for error context)
@@ -1077,11 +1077,11 @@ class MachineDefinition
             return;
         }
 
-        if (!isset($parallelParent->config['onDone'])) {
+        if (!isset($parallelParent->config['@done'])) {
             return;
         }
 
-        $onDoneConfig = $parallelParent->config['onDone'];
+        $onDoneConfig = $parallelParent->config['@done'];
         $targetId     = is_array($onDoneConfig) ? ($onDoneConfig['target'] ?? null) : $onDoneConfig;
 
         if ($targetId === null) {
