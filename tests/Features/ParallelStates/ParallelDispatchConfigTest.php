@@ -47,7 +47,7 @@ it('allows onFail key in state config', function (): void {
             'processing' => [
                 'type'   => 'parallel',
                 'onDone' => 'done',
-                'onFail' => 'error',
+                'onFail' => 'failed',
                 'states' => [
                     'region_a' => [
                         'initial' => 'working',
@@ -65,8 +65,8 @@ it('allows onFail key in state config', function (): void {
                     ],
                 ],
             ],
-            'done'  => ['type' => 'final'],
-            'error' => ['type' => 'final'],
+            'done'   => ['type' => 'final'],
+            'failed' => ['type' => 'final'],
         ],
     ]);
 
