@@ -127,7 +127,7 @@ class MachineDefinition
         $this->setupContextManager();
     }
 
-    protected function validateParallelDispatchConfig(): void
+    private function validateParallelDispatchConfig(): void
     {
         if (!$this->shouldPersist) {
             throw InvalidParallelStateDefinitionException::requiresPersistence();
