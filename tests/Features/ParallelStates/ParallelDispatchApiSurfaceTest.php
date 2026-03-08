@@ -45,18 +45,18 @@ it('areAllRegionsFinal returns correct result for various states', function (): 
                     'onDone' => 'completed',
                     'states' => [
                         'region_a' => [
-                            'initial' => 'working_a',
+                            'initial' => 'working',
                             'states'  => [
-                                'working_a' => [
+                                'working' => [
                                     'on' => ['DONE_A' => 'final_a'],
                                 ],
                                 'final_a' => ['type' => 'final'],
                             ],
                         ],
                         'region_b' => [
-                            'initial' => 'working_b',
+                            'initial' => 'working',
                             'states'  => [
-                                'working_b' => [
+                                'working' => [
                                     'on' => ['DONE_B' => 'final_b'],
                                 ],
                                 'final_b' => ['type' => 'final'],
@@ -96,15 +96,15 @@ it('areAllRegionsFinal is read-only and does not modify state', function (): voi
                     'type'   => 'parallel',
                     'states' => [
                         'region_a' => [
-                            'initial' => 'working_a',
+                            'initial' => 'working',
                             'states'  => [
-                                'working_a' => [],
+                                'working' => [],
                             ],
                         ],
                         'region_b' => [
-                            'initial' => 'working_b',
+                            'initial' => 'working',
                             'states'  => [
-                                'working_b' => [],
+                                'working' => [],
                             ],
                         ],
                     ],
@@ -137,18 +137,18 @@ it('processParallelOnDone transitions out of parallel state', function (): void 
                     'onDone' => 'completed',
                     'states' => [
                         'region_a' => [
-                            'initial' => 'working_a',
+                            'initial' => 'working',
                             'states'  => [
-                                'working_a' => [
+                                'working' => [
                                     'on' => ['DONE_A' => 'final_a'],
                                 ],
                                 'final_a' => ['type' => 'final'],
                             ],
                         ],
                         'region_b' => [
-                            'initial' => 'working_b',
+                            'initial' => 'working',
                             'states'  => [
-                                'working_b' => [
+                                'working' => [
                                     'on' => ['DONE_B' => 'final_b'],
                                 ],
                                 'final_b' => ['type' => 'final'],
