@@ -13,8 +13,8 @@ function createParallelMachineWithOnFail(array|string $onFail = 'failed'): Machi
         'states'  => [
             'parallel_state' => [
                 'type'   => 'parallel',
-                'onDone' => 'done',
-                'onFail' => $onFail,
+                '@done'  => 'done',
+                '@fail'  => $onFail,
                 'states' => [
                     'region_a' => [
                         'initial' => 'working',
@@ -66,8 +66,8 @@ it('processParallelOnFail without onFail records event and stays in parallel', f
         'initial' => 'parallel_state',
         'states'  => [
             'parallel_state' => [
-                'type'   => 'parallel',
-                'onDone' => 'done',
+                'type'  => 'parallel',
+                '@done' => 'done',
                 // No onFail defined
                 'states' => [
                     'region_a' => [
