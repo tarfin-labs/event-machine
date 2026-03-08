@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Jobs;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -86,11 +87,15 @@ class ParallelRegionJob implements ShouldQueue
             context: "parallel_region:{$this->regionId}",
         );
 
+        $shouldDispatch = false;
+
         try {
             // 9. Reload FRESH state from DB
             $freshMachine = $this->machineClass::create(state: $this->rootEventId);
 
             // 10. Guard: re-check under lock (double-guard pattern)
+            //     Guards stay OUTSIDE DB::transaction() — return inside a
+            //     Closure only exits the Closure, not the parent method.
             if (!$freshMachine->state->isInParallelState()) {
                 return;
             }
@@ -100,44 +105,53 @@ class ParallelRegionJob implements ShouldQueue
                 return;
             }
 
-            // 11. Apply context diff (deep merge, not overwrite)
-            foreach ($contextDiff as $key => $value) {
-                $existingValue = $freshMachine->state->context->data[$key] ?? null;
+            // 11-15. Mutation section — wrapped in DB::transaction() for atomicity.
+            //        If persist (or any action side-effect) fails, everything rolls back.
+            DB::transaction(function () use ($freshMachine, $contextDiff, $region, $raisedEvents): void {
+                // 11. Apply context diff (deep merge, not overwrite)
+                foreach ($contextDiff as $key => $value) {
+                    $existingValue = $freshMachine->state->context->data[$key] ?? null;
 
-                if (is_array($value) && is_array($existingValue)) {
-                    $freshMachine->state->context->set($key, ArrayUtils::recursiveMerge($existingValue, $value));
-                } else {
-                    $freshMachine->state->context->set($key, $value);
+                    if (is_array($value) && is_array($existingValue)) {
+                        $freshMachine->state->context->set($key, ArrayUtils::recursiveMerge($existingValue, $value));
+                    } else {
+                        $freshMachine->state->context->set($key, $value);
+                    }
                 }
-            }
 
-            // 12. Record region action completion event (captures context snapshot for persist)
-            $freshMachine->state->setInternalEventBehavior(
-                type: InternalEvent::PARALLEL_REGION_ENTER,
-                placeholder: $region->route,
-            );
+                // 12. Record region action completion event (captures context snapshot for persist)
+                $freshMachine->state->setInternalEventBehavior(
+                    type: InternalEvent::PARALLEL_REGION_ENTER,
+                    placeholder: $region->route,
+                );
 
-            // 13. Process raised events
-            foreach ($raisedEvents as $event) {
-                $freshMachine->state = $freshMachine->definition->transition($event, $freshMachine->state);
-            }
+                // 13. Process raised events
+                foreach ($raisedEvents as $event) {
+                    $freshMachine->state = $freshMachine->definition->transition($event, $freshMachine->state);
+                }
 
-            // 14. Check parallel completion
-            $freshRegion    = $freshMachine->definition->idMap[$this->regionId] ?? null;
-            $parallelParent = $freshRegion?->parent;
+                // 14. Check parallel completion
+                $freshRegion    = $freshMachine->definition->idMap[$this->regionId] ?? null;
+                $parallelParent = $freshRegion?->parent;
 
-            if ($parallelParent !== null && $freshMachine->definition->areAllRegionsFinal($parallelParent, $freshMachine->state)) {
-                $freshMachine->state = $freshMachine->definition->processParallelOnDone($parallelParent, $freshMachine->state);
-            }
+                if ($parallelParent !== null && $freshMachine->definition->areAllRegionsFinal($parallelParent, $freshMachine->state)) {
+                    $freshMachine->state = $freshMachine->definition->processParallelOnDone($parallelParent, $freshMachine->state);
+                }
 
-            // 15. Persist
-            $freshMachine->persist();
+                // 15. Persist
+                $freshMachine->persist();
+            });
+
+            $shouldDispatch = true;
         } finally {
             $lockHandle?->release();
 
-            // 16. Dispatch any new pending parallel jobs (after lock release)
-            if (isset($freshMachine)) {
+            // 16. Dispatch any new pending parallel jobs (only after successful persist)
+            if ($shouldDispatch && isset($freshMachine)) {
                 $freshMachine->dispatchPendingParallelJobs();
+            } elseif (isset($freshMachine)) {
+                // Clear pending dispatches to prevent stale references
+                $freshMachine->definition->pendingParallelDispatches = [];
             }
         }
     }
