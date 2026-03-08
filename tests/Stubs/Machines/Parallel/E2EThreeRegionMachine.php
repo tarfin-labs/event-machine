@@ -36,33 +36,33 @@ class E2EThreeRegionMachine extends Machine
                         'onDone' => 'completed',
                         'states' => [
                             'region_a' => [
-                                'initial' => 'working_a',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_a' => [
+                                    'working' => [
                                         'entry' => RegionARaiseAction::class,
-                                        'on'    => ['REGION_A_PROCESSED' => 'finished_a'],
+                                        'on'    => ['REGION_A_PROCESSED' => 'finished'],
                                     ],
-                                    'finished_a' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                             'region_b' => [
-                                'initial' => 'working_b',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_b' => [
+                                    'working' => [
                                         'entry' => RegionBRaiseAction::class,
-                                        'on'    => ['REGION_B_PROCESSED' => 'finished_b'],
+                                        'on'    => ['REGION_B_PROCESSED' => 'finished'],
                                     ],
-                                    'finished_b' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                             'region_c' => [
-                                'initial' => 'working_c',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_c' => [
+                                    'working' => [
                                         'entry' => RegionCRaiseAction::class,
-                                        'on'    => ['REGION_C_PROCESSED' => 'finished_c'],
+                                        'on'    => ['REGION_C_PROCESSED' => 'finished'],
                                     ],
-                                    'finished_c' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                         ],
