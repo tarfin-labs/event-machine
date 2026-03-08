@@ -334,7 +334,7 @@ MachineDefinition::define(
         'states' => [
             'processing' => [
                 'type' => 'parallel',
-                'onDone' => 'completed',
+                '@done' => 'completed',
                 'states' => [
                     'dealer' => [
                         'initial' => 'pricing',
