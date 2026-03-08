@@ -26,7 +26,7 @@ it('reconstructs machine from rootEventId in handle()', function (): void {
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     );
 
     // Should not throw — machine reconstructed successfully
@@ -99,7 +99,7 @@ it('no-ops when region no longer at initial state', function (): void {
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     );
 
     // Should return early — region already advanced
@@ -122,7 +122,7 @@ it('runs entry action and modifies context', function (): void {
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     );
 
     $job->handle();
@@ -186,7 +186,7 @@ it('both region jobs complete and context is merged', function (): void {
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     );
     $jobA->handle();
 
@@ -195,7 +195,7 @@ it('both region jobs complete and context is merged', function (): void {
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_b',
-        initialStateId: 'parallel_dispatch.processing.region_b.working_b',
+        initialStateId: 'parallel_dispatch.processing.region_b.working',
     );
     $jobB->handle();
 
@@ -218,14 +218,14 @@ it('last job triggers onDone when all regions reach final via events', function 
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     (new ParallelRegionJob(
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_b',
-        initialStateId: 'parallel_dispatch.processing.region_b.working_b',
+        initialStateId: 'parallel_dispatch.processing.region_b.working',
     ))->handle();
 
     // Now send events to transition to final states
@@ -253,7 +253,7 @@ it('first job does not trigger onDone when only partially final', function (): v
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     // Machine should still be in parallel state
