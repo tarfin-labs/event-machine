@@ -180,6 +180,13 @@ class Machine implements Castable, JsonSerializable, Stringable
         if ($this->state instanceof State && config('machine.parallel_dispatch.enabled', false)) {
             $rootEventId = $this->state->history->first()->root_event_id;
 
+            // Reload from DB — local state may be stale after previous sync dispatch.
+            try {
+                $this->state = $this->restoreStateFromRootEventId($rootEventId);
+            } catch (\Throwable) {
+                // Defensive: if reload fails, continue with current local state.
+            }
+
             try {
                 $lockHandle = MachineLockManager::acquire(
                     rootEventId: $rootEventId,
