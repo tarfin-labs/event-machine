@@ -4,7 +4,7 @@ How parallel states are stored in the database and restored.
 
 **Related pages:**
 - [Parallel States Overview](./index) - Basic concepts and syntax
-- [Event Handling](./event-handling) - Events, entry/exit actions, `onDone`
+- [Event Handling](./event-handling) - Events, entry/exit actions, `@done`
 - [Parallel Dispatch](./parallel-dispatch) - Concurrent execution via queue jobs
 - [Persistence](/laravel-integration/persistence) - General persistence documentation
 
