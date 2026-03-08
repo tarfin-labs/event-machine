@@ -24,26 +24,26 @@ it('@fail cancels sibling job that has not started yet', function (): void {
     $jobA = new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_a',
-        initialStateId: 'parallel_fail.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_fail.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
     $jobA->failed(new \RuntimeException('Region A failure'));
 
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($restored->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
 
     // Region B job starts late — pre-lock guard detects machine left parallel
     $jobB = new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_b',
-        initialStateId: 'parallel_fail.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_with_fail.processing.region_b',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_b.working',
     );
     $jobB->handle();
 
     // Region B entry action never ran (context not updated)
     $final = ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($final->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($final->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
     expect($final->state->context->get('region_b_result'))->toBeNull();
 });
 
@@ -58,8 +58,8 @@ it('@fail cancels sibling job that finished entry action', function (): void {
     $jobA = new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_a',
-        initialStateId: 'parallel_fail.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_fail.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
     $jobA->failed(new \RuntimeException('Region A failure'));
 
@@ -69,8 +69,8 @@ it('@fail cancels sibling job that finished entry action', function (): void {
     $jobB = new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_b',
-        initialStateId: 'parallel_fail.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_with_fail.processing.region_b',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_b.working',
     );
     $jobB->failed(new \RuntimeException('Region B also failed'));
 
@@ -79,7 +79,7 @@ it('@fail cancels sibling job that finished entry action', function (): void {
 
     // Still in error state
     $final = ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($final->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($final->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
 });
 
 it('@fail with sibling waiting for lock → sibling acquires and no-ops', function (): void {
@@ -93,8 +93,8 @@ it('@fail with sibling waiting for lock → sibling acquires and no-ops', functi
     $jobA = new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_a',
-        initialStateId: 'parallel_fail.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_fail.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
     $jobA->failed(new \RuntimeException('Region A failure'));
 
@@ -102,11 +102,11 @@ it('@fail with sibling waiting for lock → sibling acquires and no-ops', functi
     $jobB = new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_b',
-        initialStateId: 'parallel_fail.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_with_fail.processing.region_b',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_b.working',
     );
     $jobB->handle();
 
     $final = ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($final->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($final->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
 });
