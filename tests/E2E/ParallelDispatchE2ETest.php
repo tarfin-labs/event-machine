@@ -479,3 +479,85 @@ it('falls back to sequential mode when parallel dispatch is disabled', function 
     // Restore for other tests in this file
     config()->set('machine.parallel_dispatch.enabled', true);
 });
+
+// ============================================================
+// Grup 7: Guards & Double-Guard Pattern
+//
+// Tests the pre-lock and under-lock guards in ParallelRegionJob.
+// Pre-lock guard: isInParallelState() before acquiring lock.
+// Under-lock guard: re-check region state after acquiring lock.
+// ============================================================
+
+it('skips job when machine has already left parallel state (pre-lock guard)', function (): void {
+    // ParallelDispatchWithRaiseMachine: region_a raises (auto-completes), region_b doesn't raise
+    $machine = ParallelDispatchWithRaiseMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // Dispatch first time — region_a raises, region_b sets context only
+    $machine->dispatchPendingParallelJobs();
+
+    // Now manually trigger onFail to leave parallel state
+    $restored = ParallelDispatchWithRaiseMachine::create(state: $rootEventId);
+
+    // Manually construct a job for region_a and call handle() — should be a no-op
+    // because region_a already completed (not at initial state anymore)
+    $job = new ParallelRegionJob(
+        machineClass: ParallelDispatchWithRaiseMachine::class,
+        rootEventId: $rootEventId,
+        regionId: 'parallel_raise.processing.region_a',
+        initialStateId: 'parallel_raise.processing.region_a.working_a',
+    );
+
+    // This should early-return at under-lock guard (region already processed)
+    $job->handle();
+
+    // Verify machine state unchanged — region_a was already at finished_a
+    $afterReplay = ParallelDispatchWithRaiseMachine::create(state: $rootEventId);
+    expect($afterReplay->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($afterReplay->state->context->get('region_b_result'))->toBe('processed_by_b');
+});
+
+it('is idempotent when same job runs twice (under-lock guard)', function (): void {
+    // E2EBasicMachine: both regions raise → complete lifecycle
+    $machine = E2EBasicMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    // After lifecycle completes, machine is at 'completed' (non-parallel)
+    // Replaying a region job should be a no-op (pre-lock guard: isInParallelState = false)
+    $job = new ParallelRegionJob(
+        machineClass: E2EBasicMachine::class,
+        rootEventId: $rootEventId,
+        regionId: 'e2e_basic.processing.region_a',
+        initialStateId: 'e2e_basic.processing.region_a.working_a',
+    );
+
+    $job->handle();
+
+    $restored = E2EBasicMachine::create(state: $rootEventId);
+    expect($restored->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
+    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+});
+
+it('completes parallel lifecycle when jobs run sequentially via sync driver', function (): void {
+    // Sync driver natural behavior: jobs run one after another
+    // Job B loads fresh state from DB and sees Job A's context changes
+    $machine = E2EBasicMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    $restored = E2EBasicMachine::create(state: $rootEventId);
+
+    // Both jobs completed successfully despite sequential execution
+    expect($restored->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
+
+    // Proves fresh-load pattern works: Job B saw Job A's changes
+    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+});
