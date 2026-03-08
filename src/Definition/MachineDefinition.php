@@ -1112,10 +1112,20 @@ class MachineDefinition
         $newValues[]    = $resolvedTarget->id;
         $state->setValues($newValues);
 
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_ENTER,
+            placeholder: $resolvedTarget->route,
+        );
+
         $target->runEntryActions($state, $eventBehavior);
         if ($resolvedTarget !== $target) {
             $resolvedTarget->runEntryActions($state, $eventBehavior);
         }
+
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_ENTRY_FINISH,
+            placeholder: $resolvedTarget->route,
+        );
 
         // Recurse: the onDone target might itself be final
         if ($resolvedTarget->type === StateDefinitionType::FINAL) {
@@ -1174,6 +1184,11 @@ class MachineDefinition
         $state->value                  = [$state->currentStateDefinition->id];
 
         // Run entry actions on target state (and initial if different)
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_ENTER,
+            placeholder: $initialState->route,
+        );
+
         $targetState->runEntryActions($state, $eventBehavior);
         if ($initialState !== $targetState) {
             $initialState->runEntryActions($state, $eventBehavior);
