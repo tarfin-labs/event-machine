@@ -59,10 +59,14 @@ Enable parallel dispatch in `config/machine.php`:
 ```php ignore
 return [
     'parallel_dispatch' => [
-        'enabled'      => env('MACHINE_PARALLEL_DISPATCH', false),
-        'queue'        => env('MACHINE_PARALLEL_QUEUE', null),
-        'lock_timeout' => env('MACHINE_PARALLEL_LOCK_TIMEOUT', 30),
-        'lock_ttl'     => env('MACHINE_PARALLEL_LOCK_TTL', 60),
+        'enabled'        => env('MACHINE_PARALLEL_DISPATCH_ENABLED', false),
+        'queue'          => env('MACHINE_PARALLEL_DISPATCH_QUEUE', null),
+        'lock_timeout'   => env('MACHINE_PARALLEL_DISPATCH_LOCK_TIMEOUT', 30),
+        'lock_ttl'       => env('MACHINE_PARALLEL_DISPATCH_LOCK_TTL', 60),
+        'job_timeout'    => env('MACHINE_PARALLEL_DISPATCH_JOB_TIMEOUT', 300),
+        'job_tries'      => env('MACHINE_PARALLEL_DISPATCH_JOB_TRIES', 3),
+        'job_backoff'    => env('MACHINE_PARALLEL_DISPATCH_JOB_BACKOFF', 30),
+        'region_timeout' => env('MACHINE_PARALLEL_DISPATCH_REGION_TIMEOUT', 0),
     ],
 ];
 ```
@@ -73,6 +77,10 @@ return [
 | `queue` | `null` | Queue name for jobs (null = default queue) |
 | `lock_timeout` | `30` | Seconds to wait for blocking lock |
 | `lock_ttl` | `60` | Lock time-to-live before stale cleanup |
+| `job_timeout` | `300` | Laravel job execution timeout (seconds) |
+| `job_tries` | `3` | Max retry attempts for failed jobs |
+| `job_backoff` | `30` | Seconds between retry attempts |
+| `region_timeout` | `0` | Seconds before a parallel state is considered stuck (0 = disabled) |
 
 ## Requirements
 
@@ -243,6 +251,7 @@ The dispatch mechanism records internal events in machine history for full obser
 | `PARALLEL_REGION_GUARD_ABORT` | Under-lock guard discards work | `reason`, `discarded_context`, `discarded_events`, `work_was_discarded` |
 | `PARALLEL_CONTEXT_CONFLICT` | Second region overwrites key set by first | `region_id`, `conflicted_keys` |
 | `PARALLEL_REGION_STALLED` | Entry action completes but region does not advance | `region_id`, `initial_state_id`, `context_changed` |
+| `PARALLEL_REGION_TIMEOUT` | Parallel state did not complete within `region_timeout` | `parallel_state_id`, `timeout_seconds`, `stalled_regions` |
 | `PARALLEL_DONE` | All regions reach final, `@done` fires | — |
 | `PARALLEL_FAIL` | Job failed after all retries | `region_id`, `error`, `exception`, `attempts` |
 
@@ -304,6 +313,59 @@ The stall event is an **audit trail**, not an error. Some regions are intentiona
 ```
 
 The `context_changed` flag indicates whether the entry action had side effects. A stall with `context_changed: false` means the entry action was essentially a no-op.
+
+## Region Timeout
+
+Stall detection records an audit event but does not take corrective action. For production systems where a stuck parallel state is unacceptable, enable **region timeout** — a delayed check job that triggers `@fail` when the parallel state has not completed within the configured duration.
+
+### Configuration
+
+Set `region_timeout` to the maximum number of seconds a parallel state should remain active:
+
+```php ignore
+'parallel_dispatch' => [
+    'region_timeout' => 120, // Trigger @fail after 2 minutes
+],
+```
+
+When set to `0` (default), no timeout job is dispatched.
+
+### How It Works
+
+1. When `dispatchPendingParallelJobs()` dispatches region jobs, it also dispatches a single `ParallelRegionTimeoutJob` with a delay equal to `region_timeout` seconds.
+2. When the delay expires, the timeout job checks whether the parallel state has completed (all regions final).
+3. If the parallel state is **still active** with incomplete regions, it records a `PARALLEL_REGION_TIMEOUT` event and triggers `@fail` on the parallel state.
+4. If the parallel state has already completed (or the machine has moved on), the timeout job is a no-op.
+
+### Timeout Payload
+
+```php ignore
+[
+    'parallel_state_id' => 'order_workflow.processing',
+    'timeout_seconds'   => 120,
+    'stalled_regions'   => [
+        'order_workflow.processing.findeks',
+        // Only regions that haven't reached final are listed
+    ],
+]
+```
+
+::: warning Requires @fail
+The timeout job triggers `processParallelOnFail()`. Without a `@fail` target defined on the parallel state, the timeout event will be recorded but the machine will remain in the parallel state. Always define `@fail` alongside `region_timeout`:
+
+```php ignore
+'processing' => [
+    'type'   => 'parallel',
+    '@done'  => 'completed',
+    '@fail'  => 'failed',    // Required for timeout recovery
+    'states' => [...],
+],
+```
+:::
+
+::: tip Idempotent
+The timeout job is safe to fire multiple times. Once the machine transitions out of the parallel state (via `@fail` or `@done`), subsequent timeout checks are no-ops.
+:::
 
 ## Context Conflict Detection
 
@@ -371,3 +433,4 @@ The `dispatched` flag is a runtime property — it is not persisted to the datab
 1. **No cancellation** — Once dispatched, jobs cannot be cancelled (they no-op if machine state changes)
 2. **Queue dependency** — Requires a functioning queue system with workers
 3. **Lock contention** — High-throughput machines may experience lock wait times
+4. **Timeout requires `@fail`** — `region_timeout` records a timeout event and calls `processParallelOnFail()`, but without a `@fail` target the machine remains in the parallel state
