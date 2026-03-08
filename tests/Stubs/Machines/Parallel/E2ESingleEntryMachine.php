@@ -6,7 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionARaiseAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionAAction;
 
 /**
  * E2E test machine where only ONE region has entry actions.
@@ -35,7 +35,7 @@ class E2ESingleEntryMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionARaiseAction::class,
+                                        'entry' => ProcessRegionAAction::class,
                                         'on'    => ['REGION_A_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
