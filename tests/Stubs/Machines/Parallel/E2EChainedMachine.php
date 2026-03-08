@@ -37,7 +37,7 @@ class E2EChainedMachine extends Machine
                 'states' => [
                     'phase_one' => [
                         'type'   => 'parallel',
-                        'onDone' => 'phase_two',
+                        '@done'  => 'phase_two',
                         'states' => [
                             'region_a' => [
                                 'initial' => 'working',
@@ -63,7 +63,7 @@ class E2EChainedMachine extends Machine
                     ],
                     'phase_two' => [
                         'type'   => 'parallel',
-                        'onDone' => 'completed',
+                        '@done'  => 'completed',
                         'states' => [
                             'region_c' => [
                                 'initial' => 'working',
