@@ -369,7 +369,7 @@ $order->state->context->status;       // enum
 
 **Run concurrent workflows — truly in parallel.** Multiple independent processes execute simultaneously via Laravel queue workers. Two API calls that take 5s and 2s? Done in 5s, not 7s.
 
-Enable parallel dispatch and your entry actions run as separate queue jobs. Context merges safely under database locks. When all regions complete, `onDone` fires automatically. Zero code changes to your actions or guards.
+Enable parallel dispatch and your entry actions run as separate queue jobs. Context merges safely under database locks. When all regions complete, `@done` fires automatically. Zero code changes to your actions or guards.
 
 [Learn parallel states &rarr;](/advanced/parallel-states/)
 
@@ -380,7 +380,7 @@ Enable parallel dispatch and your entry actions run as separate queue jobs. Cont
 ```php
 'processing' => [
     'type' => 'parallel',
-    'onDone' => 'fulfilled',  // When ALL regions complete
+    '@done' => 'fulfilled',  // When ALL regions complete
     'states' => [
         'payment' => [
             'initial' => 'pending',
@@ -412,7 +412,7 @@ $machine->send(['type' => 'START_PROCESSING']);
 // → returns immediately
 
 // Each job completes independently, merges context under lock
-// Last job detects all regions final → onDone → 'fulfilled'
+// Last job detects all regions final → @done → 'fulfilled'
 ```
 
 <!-- doctest-attr: ignore -->
