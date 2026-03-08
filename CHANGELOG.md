@@ -4,35 +4,61 @@ All notable changes to `event-machine` will be documented in this file.
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-03-09
+
 ### Added
+- **Parallel Dispatch**: Opt-in concurrent execution of parallel region entry actions via Laravel queue jobs (`ParallelRegionJob`)
+  - Region entry actions run truly in parallel across queue workers
+  - Double-guard pattern (pre-lock + under-lock) prevents stale state transitions
+  - Context diff/merge strategy for safe concurrent context updates with deep recursive merge
+  - Raised events captured and processed under lock in same job scope
+  - `@fail` event support for job failure handling (`processParallelOnFail`)
+  - Stall detection: `PARALLEL_REGION_STALLED` event when entry action completes without `raise()`
+  - Context conflict detection: `PARALLEL_CONTEXT_CONFLICT` event on shared key overwrites (LWW)
+  - Guard abort tracking: `PARALLEL_REGION_GUARD_ABORT` event when under-lock guard discards work
+  - Configurable via `config/machine.php` (`parallel_dispatch` section)
 - **Region Timeout**: Configurable timeout for stuck parallel states (`region_timeout` config key)
   - `ParallelRegionTimeoutJob` dispatched with delay alongside region jobs
   - When timeout expires and regions haven't completed, triggers `@fail` on the parallel state
   - Records `PARALLEL_REGION_TIMEOUT` internal event with stalled region details
   - Idempotent — no-op if parallel state already completed or machine moved on
   - Disabled by default (`region_timeout: 0`)
+- `MachineLockManager` for database-based locking with immediate and blocking modes
+- `ArrayUtils` shared utility for `recursiveMerge()` and `recursiveDiff()`
+- `processNestedParallelCompletion()` for nested parallel `@done` auto-fire when all sub-regions reach final
+- Event resolution fix: `initializeEvent()` now resolves `EventBehavior` instances through machine's event registry (preserves validation rules)
+- Configurable job parameters: `job_timeout`, `job_tries`, `job_backoff` in `parallel_dispatch` config
+- Comprehensive documentation for parallel dispatch (configuration, requirements, context merge, stall detection, timeout, best practices, limitations)
 
 ### Changed
 - **BREAKING**: Renamed config keys `onDone` → `@done` and `onFail` → `@fail` for consistency with `@always` convention. All internal framework keys now use the `@` prefix, clearly separating them from user-defined event types (`SCREAMING_SNAKE_CASE`).
-
-## [4.1.0] - 2026-03-08
-
-### Added
-- **Parallel Dispatch**: Opt-in concurrent execution of parallel region entry actions via Laravel queue jobs (`ParallelRegionJob`)
-  - Region entry actions run truly in parallel across queue workers
-  - Double-guard pattern (pre-lock + under-lock) prevents stale state transitions
-  - Context diff/merge strategy for safe concurrent context updates
-  - Raised events captured and processed under lock in same job scope
-  - `@fail` event support for job failure handling (`processParallelOnFail`)
-  - Configurable via `config/machine.php` (`parallel_dispatch` section)
-- `MachineLockManager` for database-based locking with immediate and blocking modes
-- Event resolution fix: `initializeEvent()` now resolves `EventBehavior` instances through machine's event registry (preserves validation rules)
-- Documentation for parallel dispatch (configuration, requirements, context merge, best practices, limitations)
-
-### Changed
 - `Machine::send()` lock acquisition uses `MachineLockManager` with configurable timeout
+- `Machine::send()` lock guarded behind `parallel_dispatch.enabled` (no DB lock overhead for non-parallel machines)
 - `createEventBehavior()` signature expanded to accept `EventBehavior|array`
 - `enterParallelState()` dispatches `ParallelRegionJob` per region when parallel dispatch is enabled
+- `dispatchPendingParallelJobs()` dispatches after lock release, guarded behind persist success flag
+
+### Fixed
+- `Machine::restoreContext()` double-wrapping bug
+- Duplicate `PARALLEL_REGION_ENTER` event in dispatch branch (now recorded by job only)
+- `ParallelRegionJob`: null-safe lock release in finally blocks
+- `ParallelRegionJob`: reduced `failed()` lock timeout to 5s max (prevent deadlock between concurrent fail handlers)
+- `ParallelRegionJob`: critical section wrapped in `DB::transaction()` for atomicity
+- Entry action check unified to parsed property across all 3 dispatch paths
+- `MachineLockManager`: rate-limited expired lock cleanup to every 5s (prevent thundering herd)
+- Missing `STATE_ENTER` events in `processNestedParallelCompletion` and `exitParallelStateAndTransition`
+- Ghost job dispatch prevented on persist failure
+- `MachineDefinition`: `config()` call wrapped in try-catch for non-Laravel environments
+
+### Removed
+- `EventFactory` (unused abstract class)
+- `TransitionProperty::Normal`, `TransitionProperty::Guarded` enum cases (zero references)
+- `ContextManager::getMorphClass()` (not an Eloquent model)
+- `EventDefinition::getMorphClass()` (not an Eloquent model)
+- `MachineLockHandle::extend()` (unused method)
+- Phantom `use Exception` import in `Machine`
+- Dead OR condition in `TransitionBranch` constructor
+- `instanceof.alwaysTrue` PHPStan ignore pattern (no longer triggered)
 
 ## [4.0.2] - 2026-03-07
 
