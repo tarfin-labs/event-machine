@@ -267,7 +267,7 @@ MachineDefinition::define(
 ```
 
 ::: warning Context Conflicts
-When multiple regions modify the same context key in response to the same event, the last region (in definition order) wins. Design your context structure to avoid conflicts or use separate keys per region. Use `set()` and `get()` methods for context access.
+When multiple regions modify the same context key in response to the same event, the last region (in definition order) wins. With [Parallel Dispatch](./parallel-dispatch) enabled, a `PARALLEL_CONTEXT_CONFLICT` internal event is recorded when this happens, making the overwrite observable in machine history. Design your context structure to use separate keys per region to avoid conflicts entirely.
 :::
 
 ## Final States and onDone
@@ -698,5 +698,5 @@ When transitioning into a nested parallel state, entry actions fire in order:
 :::
 
 ::: tip Parallel Dispatch Timing
-With [Parallel Dispatch](./parallel-dispatch) enabled, entry actions for each region run as concurrent queue jobs instead of sequentially. This changes the execution model: entry actions no longer share an in-memory context during execution. Each job snapshots context before running, computes a diff after, and merges under a database lock. Regions must write to **separate context keys** to avoid last-writer-wins conflicts.
+With [Parallel Dispatch](./parallel-dispatch) enabled, entry actions for each region run as concurrent queue jobs instead of sequentially. This changes the execution model: entry actions no longer share an in-memory context during execution. Each job snapshots context before running, computes a diff after, and merges under a database lock. Regions should write to **separate context keys** — if two regions write to the same key, a `PARALLEL_CONTEXT_CONFLICT` event is recorded and the last writer wins. If a region's entry action does not call `$this->raise()`, a `PARALLEL_REGION_STALLED` event is recorded as an audit trail.
 :::
