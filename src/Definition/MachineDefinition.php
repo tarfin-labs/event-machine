@@ -1453,6 +1453,39 @@ class MachineDefinition
             $targetStateDefinition = $newState->currentStateDefinition;
         }
 
+        // Handle entering a parallel state from a non-parallel state
+        if ($targetStateDefinition?->type === StateDefinitionType::PARALLEL) {
+            $this->enterParallelState($newState, $targetStateDefinition, $eventBehavior);
+
+            // Check @always transitions on active region states
+            foreach ($newState->value as $stateId) {
+                $stateDefinition = $this->idMap[$stateId] ?? null;
+                if ($stateDefinition?->transitionDefinitions !== null) {
+                    foreach ($stateDefinition->transitionDefinitions as $transition) {
+                        if ($transition->isAlways === true) {
+                            return $this->transition(
+                                event: [
+                                    'type'  => TransitionProperty::Always->value,
+                                    'actor' => $eventBehavior->actor($newState->context),
+                                ],
+                                state: $newState
+                            );
+                        }
+                    }
+                }
+            }
+
+            // Process event queue
+            if ($this->eventQueue->isNotEmpty()) {
+                $firstEvent    = $this->eventQueue->shift();
+                $eventBehavior = $this->initializeEvent($firstEvent, $newState);
+
+                return $this->transition($eventBehavior, $newState);
+            }
+
+            return $newState;
+        }
+
         // Record state enter event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_ENTER,
