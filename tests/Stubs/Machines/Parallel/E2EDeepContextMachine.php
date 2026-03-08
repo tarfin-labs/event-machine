@@ -6,8 +6,8 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionADeepRaiseAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionBDeepRaiseAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionADeepReportAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionBDeepReportAction;
 
 /**
  * E2E test machine for deep nested context merge verification.
@@ -38,7 +38,7 @@ class E2EDeepContextMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionADeepRaiseAction::class,
+                                        'entry' => ProcessRegionADeepReportAction::class,
                                         'on'    => ['REGION_A_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
@@ -48,7 +48,7 @@ class E2EDeepContextMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionBDeepRaiseAction::class,
+                                        'entry' => ProcessRegionBDeepReportAction::class,
                                         'on'    => ['REGION_B_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
