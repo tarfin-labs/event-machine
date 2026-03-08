@@ -20,12 +20,4 @@ class MachineLockHandle
             ->where('owner_id', $this->ownerId)
             ->delete();
     }
-
-    public function extend(int $seconds): void
-    {
-        MachineStateLock::query()
-            ->where('root_event_id', $this->rootEventId)
-            ->where('owner_id', $this->ownerId)
-            ->update(['expires_at' => now()->addSeconds($seconds)]);
-    }
 }
