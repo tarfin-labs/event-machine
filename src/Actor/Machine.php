@@ -192,6 +192,8 @@ class Machine implements Castable, JsonSerializable, Stringable
             }
         }
 
+        $shouldDispatch = false;
+
         try {
             $lastPreviousEventNumber = $this->state instanceof State
                 ? $this->state->history->last()->sequence_number
@@ -212,9 +214,16 @@ class Machine implements Castable, JsonSerializable, Stringable
             }
 
             $this->handleValidationGuards($lastPreviousEventNumber);
+
+            $shouldDispatch = true;
         } finally {
             $lockHandle?->release();
-            $this->dispatchPendingParallelJobs();
+
+            if ($shouldDispatch) {
+                $this->dispatchPendingParallelJobs();
+            } else {
+                $this->definition->pendingParallelDispatches = [];
+            }
         }
 
         return $this->state;
