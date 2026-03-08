@@ -12,6 +12,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Support\ArrayUtils;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
+use Tarfinlabs\EventMachine\Definition\EventDefinition;
 
 class ParallelRegionJob implements ShouldQueue
 {
@@ -163,8 +164,8 @@ class ParallelRegionJob implements ShouldQueue
                     return;
                 }
 
-                $failEvent = new \Tarfinlabs\EventMachine\Definition\EventDefinition(
-                    type: '@fail',
+                $failEvent = new EventDefinition(
+                    type: InternalEvent::PARALLEL_FAIL->value,
                     payload: [
                         'region_id' => $this->regionId,
                         'error'     => $exception->getMessage(),
