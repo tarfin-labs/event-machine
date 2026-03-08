@@ -33,32 +33,32 @@ class E2EContextConflictMachine extends Machine
                     'processing' => [
                         'type'   => 'parallel',
                         'onDone' => 'completed',
-                        'onFail' => 'error',
+                        'onFail' => 'failed',
                         'states' => [
                             'region_a' => [
-                                'initial' => 'working_a',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_a' => [
+                                    'working' => [
                                         'entry' => WriteSharedKeyAAction::class,
-                                        'on'    => ['REGION_A_PROCESSED' => 'finished_a'],
+                                        'on'    => ['REGION_A_PROCESSED' => 'finished'],
                                     ],
-                                    'finished_a' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                             'region_b' => [
-                                'initial' => 'working_b',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_b' => [
+                                    'working' => [
                                         'entry' => WriteSharedKeyBAction::class,
-                                        'on'    => ['REGION_B_PROCESSED' => 'finished_b'],
+                                        'on'    => ['REGION_B_PROCESSED' => 'finished'],
                                     ],
-                                    'finished_b' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                         ],
                     ],
                     'completed' => ['type' => 'final'],
-                    'error'     => ['type' => 'final'],
+                    'failed'    => ['type' => 'final'],
                 ],
             ],
         );
