@@ -163,10 +163,10 @@ When a job exhausts all retries, Laravel calls the `failed()` method. The job:
 'processing' => [
     'type'   => 'parallel',
     'onDone' => 'completed',
-    'onFail' => 'error',      // ← Target state on failure
+    'onFail' => 'failed',      // ← Target state on failure
     'states' => [...],
 ],
-'error' => ['type' => 'final'],
+'failed' => ['type' => 'final'],
 ```
 
 The machine exits the parallel state and transitions to the `onFail` target. Sibling jobs that haven't started will no-op (pre-lock guard). Sibling jobs that completed already have their context preserved.
@@ -228,7 +228,7 @@ Always define `onFail` on parallel states that use dispatch. This provides a cle
 'processing' => [
     'type'   => 'parallel',
     'onDone' => 'completed',
-    'onFail' => 'error',
+    'onFail' => 'failed',
     'states' => [...],
 ],
 ```
