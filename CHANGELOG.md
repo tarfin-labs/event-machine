@@ -2,6 +2,11 @@
 
 All notable changes to `event-machine` will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **BREAKING**: Renamed config keys `onDone` → `@done` and `onFail` → `@fail` for consistency with `@always` convention. All internal framework keys now use the `@` prefix, clearly separating them from user-defined event types (`SCREAMING_SNAKE_CASE`).
+
 ## [4.1.0] - 2026-03-08
 
 ### Added
