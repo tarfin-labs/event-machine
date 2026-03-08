@@ -23,7 +23,7 @@ test('region done events fire BEFORE parallel done event (SCXML test570)', funct
             'states'  => [
                 'parallel_parent' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'region_a' => [
                             'initial' => 'working',
@@ -135,14 +135,14 @@ test('compound child done fires within parallel region (SCXML test417)', functio
             'states'  => [
                 'parallel_parent' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'region_a' => [
                             'initial' => 'compound_a',
                             'states'  => [
                                 'compound_a' => [
                                     'initial' => 'advanced',
-                                    'onDone'  => 'final_a',
+                                    '@done'   => 'final_a',
                                     'states'  => [
                                         'advanced' => [
                                             'on' => ['STEP' => 'step_done'],
@@ -195,7 +195,7 @@ test('region done event fires AFTER all entry actions complete (SCXML test372)',
             'states'  => [
                 'parallel_parent' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'region_a' => [
                             'initial' => 'working',
