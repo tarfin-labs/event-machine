@@ -213,8 +213,8 @@ it('second job sees first job context changes via fresh DB load', function (): v
 
 it('single raised event from entry action transitions region to final', function (): void {
     // E2EBasicMachine: each region's entry action raises exactly one event
-    // Region A: RegionARaiseAction → raise(REGION_A_PROCESSED) → working → finished
-    // Region B: RegionBRaiseAction → raise(REGION_B_PROCESSED) → working → finished
+    // Region A: ProcessRegionAAction → raise(REGION_A_PROCESSED) → working → finished
+    // Region B: ProcessRegionBAction → raise(REGION_B_PROCESSED) → working → finished
     $machine = E2EBasicMachine::create();
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
@@ -773,7 +773,7 @@ it('validates config requires should_persist and Machine subclass for dispatch',
                             'initial' => 'working',
                             'states'  => [
                                 'working' => [
-                                    'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionARaiseAction::class,
+                                    'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionAAction::class,
                                     'on'    => ['REGION_A_PROCESSED' => 'finished'],
                                 ],
                                 'finished' => ['type' => 'final'],
@@ -783,7 +783,7 @@ it('validates config requires should_persist and Machine subclass for dispatch',
                             'initial' => 'working',
                             'states'  => [
                                 'working' => [
-                                    'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionBRaiseAction::class,
+                                    'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionBAction::class,
                                     'on'    => ['REGION_B_PROCESSED' => 'finished'],
                                 ],
                                 'finished' => ['type' => 'final'],
