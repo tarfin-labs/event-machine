@@ -119,6 +119,8 @@ it('If the event is transactional, it rolls back the data', function (): void {
 // === Machine Running State Tests ===
 
 it('If the machine is already running, it will throw exception', function (): void {
+    config()->set('machine.parallel_dispatch.enabled', true);
+
     $machine = AsdMachine::create();
     $machine->persist();
 
@@ -131,6 +133,7 @@ it('If the machine is already running, it will throw exception', function (): vo
         $machine->send(new EEvent());
     } finally {
         $handle->release();
+        config()->set('machine.parallel_dispatch.enabled', false);
     }
 })->throws(MachineAlreadyRunningException::class);
 
