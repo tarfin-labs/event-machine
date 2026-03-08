@@ -10,6 +10,18 @@ use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
 
 class MachineLockManager
 {
+    private static float $lastCleanupAt = 0;
+
+    private const CLEANUP_INTERVAL_SECONDS = 5;
+
+    /**
+     * Reset cleanup timer (for testing).
+     */
+    public static function resetCleanupTimer(): void
+    {
+        self::$lastCleanupAt = 0;
+    }
+
     /**
      * Acquire a lock, waiting up to $timeout seconds.
      *
@@ -29,10 +41,14 @@ class MachineLockManager
         $timeoutNs = $timeout * 1_000_000_000;
 
         while (true) {
-            // Clean up expired locks (self-healing)
-            MachineStateLock::query()
-                ->where('expires_at', '<', now())
-                ->delete();
+            // Clean up expired locks (self-healing, rate-limited to avoid thundering herd)
+            $now = microtime(true);
+            if ($now - self::$lastCleanupAt >= self::CLEANUP_INTERVAL_SECONDS) {
+                self::$lastCleanupAt = $now;
+                MachineStateLock::query()
+                    ->where('expires_at', '<', now())
+                    ->delete();
+            }
 
             try {
                 MachineStateLock::create([
