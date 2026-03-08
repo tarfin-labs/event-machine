@@ -62,6 +62,10 @@ $state->context->get('total');
 
 // Access event history
 $state->history;  // EventCollection
+
+// Check if the current state can handle an event
+$machine->can('PAY');  // true if PAY transition exists
+$machine->can(PaymentEvent::class);  // also works with event classes
 ```
 
 ### The `matches()` Method
