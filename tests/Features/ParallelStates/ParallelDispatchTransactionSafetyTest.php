@@ -31,8 +31,8 @@ it('send() does not dispatch pending parallel jobs when persist fails', function
     //    to simulate what happens when a transition creates new parallel entries
     //    (e.g., nested parallel in transitionParallelState line 1279-1292)
     $machine->definition->pendingParallelDispatches = [
-        ['region_id' => 'test.region_a', 'initial_state_id' => 'test.region_a.working_a'],
-        ['region_id' => 'test.region_b', 'initial_state_id' => 'test.region_b.working_b'],
+        ['region_id' => 'test.region_a', 'initial_state_id' => 'test.region_a.working'],
+        ['region_id' => 'test.region_b', 'initial_state_id' => 'test.region_b.working'],
     ];
 
     // 3. Drop machine_events table to make persist() fail inside send()
@@ -76,7 +76,7 @@ it('ParallelRegionJob critical section runs inside a DB transaction', function (
     $rootEventId = $machine->state->history->first()->root_event_id;
 
     // 3. Capture transaction level when DbWriteAction runs inside the lock.
-    //    DbWriteAction is the entry action on finished_a. It runs when the
+    //    DbWriteAction is the entry action on finished. It runs when the
     //    RAISED event (REGION_A_PROCESSED) is processed inside the lock-protected
     //    section via transition().
     $transactionLevelDuringInsert = 0;
@@ -91,8 +91,8 @@ it('ParallelRegionJob critical section runs inside a DB transaction', function (
     (new ParallelRegionJob(
         machineClass: ParallelDispatchDbWriteMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_db_write.processing.region_a',
-        initialStateId: 'parallel_db_write.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_db_write.processing.region_a',
+        initialStateId: 'parallel_dispatch_db_write.processing.region_a.working',
     ))->handle();
 
     // 5. BUG: In current code, the INSERT runs without an explicit transaction
