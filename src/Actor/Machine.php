@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Actor;
 
-use Exception;
 use Stringable;
 use JsonSerializable;
 use Illuminate\Support\Facades\DB;
@@ -173,7 +172,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      *
      * @return State The updated state of the machine.
      *
-     * @throws Exception
+     * @throws \Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException
      */
     public function send(
         EventBehavior|array|string $event,
