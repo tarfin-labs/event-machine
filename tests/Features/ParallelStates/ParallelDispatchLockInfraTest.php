@@ -10,6 +10,10 @@ use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
 
 uses(RefreshDatabase::class);
 
+beforeEach(function (): void {
+    MachineLockManager::resetCleanupTimer();
+});
+
 it('creates machine_locks table with correct columns', function (): void {
     expect(Schema::hasTable('machine_locks'))->toBeTrue();
     expect(Schema::hasColumn('machine_locks', 'root_event_id'))->toBeTrue();
