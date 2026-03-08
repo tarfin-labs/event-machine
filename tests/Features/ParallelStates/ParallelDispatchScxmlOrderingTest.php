@@ -74,7 +74,7 @@ test('parallel state exit: children exited before parent (SCXML test406)', funct
                 'parallel_parent' => [
                     'type'   => 'parallel',
                     'exit'   => 'parentExitAction',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'region_a' => [
                             'initial' => 'working',
