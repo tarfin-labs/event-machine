@@ -6,8 +6,8 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionARaiseAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionBEntryAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionAAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBResultAction;
 
 class ParallelDispatchWithRaiseMachine extends Machine
 {
@@ -31,7 +31,7 @@ class ParallelDispatchWithRaiseMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionARaiseAction::class,
+                                        'entry' => ProcessRegionAAction::class,
                                         'on'    => [
                                             'REGION_A_PROCESSED' => 'finished',
                                         ],
@@ -43,7 +43,7 @@ class ParallelDispatchWithRaiseMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionBEntryAction::class,
+                                        'entry' => SetRegionBResultAction::class,
                                         'on'    => [
                                             'REGION_B_DONE' => 'finished',
                                         ],
