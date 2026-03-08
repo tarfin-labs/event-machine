@@ -58,7 +58,7 @@ it('cross-region event advances sibling → sibling job detects stale state', fu
                             'initial' => 'working',
                             'states'  => [
                                 'working' => [
-                                    'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionAEntryAction::class,
+                                    'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionAResultAction::class,
                                     'on'    => ['DONE_A' => 'finished'],
                                 ],
                                 'finished' => ['type' => 'final'],
@@ -68,7 +68,7 @@ it('cross-region event advances sibling → sibling job detects stale state', fu
                             'initial' => 'working',
                             'states'  => [
                                 'working' => [
-                                    'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionBEntryAction::class,
+                                    'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBResultAction::class,
                                     'on'    => ['DONE_B' => 'finished'],
                                 ],
                                 'finished' => ['type' => 'final'],
