@@ -100,7 +100,7 @@ test('areAllRegionsFinal does not count non-final states as final', function ():
             'states'  => [
                 'parallel_parent' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'region_a' => [
                             'initial' => 'working',
