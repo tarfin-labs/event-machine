@@ -4,6 +4,14 @@ All notable changes to `event-machine` will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Region Timeout**: Configurable timeout for stuck parallel states (`region_timeout` config key)
+  - `ParallelRegionTimeoutJob` dispatched with delay alongside region jobs
+  - When timeout expires and regions haven't completed, triggers `@fail` on the parallel state
+  - Records `PARALLEL_REGION_TIMEOUT` internal event with stalled region details
+  - Idempotent — no-op if parallel state already completed or machine moved on
+  - Disabled by default (`region_timeout: 0`)
+
 ### Changed
 - **BREAKING**: Renamed config keys `onDone` → `@done` and `onFail` → `@fail` for consistency with `@always` convention. All internal framework keys now use the `@` prefix, clearly separating them from user-defined event types (`SCREAMING_SNAKE_CASE`).
 
