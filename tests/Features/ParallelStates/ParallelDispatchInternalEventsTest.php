@@ -6,7 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RaiseInternalEventAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessInternalGoAction;
 
 uses(RefreshDatabase::class);
 
@@ -31,7 +31,7 @@ test('internal raised events take priority over external events (SCXML test421)'
                             'initial' => 'step_1_a',
                             'states'  => [
                                 'step_1_a' => [
-                                    'entry' => RaiseInternalEventAction::class,
+                                    'entry' => ProcessInternalGoAction::class,
                                     'on'    => [
                                         'INTERNAL_GO' => [
                                             'target'  => 'step_2_a',
