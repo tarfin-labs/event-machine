@@ -15,7 +15,7 @@ class ParallelDispatchChainedMachine extends Machine
     {
         return MachineDefinition::define(
             config: [
-                'id'             => 'parallel_chained',
+                'id'             => 'parallel_dispatch_chained',
                 'initial'        => 'phase_one',
                 'should_persist' => true,
                 'context'        => [
@@ -28,23 +28,23 @@ class ParallelDispatchChainedMachine extends Machine
                         'onDone' => 'phase_two',
                         'states' => [
                             'region_a' => [
-                                'initial' => 'working_a',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_a' => [
+                                    'working' => [
                                         'entry' => RegionAEntryAction::class,
-                                        'on'    => ['REGION_A_DONE' => 'finished_a'],
+                                        'on'    => ['REGION_A_DONE' => 'finished'],
                                     ],
-                                    'finished_a' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                             'region_b' => [
-                                'initial' => 'working_b',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_b' => [
+                                    'working' => [
                                         'entry' => RegionBEntryAction::class,
-                                        'on'    => ['REGION_B_DONE' => 'finished_b'],
+                                        'on'    => ['REGION_B_DONE' => 'finished'],
                                     ],
-                                    'finished_b' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                         ],
@@ -54,23 +54,23 @@ class ParallelDispatchChainedMachine extends Machine
                         'onDone' => 'completed',
                         'states' => [
                             'region_c' => [
-                                'initial' => 'working_c',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_c' => [
+                                    'working' => [
                                         'entry' => RegionAEntryAction::class,
-                                        'on'    => ['REGION_C_DONE' => 'finished_c'],
+                                        'on'    => ['REGION_C_DONE' => 'finished'],
                                     ],
-                                    'finished_c' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                             'region_d' => [
-                                'initial' => 'working_d',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_d' => [
+                                    'working' => [
                                         'entry' => RegionBEntryAction::class,
-                                        'on'    => ['REGION_D_DONE' => 'finished_d'],
+                                        'on'    => ['REGION_D_DONE' => 'finished'],
                                     ],
-                                    'finished_d' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                         ],
