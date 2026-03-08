@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
-function createParallelMachineWithOnFail(array|string $onFail = 'error'): MachineDefinition
+function createParallelMachineWithOnFail(array|string $onFail = 'failed'): MachineDefinition
 {
     return MachineDefinition::define(config: [
         'id'      => 'test',
@@ -17,23 +17,23 @@ function createParallelMachineWithOnFail(array|string $onFail = 'error'): Machin
                 'onFail' => $onFail,
                 'states' => [
                     'region_a' => [
-                        'initial' => 'working_a',
+                        'initial' => 'working',
                         'states'  => [
-                            'working_a'  => [],
-                            'finished_a' => ['type' => 'final'],
+                            'working'  => [],
+                            'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
-                        'initial' => 'working_b',
+                        'initial' => 'working',
                         'states'  => [
-                            'working_b'  => [],
-                            'finished_b' => ['type' => 'final'],
+                            'working'  => [],
+                            'finished' => ['type' => 'final'],
                         ],
                     ],
                 ],
             ],
-            'done'  => ['type' => 'final'],
-            'error' => ['type' => 'final'],
+            'done'   => ['type' => 'final'],
+            'failed' => ['type' => 'final'],
         ],
     ]);
 }
@@ -46,7 +46,7 @@ it('processParallelOnFail transitions to onFail target', function (): void {
     $result = $machine->processParallelOnFail($parallelState, $state);
 
     expect($result)->toBeInstanceOf(State::class);
-    expect($result->value)->toBe(['test.error']);
+    expect($result->value)->toBe(['test.failed']);
 });
 
 it('processParallelOnFail records PARALLEL_FAIL internal event', function (): void {
@@ -71,17 +71,17 @@ it('processParallelOnFail without onFail records event and stays in parallel', f
                 // No onFail defined
                 'states' => [
                     'region_a' => [
-                        'initial' => 'working_a',
+                        'initial' => 'working',
                         'states'  => [
-                            'working_a'  => [],
-                            'finished_a' => ['type' => 'final'],
+                            'working'  => [],
+                            'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
-                        'initial' => 'working_b',
+                        'initial' => 'working',
                         'states'  => [
-                            'working_b'  => [],
-                            'finished_b' => ['type' => 'final'],
+                            'working'  => [],
+                            'finished' => ['type' => 'final'],
                         ],
                     ],
                 ],
@@ -96,7 +96,7 @@ it('processParallelOnFail without onFail records event and stays in parallel', f
     $result = $machine->processParallelOnFail($parallelState, $state);
 
     // Should stay in parallel state (no transition)
-    expect($result->value)->toBe(['test.parallel_state.region_a.working_a', 'test.parallel_state.region_b.working_b']);
+    expect($result->value)->toBe(['test.parallel_state.region_a.working', 'test.parallel_state.region_b.working']);
 
     $eventTypes = $result->history->pluck('type')->toArray();
     expect($eventTypes)->toContain('test.parallel.parallel_state.fail');
@@ -110,25 +110,25 @@ it('processParallelOnFail with eventBehavior=null works', function (): void {
     // Explicitly pass null — should not throw
     $result = $machine->processParallelOnFail($parallelState, $state, null);
 
-    expect($result->value)->toBe(['test.error']);
+    expect($result->value)->toBe(['test.failed']);
 });
 
 it('processParallelOnFail with onFail as string works', function (): void {
-    $machine       = createParallelMachineWithOnFail('error');
+    $machine       = createParallelMachineWithOnFail('failed');
     $state         = $machine->getInitialState();
     $parallelState = $machine->idMap['test.parallel_state'];
 
     $result = $machine->processParallelOnFail($parallelState, $state);
 
-    expect($result->value)->toBe(['test.error']);
+    expect($result->value)->toBe(['test.failed']);
 });
 
 it('processParallelOnFail with onFail as array works', function (): void {
-    $machine       = createParallelMachineWithOnFail(['target' => 'error']);
+    $machine       = createParallelMachineWithOnFail(['target' => 'failed']);
     $state         = $machine->getInitialState();
     $parallelState = $machine->idMap['test.parallel_state'];
 
     $result = $machine->processParallelOnFail($parallelState, $state);
 
-    expect($result->value)->toBe(['test.error']);
+    expect($result->value)->toBe(['test.failed']);
 });
