@@ -26,8 +26,8 @@ it('enters all regions when transitioning into a parallel state via send()', fun
 
     // Should be in parallel state with both regions active
     expect($machine->state->isInParallelState())->toBeTrue();
-    expect($machine->state->matches('processing.region_a.working_a'))->toBeTrue();
-    expect($machine->state->matches('processing.region_b.working_b'))->toBeTrue();
+    expect($machine->state->matches('processing.region_a.working'))->toBeTrue();
+    expect($machine->state->matches('processing.region_b.working'))->toBeTrue();
 });
 
 it('runs region entry actions when transitioning into parallel state', function (): void {
@@ -76,8 +76,8 @@ it('can send region events after transitioning into parallel state', function ()
 
     // Now send events to individual regions
     $machine->send(['type' => 'REGION_A_DONE']);
-    expect($machine->state->matches('processing.region_a.finished_a'))->toBeTrue();
-    expect($machine->state->matches('processing.region_b.working_b'))->toBeTrue();
+    expect($machine->state->matches('processing.region_a.finished'))->toBeTrue();
+    expect($machine->state->matches('processing.region_b.working'))->toBeTrue();
 
     $machine->send(['type' => 'REGION_B_DONE']);
 
@@ -99,8 +99,8 @@ it('persists and restores after transitioning into parallel state', function ():
     $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
 
     expect($restored->state->isInParallelState())->toBeTrue();
-    expect($restored->state->matches('processing.region_a.working_a'))->toBeTrue();
-    expect($restored->state->matches('processing.region_b.working_b'))->toBeTrue();
+    expect($restored->state->matches('processing.region_a.working'))->toBeTrue();
+    expect($restored->state->matches('processing.region_b.working'))->toBeTrue();
     expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
     expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
 });
