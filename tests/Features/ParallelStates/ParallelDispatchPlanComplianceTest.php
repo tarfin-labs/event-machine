@@ -34,7 +34,7 @@ test('@always transitions fire after parallel region completion (plan #18)', fun
             'states'  => [
                 'parallel_parent' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'region_a' => [
                             'initial' => 'waiting_a',
@@ -203,7 +203,7 @@ test('nested parallel state within region enters correctly (plan #44)', function
             'states'  => [
                 'outer_parallel' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'region_a' => [
                             'initial' => 'step_a',
@@ -213,7 +213,7 @@ test('nested parallel state within region enters correctly (plan #44)', function
                                 ],
                                 'inner_parallel' => [
                                     'type'   => 'parallel',
-                                    'onDone' => 'completed',
+                                    '@done'  => 'completed',
                                     'states' => [
                                         'sub_region_1' => [
                                             'initial' => 'sub_working_1',
@@ -291,14 +291,14 @@ test('three-level nesting: outer parallel → inner parallel → leaf states (pl
             'states'  => [
                 'level_1' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'branch_a' => [
                             'initial' => 'level_2',
                             'states'  => [
                                 'level_2' => [
                                     'type'   => 'parallel',
-                                    'onDone' => 'branch_a_done',
+                                    '@done'  => 'branch_a_done',
                                     'states' => [
                                         'leaf_1' => [
                                             'initial' => 'active_1',
