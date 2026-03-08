@@ -38,21 +38,21 @@ it('each job captures only its own raised events', function (): void {
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithRaiseMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_raise.processing.region_a',
-        initialStateId: 'parallel_raise.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_raise.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_raise.processing.region_a.working',
     ))->handle();
 
     // Job B does not raise → no events captured
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithRaiseMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_raise.processing.region_b',
-        initialStateId: 'parallel_raise.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_with_raise.processing.region_b',
+        initialStateId: 'parallel_dispatch_with_raise.processing.region_b.working',
     ))->handle();
 
     $restored = ParallelDispatchWithRaiseMachine::create(state: $rootEventId);
 
     // Region A transitioned (its raised event was processed), Region B stayed
-    expect($restored->state->value)->toContain('parallel_raise.processing.region_a.finished_a');
-    expect($restored->state->value)->toContain('parallel_raise.processing.region_b.working_b');
+    expect($restored->state->value)->toContain('parallel_dispatch_with_raise.processing.region_a.finished');
+    expect($restored->state->value)->toContain('parallel_dispatch_with_raise.processing.region_b.working');
 });
