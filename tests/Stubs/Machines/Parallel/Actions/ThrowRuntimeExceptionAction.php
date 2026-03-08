@@ -13,7 +13,7 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
  *
  * Used to test parallel region job failure handling and onFail transitions.
  */
-class FailingEntryAction extends ActionBehavior
+class ThrowRuntimeExceptionAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
