@@ -6,8 +6,8 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionARaiseAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionBRaiseAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionAAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionBAction;
 
 /**
  * E2E test machine with mixed regions: dispatch + inline.
@@ -37,7 +37,7 @@ class E2EMixedRegionMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionARaiseAction::class,
+                                        'entry' => ProcessRegionAAction::class,
                                         'on'    => ['REGION_A_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
@@ -47,7 +47,7 @@ class E2EMixedRegionMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionBRaiseAction::class,
+                                        'entry' => ProcessRegionBAction::class,
                                         'on'    => ['REGION_B_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
