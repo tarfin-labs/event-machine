@@ -83,7 +83,7 @@ test('each dispatched job processes its raised events before releasing lock', fu
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     // Verify context was updated (entry action ran successfully)
@@ -103,18 +103,18 @@ test('areAllRegionsFinal does not count non-final states as final', function ():
                     'onDone' => 'completed',
                     'states' => [
                         'region_a' => [
-                            'initial' => 'working_a',
+                            'initial' => 'working',
                             'states'  => [
-                                'working_a' => [
+                                'working' => [
                                     'on' => ['DONE_A' => 'final_a'],
                                 ],
                                 'final_a' => ['type' => 'final'],
                             ],
                         ],
                         'region_b' => [
-                            'initial' => 'working_b',
+                            'initial' => 'working',
                             'states'  => [
-                                'working_b' => [
+                                'working' => [
                                     'on' => ['DONE_B' => 'final_b'],
                                 ],
                                 'final_b' => ['type' => 'final'],
