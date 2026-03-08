@@ -139,9 +139,11 @@ class ParallelRegionJob implements ShouldQueue
     public function failed(\Throwable $exception): void
     {
         try {
-            $lockHandle = MachineLockManager::acquire(
+            // Use a shorter timeout for fail handler — best-effort, avoid deadlock with sibling failures
+            $failLockTimeout = min(5, (int) config('machine.parallel_dispatch.lock_timeout', 30));
+            $lockHandle      = MachineLockManager::acquire(
                 rootEventId: $this->rootEventId,
-                timeout: (int) config('machine.parallel_dispatch.lock_timeout', 30),
+                timeout: $failLockTimeout,
                 ttl: (int) config('machine.parallel_dispatch.lock_ttl', 60),
                 context: "parallel_region_fail:{$this->regionId}",
             );
