@@ -715,7 +715,7 @@ test('compound onDone with actions config runs onDone actions', function (): voi
 
     $definition = MachineDefinition::define(
         config: [
-            'id'      => 'ondone_actions_test',
+            'id'      => 'oncompletedctions_test',
             'initial' => 'processing',
             'states'  => [
                 'processing' => [
@@ -761,7 +761,7 @@ test('compound onDone with actions config runs onDone actions', function (): voi
         behavior: [
             'actions' => [
                 'logOnDoneTransitionAction' => function () use (&$actionLog): void {
-                    $actionLog[] = 'ondone_action_fired';
+                    $actionLog[] = 'oncompletedction_fired';
                 },
             ],
         ]
@@ -774,7 +774,7 @@ test('compound onDone with actions config runs onDone actions', function (): voi
     expect($state->matches('processing.region_b.reviewed'))->toBeTrue();
 
     // The onDone action should have fired during the transition
-    expect($actionLog)->toContain('ondone_action_fired');
+    expect($actionLog)->toContain('oncompletedction_fired');
 });
 
 test('chained compound onDone across multiple levels', function (): void {
