@@ -20,6 +20,7 @@ Parallel states are useful when:
 
 Define a parallel state by setting `type` to `'parallel'`:
 
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
@@ -80,35 +81,42 @@ stateDiagram-v2
 
 In parallel states, `$state->value` is a flat array containing all active leaf state IDs:
 
-```php no_run
+<!-- doctest-attr: bootstrap="laravel,editor-setup" -->
+```php
 $state = $definition->getInitialState();
 
 // State value contains both active regions
+echo json_encode($state->value); // [!code hide]
 $state->value;
 // [
 //     'editor.active.document.editing',
 //     'editor.active.format.normal',
 // ]
 ```
+<!-- doctest-json: ["editor.active.document.editing","editor.active.format.normal"] -->
 
 ### Checking Active States
 
 Use the `matches()` method to check if a specific state is active:
 
-```php no_run
+<!-- doctest-attr: bootstrap="laravel,editor-setup" -->
+```php
 // Check individual states
-$state->matches('active.document.editing');  // true
-$state->matches('active.format.normal');     // true
+$state->matches('active.document.editing');  // => true
+$state->matches('active.format.normal');     // => true
 
 // Check multiple states at once with matchesAll()
-$state->matchesAll([
+$result = $state->matchesAll([ // [!code hide]
+$state->matchesAll([  // [!code --]
     'active.document.editing',
     'active.format.bold',
 ]);  // false - format is in 'normal', not 'bold'
+echo $result ? 'true' : 'false'; // [!code hide]
 
 // Check if currently in a parallel state with isInParallelState()
-$state->isInParallelState();  // true
+$state->isInParallelState();  // => true
 ```
+<!-- doctest-contains: false -->
 
 ::: warning Full Path Required
 The `matches()` method requires the full path to the leaf state. Partial paths (like `active.document` without the leaf state) will return false. Always specify the complete path to the active leaf state.
@@ -118,7 +126,8 @@ The `matches()` method requires the full path to the leaf state. Partial paths (
 
 A word processor with independent formatting toggles:
 
-```php no_run
+<!-- doctest-attr: bootstrap="laravel" -->
+```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 $definition = MachineDefinition::define([
@@ -184,10 +193,10 @@ $state = $definition->transition(['type' => 'TOGGLE_BOLD'], $state);
 $state = $definition->transition(['type' => 'TOGGLE_ITALIC'], $state);
 $state = $definition->transition(['type' => 'BULLETS'], $state);
 
-$state->matches('editing.bold.on');      // true
-$state->matches('editing.italic.on');    // true
-$state->matches('editing.underline.off'); // true
-$state->matches('editing.list.bullets'); // true
+$state->matches('editing.bold.on');      // => true
+$state->matches('editing.italic.on');    // => true
+$state->matches('editing.underline.off'); // => true
+$state->matches('editing.list.bullets'); // => true
 ```
 
 ## Validation Rules
@@ -284,7 +293,8 @@ Use `onDone` instead of complex guards when you need to wait for all regions to 
 
 When one region needs to wait for a sibling region to reach a certain state, use `@always` transitions with a guard that checks the sibling's state:
 
-```php ignore
+<!-- doctest-attr: bootstrap="laravel" -->
+```php
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
