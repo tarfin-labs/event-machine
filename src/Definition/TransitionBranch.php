@@ -78,9 +78,7 @@ class TransitionBranch
         }
 
         if (is_array($this->transitionBranchConfig)) {
-            if (!isset($this->target) || !$this->target instanceof StateDefinition) {
-                $this->target = null;
-            }
+            $this->target = null;
 
             if (isset($this->transitionBranchConfig['target'])) {
                 $targetStateDefinition = $this->transitionDefinition
