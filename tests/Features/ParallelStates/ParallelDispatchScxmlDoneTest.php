@@ -26,9 +26,9 @@ test('region done events fire BEFORE parallel done event (SCXML test570)', funct
                     'onDone' => 'completed',
                     'states' => [
                         'region_a' => [
-                            'initial' => 'working_a',
+                            'initial' => 'working',
                             'states'  => [
-                                'working_a' => [
+                                'working' => [
                                     'entry' => 'regionAEntryAction',
                                     'on'    => ['DONE_A' => 'final_a'],
                                 ],
@@ -36,9 +36,9 @@ test('region done events fire BEFORE parallel done event (SCXML test570)', funct
                             ],
                         ],
                         'region_b' => [
-                            'initial' => 'working_b',
+                            'initial' => 'working',
                             'states'  => [
-                                'working_b' => [
+                                'working' => [
                                     'entry' => 'regionBEntryAction',
                                     'on'    => ['DONE_B' => 'final_b'],
                                 ],
@@ -141,10 +141,10 @@ test('compound child done fires within parallel region (SCXML test417)', functio
                             'initial' => 'compound_a',
                             'states'  => [
                                 'compound_a' => [
-                                    'initial' => 'step_1',
+                                    'initial' => 'advanced',
                                     'onDone'  => 'final_a',
                                     'states'  => [
-                                        'step_1' => [
+                                        'advanced' => [
                                             'on' => ['STEP' => 'step_done'],
                                         ],
                                         'step_done' => ['type' => 'final'],
@@ -198,9 +198,9 @@ test('region done event fires AFTER all entry actions complete (SCXML test372)',
                     'onDone' => 'completed',
                     'states' => [
                         'region_a' => [
-                            'initial' => 'working_a',
+                            'initial' => 'working',
                             'states'  => [
-                                'working_a' => [
+                                'working' => [
                                     'on' => ['DONE_A' => 'final_a'],
                                 ],
                                 'final_a' => [
@@ -210,9 +210,9 @@ test('region done event fires AFTER all entry actions complete (SCXML test372)',
                             ],
                         ],
                         'region_b' => [
-                            'initial' => 'working_b',
+                            'initial' => 'working',
                             'states'  => [
-                                'working_b' => [
+                                'working' => [
                                     'on' => ['DONE_B' => 'final_b'],
                                 ],
                                 'final_b' => ['type' => 'final'],
@@ -273,14 +273,14 @@ test('done event ordering works with dispatched jobs', function (): void {
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     (new ParallelRegionJob(
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_b',
-        initialStateId: 'parallel_dispatch.processing.region_b.working_b',
+        initialStateId: 'parallel_dispatch.processing.region_b.working',
     ))->handle();
 
     // Transition to final
