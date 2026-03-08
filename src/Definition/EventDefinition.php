@@ -22,9 +22,4 @@ class EventDefinition extends EventBehavior
     {
         return '(event)';
     }
-
-    public function getMorphClass(): string
-    {
-        return self::class;
-    }
 }
