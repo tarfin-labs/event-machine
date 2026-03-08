@@ -413,10 +413,14 @@ Parallel dispatch runs region entry actions as concurrent queue jobs. Configure 
 ```php ignore
 return [
     'parallel_dispatch' => [
-        'enabled'      => env('MACHINE_PARALLEL_DISPATCH', false),
-        'queue'        => env('MACHINE_PARALLEL_QUEUE', null),
-        'lock_timeout' => env('MACHINE_PARALLEL_LOCK_TIMEOUT', 30),
-        'lock_ttl'     => env('MACHINE_PARALLEL_LOCK_TTL', 60),
+        'enabled'        => env('MACHINE_PARALLEL_DISPATCH_ENABLED', false),
+        'queue'          => env('MACHINE_PARALLEL_DISPATCH_QUEUE', null),
+        'lock_timeout'   => env('MACHINE_PARALLEL_DISPATCH_LOCK_TIMEOUT', 30),
+        'lock_ttl'       => env('MACHINE_PARALLEL_DISPATCH_LOCK_TTL', 60),
+        'job_timeout'    => env('MACHINE_PARALLEL_DISPATCH_JOB_TIMEOUT', 300),
+        'job_tries'      => env('MACHINE_PARALLEL_DISPATCH_JOB_TRIES', 3),
+        'job_backoff'    => env('MACHINE_PARALLEL_DISPATCH_JOB_BACKOFF', 30),
+        'region_timeout' => env('MACHINE_PARALLEL_DISPATCH_REGION_TIMEOUT', 0),
     ],
 ];
 ```
@@ -427,5 +431,9 @@ return [
 | `queue` | `null` | Queue name for region jobs (null = default) |
 | `lock_timeout` | `30` | Max seconds for blocking lock acquisition |
 | `lock_ttl` | `60` | Lock auto-expiry for stale lock cleanup |
+| `job_timeout` | `300` | Laravel job execution timeout (seconds) |
+| `job_tries` | `3` | Max retry attempts for failed region jobs |
+| `job_backoff` | `30` | Seconds between retry attempts |
+| `region_timeout` | `0` | Seconds before stuck parallel state triggers `@fail` (0 = disabled) |
 
 For details, see [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch).
