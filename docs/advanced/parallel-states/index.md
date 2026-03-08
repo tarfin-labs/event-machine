@@ -3,7 +3,7 @@
 Parallel states (also known as orthogonal states) allow multiple independent state regions to be active simultaneously. Each region processes events independently while sharing the same context.
 
 **Related pages:**
-- [Event Handling](./event-handling) - Events, entry/exit actions, `onDone`
+- [Event Handling](./event-handling) - Events, entry/exit actions, `@done`
 - [Persistence](./persistence) - Database storage and restoration
 - [Parallel Dispatch](./parallel-dispatch) - Concurrent execution via queue jobs
 
@@ -285,9 +285,9 @@ MachineDefinition::define(
 );
 ```
 
-### 4. Prefer `onDone` for Synchronization
+### 4. Prefer `@done` for Synchronization
 
-Use `onDone` instead of complex guards when you need to wait for all regions to complete.
+Use `@done` instead of complex guards when you need to wait for all regions to complete.
 
 ### 5. Use `@always` for Cross-Region Synchronization
 
@@ -307,7 +307,7 @@ MachineDefinition::define(
         'states' => [
             'processing' => [
                 'type' => 'parallel',
-                'onDone' => 'completed',
+                '@done' => 'completed',
                 'states' => [
                     'dealer' => [
                         'initial' => 'pricing',
