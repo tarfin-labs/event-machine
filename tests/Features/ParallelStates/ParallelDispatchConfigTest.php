@@ -46,8 +46,8 @@ it('allows onFail key in state config', function (): void {
             ],
             'processing' => [
                 'type'   => 'parallel',
-                'onDone' => 'done',
-                'onFail' => 'failed',
+                '@done'  => 'done',
+                '@fail'  => 'failed',
                 'states' => [
                     'region_a' => [
                         'initial' => 'working',
@@ -279,7 +279,7 @@ it('areAllRegionsFinal is callable as public method', function (): void {
         'states'  => [
             'parallel_state' => [
                 'type'   => 'parallel',
-                'onDone' => 'done',
+                '@done'  => 'done',
                 'states' => [
                     'region_a' => [
                         'initial' => 'working',
