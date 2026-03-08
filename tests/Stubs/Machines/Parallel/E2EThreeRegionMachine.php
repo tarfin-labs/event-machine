@@ -33,7 +33,7 @@ class E2EThreeRegionMachine extends Machine
                 'states' => [
                     'processing' => [
                         'type'   => 'parallel',
-                        'onDone' => 'completed',
+                        '@done'  => 'completed',
                         'states' => [
                             'region_a' => [
                                 'initial' => 'working',
