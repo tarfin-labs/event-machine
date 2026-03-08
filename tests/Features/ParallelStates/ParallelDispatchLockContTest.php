@@ -12,10 +12,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-nijd — lock contention + external events
-// ============================================================
-
 it('both jobs finishing sequentially succeed with consistent state', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 

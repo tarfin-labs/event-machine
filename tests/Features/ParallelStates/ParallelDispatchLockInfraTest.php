@@ -10,10 +10,6 @@ use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
 
 uses(RefreshDatabase::class);
 
-// ============================================================
-// Bead: event-machine-7qjc — Migration
-// ============================================================
-
 it('creates machine_locks table with correct columns', function (): void {
     expect(Schema::hasTable('machine_locks'))->toBeTrue();
     expect(Schema::hasColumn('machine_locks', 'root_event_id'))->toBeTrue();
@@ -22,10 +18,6 @@ it('creates machine_locks table with correct columns', function (): void {
     expect(Schema::hasColumn('machine_locks', 'expires_at'))->toBeTrue();
     expect(Schema::hasColumn('machine_locks', 'context'))->toBeTrue();
 });
-
-// ============================================================
-// Bead: event-machine-lu7z — MachineStateLock model
-// ============================================================
 
 it('MachineStateLock uses correct table and has no timestamps', function (): void {
     $lock = new MachineStateLock();
@@ -53,10 +45,6 @@ it('MachineStateLock can create and find records', function (): void {
     expect($found->owner_id)->toBe('owner-456');
     expect($found->context)->toBe('test_context');
 });
-
-// ============================================================
-// Bead: event-machine-t8pg — MachineLockManager + MachineLockHandle
-// ============================================================
 
 it('acquire() acquires lock and returns MachineLockHandle', function (): void {
     $handle = MachineLockManager::acquire('root-001', context: 'test');

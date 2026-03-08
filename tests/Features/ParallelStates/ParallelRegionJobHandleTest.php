@@ -14,10 +14,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-uhph — machine reconstruction + guards
-// ============================================================
-
 it('reconstructs machine from rootEventId in handle()', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
@@ -114,10 +110,6 @@ it('no-ops when region no longer at initial state', function (): void {
     expect($historyCountAfter)->toBe($historyCountBefore);
 });
 
-// ============================================================
-// Bead: event-machine-g158 — entry action execution + side effect capture
-// ============================================================
-
 it('runs entry action and modifies context', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
@@ -180,10 +172,6 @@ it('computeContextDiff ignores unchanged keys', function (): void {
 
     expect($diff)->toBe([]);
 });
-
-// ============================================================
-// Bead: event-machine-gkj6 — lock + fresh reload + merge + onDone check
-// ============================================================
 
 it('both region jobs complete and context is merged', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);

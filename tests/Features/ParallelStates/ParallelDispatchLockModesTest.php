@@ -14,10 +14,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-cwdw — lock mode semantics
-// ============================================================
-
 it('Machine::send() uses immediate lock mode (timeout=0)', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 

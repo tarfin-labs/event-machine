@@ -17,20 +17,12 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-44mp — Config
-// ============================================================
-
 it('has parallel_dispatch config section with correct defaults', function (): void {
     expect(config('machine.parallel_dispatch.enabled'))->toBeFalse();
     expect(config('machine.parallel_dispatch.queue'))->toBeNull();
     expect(config('machine.parallel_dispatch.lock_timeout'))->toBe(30);
     expect(config('machine.parallel_dispatch.lock_ttl'))->toBe(60);
 });
-
-// ============================================================
-// Bead: event-machine-scj1 — InternalEvent PARALLEL_FAIL
-// ============================================================
 
 it('has PARALLEL_FAIL enum case', function (): void {
     $case = InternalEvent::PARALLEL_FAIL;
@@ -43,10 +35,6 @@ it('generates correct PARALLEL_FAIL event name', function (): void {
 
     expect($name)->toBe('order.parallel.data_collection.fail');
 });
-
-// ============================================================
-// Bead: event-machine-1og6 — StateConfigValidator onFail key
-// ============================================================
 
 it('allows onFail key in state config', function (): void {
     StateConfigValidator::validate([
@@ -98,10 +86,6 @@ it('still rejects invalid state keys', function (): void {
     ]);
 })->throws(InvalidArgumentException::class, 'invalid keys');
 
-// ============================================================
-// Bead: event-machine-1sn2 — InvalidParallelStateDefinitionException factory methods
-// ============================================================
-
 it('creates requiresPersistence exception', function (): void {
     $exception = InvalidParallelStateDefinitionException::requiresPersistence();
 
@@ -117,10 +101,6 @@ it('creates requiresMachineSubclass exception', function (): void {
     expect($exception->getMessage())->toContain('Machine subclass');
     expect($exception->getMessage())->toContain('definition()');
 });
-
-// ============================================================
-// Bead: event-machine-6lux — MachineLockTimeoutException
-// ============================================================
 
 it('builds MachineLockTimeoutException in immediate mode', function (): void {
     $exception = MachineLockTimeoutException::build('root-123', 0);
@@ -144,10 +124,6 @@ it('builds MachineLockTimeoutException with holder info', function (): void {
 
     expect($exception->getMessage())->not->toContain('Held by');
 });
-
-// ============================================================
-// Bead: event-machine-utgx — Validate parallel dispatch + persistence
-// ============================================================
 
 it('throws when parallel_dispatch enabled but should_persist is false', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
@@ -201,10 +177,6 @@ it('skips validation when parallel_dispatch is disabled', function (): void {
     expect($machine)->toBeInstanceOf(MachineDefinition::class);
 });
 
-// ============================================================
-// Bead: event-machine-4l6g — Validate Machine subclass requirement
-// ============================================================
-
 it('throws when parallel_dispatch enabled and using base Machine::class', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
@@ -244,10 +216,6 @@ it('skips subclass validation when parallel_dispatch is disabled', function (): 
     expect($machine)->toBeInstanceOf(Machine::class);
 });
 
-// ============================================================
-// Bead: event-machine-q3bi — MachineDefinition properties + Machine::start() wiring
-// ============================================================
-
 it('sets machineClass on definition after Machine::start()', function (): void {
     $machine = AsdMachine::create();
 
@@ -278,10 +246,6 @@ it('has empty pendingParallelDispatches by default', function (): void {
     expect($definition->pendingParallelDispatches)->toBe([]);
 });
 
-// ============================================================
-// Bead: event-machine-lhyn — createEventBehavior proxy
-// ============================================================
-
 it('createEventBehavior returns EventBehavior instance', function (): void {
     $machine = MachineDefinition::define(config: [
         'id'      => 'test',
@@ -304,10 +268,6 @@ it('createEventBehavior returns EventBehavior instance', function (): void {
     expect($eventBehavior)->toBeInstanceOf(\Tarfinlabs\EventMachine\Behavior\EventBehavior::class);
     expect($eventBehavior->type)->toBe('GO');
 });
-
-// ============================================================
-// Bead: event-machine-5x3g — areAllRegionsFinal visibility
-// ============================================================
 
 it('areAllRegionsFinal is callable as public method', function (): void {
     $machine = MachineDefinition::define(config: [

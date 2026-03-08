@@ -5,10 +5,6 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RaiseInternalEventAction;
 
-// ============================================================
-// Bead: event-machine-1fxb — parallel state own entry raises
-// ============================================================
-
 test('parallel state entry action raises event → processed in Phase 1', function (): void {
     $definition = MachineDefinition::define(
         config: [

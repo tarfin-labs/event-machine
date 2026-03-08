@@ -13,10 +13,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-8juo — @fail edge cases
-// ============================================================
-
 it('@fail handler throws → last-resort logging', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 

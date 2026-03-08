@@ -14,10 +14,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-tq4e — failed() @fail event handler
-// ============================================================
-
 it('transitions to error state when failed() called with onFail defined', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 

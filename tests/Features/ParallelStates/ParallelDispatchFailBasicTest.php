@@ -13,10 +13,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-ldq9 — @fail basic flow
-// ============================================================
-
 it('region job fails with onFail → transitions to error state', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 

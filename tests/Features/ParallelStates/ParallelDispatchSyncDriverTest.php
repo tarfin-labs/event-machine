@@ -13,10 +13,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-3wl7 — sync queue driver safety
-// ============================================================
-
 it('dispatch mode correctly defers entry actions when enabled', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 

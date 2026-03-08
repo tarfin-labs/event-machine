@@ -6,10 +6,6 @@ use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMachine;
 
-// ============================================================
-// Bead: event-machine-gbpz — API surface parity
-// ============================================================
-
 it('createEventBehavior returns EventBehavior from array input', function (): void {
     $definition = ParallelDispatchMachine::definition();
     $state      = $definition->getInitialState();

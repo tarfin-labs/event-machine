@@ -13,10 +13,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-3tx5 — @fail sibling job interaction
-// ============================================================
-
 it('@fail cancels sibling job that has not started yet', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 

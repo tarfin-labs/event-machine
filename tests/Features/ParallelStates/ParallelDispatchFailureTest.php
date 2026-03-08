@@ -13,10 +13,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-ehcb — job failure + partial state
-// ============================================================
-
 it('single region job failure leaves machine in parallel state when no onFail', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 

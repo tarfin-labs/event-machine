@@ -13,10 +13,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-hos3 — SCXML done event ordering
-// ============================================================
-
 test('region done events fire BEFORE parallel done event (SCXML test570)', function (): void {
     $actionsExecuted = [];
 

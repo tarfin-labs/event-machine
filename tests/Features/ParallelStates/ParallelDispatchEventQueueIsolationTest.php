@@ -13,10 +13,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-81qt — event queue isolation
-// ============================================================
-
 it('reconstructed machine starts with empty event queue', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 

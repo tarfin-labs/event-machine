@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
-// ============================================================
-// Bead: event-machine-gj5b — XState orthogonal transitions
-// ============================================================
-
 test('same event transitions multiple regions simultaneously', function (): void {
     $definition = MachineDefinition::define(
         config: [

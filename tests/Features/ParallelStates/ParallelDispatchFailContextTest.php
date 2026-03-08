@@ -12,10 +12,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-z8va — @fail context preservation
-// ============================================================
-
 it('completed region context preserved when sibling fails', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 

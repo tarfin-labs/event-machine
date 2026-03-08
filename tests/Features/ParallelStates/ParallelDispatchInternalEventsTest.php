@@ -14,10 +14,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-43v5 — internal events priority
-// ============================================================
-
 test('internal raised events take priority over external events (SCXML test421)', function (): void {
     $definition = MachineDefinition::define(
         config: [

@@ -14,10 +14,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-q77z — basic parallel dispatch lifecycle
-// ============================================================
-
 it('full lifecycle: create → dispatch → jobs complete → onDone → next state', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
@@ -92,10 +88,6 @@ it('Bus::fake verifies dispatch from Machine::create with enabled config', funct
     Bus::assertDispatched(ParallelRegionJob::class, fn (ParallelRegionJob $job): bool => $job->regionId === 'parallel_dispatch.processing.region_b');
 });
 
-// ============================================================
-// Bead: event-machine-j60w — context merge edge cases
-// ============================================================
-
 it('context merge preserves keys set by first job when second job runs', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
@@ -158,10 +150,6 @@ it('context merge works regardless of job completion order', function (): void {
     expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
 });
 
-// ============================================================
-// Bead: event-machine-u7v2 — raised events + compound onDone
-// ============================================================
-
 it('compound onDone fires within parallel region after transition', function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 
@@ -178,10 +166,6 @@ it('compound onDone fires within parallel region after transition', function ():
     // Should transition to completed via onDone
     expect($machine->state->currentStateDefinition->id)->toBe('parallel_dispatch.completed');
 });
-
-// ============================================================
-// Bead: event-machine-oun3 — chained parallel dispatch
-// ============================================================
 
 it('onDone target state entry actions fire after all regions complete', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);

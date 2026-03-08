@@ -14,10 +14,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-nxra — job guard checks (stale state no-ops)
-// ============================================================
-
 it('job no-ops when machine no longer in parallel state (pre-lock guard)', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 

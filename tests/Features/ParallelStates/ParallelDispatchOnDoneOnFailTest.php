@@ -5,10 +5,6 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
-// ============================================================
-// Bead: event-machine-hj4v — processParallelOnFail()
-// ============================================================
-
 function createParallelMachineWithOnFail(array|string $onFail = 'error'): MachineDefinition
 {
     return MachineDefinition::define(config: [

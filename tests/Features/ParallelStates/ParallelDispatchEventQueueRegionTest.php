@@ -13,10 +13,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-1egd — region entry action raises
-// ============================================================
-
 it('region entry action raises single event → captured and processed', function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 

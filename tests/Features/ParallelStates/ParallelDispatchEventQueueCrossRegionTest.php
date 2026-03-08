@@ -12,10 +12,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-2tg0 — cross-region raised events
-// ============================================================
-
 it('job raised event broadcasts to all regions via transitionParallelState', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 

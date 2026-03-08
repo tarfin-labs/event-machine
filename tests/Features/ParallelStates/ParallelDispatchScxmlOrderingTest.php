@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
-// ============================================================
-// Bead: event-machine-4unj — SCXML entry/exit action ordering
-// ============================================================
-
 test('parallel state entry: parent entered before children (SCXML test404)', function (): void {
     $actionsExecuted = [];
 

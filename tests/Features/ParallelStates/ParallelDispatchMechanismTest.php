@@ -15,10 +15,6 @@ afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 });
 
-// ============================================================
-// Bead: event-machine-8g5g — shouldDispatchParallel + enterParallelState dispatch mode
-// ============================================================
-
 function createDispatchableParallelDefinition(): MachineDefinition
 {
     return MachineDefinition::define(config: [
@@ -221,10 +217,6 @@ it('sequential mode runs entry actions normally (regression)', function (): void
     ]);
     expect($definition->pendingParallelDispatches)->toBe([]);
 });
-
-// ============================================================
-// Bead: event-machine-hhjd — dispatchPendingParallelJobs + send() finally block
-// ============================================================
 
 it('dispatches ParallelRegionJob for each pending region', function (): void {
     Bus::fake();
