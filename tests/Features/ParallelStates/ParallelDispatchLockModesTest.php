@@ -26,14 +26,14 @@ it('Machine::send() uses immediate lock mode (timeout=0)', function (): void {
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     (new ParallelRegionJob(
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_b',
-        initialStateId: 'parallel_dispatch.processing.region_b.working_b',
+        initialStateId: 'parallel_dispatch.processing.region_b.working',
     ))->handle();
 
     // Manually hold a lock to simulate contention
@@ -67,14 +67,14 @@ it('ParallelRegionJob uses blocking lock mode (timeout>0)', function (): void {
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     (new ParallelRegionJob(
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_b',
-        initialStateId: 'parallel_dispatch.processing.region_b.working_b',
+        initialStateId: 'parallel_dispatch.processing.region_b.working',
     ))->handle();
 
     // Both completed successfully (no exception = blocking lock worked)
