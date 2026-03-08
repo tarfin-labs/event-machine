@@ -8,13 +8,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchGuardAbortMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ConcurrentModificationAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SimulateConcurrentModificationAction;
 
 uses(RefreshDatabase::class);
 
 afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
-    ConcurrentModificationAction::$onExecute = null;
+    SimulateConcurrentModificationAction::$onExecute = null;
 });
 
 // ============================================================
@@ -50,7 +50,7 @@ it('records parallel_dispatch_guard_abort event when machine exits parallel betw
 
     // During entry action (lockless phase), simulate a concurrent operation
     // that transitions the machine out of parallel state.
-    ConcurrentModificationAction::$onExecute = function () use ($rootEventId): void {
+    SimulateConcurrentModificationAction::$onExecute = function () use ($rootEventId): void {
         // Simulate: all other work completed, machine moved to 'completed'
         $lastEvent = MachineEvent::where('root_event_id', $rootEventId)
             ->orderBy('sequence_number', 'desc')
@@ -106,7 +106,7 @@ it('records parallel_dispatch_guard_abort event when region advances between act
 
     // During entry action (lockless phase), simulate a concurrent operation
     // that advances region A to finished.
-    ConcurrentModificationAction::$onExecute = function () use ($rootEventId): void {
+    SimulateConcurrentModificationAction::$onExecute = function () use ($rootEventId): void {
         $lastEvent = MachineEvent::where('root_event_id', $rootEventId)
             ->orderBy('sequence_number', 'desc')
             ->first();
@@ -160,7 +160,7 @@ it('abort event records discarded raised event count', function (): void {
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    ConcurrentModificationAction::$onExecute = function () use ($rootEventId): void {
+    SimulateConcurrentModificationAction::$onExecute = function () use ($rootEventId): void {
         $lastEvent = MachineEvent::where('root_event_id', $rootEventId)
             ->orderBy('sequence_number', 'desc')
             ->first();
@@ -206,7 +206,7 @@ it('abort event preserves full context snapshot', function (): void {
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    ConcurrentModificationAction::$onExecute = function () use ($rootEventId): void {
+    SimulateConcurrentModificationAction::$onExecute = function () use ($rootEventId): void {
         $lastEvent = MachineEvent::where('root_event_id', $rootEventId)
             ->orderBy('sequence_number', 'desc')
             ->first();
@@ -249,7 +249,7 @@ it('abort event preserves full context snapshot', function (): void {
 it('abort event records work_was_discarded=false when entry action had no side effects', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
-    // Use the standard machine (RegionAEntryAction just sets context)
+    // Use the standard machine (SetRegionAResultAction just sets context)
     $machine = ParallelDispatchMachine::create();
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
@@ -285,7 +285,7 @@ it('machine can be restored correctly after a parallel_dispatch_guard_abort even
     $rootEventId = $machine->state->history->first()->root_event_id;
 
     // Simulate concurrent exit during entry action
-    ConcurrentModificationAction::$onExecute = function () use ($rootEventId): void {
+    SimulateConcurrentModificationAction::$onExecute = function () use ($rootEventId): void {
         $lastEvent = MachineEvent::where('root_event_id', $rootEventId)
             ->orderBy('sequence_number', 'desc')
             ->first();
