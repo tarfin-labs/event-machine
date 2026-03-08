@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchDbWriteMachine;
 
 uses(RefreshDatabase::class);
 
@@ -53,4 +54,60 @@ it('send() does not dispatch pending parallel jobs when persist fails', function
 
     // 6. pendingParallelDispatches should be cleared regardless
     expect($machine->definition->pendingParallelDispatches)->toBe([]);
+});
+
+// ============================================================
+// Fix B: ParallelRegionJob::handle() — critical section must run
+//        inside DB::transaction for atomicity
+// ============================================================
+
+it('ParallelRegionJob critical section runs inside a DB transaction', function (): void {
+    config()->set('machine.parallel_dispatch.enabled', true);
+
+    // 1. Create test_side_effects table (DbWriteAction inserts into it)
+    Schema::create('test_side_effects', function ($table): void {
+        $table->id();
+        $table->string('value');
+    });
+
+    // 2. Create and persist the machine
+    $machine = ParallelDispatchDbWriteMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // 3. Capture transaction level when DbWriteAction runs inside the lock.
+    //    DbWriteAction is the entry action on finished_a. It runs when the
+    //    RAISED event (REGION_A_PROCESSED) is processed inside the lock-protected
+    //    section via transition().
+    $transactionLevelDuringInsert = 0;
+
+    DB::listen(function ($query) use (&$transactionLevelDuringInsert): void {
+        if (str_contains($query->sql, 'test_side_effects')) {
+            $transactionLevelDuringInsert = DB::transactionLevel();
+        }
+    });
+
+    // 4. Run region A job
+    (new ParallelRegionJob(
+        machineClass: ParallelDispatchDbWriteMachine::class,
+        rootEventId: $rootEventId,
+        regionId: 'parallel_db_write.processing.region_a',
+        initialStateId: 'parallel_db_write.processing.region_a.working_a',
+    ))->handle();
+
+    // 5. BUG: In current code, the INSERT runs without an explicit transaction
+    //    from ParallelRegionJob (transactionLevel = 1, only from RefreshDatabase).
+    //    After Fix B, it should be inside an explicit DB::transaction()
+    //    (transactionLevel >= 2), making it atomic with persist().
+    //    Level 1 = RefreshDatabase wrapper, Level 2 = our explicit transaction.
+    expect($transactionLevelDuringInsert)->toBeGreaterThanOrEqual(2);
+
+    // 6. Verify the job completed successfully (happy path works)
+    expect(DB::table('test_side_effects')->count())->toBe(1);
+
+    $restored = ParallelDispatchDbWriteMachine::create(state: $rootEventId);
+    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+
+    // Clean up
+    Schema::drop('test_side_effects');
 });
