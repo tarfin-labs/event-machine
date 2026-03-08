@@ -354,3 +354,7 @@ For more details and examples, see [@always Transitions — Cross-Region Synchro
 ### 6. Document Region Dependencies
 
 If regions have implicit dependencies (e.g., one region writes context that another reads), document this clearly in your machine definition.
+
+### 7. Consider Parallel Dispatch for Slow Entry Actions
+
+When region entry actions contain expensive operations (API calls, file processing), enable [Parallel Dispatch](./parallel-dispatch) to run them concurrently via Laravel queue jobs. This reduces wall-clock time from the sum of all actions to the duration of the slowest one. Each region should write to its own context keys to avoid conflicts.
