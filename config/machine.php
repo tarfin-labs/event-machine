@@ -69,5 +69,11 @@ return [
         'job_timeout' => env('MACHINE_PARALLEL_DISPATCH_JOB_TIMEOUT', 300),
         'job_tries'   => env('MACHINE_PARALLEL_DISPATCH_JOB_TRIES', 3),
         'job_backoff' => env('MACHINE_PARALLEL_DISPATCH_JOB_BACKOFF', 30),
+
+        // Seconds before a parallel state is considered stuck. When a parallel
+        // state has not completed (all regions final) within this duration, a
+        // delayed check job fires and triggers @fail on the parallel state.
+        // Set to 0 to disable (default).
+        'region_timeout' => env('MACHINE_PARALLEL_DISPATCH_REGION_TIMEOUT', 0),
     ],
 ];
