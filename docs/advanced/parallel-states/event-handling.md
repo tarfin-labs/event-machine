@@ -693,3 +693,7 @@ When transitioning into a nested parallel state, entry actions fire in order:
 1. The parallel state's entry action (`on`)
 2. Each nested region's initial state entry action (`inner1.idle`, `inner2.idle`)
 :::
+
+::: tip Parallel Dispatch Timing
+With [Parallel Dispatch](./parallel-dispatch) enabled, entry actions for each region run as concurrent queue jobs instead of sequentially. This changes the execution model: entry actions no longer share an in-memory context during execution. Each job snapshots context before running, computes a diff after, and merges under a database lock. Regions must write to **separate context keys** to avoid last-writer-wins conflicts.
+:::
