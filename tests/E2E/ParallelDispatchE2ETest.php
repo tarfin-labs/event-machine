@@ -767,7 +767,7 @@ it('validates config requires should_persist and Machine subclass for dispatch',
             'states' => [
                 'processing' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'region_a' => [
                             'initial' => 'working',
