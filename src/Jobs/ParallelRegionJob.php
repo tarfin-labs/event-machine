@@ -21,16 +21,20 @@ class ParallelRegionJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public int $timeout = 300;
-    public int $tries   = 3;
-    public int $backoff = 30;
+    public int $timeout;
+    public int $tries;
+    public int $backoff;
 
     public function __construct(
         public readonly string $machineClass,
         public readonly string $rootEventId,
         public readonly string $regionId,
         public readonly string $initialStateId,
-    ) {}
+    ) {
+        $this->timeout = (int) config('machine.parallel_dispatch.job_timeout', 300);
+        $this->tries   = (int) config('machine.parallel_dispatch.job_tries', 3);
+        $this->backoff = (int) config('machine.parallel_dispatch.job_backoff', 30);
+    }
 
     public function handle(): void
     {
