@@ -6,10 +6,10 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionARaiseAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionBRaiseAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionCRaiseAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionDRaiseAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionAAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionBAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionCAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionDAction;
 
 /**
  * E2E test machine for chained parallel states.
@@ -43,7 +43,7 @@ class E2EChainedMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionARaiseAction::class,
+                                        'entry' => ProcessRegionAAction::class,
                                         'on'    => ['REGION_A_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
@@ -53,7 +53,7 @@ class E2EChainedMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionBRaiseAction::class,
+                                        'entry' => ProcessRegionBAction::class,
                                         'on'    => ['REGION_B_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
@@ -69,7 +69,7 @@ class E2EChainedMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionCRaiseAction::class,
+                                        'entry' => ProcessRegionCAction::class,
                                         'on'    => ['REGION_C_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
@@ -79,7 +79,7 @@ class E2EChainedMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionDRaiseAction::class,
+                                        'entry' => ProcessRegionDAction::class,
                                         'on'    => ['REGION_D_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
