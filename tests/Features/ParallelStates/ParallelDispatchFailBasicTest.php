@@ -23,14 +23,14 @@ it('region job fails with onFail → transitions to error state', function (): v
     $job = new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_a',
-        initialStateId: 'parallel_fail.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_fail.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
 
     $job->failed(new \RuntimeException('API timeout'));
 
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($restored->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
     expect($restored->state->isInParallelState())->toBeFalse();
 });
 
@@ -46,7 +46,7 @@ it('region job fails without onFail → machine stays in parallel', function ():
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     );
 
     $job->failed(new \RuntimeException('API timeout'));
@@ -72,8 +72,8 @@ it('@fail payload contains failure details', function (): void {
     $job = new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_a',
-        initialStateId: 'parallel_fail.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_fail.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
 
     $job->failed(new \RuntimeException('Connection timeout'));
@@ -87,6 +87,6 @@ it('@fail payload contains failure details', function (): void {
     expect($failEvent)->not->toBeNull();
 
     // Machine must have transitioned to error state
-    expect($restored->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
     expect($restored->state->isInParallelState())->toBeFalse();
 });
