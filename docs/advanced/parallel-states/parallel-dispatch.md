@@ -109,7 +109,7 @@ foreach ($contextDiff as $key => $value) {
 ```
 
 ::: warning Context Key Isolation
-Parallel regions **must** write to different context keys. If two regions write to the same key, the last job to acquire the lock wins. Design your regions to write to unique keys (e.g., `findeks_report` vs `turmob_report`).
+Parallel regions **should** write to different context keys. If two regions write to the same key, the last job to acquire the lock wins (LWW). A `PARALLEL_CONTEXT_CONFLICT` internal event is recorded when this happens, so the overwrite is observable in machine history. Design your regions to write to unique keys (e.g., `findeks_report` vs `turmob_report`) to avoid conflicts entirely.
 :::
 
 ### Double-Guard Pattern
@@ -120,6 +120,14 @@ Jobs check preconditions twice — once before running actions (without lock) an
 2. **Under-lock guard**: Same checks repeated with fresh state from database
 
 This ensures idempotent execution even with retries or race conditions.
+
+If the under-lock guard detects the machine has moved on (either left parallel state entirely, or the region already advanced), a `PARALLEL_REGION_GUARD_ABORT` internal event is recorded. This event captures:
+- The **reason** for the abort (`machine left parallel state` or `region already advanced`)
+- **Discarded context keys** that were computed but not applied
+- **Discarded event count** from raised events that were not processed
+- Whether any **work was actually discarded** (`work_was_discarded` flag)
+
+This makes discarded work observable in the machine's event history.
 
 ### Raised Events
 
@@ -227,15 +235,37 @@ Always define `onFail` on parallel states that use dispatch. This provides a cle
 
 ### 4. Monitor with Internal Events
 
-The dispatch mechanism records internal events in machine history:
+The dispatch mechanism records internal events in machine history for full observability:
 
-| Event | When |
-|-------|------|
-| `PARALLEL_REGION_ENTER` | Job completes and persists context |
-| `PARALLEL_DONE` | All regions reach final, `onDone` fires |
-| `PARALLEL_FAIL` | Job failed after all retries |
+| Event | When | Payload |
+|-------|------|---------|
+| `PARALLEL_REGION_ENTER` | Job completes and persists context | — |
+| `PARALLEL_REGION_GUARD_ABORT` | Under-lock guard discards work | `reason`, `discarded_context`, `discarded_events`, `work_was_discarded` |
+| `PARALLEL_CONTEXT_CONFLICT` | Second region overwrites key set by first | `region_id`, `conflicted_keys` |
+| `PARALLEL_REGION_STALLED` | Entry action completes but region does not advance | `region_id`, `initial_state_id`, `context_changed` |
+| `PARALLEL_DONE` | All regions reach final, `onDone` fires | — |
+| `PARALLEL_FAIL` | Job failed after all retries | `region_id`, `error`, `exception`, `attempts` |
 
-Use these events for monitoring and debugging.
+Use these events for monitoring and debugging. All events are persisted in `machine_events` as durable audit trail records — they are never lost, unlike log entries.
+
+::: tip Querying Parallel Events
+```php no_run
+// Find all context conflicts for a machine
+MachineEvent::where('root_event_id', $rootEventId)
+    ->where('type', 'like', '%context.conflict%')
+    ->get();
+
+// Find stalled regions
+MachineEvent::where('root_event_id', $rootEventId)
+    ->where('type', 'like', '%region.stalled')
+    ->get();
+
+// Find guard aborts (discarded work)
+MachineEvent::where('root_event_id', $rootEventId)
+    ->where('type', 'like', '%guard_abort')
+    ->get();
+```
+:::
 
 ### 5. Test Both Modes
 
@@ -253,9 +283,53 @@ it('works without parallel dispatch', function (): void {
 });
 ```
 
+## Stall Detection
+
+When a region's entry action completes successfully but does **not** call `$this->raise()`, the region stays at its initial state. The job completes from Laravel's perspective (no retry), but the region never advances toward a final state.
+
+This is detected automatically: if the region is still at its initial state after processing raised events (i.e., there were none), a `PARALLEL_REGION_STALLED` internal event is recorded.
+
+::: info Stall Is Informational
+The stall event is an **audit trail**, not an error. Some regions are intentionally designed to wait for external events (e.g., a webhook callback). The stall event makes this observable so operators can distinguish between "waiting by design" and "stuck by accident."
+:::
+
+### Stall Payload
+
+```php ignore
+[
+    'region_id'        => 'order_workflow.processing.findeks',
+    'initial_state_id' => 'order_workflow.processing.findeks.waiting',
+    'context_changed'  => true,  // Entry action modified context but didn't raise events
+]
+```
+
+The `context_changed` flag indicates whether the entry action had side effects. A stall with `context_changed: false` means the entry action was essentially a no-op.
+
+## Context Conflict Detection
+
+When two regions write to the **same** context key, the second job to acquire the lock detects the conflict by comparing the current DB value against the **baseline snapshot** taken when the parallel state was entered (`contextAtDispatch`).
+
+If the DB value differs from the baseline, a sibling region already modified that key. A `PARALLEL_CONTEXT_CONFLICT` internal event is recorded with the list of conflicted keys.
+
+::: warning LWW Behavior Preserved
+Context conflict detection is **observational only**. The second region's value still wins (last-writer-wins). The conflict event enables monitoring dashboards and alerts — it does not throw exceptions or block execution.
+:::
+
+### Conflict Payload
+
+```php ignore
+[
+    'region_id'       => 'order_workflow.processing.turmob',
+    'conflicted_keys' => ['shared_score', 'shared_rating'],
+]
+```
+
+### Avoiding Conflicts
+
+The best practice remains: each region should write to its own context keys. But when shared keys are unavoidable, the conflict event provides visibility.
+
 ## Limitations
 
-1. **Context key conflicts** — Two regions writing the same key causes a last-writer-wins race
-2. **No cancellation** — Once dispatched, jobs cannot be cancelled (they no-op if machine state changes)
-3. **Queue dependency** — Requires a functioning queue system with workers
-4. **Lock contention** — High-throughput machines may experience lock wait times
+1. **No cancellation** — Once dispatched, jobs cannot be cancelled (they no-op if machine state changes)
+2. **Queue dependency** — Requires a functioning queue system with workers
+3. **Lock contention** — High-throughput machines may experience lock wait times
