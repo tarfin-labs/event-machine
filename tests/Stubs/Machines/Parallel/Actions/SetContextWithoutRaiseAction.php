@@ -11,7 +11,7 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
  * Entry action that sets context but does NOT call raise().
  * Region stays in its initial state forever — tests stuck machine behavior.
  */
-class NoRaiseEntryAction extends ActionBehavior
+class SetContextWithoutRaiseAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
