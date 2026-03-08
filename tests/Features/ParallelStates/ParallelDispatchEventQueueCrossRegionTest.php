@@ -52,7 +52,7 @@ it('cross-region event advances sibling → sibling job detects stale state', fu
             'states' => [
                 'processing' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'region_a' => [
                             'initial' => 'working',
