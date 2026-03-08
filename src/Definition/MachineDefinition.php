@@ -102,7 +102,13 @@ class MachineDefinition
 
         $this->shouldPersist = $this->config['should_persist'] ?? $this->shouldPersist;
 
-        if (config('machine.parallel_dispatch.enabled', false)) {
+        try {
+            $parallelDispatchEnabled = config('machine.parallel_dispatch.enabled', false);
+        } catch (\Throwable) {
+            $parallelDispatchEnabled = false;
+        }
+
+        if ($parallelDispatchEnabled) {
             $this->validateParallelDispatchConfig();
         }
 
