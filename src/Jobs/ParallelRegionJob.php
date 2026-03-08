@@ -173,6 +173,19 @@ class ParallelRegionJob implements ShouldQueue
                     $freshMachine->state = $freshMachine->definition->processParallelOnDone($parallelParent, $freshMachine->state);
                 }
 
+                // 14b. Stall detection: region completed entry actions but did not advance
+                if ($raisedEvents === [] && in_array($this->initialStateId, $freshMachine->state->value, true)) {
+                    $freshMachine->state->setInternalEventBehavior(
+                        type: InternalEvent::PARALLEL_REGION_STALLED,
+                        placeholder: $region->route,
+                        payload: [
+                            'region_id'        => $this->regionId,
+                            'initial_state_id' => $this->initialStateId,
+                            'context_changed'  => $contextDiff !== [],
+                        ],
+                    );
+                }
+
                 // 15. Persist
                 $freshMachine->persist();
             });
