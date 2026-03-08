@@ -42,12 +42,12 @@ test('@always transitions fire after parallel region completion (plan #18)', fun
                                 'waiting_a' => [
                                     'on' => [
                                         '@always' => [
-                                            ['target' => 'done_a', 'guards' => 'isSiblingApprovedGuard'],
+                                            ['target' => 'completed', 'guards' => 'isSiblingApprovedGuard'],
                                         ],
-                                        'ADVANCE_A' => 'done_a',
+                                        'ADVANCE_A' => 'completed',
                                     ],
                                 ],
-                                'done_a' => ['type' => 'final'],
+                                'completed' => ['type' => 'final'],
                             ],
                         ],
                         'region_b' => [
@@ -57,9 +57,9 @@ test('@always transitions fire after parallel region completion (plan #18)', fun
                                     'on' => ['APPROVE' => 'approved_b'],
                                 ],
                                 'approved_b' => [
-                                    'on' => ['DONE_B' => 'done_b'],
+                                    'on' => ['DONE_B' => 'completed'],
                                 ],
-                                'done_b' => ['type' => 'final'],
+                                'completed' => ['type' => 'final'],
                             ],
                         ],
                     ],
@@ -70,7 +70,7 @@ test('@always transitions fire after parallel region completion (plan #18)', fun
         behavior: [
             'guards' => [
                 'isSiblingApprovedGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('parallel_parent.region_b.approved_b')
-                    || $state->matches('parallel_parent.region_b.done_b'),
+                    || $state->matches('parallel_parent.region_b.completed'),
             ],
         ]
     );
@@ -84,8 +84,8 @@ test('@always transitions fire after parallel region completion (plan #18)', fun
     // Approve in region B → @always guard in region A re-evaluates and passes
     $state = $definition->transition(['type' => 'APPROVE'], $state);
 
-    // @always guard passed → region A auto-transitions to done_a
-    expect($state->value)->toContain('always_parallel.parallel_parent.region_a.done_a');
+    // @always guard passed → region A auto-transitions to completed
+    expect($state->value)->toContain('always_parallel.parallel_parent.region_a.completed');
     expect($state->value)->toContain('always_parallel.parallel_parent.region_b.approved_b');
 
     // Complete region B
@@ -111,16 +111,16 @@ test('deeply nested context keys merge correctly (plan #36)', function (): void 
     (new ParallelRegionJob(
         machineClass: ParallelDispatchDeepContextMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_deep.processing.region_a',
-        initialStateId: 'parallel_deep.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_deep_context.processing.region_a',
+        initialStateId: 'parallel_dispatch_deep_context.processing.region_a.working',
     ))->handle();
 
     // Job B writes: report.turmob = {status: clean, checked_at: ...}
     (new ParallelRegionJob(
         machineClass: ParallelDispatchDeepContextMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_deep.processing.region_b',
-        initialStateId: 'parallel_deep.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_deep_context.processing.region_b',
+        initialStateId: 'parallel_dispatch_deep_context.processing.region_b.working',
     ))->handle();
 
     $restored = ParallelDispatchDeepContextMachine::create(state: $rootEventId);
@@ -160,15 +160,15 @@ test('same scalar context key → last writer wins (plan #37)', function (): voi
     (new ParallelRegionJob(
         machineClass: ParallelDispatchDeepContextMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_deep.processing.region_a',
-        initialStateId: 'parallel_deep.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_deep_context.processing.region_a',
+        initialStateId: 'parallel_dispatch_deep_context.processing.region_a.working',
     ))->handle();
 
     (new ParallelRegionJob(
         machineClass: ParallelDispatchDeepContextMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_deep.processing.region_b',
-        initialStateId: 'parallel_deep.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_deep_context.processing.region_b',
+        initialStateId: 'parallel_dispatch_deep_context.processing.region_b.working',
     ))->handle();
 
     // For arrays written to same key: deep merge combines them
@@ -213,7 +213,7 @@ test('nested parallel state within region enters correctly (plan #44)', function
                                 ],
                                 'inner_parallel' => [
                                     'type'   => 'parallel',
-                                    'onDone' => 'done_a',
+                                    'onDone' => 'completed',
                                     'states' => [
                                         'sub_region_1' => [
                                             'initial' => 'sub_working_1',
@@ -235,16 +235,16 @@ test('nested parallel state within region enters correctly (plan #44)', function
                                         ],
                                     ],
                                 ],
-                                'done_a' => ['type' => 'final'],
+                                'completed' => ['type' => 'final'],
                             ],
                         ],
                         'region_b' => [
                             'initial' => 'waiting_b',
                             'states'  => [
                                 'waiting_b' => [
-                                    'on' => ['DONE_B' => 'done_b'],
+                                    'on' => ['DONE_B' => 'completed'],
                                 ],
-                                'done_b' => ['type' => 'final'],
+                                'completed' => ['type' => 'final'],
                             ],
                         ],
                     ],
@@ -268,8 +268,8 @@ test('nested parallel state within region enters correctly (plan #44)', function
     $state = $definition->transition(['type' => 'SUB_1_DONE'], $state);
     $state = $definition->transition(['type' => 'SUB_2_DONE'], $state);
 
-    // Inner onDone → done_a (region A reaches final)
-    expect($state->value)->toContain('nested_parallel.outer_parallel.region_a.done_a');
+    // Inner onDone → completed (region A reaches final)
+    expect($state->value)->toContain('nested_parallel.outer_parallel.region_a.completed');
 
     // Complete region B
     $state = $definition->transition(['type' => 'DONE_B'], $state);
@@ -376,15 +376,15 @@ test('chained dispatch: onDone target is another parallel state (plan #58)', fun
     (new ParallelRegionJob(
         machineClass: ParallelDispatchChainedMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_chained.phase_one.region_a',
-        initialStateId: 'parallel_chained.phase_one.region_a.working_a',
+        regionId: 'parallel_dispatch_chained.phase_one.region_a',
+        initialStateId: 'parallel_dispatch_chained.phase_one.region_a.working',
     ))->handle();
 
     (new ParallelRegionJob(
         machineClass: ParallelDispatchChainedMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_chained.phase_one.region_b',
-        initialStateId: 'parallel_chained.phase_one.region_b.working_b',
+        regionId: 'parallel_dispatch_chained.phase_one.region_b',
+        initialStateId: 'parallel_dispatch_chained.phase_one.region_b.working',
     ))->handle();
 
     // Transition phase 1 regions to final
@@ -399,22 +399,22 @@ test('chained dispatch: onDone target is another parallel state (plan #58)', fun
     expect($machine->state->isInParallelState())->toBeTrue();
 
     // Phase 2 should have pending dispatches for new regions
-    expect($machine->state->value)->toContain('parallel_chained.phase_two.region_c.working_c');
-    expect($machine->state->value)->toContain('parallel_chained.phase_two.region_d.working_d');
+    expect($machine->state->value)->toContain('parallel_dispatch_chained.phase_two.region_c.working');
+    expect($machine->state->value)->toContain('parallel_dispatch_chained.phase_two.region_d.working');
 
     // Run phase 2 jobs
     (new ParallelRegionJob(
         machineClass: ParallelDispatchChainedMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_chained.phase_two.region_c',
-        initialStateId: 'parallel_chained.phase_two.region_c.working_c',
+        regionId: 'parallel_dispatch_chained.phase_two.region_c',
+        initialStateId: 'parallel_dispatch_chained.phase_two.region_c.working',
     ))->handle();
 
     (new ParallelRegionJob(
         machineClass: ParallelDispatchChainedMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_chained.phase_two.region_d',
-        initialStateId: 'parallel_chained.phase_two.region_d.working_d',
+        regionId: 'parallel_dispatch_chained.phase_two.region_d',
+        initialStateId: 'parallel_dispatch_chained.phase_two.region_d.working',
     ))->handle();
 
     // Transition phase 2 regions to final
@@ -426,7 +426,7 @@ test('chained dispatch: onDone target is another parallel state (plan #58)', fun
 
     // Phase 2 onDone → completed
     $final = ParallelDispatchChainedMachine::create(state: $rootEventId);
-    expect($final->state->currentStateDefinition->id)->toBe('parallel_chained.completed');
+    expect($final->state->currentStateDefinition->id)->toBe('parallel_dispatch_chained.completed');
 });
 
 // ============================================================
@@ -445,15 +445,15 @@ test('entry action raises multiple events → all processed in order (plan #60)'
     (new ParallelRegionJob(
         machineClass: ParallelDispatchMultiRaiseMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_multi_raise.processing.region_a',
-        initialStateId: 'parallel_multi_raise.processing.region_a.step_initial',
+        regionId: 'parallel_dispatch_multi_raise.processing.region_a',
+        initialStateId: 'parallel_dispatch_multi_raise.processing.region_a.pending',
     ))->handle();
 
     $restored = ParallelDispatchMultiRaiseMachine::create(state: $rootEventId);
 
     // Both raised events should have been processed in order:
-    // step_initial → (STEP_1_DONE) → step_1 → (STEP_2_DONE) → finished_a
-    expect($restored->state->value)->toContain('parallel_multi_raise.processing.region_a.finished_a');
+    // pending → (STEP_1_DONE) → step_1 → (STEP_2_DONE) → finished
+    expect($restored->state->value)->toContain('parallel_dispatch_multi_raise.processing.region_a.finished');
     expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
 });
 
@@ -474,8 +474,8 @@ test('compound onDone completes in one region, then sibling fails → context pr
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_b',
-        initialStateId: 'parallel_fail.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_with_fail.processing.region_b',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_b.working',
     ))->handle();
 
     // Verify B's context is persisted
@@ -489,14 +489,14 @@ test('compound onDone completes in one region, then sibling fails → context pr
     $jobA = new ParallelRegionJob(
         machineClass: ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_a',
-        initialStateId: 'parallel_fail.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_fail.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
     $jobA->failed(new \RuntimeException('API timeout'));
 
     // Machine should be in error state
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($restored->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
 
     // Region B's completed context should be preserved
     expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
@@ -518,8 +518,8 @@ test('onFail target is parallel state → new dispatch cycle (plan #80)', functi
     $jobA = new ParallelRegionJob(
         machineClass: ParallelDispatchFailToParallelMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail_to_parallel.primary_processing.region_a',
-        initialStateId: 'parallel_fail_to_parallel.primary_processing.region_a.working_a',
+        regionId: 'parallel_dispatch_fail_to_parallel.primary_processing.region_a',
+        initialStateId: 'parallel_dispatch_fail_to_parallel.primary_processing.region_a.working',
     );
     $jobA->failed(new \RuntimeException('Primary API failed'));
 
@@ -528,22 +528,22 @@ test('onFail target is parallel state → new dispatch cycle (plan #80)', functi
     expect($restored->state->isInParallelState())->toBeTrue();
 
     // Fallback parallel state regions should be active
-    expect($restored->state->value)->toContain('parallel_fail_to_parallel.fallback_processing.fallback_a.retrying_a');
-    expect($restored->state->value)->toContain('parallel_fail_to_parallel.fallback_processing.fallback_b.retrying_b');
+    expect($restored->state->value)->toContain('parallel_dispatch_fail_to_parallel.fallback_processing.fallback_a.retrying');
+    expect($restored->state->value)->toContain('parallel_dispatch_fail_to_parallel.fallback_processing.fallback_b.retrying');
 
     // Run fallback jobs
     (new ParallelRegionJob(
         machineClass: ParallelDispatchFailToParallelMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail_to_parallel.fallback_processing.fallback_a',
-        initialStateId: 'parallel_fail_to_parallel.fallback_processing.fallback_a.retrying_a',
+        regionId: 'parallel_dispatch_fail_to_parallel.fallback_processing.fallback_a',
+        initialStateId: 'parallel_dispatch_fail_to_parallel.fallback_processing.fallback_a.retrying',
     ))->handle();
 
     (new ParallelRegionJob(
         machineClass: ParallelDispatchFailToParallelMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail_to_parallel.fallback_processing.fallback_b',
-        initialStateId: 'parallel_fail_to_parallel.fallback_processing.fallback_b.retrying_b',
+        regionId: 'parallel_dispatch_fail_to_parallel.fallback_processing.fallback_b',
+        initialStateId: 'parallel_dispatch_fail_to_parallel.fallback_processing.fallback_b.retrying',
     ))->handle();
 
     // Complete fallback regions
@@ -555,5 +555,5 @@ test('onFail target is parallel state → new dispatch cycle (plan #80)', functi
 
     // Fallback onDone → completed
     $final = ParallelDispatchFailToParallelMachine::create(state: $rootEventId);
-    expect($final->state->currentStateDefinition->id)->toBe('parallel_fail_to_parallel.completed');
+    expect($final->state->currentStateDefinition->id)->toBe('parallel_dispatch_fail_to_parallel.completed');
 });
