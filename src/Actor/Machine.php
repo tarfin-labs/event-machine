@@ -118,10 +118,6 @@ class Machine implements Castable, JsonSerializable, Stringable
         MachineDefinition|array|null $definition = null,
         State|string|null $state = null,
     ): self {
-        if (config('machine.parallel_dispatch.enabled', false) && static::class === self::class) {
-            throw InvalidParallelStateDefinitionException::requiresMachineSubclass();
-        }
-
         if (is_array($definition)) {
             $definition = MachineDefinition::define(
                 config: $definition['config'] ?? null,
@@ -150,6 +146,10 @@ class Machine implements Castable, JsonSerializable, Stringable
      */
     public function start(State|string|null $state = null): self
     {
+        if (config('machine.parallel_dispatch.enabled', false)) {
+            $this->validateParallelDispatchRuntime();
+        }
+
         $this->state = match (true) {
             $state === null         => $this->definition->getInitialState(),
             $state instanceof State => $state,
@@ -161,6 +161,19 @@ class Machine implements Castable, JsonSerializable, Stringable
         }
 
         return $this;
+    }
+
+    /**
+     * Validate parallel dispatch runtime prerequisites.
+     *
+     * Ensures that the machine is a subclass of Machine — the base Machine class
+     * cannot be reconstructed by queue jobs because it lacks a definition() override.
+     */
+    protected function validateParallelDispatchRuntime(): void
+    {
+        if ($this->definition->machineClass === null || $this->definition->machineClass === self::class) {
+            throw InvalidParallelStateDefinitionException::requiresMachineSubclass();
+        }
     }
 
     /**
