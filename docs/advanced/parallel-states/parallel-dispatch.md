@@ -388,7 +388,23 @@ Context conflict detection is **observational only**. The second region's value 
 
 ### Avoiding Conflicts
 
-The best practice remains: each region should write to its own context keys. But when shared keys are unavoidable, the conflict event provides visibility.
+**Each region should write to its own context keys.** This is the primary rule for safe parallel execution. The conflict event provides visibility when this rule is violated, but it does not prevent data loss.
+
+```php ignore
+// ✅ Good: each region writes to its own keys
+'findeks' => ['entry' => FindeksApiAction::class],   // writes findeks_report
+'turmob'  => ['entry' => TurmobApiAction::class],    // writes turmob_report
+
+// ❌ Bad: both regions write to the same key
+'findeks' => ['entry' => FindeksApiAction::class],   // writes shared_score
+'turmob'  => ['entry' => TurmobApiAction::class],    // also writes shared_score → LWW!
+```
+
+::: info Design Decision
+This is an intentional design choice. The W3C SCXML specification and XState both use last-writer-wins for parallel region data conflicts (both are single-threaded, so document order determines the winner). Actor-model systems (Akka, Temporal, Restate) eliminate the problem entirely by forbidding shared mutable state between parallel units.
+
+EventMachine takes the middle path: LWW for simplicity, audit events for observability. Config-level key partitioning was considered but rejected as contrary to EventMachine's "minimum config, maximum convention" philosophy.
+:::
 
 ## Controller Integration
 
