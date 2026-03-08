@@ -16,12 +16,12 @@ afterEach(function (): void {
 it('region entry action raises single event → captured and processed', function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
 
-    // Sequential mode: entry action raises REGION_A_PROCESSED → auto-transitions to finished_a
+    // Sequential mode: entry action raises REGION_A_PROCESSED → auto-transitions to finished
     $machine = ParallelDispatchWithRaiseMachine::create();
 
     expect($machine->state->context->get('region_a_result'))->toBe('processed_by_a');
-    // Region A should have transitioned to finished_a via raised event
-    expect($machine->state->value)->toContain('parallel_raise.processing.region_a.finished_a');
+    // Region A should have transitioned to finished via raised event
+    expect($machine->state->value)->toContain('parallel_dispatch_with_raise.processing.region_a.finished');
 });
 
 it('region entry action raises event in dispatch mode → processed by job', function (): void {
@@ -35,14 +35,14 @@ it('region entry action raises event in dispatch mode → processed by job', fun
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithRaiseMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_raise.processing.region_a',
-        initialStateId: 'parallel_raise.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_raise.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_raise.processing.region_a.working',
     ))->handle();
 
     $restored = ParallelDispatchWithRaiseMachine::create(state: $rootEventId);
     expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    // Raised event should have transitioned region A to finished_a
-    expect($restored->state->value)->toContain('parallel_raise.processing.region_a.finished_a');
+    // Raised event should have transitioned region A to finished
+    expect($restored->state->value)->toContain('parallel_dispatch_with_raise.processing.region_a.finished');
 });
 
 it('region entry action raises NO events → context-only update works', function (): void {
@@ -57,13 +57,13 @@ it('region entry action raises NO events → context-only update works', functio
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
     expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
     // Region stays at initial (no raised event to transition)
-    expect($restored->state->value)->toContain('parallel_dispatch.processing.region_a.working_a');
+    expect($restored->state->value)->toContain('parallel_dispatch.processing.region_a.working');
 });
 
 it('two regions raise different events → each job processes its own', function (): void {
@@ -73,28 +73,28 @@ it('two regions raise different events → each job processes its own', function
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    // Job A raises REGION_A_PROCESSED (transitions region A to finished_a)
+    // Job A raises REGION_A_PROCESSED (transitions region A to finished)
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithRaiseMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_raise.processing.region_a',
-        initialStateId: 'parallel_raise.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_raise.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_raise.processing.region_a.working',
     ))->handle();
 
     // Job B does NOT raise events (RegionBEntryAction only sets context)
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithRaiseMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_raise.processing.region_b',
-        initialStateId: 'parallel_raise.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_with_raise.processing.region_b',
+        initialStateId: 'parallel_dispatch_with_raise.processing.region_b.working',
     ))->handle();
 
     $restored = ParallelDispatchWithRaiseMachine::create(state: $rootEventId);
 
     // Region A transitioned (via raised event)
-    expect($restored->state->value)->toContain('parallel_raise.processing.region_a.finished_a');
+    expect($restored->state->value)->toContain('parallel_dispatch_with_raise.processing.region_a.finished');
     // Region B stayed at initial (no raised event)
-    expect($restored->state->value)->toContain('parallel_raise.processing.region_b.working_b');
+    expect($restored->state->value)->toContain('parallel_dispatch_with_raise.processing.region_b.working');
 
     // Both contexts merged
     expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
