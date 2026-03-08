@@ -74,7 +74,7 @@ test('always transition fires when cross-region guard becomes satisfied', functi
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'dealer' => [
                             'initial' => 'pricing',
@@ -405,7 +405,7 @@ test('cross-region always with onDone completes when all regions reach final', f
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'region_a' => [
                             'initial' => 'waiting',
