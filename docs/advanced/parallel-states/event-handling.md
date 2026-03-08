@@ -270,9 +270,9 @@ MachineDefinition::define(
 When multiple regions modify the same context key in response to the same event, the last region (in definition order) wins. With [Parallel Dispatch](./parallel-dispatch) enabled, a `PARALLEL_CONTEXT_CONFLICT` internal event is recorded when this happens, making the overwrite observable in machine history. Design your context structure to use separate keys per region to avoid conflicts entirely.
 :::
 
-## Final States and onDone
+## Final States and @done
 
-When all regions of a parallel state reach their final states, the parallel state is considered complete. Use `onDone` to transition when this happens:
+When all regions of a parallel state reach their final states, the parallel state is considered complete. Use `@done` to transition when this happens:
 
 <!-- doctest-attr: bootstrap="laravel" -->
 ```php
@@ -284,7 +284,7 @@ MachineDefinition::define([
     'states' => [
         'processing' => [
             'type' => 'parallel',
-            'onDone' => 'complete',  // Transition when ALL regions are final
+            '@done' => 'complete',  // Transition when ALL regions are final
             'states' => [
                 'payment' => [
                     'initial' => 'pending',
@@ -322,7 +322,7 @@ $state = $definition->transition(['type' => 'SHIPPED'], $state);
 $state->matches('complete');  // => true
 ```
 
-### onDone with Actions
+### @done with Actions
 
 You can also specify actions to run when the parallel state completes:
 
@@ -330,7 +330,7 @@ You can also specify actions to run when the parallel state completes:
 ```php
 'processing' => [
     'type' => 'parallel',
-    'onDone' => [
+    '@done' => [
         'target' => 'complete',
         'actions' => 'sendConfirmationAction',
     ],
@@ -338,16 +338,16 @@ You can also specify actions to run when the parallel state completes:
 ],
 ```
 
-### onFail — Error Handling
+### @fail — Error Handling
 
-When using [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch), region entry actions run as queue jobs. If a job exhausts all retries, you can handle the failure with `onFail`:
+When using [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch), region entry actions run as queue jobs. If a job exhausts all retries, you can handle the failure with `@fail`:
 
 <!-- doctest-attr: ignore -->
 ```php
 'processing' => [
     'type'   => 'parallel',
-    'onDone' => 'completed',
-    'onFail' => 'failed',       // Transition here when a region job fails
+    '@done' => 'completed',
+    '@fail' => 'failed',       // Transition here when a region job fails
     'states' => [
         'findeks' => [...],
         'turmob'  => [...],
@@ -356,13 +356,13 @@ When using [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch), reg
 'failed' => ['type' => 'final'],
 ```
 
-When `onFail` is triggered:
+When `@fail` is triggered:
 - The machine exits the parallel state
 - Sibling jobs that haven't started will no-op
 - Context from completed siblings is preserved
 - A `PARALLEL_FAIL` internal event is recorded in history
 
-Without `onFail`, the machine stays in the parallel state and records the failure event for debugging.
+Without `@fail`, the machine stays in the parallel state and records the failure event for debugging.
 
 ## Nested Parallel States
 
