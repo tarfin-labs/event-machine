@@ -1169,9 +1169,26 @@ class MachineDefinition
                     // Run entry actions for the parallel state itself first
                     $targetState->runEntryActions($state, $eventBehavior);
 
-                    // Then run entry actions for each initial state in the parallel regions
-                    foreach ($initialStates as $initialState) {
-                        $initialState->runEntryActions($state, $eventBehavior);
+                    // Check if nested parallel should dispatch
+                    if ($this->shouldDispatchParallel($targetState)) {
+                        foreach ($targetState->stateDefinitions as $region) {
+                            $regionInitial = $region->findInitialStateDefinition();
+                            if ($regionInitial !== null) {
+                                if ($regionInitial->entry !== null && $regionInitial->entry !== []) {
+                                    $this->pendingParallelDispatches[] = [
+                                        'region_id'        => $region->id,
+                                        'initial_state_id' => $regionInitial->id,
+                                    ];
+                                } else {
+                                    $regionInitial->runEntryActions($state, $eventBehavior);
+                                }
+                            }
+                        }
+                    } else {
+                        // Sequential: run entry actions for each initial state
+                        foreach ($initialStates as $initialState) {
+                            $initialState->runEntryActions($state, $eventBehavior);
+                        }
                     }
                 } else {
                     $currentValues[$regionIndex] = $targetState->id;
