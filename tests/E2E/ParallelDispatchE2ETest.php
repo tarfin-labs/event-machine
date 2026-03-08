@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Bus;
+use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EFailMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EBasicMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EChainedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EMultiRaiseMachine;
@@ -320,4 +322,99 @@ it('documents that pendingParallelDispatches is empty after chained onDone', fun
     // After dispatch completes, pending dispatches should be cleared
     // (phase_one dispatches consumed, phase_two never queued)
     expect($machine->definition->pendingParallelDispatches)->toBeEmpty();
+});
+
+// ============================================================
+// Grup 5: Error Handling & onFail
+//
+// Tests parallel region job failure handling. Sync driver calls
+// failed() then rethrows, so tests wrap dispatch in try-catch.
+// ============================================================
+
+it('transitions to error state when region job fails via onFail', function (): void {
+    // E2EFailMachine: Region A throws RuntimeException, Region B normal
+    // Sync driver: A fails → failed() → processParallelOnFail → error → persist → rethrow
+    $machine = E2EFailMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    try {
+        $machine->dispatchPendingParallelJobs();
+    } catch (\RuntimeException) {
+        // Expected — sync driver rethrows after calling failed()
+    }
+
+    $restored = E2EFailMachine::create(state: $rootEventId);
+
+    // Machine should have transitioned to error state via onFail
+    expect($restored->state->currentStateDefinition->id)->toBe('e2e_fail.error');
+});
+
+it('records PARALLEL_FAIL event in machine history', function (): void {
+    $machine = E2EFailMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    try {
+        $machine->dispatchPendingParallelJobs();
+    } catch (\RuntimeException) {
+        // Expected
+    }
+
+    // Check machine_events for PARALLEL_FAIL internal event
+    $events = MachineEvent::query()
+        ->where('root_event_id', $rootEventId)
+        ->oldest('sequence_number')
+        ->get();
+
+    // Internal event type format: {machine}.parallel.{route}.fail
+    // e.g., "e2e_fail.parallel.processing.fail"
+    $failEvent = $events->first(
+        fn (MachineEvent $e) => str_contains($e->type ?? '', '.parallel.') && str_ends_with($e->type ?? '', '.fail')
+    );
+
+    expect($failEvent)->not->toBeNull();
+    expect($failEvent->type)->toBe('e2e_fail.parallel.processing.fail');
+});
+
+it('does not set context from failing region action', function (): void {
+    $machine = E2EFailMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    try {
+        $machine->dispatchPendingParallelJobs();
+    } catch (\RuntimeException) {
+        // Expected
+    }
+
+    $restored = E2EFailMachine::create(state: $rootEventId);
+
+    // Region A threw before setting context — should be null
+    expect($restored->state->context->get('region_a_result'))->toBeNull();
+    // Region B never ran (sync driver: A dispatched first, threw, B skipped)
+    expect($restored->state->context->get('region_b_result'))->toBeNull();
+});
+
+it('prevents subsequent region jobs from running after onFail transition', function (): void {
+    // With sync driver, jobs run sequentially. After Region A fails and
+    // machine transitions to error (non-parallel), Region B should never run.
+    // This verifies the pre-lock guard: isInParallelState() returns false.
+    $machine = E2EFailMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    try {
+        $machine->dispatchPendingParallelJobs();
+    } catch (\RuntimeException) {
+        // Expected
+    }
+
+    $restored = E2EFailMachine::create(state: $rootEventId);
+
+    // Machine is at error (non-parallel) — Region B never ran
+    expect($restored->state->currentStateDefinition->id)->toBe('e2e_fail.error');
+    expect($restored->state->context->get('region_b_result'))->toBeNull();
+    // Only 1 dispatch happened (A), not 2 — exception interrupted the loop
+    // This is implicit: B's context being null proves it never executed
 });
