@@ -12,7 +12,7 @@ test('same event transitions multiple regions simultaneously', function (): void
             'states'  => [
                 'parallel_parent' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'region_a' => [
                             'initial' => 'idle_a',
