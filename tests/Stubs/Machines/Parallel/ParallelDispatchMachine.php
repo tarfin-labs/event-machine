@@ -28,27 +28,27 @@ class ParallelDispatchMachine extends Machine
                         'onDone' => 'completed',
                         'states' => [
                             'region_a' => [
-                                'initial' => 'working_a',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_a' => [
+                                    'working' => [
                                         'entry' => RegionAEntryAction::class,
                                         'on'    => [
-                                            'REGION_A_DONE' => 'finished_a',
+                                            'REGION_A_DONE' => 'finished',
                                         ],
                                     ],
-                                    'finished_a' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                             'region_b' => [
-                                'initial' => 'working_b',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_b' => [
+                                    'working' => [
                                         'entry' => RegionBEntryAction::class,
                                         'on'    => [
-                                            'REGION_B_DONE' => 'finished_b',
+                                            'REGION_B_DONE' => 'finished',
                                         ],
                                     ],
-                                    'finished_b' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                         ],
