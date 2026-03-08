@@ -6,8 +6,8 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionAEntryAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RegionBEntryAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionAResultAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBResultAction;
 
 class ParallelDispatchFailToParallelMachine extends Machine
 {
@@ -32,7 +32,7 @@ class ParallelDispatchFailToParallelMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionAEntryAction::class,
+                                        'entry' => SetRegionAResultAction::class,
                                         'on'    => ['REGION_A_DONE' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
@@ -42,7 +42,7 @@ class ParallelDispatchFailToParallelMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => RegionBEntryAction::class,
+                                        'entry' => SetRegionBResultAction::class,
                                         'on'    => ['REGION_B_DONE' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
@@ -58,7 +58,7 @@ class ParallelDispatchFailToParallelMachine extends Machine
                                 'initial' => 'retrying',
                                 'states'  => [
                                     'retrying' => [
-                                        'entry' => RegionAEntryAction::class,
+                                        'entry' => SetRegionAResultAction::class,
                                         'on'    => ['FALLBACK_A_DONE' => 'completed'],
                                     ],
                                     'completed' => ['type' => 'final'],
@@ -68,7 +68,7 @@ class ParallelDispatchFailToParallelMachine extends Machine
                                 'initial' => 'retrying',
                                 'states'  => [
                                     'retrying' => [
-                                        'entry' => RegionBEntryAction::class,
+                                        'entry' => SetRegionBResultAction::class,
                                         'on'    => ['FALLBACK_B_DONE' => 'completed'],
                                     ],
                                     'completed' => ['type' => 'final'],
