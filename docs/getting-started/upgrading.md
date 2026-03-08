@@ -2,25 +2,30 @@
 
 Guide for upgrading between EventMachine versions.
 
-## Upgrading to v4.1 (Parallel Dispatch)
+## Upgrading to v5.0
+
+v5.0 adds true parallel dispatch for parallel states with configurable region timeout.
 
 ### New Feature: Parallel Dispatch
 
-v4.1 adds opt-in concurrent execution of parallel region entry actions via Laravel queue jobs. Existing parallel state machines continue to work unchanged — parallel dispatch is disabled by default.
+Opt-in concurrent execution of parallel region entry actions via Laravel queue jobs. Existing parallel state machines continue to work unchanged — parallel dispatch is disabled by default.
 
 ### Enable Parallel Dispatch
 
 Publish and update the config:
 
-<!-- doctest-attr: ignore -->
-```php
+```php ignore
 // config/machine.php
 return [
     'parallel_dispatch' => [
-        'enabled'      => env('MACHINE_PARALLEL_DISPATCH', false),
-        'queue'        => env('MACHINE_PARALLEL_QUEUE', null),
-        'lock_timeout' => env('MACHINE_PARALLEL_LOCK_TIMEOUT', 30),
-        'lock_ttl'     => env('MACHINE_PARALLEL_LOCK_TTL', 60),
+        'enabled'        => env('MACHINE_PARALLEL_DISPATCH_ENABLED', false),
+        'queue'          => env('MACHINE_PARALLEL_DISPATCH_QUEUE', null),
+        'lock_timeout'   => env('MACHINE_PARALLEL_DISPATCH_LOCK_TIMEOUT', 30),
+        'lock_ttl'       => env('MACHINE_PARALLEL_DISPATCH_LOCK_TTL', 60),
+        'job_timeout'    => env('MACHINE_PARALLEL_DISPATCH_JOB_TIMEOUT', 300),
+        'job_tries'      => env('MACHINE_PARALLEL_DISPATCH_JOB_TRIES', 3),
+        'job_backoff'    => env('MACHINE_PARALLEL_DISPATCH_JOB_BACKOFF', 30),
+        'region_timeout' => env('MACHINE_PARALLEL_DISPATCH_REGION_TIMEOUT', 0),
     ],
 ];
 ```
@@ -34,17 +39,28 @@ When parallel dispatch is enabled:
 3. **Entry actions must be idempotent** — Jobs may be retried on failure
 4. **Parallel regions should write to different context keys** — Shared keys trigger a `PARALLEL_CONTEXT_CONFLICT` event (LWW applies)
 
+### New Feature: Region Timeout
+
+When `region_timeout` is set (seconds), a delayed check job fires after the configured duration. If the parallel state has not completed (any region still not final), it triggers `@fail` on the parallel state.
+
+```php ignore
+'parallel_dispatch' => [
+    'region_timeout' => 120, // Trigger @fail after 2 minutes (0 = disabled)
+],
+```
+
 ### New Files
 
 | File | Description |
 |------|-------------|
 | `src/Jobs/ParallelRegionJob.php` | Internal queue job for region entry actions |
 | `src/Jobs/ParallelRegionTimeoutJob.php` | Delayed check job for stuck parallel state detection |
-| `src/Support/MachineLockManager.php` | Database-based lock management |
+| `src/Locks/MachineLockManager.php` | Database-based lock management |
+| `src/Support/ArrayUtils.php` | Shared recursive array merge/diff utilities |
 
 ### New Internal Events
 
-v4.1 adds seven internal events for parallel dispatch observability:
+v5.0 adds seven internal events for parallel dispatch observability:
 
 | Event | Purpose |
 |-------|---------|
@@ -62,7 +78,7 @@ All events are persisted as `MachineEvent` records — durable audit trail, not 
 
 1. Update the package:
 ```bash
-composer update tarfinlabs/event-machine
+composer update tarfinlabs/event-machine:^5.0
 ```
 
 2. Publish config if not already done:
@@ -71,14 +87,8 @@ php artisan vendor:publish --tag=machine-config
 ```
 
 3. Add parallel dispatch keys to your `config/machine.php`
-4. Set `MACHINE_PARALLEL_DISPATCH=true` in `.env` when ready
+4. Set `MACHINE_PARALLEL_DISPATCH_ENABLED=true` in `.env` when ready
 5. Ensure your cache and queue drivers are configured
-
-### No Breaking Changes
-
-- All existing machine definitions work without modification
-- Parallel states run sequentially by default (same as before)
-- The `ParallelRegionJob` is internal — no user code changes needed
 
 For full details, see [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch).
 
@@ -413,6 +423,8 @@ Events use array format with `type` and `payload` keys.
 
 | EventMachine | PHP | Laravel |
 |--------------|-----|---------|
+| 5.x | 8.3+ | 11.x, 12.x |
+| 4.x | 8.3+ | 11.x, 12.x |
 | 3.x | 8.2+ | 10.x, 11.x, 12.x |
 | 2.x | 8.1+ | 9.x, 10.x |
 | 1.x | 8.0+ | 8.x, 9.x |
