@@ -177,7 +177,7 @@ class Machine implements Castable, JsonSerializable, Stringable
     ): State {
         $lockHandle = null;
 
-        if ($this->state instanceof State) {
+        if ($this->state instanceof State && config('machine.parallel_dispatch.enabled', false)) {
             $rootEventId = $this->state->history->first()->root_event_id;
 
             try {
