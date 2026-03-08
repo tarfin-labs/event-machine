@@ -144,7 +144,8 @@ export default withMermaid(
               items: [
                 { text: 'Overview', link: '/advanced/parallel-states/' },
                 { text: 'Event Handling', link: '/advanced/parallel-states/event-handling' },
-                { text: 'Persistence', link: '/advanced/parallel-states/persistence' }
+                { text: 'Persistence', link: '/advanced/parallel-states/persistence' },
+                { text: 'Parallel Dispatch', link: '/advanced/parallel-states/parallel-dispatch' }
               ]
             },
             { text: '@always Transitions', link: '/advanced/always-transitions' },

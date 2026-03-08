@@ -1,0 +1,261 @@
+# Parallel Dispatch
+
+When a machine enters a parallel state, region entry actions normally run sequentially. **Parallel Dispatch** runs them as concurrent Laravel queue jobs, reducing total wall-clock time.
+
+**Related pages:**
+- [Parallel States Overview](./index) - Basic concepts and syntax
+- [Event Handling](./event-handling) - Events, entry/exit actions, `onDone`
+- [Persistence](./persistence) - Database storage and restoration
+
+## What It Does
+
+Without parallel dispatch:
+```
+t=0s  Region A entry action (findeks API)... 5 seconds
+t=5s  Region B entry action (turmob API)... 2 seconds
+t=7s  Both done → total: 7 seconds
+```
+
+With parallel dispatch:
+```
+t=0s  Dispatch Job A (findeks) + Job B (turmob)
+t=0s  Worker 1: findeks API... | Worker 2: turmob API...
+t=2s  Worker 2: done → lock → merge context → unlock
+t=5s  Worker 1: done → lock → merge context → unlock
+t=5s  Total: 5 seconds (max of the two, not sum)
+```
+
+## How It Works
+
+The lifecycle has three phases:
+
+### Phase 1 — HTTP Request
+```
+Controller → Machine::create() → enters parallel state
+→ enterParallelState() persists state (all regions at initial)
+→ records pending dispatches for each region with entry actions
+→ returns immediately → controller returns HTTP response
+→ Machine::send() finally block: dispatchPendingParallelJobs()
+```
+
+### Phase 2 — Parallel Execution (Queue Workers)
+Each `ParallelRegionJob` independently:
+1. Reconstructs machine from database
+2. Runs entry action (the expensive API call — **no lock held**)
+3. Acquires blocking database lock
+4. Reloads fresh state (sees other jobs' changes)
+5. Applies context diff (merge, not overwrite)
+6. Processes raised events
+7. Checks `areAllRegionsFinal()` → fires `onDone` if ready
+8. Persists and releases lock
+
+### Phase 3 — Continuation
+The **last job to complete** naturally becomes the orchestrator. Its `areAllRegionsFinal()` returns true → `onDone` fires → machine transitions to the next state.
+
+## Configuration
+
+Enable parallel dispatch in `config/machine.php`:
+
+```php ignore
+return [
+    'parallel_dispatch' => [
+        'enabled'      => env('MACHINE_PARALLEL_DISPATCH', false),
+        'queue'        => env('MACHINE_PARALLEL_QUEUE', null),
+        'lock_timeout' => env('MACHINE_PARALLEL_LOCK_TIMEOUT', 30),
+        'lock_ttl'     => env('MACHINE_PARALLEL_LOCK_TTL', 60),
+    ],
+];
+```
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `enabled` | `false` | Master toggle for parallel dispatch |
+| `queue` | `null` | Queue name for jobs (null = default queue) |
+| `lock_timeout` | `30` | Seconds to wait for blocking lock |
+| `lock_ttl` | `60` | Lock time-to-live before stale cleanup |
+
+## Requirements
+
+Parallel dispatch requires:
+1. **`should_persist` must be `true`** — jobs reconstruct state from database
+2. **Machine must extend `Machine` class** — not inline `MachineDefinition::define()`
+3. **At least 2 regions with entry actions** — otherwise sequential is faster
+4. **A queue driver** — `database`, `redis`, `sqs`, etc.
+
+When any requirement is not met, entry actions run sequentially (existing behavior).
+
+## How Region Jobs Work
+
+### Context Merge Strategy
+
+Each job snapshots context **before** running entry actions, then computes a diff **after**:
+
+```php ignore
+// Inside ParallelRegionJob::handle()
+$contextBefore = $machine->state->context->data;
+$regionInitial->runEntryActions($machine->state);  // The expensive part
+$contextAfter  = $machine->state->context->data;
+$contextDiff   = $this->computeContextDiff($contextBefore, $contextAfter);
+```
+
+Under lock, the diff is applied to the **fresh** state (not the stale snapshot):
+
+```php ignore
+// Under lock — fresh state from DB
+$freshMachine = $this->machineClass::create(state: $this->rootEventId);
+foreach ($contextDiff as $key => $value) {
+    $freshMachine->state->context->set($key, $value);
+}
+```
+
+::: warning Context Key Isolation
+Parallel regions **must** write to different context keys. If two regions write to the same key, the last job to acquire the lock wins. Design your regions to write to unique keys (e.g., `findeks_report` vs `turmob_report`).
+:::
+
+### Double-Guard Pattern
+
+Jobs check preconditions twice — once before running actions (without lock) and once under lock (with fresh state):
+
+1. **Pre-lock guard**: `isInParallelState()`, region exists, region at initial state
+2. **Under-lock guard**: Same checks repeated with fresh state from database
+
+This ensures idempotent execution even with retries or race conditions.
+
+### Raised Events
+
+If an entry action calls `$this->raise()`, the raised events are captured and processed **under lock** in the same lock scope:
+
+```php ignore
+// Events raised during entry action
+$raisedEvents = [];
+while ($definition->eventQueue->isNotEmpty()) {
+    $raisedEvents[] = $definition->eventQueue->shift();
+}
+
+// Under lock: process each raised event
+foreach ($raisedEvents as $event) {
+    $freshMachine->state = $freshMachine->definition->transition($event, $freshMachine->state);
+}
+```
+
+Raised events are scoped to the job that produced them — no cross-contamination between jobs.
+
+## @fail Handling
+
+When a job exhausts all retries, Laravel calls the `failed()` method. The job:
+
+1. Acquires the database lock
+2. Reconstructs the machine
+3. Creates a `@fail` event with error details
+4. Calls `processParallelOnFail()` on the parallel parent
+
+### With `onFail` Configured
+
+```php ignore
+'processing' => [
+    'type'   => 'parallel',
+    'onDone' => 'completed',
+    'onFail' => 'error',      // ← Target state on failure
+    'states' => [...],
+],
+'error' => ['type' => 'final'],
+```
+
+The machine exits the parallel state and transitions to the `onFail` target. Sibling jobs that haven't started will no-op (pre-lock guard). Sibling jobs that completed already have their context preserved.
+
+### Without `onFail`
+
+The machine stays in the parallel state. A `PARALLEL_FAIL` internal event is recorded in history for debugging. The machine remains operable — you can send events manually or wait for retries.
+
+### @fail Payload
+
+The `@fail` event carries error details:
+
+```php ignore
+[
+    'region_id' => 'order_workflow.processing.findeks',
+    'error'     => 'Connection timeout',
+    'exception' => 'RuntimeException',
+    'attempts'  => 3,
+]
+```
+
+## Best Practices
+
+### 1. Design for Independent Regions
+
+Each region should write to its own context keys and not depend on other regions' entry action results:
+
+```php ignore
+// Good: independent keys
+'findeks' => [
+    'entry' => FindeksApiAction::class,  // writes findeks_report
+],
+'turmob' => [
+    'entry' => TurmobApiAction::class,   // writes turmob_report
+],
+```
+
+### 2. Keep Entry Actions Idempotent
+
+Jobs may be retried. Entry actions should be safe to run multiple times:
+
+```php ignore
+class FindeksApiAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        // Idempotent: overwrites existing value
+        $report = FindeksApi::fetchReport($context->get('customer_id'));
+        $context->set('findeks_report', $report);
+    }
+}
+```
+
+### 3. Use `onFail` for Error Handling
+
+Always define `onFail` on parallel states that use dispatch. This provides a clean error state instead of leaving the machine stuck in parallel:
+
+```php ignore
+'processing' => [
+    'type'   => 'parallel',
+    'onDone' => 'completed',
+    'onFail' => 'error',
+    'states' => [...],
+],
+```
+
+### 4. Monitor with Internal Events
+
+The dispatch mechanism records internal events in machine history:
+
+| Event | When |
+|-------|------|
+| `PARALLEL_REGION_ENTER` | Job completes and persists context |
+| `PARALLEL_DONE` | All regions reach final, `onDone` fires |
+| `PARALLEL_FAIL` | Job failed after all retries |
+
+Use these events for monitoring and debugging.
+
+### 5. Test Both Modes
+
+Always test your machines with dispatch both enabled and disabled:
+
+```php no_run
+it('works with parallel dispatch', function (): void {
+    config()->set('machine.parallel_dispatch.enabled', true);
+    // ... test with dispatched jobs
+});
+
+it('works without parallel dispatch', function (): void {
+    config()->set('machine.parallel_dispatch.enabled', false);
+    // ... test with sequential execution
+});
+```
+
+## Limitations
+
+1. **Context key conflicts** — Two regions writing the same key causes a last-writer-wins race
+2. **No cancellation** — Once dispatched, jobs cannot be cancelled (they no-op if machine state changes)
+3. **Queue dependency** — Requires a functioning queue system with workers
+4. **Lock contention** — High-throughput machines may experience lock wait times

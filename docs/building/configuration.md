@@ -405,3 +405,27 @@ MachineDefinition::define(
     ],
 );
 ```
+
+## Parallel Dispatch Configuration
+
+Parallel dispatch runs region entry actions as concurrent queue jobs. Configure in `config/machine.php`:
+
+```php ignore
+return [
+    'parallel_dispatch' => [
+        'enabled'      => env('MACHINE_PARALLEL_DISPATCH', false),
+        'queue'        => env('MACHINE_PARALLEL_QUEUE', null),
+        'lock_timeout' => env('MACHINE_PARALLEL_LOCK_TIMEOUT', 30),
+        'lock_ttl'     => env('MACHINE_PARALLEL_LOCK_TTL', 60),
+    ],
+];
+```
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `enabled` | `false` | Enable concurrent dispatch of region entry actions |
+| `queue` | `null` | Queue name for region jobs (null = default) |
+| `lock_timeout` | `30` | Max seconds for blocking lock acquisition |
+| `lock_ttl` | `60` | Lock auto-expiry for stale lock cleanup |
+
+For details, see [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch).

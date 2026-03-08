@@ -2,6 +2,25 @@
 
 All notable changes to `event-machine` will be documented in this file.
 
+## [4.1.0] - 2026-03-08
+
+### Added
+- **Parallel Dispatch**: Opt-in concurrent execution of parallel region entry actions via Laravel queue jobs (`ParallelRegionJob`)
+  - Region entry actions run truly in parallel across queue workers
+  - Double-guard pattern (pre-lock + under-lock) prevents stale state transitions
+  - Context diff/merge strategy for safe concurrent context updates
+  - Raised events captured and processed under lock in same job scope
+  - `@fail` event support for job failure handling (`processParallelOnFail`)
+  - Configurable via `config/machine.php` (`parallel_dispatch` section)
+- `MachineLockManager` for database-based locking with immediate and blocking modes
+- Event resolution fix: `initializeEvent()` now resolves `EventBehavior` instances through machine's event registry (preserves validation rules)
+- Documentation for parallel dispatch (configuration, requirements, context merge, best practices, limitations)
+
+### Changed
+- `Machine::send()` lock acquisition uses `MachineLockManager` with configurable timeout
+- `createEventBehavior()` signature expanded to accept `EventBehavior|array`
+- `enterParallelState()` dispatches `ParallelRegionJob` per region when parallel dispatch is enabled
+
 ## [4.0.2] - 2026-03-07
 
 ### Fixed

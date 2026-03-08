@@ -445,3 +445,15 @@ class MyAction extends ActionBehavior
     'doSomethingAction' => fn($ctx) => $this->raise(['type' => 'EVENT']), // Error! `raise()` not available
 ],
 ```
+
+## Raised Events with Parallel Dispatch
+
+When [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch) is enabled, raised events from region entry actions are captured and processed **under lock** in the same job scope:
+
+1. Entry action runs (no lock) → calls `$this->raise()`
+2. Events are captured from the event queue
+3. Job acquires database lock
+4. Raised events are processed under lock via `transition()`
+5. Each job processes only its own raised events — no cross-contamination
+
+This means raised events work identically whether dispatch is enabled or disabled. The only difference is *where* they run (queue worker vs. HTTP request).

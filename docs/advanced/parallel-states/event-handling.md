@@ -5,6 +5,7 @@ How events, actions, and transitions work within parallel state regions.
 **Related pages:**
 - [Parallel States Overview](./index) - Basic concepts and syntax
 - [Persistence](./persistence) - Database storage and restoration
+- [Parallel Dispatch](./parallel-dispatch) - Concurrent execution via queue jobs
 
 ## Event Handling
 
@@ -330,6 +331,32 @@ You can also specify actions to run when the parallel state completes:
     'states' => [...],
 ],
 ```
+
+### onFail — Error Handling
+
+When using [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch), region entry actions run as queue jobs. If a job exhausts all retries, you can handle the failure with `onFail`:
+
+<!-- doctest-attr: ignore -->
+```php
+'processing' => [
+    'type'   => 'parallel',
+    'onDone' => 'completed',
+    'onFail' => 'error',       // Transition here when a region job fails
+    'states' => [
+        'findeks' => [...],
+        'turmob'  => [...],
+    ],
+],
+'error' => ['type' => 'final'],
+```
+
+When `onFail` is triggered:
+- The machine exits the parallel state
+- Sibling jobs that haven't started will no-op
+- Context from completed siblings is preserved
+- A `PARALLEL_FAIL` internal event is recorded in history
+
+Without `onFail`, the machine stays in the parallel state and records the failure event for debugging.
 
 ## Nested Parallel States
 

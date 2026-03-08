@@ -5,6 +5,7 @@ Parallel states (also known as orthogonal states) allow multiple independent sta
 **Related pages:**
 - [Event Handling](./event-handling) - Events, entry/exit actions, `onDone`
 - [Persistence](./persistence) - Database storage and restoration
+- [Parallel Dispatch](./parallel-dispatch) - Concurrent execution via queue jobs
 
 ## When to Use Parallel States
 

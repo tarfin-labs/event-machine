@@ -2,6 +2,71 @@
 
 Guide for upgrading between EventMachine versions.
 
+## Upgrading to v4.1 (Parallel Dispatch)
+
+### New Feature: Parallel Dispatch
+
+v4.1 adds opt-in concurrent execution of parallel region entry actions via Laravel queue jobs. Existing parallel state machines continue to work unchanged — parallel dispatch is disabled by default.
+
+### Enable Parallel Dispatch
+
+Publish and update the config:
+
+<!-- doctest-attr: ignore -->
+```php
+// config/machine.php
+return [
+    'parallel_dispatch' => [
+        'enabled'      => env('MACHINE_PARALLEL_DISPATCH', false),
+        'queue'        => env('MACHINE_PARALLEL_QUEUE', null),
+        'lock_timeout' => env('MACHINE_PARALLEL_LOCK_TIMEOUT', 30),
+        'lock_ttl'     => env('MACHINE_PARALLEL_LOCK_TTL', 60),
+    ],
+];
+```
+
+### Requirements
+
+When parallel dispatch is enabled:
+
+1. **Cache driver must support atomic locks** — Redis or database (not `array` or `file`)
+2. **Queue worker must be running** — Region jobs are dispatched to the queue
+3. **Entry actions must be idempotent** — Jobs may be retried on failure
+4. **Parallel regions must write to different context keys** — No cross-region key conflicts
+
+### New Files
+
+| File | Description |
+|------|-------------|
+| `src/Jobs/ParallelRegionJob.php` | Internal queue job for region entry actions |
+| `src/Support/MachineLockManager.php` | Database-based lock management |
+
+### Migration Steps
+
+1. Update the package:
+```bash
+composer update tarfinlabs/event-machine
+```
+
+2. Publish config if not already done:
+```bash
+php artisan vendor:publish --tag=machine-config
+```
+
+3. Add parallel dispatch keys to your `config/machine.php`
+4. Set `MACHINE_PARALLEL_DISPATCH=true` in `.env` when ready
+5. Ensure your cache and queue drivers are configured
+
+### No Breaking Changes
+
+- All existing machine definitions work without modification
+- Parallel states run sequentially by default (same as before)
+- The `ParallelRegionJob` is internal — no user code changes needed
+
+For full details, see [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch).
+
+---
+
 ## Upgrading to v3.x
 
 ### Requirements
