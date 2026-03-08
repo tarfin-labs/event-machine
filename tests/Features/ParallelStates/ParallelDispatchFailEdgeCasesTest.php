@@ -46,26 +46,26 @@ it('multiple sequential failures all handled correctly', function (): void {
     $job1 = new ParallelRegionJob(
         machineClass: \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_a',
-        initialStateId: 'parallel_fail.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_fail.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
     $job1->failed(new \RuntimeException('First failure'));
 
     $restored = \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($restored->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
 
     // Second failure → no-op (already in error)
     $job2 = new ParallelRegionJob(
         machineClass: \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_b',
-        initialStateId: 'parallel_fail.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_with_fail.processing.region_b',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_b.working',
     );
     $job2->failed(new \RuntimeException('Second failure'));
 
     // Still in error state, not crashed
     $final = \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($final->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($final->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
 });
 
 it('failed job with handle completing before failed() → no double processing', function (): void {
@@ -79,21 +79,21 @@ it('failed job with handle completing before failed() → no double processing',
     (new ParallelRegionJob(
         machineClass: \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_a',
-        initialStateId: 'parallel_fail.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_fail.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     ))->handle();
 
     // Region B fails
     $jobB = new ParallelRegionJob(
         machineClass: \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithFailMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_fail.processing.region_b',
-        initialStateId: 'parallel_fail.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_with_fail.processing.region_b',
+        initialStateId: 'parallel_dispatch_with_fail.processing.region_b.working',
     );
     $jobB->failed(new \RuntimeException('Region B failure'));
 
     $restored = \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($restored->state->currentStateDefinition->id)->toBe('parallel_fail.error');
+    expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
 
     // Region A's context preserved
     expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
