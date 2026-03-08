@@ -326,7 +326,7 @@ class MachineDefinition
         if ($parallelState->stateDefinitions !== null) {
             foreach ($parallelState->stateDefinitions as $region) {
                 $regionInitial = $region->findInitialStateDefinition();
-                if ($regionInitial !== null && isset($regionInitial->config['entry'])) {
+                if ($regionInitial !== null && $regionInitial->entry !== null && $regionInitial->entry !== []) {
                     $regionsWithEntryActions++;
                 }
             }
@@ -361,7 +361,7 @@ class MachineDefinition
 
                     if ($regionInitial !== null) {
                         // Mark regions with entry actions for dispatch
-                        if (isset($regionInitial->config['entry'])) {
+                        if ($regionInitial->entry !== null && $regionInitial->entry !== []) {
                             // Region entry event will be recorded by ParallelRegionJob on completion
                             $this->pendingParallelDispatches[] = [
                                 'region_id'        => $region->id,
