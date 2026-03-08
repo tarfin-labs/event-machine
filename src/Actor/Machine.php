@@ -254,6 +254,7 @@ class Machine implements Castable, JsonSerializable, Stringable
                 rootEventId: $rootEventId,
                 regionId: $dispatch['region_id'],
                 initialStateId: $dispatch['initial_state_id'],
+                contextAtDispatch: $this->state->context->data,
             );
 
             if ($queue !== null) {
