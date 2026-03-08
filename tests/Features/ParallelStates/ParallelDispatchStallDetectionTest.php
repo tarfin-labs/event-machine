@@ -51,7 +51,7 @@ it('records stall event when region entry action completes without raising event
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     $stallEvent = MachineEvent::where('root_event_id', $rootEventId)
@@ -60,7 +60,7 @@ it('records stall event when region entry action completes without raising event
 
     expect($stallEvent)->not->toBeNull();
     expect($stallEvent->payload['region_id'])->toBe('parallel_dispatch.processing.region_a');
-    expect($stallEvent->payload['initial_state_id'])->toBe('parallel_dispatch.processing.region_a.working_a');
+    expect($stallEvent->payload['initial_state_id'])->toBe('parallel_dispatch.processing.region_a.working');
     expect($stallEvent->payload['context_changed'])->toBeTrue();
 });
 
@@ -75,12 +75,12 @@ it('does not record stall event when entry action raises event that advances reg
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    // RegionARaiseAction raises REGION_A_PROCESSED → transitions to finished_a
+    // RegionARaiseAction raises REGION_A_PROCESSED → transitions to finished
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithRaiseMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_raise.processing.region_a',
-        initialStateId: 'parallel_raise.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_raise.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_raise.processing.region_a.working',
     ))->handle();
 
     $stallEvents = MachineEvent::where('root_event_id', $rootEventId)
@@ -91,7 +91,7 @@ it('does not record stall event when entry action raises event that advances reg
 
     // Verify region actually advanced
     $restored = ParallelDispatchWithRaiseMachine::create(state: $rootEventId);
-    expect($restored->state->value)->toContain('parallel_raise.processing.region_a.finished_a');
+    expect($restored->state->value)->toContain('parallel_dispatch_with_raise.processing.region_a.finished');
 });
 
 // ============================================================
@@ -111,7 +111,7 @@ it('stall event payload includes context_changed=false when entry action has no 
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_b',
-        initialStateId: 'parallel_dispatch.processing.region_b.working_b',
+        initialStateId: 'parallel_dispatch.processing.region_b.working',
     ))->handle();
 
     $stallEvent = MachineEvent::where('root_event_id', $rootEventId)
@@ -139,14 +139,14 @@ it('records separate stall events for each region that does not advance', functi
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     (new ParallelRegionJob(
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_b',
-        initialStateId: 'parallel_dispatch.processing.region_b.working_b',
+        initialStateId: 'parallel_dispatch.processing.region_b.working',
     ))->handle();
 
     $stallEvents = MachineEvent::where('root_event_id', $rootEventId)
@@ -171,20 +171,20 @@ it('only stalled region records stall event when sibling advances normally', fun
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    // Region A raises event → advances to finished_a (no stall)
+    // Region A raises event → advances to finished (no stall)
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithRaiseMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_raise.processing.region_a',
-        initialStateId: 'parallel_raise.processing.region_a.working_a',
+        regionId: 'parallel_dispatch_with_raise.processing.region_a',
+        initialStateId: 'parallel_dispatch_with_raise.processing.region_a.working',
     ))->handle();
 
-    // Region B only sets context → stays at working_b (stall)
+    // Region B only sets context → stays at working (stall)
     (new ParallelRegionJob(
         machineClass: ParallelDispatchWithRaiseMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_raise.processing.region_b',
-        initialStateId: 'parallel_raise.processing.region_b.working_b',
+        regionId: 'parallel_dispatch_with_raise.processing.region_b',
+        initialStateId: 'parallel_dispatch_with_raise.processing.region_b.working',
     ))->handle();
 
     $stallEvents = MachineEvent::where('root_event_id', $rootEventId)
@@ -193,7 +193,7 @@ it('only stalled region records stall event when sibling advances normally', fun
 
     // Only region B should have a stall event
     expect($stallEvents)->toHaveCount(1);
-    expect($stallEvents->first()->payload['region_id'])->toBe('parallel_raise.processing.region_b');
+    expect($stallEvents->first()->payload['region_id'])->toBe('parallel_dispatch_with_raise.processing.region_b');
 });
 
 // ============================================================
@@ -211,7 +211,7 @@ it('machine can be restored correctly after stall events exist in history', func
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
         regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working_a',
+        initialStateId: 'parallel_dispatch.processing.region_a.working',
     ))->handle();
 
     // Machine should be restorable despite stall event in history
@@ -220,5 +220,5 @@ it('machine can be restored correctly after stall events exist in history', func
     expect($restored->state->isInParallelState())->toBeTrue();
     expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
     // Region still at initial — stall is informational, not destructive
-    expect($restored->state->value)->toContain('parallel_dispatch.processing.region_a.working_a');
+    expect($restored->state->value)->toContain('parallel_dispatch.processing.region_a.working');
 });
