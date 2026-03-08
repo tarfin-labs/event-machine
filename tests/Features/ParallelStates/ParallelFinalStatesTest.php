@@ -207,7 +207,7 @@ test('onDone transitions to next state when all regions are final', function ():
         'states'  => [
             'processing' => [
                 'type'   => 'parallel',
-                'onDone' => 'completed',
+                '@done'  => 'completed',
                 'states' => [
                     'taskA' => [
                         'initial' => 'working',
@@ -260,8 +260,8 @@ test('onDone works with array configuration', function (): void {
         'initial' => 'processing',
         'states'  => [
             'processing' => [
-                'type'   => 'parallel',
-                'onDone' => [
+                'type'  => 'parallel',
+                '@done' => [
                     'target' => 'finished',
                 ],
                 'states' => [
@@ -313,7 +313,7 @@ test('nested final state in compound sub-state should NOT trigger region complet
         'states'  => [
             'data_collection' => [
                 'type'   => 'parallel',
-                'onDone' => 'application_submitted',
+                '@done'  => 'application_submitted',
                 'states' => [
                     'retailer' => [
                         'initial' => 'awaiting_vehicle_info',
@@ -396,7 +396,7 @@ test('car sales style: compound onDone + cross-region sync + parallel onDone', f
             'states'  => [
                 'data_collection' => [
                     'type'   => 'parallel',
-                    'onDone' => 'application_submitted',
+                    '@done'  => 'application_submitted',
                     'states' => [
                         'retailer' => [
                             'initial' => 'pricing',
@@ -431,7 +431,7 @@ test('car sales style: compound onDone + cross-region sync + parallel onDone', f
                                 ],
                                 'verification' => [
                                     'initial' => 'checking',
-                                    'onDone'  => 'under_policy_review',
+                                    '@done'   => 'under_policy_review',
                                     'states'  => [
                                         'checking' => [
                                             'on' => [
@@ -511,7 +511,7 @@ test('three levels of nesting: deeply nested final should NOT trigger region com
         'states'  => [
             'processing' => [
                 'type'   => 'parallel',
-                'onDone' => 'all_done',
+                '@done'  => 'all_done',
                 'states' => [
                     'region_a' => [
                         'initial' => 'working',
@@ -577,7 +577,7 @@ test('non-onDone compound parent should NOT propagate to grandparent onDone', fu
         'states'  => [
             'processing' => [
                 'type'   => 'parallel',
-                'onDone' => 'finished',
+                '@done'  => 'finished',
                 'states' => [
                     'region_a' => [
                         'initial' => 'working',
@@ -593,7 +593,7 @@ test('non-onDone compound parent should NOT propagate to grandparent onDone', fu
                         'states'  => [
                             'outer' => [
                                 'initial' => 'inner',
-                                'onDone'  => 'after_outer',
+                                '@done'   => 'after_outer',
                                 'states'  => [
                                     'inner' => [
                                         'initial' => 'running',
@@ -647,7 +647,7 @@ test('compound parent exit actions fire when onDone transitions', function (): v
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
-                    'onDone' => 'done',
+                    '@done'  => 'done',
                     'states' => [
                         'region_a' => [
                             'initial' => 'working',
@@ -663,7 +663,7 @@ test('compound parent exit actions fire when onDone transitions', function (): v
                             'states'  => [
                                 'sub_process' => [
                                     'initial' => 'checking',
-                                    'onDone'  => 'after_sub',
+                                    '@done'   => 'after_sub',
                                     'exit'    => 'logSubProcessExitAction',
                                     'states'  => [
                                         'checking' => [
@@ -720,7 +720,7 @@ test('compound onDone with actions config runs onDone actions', function (): voi
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
-                    'onDone' => 'done',
+                    '@done'  => 'done',
                     'states' => [
                         'region_a' => [
                             'initial' => 'working',
@@ -736,7 +736,7 @@ test('compound onDone with actions config runs onDone actions', function (): voi
                             'states'  => [
                                 'sub_process' => [
                                     'initial' => 'checking',
-                                    'onDone'  => [
+                                    '@done'   => [
                                         'target'  => 'reviewed',
                                         'actions' => 'logOnDoneTransitionAction',
                                     ],
@@ -785,7 +785,7 @@ test('chained compound onDone across multiple levels', function (): void {
         'states'  => [
             'processing' => [
                 'type'   => 'parallel',
-                'onDone' => 'all_done',
+                '@done'  => 'all_done',
                 'states' => [
                     'region_a' => [
                         'initial' => 'working',
@@ -801,7 +801,7 @@ test('chained compound onDone across multiple levels', function (): void {
                         'states'  => [
                             'phase1' => [
                                 'initial' => 'running',
-                                'onDone'  => 'phase2',
+                                '@done'   => 'phase2',
                                 'states'  => [
                                     'running' => [
                                         'on' => ['PHASE1_DONE' => 'phase1_final'],
@@ -811,7 +811,7 @@ test('chained compound onDone across multiple levels', function (): void {
                             ],
                             'phase2' => [
                                 'initial' => 'auto_complete',
-                                'onDone'  => 'phase3',
+                                '@done'   => 'phase3',
                                 'states'  => [
                                     // Initial state is immediately final → triggers chained onDone
                                     'auto_complete' => ['type' => 'final'],
@@ -851,7 +851,7 @@ test('region where initial state is immediately final triggers parallel onDone',
         'states'  => [
             'processing' => [
                 'type'   => 'parallel',
-                'onDone' => 'done',
+                '@done'  => 'done',
                 'states' => [
                     'auto_region' => [
                         'initial' => 'completed',
@@ -897,7 +897,7 @@ test('compound sub-state onDone transitions within a parallel region', function 
         'states'  => [
             'processing' => [
                 'type'   => 'parallel',
-                'onDone' => 'done',
+                '@done'  => 'done',
                 'states' => [
                     'region_a' => [
                         'initial' => 'working',
@@ -920,7 +920,7 @@ test('compound sub-state onDone transitions within a parallel region', function 
                             ],
                             'sub_process' => [
                                 'initial' => 'checking',
-                                'onDone'  => 'step3',
+                                '@done'   => 'step3',
                                 'states'  => [
                                     'checking' => [
                                         'on' => [
