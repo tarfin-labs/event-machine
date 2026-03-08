@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EBasicMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EMultiRaiseMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EDeepContextMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EThreeRegionMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMachine;
@@ -192,4 +193,77 @@ it('second job sees first job context changes via fresh DB load', function (): v
     // (if Job B had overwritten, region_a_result would be null)
     expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
     expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+});
+
+// ============================================================
+// Grup 3: Raised Events & Internal Transitions
+//
+// Verifies that entry actions can raise events to drive region
+// transitions within parallel jobs. Covers single raise, multi-
+// raise chains, and no-raise (context-only) scenarios.
+// ============================================================
+
+it('single raised event from entry action transitions region to final', function (): void {
+    // E2EBasicMachine: each region's entry action raises exactly one event
+    // Region A: RegionARaiseAction → raise(REGION_A_PROCESSED) → working_a → finished_a
+    // Region B: RegionBRaiseAction → raise(REGION_B_PROCESSED) → working_b → finished_b
+    $machine = E2EBasicMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    $restored = E2EBasicMachine::create(state: $rootEventId);
+
+    // Both regions must have reached their final states via raised events
+    expect($restored->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
+
+    // Verify the raised events caused actual transitions (not just context writes)
+    // by checking that the machine value no longer contains the initial states
+    expect($restored->state->value)->not->toContain('e2e_basic.processing.region_a.working_a');
+    expect($restored->state->value)->not->toContain('e2e_basic.processing.region_b.working_b');
+});
+
+it('multiple raised events in single job are processed in sequence', function (): void {
+    // E2EMultiRaiseMachine: Region A raises STEP_1_DONE + STEP_2_DONE in one action
+    // Chain: step_initial → (STEP_1_DONE) → step_1 → (STEP_2_DONE) → finished_a
+    // Region B: normal single raise → finished_b
+    // Both final → onDone → completed
+    $machine = E2EMultiRaiseMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    $restored = E2EMultiRaiseMachine::create(state: $rootEventId);
+
+    // Machine should have completed — both regions reached final, onDone fired
+    expect($restored->state->currentStateDefinition->id)->toBe('e2e_multi_raise.completed');
+
+    // Context set by Region A's multi-raise action should be preserved
+    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+});
+
+it('entry action that sets context without raising event keeps region at initial', function (): void {
+    // ParallelDispatchMachine: both entry actions set context but do NOT raise events
+    // Regions should stay at their initial states — no transitions happen
+    $machine = ParallelDispatchMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    $restored = ParallelDispatchMachine::create(state: $rootEventId);
+
+    // Context was written by entry actions (proves jobs ran)
+    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+
+    // But onDone should NOT have fired — regions are still at initial, not final
+    expect($restored->state->currentStateDefinition->id)->not->toBe('parallel_dispatch.completed');
+
+    // Machine value should still contain region initial states
+    expect($restored->state->value)->toContain('parallel_dispatch.processing.region_a.working_a');
+    expect($restored->state->value)->toContain('parallel_dispatch.processing.region_b.working_b');
 });
