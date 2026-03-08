@@ -32,7 +32,7 @@ When parallel dispatch is enabled:
 1. **Cache driver must support atomic locks** — Redis or database (not `array` or `file`)
 2. **Queue worker must be running** — Region jobs are dispatched to the queue
 3. **Entry actions must be idempotent** — Jobs may be retried on failure
-4. **Parallel regions must write to different context keys** — No cross-region key conflicts
+4. **Parallel regions should write to different context keys** — Shared keys trigger a `PARALLEL_CONTEXT_CONFLICT` event (LWW applies)
 
 ### New Files
 
@@ -40,6 +40,21 @@ When parallel dispatch is enabled:
 |------|-------------|
 | `src/Jobs/ParallelRegionJob.php` | Internal queue job for region entry actions |
 | `src/Support/MachineLockManager.php` | Database-based lock management |
+
+### New Internal Events
+
+v4.1 adds six internal events for parallel dispatch observability:
+
+| Event | Purpose |
+|-------|---------|
+| `PARALLEL_REGION_ENTER` | Region job completed and persisted context |
+| `PARALLEL_REGION_GUARD_ABORT` | Under-lock guard discarded work (machine moved on) |
+| `PARALLEL_CONTEXT_CONFLICT` | Sibling region overwrote a shared context key (LWW) |
+| `PARALLEL_REGION_STALLED` | Region entry action completed without advancing (no raise) |
+| `PARALLEL_DONE` | All regions reached final, `onDone` fired |
+| `PARALLEL_FAIL` | Region job failed after all retries |
+
+All events are persisted as `MachineEvent` records — durable audit trail, not logs.
 
 ### Migration Steps
 
