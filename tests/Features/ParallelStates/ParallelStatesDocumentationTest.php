@@ -288,7 +288,7 @@ test('docs example: exit action execution order', function (): void {
                 'active' => [
                     'type'   => 'parallel',
                     'exit'   => 'logParallelExitAction',
-                    'onDone' => 'inactive',
+                    '@done'  => 'inactive',
                     'states' => [
                         'region1' => [
                             'initial' => 'a',
@@ -420,7 +420,7 @@ test('docs example: onDone transitions when all regions are final', function ():
         'states'  => [
             'processing' => [
                 'type'   => 'parallel',
-                'onDone' => 'complete',
+                '@done'  => 'complete',
                 'states' => [
                     'payment' => [
                         'initial' => 'pending',
