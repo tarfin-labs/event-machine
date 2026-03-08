@@ -31,7 +31,7 @@ class E2EMixedRegionMachine extends Machine
                 'states' => [
                     'processing' => [
                         'type'   => 'parallel',
-                        'onDone' => 'completed',
+                        '@done'  => 'completed',
                         'states' => [
                             'region_a' => [
                                 'initial' => 'working',
