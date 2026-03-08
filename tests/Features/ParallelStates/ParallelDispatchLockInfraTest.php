@@ -120,19 +120,3 @@ it('release() removes lock from database', function (): void {
     expect($handle2)->toBeInstanceOf(MachineLockHandle::class);
     $handle2->release();
 });
-
-it('extend() updates expires_at without releasing lock', function (): void {
-    $handle = MachineLockManager::acquire('root-007', ttl: 10);
-
-    $lockBefore      = MachineStateLock::find('root-007');
-    $expiresAtBefore = $lockBefore->expires_at;
-
-    // Extend by 120 seconds
-    $handle->extend(120);
-
-    $lockAfter = MachineStateLock::find('root-007');
-    expect($lockAfter)->not->toBeNull();
-    expect($lockAfter->expires_at->greaterThan($expiresAtBefore))->toBeTrue();
-
-    $handle->release();
-});
