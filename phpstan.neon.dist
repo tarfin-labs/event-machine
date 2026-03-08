@@ -26,7 +26,6 @@ parameters:
         - identifier: match.unhandled
         # Strict comparison always true/false - defensive coding
         - identifier: identical.alwaysFalse
-        - identifier: instanceof.alwaysTrue
         # Boolean expression analysis - PHPDoc type inference
         - identifier: booleanNot.alwaysFalse
         # is_subclass_of checks - intentional for polymorphism
