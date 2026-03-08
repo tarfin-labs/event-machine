@@ -6,8 +6,8 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\WriteSharedKeyAAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\WriteSharedKeyBAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessSharedKeyAAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessSharedKeyBAction;
 
 /**
  * Both regions write to the same context keys (shared_scalar, shared_array).
@@ -39,7 +39,7 @@ class E2EContextConflictMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => WriteSharedKeyAAction::class,
+                                        'entry' => ProcessSharedKeyAAction::class,
                                         'on'    => ['REGION_A_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
@@ -49,7 +49,7 @@ class E2EContextConflictMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => WriteSharedKeyBAction::class,
+                                        'entry' => ProcessSharedKeyBAction::class,
                                         'on'    => ['REGION_B_PROCESSED' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
