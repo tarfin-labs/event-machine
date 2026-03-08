@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EBasicMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EDeepContextMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EThreeRegionMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithRaiseMachine;
@@ -112,4 +113,83 @@ it('returns consistent state on multiple restores after lifecycle completes', fu
     expect($restored2->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
     expect($restored1->state->context->get('region_a_result'))
         ->toBe($restored2->state->context->get('region_a_result'));
+});
+
+// ============================================================
+// Grup 2: Context Merge & Veri Bütünlüğü
+// ============================================================
+
+it('merges scalar context from parallel regions correctly', function (): void {
+    $machine = E2EBasicMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    $restored = E2EBasicMachine::create(state: $rootEventId);
+
+    // Both regions wrote to different scalar context keys — both should exist
+    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    // Neither should have overwritten the other
+    expect($restored->state->context->get('region_a_result'))->not->toBe('processed_by_b');
+});
+
+it('merges deep nested context from parallel regions', function (): void {
+    $machine = E2EDeepContextMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $machine->dispatchPendingParallelJobs();
+
+    $restored = E2EDeepContextMachine::create(state: $rootEventId);
+
+    expect($restored->state->currentStateDefinition->id)->toBe('e2e_deep_context.completed');
+
+    // Both nested keys inside 'report' should be preserved after deep merge
+    $report = $restored->state->context->get('report');
+    expect($report)->toBeArray();
+    expect($report['findeks']['score'])->toBe(750);
+    expect($report['findeks']['provider'])->toBe('kkb');
+    expect($report['turmob']['status'])->toBe('clean');
+    expect($report['turmob']['checked_at'])->toBe('2026-03-08');
+});
+
+it('preserves context keys not written by any job', function (): void {
+    // E2EBasicMachine has 'order_id' in config (initial=null).
+    // No region job writes to it — it should remain null after lifecycle.
+    $machine = E2EBasicMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // Verify order_id is in initial context
+    expect($machine->state->context->get('order_id'))->toBeNull();
+
+    $machine->dispatchPendingParallelJobs();
+
+    $restored = E2EBasicMachine::create(state: $rootEventId);
+
+    // order_id should remain null — jobs only write region_a/b_result
+    expect($restored->state->context->get('order_id'))->toBeNull();
+    // Region results should be set by their respective jobs
+    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+});
+
+it('second job sees first job context changes via fresh DB load', function (): void {
+    $machine = E2EBasicMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // With sync driver, jobs run sequentially:
+    // Job A runs first → persists context with region_a_result
+    // Job B runs second → loads fresh from DB → sees region_a_result → adds region_b_result
+    $machine->dispatchPendingParallelJobs();
+
+    $restored = E2EBasicMachine::create(state: $rootEventId);
+
+    // Both context keys must be present — proves diff-based merge works
+    // (if Job B had overwritten, region_a_result would be null)
+    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
 });
