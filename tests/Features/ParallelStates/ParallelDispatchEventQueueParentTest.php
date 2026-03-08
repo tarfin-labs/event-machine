@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\RaiseInternalEventAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessInternalGoAction;
 
 test('parallel state entry action raises event → processed in Phase 1', function (): void {
     $definition = MachineDefinition::define(
@@ -17,7 +17,7 @@ test('parallel state entry action raises event → processed in Phase 1', functi
             'states' => [
                 'parallel_parent' => [
                     'type'   => 'parallel',
-                    'entry'  => RaiseInternalEventAction::class,
+                    'entry'  => ProcessInternalGoAction::class,
                     'states' => [
                         'region_a' => [
                             'initial' => 'idle_a',
@@ -71,7 +71,7 @@ test('parallel state entry raises event with no handler → throws NoTransitionD
             'states' => [
                 'parallel_parent' => [
                     'type'   => 'parallel',
-                    'entry'  => RaiseInternalEventAction::class,
+                    'entry'  => ProcessInternalGoAction::class,
                     'states' => [
                         'region_a' => [
                             'initial' => 'idle_a',
