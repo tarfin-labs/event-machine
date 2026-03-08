@@ -15,7 +15,7 @@ class ParallelDispatchWithFailMachine extends Machine
     {
         return MachineDefinition::define(
             config: [
-                'id'             => 'parallel_fail',
+                'id'             => 'parallel_dispatch_with_fail',
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
@@ -26,36 +26,36 @@ class ParallelDispatchWithFailMachine extends Machine
                     'processing' => [
                         'type'   => 'parallel',
                         'onDone' => 'completed',
-                        'onFail' => 'error',
+                        'onFail' => 'failed',
                         'states' => [
                             'region_a' => [
-                                'initial' => 'working_a',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_a' => [
+                                    'working' => [
                                         'entry' => RegionAEntryAction::class,
                                         'on'    => [
-                                            'REGION_A_DONE' => 'finished_a',
+                                            'REGION_A_DONE' => 'finished',
                                         ],
                                     ],
-                                    'finished_a' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                             'region_b' => [
-                                'initial' => 'working_b',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_b' => [
+                                    'working' => [
                                         'entry' => RegionBEntryAction::class,
                                         'on'    => [
-                                            'REGION_B_DONE' => 'finished_b',
+                                            'REGION_B_DONE' => 'finished',
                                         ],
                                     ],
-                                    'finished_b' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                         ],
                     ],
                     'completed' => ['type' => 'final'],
-                    'error'     => ['type' => 'final'],
+                    'failed'    => ['type' => 'final'],
                 ],
             ],
         );
