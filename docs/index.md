@@ -365,11 +365,11 @@ $order->state->context->status;       // enum
 <div class="feature-section">
 <div class="feature-text">
 
-## Parallel States
+## Parallel States with True Parallel Dispatch
 
-**Run concurrent workflows.** Multiple independent processes can be active simultaneously in a single machine. Payment, shipping, and document generation - all tracked together.
+**Run concurrent workflows — truly in parallel.** Multiple independent processes execute simultaneously via Laravel queue workers. Two API calls that take 5s and 2s? Done in 5s, not 7s.
 
-When all parallel regions complete, `onDone` triggers the next step. No polling, no callbacks, no coordination code.
+Enable parallel dispatch and your entry actions run as separate queue jobs. Context merges safely under database locks. When all regions complete, `onDone` fires automatically. Zero code changes to your actions or guards.
 
 [Learn parallel states &rarr;](/advanced/parallel-states/)
 
@@ -402,11 +402,22 @@ When all parallel regions complete, `onDone` triggers the next step. No polling,
 
 <!-- doctest-attr: ignore -->
 ```php
-// Both regions active simultaneously
-$state->matches('processing.payment.pending');   // true
-$state->matches('processing.shipping.preparing'); // true
+// With parallel dispatch enabled: entry actions run as queue jobs
+// Worker A: PaymentGateway::charge()  — 5s
+// Worker B: ShippingAPI::createLabel() — 2s
+// Total: 5s (max), not 7s (sum)
 
-// Events handled by their respective regions
+$machine->send(['type' => 'START_PROCESSING']);
+// → dispatches 2 ParallelRegionJobs
+// → returns immediately
+
+// Each job completes independently, merges context under lock
+// Last job detects all regions final → onDone → 'fulfilled'
+```
+
+<!-- doctest-attr: ignore -->
+```php
+// Or use actor-driven parallelism without dispatch:
 $machine->send(['type' => 'PAID']);    // payment → done
 $machine->send(['type' => 'SHIPPED']); // shipping → done
 // All final → auto-transitions to 'fulfilled'
