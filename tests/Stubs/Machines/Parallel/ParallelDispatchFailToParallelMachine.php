@@ -15,7 +15,7 @@ class ParallelDispatchFailToParallelMachine extends Machine
     {
         return MachineDefinition::define(
             config: [
-                'id'             => 'parallel_fail_to_parallel',
+                'id'             => 'parallel_dispatch_fail_to_parallel',
                 'initial'        => 'primary_processing',
                 'should_persist' => true,
                 'context'        => [
@@ -29,23 +29,23 @@ class ParallelDispatchFailToParallelMachine extends Machine
                         'onFail' => 'fallback_processing',
                         'states' => [
                             'region_a' => [
-                                'initial' => 'working_a',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_a' => [
+                                    'working' => [
                                         'entry' => RegionAEntryAction::class,
-                                        'on'    => ['REGION_A_DONE' => 'finished_a'],
+                                        'on'    => ['REGION_A_DONE' => 'finished'],
                                     ],
-                                    'finished_a' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                             'region_b' => [
-                                'initial' => 'working_b',
+                                'initial' => 'working',
                                 'states'  => [
-                                    'working_b' => [
+                                    'working' => [
                                         'entry' => RegionBEntryAction::class,
-                                        'on'    => ['REGION_B_DONE' => 'finished_b'],
+                                        'on'    => ['REGION_B_DONE' => 'finished'],
                                     ],
-                                    'finished_b' => ['type' => 'final'],
+                                    'finished' => ['type' => 'final'],
                                 ],
                             ],
                         ],
@@ -55,23 +55,23 @@ class ParallelDispatchFailToParallelMachine extends Machine
                         'onDone' => 'completed',
                         'states' => [
                             'fallback_a' => [
-                                'initial' => 'retrying_a',
+                                'initial' => 'retrying',
                                 'states'  => [
-                                    'retrying_a' => [
+                                    'retrying' => [
                                         'entry' => RegionAEntryAction::class,
-                                        'on'    => ['FALLBACK_A_DONE' => 'done_a'],
+                                        'on'    => ['FALLBACK_A_DONE' => 'completed'],
                                     ],
-                                    'done_a' => ['type' => 'final'],
+                                    'completed' => ['type' => 'final'],
                                 ],
                             ],
                             'fallback_b' => [
-                                'initial' => 'retrying_b',
+                                'initial' => 'retrying',
                                 'states'  => [
-                                    'retrying_b' => [
+                                    'retrying' => [
                                         'entry' => RegionBEntryAction::class,
-                                        'on'    => ['FALLBACK_B_DONE' => 'done_b'],
+                                        'on'    => ['FALLBACK_B_DONE' => 'completed'],
                                     ],
-                                    'done_b' => ['type' => 'final'],
+                                    'completed' => ['type' => 'final'],
                                 ],
                             ],
                         ],
