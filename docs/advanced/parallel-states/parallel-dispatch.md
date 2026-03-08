@@ -328,6 +328,44 @@ Context conflict detection is **observational only**. The second region's value 
 
 The best practice remains: each region should write to its own context keys. But when shared keys are unavoidable, the conflict event provides visibility.
 
+## Controller Integration
+
+When using parallel dispatch from a controller, the machine's `dispatched` property tells you whether region jobs were sent to the queue:
+
+```php no_run
+class OrderController extends Controller
+{
+    public function store(Request $request)
+    {
+        $machine = OrderMachine::create();
+        $machine->persist();
+        $machine->dispatchPendingParallelJobs();
+
+        if ($machine->dispatched) {
+            // Regions are running in queue workers — return early
+            return response()->json([
+                'status'  => 'processing',
+                'message' => 'Order is being processed in the background.',
+            ], 202);
+        }
+
+        // Sequential mode or no pending dispatches — machine already finished
+        return response()->json([
+            'status' => 'completed',
+            'result' => $machine->state->context->get('result'),
+        ]);
+    }
+}
+```
+
+The `dispatched` flag is:
+- **`true`** after `dispatchPendingParallelJobs()` actually dispatches jobs
+- **`false`** when dispatch is disabled, no pending dispatches exist, or the machine was restored from DB
+
+::: tip Lifecycle Scope
+The `dispatched` flag is a runtime property — it is not persisted to the database. Each `Machine::create()` or restore starts with `dispatched = false`. Only the explicit `dispatchPendingParallelJobs()` call can set it to `true`.
+:::
+
 ## Limitations
 
 1. **No cancellation** — Once dispatched, jobs cannot be cancelled (they no-op if machine state changes)
