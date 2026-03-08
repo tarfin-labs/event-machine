@@ -9,7 +9,5 @@ namespace Tarfinlabs\EventMachine\Enums;
  */
 enum TransitionProperty: string
 {
-    case Normal  = '@normal';
-    case Always  = '@always';
-    case Guarded = '@guarded';
+    case Always = '@always';
 }
