@@ -344,3 +344,65 @@ it('runs exit actions on all active leaf states during escape', function (): voi
     expect($exits->exited)->toContain('region_b');
     expect($exits->exited)->toHaveCount(2);
 });
+
+// ---------------------------------------------------------------------------
+// Escape to a compound target (resolves to initial child)
+// ---------------------------------------------------------------------------
+
+it('escapes parallel state to a compound target and resolves to its initial child', function (): void {
+    $definition = MachineDefinition::define([
+        'id'      => 'test_escape_to_compound',
+        'initial' => 'processing',
+        'on'      => [
+            'CANCEL' => 'review',
+        ],
+        'states' => [
+            'processing' => [
+                'type'   => 'parallel',
+                '@done'  => 'done',
+                'states' => [
+                    'region_a' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
+                            'finished' => ['type' => 'final'],
+                        ],
+                    ],
+                    'region_b' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working'  => ['on' => ['DONE_B' => 'finished']],
+                            'finished' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'review' => [
+                'initial' => 'pending',
+                'states'  => [
+                    'pending'  => ['on' => ['APPROVE' => 'approved']],
+                    'approved' => ['type' => 'final'],
+                ],
+            ],
+            'done' => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $definition->getInitialState();
+
+    // Start in parallel state
+    expect($state->value)->toBe([
+        'test_escape_to_compound.processing.region_a.working',
+        'test_escape_to_compound.processing.region_b.working',
+    ]);
+
+    // Escape to compound target 'review' — should resolve to initial child 'pending'
+    $state = $definition->transition(['type' => 'CANCEL'], $state);
+
+    expect($state->value)->toBe(['test_escape_to_compound.review.pending']);
+
+    // Continue within compound state
+    $state = $definition->transition(['type' => 'APPROVE'], $state);
+
+    expect($state->value)->toBe(['test_escape_to_compound.review.approved']);
+});
