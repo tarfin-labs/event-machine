@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\CanRetryGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\AlwaysFailGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SendAlertAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ConditionalOnFailMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\IncrementRetryAction;
 
 // Test 13: Backward compat — simple string @fail still works
@@ -318,4 +319,57 @@ test('it works with canRetry pattern across multiple fail invocations', function
     // retry_count=3 >= 3 → failed with alert
     expect($state2->value)->toBe(['test_retry_pattern.failed'])
         ->and(SendAlertAction::wasExecuted())->toBeTrue();
+});
+
+// Test 19: ConditionalOnFailMachine via Machine::create — @fail guard passes (can retry)
+test('ConditionalOnFailMachine @fail with guard pass via Machine::create', function (): void {
+    SendAlertAction::reset();
+
+    $machine = ConditionalOnFailMachine::create();
+
+    // retry_count starts at 0, CanRetryGuard passes (0 < 3)
+    $parallelState = $machine->definition->idMap['conditional_on_fail.processing'];
+    $state         = $machine->definition->processParallelOnFail($parallelState, $machine->state);
+
+    expect($state->value)->toBe(['conditional_on_fail.retrying'])
+        ->and($state->context->get('retry_count'))->toBe(1)
+        ->and(SendAlertAction::wasExecuted())->toBeFalse();
+});
+
+// Test 20: ConditionalOnFailMachine via Machine::create — @fail guard fails (exhausted retries)
+test('ConditionalOnFailMachine @fail with guard fail via Machine::create', function (): void {
+    SendAlertAction::reset();
+
+    $machine = ConditionalOnFailMachine::create();
+    $machine->state->context->set('retry_count', 5);
+
+    // retry_count=5 >= 3, CanRetryGuard fails → falls through to SendAlertAction
+    $parallelState = $machine->definition->idMap['conditional_on_fail.processing'];
+    $state         = $machine->definition->processParallelOnFail($parallelState, $machine->state);
+
+    expect($state->value)->toBe(['conditional_on_fail.failed'])
+        ->and(SendAlertAction::wasExecuted())->toBeTrue()
+        ->and($state->context->get('alert_sent'))->toBeTrue();
+});
+
+// Test 21: ConditionalOnFailMachine — @done path via Machine::send (all regions succeed)
+test('ConditionalOnFailMachine @done fires when all regions succeed via send', function (): void {
+    $machine = ConditionalOnFailMachine::create();
+
+    $machine->send(['type' => 'INVENTORY_CHECKED']);
+    $state = $machine->send(['type' => 'PAYMENT_VALIDATED']);
+
+    // Both regions final (done states) → @done fires → completed
+    expect($state->value)->toBe(['conditional_on_fail.completed']);
+});
+
+// Test 22: ConditionalOnFailMachine — PAYMENT_FAILED also leads to @done (error is final)
+test('ConditionalOnFailMachine @done fires even when payment fails via send', function (): void {
+    $machine = ConditionalOnFailMachine::create();
+
+    $machine->send(['type' => 'INVENTORY_CHECKED']);
+    $state = $machine->send(['type' => 'PAYMENT_FAILED']);
+
+    // payment.error is final, inventory.done is final → all regions final → @done fires
+    expect($state->value)->toBe(['conditional_on_fail.completed']);
 });
