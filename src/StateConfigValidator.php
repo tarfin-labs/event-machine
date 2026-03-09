@@ -146,6 +146,14 @@ class StateConfigValidator
             self::validateParallelState(stateConfig: $stateConfig, path: $path);
         }
 
+        // Validate @done/@fail configurations
+        if (isset($stateConfig['@done'])) {
+            self::validateDoneFailConfig($stateConfig['@done'], '@done', $path);
+        }
+        if (isset($stateConfig['@fail'])) {
+            self::validateDoneFailConfig($stateConfig['@fail'], '@fail', $path);
+        }
+
         // Process nested states first to ensure proper context
         if (isset($stateConfig['states'])) {
             if (!is_array($stateConfig['states'])) {
@@ -397,6 +405,40 @@ class StateConfigValidator
                              'Default condition (no guards) must be the last condition.'
                 );
             }
+        }
+    }
+
+    /**
+     * Validates @done/@fail configuration format.
+     *
+     * Accepts the same formats as regular transitions: string target,
+     * single config object, or conditional array of objects with guards.
+     *
+     * @throws InvalidArgumentException
+     */
+    private static function validateDoneFailConfig(mixed $config, string $key, string $path): void
+    {
+        if ($config === null) {
+            return;
+        }
+
+        if (is_string($config)) {
+            return;
+        }
+
+        if (!is_array($config)) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has invalid '{$key}' configuration. Must be a string or array."
+            );
+        }
+
+        if (array_is_list($config)) {
+            self::validateGuardedTransitions($config, $path, $key);
+            foreach ($config as &$condition) {
+                self::validateTransitionConfig(transitionConfig: $condition, path: $path, eventName: $key);
+            }
+        } else {
+            self::validateTransitionConfig(transitionConfig: $config, path: $path, eventName: $key);
         }
     }
 
