@@ -57,7 +57,7 @@ Context changes within parallel states are persisted incrementally. Each event s
 ```php
 // Event 1: Payment succeeds
 $machine->send([
-    'type' => 'PAYMENT_SUCCESS',
+    'type' => 'PAYMENT_SUCCEEDED',
     'payload' => ['payment_id' => 'pay_123'],
 ]);
 // Persists: {"payment_id": "pay_123"}
@@ -117,7 +117,7 @@ class Order extends Model
 
 // The cast handles root_event_id storage automatically
 $order = Order::create(['customer_id' => 123]);
-$order->fulfillment_state->send(['type' => 'PAYMENT_SUCCESS', 'payload' => ['payment_id' => 'pay_123']]);
+$order->fulfillment_state->send(['type' => 'PAYMENT_SUCCEEDED', 'payload' => ['payment_id' => 'pay_123']]);
 $order->save();
 
 // Later retrieval restores the full parallel state
