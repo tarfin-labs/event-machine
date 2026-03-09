@@ -856,8 +856,31 @@ class MachineDefinition
     }
 
     /**
-     * Check if all regions of a parallel state have reached their final states.
+     * Resolve a @done or @fail TransitionDefinition to its winning TransitionBranch.
      *
+     * Evaluates guards on the TransitionDefinition branches and returns the first
+     * valid branch. Creates a synthetic EventBehavior when none is available
+     * (e.g., in async job contexts like ParallelRegionJob).
+     *
+     * @param  TransitionDefinition  $transition  The @done or @fail transition definition.
+     * @param  State  $state  The current machine state.
+     * @param  EventBehavior|null  $eventBehavior  The triggering event (null in async contexts).
+     *
+     * @return TransitionBranch|null The winning branch, or null if no branch qualifies.
+     */
+    protected function resolveOnDoneOrFailBranch(
+        TransitionDefinition $transition,
+        State $state,
+        ?EventBehavior $eventBehavior,
+    ): ?TransitionBranch {
+        if (!$eventBehavior instanceof EventBehavior) {
+            $eventBehavior = new EventDefinition(type: $transition->event);
+        }
+
+        return $transition->getFirstValidTransitionBranch($eventBehavior, $state);
+    }
+
+    /**
      * Process compound state onDone transitions.
      *
      * When a transition lands on a final state within a compound sub-state,
