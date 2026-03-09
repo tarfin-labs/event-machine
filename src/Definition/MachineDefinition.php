@@ -826,10 +826,43 @@ class MachineDefinition
     }
 
     /**
+     * Check if a transition source is the parallel state or one of its ancestors.
+     *
+     * When a transition's source is at or above the parallel state level, the
+     * transition "escapes" the parallel state — the entire parallel state must
+     * be exited rather than updating individual region values.
+     *
+     * @param  StateDefinition  $source  The transition source state.
+     * @param  StateDefinition  $parallelState  The currently active parallel state.
+     *
+     * @return bool True if the source escapes the parallel state.
+     */
+    protected function isParallelEscapeSource(StateDefinition $source, StateDefinition $parallelState): bool
+    {
+        // Source is the parallel state itself (parallel-level `on` handler)
+        if ($source === $parallelState) {
+            return true;
+        }
+
+        // Source is an ancestor of the parallel state (root-level `on` handler)
+        $ancestor = $parallelState->parent;
+        while ($ancestor instanceof \Tarfinlabs\EventMachine\Definition\StateDefinition) {
+            if ($ancestor === $source) {
+                return true;
+            }
+            $ancestor = $ancestor->parent;
+        }
+
+        return false;
+    }
+
+    /**
      * Select transitions for all active regions based on the event.
      *
      * For parallel states, an event is broadcast to all active atomic states.
      * Each region independently evaluates guards and selects a transition.
+     * Transitions from the same TransitionDefinition (ancestor-level handlers)
+     * are deduplicated to prevent duplicate action execution.
      *
      * @param  EventBehavior  $eventBehavior  The event behavior.
      * @param  State  $state  The current state.
@@ -839,11 +872,20 @@ class MachineDefinition
     protected function selectTransitions(EventBehavior $eventBehavior, State $state): array
     {
         $transitions = [];
+        $seen        = [];
 
         foreach ($this->getActiveAtomicStates($state) as $atomicState) {
             $transitionDef = $this->findTransitionDefinitionOrNull($atomicState, $eventBehavior);
 
             if ($transitionDef instanceof TransitionDefinition) {
+                // Deduplicate: when multiple atomic states resolve to the same
+                // TransitionDefinition (ancestor-level handler), keep only one branch.
+                $defId = spl_object_id($transitionDef);
+                if (isset($seen[$defId])) {
+                    continue;
+                }
+                $seen[$defId] = true;
+
                 $branch = $transitionDef->getFirstValidTransitionBranch($eventBehavior, $state);
 
                 if ($branch instanceof TransitionBranch) {
@@ -1269,6 +1311,34 @@ class MachineDefinition
                 $eventBehavior->type,
                 $state->currentStateDefinition->id
             );
+        }
+
+        // Check for escape transitions: when the transition source is the parallel
+        // state itself or an ancestor (root-level `on`, parallel-level `on`), the
+        // entire parallel state must be exited — not individual region values.
+        $parallelState = $state->currentStateDefinition;
+        foreach ($transitions as $branch) {
+            $source = $branch->transitionDefinition->source;
+            if ($this->isParallelEscapeSource($source, $parallelState)) {
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::TRANSITION_START,
+                    placeholder: "{$parallelState->route}.{$eventBehavior->type}",
+                );
+
+                $state = $this->exitParallelStateAndTransitionToTarget(
+                    parallelState: $parallelState,
+                    state: $state,
+                    branch: $branch,
+                    eventBehavior: $eventBehavior,
+                );
+
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::TRANSITION_FINISH,
+                    placeholder: "{$parallelState->route}.{$eventBehavior->type}",
+                );
+
+                return $state;
+            }
         }
 
         // Record transition start
