@@ -418,10 +418,6 @@ class StateConfigValidator
      */
     private static function validateDoneFailConfig(mixed $config, string $key, string $path): void
     {
-        if ($config === null) {
-            return;
-        }
-
         if (is_string($config)) {
             return;
         }
