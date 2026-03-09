@@ -1009,14 +1009,17 @@ class MachineDefinition
             placeholder: $parallelState->route,
         );
 
-        if (!isset($parallelState->config['@done'])) {
+        if (!$parallelState->onDoneTransition instanceof TransitionDefinition) {
             return $state;
         }
 
-        $onDoneConfig = $parallelState->config['@done'];
-        $targetId     = is_array($onDoneConfig) ? ($onDoneConfig['target'] ?? null) : $onDoneConfig;
+        $branch = $this->resolveOnDoneOrFailBranch($parallelState->onDoneTransition, $state, $eventBehavior);
 
-        return $this->exitParallelStateAndTransition($parallelState, $state, $targetId, $eventBehavior);
+        if (!$branch instanceof TransitionBranch) {
+            return $state;
+        }
+
+        return $this->exitParallelStateAndTransitionToTarget($parallelState, $state, $branch, $eventBehavior);
     }
 
     /**
@@ -1040,22 +1043,24 @@ class MachineDefinition
             placeholder: $parallelState->route,
         );
 
-        if (!isset($parallelState->config['@fail'])) {
+        if (!$parallelState->onFailTransition instanceof TransitionDefinition) {
             return $state;
         }
 
-        $onFailConfig = $parallelState->config['@fail'];
-        $targetId     = is_array($onFailConfig) ? ($onFailConfig['target'] ?? null) : $onFailConfig;
+        $branch = $this->resolveOnDoneOrFailBranch($parallelState->onFailTransition, $state, $eventBehavior);
 
-        // Run onFail actions BEFORE exit (can inspect parallel state for error context)
-        if (is_array($onFailConfig) && isset($onFailConfig['actions'])) {
-            $actions = is_array($onFailConfig['actions']) ? $onFailConfig['actions'] : [$onFailConfig['actions']];
-            foreach ($actions as $action) {
-                $this->runAction($action, $state, $eventBehavior);
-            }
+        if (!$branch instanceof TransitionBranch) {
+            return $state;
         }
 
-        return $this->exitParallelStateAndTransition($parallelState, $state, $targetId, $eventBehavior);
+        // Run onFail actions BEFORE exit (can inspect parallel state for error context)
+        return $this->exitParallelStateAndTransitionToTarget(
+            parallelState: $parallelState,
+            state: $state,
+            branch: $branch,
+            eventBehavior: $eventBehavior,
+            runActionsBeforeExit: true,
+        );
     }
 
     /**
@@ -1072,12 +1077,12 @@ class MachineDefinition
     ): void {
         // Walk up: finalState → region → possible nested parallel
         $region = $finalState->parent;
-        if (!$region instanceof \Tarfinlabs\EventMachine\Definition\StateDefinition) {
+        if (!$region instanceof StateDefinition) {
             return;
         }
 
         $parallelParent = $region->parent;
-        if (!$parallelParent instanceof \Tarfinlabs\EventMachine\Definition\StateDefinition || $parallelParent->type !== StateDefinitionType::PARALLEL) {
+        if (!$parallelParent instanceof StateDefinition || $parallelParent->type !== StateDefinitionType::PARALLEL) {
             return;
         }
 
@@ -1090,26 +1095,25 @@ class MachineDefinition
             return;
         }
 
-        if (!isset($parallelParent->config['@done'])) {
+        if (!$parallelParent->onDoneTransition instanceof TransitionDefinition) {
             return;
         }
 
-        $onDoneConfig = $parallelParent->config['@done'];
-        $targetId     = is_array($onDoneConfig) ? ($onDoneConfig['target'] ?? null) : $onDoneConfig;
+        $branch = $this->resolveOnDoneOrFailBranch($parallelParent->onDoneTransition, $state, $eventBehavior);
 
-        if ($targetId === null) {
+        if (!$branch instanceof TransitionBranch || !$branch->target instanceof StateDefinition) {
             return;
         }
 
-        $target = $this->getNearestStateDefinitionByString($targetId, $parallelParent);
-        if (!$target instanceof StateDefinition) {
-            return;
-        }
+        $target = $branch->target;
 
         $state->setInternalEventBehavior(
             type: InternalEvent::PARALLEL_DONE,
             placeholder: $parallelParent->route,
         );
+
+        // Run branch actions
+        $branch->runActions($state, $eventBehavior);
 
         // Replace all nested parallel leaf states with the onDone target
         $values    = $state->value;
@@ -1157,23 +1161,31 @@ class MachineDefinition
      * Exit a parallel state and transition to a target state.
      *
      * Shared logic between processParallelOnDone and processParallelOnFail:
-     * runs exit actions on all active child states, records region exits,
+     * runs branch actions, exit actions on all active child states, records region exits,
      * exits the parallel state itself, then transitions to the target.
+     *
+     * @param  StateDefinition  $parallelState  The parallel state being exited.
+     * @param  State  $state  The current state.
+     * @param  TransitionBranch  $branch  The resolved transition branch with target and actions.
+     * @param  EventBehavior|null  $eventBehavior  The triggering event.
+     * @param  bool  $runActionsBeforeExit  If true, run branch actions before exit (for @fail error inspection).
      */
-    protected function exitParallelStateAndTransition(
+    protected function exitParallelStateAndTransitionToTarget(
         StateDefinition $parallelState,
         State $state,
-        ?string $targetId,
+        TransitionBranch $branch,
         ?EventBehavior $eventBehavior,
+        bool $runActionsBeforeExit = false,
     ): State {
-        if ($targetId === null) {
-            return $state;
-        }
-
-        $targetState = $this->getNearestStateDefinitionByString($targetId, $parallelState);
+        $targetState = $branch->target;
 
         if (!$targetState instanceof StateDefinition) {
             return $state;
+        }
+
+        // Run branch actions BEFORE exit if requested (for @fail — can inspect parallel state for error context)
+        if ($runActionsBeforeExit) {
+            $branch->runActions($state, $eventBehavior);
         }
 
         // Run exit actions on all active states and record region exits
@@ -1196,6 +1208,11 @@ class MachineDefinition
 
         // Run exit action on parallel state itself
         $parallelState->runExitActions($state);
+
+        // Run branch actions AFTER exit if not already run before exit
+        if (!$runActionsBeforeExit) {
+            $branch->runActions($state, $eventBehavior);
+        }
 
         // Transition to the target state (use target itself if atomic/final)
         $initialState                  = $targetState->findInitialStateDefinition() ?? $targetState;
