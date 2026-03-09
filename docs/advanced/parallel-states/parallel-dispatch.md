@@ -11,15 +11,15 @@ When a machine enters a parallel state, region entry actions normally run sequen
 
 Without parallel dispatch:
 ```
-t=0s  Region A entry action (findeks API)... 5 seconds
-t=5s  Region B entry action (turmob API)... 2 seconds
+t=0s  Region A entry action (Inventory API)... 5 seconds
+t=5s  Region B entry action (Payment API)... 2 seconds
 t=7s  Both done → total: 7 seconds
 ```
 
 With parallel dispatch:
 ```
-t=0s  Dispatch Job A (findeks) + Job B (turmob)
-t=0s  Worker 1: findeks API... | Worker 2: turmob API...
+t=0s  Dispatch Job A (inventory) + Job B (payment)
+t=0s  Worker 1: Inventory API... | Worker 2: Payment API...
 t=2s  Worker 2: done → lock → merge context → unlock
 t=5s  Worker 1: done → lock → merge context → unlock
 t=5s  Total: 5 seconds (max of the two, not sum)
@@ -117,7 +117,7 @@ foreach ($contextDiff as $key => $value) {
 ```
 
 ::: warning Context Key Isolation
-Parallel regions **should** write to different context keys. If two regions write to the same key, the last job to acquire the lock wins (LWW). A `PARALLEL_CONTEXT_CONFLICT` internal event is recorded when this happens, so the overwrite is observable in machine history. Design your regions to write to unique keys (e.g., `findeks_report` vs `turmob_report`) to avoid conflicts entirely.
+Parallel regions **should** write to different context keys. If two regions write to the same key, the last job to acquire the lock wins (LWW). A `PARALLEL_CONTEXT_CONFLICT` internal event is recorded when this happens, so the overwrite is observable in machine history. Design your regions to write to unique keys (e.g., `inventory_result` vs `payment_result`) to avoid conflicts entirely.
 :::
 
 ### Double-Guard Pattern
@@ -189,7 +189,7 @@ The `@fail` event carries error details:
 
 ```php ignore
 [
-    'region_id' => 'order_workflow.processing.findeks',
+    'region_id' => 'order_workflow.processing.inventory',
     'error'     => 'Connection timeout',
     'exception' => 'RuntimeException',
     'attempts'  => 3,
@@ -204,11 +204,11 @@ Each region should write to its own context keys and not depend on other regions
 
 ```php ignore
 // Good: independent keys
-'findeks' => [
-    'entry' => FindeksApiAction::class,  // writes findeks_report
+'inventory' => [
+    'entry' => CheckInventoryAction::class,  // writes inventory_result
 ],
-'turmob' => [
-    'entry' => TurmobApiAction::class,   // writes turmob_report
+'payment' => [
+    'entry' => ValidatePaymentAction::class,   // writes payment_result
 ],
 ```
 
@@ -217,13 +217,13 @@ Each region should write to its own context keys and not depend on other regions
 Jobs may be retried. Entry actions should be safe to run multiple times:
 
 ```php ignore
-class FindeksApiAction extends ActionBehavior
+class CheckInventoryAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
         // Idempotent: overwrites existing value
-        $report = FindeksApi::fetchReport($context->get('customer_id'));
-        $context->set('findeks_report', $report);
+        $stock = InventoryApi::checkStock($context->get('order_id'));
+        $context->set('inventory_result', $stock);
     }
 }
 ```
@@ -306,8 +306,8 @@ The stall event is an **audit trail**, not an error. Some regions are intentiona
 
 ```php ignore
 [
-    'region_id'        => 'order_workflow.processing.findeks',
-    'initial_state_id' => 'order_workflow.processing.findeks.waiting',
+    'region_id'        => 'order_workflow.processing.inventory',
+    'initial_state_id' => 'order_workflow.processing.inventory.waiting',
     'context_changed'  => true,  // Entry action modified context but didn't raise events
 ]
 ```
@@ -344,7 +344,7 @@ When set to `0` (default), no timeout job is dispatched.
     'parallel_state_id' => 'order_workflow.processing',
     'timeout_seconds'   => 120,
     'stalled_regions'   => [
-        'order_workflow.processing.findeks',
+        'order_workflow.processing.inventory',
         // Only regions that haven't reached final are listed
     ],
 ]
@@ -381,8 +381,8 @@ Context conflict detection is **observational only**. The second region's value 
 
 ```php ignore
 [
-    'region_id'       => 'order_workflow.processing.turmob',
-    'conflicted_keys' => ['shared_score', 'shared_rating'],
+    'region_id'       => 'order_workflow.processing.payment',
+    'conflicted_keys' => ['shared_total', 'shared_discount'],
 ]
 ```
 
@@ -392,12 +392,12 @@ Context conflict detection is **observational only**. The second region's value 
 
 ```php ignore
 // ✅ Good: each region writes to its own keys
-'findeks' => ['entry' => FindeksApiAction::class],   // writes findeks_report
-'turmob'  => ['entry' => TurmobApiAction::class],    // writes turmob_report
+'inventory' => ['entry' => CheckInventoryAction::class],    // writes inventory_result
+'payment'   => ['entry' => ValidatePaymentAction::class],   // writes payment_result
 
 // ❌ Bad: both regions write to the same key
-'findeks' => ['entry' => FindeksApiAction::class],   // writes shared_score
-'turmob'  => ['entry' => TurmobApiAction::class],    // also writes shared_score → LWW!
+'inventory' => ['entry' => CheckInventoryAction::class],    // writes shared_total
+'payment'   => ['entry' => ValidatePaymentAction::class],   // also writes shared_total → LWW!
 ```
 
 ::: info Design Decision
