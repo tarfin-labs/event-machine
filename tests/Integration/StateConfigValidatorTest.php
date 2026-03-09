@@ -426,3 +426,192 @@ test('guarded transitions can run actions without changing state when no target 
     expect($state->matches('active'))->toBeTrue()
         ->and(RecordAction::wasExecuted())->toBeTrue();
 });
+
+// region @done/@fail Validation Tests
+
+test('it accepts string @done configuration', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'type'   => 'parallel',
+                '@done'  => 'completed',
+                'states' => [
+                    'region_a' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'finished' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'completed' => ['type' => 'final'],
+        ],
+    ]))->not->toThrow(InvalidArgumentException::class);
+});
+
+test('it accepts array @done with target and actions', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'type'   => 'parallel',
+                '@done'  => ['target' => 'completed', 'actions' => 'logAction'],
+                'states' => [
+                    'region_a' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'finished' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'completed' => ['type' => 'final'],
+        ],
+    ]))->not->toThrow(InvalidArgumentException::class);
+});
+
+test('it accepts conditional @done with guards', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'type'   => 'parallel',
+                '@done'  => [
+                    ['target' => 'approved', 'guards' => 'isAllPassedGuard'],
+                    ['target' => 'manual_review'],
+                ],
+                'states' => [
+                    'region_a' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'finished' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'approved'      => ['type' => 'final'],
+            'manual_review' => ['type' => 'final'],
+        ],
+    ]))->not->toThrow(InvalidArgumentException::class);
+});
+
+test('it rejects @done with default branch not last', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'type'   => 'parallel',
+                '@done'  => [
+                    ['target' => 'manual_review'], // Default (no guards) NOT last
+                    ['target' => 'approved', 'guards' => 'isAllPassedGuard'],
+                ],
+                'states' => [
+                    'region_a' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'finished' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'approved'      => ['type' => 'final'],
+            'manual_review' => ['type' => 'final'],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'processing' has invalid conditions order for event '@done'. Default condition (no guards) must be the last condition."
+    );
+});
+
+test('it rejects @done with invalid keys in branch', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'type'   => 'parallel',
+                '@done'  => [
+                    'target'      => 'completed',
+                    'invalid_key' => 'value',
+                ],
+                'states' => [
+                    'region_a' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'finished' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'completed' => ['type' => 'final'],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'processing' has invalid keys in transition config for event '@done': invalid_key. Allowed keys are: target, guards, actions, description, calculators"
+    );
+});
+
+test('it accepts conditional @fail with guards', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'type'   => 'parallel',
+                '@fail'  => [
+                    ['target' => 'retrying', 'guards' => 'canRetryGuard', 'actions' => 'incrementRetryAction'],
+                    ['target' => 'failed', 'actions' => 'sendAlertAction'],
+                ],
+                'states' => [
+                    'region_a' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'finished' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'retrying' => ['type' => 'final'],
+            'failed'   => ['type' => 'final'],
+        ],
+    ]))->not->toThrow(InvalidArgumentException::class);
+});
+
+test('it rejects invalid @done format', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'type'   => 'parallel',
+                '@done'  => 42, // Integer — not valid
+                'states' => [
+                    'region_a' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'finished' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'completed' => ['type' => 'final'],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'processing' has invalid '@done' configuration. Must be a string or array."
+    );
+});
+
+// endregion
