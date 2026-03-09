@@ -1075,7 +1075,19 @@ class MachineDefinition
             return $state;
         }
 
-        return $this->exitParallelStateAndTransitionToTarget($parallelState, $state, $branch, $eventBehavior);
+        $state->setInternalEventBehavior(
+            type: InternalEvent::TRANSITION_START,
+            placeholder: "{$parallelState->route}.@done",
+        );
+
+        $state = $this->exitParallelStateAndTransitionToTarget($parallelState, $state, $branch, $eventBehavior);
+
+        $state->setInternalEventBehavior(
+            type: InternalEvent::TRANSITION_FINISH,
+            placeholder: "{$parallelState->route}.@done",
+        );
+
+        return $state;
     }
 
     /**
@@ -1116,14 +1128,26 @@ class MachineDefinition
             return $state;
         }
 
+        $state->setInternalEventBehavior(
+            type: InternalEvent::TRANSITION_START,
+            placeholder: "{$parallelState->route}.@fail",
+        );
+
         // Run onFail actions BEFORE exit (can inspect parallel state for error context)
-        return $this->exitParallelStateAndTransitionToTarget(
+        $state = $this->exitParallelStateAndTransitionToTarget(
             parallelState: $parallelState,
             state: $state,
             branch: $branch,
             eventBehavior: $eventBehavior,
             runActionsBeforeExit: true,
         );
+
+        $state->setInternalEventBehavior(
+            type: InternalEvent::TRANSITION_FINISH,
+            placeholder: "{$parallelState->route}.@fail",
+        );
+
+        return $state;
     }
 
     /**
