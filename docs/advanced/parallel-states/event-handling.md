@@ -338,6 +338,37 @@ You can also specify actions to run when the parallel state completes:
 ],
 ```
 
+### Conditional @done with Guards
+
+Instead of a single target, `@done` can be an array of branches — each with a `target`, optional `guards`, and optional `actions`. The first branch whose guard passes wins. A branch without a guard acts as the default fallback:
+
+<!-- doctest-attr: ignore -->
+```php
+'processing' => [
+    'type'   => 'parallel',
+    '@done'  => [
+        ['target' => 'approved',      'guards' => IsAllSucceededGuard::class, 'actions' => LogApprovalAction::class],
+        ['target' => 'manual_review', 'actions' => NotifyReviewerAction::class],  // fallback (no guard)
+    ],
+    'states' => [
+        'inventory' => [...],
+        'payment'   => [...],
+    ],
+],
+'approved'      => ['type' => 'final'],
+'manual_review' => ['type' => 'final'],
+```
+
+**Evaluation rules:**
+- Branches are evaluated top-to-bottom — the first passing guard wins
+- Only the winning branch's actions run; losing branch actions are skipped
+- If all guards fail and no guardless fallback exists, the machine stays in the parallel state
+- Guards receive the current `State` and `ContextManager`, so they can inspect region results
+
+::: tip Compound States Too
+Conditional `@done` also works on compound (non-parallel) states. When a compound state's child reaches a `final` state, the same guard evaluation applies.
+:::
+
 ### @fail — Error Handling
 
 When using [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch), region entry actions run as queue jobs. If a job exhausts all retries, you can handle the failure with `@fail`:
@@ -363,6 +394,27 @@ When `@fail` is triggered:
 - A `PARALLEL_FAIL` internal event is recorded in history
 
 Without `@fail`, the machine stays in the parallel state and records the failure event for debugging.
+
+### Conditional @fail with Guards
+
+Like `@done`, `@fail` supports conditional branches with guards. This enables retry-or-escalate patterns:
+
+<!-- doctest-attr: ignore -->
+```php
+'processing' => [
+    'type'   => 'parallel',
+    '@done'  => 'completed',
+    '@fail'  => [
+        ['target' => 'retrying', 'guards' => CanRetryGuard::class, 'actions' => IncrementRetryAction::class],
+        ['target' => 'failed',   'actions' => SendAlertAction::class],  // fallback
+    ],
+    'states' => [...],
+],
+'retrying'  => ['type' => 'final'],
+'failed'    => ['type' => 'final'],
+```
+
+**@fail action timing:** Branch actions run **before** exit actions. This allows actions to inspect the parallel state's context (e.g., error details) before the machine transitions out.
 
 ## Nested Parallel States
 
