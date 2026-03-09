@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\AlwaysFailGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ConditionalOnDoneMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\LogApprovalAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\NotifyReviewerAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\AlwaysFailGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\IsAllSucceededGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\NotifyReviewerAction;
 
 // Test 1: Backward compat — simple string @done still works
 test('it resolves simple string @done unchanged', function (): void {
@@ -22,14 +22,14 @@ test('it resolves simple string @done unchanged', function (): void {
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_B' => 'finished']],
+                            'working'  => ['on' => ['DONE_B' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -61,14 +61,14 @@ test('it resolves array @done with target and actions unchanged', function (): v
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_B' => 'finished']],
+                            'working'  => ['on' => ['DONE_B' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -118,8 +118,8 @@ test('it falls through to default branch when first guard fails', function (): v
         ],
         'states' => [
             'processing' => [
-                'type'   => 'parallel',
-                '@done'  => [
+                'type'  => 'parallel',
+                '@done' => [
                     ['target' => 'approved',      'guards' => IsAllSucceededGuard::class],
                     ['target' => 'manual_review', 'actions' => NotifyReviewerAction::class],
                 ],
@@ -128,14 +128,14 @@ test('it falls through to default branch when first guard fails', function (): v
                         'initial' => 'checking',
                         'states'  => [
                             'checking' => ['on' => ['INVENTORY_CHECKED' => 'done']],
-                            'done' => ['type' => 'final'],
+                            'done'     => ['type' => 'final'],
                         ],
                     ],
                     'payment' => [
                         'initial' => 'validating',
                         'states'  => [
                             'validating' => ['on' => ['PAYMENT_VALIDATED' => 'done']],
-                            'done' => ['type' => 'final'],
+                            'done'       => ['type' => 'final'],
                         ],
                     ],
                 ],
@@ -166,8 +166,8 @@ test('it aborts @done when all guards fail and no default', function (): void {
         ],
         'states' => [
             'processing' => [
-                'type'   => 'parallel',
-                '@done'  => [
+                'type'  => 'parallel',
+                '@done' => [
                     ['target' => 'approved', 'guards' => IsAllSucceededGuard::class],
                     ['target' => 'also_approved', 'guards' => AlwaysFailGuard::class],
                 ],
@@ -175,14 +175,14 @@ test('it aborts @done when all guards fail and no default', function (): void {
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_B' => 'finished']],
+                            'working'  => ['on' => ['DONE_B' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -363,8 +363,8 @@ test('it falls through to second guarded branch when first guard fails', functio
         ],
         'states' => [
             'processing' => [
-                'type'   => 'parallel',
-                '@done'  => [
+                'type'  => 'parallel',
+                '@done' => [
                     ['target' => 'approved',       'guards' => IsAllSucceededGuard::class],
                     ['target' => 'partial_review', 'guards' => AlwaysFailGuard::class],
                     ['target' => 'manual_review'],
@@ -373,14 +373,14 @@ test('it falls through to second guarded branch when first guard fails', functio
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_B' => 'finished']],
+                            'working'  => ['on' => ['DONE_B' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
