@@ -1019,7 +1019,7 @@ class MachineDefinition
             // only reaching "completed" should count as the region being final,
             // not "report_saved" which is final only within the verification sub-state.
             foreach ($state->value as $activeStateId) {
-                if (str_starts_with($activeStateId, $region->id)) {
+                if (str_starts_with($activeStateId, $region->id.$this->delimiter)) {
                     $activeState = $this->idMap[$activeStateId] ?? null;
 
                     if ($activeState !== null && $activeState->type === StateDefinitionType::FINAL && $activeState->parent === $region) {
@@ -1191,7 +1191,7 @@ class MachineDefinition
         foreach ($values as $v) {
             $isNested = false;
             foreach ($parallelParent->stateDefinitions as $r) {
-                if (str_starts_with($v, $r->id)) {
+                if (str_starts_with($v, $r->id.$this->delimiter)) {
                     $isNested = true;
 
                     break;
