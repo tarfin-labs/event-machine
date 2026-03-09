@@ -614,4 +614,82 @@ test('it rejects invalid @done format', function (): void {
     );
 });
 
+test('it rejects invalid @fail format', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'type'   => 'parallel',
+                '@fail'  => 42, // Integer — not valid
+                'states' => [
+                    'region_a' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
+                            'finished' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'failed' => ['type' => 'final'],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'processing' has invalid '@fail' configuration. Must be a string or array."
+    );
+});
+
+test('it accepts @done on compound state with guards', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'verification',
+        'states'  => [
+            'verification' => [
+                '@done' => [
+                    ['target' => 'approved', 'guards' => 'isValidGuard'],
+                    ['target' => 'rejected'],
+                ],
+                'initial' => 'checking',
+                'states'  => [
+                    'checking' => ['on' => ['CHECK' => 'done']],
+                    'done'     => ['type' => 'final'],
+                ],
+            ],
+            'approved' => ['type' => 'final'],
+            'rejected' => ['type' => 'final'],
+        ],
+    ]))->not->toThrow(InvalidArgumentException::class);
+});
+
+test('it rejects @fail with default branch not last', function (): void {
+    expect(fn () => MachineDefinition::define([
+        'id'      => 'machine',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'type'  => 'parallel',
+                '@fail' => [
+                    ['target' => 'failed'],   // Default (no guards) NOT last
+                    ['target' => 'retrying', 'guards' => 'canRetryGuard'],
+                ],
+                'states' => [
+                    'region_a' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
+                            'finished' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'retrying' => ['type' => 'final'],
+            'failed'   => ['type' => 'final'],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "State 'processing' has invalid conditions order for event '@fail'. Default condition (no guards) must be the last condition."
+    );
+});
+
 // endregion
