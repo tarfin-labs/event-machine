@@ -1185,7 +1185,7 @@ class MachineDefinition
         // Run branch actions
         $branch->runActions($state, $eventBehavior);
 
-        // Replace all nested parallel leaf states with the onDone target
+        // Run exit actions on all active nested parallel leaf states and collect non-nested values
         $values    = $state->value;
         $newValues = [];
         foreach ($values as $v) {
@@ -1193,13 +1193,21 @@ class MachineDefinition
             foreach ($parallelParent->stateDefinitions as $r) {
                 if (str_starts_with($v, $r->id)) {
                     $isNested = true;
+
                     break;
                 }
             }
-            if (!$isNested) {
+            if ($isNested) {
+                // Run exit action on the leaf state being removed
+                $leafState = $this->idMap[$v] ?? null;
+                $leafState?->runExitActions($state);
+            } else {
                 $newValues[] = $v;
             }
         }
+
+        // Run exit action on the nested parallel state itself
+        $parallelParent->runExitActions($state);
 
         $resolvedTarget = $target->findInitialStateDefinition() ?? $target;
         $newValues[]    = $resolvedTarget->id;
