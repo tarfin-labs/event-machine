@@ -179,6 +179,19 @@ When a job exhausts all retries, Laravel calls the `failed()` method. The job:
 
 The machine exits the parallel state and transitions to the `@fail` target. Sibling jobs that haven't started will no-op (pre-lock guard). Sibling jobs that completed already have their context preserved.
 
+### Conditional @done and @fail in Async Context
+
+Both `@done` and `@fail` support [conditional branches with guards](./event-handling#conditional-done-with-guards). In the async dispatch context, region jobs and timeout jobs pass `null` as the `EventBehavior` parameter. The machine automatically creates a synthetic `EventDefinition` so that guards can evaluate normally:
+
+```php ignore
+'@fail' => [
+    ['target' => 'retrying', 'guards' => CanRetryGuard::class, 'actions' => IncrementRetryAction::class],
+    ['target' => 'failed',   'actions' => SendAlertAction::class],
+],
+```
+
+This works identically whether triggered synchronously (from `transition()`) or asynchronously (from `ParallelRegionJob` / `ParallelRegionTimeoutJob`). Guards receive the current machine state and context — they do not depend on the originating event.
+
 ### Without `@fail`
 
 The machine stays in the parallel state. A `PARALLEL_FAIL` internal event is recorded in history for debugging. The machine remains operable — you can send events manually or wait for retries.
