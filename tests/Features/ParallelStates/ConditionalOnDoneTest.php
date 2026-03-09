@@ -352,8 +352,8 @@ test('it aborts compound @done when all guards fail and no default', function ()
     expect($state->value)->toBe(['compound_abort.verification.done']);
 });
 
-// Test 11: Multiple guarded branches — second guard passes
-test('it falls through to second guarded branch when first guard fails', function (): void {
+// Test 11: Multiple guarded branches — all guards fail, default wins
+test('it falls through to default branch when all guarded branches fail', function (): void {
     $definition = MachineDefinition::define([
         'id'      => 'test_second_branch',
         'initial' => 'processing',
