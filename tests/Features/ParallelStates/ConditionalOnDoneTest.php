@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ConditionalOnDoneMachi
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\LogApprovalAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\IsAllSucceededGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\NotifyReviewerAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ConditionalCompoundOnDoneMachine;
 
 // Test 1: Backward compat — simple string @done still works
 test('it resolves simple string @done unchanged', function (): void {
@@ -416,6 +417,40 @@ test('it handles conditional @done via Machine::create with full lifecycle', fun
     expect($state->value)->toBe(['conditional_on_done.approved'])
         ->and($state->context->get('inventory_result'))->toBe('success')
         ->and($state->context->get('payment_result'))->toBe('success')
+        ->and(LogApprovalAction::wasExecuted())->toBeTrue()
+        ->and(NotifyReviewerAction::wasExecuted())->toBeFalse();
+});
+
+// Test 13: ConditionalCompoundOnDoneMachine via Machine::create — guard passes
+test('compound @done guard passes via Machine::create lifecycle', function (): void {
+    LogApprovalAction::reset();
+    NotifyReviewerAction::reset();
+
+    $machine = ConditionalCompoundOnDoneMachine::create();
+
+    // Entry action sets inventory_result=success, then CHECK_COMPLETED → done (final)
+    // Context: inventory_result=success but payment_result=null → guard fails → manual_review
+    $state = $machine->send(['type' => 'CHECK_COMPLETED']);
+
+    expect($state->value)->toBe(['conditional_compound_on_done.manual_review'])
+        ->and(NotifyReviewerAction::wasExecuted())->toBeTrue()
+        ->and(LogApprovalAction::wasExecuted())->toBeFalse();
+});
+
+// Test 14: ConditionalCompoundOnDoneMachine — both context values success → approved
+test('compound @done guard passes when context is pre-set via Machine::create', function (): void {
+    LogApprovalAction::reset();
+    NotifyReviewerAction::reset();
+
+    $machine = ConditionalCompoundOnDoneMachine::create();
+
+    // Pre-set payment_result so both are success after entry action
+    $machine->state->context->set('payment_result', 'success');
+
+    $state = $machine->send(['type' => 'CHECK_COMPLETED']);
+
+    // inventory_result set by entry action, payment_result pre-set → guard passes → approved
+    expect($state->value)->toBe(['conditional_compound_on_done.approved'])
         ->and(LogApprovalAction::wasExecuted())->toBeTrue()
         ->and(NotifyReviewerAction::wasExecuted())->toBeFalse();
 });
