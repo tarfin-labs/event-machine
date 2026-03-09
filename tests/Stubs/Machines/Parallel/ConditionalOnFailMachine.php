@@ -9,8 +9,8 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\CanRetryGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SendAlertAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\IncrementRetryAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetInventorySuccessAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetPaymentSuccessAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetInventorySuccessAction;
 
 /**
  * A parallel state machine with conditional @fail guards.
@@ -34,9 +34,9 @@ class ConditionalOnFailMachine extends Machine
                 ],
                 'states' => [
                     'processing' => [
-                        'type'   => 'parallel',
-                        '@done'  => 'completed',
-                        '@fail'  => [
+                        'type'  => 'parallel',
+                        '@done' => 'completed',
+                        '@fail' => [
                             ['target' => 'retrying', 'guards' => CanRetryGuard::class, 'actions' => IncrementRetryAction::class],
                             ['target' => 'failed',   'actions' => SendAlertAction::class],
                         ],
