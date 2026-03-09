@@ -206,55 +206,68 @@ test('it aborts @fail when all guards fail and no default', function (): void {
         ->and($state->value)->toContain('test_fail_abort.processing.region_b.working');
 });
 
-// Test 17: @fail actions run BEFORE exit (can inspect parallel state context)
+// Test 17: @fail actions run BEFORE exit (captures state.value snapshot during action)
 test('it runs branch actions BEFORE exit on @fail', function (): void {
-    SendAlertAction::reset();
+    $capturedValues = null;
+    $state          = null;
 
-    $definition = MachineDefinition::define([
-        'id'      => 'test_fail_before_exit',
-        'initial' => 'processing',
-        'context' => [
-            'retry_count' => 5,
-            'alert_sent'  => false,
-        ],
-        'states' => [
-            'processing' => [
-                'type'  => 'parallel',
-                '@done' => 'completed',
-                '@fail' => [
-                    ['target' => 'failed', 'actions' => SendAlertAction::class],
-                ],
-                'states' => [
-                    'region_a' => [
-                        'initial' => 'working',
-                        'states'  => [
-                            'working'  => ['on' => ['DONE_A' => 'finished']],
-                            'finished' => ['type' => 'final'],
-                        ],
-                    ],
-                    'region_b' => [
-                        'initial' => 'working',
-                        'states'  => [
-                            'working'  => ['on' => ['DONE_B' => 'finished']],
-                            'finished' => ['type' => 'final'],
-                        ],
-                    ],
-                ],
+    $definition = MachineDefinition::define(
+        config: [
+            'id'      => 'test_fail_before_exit',
+            'initial' => 'processing',
+            'context' => [
+                'retry_count' => 5,
             ],
-            'completed' => ['type' => 'final'],
-            'failed'    => ['type' => 'final'],
+            'states' => [
+                'processing' => [
+                    'type'  => 'parallel',
+                    '@done' => 'completed',
+                    '@fail' => [
+                        ['target' => 'failed', 'actions' => 'captureSnapshotAction'],
+                    ],
+                    'states' => [
+                        'region_a' => [
+                            'initial' => 'working',
+                            'states'  => [
+                                'working'  => ['on' => ['DONE_A' => 'finished']],
+                                'finished' => ['type' => 'final'],
+                            ],
+                        ],
+                        'region_b' => [
+                            'initial' => 'working',
+                            'states'  => [
+                                'working'  => ['on' => ['DONE_B' => 'finished']],
+                                'finished' => ['type' => 'final'],
+                            ],
+                        ],
+                    ],
+                ],
+                'completed' => ['type' => 'final'],
+                'failed'    => ['type' => 'final'],
+            ],
         ],
-    ]);
+        behavior: [
+            'actions' => [
+                'captureSnapshotAction' => function () use (&$capturedValues, &$state): void {
+                    // Capture state.value at the moment the action runs.
+                    // If actions run BEFORE exit, values should still contain parallel regions.
+                    $capturedValues = $state->value;
+                },
+            ],
+        ]
+    );
 
     $state = $definition->getInitialState();
 
     $parallelState = $definition->idMap['test_fail_before_exit.processing'];
     $state         = $definition->processParallelOnFail($parallelState, $state);
 
-    // Actions run before exit → alert_sent should be true
-    expect($state->value)->toBe(['test_fail_before_exit.failed'])
-        ->and(SendAlertAction::wasExecuted())->toBeTrue()
-        ->and($state->context->get('alert_sent'))->toBeTrue();
+    // After @fail completes, state should be at 'failed'
+    expect($state->value)->toBe(['test_fail_before_exit.failed']);
+
+    // During action execution, state.value should have been in the parallel state (before exit)
+    expect($capturedValues)->toContain('test_fail_before_exit.processing.region_a.working')
+        ->and($capturedValues)->toContain('test_fail_before_exit.processing.region_b.working');
 });
 
 // Test 18: Realistic canRetry pattern — retry succeeds then exceeds
