@@ -340,6 +340,8 @@ You can also specify actions to run when the parallel state completes:
 
 ### Conditional @done with Guards
 
+> **Backward compatible:** Existing simple string `@done` (e.g., `'@done' => 'completed'`) and single-object `@done` (e.g., `'@done' => ['target' => 'completed', 'actions' => ...]`) continue to work unchanged. The conditional array format is additive.
+
 Instead of a single target, `@done` can be an array of branches — each with a `target`, optional `guards`, and optional `actions`. The first branch whose guard passes wins. A branch without a guard acts as the default fallback:
 
 <!-- doctest-attr: ignore -->
@@ -364,6 +366,7 @@ Instead of a single target, `@done` can be an array of branches — each with a 
 - Only the winning branch's actions run; losing branch actions are skipped
 - If all guards fail and no guardless fallback exists, the machine stays in the parallel state
 - Guards receive the current `State` and `ContextManager`, so they can inspect region results
+- Each branch also supports `calculators` and `description` keys, same as regular transitions
 
 ::: tip Compound States Too
 Conditional `@done` also works on compound (non-parallel) states. When a compound state's child reaches a `final` state, the same guard evaluation applies.
@@ -414,7 +417,96 @@ Like `@done`, `@fail` supports conditional branches with guards. This enables re
 'failed'    => ['type' => 'final'],
 ```
 
-**@fail action timing:** Branch actions run **before** exit actions. This allows actions to inspect the parallel state's context (e.g., error details) before the machine transitions out.
+::: warning Action Timing Asymmetry: @done vs @fail
+**`@done` actions** run **after** exit — the parallel state's child states have already exited when actions execute. This matches XState semantics where completion actions run as part of entering the target state.
+
+**`@fail` actions** run **before** exit — the parallel state is still active when actions execute. This allows error-handling actions to inspect region state values and context (e.g., which region failed, error details) before the machine transitions out.
+
+This asymmetry is intentional. If you need to read parallel state context during `@done`, use a guard (guards always run before exit) or capture the values in context before the transition.
+:::
+
+## Escape Transitions
+
+Root-level or parallel-state-level `on` events can exit the entire parallel state — regardless of which regions are active. This is useful for timeouts, cancellations, or any event that should abort all parallel work.
+
+### Root-Level Escape
+
+A root-level `on` event fires from any state in the machine, including parallel:
+
+<!-- doctest-attr: ignore -->
+```php
+'id' => 'order',
+'initial' => 'processing',
+'on' => [
+    'EXPIRED' => 'expired',  // Exits parallel from any state
+],
+'states' => [
+    'processing' => [
+        'type' => 'parallel',
+        '@done' => 'done',
+        'states' => [
+            'payment'  => [...],
+            'shipping' => [...],
+        ],
+    ],
+    'done'    => ['type' => 'final'],
+    'expired' => ['type' => 'final'],
+],
+```
+
+### Parallel-Level Escape
+
+An `on` event on the parallel state itself exits all regions:
+
+<!-- doctest-attr: ignore -->
+```php
+'processing' => [
+    'type' => 'parallel',
+    '@done' => 'done',
+    'on' => [
+        'CANCEL' => 'cancelled',  // Exits parallel state
+    ],
+    'states' => [
+        'payment'  => [...],
+        'shipping' => [...],
+    ],
+],
+'cancelled' => ['type' => 'final'],
+```
+
+### Escape Behavior
+
+When an escape transition fires:
+
+1. **Exit actions** fire on all active leaf states and the parallel state itself
+2. **Transition actions** fire exactly once (not per region)
+3. **Guards** are evaluated once — if the guard fails, the machine stays in the parallel state
+4. The machine transitions to the target state
+
+::: tip Deduplication
+Escape transitions are automatically deduplicated. Even though multiple regions could each find the ancestor-level transition, the action runs only once.
+:::
+
+### Escape to Compound Target
+
+Escape transitions can target compound states — the machine resolves to the target's initial child:
+
+<!-- doctest-attr: ignore -->
+```php
+'on' => [
+    'CANCEL' => 'review',  // 'review' is a compound state
+],
+// ...
+'review' => [
+    'initial' => 'pending',
+    'states' => [
+        'pending'  => ['on' => ['APPROVE' => 'approved']],
+        'approved' => ['type' => 'final'],
+    ],
+],
+```
+
+After `CANCEL`, the machine is at `review.pending`.
 
 ## Nested Parallel States
 
