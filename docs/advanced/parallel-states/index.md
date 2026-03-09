@@ -3,7 +3,7 @@
 Parallel states (also known as orthogonal states) allow multiple independent state regions to be active simultaneously. Each region processes events independently while sharing the same context.
 
 **Related pages:**
-- [Event Handling](./event-handling) - Events, entry/exit actions, `@done`
+- [Event Handling](./event-handling) - Events, entry/exit actions, `@done`, escape transitions
 - [Persistence](./persistence) - Database storage and restoration
 - [Parallel Dispatch](./parallel-dispatch) - Concurrent execution via queue jobs
 
