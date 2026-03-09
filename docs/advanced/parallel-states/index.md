@@ -163,19 +163,19 @@ $definition = MachineDefinition::define([
                     'states' => [
                         'none' => [
                             'on' => [
-                                'BULLETS' => 'bullets',
-                                'NUMBERS' => 'numbers',
+                                'BULLETS' => 'bulleted',
+                                'NUMBERS' => 'numbered',
                             ],
                         ],
-                        'bullets' => [
+                        'bulleted' => [
                             'on' => [
                                 'NONE' => 'none',
-                                'NUMBERS' => 'numbers',
+                                'NUMBERS' => 'numbered',
                             ],
                         ],
-                        'numbers' => [
+                        'numbered' => [
                             'on' => [
-                                'BULLETS' => 'bullets',
+                                'BULLETS' => 'bulleted',
                                 'NONE' => 'none',
                             ],
                         ],
@@ -193,10 +193,10 @@ $state = $definition->transition(['type' => 'TOGGLE_BOLD'], $state);
 $state = $definition->transition(['type' => 'TOGGLE_ITALIC'], $state);
 $state = $definition->transition(['type' => 'BULLETS'], $state);
 
-$state->matches('editing.bold.on');      // => true
-$state->matches('editing.italic.on');    // => true
+$state->matches('editing.bold.on');       // => true
+$state->matches('editing.italic.on');     // => true
 $state->matches('editing.underline.off'); // => true
-$state->matches('editing.list.bullets'); // => true
+$state->matches('editing.list.bulleted'); // => true
 ```
 
 ## Validation Rules
@@ -313,31 +313,31 @@ MachineDefinition::define(
                         'initial' => 'pricing',
                         'states' => [
                             'pricing' => [
-                                'on' => ['PRICING_DONE' => 'awaiting_approval'],
+                                'on' => ['PRICING_COMPLETED' => 'awaiting_approval'],
                             ],
                             'awaiting_approval' => [
                                 'on' => [
                                     '@always' => [
-                                        ['target' => 'payment_options', 'guards' => 'isApprovalPassedGuard'],
+                                        ['target' => 'selecting_payment', 'guards' => 'isApprovalPassedGuard'],
                                     ],
                                 ],
                             ],
-                            'payment_options' => [
-                                'on' => ['PAYMENT_DONE' => 'dealer_done'],
+                            'selecting_payment' => [
+                                'on' => ['PAYMENT_COMPLETED' => 'completed'],
                             ],
-                            'dealer_done' => ['type' => 'final'],
+                            'completed' => ['type' => 'final'],
                         ],
                     ],
                     'customer' => [
-                        'initial' => 'consent',
+                        'initial' => 'awaiting_consent',
                         'states' => [
-                            'consent' => [
+                            'awaiting_consent' => [
                                 'on' => ['CONSENT_GIVEN' => 'approved'],
                             ],
                             'approved' => [
-                                'on' => ['SUBMITTED' => 'customer_done'],
+                                'on' => ['SUBMITTED' => 'completed'],
                             ],
-                            'customer_done' => ['type' => 'final'],
+                            'completed' => ['type' => 'final'],
                         ],
                     ],
                 ],
@@ -349,7 +349,7 @@ MachineDefinition::define(
         'guards' => [
             'isApprovalPassedGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state)
                 => $state->matches('processing.customer.approved')
-                || $state->matches('processing.customer.customer_done'),
+                || $state->matches('processing.customer.completed'),
         ],
     ]
 );
