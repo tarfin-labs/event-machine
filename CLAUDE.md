@@ -67,6 +67,19 @@ All machine behaviors extend `InvokableBehavior` and include:
 - State can be restored from any point using root event IDs
 - Incremental context changes are stored to optimize database usage
 
+## Workflow Rules
+
+### Releases
+- **NEVER create a release (gh release, git tag) without explicit user approval.** Always ask first.
+
+### Quality Gate
+- **Always use `composer test`** — never run `vendor/bin/pest` directly. `composer test` runs tests in parallel AND includes doctest and other tools. Running pest alone is slower (no parallelism) and incomplete.
+- Pre-existing doctest failures (currently 13) are known and can be ignored.
+
+### Pre-Commit Checks
+- **Always run `composer pint && composer rector`** before committing.
+- After Rector runs, **review what it changed** — Rector may apply refactorings (e.g., `instanceof` checks, type narrowing) that need verification. Check the diff before committing Rector's changes.
+
 ## Key Development Patterns
 
 ### Machine Definition Structure
