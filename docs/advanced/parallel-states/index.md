@@ -287,7 +287,14 @@ MachineDefinition::define(
 
 ### 4. Prefer `@done` for Synchronization
 
-Use `@done` instead of complex guards when you need to wait for all regions to complete.
+Use `@done` instead of complex guards when you need to wait for all regions to complete. For conditional routing based on region results, use [conditional `@done` with guards](./event-handling#conditional-done-with-guards):
+
+```php ignore
+'@done' => [
+    ['target' => 'approved',      'guards' => IsAllSucceededGuard::class],
+    ['target' => 'manual_review'],  // fallback when guard fails
+],
+```
 
 ### 5. Use `@always` for Cross-Region Synchronization
 
