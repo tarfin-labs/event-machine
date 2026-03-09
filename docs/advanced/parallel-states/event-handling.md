@@ -290,7 +290,7 @@ MachineDefinition::define([
                     'initial' => 'pending',
                     'states' => [
                         'pending' => [
-                            'on' => ['PAYMENT_SUCCESS' => 'done'],
+                            'on' => ['PAYMENT_SUCCEEDED' => 'done'],
                         ],
                         'done' => ['type' => 'final'],
                     ],
@@ -313,7 +313,7 @@ MachineDefinition::define([
 $state = $definition->getInitialState();
 // processing.payment.pending, processing.shipping.preparing
 
-$state = $definition->transition(['type' => 'PAYMENT_SUCCESS'], $state);
+$state = $definition->transition(['type' => 'PAYMENT_SUCCEEDED'], $state);
 // processing.payment.done, processing.shipping.preparing
 // Still in processing - shipping not complete
 
@@ -349,8 +349,8 @@ When using [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch), reg
     '@done' => 'completed',
     '@fail' => 'failed',       // Transition here when a region job fails
     'states' => [
-        'findeks' => [...],
-        'turmob'  => [...],
+        'inventory' => [...],
+        'payment'   => [...],
     ],
 ],
 'failed' => ['type' => 'final'],
