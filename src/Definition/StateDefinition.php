@@ -71,6 +71,12 @@ class StateDefinition
     /** The initial state definition for this machine definition. */
     public ?StateDefinition $initialStateDefinition = null;
 
+    /** The transition definition for @done, resolved at init time for guard support. */
+    public ?TransitionDefinition $onDoneTransition = null;
+
+    /** The transition definition for @fail, resolved at init time for guard support. */
+    public ?TransitionDefinition $onFailTransition = null;
+
     /**
      * The action(s) to be executed upon entering the state definition.
      *
@@ -424,6 +430,22 @@ class StateDefinition
     public function initializeTransitions(): void
     {
         $this->transitionDefinitions = $this->createTransitionDefinitions($this);
+
+        if (isset($this->config['@done'])) {
+            $this->onDoneTransition = new TransitionDefinition(
+                transitionConfig: $this->config['@done'],
+                source: $this,
+                event: '@done',
+            );
+        }
+
+        if (isset($this->config['@fail'])) {
+            $this->onFailTransition = new TransitionDefinition(
+                transitionConfig: $this->config['@fail'],
+                source: $this,
+                event: '@fail',
+            );
+        }
 
         if ($this->stateDefinitions !== null) {
             /** @var StateDefinition $state */
