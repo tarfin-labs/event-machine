@@ -951,7 +951,14 @@ class MachineDefinition
 
         $branch = $this->resolveOnDoneOrFailBranch($compoundParent->onDoneTransition, $state, $eventBehavior);
 
-        if (!$branch instanceof TransitionBranch || !$branch->target instanceof StateDefinition) {
+        if (!$branch instanceof TransitionBranch) {
+            return;
+        }
+
+        // Targetless @done: run actions without changing state (XState semantic)
+        if (!$branch->target instanceof StateDefinition) {
+            $branch->runActions($state, $eventBehavior);
+
             return;
         }
 
@@ -1061,6 +1068,13 @@ class MachineDefinition
             return $state;
         }
 
+        // Targetless @done: run actions without exiting (XState semantic)
+        if (!$branch->target instanceof StateDefinition) {
+            $branch->runActions($state, $eventBehavior);
+
+            return $state;
+        }
+
         return $this->exitParallelStateAndTransitionToTarget($parallelState, $state, $branch, $eventBehavior);
     }
 
@@ -1092,6 +1106,13 @@ class MachineDefinition
         $branch = $this->resolveOnDoneOrFailBranch($parallelState->onFailTransition, $state, $eventBehavior);
 
         if (!$branch instanceof TransitionBranch) {
+            return $state;
+        }
+
+        // Targetless @fail: run actions without exiting (XState semantic)
+        if (!$branch->target instanceof StateDefinition) {
+            $branch->runActions($state, $eventBehavior);
+
             return $state;
         }
 
@@ -1143,16 +1164,23 @@ class MachineDefinition
 
         $branch = $this->resolveOnDoneOrFailBranch($parallelParent->onDoneTransition, $state, $eventBehavior);
 
-        if (!$branch instanceof TransitionBranch || !$branch->target instanceof StateDefinition) {
+        if (!$branch instanceof TransitionBranch) {
             return;
         }
-
-        $target = $branch->target;
 
         $state->setInternalEventBehavior(
             type: InternalEvent::PARALLEL_DONE,
             placeholder: $parallelParent->route,
         );
+
+        // Targetless @done: run actions without changing state (XState semantic)
+        if (!$branch->target instanceof StateDefinition) {
+            $branch->runActions($state, $eventBehavior);
+
+            return;
+        }
+
+        $target = $branch->target;
 
         // Run branch actions
         $branch->runActions($state, $eventBehavior);
