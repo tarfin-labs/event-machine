@@ -326,16 +326,54 @@ $state->matches('complete');  // => true
 
 You can also specify actions to run when the parallel state completes:
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+$definition = // [!code hide]
+MachineDefinition::define( // [!code hide]
+    config: [ // [!code hide]
+        'id' => 'checkout', // [!code hide]
+        'initial' => 'processing', // [!code hide]
+        'context' => ['confirmed' => false], // [!code hide]
+        'states' => [ // [!code hide]
 'processing' => [
     'type' => 'parallel',
     '@done' => [
         'target' => 'complete',
         'actions' => 'sendConfirmationAction',
     ],
-    'states' => [...],
+    'states' => [ // [!code hide]
+        'payment' => [ // [!code hide]
+            'initial' => 'pending', // [!code hide]
+            'states' => [ // [!code hide]
+                'pending' => ['on' => ['PAY' => 'done']], // [!code hide]
+                'done' => ['type' => 'final'], // [!code hide]
+            ], // [!code hide]
+        ], // [!code hide]
+        'shipping' => [ // [!code hide]
+            'initial' => 'preparing', // [!code hide]
+            'states' => [ // [!code hide]
+                'preparing' => ['on' => ['SHIP' => 'done']], // [!code hide]
+                'done' => ['type' => 'final'], // [!code hide]
+            ], // [!code hide]
+        ], // [!code hide]
+    ], // [!code hide]
 ],
+'complete' => ['type' => 'final'], // [!code hide]
+        ], // [!code hide]
+    ], // [!code hide]
+    behavior: [ // [!code hide]
+        'actions' => [ // [!code hide]
+            'sendConfirmationAction' => fn (ContextManager $ctx) => $ctx->set('confirmed', true), // [!code hide]
+        ], // [!code hide]
+    ] // [!code hide]
+); // [!code hide]
+$state = $definition->getInitialState(); // [!code hide]
+$state = $definition->transition(['type' => 'PAY'], $state); // [!code hide]
+$state = $definition->transition(['type' => 'SHIP'], $state); // [!code hide]
+$state->matches('complete'); // => true // [!code hide]
+$state->context->get('confirmed'); // => true // [!code hide]
 ```
 
 ### Conditional @done with Guards
@@ -344,21 +382,58 @@ You can also specify actions to run when the parallel state completes:
 
 Instead of a single target, `@done` can be an array of branches — each with a `target`, optional `guards`, and optional `actions`. The first branch whose guard passes wins. A branch without a guard acts as the default fallback:
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+$definition = MachineDefinition::define( // [!code hide]
+    config: [ // [!code hide]
+        'id' => 'order', // [!code hide]
+        'initial' => 'processing', // [!code hide]
+        'context' => ['inventory_result' => 'success', 'payment_result' => 'success'], // [!code hide]
+        'states' => [ // [!code hide]
 'processing' => [
     'type'   => 'parallel',
     '@done'  => [
-        ['target' => 'approved',      'guards' => IsAllSucceededGuard::class, 'actions' => LogApprovalAction::class],
-        ['target' => 'manual_review', 'actions' => NotifyReviewerAction::class],  // fallback (no guard)
+        ['target' => 'approved',      'guards' => 'isAllSucceededGuard', 'actions' => 'logApprovalAction'],
+        ['target' => 'manual_review', 'actions' => 'notifyReviewerAction'],  // fallback (no guard)
     ],
     'states' => [
-        'inventory' => [...],
-        'payment'   => [...],
+        'inventory' => [ // [!code hide]
+            'initial' => 'checking', // [!code hide]
+            'states' => [ // [!code hide]
+                'checking' => ['on' => ['INV_DONE' => 'done']], // [!code hide]
+                'done' => ['type' => 'final'], // [!code hide]
+            ], // [!code hide]
+        ], // [!code hide]
+        'payment'   => [ // [!code hide]
+            'initial' => 'validating', // [!code hide]
+            'states' => [ // [!code hide]
+                'validating' => ['on' => ['PAY_DONE' => 'done']], // [!code hide]
+                'done' => ['type' => 'final'], // [!code hide]
+            ], // [!code hide]
+        ], // [!code hide]
     ],
 ],
 'approved'      => ['type' => 'final'],
 'manual_review' => ['type' => 'final'],
+        ], // [!code hide]
+    ], // [!code hide]
+    behavior: [ // [!code hide]
+        'guards' => [ // [!code hide]
+            'isAllSucceededGuard' => fn (ContextManager $ctx) // [!code hide]
+                => $ctx->get('inventory_result') === 'success' && $ctx->get('payment_result') === 'success', // [!code hide]
+        ], // [!code hide]
+        'actions' => [ // [!code hide]
+            'logApprovalAction' => fn () => null, // [!code hide]
+            'notifyReviewerAction' => fn () => null, // [!code hide]
+        ], // [!code hide]
+    ] // [!code hide]
+); // [!code hide]
+$state = $definition->getInitialState(); // [!code hide]
+$state = $definition->transition(['type' => 'INV_DONE'], $state); // [!code hide]
+$state = $definition->transition(['type' => 'PAY_DONE'], $state); // [!code hide]
+$state->matches('approved'); // => true // [!code hide]
 ```
 
 **Evaluation rules:**
@@ -376,18 +451,42 @@ Conditional `@done` also works on compound (non-parallel) states. When a compoun
 
 When using [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch), region entry actions run as queue jobs. If a job exhausts all retries, you can handle the failure with `@fail`:
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+$definition = MachineDefinition::define([ // [!code hide]
+    'id' => 'order', // [!code hide]
+    'initial' => 'processing', // [!code hide]
+    'states' => [ // [!code hide]
 'processing' => [
     'type'   => 'parallel',
     '@done' => 'completed',
     '@fail' => 'failed',       // Transition here when a region job fails
     'states' => [
-        'inventory' => [...],
-        'payment'   => [...],
+        'inventory' => [ // [!code hide]
+            'initial' => 'checking', // [!code hide]
+            'states' => [ // [!code hide]
+                'checking' => ['on' => ['INV_DONE' => 'done']], // [!code hide]
+                'done' => ['type' => 'final'], // [!code hide]
+            ], // [!code hide]
+        ], // [!code hide]
+        'payment'   => [ // [!code hide]
+            'initial' => 'validating', // [!code hide]
+            'states' => [ // [!code hide]
+                'validating' => ['on' => ['PAY_DONE' => 'done']], // [!code hide]
+                'done' => ['type' => 'final'], // [!code hide]
+            ], // [!code hide]
+        ], // [!code hide]
     ],
 ],
+'completed' => ['type' => 'final'], // [!code hide]
 'failed' => ['type' => 'final'],
+    ], // [!code hide]
+]); // [!code hide]
+$state = $definition->getInitialState(); // [!code hide]
+$state = $definition->transition(['type' => 'INV_DONE'], $state); // [!code hide]
+$state = $definition->transition(['type' => 'PAY_DONE'], $state); // [!code hide]
+$state->matches('completed'); // => true // [!code hide]
 ```
 
 When `@fail` is triggered:
@@ -402,19 +501,37 @@ Without `@fail`, the machine stays in the parallel state and records the failure
 
 Like `@done`, `@fail` supports conditional branches with guards. This enables retry-or-escalate patterns:
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+$definition = MachineDefinition::define([ // [!code hide]
+    'id' => 'order', // [!code hide]
+    'initial' => 'processing', // [!code hide]
+    'context' => ['retry_count' => 0], // [!code hide]
+    'states' => [ // [!code hide]
 'processing' => [
     'type'   => 'parallel',
     '@done'  => 'completed',
     '@fail'  => [
-        ['target' => 'retrying', 'guards' => CanRetryGuard::class, 'actions' => IncrementRetryAction::class],
-        ['target' => 'failed',   'actions' => SendAlertAction::class],  // fallback
+        ['target' => 'retrying', 'guards' => 'canRetryGuard', 'actions' => 'incrementRetryAction'],
+        ['target' => 'failed',   'actions' => 'sendAlertAction'],  // fallback
     ],
-    'states' => [...],
+    'states' => [ // [!code hide]
+        'region_a' => [ // [!code hide]
+            'initial' => 'working', // [!code hide]
+            'states' => [ // [!code hide]
+                'working' => ['on' => ['DONE_A' => 'done']], // [!code hide]
+                'done' => ['type' => 'final'], // [!code hide]
+            ], // [!code hide]
+        ], // [!code hide]
+    ], // [!code hide]
 ],
+'completed' => ['type' => 'final'], // [!code hide]
 'retrying'  => ['type' => 'final'],
 'failed'    => ['type' => 'final'],
+    ], // [!code hide]
+]); // [!code hide]
 ```
 
 ::: warning Action Timing Asymmetry: @done vs @fail
@@ -433,8 +550,10 @@ Root-level or parallel-state-level `on` events can exit the entire parallel stat
 
 A root-level `on` event fires from any state in the machine, including parallel:
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+$definition = MachineDefinition::define([ // [!code hide]
 'id' => 'order',
 'initial' => 'processing',
 'on' => [
@@ -445,21 +564,43 @@ A root-level `on` event fires from any state in the machine, including parallel:
         'type' => 'parallel',
         '@done' => 'done',
         'states' => [
-            'payment'  => [...],
-            'shipping' => [...],
+            'payment'  => [ // [!code hide]
+                'initial' => 'pending', // [!code hide]
+                'states' => [ // [!code hide]
+                    'pending' => ['on' => ['PAY' => 'done']], // [!code hide]
+                    'done' => ['type' => 'final'], // [!code hide]
+                ], // [!code hide]
+            ], // [!code hide]
+            'shipping' => [ // [!code hide]
+                'initial' => 'preparing', // [!code hide]
+                'states' => [ // [!code hide]
+                    'preparing' => ['on' => ['SHIP' => 'done']], // [!code hide]
+                    'done' => ['type' => 'final'], // [!code hide]
+                ], // [!code hide]
+            ], // [!code hide]
         ],
     ],
     'done'    => ['type' => 'final'],
     'expired' => ['type' => 'final'],
 ],
+]); // [!code hide]
+$state = $definition->getInitialState(); // [!code hide]
+$state = $definition->transition(['type' => 'PAY'], $state); // [!code hide]
+$state = $definition->transition(['type' => 'EXPIRED'], $state); // [!code hide]
+$state->matches('expired'); // => true // [!code hide]
 ```
 
 ### Parallel-Level Escape
 
 An `on` event on the parallel state itself exits all regions:
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+$definition = MachineDefinition::define([ // [!code hide]
+    'id' => 'order', // [!code hide]
+    'initial' => 'processing', // [!code hide]
+    'states' => [ // [!code hide]
 'processing' => [
     'type' => 'parallel',
     '@done' => 'done',
@@ -467,11 +608,29 @@ An `on` event on the parallel state itself exits all regions:
         'CANCEL' => 'cancelled',  // Exits parallel state
     ],
     'states' => [
-        'payment'  => [...],
-        'shipping' => [...],
+        'payment'  => [ // [!code hide]
+            'initial' => 'pending', // [!code hide]
+            'states' => [ // [!code hide]
+                'pending' => ['on' => ['PAY' => 'done']], // [!code hide]
+                'done' => ['type' => 'final'], // [!code hide]
+            ], // [!code hide]
+        ], // [!code hide]
+        'shipping' => [ // [!code hide]
+            'initial' => 'preparing', // [!code hide]
+            'states' => [ // [!code hide]
+                'preparing' => ['on' => ['SHIP' => 'done']], // [!code hide]
+                'done' => ['type' => 'final'], // [!code hide]
+            ], // [!code hide]
+        ], // [!code hide]
     ],
 ],
+'done' => ['type' => 'final'], // [!code hide]
 'cancelled' => ['type' => 'final'],
+    ], // [!code hide]
+]); // [!code hide]
+$state = $definition->getInitialState(); // [!code hide]
+$state = $definition->transition(['type' => 'CANCEL'], $state); // [!code hide]
+$state->matches('cancelled'); // => true // [!code hide]
 ```
 
 ### Escape Behavior
@@ -491,12 +650,25 @@ Escape transitions are automatically deduplicated. Even though multiple regions 
 
 Escape transitions can target compound states — the machine resolves to the target's initial child:
 
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel" -->
 ```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+$definition = MachineDefinition::define([ // [!code hide]
+    'id' => 'order', // [!code hide]
+    'initial' => 'processing', // [!code hide]
 'on' => [
     'CANCEL' => 'review',  // 'review' is a compound state
 ],
-// ...
+    'states' => [ // [!code hide]
+        'processing' => [ // [!code hide]
+            'type' => 'parallel', // [!code hide]
+            'states' => [ // [!code hide]
+                'region_a' => [ // [!code hide]
+                    'initial' => 'working', // [!code hide]
+                    'states' => ['working' => []], // [!code hide]
+                ], // [!code hide]
+            ], // [!code hide]
+        ], // [!code hide]
 'review' => [
     'initial' => 'pending',
     'states' => [
@@ -504,6 +676,11 @@ Escape transitions can target compound states — the machine resolves to the ta
         'approved' => ['type' => 'final'],
     ],
 ],
+    ], // [!code hide]
+]); // [!code hide]
+$state = $definition->getInitialState(); // [!code hide]
+$state = $definition->transition(['type' => 'CANCEL'], $state); // [!code hide]
+$state->matches('review.pending'); // => true // [!code hide]
 ```
 
 After `CANCEL`, the machine is at `review.pending`.
