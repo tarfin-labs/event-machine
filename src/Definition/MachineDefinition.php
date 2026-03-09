@@ -1531,6 +1531,12 @@ class MachineDefinition
         // Execute entry actions for the new state definition
         $targetStateDefinition?->runEntryActions($newState, $eventBehavior);
 
+        // Process compound state onDone: when a non-parallel transition lands on a final
+        // state that is a child of a compound parent, fire the compound state's @done.
+        if ($targetStateDefinition?->type === StateDefinitionType::FINAL) {
+            $this->processCompoundOnDone($newState, $targetStateDefinition, $eventBehavior);
+        }
+
         // Check if the new state has any transitions that are always taken
         if ($this->idMap[$newState->currentStateDefinition->id]->transitionDefinitions !== null) {
             /** @var TransitionDefinition $transition */
