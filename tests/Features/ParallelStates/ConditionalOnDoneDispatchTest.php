@@ -3,12 +3,12 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\LogApprovalAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\NotifyReviewerAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SendAlertAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\IncrementRetryAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\IsAllSucceededGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\CanRetryGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SendAlertAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\LogApprovalAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\IsAllSucceededGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\IncrementRetryAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\NotifyReviewerAction;
 
 // Test 19: Conditional @done resolves correctly with null EventBehavior (async mode)
 test('it resolves conditional @done in async mode with null EventBehavior', function (): void {
@@ -26,8 +26,8 @@ test('it resolves conditional @done in async mode with null EventBehavior', func
         ],
         'states' => [
             'processing' => [
-                'type'   => 'parallel',
-                '@done'  => [
+                'type'  => 'parallel',
+                '@done' => [
                     ['target' => 'approved',      'guards' => IsAllSucceededGuard::class, 'actions' => LogApprovalAction::class],
                     ['target' => 'manual_review', 'actions' => NotifyReviewerAction::class],
                 ],
@@ -35,14 +35,14 @@ test('it resolves conditional @done in async mode with null EventBehavior', func
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_B' => 'finished']],
+                            'working'  => ['on' => ['DONE_B' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -79,8 +79,8 @@ test('it handles null EventBehavior with synthetic event on guard failure', func
         ],
         'states' => [
             'processing' => [
-                'type'   => 'parallel',
-                '@done'  => [
+                'type'  => 'parallel',
+                '@done' => [
                     ['target' => 'approved', 'guards' => IsAllSucceededGuard::class],
                     ['target' => 'manual_review', 'actions' => NotifyReviewerAction::class],
                 ],
@@ -88,14 +88,14 @@ test('it handles null EventBehavior with synthetic event on guard failure', func
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_B' => 'finished']],
+                            'working'  => ['on' => ['DONE_B' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -129,9 +129,9 @@ test('it resolves conditional @fail in async timeout with null EventBehavior', f
         ],
         'states' => [
             'processing' => [
-                'type'   => 'parallel',
-                '@done'  => 'completed',
-                '@fail'  => [
+                'type'  => 'parallel',
+                '@done' => 'completed',
+                '@fail' => [
                     ['target' => 'retrying', 'guards' => CanRetryGuard::class, 'actions' => IncrementRetryAction::class],
                     ['target' => 'failed',   'actions' => SendAlertAction::class],
                 ],
@@ -139,14 +139,14 @@ test('it resolves conditional @fail in async timeout with null EventBehavior', f
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_B' => 'finished']],
+                            'working'  => ['on' => ['DONE_B' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
