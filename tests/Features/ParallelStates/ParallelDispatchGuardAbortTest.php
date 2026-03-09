@@ -14,7 +14,8 @@ uses(RefreshDatabase::class);
 
 afterEach(function (): void {
     config()->set('machine.parallel_dispatch.enabled', false);
-    SimulateConcurrentModificationAction::$onExecute = null;
+    SimulateConcurrentModificationAction::$onExecute           = null;
+    SimulateConcurrentModificationAction::$shouldModifyContext = true;
 });
 
 // ============================================================
@@ -249,29 +250,53 @@ it('abort event preserves full context snapshot', function (): void {
 it('abort event records work_was_discarded=false when entry action had no side effects', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
-    // Use the standard machine (SetRegionAResultAction just sets context)
-    $machine = ParallelDispatchMachine::create();
+    // Disable context modification — action runs but produces no diff
+    SimulateConcurrentModificationAction::$shouldModifyContext = false;
+
+    $machine = ParallelDispatchGuardAbortMachine::create();
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    // Run Job A normally first — context gets region_a_result
+    // During entry action (lockless phase), simulate a concurrent operation
+    // that transitions the machine out of parallel state.
+    // Action produces NO context diff (shouldModifyContext=false), so
+    // work_was_discarded should be false.
+    SimulateConcurrentModificationAction::$onExecute = function () use ($rootEventId): void {
+        $lastEvent = MachineEvent::where('root_event_id', $rootEventId)
+            ->orderBy('sequence_number', 'desc')
+            ->first();
+
+        MachineEvent::create([
+            'sequence_number' => $lastEvent->sequence_number + 1,
+            'created_at'      => now(),
+            'machine_id'      => $lastEvent->machine_id,
+            'machine_value'   => ['parallel_dispatch_guard_abort.completed'],
+            'root_event_id'   => $rootEventId,
+            'source'          => 'internal',
+            'type'            => 'parallel_dispatch_guard_abort.parallel.processing.done',
+            'version'         => 1,
+            'payload'         => null,
+            'context'         => $lastEvent->context,
+        ]);
+    };
+
     (new ParallelRegionJob(
-        machineClass: ParallelDispatchMachine::class,
+        machineClass: ParallelDispatchGuardAbortMachine::class,
         rootEventId: $rootEventId,
-        regionId: 'parallel_dispatch.processing.region_a',
-        initialStateId: 'parallel_dispatch.processing.region_a.working',
+        regionId: 'parallel_dispatch_guard_abort.processing.region_a',
+        initialStateId: 'parallel_dispatch_guard_abort.processing.region_a.working',
     ))->handle();
 
-    // Now advance region A so a retry would hit the under-lock guard
-    $machine = ParallelDispatchMachine::create(state: $rootEventId);
-    $machine->send('REGION_A_DONE');
+    $abortEvent = MachineEvent::where('root_event_id', $rootEventId)
+        ->where('type', 'like', '%region.guard_abort')
+        ->first();
 
-    // Simulate: another job advances region A BACK to working AFTER the
-    // pre-lock guard but the initial state check fails under lock.
-    // Actually, let's use a simpler approach: directly test the existing
-    // guard test behavior — pre-lock guard catches this, not under-lock.
-    // So we skip this test variant (pre-lock no-ops don't record events).
-})->skip('Pre-lock guard catches this scenario without recording — no under-lock abort to verify');
+    expect($abortEvent)->not->toBeNull();
+    expect($abortEvent->payload['reason'])->toBe('machine left parallel state');
+    expect($abortEvent->payload['work_was_discarded'])->toBeFalse();
+    expect($abortEvent->payload['discarded_context'])->toBe([]);
+    expect($abortEvent->payload['discarded_events'])->toBe(0);
+});
 
 // ============================================================
 // Grup 6: Machine restoration after abort event

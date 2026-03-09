@@ -17,11 +17,14 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
  */
 class SimulateConcurrentModificationAction extends ActionBehavior
 {
-    public static ?Closure $onExecute = null;
+    public static ?Closure $onExecute       = null;
+    public static bool $shouldModifyContext = true;
 
     public function __invoke(ContextManager $context): void
     {
-        $context->set('concurrent_result', 'processed');
+        if (static::$shouldModifyContext) {
+            $context->set('concurrent_result', 'processed');
+        }
 
         if (static::$onExecute !== null) {
             (static::$onExecute)();
