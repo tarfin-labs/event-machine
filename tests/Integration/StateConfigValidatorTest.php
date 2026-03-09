@@ -441,7 +441,7 @@ test('it accepts string @done configuration', function (): void {
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -464,7 +464,7 @@ test('it accepts array @done with target and actions', function (): void {
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -481,8 +481,8 @@ test('it accepts conditional @done with guards', function (): void {
         'initial' => 'processing',
         'states'  => [
             'processing' => [
-                'type'   => 'parallel',
-                '@done'  => [
+                'type'  => 'parallel',
+                '@done' => [
                     ['target' => 'approved', 'guards' => 'isAllPassedGuard'],
                     ['target' => 'manual_review'],
                 ],
@@ -490,7 +490,7 @@ test('it accepts conditional @done with guards', function (): void {
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -508,8 +508,8 @@ test('it rejects @done with default branch not last', function (): void {
         'initial' => 'processing',
         'states'  => [
             'processing' => [
-                'type'   => 'parallel',
-                '@done'  => [
+                'type'  => 'parallel',
+                '@done' => [
                     ['target' => 'manual_review'], // Default (no guards) NOT last
                     ['target' => 'approved', 'guards' => 'isAllPassedGuard'],
                 ],
@@ -517,7 +517,7 @@ test('it rejects @done with default branch not last', function (): void {
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -538,8 +538,8 @@ test('it rejects @done with invalid keys in branch', function (): void {
         'initial' => 'processing',
         'states'  => [
             'processing' => [
-                'type'   => 'parallel',
-                '@done'  => [
+                'type'  => 'parallel',
+                '@done' => [
                     'target'      => 'completed',
                     'invalid_key' => 'value',
                 ],
@@ -547,7 +547,7 @@ test('it rejects @done with invalid keys in branch', function (): void {
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -567,8 +567,8 @@ test('it accepts conditional @fail with guards', function (): void {
         'initial' => 'processing',
         'states'  => [
             'processing' => [
-                'type'   => 'parallel',
-                '@fail'  => [
+                'type'  => 'parallel',
+                '@fail' => [
                     ['target' => 'retrying', 'guards' => 'canRetryGuard', 'actions' => 'incrementRetryAction'],
                     ['target' => 'failed', 'actions' => 'sendAlertAction'],
                 ],
@@ -576,7 +576,7 @@ test('it accepts conditional @fail with guards', function (): void {
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -600,7 +600,7 @@ test('it rejects invalid @done format', function (): void {
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
