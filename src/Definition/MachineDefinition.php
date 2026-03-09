@@ -846,7 +846,7 @@ class MachineDefinition
 
         // Source is an ancestor of the parallel state (root-level `on` handler)
         $ancestor = $parallelState->parent;
-        while ($ancestor instanceof \Tarfinlabs\EventMachine\Definition\StateDefinition) {
+        while ($ancestor instanceof StateDefinition) {
             if ($ancestor === $source) {
                 return true;
             }
