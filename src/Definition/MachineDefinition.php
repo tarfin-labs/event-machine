@@ -903,34 +903,24 @@ class MachineDefinition
             return;
         }
 
-        if (!isset($compoundParent->config['@done'])) {
+        if (!$compoundParent->onDoneTransition instanceof TransitionDefinition) {
             return;
         }
 
-        $onDoneConfig = $compoundParent->config['@done'];
-        $targetId     = is_array($onDoneConfig) ? ($onDoneConfig['target'] ?? null) : $onDoneConfig;
+        $branch = $this->resolveOnDoneOrFailBranch($compoundParent->onDoneTransition, $state, $eventBehavior);
 
-        if ($targetId === null) {
+        if (!$branch instanceof TransitionBranch || !$branch->target instanceof StateDefinition) {
             return;
         }
 
-        $target = $this->getNearestStateDefinitionByString($targetId, $compoundParent);
-
-        if (!$target instanceof StateDefinition) {
-            return;
-        }
+        $target = $branch->target;
 
         // Exit the final state and the compound parent
         $finalState->runExitActions($state);
         $compoundParent->runExitActions($state);
 
-        // Run onDone transition actions if configured
-        if (is_array($onDoneConfig) && isset($onDoneConfig['actions'])) {
-            $actions = is_array($onDoneConfig['actions']) ? $onDoneConfig['actions'] : [$onDoneConfig['actions']];
-            foreach ($actions as $action) {
-                $this->runAction($action, $state, $eventBehavior);
-            }
-        }
+        // Run branch actions (guards, calculators already evaluated by resolveOnDoneOrFailBranch)
+        $branch->runActions($state, $eventBehavior);
 
         // Resolve to initial state if the target is a compound state
         $initialTarget = $target->findInitialStateDefinition() ?? $target;
