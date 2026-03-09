@@ -232,8 +232,8 @@ test('it does not run losing branch actions', function (): void {
     expect(NotifyReviewerAction::wasExecuted())->toBeFalse();
 });
 
-// Test 8: Compound state @done with guards
-test('it works with compound state @done', function (): void {
+// Test 8: Compound state @done with guards (guard passes)
+test('it works with compound state @done when guard passes', function (): void {
     LogApprovalAction::reset();
     NotifyReviewerAction::reset();
 
@@ -271,6 +271,151 @@ test('it works with compound state @done', function (): void {
 
     // Context has both success → guard passes → approved
     expect($state->value)->toBe(['compound_test.approved'])
+        ->and(LogApprovalAction::wasExecuted())->toBeTrue()
+        ->and(NotifyReviewerAction::wasExecuted())->toBeFalse();
+});
+
+// Test 9: Compound state @done with guards (guard fails → fallback)
+test('it works with compound state @done when guard fails', function (): void {
+    LogApprovalAction::reset();
+    NotifyReviewerAction::reset();
+
+    $definition = MachineDefinition::define([
+        'id'      => 'compound_fail_test',
+        'initial' => 'verification',
+        'context' => [
+            'inventory_result'  => null,
+            'payment_result'    => null,
+            'approval_logged'   => false,
+            'reviewer_notified' => false,
+        ],
+        'states' => [
+            'verification' => [
+                '@done' => [
+                    ['target' => 'approved',      'guards' => IsAllSucceededGuard::class, 'actions' => LogApprovalAction::class],
+                    ['target' => 'manual_review', 'actions' => NotifyReviewerAction::class],
+                ],
+                'initial' => 'checking',
+                'states'  => [
+                    'checking' => [
+                        'on' => ['CHECK_COMPLETED' => 'done'],
+                    ],
+                    'done' => ['type' => 'final'],
+                ],
+            ],
+            'approved'      => ['type' => 'final'],
+            'manual_review' => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $definition->getInitialState();
+    $state = $definition->transition(['type' => 'CHECK_COMPLETED'], $state);
+
+    // Context has null values → guard fails → manual_review
+    expect($state->value)->toBe(['compound_fail_test.manual_review'])
+        ->and(NotifyReviewerAction::wasExecuted())->toBeTrue()
+        ->and(LogApprovalAction::wasExecuted())->toBeFalse();
+});
+
+// Test 10: Compound @done — all guards fail, no default → stays at final child
+test('it aborts compound @done when all guards fail and no default', function (): void {
+    $definition = MachineDefinition::define([
+        'id'      => 'compound_abort',
+        'initial' => 'verification',
+        'context' => [
+            'inventory_result' => null,
+            'payment_result'   => null,
+        ],
+        'states' => [
+            'verification' => [
+                '@done' => [
+                    ['target' => 'approved', 'guards' => IsAllSucceededGuard::class],
+                    ['target' => 'also_approved', 'guards' => AlwaysFailGuard::class],
+                ],
+                'initial' => 'checking',
+                'states'  => [
+                    'checking' => [
+                        'on' => ['CHECK_COMPLETED' => 'done'],
+                    ],
+                    'done' => ['type' => 'final'],
+                ],
+            ],
+            'approved'      => ['type' => 'final'],
+            'also_approved' => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $definition->getInitialState();
+    $state = $definition->transition(['type' => 'CHECK_COMPLETED'], $state);
+
+    // All guards fail → stays at compound's final child
+    expect($state->value)->toBe(['compound_abort.verification.done']);
+});
+
+// Test 11: Multiple guarded branches — second guard passes
+test('it falls through to second guarded branch when first guard fails', function (): void {
+    $definition = MachineDefinition::define([
+        'id'      => 'test_second_branch',
+        'initial' => 'processing',
+        'context' => [
+            'inventory_result' => null,
+            'payment_result'   => 'success',
+        ],
+        'states' => [
+            'processing' => [
+                'type'   => 'parallel',
+                '@done'  => [
+                    ['target' => 'approved',       'guards' => IsAllSucceededGuard::class],
+                    ['target' => 'partial_review', 'guards' => AlwaysFailGuard::class],
+                    ['target' => 'manual_review'],
+                ],
+                'states' => [
+                    'region_a' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'finished' => ['type' => 'final'],
+                        ],
+                    ],
+                    'region_b' => [
+                        'initial' => 'working',
+                        'states'  => [
+                            'working' => ['on' => ['DONE_B' => 'finished']],
+                            'finished' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'approved'       => ['type' => 'final'],
+            'partial_review' => ['type' => 'final'],
+            'manual_review'  => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $definition->getInitialState();
+    $state = $definition->transition(['type' => 'DONE_A'], $state);
+    $state = $definition->transition(['type' => 'DONE_B'], $state);
+
+    // First guard fails (inventory null), second guard fails (AlwaysFailGuard), default → manual_review
+    expect($state->value)->toBe(['test_second_branch.manual_review']);
+});
+
+// Test 12: ConditionalOnDoneMachine via Machine::create — full integration
+test('it handles conditional @done via Machine::create with full lifecycle', function (): void {
+    LogApprovalAction::reset();
+    NotifyReviewerAction::reset();
+
+    $machine = ConditionalOnDoneMachine::create();
+
+    // First send: inventory checked → entry sets inventory_result=success
+    $state = $machine->send(['type' => 'INVENTORY_CHECKED']);
+    expect($state->value)->toContain('conditional_on_done.processing.inventory.done');
+
+    // Second send: payment validated → entry sets payment_result=success, all regions final, @done fires
+    $state = $machine->send(['type' => 'PAYMENT_VALIDATED']);
+    expect($state->value)->toBe(['conditional_on_done.approved'])
+        ->and($state->context->get('inventory_result'))->toBe('success')
+        ->and($state->context->get('payment_result'))->toBe('success')
         ->and(LogApprovalAction::wasExecuted())->toBeTrue()
         ->and(NotifyReviewerAction::wasExecuted())->toBeFalse();
 });
