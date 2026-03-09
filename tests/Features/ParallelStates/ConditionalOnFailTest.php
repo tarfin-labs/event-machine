@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ConditionalOnFailMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SendAlertAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\IncrementRetryAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\CanRetryGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\AlwaysFailGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SendAlertAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\IncrementRetryAction;
 
 // Test 13: Backward compat — simple string @fail still works
 test('it resolves simple string @fail unchanged', function (): void {
@@ -23,14 +22,14 @@ test('it resolves simple string @fail unchanged', function (): void {
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_B' => 'finished']],
+                            'working'  => ['on' => ['DONE_B' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -63,9 +62,9 @@ test('it transitions to first matching guard branch on @fail', function (): void
         ],
         'states' => [
             'processing' => [
-                'type'   => 'parallel',
-                '@done'  => 'completed',
-                '@fail'  => [
+                'type'  => 'parallel',
+                '@done' => 'completed',
+                '@fail' => [
                     ['target' => 'retrying', 'guards' => CanRetryGuard::class, 'actions' => IncrementRetryAction::class],
                     ['target' => 'failed',   'actions' => SendAlertAction::class],
                 ],
@@ -73,14 +72,14 @@ test('it transitions to first matching guard branch on @fail', function (): void
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_B' => 'finished']],
+                            'working'  => ['on' => ['DONE_B' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -116,9 +115,9 @@ test('it falls through to default branch on @fail', function (): void {
         ],
         'states' => [
             'processing' => [
-                'type'   => 'parallel',
-                '@done'  => 'completed',
-                '@fail'  => [
+                'type'  => 'parallel',
+                '@done' => 'completed',
+                '@fail' => [
                     ['target' => 'retrying', 'guards' => CanRetryGuard::class],
                     ['target' => 'failed',   'actions' => SendAlertAction::class],
                 ],
@@ -126,14 +125,14 @@ test('it falls through to default branch on @fail', function (): void {
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_B' => 'finished']],
+                            'working'  => ['on' => ['DONE_B' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -166,9 +165,9 @@ test('it aborts @fail when all guards fail and no default', function (): void {
         ],
         'states' => [
             'processing' => [
-                'type'   => 'parallel',
-                '@done'  => 'completed',
-                '@fail'  => [
+                'type'  => 'parallel',
+                '@done' => 'completed',
+                '@fail' => [
                     ['target' => 'retrying', 'guards' => CanRetryGuard::class],
                     ['target' => 'also_retrying', 'guards' => AlwaysFailGuard::class],
                 ],
@@ -176,14 +175,14 @@ test('it aborts @fail when all guards fail and no default', function (): void {
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_B' => 'finished']],
+                            'working'  => ['on' => ['DONE_B' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -219,23 +218,23 @@ test('it runs branch actions BEFORE exit on @fail', function (): void {
         ],
         'states' => [
             'processing' => [
-                'type'   => 'parallel',
-                '@done'  => 'completed',
-                '@fail'  => [
+                'type'  => 'parallel',
+                '@done' => 'completed',
+                '@fail' => [
                     ['target' => 'failed', 'actions' => SendAlertAction::class],
                 ],
                 'states' => [
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_B' => 'finished']],
+                            'working'  => ['on' => ['DONE_B' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
@@ -270,9 +269,9 @@ test('it works with canRetry pattern across multiple fail invocations', function
         ],
         'states' => [
             'processing' => [
-                'type'   => 'parallel',
-                '@done'  => 'completed',
-                '@fail'  => [
+                'type'  => 'parallel',
+                '@done' => 'completed',
+                '@fail' => [
                     ['target' => 'retrying', 'guards' => CanRetryGuard::class, 'actions' => IncrementRetryAction::class],
                     ['target' => 'failed',   'actions' => SendAlertAction::class],
                 ],
@@ -280,14 +279,14 @@ test('it works with canRetry pattern across multiple fail invocations', function
                     'region_a' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_A' => 'finished']],
+                            'working'  => ['on' => ['DONE_A' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
                     'region_b' => [
                         'initial' => 'working',
                         'states'  => [
-                            'working' => ['on' => ['DONE_B' => 'finished']],
+                            'working'  => ['on' => ['DONE_B' => 'finished']],
                             'finished' => ['type' => 'final'],
                         ],
                     ],
