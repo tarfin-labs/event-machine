@@ -82,6 +82,16 @@ OrderMachine::test(['order_id' => 1])
 | `faking([...])` | Spies (via `spy()`) | Silently ignored | Selective faking with TestMachine |
 :::
 
+::: warning Guards need shouldReturn() after faking()
+Spies return `null` by default. For guards, `null !== false` means the guard **silently passes** — the engine only blocks on an explicit `false` return. Always call `shouldReturn()` after faking a guard:
+
+```php
+->faking([IsValidGuard::class])
+// Without this, the guard always passes (null is not false):
+IsValidGuard::shouldReturn(false);
+```
+:::
+
 ## Fakes Work During Machine::send()
 
 All 5 invocation points respect fakes:
