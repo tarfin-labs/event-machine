@@ -11,6 +11,7 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
+use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
 class TestMachine
 {
@@ -217,7 +218,14 @@ class TestMachine
     public function assertGuarded(array|string $event): self
     {
         $before = $this->machine->state->value;
-        $this->send($event);
+
+        try {
+            $this->send($event);
+        } catch (NoTransitionDefinitionFoundException) {
+            // Unknown events are inherently guarded — no transition possible
+            return $this;
+        }
+
         expect($this->machine->state->value)->toBe($before,
             'Expected event to be guarded, but a transition occurred'
         );
