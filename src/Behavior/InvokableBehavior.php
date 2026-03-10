@@ -194,6 +194,11 @@ abstract class InvokableBehavior
      * @param  State  $state  The state to run against.
      * @param  EventBehavior|null  $eventBehavior  Optional event behavior.
      * @param  array|null  $arguments  Optional behavior arguments.
+     *
+     * @return bool|Collection<int, mixed>|mixed Guards return bool, calculators
+     *     mutate context and return void (→ eventQueue Collection), actions return
+     *     void (→ eventQueue Collection). The eventQueue captures any events raised
+     *     via $this->raise() during execution.
      */
     public static function runWithState(
         State $state,
