@@ -12,18 +12,23 @@ Strategies for testing machines with parallel (orthogonal) regions.
 
 ## Strategy 1: Dispatch Verification
 
+Use Laravel's `Queue::fake()` to verify that parallel region jobs are dispatched correctly without actually executing them:
+
 <!-- doctest-attr: ignore -->
 ```php
 it('dispatches correct parallel jobs', function () {
     Queue::fake();
 
-    ParallelMachine::test()
-        ->send('START_PROCESSING')
-        ->assertParallelDispatched(2)
-        ->assertRegionDispatched('payment')
-        ->assertRegionDispatched('inventory');
+    $machine = ParallelMachine::create();
+    $machine->send(['type' => 'START_PROCESSING']);
 
-    Queue::assertPushed(ParallelRegionTimeoutJob::class);
+    Queue::assertPushed(ProcessParallelRegionJob::class, 2);
+    Queue::assertPushed(ProcessParallelRegionJob::class, fn ($job) =>
+        str_contains($job->regionId, 'payment')
+    );
+    Queue::assertPushed(ProcessParallelRegionJob::class, fn ($job) =>
+        str_contains($job->regionId, 'inventory')
+    );
 });
 ```
 
