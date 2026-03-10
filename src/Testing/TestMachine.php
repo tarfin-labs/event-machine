@@ -229,7 +229,11 @@ class TestMachine
     }
 
     /**
-     * Assert an event is guarded (state unchanged).
+     * Assert an event is guarded (state unchanged after send).
+     *
+     * Note: Cannot detect self-transitions (target === source) since the state
+     * value array is identical before and after. Use assertTransition() with
+     * explicit state checks for self-transition scenarios.
      */
     public function assertGuarded(EventBehavior|array|string $event): self
     {
