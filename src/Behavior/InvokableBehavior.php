@@ -196,9 +196,9 @@ abstract class InvokableBehavior
      * @param  array|null  $arguments  Optional behavior arguments.
      *
      * @return bool|Collection<int, mixed>|mixed Guards return bool, calculators
-     *     mutate context and return void (→ eventQueue Collection), actions return
-     *     void (→ eventQueue Collection). The eventQueue captures any events raised
-     *     via $this->raise() during execution.
+     *                                           mutate context and return void (→ eventQueue Collection), actions return
+     *                                           void (→ eventQueue Collection). The eventQueue captures any events raised
+     *                                           via $this->raise() during execution.
      */
     public static function runWithState(
         State $state,
