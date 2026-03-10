@@ -229,6 +229,31 @@ it('assertFinished fails when not in final state', function (): void {
         ->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
 });
 
+// ─── Validation assertions ──────────────────────────────────
+
+it('asserts validation failed with assertValidationFailed', function (): void {
+    TrafficLightsMachine::test()
+        ->send('INCREASE')
+        ->assertValidationFailed('MULTIPLY')
+        ->assertState('active');
+});
+
+it('assertValidationFailed checks specific error key', function (): void {
+    $test = TrafficLightsMachine::test()
+        ->send('INCREASE');
+
+    // IsEvenGuard error key contains the guard event type pattern
+    // We just verify the assertion does not throw when a key is present
+    expect(fn () => $test->assertValidationFailed('MULTIPLY', 'nonexistent_key'))
+        ->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
+});
+
+it('assertValidationFailed fails when no exception is thrown', function (): void {
+    // count=0 is even, so IsEvenGuard passes — no MachineValidationException
+    expect(fn () => TrafficLightsMachine::test()->assertValidationFailed('MULTIPLY'))
+        ->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
+});
+
 // ─── withoutPersistence() ────────────────────────────────────
 
 it('disables persistence', function (): void {
