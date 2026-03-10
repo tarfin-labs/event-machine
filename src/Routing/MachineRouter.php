@@ -65,19 +65,24 @@ class MachineRouter
                         ->setDefaults(['_machine_class' => $machineClass]);
                 }
 
+                $modelParam = $model !== null ? Str::camel(class_basename($model)) : null;
+
+                if ($modelParam !== null) {
+                    Route::model($modelParam, $model);
+                }
+
                 foreach ($endpoints as $eventType => $endpoint) {
                     $isMachineIdBound = in_array($eventType, $machineIdFor, true);
 
-                    if ($model === null) {
-                        $routeUri = $endpoint->uri;
-                        $handler  = 'handleStateless';
-                    } elseif ($isMachineIdBound) {
+                    if ($isMachineIdBound) {
                         $routeUri = "/{machineId}{$endpoint->uri}";
                         $handler  = 'handleMachineIdBound';
+                    } elseif ($model !== null && $modelParam !== null) {
+                        $routeUri = "/{{$modelParam}}{$endpoint->uri}";
+                        $handler  = 'handleModelBound';
                     } else {
-                        $modelParam = Str::camel(class_basename($model));
-                        $routeUri   = "/{{$modelParam}}{$endpoint->uri}";
-                        $handler    = 'handleModelBound';
+                        $routeUri = $endpoint->uri;
+                        $handler  = 'handleStateless';
                     }
 
                     $routeName = "{$namePrefix}.".strtolower($eventType);

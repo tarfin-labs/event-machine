@@ -339,6 +339,40 @@ test('route defaults include model attribute when set', function (): void {
     expect($route->defaults['_model_attribute'])->toBe('machine_ref');
 });
 
+// ─── MachineIdFor Without Model ──────────────────────────────────────
+
+test('machineIdFor works without model', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'       => '/api/standalone-machine-id',
+        'machineIdFor' => ['START'],
+    ]);
+
+    refreshRoutes();
+
+    $route = Route::getRoutes()->getByName('test_endpoint.start');
+
+    expect($route->getActionMethod())->toBe('handleMachineIdBound')
+        ->and($route->uri())->toBe('api/standalone-machine-id/{machineId}/start');
+});
+
+test('machineIdFor without model falls back to stateless for other events', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'       => '/api/mixed-standalone',
+        'machineIdFor' => ['START'],
+    ]);
+
+    refreshRoutes();
+
+    // START → machineIdBound
+    $startRoute = Route::getRoutes()->getByName('test_endpoint.start');
+    expect($startRoute->getActionMethod())->toBe('handleMachineIdBound');
+
+    // COMPLETE → stateless (not in machineIdFor, no model)
+    $completeRoute = Route::getRoutes()->getByName('test_endpoint.complete');
+    expect($completeRoute->getActionMethod())->toBe('handleStateless')
+        ->and($completeRoute->uri())->toBe('api/mixed-standalone/complete');
+});
+
 // ─── Empty Endpoints ──────────────────────────────────────────────────
 
 test('register does nothing when machine has no endpoints', function (): void {
