@@ -10,6 +10,9 @@ Fluent test wrapper inspired by `Livewire::test()`. Provides a chainable API for
 TrafficLightsMachine::test()
 TrafficLightsMachine::test(['count' => 42])
 
+// Pre-start context — entry actions see injected values
+TrafficLightsMachine::withContext(['count' => 42])
+
 // Inline definition (no Machine class, no persistence)
 TestMachine::define(
     config: ['id' => 'counter', 'initial' => 'active', 'context' => ['count' => 0], 'states' => [
@@ -30,6 +33,7 @@ TestMachine::for($machine)
 ->faking([SendEmailAction::class, ChargePaymentAction::class])  // selective behavior faking (spy mode)
 ->withoutPersistence()                                            // skip DB writes
 ->withoutParallelDispatch()                                       // run regions sequentially
+->withScenario('rush_order')                                      // set scenario type
 ```
 
 ## Sending Events
@@ -70,6 +74,7 @@ TestMachine::for($machine)
 ```php
 ->assertTransition('NEXT', 'yellow')       // send + assertState in one
 ->assertGuarded('SHIP')                    // event blocked, state unchanged
+->assertGuardedBy('SHIP', IsStockAvailableGuard::class)  // blocked by specific guard
 ->assertValidationFailed('PAY', 'amount')  // MachineValidationException thrown
 ```
 
@@ -79,6 +84,7 @@ TestMachine::for($machine)
 ```php
 ->assertHistoryContains('SUBMIT', 'PAY')
 ->assertHistoryOrder('SUBMIT', 'PAY', 'SHIP')  // events appear in this order
+->assertTransitionedThrough(['idle', 'processing', 'done'])  // states visited (including @always)
 ```
 
 ## Path Assertions
@@ -96,6 +102,8 @@ TestMachine::for($machine)
 <!-- doctest-attr: ignore -->
 ```php
 ->assertRegionState('payment', 'charged')
+->assertAllRegionsCompleted()              // any parallel state's @done fired
+->assertAllRegionsCompleted('processing')  // specific parallel state route
 ```
 
 ## Behavior Assertions
@@ -104,6 +112,8 @@ TestMachine::for($machine)
 ```php
 ->assertBehaviorRan(SendEmailAction::class)
 ->assertBehaviorNotRan(RefundAction::class)
+->assertBehaviorRanTimes(SendEmailAction::class, 2)
+->assertBehaviorRanWith(SendEmailAction::class, fn($ctx) => $ctx->get('email') !== null)
 ```
 
 ## Accessors
@@ -113,6 +123,17 @@ TestMachine::for($machine)
 ->machine()     // underlying Machine instance
 ->state()       // current State object
 ->context()     // ContextManager instance
+```
+
+## Utilities
+
+<!-- doctest-attr: ignore -->
+```php
+// Execute a callback mid-chain for side-effect assertions
+->tap(fn($test) => Notification::assertSentTo($user, ApprovalNotification::class))
+
+// Debug guard evaluation results
+->debugGuards('SUBMIT')  // returns ['IsValidGuard' => true, 'HasStockGuard' => false]
 ```
 
 ## Cleanup
@@ -134,8 +155,27 @@ TrafficLightsMachine::test()
     ->assertContext('count', 2)
     ->assertHistoryContains('INCREASE')
     ->assertPath([
+        // assertPath sends each event, then checks state + context
         ['event' => 'INCREASE', 'state' => 'active', 'context' => ['count' => 3]],
     ]);
+```
+
+## Direct State Access
+
+For advanced cases where TestMachine doesn't fit, you can access the underlying state directly:
+
+<!-- doctest-attr: ignore -->
+```php
+// Direct state matching
+expect($machine->state->matches('processing'))->toBeTrue();
+expect($machine->state->value)->toBe(['order.processing']);
+
+// Context access
+expect($machine->state->context->get('total'))->toBe(100);
+expect($machine->state->context->has('paid_at'))->toBeTrue();
+
+// History inspection
+expect($machine->state->history->pluck('type'))->toContain('SUBMIT');
 ```
 
 ::: tip Related

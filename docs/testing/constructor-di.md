@@ -85,7 +85,8 @@ class ProcessPaymentAction extends ActionBehavior {
 ::: tip Related
 See [Isolated Testing](/testing/isolated-testing) for `runWithState()` details,
 [Fakeable Behaviors](/testing/fakeable-behaviors) for the faking API,
-and [TestMachine](/testing/test-machine) for the fluent machine-level wrapper.
+[TestMachine](/testing/test-machine) for the fluent machine-level wrapper,
+and [Migration Guide](/testing/migration-guide) for upgrading from legacy test patterns.
 
 For DI patterns beyond testing, see [Dependency Injection](/advanced/dependency-injection).
 :::

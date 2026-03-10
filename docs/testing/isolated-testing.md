@@ -102,5 +102,6 @@ AddValueAction::runWithState($state, eventBehavior: $event);
 ::: tip Related
 See [Fakeable Behaviors](/testing/fakeable-behaviors) for mocking during execution,
 [Constructor DI](/testing/constructor-di) for service injection testing,
-and [TestMachine](/testing/test-machine) for the fluent machine-level wrapper.
+[TestMachine](/testing/test-machine) for the fluent machine-level wrapper,
+and [Migration Guide](/testing/migration-guide) for upgrading from legacy test patterns.
 :::

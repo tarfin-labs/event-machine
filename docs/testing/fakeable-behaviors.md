@@ -136,5 +136,6 @@ afterEach(fn() => IncrementAction::resetAllFakes());
 ::: tip Related
 See [Isolated Testing](/testing/isolated-testing) for unit-level `runWithState()` tests,
 [TestMachine](/testing/test-machine) for the fluent wrapper with `faking()` and `assertBehaviorRan()`,
-and [Transitions & Paths](/testing/transitions-and-paths) for guard faking patterns.
+[Transitions & Paths](/testing/transitions-and-paths) for guard faking patterns,
+and [Migration Guide](/testing/migration-guide) for upgrading from legacy test patterns.
 :::

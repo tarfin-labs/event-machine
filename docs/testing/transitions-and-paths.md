@@ -28,6 +28,22 @@ AllInvocationPointsMachine::test(['count' => 0])
     ->assertTransition('PROCESS', 'active');  // guard bypassed
 ```
 
+## Guard-Specific Assertions
+
+Verify which guard blocked an event with `assertGuardedBy()`:
+
+<!-- doctest-attr: ignore -->
+```php
+// Assert a specific guard blocked the transition
+AllInvocationPointsMachine::test(['count' => 0])
+    ->assertGuardedBy('PROCESS', IsCountPositiveGuard::class);
+
+// Debug all guard results
+$test = AllInvocationPointsMachine::test(['count' => 0]);
+$results = $test->debugGuards('PROCESS');
+// ['IsCountPositiveGuard' => false]
+```
+
 ## Validation Guard Testing
 
 <!-- doctest-attr: ignore -->
@@ -71,6 +87,17 @@ SyncMachine::test(['is_ready' => false])
     ->assertState('waiting')
     ->send(['type' => 'UPDATE', 'payload' => ['is_ready' => true]])
     ->assertState('processing');  // @always transition fired
+```
+
+Verify transient router states were visited using `assertTransitionedThrough()`:
+
+<!-- doctest-attr: ignore -->
+```php
+// @always states appear in history even though they resolve immediately
+OrderMachine::test()
+    ->send('SUBMIT')
+    ->assertTransitionedThrough(['idle', 'router', 'processing'])
+    ->assertState('processing');
 ```
 
 ## Raised Events

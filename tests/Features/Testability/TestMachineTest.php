@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\MachineWithScenarios;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\TestabilityMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\IncreaseEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
@@ -322,6 +323,165 @@ it('provides access to machine, state, and context', function (): void {
     expect($test->machine())->toBeInstanceOf(Machine::class);
     expect($test->state())->toBeInstanceOf(\Tarfinlabs\EventMachine\Actor\State::class);
     expect($test->context())->toBeInstanceOf(\Tarfinlabs\EventMachine\ContextManager::class);
+});
+
+// ─── Cleanup ─────────────────────────────────────────────────
+
+// ─── withContext() ──────────────────────────────────────────
+
+it('creates TestMachine with pre-start context via withContext()', function (): void {
+    $test = TestMachine::withContext(TestabilityMachine::class, ['count' => 99]);
+
+    expect($test->context()->get('count'))->toBe(99);
+});
+
+it('withContext() is available as Machine::withContext() shortcut', function (): void {
+    $test = TestabilityMachine::withContext(['count' => 55]);
+
+    expect($test)->toBeInstanceOf(TestMachine::class);
+    expect($test->context()->get('count'))->toBe(55);
+});
+
+it('withContext() disables persistence', function (): void {
+    $test = TestabilityMachine::withContext(['count' => 1]);
+
+    expect($test->machine()->definition->shouldPersist)->toBeFalse();
+});
+
+// ─── tap() ──────────────────────────────────────────────────
+
+it('executes callback via tap() and continues chain', function (): void {
+    $called = false;
+
+    TrafficLightsMachine::test()
+        ->send('INCREASE')
+        ->tap(function ($test) use (&$called): void {
+            $called = true;
+            expect($test->context()->get('count'))->toBe(1);
+        })
+        ->assertContext('count', 1);
+
+    expect($called)->toBeTrue();
+});
+
+// ─── assertBehaviorRanTimes() + assertBehaviorRanWith() ─────
+
+it('asserts behavior ran exact number of times', function (): void {
+    IncrementAction::spy();
+
+    TrafficLightsMachine::test()
+        ->send('INCREASE')
+        ->send('INCREASE')
+        ->assertBehaviorRanTimes(IncrementAction::class, 2);
+});
+
+it('asserts behavior ran with matching context', function (): void {
+    IncrementAction::allowToRun();
+
+    TrafficLightsMachine::test()
+        ->send('INCREASE')
+        ->assertBehaviorRanWith(IncrementAction::class, fn ($ctx) => true);
+});
+
+// ─── assertGuardedBy() ──────────────────────────────────────
+
+it('asserts event is guarded by a specific FQCN guard', function (): void {
+    AllInvocationPointsMachine::test(['count' => 0])
+        ->assertGuardedBy('PROCESS', IsCountPositiveGuard::class);
+});
+
+it('assertGuardedBy fails when guard passes', function (): void {
+    expect(fn () => AllInvocationPointsMachine::test(['count' => 5])
+        ->assertGuardedBy('PROCESS', IsCountPositiveGuard::class)
+    )->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
+});
+
+// ─── withScenario() ─────────────────────────────────────────
+
+it('sets scenario type via withScenario()', function (): void {
+    $test = MachineWithScenarios::test()
+        ->withScenario('test');
+
+    expect($test->context()->get('scenarioType'))->toBe('test');
+});
+
+it('withScenario routes to scenario-specific state', function (): void {
+    // Without scenario: EVENT_B goes state_a → state_b
+    MachineWithScenarios::test()
+        ->send('EVENT_B')
+        ->assertState('state_b');
+
+    // With 'test' scenario: EVENT_B goes state_a → state_c (scenario override)
+    // Scenario states are namespaced: test.state_c
+    MachineWithScenarios::test()
+        ->withScenario('test')
+        ->send('EVENT_B')
+        ->assertState('test.state_c');
+});
+
+// ─── assertTransitionedThrough() ────────────────────────────
+
+it('asserts machine transitioned through expected states', function (): void {
+    AllInvocationPointsMachine::test()
+        ->send('PROCESS')
+        ->assertTransitionedThrough(['idle', 'active']);
+});
+
+// ─── debugGuards() ──────────────────────────────────────────
+
+it('returns guard evaluation results via debugGuards()', function (): void {
+    // Guard fails (count = 0)
+    $test    = AllInvocationPointsMachine::test(['count' => 0]);
+    $results = $test->debugGuards('PROCESS');
+
+    expect($results)->toHaveKey('IsCountPositiveGuard');
+    expect($results['IsCountPositiveGuard'])->toBeFalse();
+});
+
+it('debugGuards returns pass when guard succeeds', function (): void {
+    $test    = AllInvocationPointsMachine::test(['count' => 5]);
+    $results = $test->debugGuards('PROCESS');
+
+    expect($results)->toHaveKey('IsCountPositiveGuard');
+    expect($results['IsCountPositiveGuard'])->toBeTrue();
+});
+
+it('debugGuards returns empty array for unknown events', function (): void {
+    $test    = AllInvocationPointsMachine::test();
+    $results = $test->debugGuards('NONEXISTENT');
+
+    expect($results)->toBeEmpty();
+});
+
+// ─── assertAllRegionsCompleted() ─────────────────────────────
+
+it('asserts all parallel regions completed', function (): void {
+    \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\ParallelCompletionMachine::test()
+        ->withoutPersistence()
+        ->withoutParallelDispatch()
+        ->send('PAYMENT_SUCCESS')
+        ->send('INVENTORY_RESERVE')
+        ->assertAllRegionsCompleted()
+        ->assertState('fulfilled');
+});
+
+it('asserts all parallel regions completed with explicit route', function (): void {
+    \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\ParallelCompletionMachine::test()
+        ->withoutPersistence()
+        ->withoutParallelDispatch()
+        ->send('PAYMENT_SUCCESS')
+        ->send('INVENTORY_RESERVE')
+        ->assertAllRegionsCompleted('processing')
+        ->assertState('fulfilled');
+});
+
+it('assertAllRegionsCompleted fails when not all regions are final', function (): void {
+    expect(fn () => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\ParallelCompletionMachine::test()
+        ->withoutPersistence()
+        ->withoutParallelDispatch()
+        ->send('PAYMENT_SUCCESS')
+        ->assertAllRegionsCompleted()
+    )->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
 });
 
 // ─── Cleanup ─────────────────────────────────────────────────

@@ -150,6 +150,19 @@ class Machine implements Castable, JsonSerializable, Stringable
     }
 
     /**
+     * Create a TestMachine with pre-start context injection.
+     *
+     * Context is merged BEFORE initialization, so entry actions on the
+     * initial state see the injected context values.
+     *
+     * @param  array  $context  Context values to inject before machine start.
+     */
+    public static function withContext(array $context): \Tarfinlabs\EventMachine\Testing\TestMachine
+    {
+        return \Tarfinlabs\EventMachine\Testing\TestMachine::withContext(static::class, $context);
+    }
+
+    /**
      * Starts the machine with the specified state.
      *
      * This method starts the machine with the given state. If no state is provided,

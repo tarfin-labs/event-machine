@@ -108,6 +108,167 @@ it('completes full order lifecycle', function () {
 });
 ```
 
+## Recipe: End-to-End State Flow
+
+Test the complete machine lifecycle without touching the database:
+
+<!-- doctest-attr: ignore -->
+```php
+it('completes full order flow', function () {
+    OrderMachine::test()
+        ->withoutPersistence()
+        ->send('SUBMIT')
+        ->assertState('awaiting_payment')
+        ->send('PAY')
+        ->assertState('preparing')
+        ->send('SHIP')
+        ->assertState('shipped')
+        ->send('DELIVER')
+        ->assertState('delivered')
+        ->assertFinished();
+});
+
+// With EventBehavior factory
+it('processes order with typed event', function () {
+    OrderMachine::test()
+        ->withoutPersistence()
+        ->send(SubmitOrderEvent::forTesting(['payload' => ['rush' => true]]))
+        ->assertState('awaiting_payment')
+        ->assertContext('rush', true);
+});
+```
+
+## Recipe: Notification / Queue / Mail Integration
+
+Combine Laravel's `::fake()` with TestMachine for side-effect assertions:
+
+<!-- doctest-attr: ignore -->
+```php
+it('sends approval notification on approve', function () {
+    Notification::fake();
+
+    OrderMachine::test()
+        ->withoutPersistence()
+        ->faking([SendApprovalNotificationAction::class])
+        ->send('APPROVE')
+        ->assertState('approved')
+        ->assertBehaviorRan(SendApprovalNotificationAction::class);
+});
+
+it('dispatches processing job', function () {
+    Queue::fake();
+
+    OrderMachine::test()
+        ->withoutPersistence()
+        ->send('PROCESS')
+        ->assertState('processing');
+
+    Queue::assertPushed(ProcessOrderJob::class);
+});
+
+it('sends receipt email', function () {
+    Mail::fake();
+
+    OrderMachine::test()
+        ->withoutPersistence()
+        ->send('COMPLETE')
+        ->assertState('completed');
+
+    Mail::assertSent(OrderReceiptMail::class);
+});
+```
+
+## Recipe: Parametric Guard Testing
+
+Test guards that accept arguments (e.g., `guardName:param1,param2`):
+
+<!-- doctest-attr: ignore -->
+```php
+// Guard definition: 'guards' => 'checkDaysAfterCompletionGuard:7'
+// The engine passes ['7'] as the $arguments parameter
+
+it('blocks before 7 days', function () {
+    $state = State::forTesting([
+        'completed_at' => now()->subDays(3),
+    ]);
+
+    // Third parameter = guard arguments
+    expect(CheckDaysAfterCompletionGuard::runWithState($state, null, ['7']))->toBeFalse();
+});
+
+it('passes after 7 days', function () {
+    $state = State::forTesting([
+        'completed_at' => now()->subDays(10),
+    ]);
+
+    expect(CheckDaysAfterCompletionGuard::runWithState($state, null, ['7']))->toBeTrue();
+});
+
+// Test inline parametric guard via Machine::getGuard()
+it('tests inline parametric guard', function () {
+    $guard = OrderMachine::getGuard('checkMinimumAmountGuard');
+    $context = new ContextManager(['amount' => 50]);
+
+    // Invoke with arguments
+    expect($guard($context, ['100']))->toBeFalse();
+    expect($guard($context, ['25']))->toBeTrue();
+});
+```
+
+## Recipe: Side-Effect Assertions with tap()
+
+Use `tap()` to assert side-effects (notifications, DB changes) mid-chain:
+
+<!-- doctest-attr: ignore -->
+```php
+it('sends notification and updates DB on approve', function () {
+    Notification::fake();
+
+    OrderMachine::test()
+        ->withoutPersistence()
+        ->faking([SendApprovalNotificationAction::class])
+        ->send('APPROVE')
+        ->assertState('approved')
+        ->tap(fn () => Notification::assertSentTo($user, ApprovalNotification::class))
+        ->assertBehaviorRan(SendApprovalNotificationAction::class);
+});
+```
+
+## Recipe: Scenario Testing
+
+Test different machine scenarios with `withScenario()`:
+
+<!-- doctest-attr: ignore -->
+```php
+it('follows default flow without scenario', function () {
+    OrderMachine::test()
+        ->send('SUBMIT')
+        ->assertState('review');
+});
+
+it('follows rush scenario', function () {
+    OrderMachine::test()
+        ->withScenario('rush')
+        ->send('SUBMIT')
+        ->assertState('processing');  // skips review in rush scenario
+});
+```
+
+## Recipe: Entry Action Testing with withContext()
+
+When initial state has entry actions that depend on context, use `withContext()` to inject values before the machine starts:
+
+<!-- doctest-attr: ignore -->
+```php
+// test() applies context AFTER start — entry actions see default context
+OrderMachine::test(['order_id' => 1])  // entry action already ran with null order_id
+
+// withContext() applies context BEFORE start — entry actions see injected values
+OrderMachine::withContext(['order_id' => 1])  // entry action sees order_id = 1
+    ->assertState('processing')
+    ->assertContextHas('order_loaded');
+```
+
 ## Recipe: Testing State Restoration
 
 <!-- doctest-attr: ignore -->

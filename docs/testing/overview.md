@@ -68,3 +68,4 @@ For fast tests, use SQLite in-memory:
 | Parallel | Dispatch verification, region isolation | [Parallel Testing](/testing/parallel-testing) |
 | Persistence | DB, restoration, archival | [Persistence Testing](/testing/persistence-testing) |
 | Recipes | Common real-world patterns | [Recipes](/testing/recipes) |
+| Migration | Upgrading from legacy test patterns | [Migration Guide](/testing/migration-guide) |

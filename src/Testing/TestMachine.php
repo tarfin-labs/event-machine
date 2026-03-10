@@ -48,6 +48,31 @@ class TestMachine
     }
 
     /**
+     * From a Machine subclass with pre-start context injection.
+     *
+     * Unlike create(), context values are merged BEFORE initialization,
+     * so entry actions on the initial state see the injected context.
+     */
+    public static function withContext(string $machineClass, array $context): self
+    {
+        /** @var MachineDefinition $definition */
+        $definition                = $machineClass::definition();
+        $definition->shouldPersist = false;
+        $definition->machineClass  = $machineClass;
+
+        // Merge context before getInitialState() so entry actions see it
+        $definition->config['context'] = array_merge(
+            $definition->config['context'] ?? [],
+            $context,
+        );
+
+        $machine        = Machine::withDefinition($definition);
+        $machine->state = $definition->getInitialState();
+
+        return new self($machine);
+    }
+
+    /**
      * From an inline definition (no persistence, no Machine class).
      */
     public static function define(array $config, array $behavior = []): self
@@ -81,6 +106,19 @@ class TestMachine
             $behavior::spy();
             $this->fakedBehaviors[] = $behavior;
         }
+
+        return $this;
+    }
+
+    /**
+     * Set the scenario type for scenario-aware machines.
+     *
+     * Sets the 'scenarioType' context key which MachineDefinition::getScenarioStateIfAvailable()
+     * reads to route to scenario-specific states.
+     */
+    public function withScenario(string $scenarioName): self
+    {
+        $this->machine->state->context->set('scenarioType', $scenarioName);
 
         return $this;
     }
@@ -268,6 +306,46 @@ class TestMachine
     }
 
     /**
+     * Assert an event is guarded by a specific guard.
+     *
+     * Sends the event, verifies state did not change, and checks the guard's
+     * fail event appears in history. Handles both inline guard keys (camelCase)
+     * and FQCN guards (uses classBasename).
+     */
+    public function assertGuardedBy(EventBehavior|array|string $event, string $guardName): self
+    {
+        $before = $this->machine->state->value;
+
+        try {
+            $this->send($event);
+        } catch (NoTransitionDefinitionFoundException) {
+            expect(false)->toBeTrue(
+                "Event not recognized — cannot verify guard [{$guardName}]"
+            );
+        }
+
+        expect($this->machine->state->value)->toBe($before,
+            "Expected event to be guarded by [{$guardName}], but a transition occurred"
+        );
+
+        $machineId = $this->machine->state->currentStateDefinition->machine->id;
+
+        // Derive the placeholder: inline keys are used as-is, FQCN uses classBasename
+        $placeholder = class_exists($guardName)
+            ? class_basename($guardName)
+            : $guardName;
+
+        $guardFailEvent = "{$machineId}.guard.{$placeholder}.fail";
+        $guardFailed    = $this->machine->state->history->pluck('type')->contains($guardFailEvent);
+
+        expect($guardFailed)->toBeTrue(
+            "Expected guard [{$guardName}] to block the event, but no fail event [{$guardFailEvent}] found in history"
+        );
+
+        return $this;
+    }
+
+    /**
      * Assert an event raises MachineValidationException.
      */
     public function assertValidationFailed(EventBehavior|array|string $event, ?string $errorKey = null): self
@@ -328,6 +406,44 @@ class TestMachine
     }
 
     // ═══════════════════════════════════════════
+    //  Transition Path Assertions
+    // ═══════════════════════════════════════════
+
+    /**
+     * Assert that the machine transitioned through the given states in order.
+     *
+     * Checks history's machine_value arrays for the expected state names.
+     * Useful for verifying @always router states that appear briefly in history.
+     *
+     * @param  array<string>  $states  Expected states in order
+     */
+    public function assertTransitionedThrough(array $states): self
+    {
+        $visitedStates = [];
+
+        foreach ($this->machine->state->history as $event) {
+            if (isset($event->machine_value)) {
+                foreach ($event->machine_value as $stateValue) {
+                    $segments = explode('.', (string) $stateValue);
+                    foreach ($segments as $segment) {
+                        if (!in_array($segment, $visitedStates, true)) {
+                            $visitedStates[] = $segment;
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach ($states as $expectedState) {
+            expect(in_array($expectedState, $visitedStates, true))->toBeTrue(
+                "Expected machine to have transitioned through [{$expectedState}], visited states: [".implode(', ', $visitedStates).']'
+            );
+        }
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
     //  Path Assertions
     // ═══════════════════════════════════════════
 
@@ -372,6 +488,38 @@ class TestMachine
         return $this;
     }
 
+    /**
+     * Assert that all regions in a parallel state completed (@done fired).
+     *
+     * Checks history for the PARALLEL_DONE internal event. For machines with
+     * a single parallel state, no argument is needed. For machines with multiple
+     * parallel states, pass the parallel state route to disambiguate.
+     */
+    public function assertAllRegionsCompleted(?string $parallelStateRoute = null): self
+    {
+        $machineId = $this->machine->definition->id;
+        $history   = $this->machine->state->history->pluck('type');
+
+        if ($parallelStateRoute !== null) {
+            $expectedEvent = "{$machineId}.parallel.{$parallelStateRoute}.done";
+            expect($history->contains($expectedEvent))->toBeTrue(
+                "Expected all regions of [{$parallelStateRoute}] to complete, but PARALLEL_DONE event [{$expectedEvent}] not found in history"
+            );
+        } else {
+            $prefix = "{$machineId}.parallel.";
+            $suffix = '.done';
+            $found  = $history->contains(
+                fn ($type): bool => str_starts_with((string) $type, $prefix) && str_ends_with((string) $type, $suffix)
+            );
+
+            expect($found)->toBeTrue(
+                'Expected all regions to complete, but no PARALLEL_DONE event found in history'
+            );
+        }
+
+        return $this;
+    }
+
     // ═══════════════════════════════════════════
     //  Behavior Assertions (convenience)
     // ═══════════════════════════════════════════
@@ -386,6 +534,71 @@ class TestMachine
     public function assertBehaviorNotRan(string $class): self
     {
         $class::assertNotRan();
+
+        return $this;
+    }
+
+    public function assertBehaviorRanTimes(string $class, int $times): self
+    {
+        $class::assertRanTimes($times);
+
+        return $this;
+    }
+
+    public function assertBehaviorRanWith(string $class, \Closure $callback): self
+    {
+        $class::assertRanWith($callback);
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Debugging
+    // ═══════════════════════════════════════════
+
+    /**
+     * Debug guard evaluation results for an event.
+     *
+     * Sends the event and inspects history for guard pass/fail events.
+     * Returns an associative array of guard names => bool (true = passed, false = failed).
+     *
+     * @return array<string, bool>
+     */
+    public function debugGuards(EventBehavior|array|string $event): array
+    {
+        $historyCountBefore = count($this->machine->state->history);
+
+        try {
+            $this->send($event);
+        } catch (NoTransitionDefinitionFoundException) {
+            return [];
+        }
+
+        $machineId = $this->machine->state->currentStateDefinition->machine->id;
+        $results   = [];
+
+        $newEvents = $this->machine->state->history->slice($historyCountBefore);
+
+        foreach ($newEvents as $historyEvent) {
+            if (preg_match("/{$machineId}\.guard\.(.+)\.(pass|fail)/", $historyEvent->type, $matches)) {
+                $results[$matches[1]] = $matches[2] === 'pass';
+            }
+        }
+
+        return $results;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Utilities
+    // ═══════════════════════════════════════════
+
+    /**
+     * Execute a callback for side-effect assertions (e.g. Notification::assertSentTo)
+     * while maintaining the fluent chain.
+     */
+    public function tap(callable $callback): self
+    {
+        $callback($this);
 
         return $this;
     }

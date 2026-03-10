@@ -238,9 +238,9 @@ Use `shouldReturn()` to mock guards, `shouldRun()` to verify actions. Assert beh
 <!-- doctest-attr: ignore -->
 ```php
 it('blocks checkout with insufficient total', function () {
-    $context = new ContextManager(['total' => 50]);
+    $state = State::forTesting(['total' => 50, 'minimum' => 100]);
 
-    expect(MinimumOrderGuard::run($context))->toBeFalse();
+    expect(MinimumOrderGuard::runWithState($state))->toBeFalse();
 });
 ```
 

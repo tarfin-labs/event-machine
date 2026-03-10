@@ -94,7 +94,40 @@ ParallelMachine::test()
     ->assertRegionState('inventory', 'checking');
 ```
 
+## Completion Assertions
+
+Verify that all regions reached their final states (i.e., the `@done` transition fired):
+
+<!-- doctest-attr: ignore -->
+```php
+ParallelMachine::test()
+    ->withoutParallelDispatch()
+    ->send('PAYMENT_SUCCESS')
+    ->send('INVENTORY_RESERVE')
+    ->assertAllRegionsCompleted()   // any parallel state's @done
+    ->assertState('fulfilled');
+
+// With explicit parallel state route
+ParallelMachine::test()
+    ->withoutParallelDispatch()
+    ->send('PAYMENT_SUCCESS')
+    ->send('INVENTORY_RESERVE')
+    ->assertAllRegionsCompleted('processing');  // specific parallel state
+```
+
+When not all regions have completed, the assertion fails:
+
+<!-- doctest-attr: ignore -->
+```php
+// Only payment completed — inventory still in 'checking'
+ParallelMachine::test()
+    ->withoutParallelDispatch()
+    ->send('PAYMENT_SUCCESS')
+    ->assertAllRegionsCompleted();  // fails — inventory not final
+```
+
 ::: tip Related
-See [Overview](/testing/overview) for the testing pyramid
-and [TestMachine](/testing/test-machine) for the complete assertion API.
+See [Overview](/testing/overview) for the testing pyramid,
+[TestMachine](/testing/test-machine) for the complete assertion API,
+and [Recipes](/testing/recipes) for common real-world patterns.
 :::
