@@ -21,7 +21,7 @@ use Tarfinlabs\EventMachine\Definition\StateDefinition;
  *
  * Represents a state in an event machine.
  */
-class State
+class State implements \JsonSerializable
 {
     /**
      * Represents the value of the state.
@@ -256,5 +256,28 @@ class State
         $this->value = $values;
 
         return $this;
+    }
+
+    /**
+     * Serialize the state to an array.
+     *
+     * @return array{value: array<string>, context: array<string, mixed>}
+     */
+    public function toArray(): array
+    {
+        return [
+            'value'   => $this->value,
+            'context' => $this->context->toArray(),
+        ];
+    }
+
+    /**
+     * Specify data which should be serialized to JSON.
+     *
+     * @return array{value: array<string>, context: array<string, mixed>}
+     */
+    public function jsonSerialize(): array
+    {
+        return $this->toArray();
     }
 }

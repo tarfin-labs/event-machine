@@ -398,6 +398,57 @@ class ProcessPaymentAction extends ActionBehavior
 <div class="feature-section">
 <div class="feature-text">
 
+## Zero-Boilerplate Endpoints
+
+**Define endpoints in your machine, skip the controllers.** Each event becomes an HTTP endpoint automatically. One `MachineRouter::register()` call replaces dozens of routes and controllers.
+
+Pre-send validation? Post-send cleanup? Exception handling? EndpointActions give you lifecycle hooks without touching machine internals.
+
+[HTTP Endpoints &rarr;](/laravel-integration/endpoints)
+
+</div>
+<div class="feature-code">
+
+<!-- doctest-attr: ignore -->
+```php
+MachineDefinition::define(
+    config: [...],
+    behavior: [...],
+    endpoints: [
+        'SUBMIT'  => null,              // POST /submit
+        'APPROVE' => [
+            'method'     => 'PATCH',
+            'middleware'  => ['auth:admin'],
+            'result'     => 'approvalResult',
+        ],
+        'CANCEL'  => [
+            'action' => CancelEndpointAction::class,
+        ],
+    ],
+);
+```
+
+<!-- doctest-attr: ignore -->
+```php
+// One call generates all routes
+MachineRouter::register(OrderMachine::class, [
+    'prefix'    => 'orders',
+    'model'     => Order::class,
+    'attribute' => 'order_mre',
+    'create'    => true,
+]);
+// POST   /orders/create
+// POST   /orders/{order}/submit
+// PATCH  /orders/{order}/approve
+// POST   /orders/{order}/cancel
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
 ## Archive Millions, Restore Any
 
 **Enterprise-grade event management.** Completed machines pile up? Archive them. Events compressed to a fraction of their size, but fully restorable when needed.
