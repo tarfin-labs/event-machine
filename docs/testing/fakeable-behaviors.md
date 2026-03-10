@@ -85,7 +85,7 @@ OrderMachine::test(['order_id' => 1])
 ::: warning Guards need shouldReturn() after faking()
 Spies return `null` by default. For guards, `null !== false` means the guard **silently passes** — the engine only blocks on an explicit `false` return. Always call `shouldReturn()` after faking a guard:
 
-```php
+```php ignore
 ->faking([IsValidGuard::class])
 // Without this, the guard always passes (null is not false):
 IsValidGuard::shouldReturn(false);
