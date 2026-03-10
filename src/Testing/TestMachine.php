@@ -48,9 +48,10 @@ class TestMachine
      */
     public static function define(array $config, array $behavior = []): self
     {
-        $definition     = MachineDefinition::define(config: $config, behavior: $behavior);
-        $machine        = Machine::withDefinition($definition);
-        $machine->state = $definition->getInitialState();
+        $definition                = MachineDefinition::define(config: $config, behavior: $behavior);
+        $definition->shouldPersist = false;
+        $machine                   = Machine::withDefinition($definition);
+        $machine->state            = $definition->getInitialState();
 
         return new self($machine);
     }

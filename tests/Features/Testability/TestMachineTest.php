@@ -47,6 +47,15 @@ it('creates TestMachine via define() for inline definitions', function (): void 
     $test->send('GO')->assertState('active');
 });
 
+it('auto-disables persistence in define()', function (): void {
+    $test = TestMachine::define([
+        'initial' => 'idle',
+        'states'  => ['idle' => []],
+    ]);
+
+    expect($test->machine()->definition->shouldPersist)->toBeFalse();
+});
+
 it('wraps existing machine via for()', function (): void {
     $machine = TrafficLightsMachine::create();
     $test    = TestMachine::for($machine);
