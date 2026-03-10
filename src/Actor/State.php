@@ -57,6 +57,12 @@ class State
      */
     protected function updateMachineValueFromState(): void
     {
+        if (!$this->currentStateDefinition instanceof \Tarfinlabs\EventMachine\Definition\StateDefinition) {
+            $this->value = [];
+
+            return;
+        }
+
         if ($this->currentStateDefinition->type === StateDefinitionType::PARALLEL) {
             // For parallel states, collect all initial states from all regions
             $this->value = array_map(
@@ -66,6 +72,30 @@ class State
         } else {
             $this->value = [$this->currentStateDefinition->id];
         }
+    }
+
+    /**
+     * Create a lightweight State instance for testing without a full MachineDefinition.
+     *
+     * @param  array|ContextManager  $context  Context data as an array or ContextManager instance.
+     * @param  StateDefinition|null  $currentStateDefinition  Optional state definition.
+     * @param  EventBehavior|null  $currentEventBehavior  Optional event behavior.
+     */
+    public static function forTesting(
+        array|ContextManager $context = [],
+        ?StateDefinition $currentStateDefinition = null,
+        ?EventBehavior $currentEventBehavior = null,
+    ): self {
+        $contextManager = $context instanceof ContextManager
+            ? $context
+            : new ContextManager($context);
+
+        return new self(
+            context: $contextManager,
+            currentStateDefinition: $currentStateDefinition,
+            currentEventBehavior: $currentEventBehavior,
+            history: new EventCollection(),
+        );
     }
 
     /**
