@@ -224,59 +224,11 @@ class SendReceiptAction extends ActionBehavior
 <div class="feature-section">
 <div class="feature-text">
 
-## Testable Behaviors
+## Test Everything, Fluently
 
-**Mock, assert, verify.** Every behavior supports faking for isolated unit tests. No more integration tests for simple business logic.
+**From unit tests to full workflows — one expressive API.** Test individual behaviors in isolation with `runWithState()`, or chain entire machine lifecycles with `Machine::test()` and 21+ assertion methods.
 
-Use `shouldReturn()` to mock guards, `shouldRun()` to verify actions. Assert behaviors ran or didn't. Full Mockery integration built-in.
-
-[Testing behaviors &rarr;](/testing/fakeable-behaviors)
-
-</div>
-<div class="feature-code">
-
-<!-- doctest-attr: ignore -->
-```php
-it('blocks checkout with insufficient total', function () {
-    $state = State::forTesting(['total' => 50, 'minimum' => 100]);
-
-    expect(MinimumOrderGuard::runWithState($state))->toBeFalse();
-});
-```
-
-<!-- doctest-attr: ignore -->
-```php
-it('sends receipt on checkout', function () {
-    SendReceiptAction::shouldRun()->once();
-
-    $machine->send(['type' => 'CHECKOUT']);
-
-    SendReceiptAction::assertRan();
-});
-```
-
-<!-- doctest-attr: ignore -->
-```php
-it('can mock guard to always pass', function () {
-    MinimumOrderGuard::shouldReturn(true);
-
-    $machine->send(['type' => 'CHECKOUT']);
-
-    expect($machine->state->matches('processing'))->toBeTrue();
-});
-```
-
-</div>
-</div>
-
-<div class="feature-section">
-<div class="feature-text">
-
-## Fluent Machine Testing
-
-**Test entire workflows in a single chain.** `Machine::test()` gives you a Livewire-style fluent API with 21+ assertion methods and contextual failure messages.
-
-Send events, assert states, check context, verify guards, fake behaviors — all in one readable chain. No database needed.
+Fake behaviors, assert guards, verify paths, check context — all with contextual failure messages. No database needed.
 
 [Testing guide &rarr;](/testing/overview)
 
@@ -285,17 +237,15 @@ Send events, assert states, check context, verify guards, fake behaviors — all
 
 <!-- doctest-attr: ignore -->
 ```php
+// Machine-level: fluent lifecycle testing
 OrderMachine::test(['amount' => 100])
     ->withoutPersistence()
     ->faking([SendEmailAction::class])
     ->send('SUBMIT')
     ->assertState('awaiting_payment')
-    ->assertContext('amount', 100)
     ->send('PAY')
     ->assertState('preparing')
     ->assertBehaviorRan(SendEmailAction::class)
-    ->send('SHIP')
-    ->assertState('shipped')
     ->send('DELIVER')
     ->assertState('delivered')
     ->assertFinished();
@@ -303,17 +253,14 @@ OrderMachine::test(['amount' => 100])
 
 <!-- doctest-attr: ignore -->
 ```php
-// Test guard blocking
+// Unit-level: isolated behavior testing
+$state = State::forTesting(['total' => 50]);
+expect(MinimumOrderGuard::runWithState($state))->toBeFalse();
+
+// Guard and path assertions
 OrderMachine::test(['amount' => 0])
     ->assertGuarded('SUBMIT')
     ->assertGuardedBy('SUBMIT', MinimumAmountGuard::class);
-
-// Test full path with context assertions
-OrderMachine::test()
-    ->assertPath([
-        ['event' => 'SUBMIT', 'state' => 'review'],
-        ['event' => 'APPROVE', 'state' => 'approved', 'context' => ['approved' => true]],
-    ]);
 ```
 
 </div>
