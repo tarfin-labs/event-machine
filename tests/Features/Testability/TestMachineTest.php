@@ -208,6 +208,27 @@ it('asserts behavior was not run', function (): void {
         ->assertBehaviorNotRan(IncrementAction::class);
 });
 
+// ─── Edge cases ─────────────────────────────────────────────
+
+it('handles empty steps in assertPath', function (): void {
+    $test = TrafficLightsMachine::test()
+        ->assertPath([]);
+
+    $test->assertState('active');
+});
+
+it('handles empty subset in assertContextIncludes', function (): void {
+    $test = TrafficLightsMachine::test()
+        ->assertContextIncludes([]);
+
+    $test->assertContextHas('count');
+});
+
+it('assertFinished fails when not in final state', function (): void {
+    expect(fn () => TrafficLightsMachine::test()->assertFinished())
+        ->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
+});
+
 // ─── withoutPersistence() ────────────────────────────────────
 
 it('disables persistence', function (): void {
