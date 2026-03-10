@@ -23,7 +23,7 @@ class ContextManager extends Data
     /**
      * Create a new ContextManager instance.
      *
-     * @param  \Spatie\LaravelData\Optional|array  $data  An optional initial array of key-value pairs.
+     * @param  Optional|array  $data  An optional initial array of key-value pairs.
      */
     public function __construct(
         #[ArrayType]

@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
+use Spatie\LaravelData\Optional;
+use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\AddValueEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\IncreaseEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\AddValueAction;
 
 // ─── Basic factory usage ─────────────────────────────────────
 
@@ -58,16 +62,16 @@ it('returns an instance of the concrete event class', function (): void {
 // ─── Integration with runWithState ───────────────────────────
 
 it('can be used with runWithState', function (): void {
-    $state = \Tarfinlabs\EventMachine\Actor\State::forTesting(
-        new \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext(
+    $state = State::forTesting(
+        new TrafficLightsContext(
             count: 10,
-            modelA: new \Spatie\LaravelData\Optional(),
+            modelA: new Optional(),
         )
     );
 
     $event = AddValueEvent::forTesting(['payload' => ['value' => 5]]);
 
-    \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\AddValueAction::runWithState($state, eventBehavior: $event);
+    AddValueAction::runWithState($state, eventBehavior: $event);
 
     expect($state->context->count)->toBe(15);
 });

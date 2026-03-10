@@ -43,7 +43,7 @@ test('default after is a no-op and does not throw', function (): void {
 test('default onException returns null', function (): void {
     $action = new class() extends MachineEndpointAction {};
 
-    $result = $action->onException(new \RuntimeException('test error'));
+    $result = $action->onException(new RuntimeException('test error'));
 
     expect($result)->toBeNull();
 });
@@ -74,7 +74,7 @@ test('TestEndpointAction onException captures exception and returns null', funct
     TestEndpointAction::reset();
 
     $action    = new TestEndpointAction();
-    $exception = new \RuntimeException('test exception');
+    $exception = new RuntimeException('test exception');
 
     $result = $action->onException($exception);
 
@@ -87,7 +87,7 @@ test('TestEndpointAction reset clears all static flags', function (): void {
     // Set all flags
     TestEndpointAction::$beforeCalled  = true;
     TestEndpointAction::$afterCalled   = true;
-    TestEndpointAction::$lastException = new \RuntimeException('x');
+    TestEndpointAction::$lastException = new RuntimeException('x');
 
     TestEndpointAction::reset();
 

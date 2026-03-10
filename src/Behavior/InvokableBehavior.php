@@ -47,7 +47,7 @@ abstract class InvokableBehavior
     /**
      * Raises an event by adding it to the event queue.
      *
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|array  $eventBehavior  The event definition object to be raised.
+     * @param  EventBehavior|array  $eventBehavior  The event definition object to be raised.
      */
     public function raise(EventBehavior|array $eventBehavior): void
     {

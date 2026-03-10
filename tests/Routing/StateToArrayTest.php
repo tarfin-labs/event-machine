@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Events\SimpleEvent;
 
 // === toArray ===
 
@@ -19,7 +21,7 @@ test('toArray returns value and context arrays', function (): void {
 });
 
 test('toArray returns state value when currentStateDefinition is set', function (): void {
-    $definition = \Tarfinlabs\EventMachine\Definition\MachineDefinition::define(
+    $definition = MachineDefinition::define(
         config: [
             'id'      => 'toarray_test',
             'initial' => 'idle',
@@ -33,7 +35,7 @@ test('toArray returns state value when currentStateDefinition is set', function 
         ],
         behavior: [
             'events' => [
-                'GO' => \Tarfinlabs\EventMachine\Tests\Stubs\Events\SimpleEvent::class,
+                'GO' => SimpleEvent::class,
             ],
         ],
     );

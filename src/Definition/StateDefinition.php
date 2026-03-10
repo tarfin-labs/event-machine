@@ -57,7 +57,7 @@ class StateDefinition
     /**
      * The transition definitions of this state definition.
      *
-     * @var null|array<\Tarfinlabs\EventMachine\Definition\TransitionDefinition>
+     * @var null|array<TransitionDefinition>
      */
     public ?array $transitionDefinitions = null;
 
@@ -93,7 +93,7 @@ class StateDefinition
 
     /**
      * The meta data associated with this state definition,
-     * which will be returned in {@see \Tarfinlabs\EventMachine\Actor\State} instances.
+     * which will be returned in {@see State} instances.
      *
      * @var null|array<mixed>
      */
@@ -239,7 +239,7 @@ class StateDefinition
      * Create transition definitions for a given state definition.
      *
      * This method processes the 'on' configuration of the state definition, creating
-     * corresponding {@see \Tarfinlabs\EventMachine\Definition\TransitionDefinition} objects for
+     * corresponding {@see TransitionDefinition} objects for
      * each event.
      *
      * @param  StateDefinition  $stateDefinition  The state definition to process.
@@ -308,7 +308,7 @@ class StateDefinition
         $initialStateDefinitionKey = $this->id.$this->machine->delimiter.$initialStateDefinitionKey;
 
         // Try to find the initial state definition in the machine's id map.
-        /** @var \Tarfinlabs\EventMachine\Definition\StateDefinition $initialStateDefinition */
+        /** @var StateDefinition $initialStateDefinition */
         $initialStateDefinition = $this->machine->idMap[$initialStateDefinitionKey] ?? null;
 
         if ($initialStateDefinition === null) {
@@ -533,7 +533,7 @@ class StateDefinition
     /**
      * Runs the entry actions of the current state definition with the given event.
      *
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|null  $eventBehavior  The event to be processed.
+     * @param  EventBehavior|null  $eventBehavior  The event to be processed.
      */
     public function runEntryActions(State $state, ?EventBehavior $eventBehavior = null): void
     {

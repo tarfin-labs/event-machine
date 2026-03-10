@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Bus;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EFailMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EBasicMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EChainedMachine;
@@ -18,6 +19,8 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2ESingleEntryMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EThreeRegionMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EContextConflictMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionAAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionBAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithRaiseMachine;
 
 uses(RefreshDatabase::class);
@@ -345,7 +348,7 @@ it('transitions to error state when region job fails via onFail', function (): v
 
     try {
         $machine->dispatchPendingParallelJobs();
-    } catch (\RuntimeException) {
+    } catch (RuntimeException) {
         // Expected — sync driver rethrows after calling failed()
     }
 
@@ -362,7 +365,7 @@ it('records PARALLEL_FAIL event in machine history', function (): void {
 
     try {
         $machine->dispatchPendingParallelJobs();
-    } catch (\RuntimeException) {
+    } catch (RuntimeException) {
         // Expected
     }
 
@@ -389,7 +392,7 @@ it('does not set context from failing region action', function (): void {
 
     try {
         $machine->dispatchPendingParallelJobs();
-    } catch (\RuntimeException) {
+    } catch (RuntimeException) {
         // Expected
     }
 
@@ -411,7 +414,7 @@ it('prevents subsequent region jobs from running after onFail transition', funct
 
     try {
         $machine->dispatchPendingParallelJobs();
-    } catch (\RuntimeException) {
+    } catch (RuntimeException) {
         // Expected
     }
 
@@ -755,7 +758,7 @@ it('validates config requires should_persist and Machine subclass for dispatch',
 
     // MachineDefinition::define (not a Machine subclass) → shouldDispatchParallel = false
     // even with dispatch enabled
-    $definition = \Tarfinlabs\EventMachine\Definition\MachineDefinition::define(
+    $definition = MachineDefinition::define(
         config: [
             'id'             => 'inline_parallel',
             'initial'        => 'processing',
@@ -773,7 +776,7 @@ it('validates config requires should_persist and Machine subclass for dispatch',
                             'initial' => 'working',
                             'states'  => [
                                 'working' => [
-                                    'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionAAction::class,
+                                    'entry' => ProcessRegionAAction::class,
                                     'on'    => ['REGION_A_PROCESSED' => 'finished'],
                                 ],
                                 'finished' => ['type' => 'final'],
@@ -783,7 +786,7 @@ it('validates config requires should_persist and Machine subclass for dispatch',
                             'initial' => 'working',
                             'states'  => [
                                 'working' => [
-                                    'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionBAction::class,
+                                    'entry' => ProcessRegionBAction::class,
                                     'on'    => ['REGION_B_PROCESSED' => 'finished'],
                                 ],
                                 'finished' => ['type' => 'final'],
@@ -932,7 +935,7 @@ it('handles dual region failure with single onFail transition', function (): voi
     // Sync driver: first failing job's exception is rethrown after failed() handler runs
     try {
         $machine->dispatchPendingParallelJobs();
-    } catch (\RuntimeException) {
+    } catch (RuntimeException) {
         // Expected — sync driver rethrows after calling failed()
     }
 
@@ -957,7 +960,7 @@ it('records exactly one PARALLEL_FAIL event when both regions fail', function ()
     // Sync driver: first job's exception is rethrown after failed() runs
     try {
         $machine->dispatchPendingParallelJobs();
-    } catch (\RuntimeException) {
+    } catch (RuntimeException) {
         // Expected
     }
 

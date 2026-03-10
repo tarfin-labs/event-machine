@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Tests;
 use RuntimeException;
 use Mockery\MockInterface;
 use Tarfinlabs\EventMachine\ContextManager;
+use Mockery\Exception\InvalidCountException;
 use Tarfinlabs\EventMachine\Facades\EventMachine;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
@@ -221,7 +222,7 @@ it('verifies expectation counts accurately', function (): void {
 
     // Should fail if we don't call it a third time
     expect(fn () => TestIncrementAction::getFake()->mockery_verify())
-        ->toThrow(\Mockery\Exception\InvalidCountException::class);
+        ->toThrow(InvalidCountException::class);
 });
 
 // endregion

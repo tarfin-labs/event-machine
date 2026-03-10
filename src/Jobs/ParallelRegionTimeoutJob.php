@@ -8,12 +8,14 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
+use Tarfinlabs\EventMachine\Definition\StateDefinition;
 
 /**
  * Delayed check job that detects stuck parallel states.
@@ -134,8 +136,8 @@ class ParallelRegionTimeoutJob implements ShouldQueue
      * @return array<int, string>
      */
     private function findStalledRegions(
-        \Tarfinlabs\EventMachine\Actor\Machine $machine,
-        \Tarfinlabs\EventMachine\Definition\StateDefinition $parallelState,
+        Machine $machine,
+        StateDefinition $parallelState,
     ): array {
         $stalledRegions = [];
 

@@ -701,7 +701,7 @@ test('docs example: guards checking cross-region state', function (): void {
         $state = $definition->transition(['type' => 'PROCEED'], $state);
         // Guard should block this
         expect($state->matches('parallel.region1.waiting'))->toBeTrue();
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         // Guard blocked the transition - this is expected
     }
 

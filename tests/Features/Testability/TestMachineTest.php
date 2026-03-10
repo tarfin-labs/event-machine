@@ -2,12 +2,16 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
+use PHPUnit\Framework\ExpectationFailedException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\MachineWithScenarios;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\TestabilityMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\IncreaseEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\ParallelCompletionMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\IncrementAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\AllInvocationPointsMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Guards\IsCountPositiveGuard;
@@ -135,7 +139,7 @@ it('asserts context key is absent with assertContextMissing', function (): void 
 
 it('assertContextMissing fails when key exists', function (): void {
     expect(fn () => TrafficLightsMachine::test()->assertContextMissing('count'))
-        ->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
+        ->toThrow(ExpectationFailedException::class);
 });
 
 it('asserts context matches callback', function (): void {
@@ -261,7 +265,7 @@ it('assertFinished passes when in final state', function (): void {
 
 it('assertFinished fails when not in final state', function (): void {
     expect(fn () => TrafficLightsMachine::test()->assertFinished())
-        ->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
+        ->toThrow(ExpectationFailedException::class);
 });
 
 it('asserts result value with assertResult', function (): void {
@@ -297,13 +301,13 @@ it('assertValidationFailed checks specific error key', function (): void {
     // IsEvenGuard error key contains the guard event type pattern
     // We just verify the assertion does not throw when a key is present
     expect(fn () => $test->assertValidationFailed('MULTIPLY', 'nonexistent_key'))
-        ->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
+        ->toThrow(ExpectationFailedException::class);
 });
 
 it('assertValidationFailed fails when no exception is thrown', function (): void {
     // count=0 is even, so IsEvenGuard passes — no MachineValidationException
     expect(fn () => TrafficLightsMachine::test()->assertValidationFailed('MULTIPLY'))
-        ->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
+        ->toThrow(ExpectationFailedException::class);
 });
 
 // ─── withoutPersistence() ────────────────────────────────────
@@ -321,8 +325,8 @@ it('provides access to machine, state, and context', function (): void {
     $test = TrafficLightsMachine::test();
 
     expect($test->machine())->toBeInstanceOf(Machine::class);
-    expect($test->state())->toBeInstanceOf(\Tarfinlabs\EventMachine\Actor\State::class);
-    expect($test->context())->toBeInstanceOf(\Tarfinlabs\EventMachine\ContextManager::class);
+    expect($test->state())->toBeInstanceOf(State::class);
+    expect($test->context())->toBeInstanceOf(ContextManager::class);
 });
 
 // ─── Cleanup ─────────────────────────────────────────────────
@@ -401,7 +405,7 @@ it('asserts event is guarded by a specific FQCN guard', function (): void {
 it('assertGuardedBy fails when guard passes', function (): void {
     expect(fn () => AllInvocationPointsMachine::test(['count' => 5])
         ->assertGuardedBy('PROCESS', IsCountPositiveGuard::class)
-    )->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
+    )->toThrow(ExpectationFailedException::class);
 });
 
 // ─── withScenario() ─────────────────────────────────────────
@@ -440,7 +444,7 @@ it('assertTransitionedThrough enforces order', function (): void {
     expect(fn () => AllInvocationPointsMachine::test()
         ->send('PROCESS')
         ->assertTransitionedThrough(['active', 'idle'])
-    )->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
+    )->toThrow(ExpectationFailedException::class);
 });
 
 // ─── debugGuards() ──────────────────────────────────────────
@@ -472,7 +476,7 @@ it('debugGuards returns empty array for unknown events', function (): void {
 // ─── assertAllRegionsCompleted() ─────────────────────────────
 
 it('asserts all parallel regions completed', function (): void {
-    \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\ParallelCompletionMachine::test()
+    ParallelCompletionMachine::test()
         ->withoutPersistence()
         ->withoutParallelDispatch()
         ->send('PAYMENT_SUCCESS')
@@ -482,7 +486,7 @@ it('asserts all parallel regions completed', function (): void {
 });
 
 it('asserts all parallel regions completed with explicit route', function (): void {
-    \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\ParallelCompletionMachine::test()
+    ParallelCompletionMachine::test()
         ->withoutPersistence()
         ->withoutParallelDispatch()
         ->send('PAYMENT_SUCCESS')
@@ -492,12 +496,12 @@ it('asserts all parallel regions completed with explicit route', function (): vo
 });
 
 it('assertAllRegionsCompleted fails when not all regions are final', function (): void {
-    expect(fn () => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\ParallelCompletionMachine::test()
+    expect(fn () => ParallelCompletionMachine::test()
         ->withoutPersistence()
         ->withoutParallelDispatch()
         ->send('PAYMENT_SUCCESS')
         ->assertAllRegionsCompleted()
-    )->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
+    )->toThrow(ExpectationFailedException::class);
 });
 
 // ─── Cleanup ─────────────────────────────────────────────────

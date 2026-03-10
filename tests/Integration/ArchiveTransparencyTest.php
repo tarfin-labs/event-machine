@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
@@ -9,6 +10,7 @@ use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 use Tarfinlabs\EventMachine\Support\CompressionManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 
 describe('Archive Transparency Integration', function (): void {
     beforeEach(function (): void {
@@ -89,7 +91,7 @@ describe('Archive Transparency Integration', function (): void {
         // This should transparently restore from archive
         $state = $machine->restoreStateFromRootEventId($rootEventId);
 
-        expect($state)->toBeInstanceOf(\Tarfinlabs\EventMachine\Actor\State::class);
+        expect($state)->toBeInstanceOf(State::class);
         expect($state->history)->toHaveCount(2);
         expect($state->history->first()->type)->toBe('machine.start');
         expect($state->history->last()->type)->toBe('machine.process');
@@ -182,6 +184,6 @@ describe('Archive Transparency Integration', function (): void {
         $machine = Machine::withDefinition($machineDefinition);
 
         expect(fn () => $machine->restoreStateFromRootEventId($rootEventId))
-            ->toThrow(\Tarfinlabs\EventMachine\Exceptions\RestoringStateException::class, 'Machine state is not found.');
+            ->toThrow(RestoringStateException::class, 'Machine state is not found.');
     });
 });

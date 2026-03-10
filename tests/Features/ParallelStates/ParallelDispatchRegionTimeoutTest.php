@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -270,7 +271,7 @@ it('does not dispatch timeout job when region_timeout is 0', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
     config()->set('machine.parallel_dispatch.region_timeout', 0);
 
-    \Illuminate\Support\Facades\Queue::fake();
+    Queue::fake();
 
     $machine = ParallelDispatchWithFailMachine::create();
     $machine->persist();
@@ -284,15 +285,15 @@ it('does not dispatch timeout job when region_timeout is 0', function (): void {
 
     $machine->dispatchPendingParallelJobs();
 
-    \Illuminate\Support\Facades\Queue::assertPushed(ParallelRegionJob::class);
-    \Illuminate\Support\Facades\Queue::assertNotPushed(ParallelRegionTimeoutJob::class);
+    Queue::assertPushed(ParallelRegionJob::class);
+    Queue::assertNotPushed(ParallelRegionTimeoutJob::class);
 });
 
 it('dispatches timeout job when region_timeout is configured', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
     config()->set('machine.parallel_dispatch.region_timeout', 120);
 
-    \Illuminate\Support\Facades\Queue::fake();
+    Queue::fake();
 
     $machine = ParallelDispatchWithFailMachine::create();
     $machine->persist();
@@ -310,9 +311,9 @@ it('dispatches timeout job when region_timeout is configured', function (): void
 
     $machine->dispatchPendingParallelJobs();
 
-    \Illuminate\Support\Facades\Queue::assertPushed(ParallelRegionJob::class, 2);
+    Queue::assertPushed(ParallelRegionJob::class, 2);
     // Only ONE timeout job per parallel state, not per region
-    \Illuminate\Support\Facades\Queue::assertPushed(ParallelRegionTimeoutJob::class, 1);
+    Queue::assertPushed(ParallelRegionTimeoutJob::class, 1);
 });
 
 // ============================================================

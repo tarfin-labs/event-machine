@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Events\CallerEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Events\MachineRegisteredEvent;
+use Tarfinlabs\EventMachine\Exceptions\MachineEventValidationException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\EventResolution\EventResolutionMachine;
 
 // ============================================================
@@ -139,7 +140,7 @@ it('machine validates with registered class rules when caller bypasses validatio
 
     expect($resolved)->toBeInstanceOf(MachineRegisteredEvent::class);
     expect(fn () => $resolved->selfValidate())->toThrow(
-        \Tarfinlabs\EventMachine\Exceptions\MachineEventValidationException::class
+        MachineEventValidationException::class
     );
 });
 

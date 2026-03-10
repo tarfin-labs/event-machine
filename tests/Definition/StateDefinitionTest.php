@@ -590,7 +590,7 @@ test('a machine can have outputs on final states', function (string $eventType):
 
     $machine->send($eventType);
 
-    /** @var \Illuminate\Support\Carbon $result */
+    /** @var Carbon $result */
     $result = $machine->result();
 
     expect($result->toDateTimeString())->toBe($now->toDateTimeString());

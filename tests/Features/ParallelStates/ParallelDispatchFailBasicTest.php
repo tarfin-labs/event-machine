@@ -27,7 +27,7 @@ it('region job fails with onFail → transitions to error state', function (): v
         initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
 
-    $job->failed(new \RuntimeException('API timeout'));
+    $job->failed(new RuntimeException('API timeout'));
 
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
     expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
@@ -49,7 +49,7 @@ it('region job fails without onFail → machine stays in parallel', function ():
         initialStateId: 'parallel_dispatch.processing.region_a.working',
     );
 
-    $job->failed(new \RuntimeException('API timeout'));
+    $job->failed(new RuntimeException('API timeout'));
 
     // Machine stays in parallel (no onFail target to transition to)
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
@@ -76,7 +76,7 @@ it('@fail payload contains failure details', function (): void {
         initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
 
-    $job->failed(new \RuntimeException('Connection timeout'));
+    $job->failed(new RuntimeException('Connection timeout'));
 
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
 

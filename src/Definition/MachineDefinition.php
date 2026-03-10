@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Definition;
 
+use Mockery\MockInterface;
+use Spatie\LaravelData\Optional;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Actor\State;
@@ -79,7 +81,7 @@ class MachineDefinition
     /** Pending parallel region dispatches (consumed by Machine::send after persist). */
     public array $pendingParallelDispatches = [];
 
-    /** @var array<string, \Tarfinlabs\EventMachine\Routing\EndpointDefinition>|null Parsed endpoint definitions. */
+    /** @var array<string, EndpointDefinition>|null Parsed endpoint definitions. */
     public ?array $parsedEndpoints = null;
 
     // endregion
@@ -592,7 +594,7 @@ class MachineDefinition
      * @param  string  $behaviorDefinition  The behavior definition to look up.
      * @param  BehaviorType  $behaviorType  The type of the behavior (e.g., guard or action).
      *
-     * @return callable|\Tarfinlabs\EventMachine\Behavior\InvokableBehavior|null The invokable behavior instance or callable, or null if not found.
+     * @return callable|InvokableBehavior|null The invokable behavior instance or callable, or null if not found.
      */
     public function getInvokableBehavior(string $behaviorDefinition, BehaviorType $behaviorType): null|callable|InvokableBehavior
     {
@@ -684,10 +686,10 @@ class MachineDefinition
         // Different class — re-instantiate with machine's registered class, preserving metadata
         return new $registeredClass(
             type: $typeString,
-            payload: $event->payload instanceof \Spatie\LaravelData\Optional ? null : $event->payload,
+            payload: $event->payload instanceof Optional ? null : $event->payload,
             isTransactional: $event->isTransactional,
             actor: $event->actor($state->context),
-            version: $event->version instanceof \Spatie\LaravelData\Optional ? 1 : $event->version,
+            version: $event->version instanceof Optional ? 1 : $event->version,
             source: $event->source,
         );
     }
@@ -781,13 +783,13 @@ class MachineDefinition
      * definition in the parent state definition. If no transition definition is found and the current
      * state definition is not the initial state, throw an exception.
      *
-     * @param  \Tarfinlabs\EventMachine\Definition\StateDefinition  $currentStateDefinition  The current state definition.
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior  $eventBehavior  The event behavior.
+     * @param  StateDefinition  $currentStateDefinition  The current state definition.
+     * @param  EventBehavior  $eventBehavior  The event behavior.
      * @param  string|null  $firstStateDefinitionId  The ID of the first state definition encountered during recursion.
      *
-     * @return \Tarfinlabs\EventMachine\Definition\TransitionDefinition|null The found transition definition, or null if none is found.
+     * @return TransitionDefinition|null The found transition definition, or null if none is found.
      *
-     * @throws \Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException If no transition definition is found for the event type.
+     * @throws NoTransitionDefinitionFoundException If no transition definition is found for the event type.
      */
     protected function findTransitionDefinition(
         StateDefinition $currentStateDefinition,
@@ -822,10 +824,10 @@ class MachineDefinition
      *
      * Used for parallel states where an event might not be handled by all regions.
      *
-     * @param  \Tarfinlabs\EventMachine\Definition\StateDefinition  $currentStateDefinition  The current state definition.
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior  $eventBehavior  The event behavior.
+     * @param  StateDefinition  $currentStateDefinition  The current state definition.
+     * @param  EventBehavior  $eventBehavior  The event behavior.
      *
-     * @return \Tarfinlabs\EventMachine\Definition\TransitionDefinition|null The found transition definition, or null if none is found.
+     * @return TransitionDefinition|null The found transition definition, or null if none is found.
      */
     protected function findTransitionDefinitionOrNull(
         StateDefinition $currentStateDefinition,
@@ -1790,7 +1792,7 @@ class MachineDefinition
             shouldLog: $shouldLog,
         );
 
-        if ($actionBehavior instanceof InvokableBehavior && !$actionBehavior instanceof \Mockery\MockInterface) {
+        if ($actionBehavior instanceof InvokableBehavior && !$actionBehavior instanceof MockInterface) {
             $actionBehavior::validateRequiredContext($state->context);
         }
 

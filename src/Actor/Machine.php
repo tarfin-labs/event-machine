@@ -14,6 +14,7 @@ use Tarfinlabs\EventMachine\Casts\MachineCast;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Support\ArrayUtils;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Illuminate\Contracts\Database\Eloquent\Castable;
@@ -112,8 +113,8 @@ class Machine implements Castable, JsonSerializable, Stringable
      * provided definition and state. If the definition is `null`, it attempts
      * to retrieve the definition using the `definition()` method.
      *
-     * @param  \Tarfinlabs\EventMachine\Definition\MachineDefinition|array|null  $definition  The definition to initialize the machine with.
-     * @param  \Tarfinlabs\EventMachine\Actor\State|string|null  $state  The initial state of the machine.
+     * @param  MachineDefinition|array|null  $definition  The definition to initialize the machine with.
+     * @param  State|string|null  $state  The initial state of the machine.
      *
      * @return self The newly created and initialized machine instance.
      */
@@ -144,9 +145,9 @@ class Machine implements Castable, JsonSerializable, Stringable
      *
      * @param  array  $context  Optional context overrides applied post-initialization.
      */
-    public static function test(array $context = []): \Tarfinlabs\EventMachine\Testing\TestMachine
+    public static function test(array $context = []): TestMachine
     {
-        return \Tarfinlabs\EventMachine\Testing\TestMachine::create(static::class, $context);
+        return TestMachine::create(static::class, $context);
     }
 
     /**
@@ -157,9 +158,9 @@ class Machine implements Castable, JsonSerializable, Stringable
      *
      * @param  array  $context  Context values to inject before machine start.
      */
-    public static function withContext(array $context): \Tarfinlabs\EventMachine\Testing\TestMachine
+    public static function withContext(array $context): TestMachine
     {
-        return \Tarfinlabs\EventMachine\Testing\TestMachine::withContext(static::class, $context);
+        return TestMachine::withContext(static::class, $context);
     }
 
     /**
@@ -169,7 +170,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * it uses the machine's initial state. If a string is provided, it restores
      * the state using the `restoreStateFromRootEventId()` method.
      *
-     * @param  \Tarfinlabs\EventMachine\Actor\State|string|null  $state  The initial state or root event identifier.
+     * @param  State|string|null  $state  The initial state or root event identifier.
      *
      * @return self The started machine instance.
      */
@@ -195,11 +196,11 @@ class Machine implements Castable, JsonSerializable, Stringable
      * updates the machine's state and handles validation guards. If the event
      * should be persisted, it calls the `persist()` method.
      *
-     * @param  \Tarfinlabs\EventMachine\Behavior\EventBehavior|array|string  $event  The event to send to the machine.
+     * @param  EventBehavior|array|string  $event  The event to send to the machine.
      *
      * @return State The updated state of the machine.
      *
-     * @throws \Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException
+     * @throws MachineAlreadyRunningException
      */
     public function send(
         EventBehavior|array|string $event,

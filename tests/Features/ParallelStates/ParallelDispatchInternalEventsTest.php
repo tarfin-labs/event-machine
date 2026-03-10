@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\ContextManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -54,7 +55,7 @@ test('internal raised events take priority over external events (SCXML test421)'
         ],
         behavior: [
             'actions' => [
-                'logInternalAction' => function (\Tarfinlabs\EventMachine\ContextManager $context): void {
+                'logInternalAction' => function (ContextManager $context): void {
                     $context->set('internal_transition', true);
                 },
             ],

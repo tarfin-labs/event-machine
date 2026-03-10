@@ -211,13 +211,13 @@ test('endpoint action onException is called when machine send throws', function 
     try {
         $this->withoutExceptionHandling();
         $this->postJson('/api/throwing/start');
-    } catch (\RuntimeException) {
+    } catch (RuntimeException) {
         // Expected: onException returns null so exception is re-thrown
     }
 
     // onException should have been called with the RuntimeException
     expect(TestEndpointAction::$lastException)->not->toBeNull()
-        ->and(TestEndpointAction::$lastException)->toBeInstanceOf(\RuntimeException::class)
+        ->and(TestEndpointAction::$lastException)->toBeInstanceOf(RuntimeException::class)
         ->and(TestEndpointAction::$lastException->getMessage())->toBe('Action blew up');
 });
 
@@ -228,5 +228,5 @@ test('endpoint action onException re-throws when returning null', function (): v
     $this->withoutExceptionHandling();
 
     expect(fn () => $this->postJson('/api/throwing/start'))
-        ->toThrow(\RuntimeException::class, 'Action blew up');
+        ->toThrow(RuntimeException::class, 'Action blew up');
 });

@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\StateConfigValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
 use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
@@ -268,7 +269,7 @@ it('createEventBehavior returns EventBehavior instance', function (): void {
         $state
     );
 
-    expect($eventBehavior)->toBeInstanceOf(\Tarfinlabs\EventMachine\Behavior\EventBehavior::class);
+    expect($eventBehavior)->toBeInstanceOf(EventBehavior::class);
     expect($eventBehavior->type)->toBe('GO');
 });
 

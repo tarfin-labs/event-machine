@@ -43,7 +43,7 @@ it('send() does not dispatch pending parallel jobs when persist fails', function
     //    finally block runs dispatchPendingParallelJobs()
     try {
         $machine->send('REGION_A_DONE');
-    } catch (\Throwable) {
+    } catch (Throwable) {
         // Expected — persist fails because machine_events table is dropped
     }
 

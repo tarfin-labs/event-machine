@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Mockery\MockInterface;
 use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Guards\IsEvenGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
@@ -54,7 +55,7 @@ it('creates a proper spy when spy() is called after fake()', function (): void {
     $spy = IncrementAction::spy();
 
     // spy() after fake() should create a real spy (allows all calls), not return the strict mock
-    $ctx = Mockery::mock(\Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext::class);
+    $ctx = Mockery::mock(TrafficLightsContext::class);
     // A spy allows all calls silently — this should NOT throw BadMethodCallException
     $spy->__invoke($ctx);
     IncrementAction::assertRan();
@@ -231,7 +232,7 @@ it('resolves fresh instance from container after resetFakes()', function (): voi
 
     $resolved = App::make(IncrementAction::class);
     expect($resolved)->toBeInstanceOf(IncrementAction::class);
-    expect($resolved)->not->toBeInstanceOf(Mockery\MockInterface::class);
+    expect($resolved)->not->toBeInstanceOf(MockInterface::class);
 });
 
 // ─── resetAllFakes() ─────────────────────────────────────────
@@ -260,8 +261,8 @@ it('resets all fakes when called from any behavior class', function (): void {
     expect(IsEvenGuard::isFaked())->toBeFalse();
 
     // Container resolves fresh instances, not mocks
-    expect(App::make(IncrementAction::class))->not->toBeInstanceOf(Mockery\MockInterface::class);
-    expect(App::make(IsEvenGuard::class))->not->toBeInstanceOf(Mockery\MockInterface::class);
+    expect(App::make(IncrementAction::class))->not->toBeInstanceOf(MockInterface::class);
+    expect(App::make(IsEvenGuard::class))->not->toBeInstanceOf(MockInterface::class);
 });
 
 // ─── Different behavior classes maintain separate fakes ──────

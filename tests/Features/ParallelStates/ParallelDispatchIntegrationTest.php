@@ -216,7 +216,7 @@ it('failed job triggers onFail while sibling completes normally', function (): v
         regionId: 'parallel_dispatch_with_fail.processing.region_a',
         initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
-    $jobA->failed(new \RuntimeException('API timeout'));
+    $jobA->failed(new RuntimeException('API timeout'));
 
     // Machine should be in error state
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);

@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
+use Tarfinlabs\EventMachine\Definition\TransitionBranch;
 
 class GenerateUmlCommand extends Command
 {
@@ -109,7 +110,7 @@ class GenerateUmlCommand extends Command
                 $branches  = $transitionDefinition->branches ?? [];
                 $eventName = str_replace('@', '', $event);
 
-                /** @var \Tarfinlabs\EventMachine\Definition\TransitionBranch $branch */
+                /** @var TransitionBranch $branch */
                 foreach ($branches as $branch) {
 
                     $this->addTransition(

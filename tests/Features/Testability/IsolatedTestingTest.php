@@ -2,16 +2,21 @@
 
 declare(strict_types=1);
 
+use Spatie\LaravelData\Optional;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\CounterService;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\LogEntryAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\AddValueAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\IncrementAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Guards\IsCountPositiveGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Calculators\DoubleCountCalculator;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\IncrementWithServiceAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\EventProcessingOrder\Actions\TransitionActionWithRaise;
 
 afterEach(function (): void {
     IncrementAction::resetAllFakes();
@@ -62,10 +67,10 @@ it('returns false from matchesAll() when currentStateDefinition is null', functi
 it('captures raised events via runWithState', function (): void {
     $state = State::forTesting(['execution_order' => []]);
 
-    $result = \Tarfinlabs\EventMachine\Tests\Stubs\Machines\EventProcessingOrder\Actions\TransitionActionWithRaise::runWithState($state);
+    $result = TransitionActionWithRaise::runWithState($state);
 
     // The action raises ['type' => 'NEXT'] — we need access to the eventQueue
-    expect($result)->toBeInstanceOf(\Illuminate\Support\Collection::class);
+    expect($result)->toBeInstanceOf(Collection::class);
     expect($result)->toHaveCount(1);
     expect($result->first())->toBe(['type' => 'NEXT']);
 });
@@ -123,8 +128,8 @@ it('uses mocked constructor DI service with runWithState', function (): void {
 // ─── runWithState() — with event behavior ────────────────────
 
 it('passes event behavior to action via runWithState', function (): void {
-    $state = State::forTesting(new \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext(count: 0, modelA: new \Spatie\LaravelData\Optional()));
-    $event = new \Tarfinlabs\EventMachine\Definition\EventDefinition(type: 'ADD_VALUE', payload: ['value' => 42]);
+    $state = State::forTesting(new TrafficLightsContext(count: 0, modelA: new Optional()));
+    $event = new EventDefinition(type: 'ADD_VALUE', payload: ['value' => 42]);
 
     AddValueAction::runWithState($state, eventBehavior: $event);
 
@@ -136,7 +141,7 @@ it('passes event behavior to action via runWithState', function (): void {
 it('respects faked behavior via runWithState', function (): void {
     IncrementAction::shouldRun()->withAnyArgs()->once();
 
-    $state = State::forTesting(new \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext(count: 0, modelA: new \Spatie\LaravelData\Optional()));
+    $state = State::forTesting(new TrafficLightsContext(count: 0, modelA: new Optional()));
 
     IncrementAction::runWithState($state);
 
@@ -148,7 +153,7 @@ it('respects faked behavior via runWithState', function (): void {
 it('uses spy to verify faked behavior was called with runWithState', function (): void {
     IncrementAction::allowToRun();
 
-    $state = State::forTesting(new \Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext(count: 5, modelA: new \Spatie\LaravelData\Optional()));
+    $state = State::forTesting(new TrafficLightsContext(count: 5, modelA: new Optional()));
 
     IncrementAction::runWithState($state);
 

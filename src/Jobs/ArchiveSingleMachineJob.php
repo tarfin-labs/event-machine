@@ -82,7 +82,7 @@ class ArchiveSingleMachineJob implements ShouldBeUnique, ShouldQueue
         $compressionLevel = (int) ($config['level'] ?? 6);
         $archive          = $archiveService->archiveMachine($this->rootEventId, $compressionLevel);
 
-        if ($archive instanceof \Tarfinlabs\EventMachine\Models\MachineEventArchive) {
+        if ($archive instanceof MachineEventArchive) {
             logger()->info('ArchiveSingleMachineJob: Archived machine', [
                 'root_event_id'     => $this->rootEventId,
                 'machine_id'        => $archive->machine_id,

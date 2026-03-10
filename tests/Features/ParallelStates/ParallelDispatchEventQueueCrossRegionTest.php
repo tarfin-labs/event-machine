@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionAResultAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBResultAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithRaiseMachine;
 
 uses(RefreshDatabase::class);
@@ -40,7 +43,7 @@ it('cross-region event advances sibling → sibling job detects stale state', fu
     config()->set('machine.parallel_dispatch.enabled', true);
 
     // Use inline machine where region A raises event that region B handles
-    $definition = \Tarfinlabs\EventMachine\Definition\MachineDefinition::define(
+    $definition = MachineDefinition::define(
         config: [
             'id'             => 'cross_region_raise',
             'initial'        => 'processing',
@@ -58,7 +61,7 @@ it('cross-region event advances sibling → sibling job detects stale state', fu
                             'initial' => 'working',
                             'states'  => [
                                 'working' => [
-                                    'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionAResultAction::class,
+                                    'entry' => SetRegionAResultAction::class,
                                     'on'    => ['DONE_A' => 'finished'],
                                 ],
                                 'finished' => ['type' => 'final'],
@@ -68,7 +71,7 @@ it('cross-region event advances sibling → sibling job detects stale state', fu
                             'initial' => 'working',
                             'states'  => [
                                 'working' => [
-                                    'entry' => \Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBResultAction::class,
+                                    'entry' => SetRegionBResultAction::class,
                                     'on'    => ['DONE_B' => 'finished'],
                                 ],
                                 'finished' => ['type' => 'final'],

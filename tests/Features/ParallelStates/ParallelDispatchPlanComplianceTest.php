@@ -492,7 +492,7 @@ test('compound onDone completes in one region, then sibling fails → context pr
         regionId: 'parallel_dispatch_with_fail.processing.region_a',
         initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
-    $jobA->failed(new \RuntimeException('API timeout'));
+    $jobA->failed(new RuntimeException('API timeout'));
 
     // Machine should be in error state
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
@@ -521,7 +521,7 @@ test('onFail target is parallel state → new dispatch cycle (plan #80)', functi
         regionId: 'parallel_dispatch_fail_to_parallel.primary_processing.region_a',
         initialStateId: 'parallel_dispatch_fail_to_parallel.primary_processing.region_a.working',
     );
-    $jobA->failed(new \RuntimeException('Primary API failed'));
+    $jobA->failed(new RuntimeException('Primary API failed'));
 
     // Machine should transition to fallback_processing (another parallel state)
     $restored = ParallelDispatchFailToParallelMachine::create(state: $rootEventId);

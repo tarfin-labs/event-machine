@@ -27,7 +27,7 @@ it('@fail cancels sibling job that has not started yet', function (): void {
         regionId: 'parallel_dispatch_with_fail.processing.region_a',
         initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
-    $jobA->failed(new \RuntimeException('Region A failure'));
+    $jobA->failed(new RuntimeException('Region A failure'));
 
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
     expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
@@ -61,7 +61,7 @@ it('@fail cancels sibling job that finished entry action', function (): void {
         regionId: 'parallel_dispatch_with_fail.processing.region_a',
         initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
-    $jobA->failed(new \RuntimeException('Region A failure'));
+    $jobA->failed(new RuntimeException('Region A failure'));
 
     $historyBefore = MachineEvent::where('root_event_id', $rootEventId)->count();
 
@@ -72,7 +72,7 @@ it('@fail cancels sibling job that finished entry action', function (): void {
         regionId: 'parallel_dispatch_with_fail.processing.region_b',
         initialStateId: 'parallel_dispatch_with_fail.processing.region_b.working',
     );
-    $jobB->failed(new \RuntimeException('Region B also failed'));
+    $jobB->failed(new RuntimeException('Region B also failed'));
 
     $historyAfter = MachineEvent::where('root_event_id', $rootEventId)->count();
     expect($historyAfter)->toBe($historyBefore);
@@ -96,7 +96,7 @@ it('@fail with sibling waiting for lock → sibling acquires and no-ops', functi
         regionId: 'parallel_dispatch_with_fail.processing.region_a',
         initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
-    $jobA->failed(new \RuntimeException('Region A failure'));
+    $jobA->failed(new RuntimeException('Region A failure'));
 
     // Region B acquires lock (now free) → reloads → not in parallel → no-op
     $jobB = new ParallelRegionJob(

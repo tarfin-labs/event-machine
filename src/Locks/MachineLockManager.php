@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Locks;
 
 use Illuminate\Support\Str;
+use Illuminate\Support\Sleep;
 use Tarfinlabs\EventMachine\Models\MachineStateLock;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
 
 class MachineLockManager
@@ -60,7 +62,7 @@ class MachineLockManager
                 ]);
 
                 return new MachineLockHandle($rootEventId, $ownerId);
-            } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+            } catch (UniqueConstraintViolationException) {
                 // Immediate mode: fail on first attempt
                 if ($timeout === 0) {
                     $holder = MachineStateLock::find($rootEventId);
@@ -85,7 +87,7 @@ class MachineLockManager
                 }
 
                 // Wait 100ms before retrying
-                \Illuminate\Support\Sleep::usleep(100_000);
+                Sleep::usleep(100_000);
             }
         }
     }

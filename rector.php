@@ -8,6 +8,7 @@ use Rector\Set\ValueObject\SetList;
 use RectorLaravel\Set\LaravelSetList;
 use Rector\Set\ValueObject\LevelSetList;
 use Rector\Php74\Rector\Closure\ClosureToArrowFunctionRector;
+use RectorLaravel\Rector\StaticCall\CarbonToDateFacadeRector;
 use Rector\Php81\Rector\Array_\ArrayToFirstClassCallableRector;
 use Rector\Php80\Rector\Class_\ClassPropertyAssignToConstructorPromotionRector;
 
@@ -36,5 +37,5 @@ return RectorConfig::configure()
         ClosureToArrowFunctionRector::class,
         ArrayToFirstClassCallableRector::class,
         ClassPropertyAssignToConstructorPromotionRector::class,
-        \RectorLaravel\Rector\StaticCall\CarbonToDateFacadeRector::class,
+        CarbonToDateFacadeRector::class,
     ]);

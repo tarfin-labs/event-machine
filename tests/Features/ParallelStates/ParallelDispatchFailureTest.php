@@ -63,7 +63,7 @@ it('job failure does NOT corrupt other region state', function (): void {
         regionId: 'parallel_dispatch_with_fail.processing.region_b',
         initialStateId: 'parallel_dispatch_with_fail.processing.region_b.working',
     );
-    $jobB->failed(new \RuntimeException('Region B API timeout'));
+    $jobB->failed(new RuntimeException('Region B API timeout'));
 
     // Machine transitioned to error, but region A's context is preserved
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
@@ -85,7 +85,7 @@ it('all region jobs fail leaves machine in error state with onFail', function ()
         regionId: 'parallel_dispatch_with_fail.processing.region_a',
         initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
-    $jobA->failed(new \RuntimeException('Region A failure'));
+    $jobA->failed(new RuntimeException('Region A failure'));
 
     // Machine in error state
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
@@ -98,7 +98,7 @@ it('all region jobs fail leaves machine in error state with onFail', function ()
         regionId: 'parallel_dispatch_with_fail.processing.region_b',
         initialStateId: 'parallel_dispatch_with_fail.processing.region_b.working',
     );
-    $jobB->failed(new \RuntimeException('Region B failure'));
+    $jobB->failed(new RuntimeException('Region B failure'));
 
     // Still in error state
     $final = ParallelDispatchWithFailMachine::create(state: $rootEventId);

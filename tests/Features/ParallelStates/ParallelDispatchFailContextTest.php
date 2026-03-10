@@ -38,7 +38,7 @@ it('completed region context preserved when sibling fails', function (): void {
         regionId: 'parallel_dispatch_with_fail.processing.region_a',
         initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
-    $jobA->failed(new \RuntimeException('Region A failed'));
+    $jobA->failed(new RuntimeException('Region A failed'));
 
     // Machine in error state
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
@@ -82,7 +82,7 @@ it('both regions complete context then one fails → all context preserved', fun
         regionId: 'parallel_dispatch_with_fail.processing.region_a',
         initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
-    $failJob->failed(new \RuntimeException('Late failure'));
+    $failJob->failed(new RuntimeException('Late failure'));
 
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
     expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');

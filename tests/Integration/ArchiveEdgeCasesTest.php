@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\QueryException;
 use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
@@ -317,7 +318,7 @@ describe('Archive Edge Cases', function (): void {
 
             // Second archive with same root_event_id should fail (unique constraint)
             expect(fn () => MachineEventArchive::archiveEvents($events))
-                ->toThrow(\Illuminate\Database\QueryException::class);
+                ->toThrow(QueryException::class);
         });
     });
 

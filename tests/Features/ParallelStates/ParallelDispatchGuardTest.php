@@ -28,7 +28,7 @@ it('job no-ops when machine no longer in parallel state (pre-lock guard)', funct
         regionId: 'parallel_dispatch_with_fail.processing.region_a',
         initialStateId: 'parallel_dispatch_with_fail.processing.region_a.working',
     );
-    $jobA->failed(new \RuntimeException('Trigger onFail'));
+    $jobA->failed(new RuntimeException('Trigger onFail'));
 
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
     expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');

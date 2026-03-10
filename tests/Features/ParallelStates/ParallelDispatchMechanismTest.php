@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
+use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 uses(RefreshDatabase::class);
 
@@ -129,7 +130,7 @@ it('does not dispatch when fewer than 2 regions have entry actions', function ()
     // we just verify that pendingParallelDispatches is NOT populated.
     // We expect BehaviorNotFoundException from sequential path running the fake action.
     expect(fn () => $definition->getInitialState())
-        ->toThrow(\Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException::class);
+        ->toThrow(BehaviorNotFoundException::class);
 
     expect($definition->pendingParallelDispatches)->toBe([]);
 });
@@ -158,7 +159,7 @@ it('does not dispatch when machineClass is base Machine::class', function (): vo
 
     // Sequential mode — but fake actions cause BehaviorNotFoundException
     expect(fn () => $definition->getInitialState())
-        ->toThrow(\Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException::class);
+        ->toThrow(BehaviorNotFoundException::class);
 
     expect($definition->pendingParallelDispatches)->toBe([]);
 });

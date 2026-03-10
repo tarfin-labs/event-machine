@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessInternalGoAction;
 
 test('parallel state entry action raises event → processed in Phase 1', function (): void {
@@ -45,7 +47,7 @@ test('parallel state entry action raises event → processed in Phase 1', functi
         ],
         behavior: [
             'actions' => [
-                'markSetupAction' => function (\Tarfinlabs\EventMachine\ContextManager $context): void {
+                'markSetupAction' => function (ContextManager $context): void {
                     $context->set('setup_complete', true);
                 },
             ],
@@ -94,6 +96,6 @@ test('parallel state entry raises event with no handler → throws NoTransitionD
 
     // Raised event with no handler throws exception (event-machine strict behavior)
     expect(fn () => $definition->getInitialState())->toThrow(
-        \Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException::class
+        NoTransitionDefinitionFoundException::class
     );
 });

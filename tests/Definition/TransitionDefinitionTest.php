@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -291,7 +292,7 @@ test('always transitions with initial jump', function (): void {
         ],
     ]);
 
-    /** @var \Tarfinlabs\EventMachine\Actor\State $newState */
+    /** @var State $newState */
     $newState = $machine->getInitialState();
 
     expect($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'state_c']);

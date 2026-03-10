@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
 test('parallel state type is correctly detected', function (): void {
     $definition = MachineDefinition::define([
@@ -227,7 +228,7 @@ test('parallel state cannot have initial property', function (): void {
                 ],
             ],
         ],
-    ]))->toThrow(\Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException::class);
+    ]))->toThrow(InvalidParallelStateDefinitionException::class);
 });
 
 test('parallel state must have at least one region', function (): void {

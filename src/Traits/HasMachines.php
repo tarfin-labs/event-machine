@@ -45,7 +45,7 @@ trait HasMachines
             $machine = $this->findMachine($key);
 
             if ($machine !== null) {
-                /** @var \Tarfinlabs\EventMachine\Actor\Machine $machineClass */
+                /** @var Machine $machineClass */
                 [$machineClass, $contextKey] = explode(':', $machine);
 
                 $machine = $machineClass::create(state: $attribute);

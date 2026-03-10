@@ -57,7 +57,7 @@ class State implements \JsonSerializable
      */
     protected function updateMachineValueFromState(): void
     {
-        if (!$this->currentStateDefinition instanceof \Tarfinlabs\EventMachine\Definition\StateDefinition) {
+        if (!$this->currentStateDefinition instanceof StateDefinition) {
             $this->value = [];
 
             return;

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
@@ -93,7 +94,7 @@ it('no-ops when region no longer at initial state', function (): void {
     // Advance region_a out of its initial state
     $machine->send('REGION_A_DONE');
 
-    $historyCountBefore = \Tarfinlabs\EventMachine\Models\MachineEvent::where('root_event_id', $rootEventId)->count();
+    $historyCountBefore = MachineEvent::where('root_event_id', $rootEventId)->count();
 
     $job = new ParallelRegionJob(
         machineClass: ParallelDispatchMachine::class,
@@ -106,7 +107,7 @@ it('no-ops when region no longer at initial state', function (): void {
     $job->handle();
 
     // No new events should have been added
-    $historyCountAfter = \Tarfinlabs\EventMachine\Models\MachineEvent::where('root_event_id', $rootEventId)->count();
+    $historyCountAfter = MachineEvent::where('root_event_id', $rootEventId)->count();
     expect($historyCountAfter)->toBe($historyCountBefore);
 });
 

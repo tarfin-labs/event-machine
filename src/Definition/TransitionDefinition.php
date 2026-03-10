@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Definition;
 
 use Throwable;
+use Mockery\MockInterface;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
@@ -166,7 +167,7 @@ class TransitionDefinition
 
                 $shouldLog = $guardBehavior?->shouldLog ?? false;
 
-                if ($guardBehavior instanceof GuardBehavior && !$guardBehavior instanceof \Mockery\MockInterface) {
+                if ($guardBehavior instanceof GuardBehavior && !$guardBehavior instanceof MockInterface) {
                     $guardBehavior::validateRequiredContext($state->context);
                 }
 
