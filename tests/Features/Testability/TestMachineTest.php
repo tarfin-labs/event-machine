@@ -7,6 +7,7 @@ use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\TestabilityMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\IncrementAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\IncreaseEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\AllInvocationPointsMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Guards\IsCountPositiveGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\IncrementWithServiceAction;
@@ -75,6 +76,13 @@ it('sends events via string shorthand', function (): void {
 it('sends events via array', function (): void {
     $test = TrafficLightsMachine::test();
     $test->send(['type' => 'INCREASE']);
+
+    expect($test->context()->get('count'))->toBe(1);
+});
+
+it('sends events via EventBehavior instance', function (): void {
+    $test = TrafficLightsMachine::test();
+    $test->send(IncreaseEvent::forTesting());
 
     expect($test->context()->get('count'))->toBe(1);
 });
