@@ -223,7 +223,7 @@ class TestMachine
     /**
      * Send + assertState in one call.
      */
-    public function assertTransition(array|string $event, string $expectedState): self
+    public function assertTransition(EventBehavior|array|string $event, string $expectedState): self
     {
         return $this->send($event)->assertState($expectedState);
     }
@@ -231,7 +231,7 @@ class TestMachine
     /**
      * Assert an event is guarded (state unchanged).
      */
-    public function assertGuarded(array|string $event): self
+    public function assertGuarded(EventBehavior|array|string $event): self
     {
         $before = $this->machine->state->value;
 
@@ -252,7 +252,7 @@ class TestMachine
     /**
      * Assert an event raises MachineValidationException.
      */
-    public function assertValidationFailed(array|string $event, ?string $errorKey = null): self
+    public function assertValidationFailed(EventBehavior|array|string $event, ?string $errorKey = null): self
     {
         try {
             $this->send($event);
