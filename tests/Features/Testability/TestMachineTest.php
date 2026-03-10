@@ -119,6 +119,16 @@ it('asserts context has key', function (): void {
         ->assertContextHas('count');
 });
 
+it('asserts context key is absent with assertContextMissing', function (): void {
+    TrafficLightsMachine::test()
+        ->assertContextMissing('nonexistent_key');
+});
+
+it('assertContextMissing fails when key exists', function (): void {
+    expect(fn () => TrafficLightsMachine::test()->assertContextMissing('count'))
+        ->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
+});
+
 it('asserts context matches callback', function (): void {
     TrafficLightsMachine::test()
         ->send('INCREASE')
