@@ -45,6 +45,8 @@ Every element in EventMachine has two identities: its **PHP class name** and the
 | Event | `OrderSubmittedEvent` | — | `'ORDER_SUBMITTED'` |
 | Machine | `OrderWorkflowMachine` | — | `'order_workflow'` |
 | Context | `OrderWorkflowContext` | — | — |
+| Endpoint Action | `CancelEndpointAction` | — | `CancelEndpointAction::class` |
+| Endpoint Result | `OrderDetailEndpointResult` | `orderDetailEndpointResult` | `'orderDetailEndpointResult'` |
 
 The pattern is straightforward:
 
@@ -823,6 +825,40 @@ URIs are auto-generated from event types by converting `SCREAMING_SNAKE_CASE` to
 | `ORDER_SUBMITTED` | `/order-submitted` |
 
 You can override the auto-generated URI with an explicit `uri` key in the endpoint definition.
+
+### Endpoint Config Keys
+
+When defining endpoints in `MachineDefinition::define()`, config keys use `snake_case` to match the existing config convention:
+
+```php ignore
+MachineDefinition::define(
+    // ...
+    endpoints: [
+        'SUBMIT_ORDER' => [
+            'uri'        => '/submit',        // snake_case (kebab-case value)
+            'method'     => 'POST',           // HTTP method
+            'action'     => SubmitEndpointAction::class,
+            'result'     => 'orderSummaryResult',
+            'statusCode' => 201,              // camelCase (inherited from XState convention)
+            'middleware'  => ['auth:api'],
+        ],
+    ],
+);
+```
+
+### MachineRouter Options
+
+When registering routes via `MachineRouter::register()`, options use `camelCase` for PHP method argument consistency:
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `prefix` | `string` | URL prefix for all routes |
+| `model` | `string` | Eloquent model FQCN for model-bound routes |
+| `attribute` | `string` | Model attribute that returns the Machine (required when `model` is set) |
+| `create` | `bool` | Generate `POST /create` endpoint |
+| `machineIdFor` | `string[]` | Event types that use machineId-bound handler instead of model-bound |
+| `middleware` | `string[]` | Middleware applied to all routes in the group |
+| `name` | `string` | Route name prefix (defaults to machine ID) |
 
 ### Route Names
 
