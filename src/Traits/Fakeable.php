@@ -25,6 +25,10 @@ trait Fakeable
      */
     public static function fake(): MockInterface
     {
+        if (isset(static::$fakes[static::class])) {
+            static::resetFakes();
+        }
+
         $mock                         = Mockery::mock(static::class);
         static::$fakes[static::class] = $mock;
         App::bind(static::class, fn () => $mock);

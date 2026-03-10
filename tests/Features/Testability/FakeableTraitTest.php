@@ -24,13 +24,17 @@ it('creates a mock and binds it in the container via fake()', function (): void 
     expect($resolved)->toBe($mock);
 });
 
-it('returns a fresh mock when fake() is called multiple times', function (): void {
+it('tears down previous mock when fake() is called again', function (): void {
     $mock1 = IncrementAction::fake();
     $mock2 = IncrementAction::fake();
 
     // fake() always creates a fresh mock
     expect($mock1)->not->toBe($mock2);
     expect(IncrementAction::getFake())->toBe($mock2);
+
+    // Container resolves the second mock, not the leaked first one
+    $resolved = App::make(IncrementAction::class);
+    expect($resolved)->toBe($mock2);
 });
 
 // ─── spy() ───────────────────────────────────────────────────
