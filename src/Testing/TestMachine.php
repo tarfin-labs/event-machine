@@ -282,7 +282,9 @@ class TestMachine
     {
         $history = $this->machine->state->history->pluck('type')->toArray();
         foreach ($eventTypes as $type) {
-            expect($history)->toContain($type);
+            expect(in_array($type, $history, true))->toBeTrue(
+                "Expected history to contain [{$type}], got [".implode(', ', $history).']'
+            );
         }
 
         return $this;
