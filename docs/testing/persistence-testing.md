@@ -4,7 +4,7 @@ Testing EventMachine's database persistence and event sourcing capabilities.
 
 ## Stateless Testing
 
-Skip DB entirely for logic-only tests:
+Use stateless tests when you only need to verify state machine logic — not what gets written to the database. Prefer this approach for unit-level tests where database setup would add overhead without adding value.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -28,7 +28,11 @@ TestMachine::define(config: [
 
 ## Test Setup
 
+Persistence tests require a working database. The two setup steps below ensure every test starts with a clean schema.
+
 ### RefreshDatabase Trait
+
+Add `RefreshDatabase` to any test class that writes to the database. It wraps each test in a transaction and rolls it back afterwards, ensuring tests do not bleed state into one another.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -44,6 +48,8 @@ class OrderMachineTest extends TestCase
 
 ### In-Memory SQLite
 
+Configuring the test suite to use an in-memory SQLite database removes disk I/O and avoids leaving behind test data, making the full test suite significantly faster than running against a real PostgreSQL or MySQL instance.
+
 ```xml
 <!-- phpunit.xml -->
 <php>
@@ -54,7 +60,11 @@ class OrderMachineTest extends TestCase
 
 ## Database Assertions
 
+Laravel's built-in database assertion helpers let you verify the exact rows written to the `machine_events` table without loading Eloquent models. They are the fastest way to confirm that persistence worked correctly.
+
 ### `assertDatabaseHas()`
+
+The `machine_events` table stores one row per event. The `type` column holds the event name, `source` distinguishes externally sent events (`external`) from internally raised ones, and `machine_id` identifies which machine definition the event belongs to.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -71,6 +81,8 @@ it('persists events to database', function () {
 ```
 
 ### `assertDatabaseCount()`
+
+Every top-level `send()` call creates a group of related events. All events in the group share the same `root_event_id`, which is the ID of the first external event that triggered the transition. Counting by `root_event_id` lets you assert how many events (including internal ones) a single send produced.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -89,6 +101,8 @@ it('creates expected number of events', function () {
 ```
 
 ### `assertDatabaseMissing()`
+
+When `should_persist` is set to `false` in a machine's config, no events are written to the database at all. Use `assertDatabaseMissing()` to confirm that a machine or specific event type leaves no trace in `machine_events`.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -115,7 +129,11 @@ it('does not persist when disabled', function () {
 
 ## Event History Testing
 
+Event history is the ordered log of all events — external and internal — that have been applied to a machine instance. It is the source of truth for auditing, debugging, and state reconstruction.
+
 ### Check Event Order
+
+Event order matters because replaying events out of sequence would produce a different final state. Tests that assert order verify that `sequence_number` is assigned correctly and that `orderBy('sequence_number')` retrieves events in the same sequence they were applied.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -137,6 +155,8 @@ it('records events in correct order', function () {
 ```
 
 ### Check Event Payload
+
+The `payload` column stores the data that was passed alongside an event. It is populated only when the event carries extra data (e.g., item details, user input). Test payload storage whenever your machine reads from `event.payload` inside an action or guard.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -161,6 +181,8 @@ it('stores event payload correctly', function () {
 ```
 
 ### Check Context Storage
+
+EventMachine uses incremental context storage: the first event in a group records the full context snapshot, while subsequent events in the same session record only the keys that changed. This minimises database storage while still allowing full reconstruction. Test this behaviour to confirm that only deltas are written after the initial event.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -187,6 +209,8 @@ it('stores context incrementally', function () {
 ```
 
 ## State Restoration Testing
+
+State restoration is the ability to recreate an exact machine snapshot from its persisted event log. You pass a `root_event_id` to `Machine::create()` and EventMachine replays all stored events in order, merging the incremental context deltas, to arrive at the same state and context that existed when the events were first applied.
 
 ### Basic Restoration
 
@@ -260,6 +284,8 @@ it('can continue from restored state', function () {
 
 ## Transactional Testing
 
+By default, EventMachine wraps each event dispatch in a database transaction so that if an action throws an exception, no partial data is committed. Test transactional behaviour to confirm that failures leave the database in the state it was before the event was sent.
+
 ### Rollback on Failure
 
 <!-- doctest-attr: ignore -->
@@ -286,6 +312,8 @@ it('rolls back on exception with transactional event', function () {
 
 ### Non-Transactional Events
 
+Use non-transactional events when you need an event to be persisted immediately — before the rest of the action pipeline completes. This is useful for audit logging or webhooks where you want a record written even if a later step fails.
+
 <!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
@@ -305,6 +333,8 @@ it('persists non-transactional events on failure', function () {
 ```
 
 ## Eloquent Integration Testing
+
+The `HasMachines` trait wires state machines directly to Eloquent models, automatically initialising machines on model creation and storing `root_event_id` values as model attributes. These tests verify that the binding between model lifecycle events and machine initialisation works correctly.
 
 ### Model Machine Testing
 
@@ -376,6 +406,8 @@ it('initializes machine when condition is true', function () {
 
 ## Concurrent Access Testing
 
+When two processes attempt to advance the same machine at the same time, one of them must be rejected to prevent conflicting state writes. EventMachine raises `MachineAlreadyRunningException` for the second caller. These tests confirm that locking is enforced and at least one caller always succeeds.
+
 <!-- doctest-attr: ignore -->
 ```php
 it('handles concurrent access with locking', function () {
@@ -399,6 +431,8 @@ it('handles concurrent access with locking', function () {
 ```
 
 ## Archive Testing
+
+The archive system moves historical event logs out of the hot `machine_events` table while keeping them accessible for restoration. These tests verify that archiving records the correct event count and that a machine can still be restored from a `root_event_id` after its events have been archived.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -425,6 +459,8 @@ it('archives and restores events', function () {
 
 ### 1. Use RefreshDatabase
 
+Always include the `RefreshDatabase` trait in persistence test classes so each test receives a clean schema and leftover rows from previous tests cannot cause false positives or failures.
+
 <!-- doctest-attr: ignore -->
 ```php
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -437,6 +473,8 @@ class MyTest extends TestCase
 
 ### 2. Test State Restoration
 
+Verify that a machine created from a saved `root_event_id` reaches the same state value and context as the original — confirming that incremental context deltas are merged correctly during replay.
+
 <!-- doctest-attr: ignore -->
 ```php
 it('restores correctly', function () {
@@ -447,6 +485,8 @@ it('restores correctly', function () {
 
 ### 3. Test Incremental Context
 
+After making several distinct context changes, restore the machine and assert that every changed key is present with its final value — confirming that no delta was lost or overwritten during incremental storage.
+
 <!-- doctest-attr: ignore -->
 ```php
 it('handles context changes', function () {
@@ -456,6 +496,8 @@ it('handles context changes', function () {
 ```
 
 ### 4. Test Edge Cases
+
+Cover boundary conditions to guard against subtle persistence bugs: an empty context on first transition, a payload large enough to exceed typical column limits, and special characters (Unicode, escaped quotes) that could corrupt serialised JSON.
 
 <!-- doctest-attr: ignore -->
 ```php

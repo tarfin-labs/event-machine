@@ -33,6 +33,8 @@ TrafficLightsMachine::test()
 
 ### Pest / PHPUnit Configuration
 
+Reset all behavior fakes between tests to prevent state leaking across test cases. Without this, a fake registered in one test could silently affect subsequent tests.
+
 <!-- doctest-attr: ignore -->
 ```php
 // tests/Pest.php or tests/TestCase.php
@@ -46,7 +48,7 @@ afterEach(function (): void {
 
 ### In-Memory Database
 
-For fast tests, use SQLite in-memory:
+For fast tests, use SQLite in-memory. This eliminates migration overhead and disk I/O — each test gets a fresh database without touching the filesystem. Combined with RefreshDatabase, tests run in complete isolation.
 
 ```xml
 <!-- phpunit.xml -->
@@ -68,4 +70,4 @@ For fast tests, use SQLite in-memory:
 | Parallel | Dispatch verification, region isolation | [Parallel Testing](/testing/parallel-testing) |
 | Persistence | DB, restoration, archival | [Persistence Testing](/testing/persistence-testing) |
 | Recipes | Common real-world patterns | [Recipes](/testing/recipes) |
-| Migration | Upgrading from legacy test patterns | [Migration Guide](/testing/migration-guide) |
+| Migration | Upgrading from legacy test patterns | [Migration Patterns](/getting-started/upgrading#testing-migration-patterns) |

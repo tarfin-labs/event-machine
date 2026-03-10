@@ -4,6 +4,8 @@ Common real-world testing patterns combining isolated, faked, and machine-level 
 
 ## Recipe: External API Action
 
+Two strategies for testing actions that call external APIs. Strategy 1 mocks the service to test the action's error handling logic. Strategy 2 fakes the entire action to test the machine's flow without the API dependency. Choose Strategy 1 when the action's internal logic matters, Strategy 2 when only the machine flow matters.
+
 <!-- doctest-attr: ignore -->
 ```php
 // Strategy 1: Mock the service (test real action logic)
@@ -29,6 +31,8 @@ it('continues flow after payment', function () {
 
 ## Recipe: Guard Chain (Multiple Guards)
 
+When a transition has multiple guards, ALL must return true for the transition to proceed. Guards are evaluated in declaration order — the first guard that returns false blocks the transition, and remaining guards are not evaluated.
+
 <!-- doctest-attr: ignore -->
 ```php
 it('requires all guards to pass', function () {
@@ -48,6 +52,8 @@ it('first failing guard blocks', function () {
 ```
 
 ## Recipe: Calculator Ordering
+
+Calculators run in declaration order before guards. When calculators depend on each other's output (e.g., subtotal → discount → tax), test them in sequence to verify the pipeline produces correct values.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -71,6 +77,8 @@ it('calculators run in declared order', function () {
 ```
 
 ## Recipe: Raised Event Flow
+
+Actions can call `$this->raise(['type' => 'EVENT_NAME'])` to push events onto the internal queue. After the current transition completes, raised events are processed as if they were sent externally — triggering further transitions.
 
 <!-- doctest-attr: ignore -->
 ```php

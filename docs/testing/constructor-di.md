@@ -4,6 +4,8 @@ Behaviors support constructor dependency injection. Services are resolved by the
 
 ## Two-Layer DI Architecture
 
+EventMachine uses two separate injection layers. The constructor receives long-lived services (database repositories, API clients) resolved once by Laravel's container. The `__invoke` method receives per-transition state (context, event, history) injected by the engine. This separation makes behaviors easy to test: mock the services, provide test state.
+
 | Layer | What | Where | Resolved By |
 |-------|------|-------|-------------|
 | Services | PaymentGateway, Logger, Repository | `__construct()` | Laravel container via `App::make()` |
@@ -12,6 +14,8 @@ Behaviors support constructor dependency injection. Services are resolved by the
 ## Mocking Injected Services
 
 ### With runWithState() — Isolated
+
+Use `App::instance()` or Mockery to replace the service in Laravel's container before calling `runWithState()`. The container resolves the mock just like production code would.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -29,6 +33,8 @@ it('calls payment gateway with correct amount', function () {
 
 ### With Machine::test() — Integration
 
+In machine-level tests, mock the service the same way — the container binding is global. The difference is that the full machine lifecycle runs, so you're testing the behavior within its real transition context.
+
 <!-- doctest-attr: ignore -->
 ```php
 it('processes payment in the full machine', function () {
@@ -43,6 +49,8 @@ it('processes payment in the full machine', function () {
 ```
 
 ## Before/After Comparison
+
+Before v6, behaviors that needed external services used the service locator pattern (calling `app()` inside `__invoke`). Constructor DI is cleaner: dependencies are explicit, testable, and visible in the class signature.
 
 ### Before — Service Locator (anti-pattern)
 
@@ -86,7 +94,7 @@ class ProcessPaymentAction extends ActionBehavior {
 See [Isolated Testing](/testing/isolated-testing) for `runWithState()` details,
 [Fakeable Behaviors](/testing/fakeable-behaviors) for the faking API,
 [TestMachine](/testing/test-machine) for the fluent machine-level wrapper,
-and [Migration Guide](/testing/migration-guide) for upgrading from legacy test patterns.
+and [Migration Patterns](/getting-started/upgrading#testing-migration-patterns) for upgrading from legacy test patterns.
 
 For DI patterns beyond testing, see [Dependency Injection](/advanced/dependency-injection).
 :::

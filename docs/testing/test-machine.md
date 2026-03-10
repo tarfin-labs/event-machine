@@ -4,6 +4,8 @@ Fluent test wrapper inspired by `Livewire::test()`. Provides a chainable API for
 
 ## Construction
 
+TestMachine can be created four ways depending on your testing needs. Use `Machine::test()` for existing machine classes, `withContext()` when initial entry actions depend on context, `define()` for inline throwaway definitions, and `for()` when you already have a Machine instance.
+
 <!-- doctest-attr: ignore -->
 ```php
 // From a Machine subclass
@@ -27,6 +29,8 @@ TestMachine::for($machine)
 ```
 
 ## Configuration
+
+Chain configuration methods before sending events to customize machine behavior for the test.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -118,6 +122,8 @@ TestMachine::for($machine)
 
 ## Accessors
 
+When you need direct access to the underlying machine, state, or context — for example, to perform custom assertions not covered by the built-in methods.
+
 <!-- doctest-attr: ignore -->
 ```php
 ->machine()     // underlying Machine instance
@@ -126,6 +132,8 @@ TestMachine::for($machine)
 ```
 
 ## Utilities
+
+Helper methods for debugging and mid-chain side effects.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -137,6 +145,8 @@ TestMachine::for($machine)
 ```
 
 ## Cleanup
+
+Call `resetFakes()` when you need to clear fakes mid-test. In most cases, the global `afterEach` hook handles this automatically.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -161,6 +171,8 @@ TrafficLightsMachine::test()
 ```
 
 ## Direct State Access
+
+Use direct state access when you need raw values for complex assertions, or when integrating with external assertion libraries that don't work with TestMachine's fluent API.
 
 For advanced cases where TestMachine doesn't fit, you can access the underlying state directly:
 

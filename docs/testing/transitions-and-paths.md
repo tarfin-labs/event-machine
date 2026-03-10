@@ -4,6 +4,8 @@ Test state transitions, guard behavior, and complete lifecycle paths using `Mach
 
 ## Single Transitions
 
+`assertTransition()` sends the named event to the machine and verifies that the machine lands in the expected target state. It is the simplest way to confirm that a single event produces the correct outcome.
+
 <!-- doctest-attr: ignore -->
 ```php
 AllInvocationPointsMachine::test()
@@ -11,6 +13,8 @@ AllInvocationPointsMachine::test()
 ```
 
 ## Guard Testing
+
+A guarded transition is one that a guard condition has rejected: the event is received but the machine stays in its current state without transitioning. `assertGuarded()` confirms this blocking behavior, while `assertTransition()` confirms the transition succeeds when the guard passes.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -46,6 +50,8 @@ $results = $test->debugGuards('PROCESS');
 
 ## Validation Guard Testing
 
+`ValidationGuardBehavior` differs from a regular guard in one important way: instead of silently blocking the transition, it throws a validation exception with structured error messages. `assertValidationFailed()` catches that exception and lets you assert which field caused the failure.
+
 <!-- doctest-attr: ignore -->
 ```php
 OrderMachine::test()
@@ -57,6 +63,8 @@ OrderMachine::test()
 
 ## Path Testing — Full Lifecycle
 
+`assertPath()` drives the machine through an entire sequence in one call: it sends each event in order and immediately asserts the expected state and context after each step. This makes it the primary tool for verifying multi-step workflows, because a single `assertPath()` replaces a chain of individual `send()` + `assertState()` calls.
+
 <!-- doctest-attr: ignore -->
 ```php
 TrafficLightsMachine::test()
@@ -67,6 +75,8 @@ TrafficLightsMachine::test()
 ```
 
 ## Hierarchical State Transitions
+
+Nested (compound) states are identified with dot notation, where the parent state name and child state name are joined by a dot (e.g., `checkout.shipping`). Use the same notation in `assertState()` and `assertTransition()` to target or verify any level of the hierarchy.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -102,7 +112,7 @@ OrderMachine::test()
 
 ## Raised Events
 
-Actions can raise internal events that trigger further transitions:
+An action can push additional events onto the machine's internal queue using `raise()`. Those raised events are processed immediately after the current transition completes, exactly as if they had been sent from outside — enabling a single external event to trigger a chain of further transitions. `assertHistoryContains()` lets you verify that a raised event was processed during that chain.
 
 <!-- doctest-attr: ignore -->
 ```php

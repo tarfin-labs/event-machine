@@ -29,6 +29,8 @@ Uses the **exact same** `injectInvokableBehaviorParameters` DI as the engine. Wh
 
 ### Guards — returns bool
 
+Guards return `true` to allow a transition or `false` to block it. Test them by creating a state with the context your guard depends on.
+
 <!-- doctest-attr: ignore -->
 ```php
 $state = State::forTesting(['count' => 5]);
@@ -39,6 +41,8 @@ expect(IsCountPositiveGuard::runWithState($state))->toBeFalse();
 ```
 
 ### Actions — modifies context
+
+Actions perform side effects, typically modifying context values. Since they return void, assert on the context changes after calling `runWithState()`.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -51,6 +55,8 @@ expect($state->context->count)->toBe(1);
 
 ### Calculators — with arguments
 
+Calculators run before guards to compute derived values. Unlike actions, they only modify context — no side effects. The third parameter passes colon-separated arguments from the machine definition (e.g., `'myCalculator:7'` passes `['7']`).
+
 <!-- doctest-attr: ignore -->
 ```php
 $state = State::forTesting(['count' => 10]);
@@ -59,6 +65,8 @@ expect($state->context->get('result'))->toBe(20);
 ```
 
 ### With EventBehavior
+
+When an action reads event payload (e.g., values submitted by the user), pass an `EventDefinition` as the second parameter to simulate the event data.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -73,7 +81,7 @@ expect($state->context->count)->toBe(15);
 
 ## EventBehavior::forTesting()
 
-Create event instances with sensible defaults:
+`EventBehavior` subclasses often have validation rules and required fields. `forTesting()` creates a valid instance with sensible defaults, so you don't have to manually construct the full event structure.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -103,5 +111,5 @@ AddValueAction::runWithState($state, eventBehavior: $event);
 See [Fakeable Behaviors](/testing/fakeable-behaviors) for mocking during execution,
 [Constructor DI](/testing/constructor-di) for service injection testing,
 [TestMachine](/testing/test-machine) for the fluent machine-level wrapper,
-and [Migration Guide](/testing/migration-guide) for upgrading from legacy test patterns.
+and [Migration Patterns](/getting-started/upgrading#testing-migration-patterns) for upgrading from legacy test patterns.
 :::

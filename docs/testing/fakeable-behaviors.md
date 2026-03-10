@@ -12,6 +12,8 @@ Instance bindings are silently bypassed when `App::make()` receives explicit par
 
 ## Creating Fakes
 
+Use `fake()` when you need strict control — the mock will fail if expected calls are never made. Use `spy()` when you want permissive recording — the spy silently captures all invocations and lets you assert afterward without requiring any calls up front.
+
 <!-- doctest-attr: ignore -->
 ```php
 // Mock — strict, expectations must be set
@@ -25,6 +27,8 @@ $spy->shouldHaveReceived('__invoke');
 ```
 
 ## Setting Expectations
+
+`shouldRun()` and `shouldReturn()` both add an implicit "at least once" expectation on `__invoke` — if the behavior is never called during the test, Mockery will fail at teardown. `mayReturn()` only presets the return value without registering any call expectation, so the test passes cleanly even if the behavior is skipped.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -50,6 +54,8 @@ ProcessOrderAction::allowToRun();
 :::
 
 ## Assertions
+
+These low-level assertions are intended for isolated unit tests where you invoke a behavior directly — outside of `Machine::test()`. When testing through the full machine pipeline, prefer `TestMachine::assertBehaviorRan()` instead, which integrates with the fluent chain and handles spy setup automatically.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -94,6 +100,8 @@ IsValidGuard::shouldReturn(false);
 
 ## Fakes Work During Machine::send()
 
+This matters because behaviors are invoked at five distinct points in the execution pipeline — not just transition actions. Fakes registered before `send()` are correctly intercepted regardless of whether the behavior is called as a guard, calculator, transition action, exit action, or entry action.
+
 All 5 invocation points respect fakes:
 
 | Invocation Point | Where |
@@ -106,6 +114,8 @@ All 5 invocation points respect fakes:
 
 ## Inspection
 
+`isFaked()` is useful in shared test helpers or base test classes where you want to conditionally configure a behavior only when it has not already been faked by the calling test — preventing accidental double-setup.
+
 <!-- doctest-attr: ignore -->
 ```php
 // Check if a behavior is currently faked
@@ -116,6 +126,8 @@ $mock = ProcessOrderAction::getFake();
 ```
 
 ## Cleanup
+
+Without explicit cleanup, fakes registered in one test persist into the next test in the same process. This causes false positives (a behavior appears to have run when it did not) and false negatives (unexpected calls are silently swallowed by a leftover mock), making test failures intermittent and hard to diagnose.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -137,5 +149,5 @@ afterEach(fn() => IncrementAction::resetAllFakes());
 See [Isolated Testing](/testing/isolated-testing) for unit-level `runWithState()` tests,
 [TestMachine](/testing/test-machine) for the fluent wrapper with `faking()` and `assertBehaviorRan()`,
 [Transitions & Paths](/testing/transitions-and-paths) for guard faking patterns,
-and [Migration Guide](/testing/migration-guide) for upgrading from legacy test patterns.
+and [Migration Patterns](/getting-started/upgrading#testing-migration-patterns) for upgrading from legacy test patterns.
 :::

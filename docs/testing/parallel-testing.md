@@ -4,6 +4,8 @@ Strategies for testing machines with parallel (orthogonal) regions.
 
 ## Three Strategies
 
+Parallel states can be tested with three distinct strategies because each makes a different trade-off: you can verify that jobs are dispatched without running them, run jobs immediately in the same process for true end-to-end coverage, or skip the queue entirely for deterministic sequential execution. Choose based on whether you need to inspect dispatch details, validate full behavior, or avoid queue infrastructure altogether.
+
 | Strategy | Use Case | Fakes Work? | Needs Queue? |
 |----------|---------|-------------|--------------|
 | `Queue::fake()` | Verify dispatch (jobs, count, params) | N/A (jobs not executed) | No |
@@ -34,6 +36,8 @@ it('dispatches correct parallel jobs', function () {
 
 ## Strategy 2: Sync Queue — E2E
 
+Setting `queue.default` to `sync` makes Laravel execute dispatched jobs immediately in the same process instead of pushing them to a real queue driver. This gives true end-to-end parallel execution — all region entry actions run and fakes (mail, notifications, events) capture their calls — without requiring any queue infrastructure.
+
 <!-- doctest-attr: ignore -->
 ```php
 it('runs full parallel flow', function () {
@@ -49,6 +53,8 @@ it('runs full parallel flow', function () {
 
 ## Strategy 3: Sequential — withoutParallelDispatch()
 
+`withoutParallelDispatch()` disables queue dispatch entirely and runs region entry actions sequentially in the current process. Use this when you need deterministic execution order, want assertions to reflect all regions immediately after a `send()`, or simply want to avoid queue complexity in tests.
+
 <!-- doctest-attr: ignore -->
 ```php
 it('enters parallel regions sequentially', function () {
@@ -61,6 +67,8 @@ it('enters parallel regions sequentially', function () {
 ```
 
 ## Testing Regions Independently
+
+When a region's internal logic is complex enough — multiple states, guards, or actions — it warrants its own focused test suite rather than always being exercised through the full parallel machine. Extracting the region config lets you drive it as a standalone machine, keeping tests fast and failures easy to pinpoint.
 
 Extract a single region and test it as a standalone machine:
 
@@ -85,6 +93,8 @@ it('tests payment region in isolation', function () {
 ```
 
 ## Region State Assertions
+
+`assertRegionState(regionName, expectedState)` checks the current state within a specific named region of a parallel state, letting you assert each region's progress independently after an event is sent.
 
 <!-- doctest-attr: ignore -->
 ```php
