@@ -161,7 +161,6 @@ export default withMermaid(
           collapsed: false,
           items: [
             { text: 'Overview', link: '/testing/overview' },
-            { text: 'Migration Guide', link: '/testing/migration-guide' },
             { text: 'Isolated Testing', link: '/testing/isolated-testing' },
             { text: 'Fakeable Behaviors', link: '/testing/fakeable-behaviors' },
             { text: 'Constructor DI', link: '/testing/constructor-di' },
