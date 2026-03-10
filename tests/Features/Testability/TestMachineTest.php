@@ -119,6 +119,13 @@ it('asserts context has key', function (): void {
         ->assertContextHas('count');
 });
 
+it('asserts context matches callback', function (): void {
+    TrafficLightsMachine::test()
+        ->send('INCREASE')
+        ->send('INCREASE')
+        ->assertContextMatches('count', fn ($v) => $v > 1);
+});
+
 it('asserts context includes subset', function (): void {
     TestabilityMachine::test(['count' => 5])
         ->assertContextIncludes(['count' => 5]);

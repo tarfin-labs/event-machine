@@ -179,6 +179,16 @@ class TestMachine
         return $this;
     }
 
+    public function assertContextMatches(string $key, callable $callback): self
+    {
+        $value = $this->machine->state->context->get($key);
+        expect($callback($value))->toBeTrue(
+            "context[{$key}]: value ".json_encode($value).' did not match callback'
+        );
+
+        return $this;
+    }
+
     public function assertContextHas(string $key): self
     {
         expect($this->machine->state->context->has($key))->toBeTrue(
