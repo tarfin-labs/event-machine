@@ -137,6 +137,16 @@ class Machine implements Castable, JsonSerializable, Stringable
     }
 
     /**
+     * Create a TestMachine wrapper for fluent testing.
+     *
+     * @param  array  $context  Optional initial context.
+     */
+    public static function test(array $context = []): \Tarfinlabs\EventMachine\Testing\TestMachine
+    {
+        return \Tarfinlabs\EventMachine\Testing\TestMachine::create(static::class, $context);
+    }
+
+    /**
      * Starts the machine with the specified state.
      *
      * This method starts the machine with the given state. If no state is provided,
