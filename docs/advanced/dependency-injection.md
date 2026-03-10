@@ -353,45 +353,27 @@ public function register(): void
 
 ## Testing with DI
 
-### Mock Dependencies
+> **Canonical reference:** [Testing with Constructor DI](/testing/constructor-di)
+
+### Quick Example
 
 <!-- doctest-attr: ignore -->
 ```php
 it('processes order with mocked services', function () {
-    $orderService = Mockery::mock(OrderService::class);
-    $orderService->shouldReceive('create')
-        ->once()
+    // Use $this->mock() — NOT app()->instance()
+    $this->mock(OrderService::class)
+        ->shouldReceive('create')->once()
         ->andReturn(new Order(['id' => 'order-123']));
 
-    app()->instance(OrderService::class, $orderService);
+    $state = State::forTesting(['items' => [['id' => 1]]]);
+    ProcessOrderAction::runWithState($state);
 
-    $machine = OrderMachine::create();
-    $machine->send(['type' => 'SUBMIT']);
-
-    expect($machine->state->context->orderId)->toBe('order-123');
+    expect($state->context->get('order_id'))->toBe('order-123');
 });
 ```
 
-### Using Fake Behaviors
-
-<!-- doctest-attr: ignore -->
-```php
-it('uses fake behavior for testing', function () {
-    ProcessOrderAction::fake();
-
-    ProcessOrderAction::shouldRun()
-        ->once()
-        ->andReturnUsing(function ($context) {
-            $context->orderId = 'fake-order-123';
-        });
-
-    $machine = OrderMachine::create();
-    $machine->send(['type' => 'SUBMIT']);
-
-    ProcessOrderAction::assertRan();
-    expect($machine->state->context->orderId)->toBe('fake-order-123');
-});
-```
+For isolated testing, faked behavior patterns, and decision guides, see the
+[full Constructor DI testing guide](/testing/constructor-di).
 
 ## Best Practices
 
