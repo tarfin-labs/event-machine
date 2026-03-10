@@ -16,7 +16,10 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
+use Tarfinlabs\EventMachine\Routing\MachineEndpointAction;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidEndpointDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
@@ -76,6 +79,9 @@ class MachineDefinition
     /** Pending parallel region dispatches (consumed by Machine::send after persist). */
     public array $pendingParallelDispatches = [];
 
+    /** @var array<string, \Tarfinlabs\EventMachine\Routing\EndpointDefinition>|null Parsed endpoint definitions. */
+    public ?array $parsedEndpoints = null;
+
     // endregion
 
     // region Constructor
@@ -95,6 +101,7 @@ class MachineDefinition
         public string $id,
         public ?string $version,
         public ?array $scenarios,
+        public ?array $endpoints = null,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
         StateConfigValidator::validate($config);
@@ -132,12 +139,52 @@ class MachineDefinition
         $this->initialStateDefinition = $this->root->initialStateDefinition;
 
         $this->setupContextManager();
+
+        if ($this->endpoints !== null) {
+            $this->parseEndpoints();
+        }
     }
 
     private function validateParallelDispatchConfig(): void
     {
         if (!$this->shouldPersist) {
             throw InvalidParallelStateDefinitionException::requiresPersistence();
+        }
+    }
+
+    /**
+     * Parse and validate endpoint definitions.
+     *
+     * Converts raw endpoint config arrays into EndpointDefinition value objects
+     * and validates that referenced events, results, and actions exist.
+     */
+    private function parseEndpoints(): void
+    {
+        $this->parsedEndpoints = [];
+
+        foreach ($this->endpoints as $key => $config) {
+            $endpoint = EndpointDefinition::fromConfig($key, $config, $this->behavior);
+
+            if (!isset($this->behavior['events'][$endpoint->eventType])) {
+                throw InvalidEndpointDefinitionException::undefinedEvent($endpoint->eventType);
+            }
+
+            if (
+                $endpoint->resultBehavior !== null
+                && !class_exists($endpoint->resultBehavior)
+                && !isset($this->behavior['results'][$endpoint->resultBehavior])
+            ) {
+                throw InvalidEndpointDefinitionException::undefinedResult($endpoint->resultBehavior);
+            }
+
+            if (
+                $endpoint->actionClass !== null
+                && !is_subclass_of($endpoint->actionClass, MachineEndpointAction::class)
+            ) {
+                throw InvalidEndpointDefinitionException::invalidAction($endpoint->actionClass);
+            }
+
+            $this->parsedEndpoints[$endpoint->eventType] = $endpoint;
         }
     }
 
@@ -157,6 +204,7 @@ class MachineDefinition
         ?array $config = null,
         ?array $behavior = null,
         ?array $scenarios = null,
+        ?array $endpoints = null,
     ): self {
         return new self(
             config: $config ?? null,
@@ -164,6 +212,7 @@ class MachineDefinition
             id: $config['id'] ?? self::DEFAULT_ID,
             version: $config['version'] ?? null,
             scenarios: $scenarios,
+            endpoints: $endpoints,
             delimiter: $config['delimiter'] ?? self::STATE_DELIMITER,
         );
     }
