@@ -253,9 +253,7 @@ See [Raised Events](/advanced/raised-events) for details.
 For testing, behaviors can be faked:
 
 ```php no_run
-// In test
-ProcessOrderAction::fake();
-
+// In test — shouldRun() creates a mock internally (no separate fake() needed)
 ProcessOrderAction::shouldRun()
     ->once()
     ->andReturnUsing(function (ContextManager $context) {
