@@ -160,6 +160,14 @@ it('asserts history contains event types', function (): void {
         ->assertHistoryContains('INCREASE');
 });
 
+it('asserts history order of events', function (): void {
+    TrafficLightsMachine::test()
+        ->send('INCREASE')
+        ->send('INCREASE')
+        ->send('INCREASE')
+        ->assertHistoryOrder('INCREASE', 'INCREASE', 'INCREASE');
+});
+
 // ─── Path assertions ─────────────────────────────────────────
 
 it('asserts path of state transitions', function (): void {

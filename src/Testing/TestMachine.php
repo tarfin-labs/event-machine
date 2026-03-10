@@ -274,6 +274,29 @@ class TestMachine
         return $this;
     }
 
+    public function assertHistoryOrder(string ...$eventTypes): self
+    {
+        $history  = $this->machine->state->history->pluck('type')->toArray();
+        $position = 0;
+
+        foreach ($eventTypes as $type) {
+            $found   = false;
+            $counter = count($history);
+            for ($i = $position; $i < $counter; $i++) {
+                if ($history[$i] === $type) {
+                    $position = $i + 1;
+                    $found    = true;
+                    break;
+                }
+            }
+            expect($found)->toBeTrue(
+                "Expected event [{$type}] after position {$position} in history [".implode(', ', $history).']'
+            );
+        }
+
+        return $this;
+    }
+
     // ═══════════════════════════════════════════
     //  Path Assertions
     // ═══════════════════════════════════════════
