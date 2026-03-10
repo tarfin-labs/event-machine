@@ -6,10 +6,12 @@ use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
+use Tarfinlabs\EventMachine\Support\CompressionManager;
 use Tarfinlabs\EventMachine\Jobs\ArchiveSingleMachineJob;
 
 describe('ArchiveEventsCommand', function (): void {
     beforeEach(function (): void {
+        CompressionManager::clearCache();
         config([
             'machine.archival.enabled'        => true,
             'machine.archival.level'          => 6,

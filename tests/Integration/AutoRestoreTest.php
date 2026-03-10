@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
+use Tarfinlabs\EventMachine\Support\CompressionManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 /*
@@ -20,6 +21,7 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
  */
 describe('Auto-Restore on Event Save', function (): void {
     beforeEach(function (): void {
+        CompressionManager::clearCache();
         config([
             'machine.archival.enabled'                => true,
             'machine.archival.level'                  => 6,
@@ -287,6 +289,7 @@ describe('Auto-Restore on Event Save', function (): void {
  */
 describe('Auto-Restore Full Lifecycle', function (): void {
     beforeEach(function (): void {
+        CompressionManager::clearCache();
         config([
             'machine.archival.enabled'                => true,
             'machine.archival.level'                  => 6,

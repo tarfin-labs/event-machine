@@ -82,10 +82,12 @@ describe('CompressionManager (Archival)', function (): void {
 
     it('validates compression level bounds', function (): void {
         config(['machine.archival.level' => -1]);
+        CompressionManager::clearCache();
         expect(fn () => CompressionManager::getLevel())
             ->toThrow(InvalidArgumentException::class, 'Compression level must be between 0 and 9');
 
         config(['machine.archival.level' => 10]);
+        CompressionManager::clearCache();
         expect(fn () => CompressionManager::getLevel())
             ->toThrow(InvalidArgumentException::class, 'Compression level must be between 0 and 9');
     });

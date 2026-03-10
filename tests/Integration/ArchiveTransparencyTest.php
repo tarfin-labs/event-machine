@@ -7,11 +7,12 @@ use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
+use Tarfinlabs\EventMachine\Support\CompressionManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 describe('Archive Transparency Integration', function (): void {
     beforeEach(function (): void {
-        // Enable archival for tests
+        CompressionManager::clearCache();
         config([
             'machine.archival.enabled'   => true,
             'machine.archival.level'     => 6,
