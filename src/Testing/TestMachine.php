@@ -299,9 +299,16 @@ class TestMachine
     public function assertRegionState(string $regionId, string $expectedState): self
     {
         $match = collect($this->machine->state->value)
-            ->first(fn ($v): bool => str_contains($v, $regionId));
-        expect($match)->not->toBeNull("No active state in region [{$regionId}]")
-            ->and($match)->toContain($expectedState);
+            ->first(function ($v) use ($regionId): bool {
+                $segments = explode('.', $v);
+
+                return in_array($regionId, $segments, true);
+            });
+        expect($match)->not->toBeNull("No active state in region [{$regionId}]");
+
+        $segments  = explode('.', (string) $match);
+        $lastState = end($segments);
+        expect($lastState)->toBe($expectedState, "Expected state [{$expectedState}] in region [{$regionId}], got [{$lastState}]");
 
         return $this;
     }

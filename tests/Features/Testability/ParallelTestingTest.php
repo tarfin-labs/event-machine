@@ -64,3 +64,37 @@ it('asserts region state from value array', function (): void {
     $test->assertRegionState('payment', 'pending');
     $test->assertRegionState('inventory', 'checking');
 });
+
+it('rejects partial region name matches in assertRegionState', function (): void {
+    $test = TestMachine::define([
+        'initial' => 'active',
+        'states'  => [
+            'active' => [],
+        ],
+    ]);
+
+    $test->state()->value = [
+        'machine.processing.payment.pending',
+    ];
+
+    // 'pay' is a substring of 'payment' — should NOT match
+    expect(fn () => $test->assertRegionState('pay', 'pending'))
+        ->toThrow(Exception::class);
+});
+
+it('rejects partial state name matches in assertRegionState', function (): void {
+    $test = TestMachine::define([
+        'initial' => 'active',
+        'states'  => [
+            'active' => [],
+        ],
+    ]);
+
+    $test->state()->value = [
+        'machine.processing.payment.pending',
+    ];
+
+    // 'pend' is a substring of 'pending' — should NOT match
+    expect(fn () => $test->assertRegionState('payment', 'pend'))
+        ->toThrow(Exception::class);
+});
