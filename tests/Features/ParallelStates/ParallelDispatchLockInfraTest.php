@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Sleep;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Locks\MachineLockHandle;
 use Tarfinlabs\EventMachine\Models\MachineStateLock;
@@ -123,4 +124,53 @@ it('release() removes lock from database', function (): void {
     $handle2 = MachineLockManager::acquire('root-006');
     expect($handle2)->toBeInstanceOf(MachineLockHandle::class);
     $handle2->release();
+});
+
+// ─── Mutation Coverage: Holder Info in Exception ─────────────────────
+
+it('immediate timeout exception includes holder information', function (): void {
+    $handle = MachineLockManager::acquire('root-holder-imm', context: 'holding_context');
+
+    try {
+        MachineLockManager::acquire('root-holder-imm', timeout: 0);
+        test()->fail('Should have thrown');
+    } catch (MachineLockTimeoutException $e) {
+        expect($e->getMessage())->toContain('Held by:')
+            ->and($e->getMessage())->toContain('holding_context');
+    }
+
+    $handle->release();
+});
+
+it('blocking timeout exception includes holder information', function (): void {
+    $handle = MachineLockManager::acquire('root-holder-blk', ttl: 60, context: 'block_ctx');
+
+    try {
+        MachineLockManager::acquire('root-holder-blk', timeout: 1);
+        test()->fail('Should have thrown');
+    } catch (MachineLockTimeoutException $e) {
+        expect($e->getMessage())->toContain('Held by:')
+            ->and($e->getMessage())->toContain('block_ctx');
+    }
+
+    $handle->release();
+});
+
+// ─── Mutation Coverage: Blocking Mode Uses Sleep ─────────────────────
+
+it('blocking mode invokes sleep between retries', function (): void {
+    Sleep::fake();
+
+    $handle = MachineLockManager::acquire('root-sleep-mut');
+
+    try {
+        MachineLockManager::acquire('root-sleep-mut', timeout: 1);
+    } catch (MachineLockTimeoutException) {
+    }
+
+    // Blocking mode must call Sleep::usleep at least once before timing out
+    $sequence = (new ReflectionProperty(Sleep::class, 'sequence'))->getValue();
+    expect($sequence)->not->toBeEmpty();
+
+    $handle->release();
 });
