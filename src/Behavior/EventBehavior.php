@@ -184,4 +184,19 @@ abstract class EventBehavior extends Data
     {
         return data_get($this->all(), $key, $default);
     }
+
+    /**
+     * Create an event instance for testing with sensible defaults.
+     * Override in concrete classes for domain-specific defaults.
+     *
+     * @param  array  $attributes  Attributes to merge with defaults.
+     */
+    public static function forTesting(array $attributes = []): static
+    {
+        return static::from(array_merge([
+            'type'    => static::getType(),
+            'payload' => [],
+            'version' => 1,
+        ], $attributes));
+    }
 }
