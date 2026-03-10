@@ -236,7 +236,7 @@ it('sends notification and updates DB on approve', function () {
 
 ## Recipe: Scenario Testing
 
-Test different machine scenarios with `withScenario()`:
+Test different machine scenarios with `withScenario()` (sets the `scenarioType` context key). See [Scenarios](/advanced/scenarios#testing-with-scenarios) for the production payload-based approach.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -251,6 +251,36 @@ it('follows rush scenario', function () {
         ->withScenario('rush')
         ->send('SUBMIT')
         ->assertState('processing');  // skips review in rush scenario
+});
+```
+
+## Recipe: Entry/Exit Action Assertions
+
+Verify entry and exit actions ran during transitions using `faking()` + `assertBehaviorRan()`:
+
+<!-- doctest-attr: ignore -->
+```php
+it('runs entry action when entering state', function () {
+    OrderMachine::test()
+        ->faking([InitializeOrderAction::class])
+        ->send('SUBMIT')
+        ->assertState('awaiting_payment')
+        ->assertBehaviorRan(InitializeOrderAction::class);
+});
+
+it('runs exit action when leaving state', function () {
+    OrderMachine::test()
+        ->faking([CleanupDraftAction::class])
+        ->send('SUBMIT')
+        ->assertBehaviorRan(CleanupDraftAction::class);  // exit action on 'draft' state
+});
+
+it('runs both entry and exit actions on transition', function () {
+    OrderMachine::test()
+        ->faking([CleanupDraftAction::class, InitializeOrderAction::class])
+        ->send('SUBMIT')
+        ->assertBehaviorRan(CleanupDraftAction::class)       // exit 'draft'
+        ->assertBehaviorRan(InitializeOrderAction::class);    // entry 'awaiting_payment'
 });
 ```
 
@@ -287,6 +317,28 @@ it('machine continues correctly after restore', function () {
     expect($restored->state->matches('preparing'))->toBeTrue();
 });
 ```
+
+## Recipe: Machine Configuration Validation in Tests
+
+Use `machine:validate` in your test suite to catch configuration errors early:
+
+<!-- doctest-attr: ignore -->
+```php
+it('has valid machine configuration', function () {
+    $this->artisan('machine:validate', [
+        'machine' => OrderMachine::class,
+    ])->assertSuccessful();
+});
+
+it('validates all machines in project', function () {
+    $this->artisan('machine:validate', ['--all' => true])
+        ->assertSuccessful();
+});
+```
+
+::: tip CI Pipeline
+Add `php artisan machine:validate --all` to your CI pipeline alongside tests and static analysis. See [Artisan Commands](/laravel-integration/artisan-commands#machine-validate) for what it checks.
+:::
 
 ::: tip Related
 See [Overview](/testing/overview) for the testing pyramid,

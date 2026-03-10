@@ -392,6 +392,12 @@ $testMachine->send([
 
 ## Testing with Scenarios
 
+Two approaches: payload-based (production) and `withScenario()` (test helper).
+
+### Payload approach (production-style)
+
+Pass `scenarioType` in the event payload — this is how production code triggers scenarios:
+
 <!-- doctest-attr: ignore -->
 ```php
 it('uses test scenario when specified', function () {
@@ -415,6 +421,22 @@ it('uses default flow without scenario', function () {
         ->and($machine->state->context->count)->toBe(2);
 });
 ```
+
+### TestMachine approach (fluent)
+
+`withScenario()` sets the `scenarioType` context key before sending events — same effect, less boilerplate:
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->withScenario('rush')
+    ->send('SUBMIT')
+    ->assertState('processing');
+```
+
+::: tip
+Both approaches set the same `scenarioType` context key that `getScenarioStateIfAvailable()` reads. See [Recipes: Scenario Testing](/testing/recipes#recipe-scenario-testing) for more examples.
+:::
 
 ## Best Practices
 

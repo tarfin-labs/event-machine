@@ -353,6 +353,27 @@ it('handles multiple machines on model', function () {
 });
 ```
 
+### Conditional Initialization
+
+Test `shouldInitializeMachine()` overrides that control when a machine starts:
+
+<!-- doctest-attr: ignore -->
+```php
+it('does not initialize machine when condition is false', function () {
+    // Model overrides shouldInitializeMachine() → returns false for drafts
+    $order = Order::create(['name' => 'Draft', 'is_draft' => true]);
+
+    expect($order->status)->toBeNull();
+});
+
+it('initializes machine when condition is true', function () {
+    $order = Order::create(['name' => 'Real Order', 'is_draft' => false]);
+
+    expect($order->status)->not->toBeNull();
+    expect($order->status->state->matches('pending'))->toBeTrue();
+});
+```
+
 ## Concurrent Access Testing
 
 <!-- doctest-attr: ignore -->

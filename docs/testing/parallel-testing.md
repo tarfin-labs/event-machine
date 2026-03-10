@@ -115,6 +115,33 @@ ParallelMachine::test()
     ->assertAllRegionsCompleted('processing');  // specific parallel state
 ```
 
+## Failure Path Assertions
+
+Test the `@fail` path when a parallel region reaches a failure final state:
+
+<!-- doctest-attr: ignore -->
+```php
+it('transitions to @fail target when region fails', function () {
+    ParallelMachine::test()
+        ->withoutParallelDispatch()
+        ->send('PAYMENT_FAIL')           // payment region → payment_failed (final)
+        ->send('INVENTORY_RESERVE')      // inventory region → reserved (final)
+        ->assertState('failed');         // @fail target — not @done
+});
+
+it('handles mixed success/failure across regions', function () {
+    ParallelMachine::test()
+        ->withoutParallelDispatch()
+        ->send('PAYMENT_FAIL')
+        ->assertRegionState('payment', 'payment_failed')
+        ->assertRegionState('inventory', 'checking');  // still in progress
+});
+```
+
+::: info @fail vs @done
+`@fail` fires when the parallel dispatch job fails (e.g., exhausts retries). Individual regions reaching a "failure" final state still trigger `@done` because all regions are in final states. Use guards or context flags to distinguish success from failure in the `@done` handler.
+:::
+
 When not all regions have completed, the assertion fails:
 
 <!-- doctest-attr: ignore -->
