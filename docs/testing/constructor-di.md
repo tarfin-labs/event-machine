@@ -1,0 +1,91 @@
+# Testing with Constructor DI
+
+Behaviors support constructor dependency injection. Services are resolved by the Laravel container, making them fully mockable in tests.
+
+## Two-Layer DI Architecture
+
+| Layer | What | Where | Resolved By |
+|-------|------|-------|-------------|
+| Services | PaymentGateway, Logger, Repository | `__construct()` | Laravel container via `App::make()` |
+| State | ContextManager, EventBehavior, State | `__invoke()` | `injectInvokableBehaviorParameters` |
+
+## Mocking Injected Services
+
+### With runWithState() — Isolated
+
+<!-- doctest-attr: ignore -->
+```php
+it('calls payment gateway with correct amount', function () {
+    $this->mock(PaymentGateway::class)
+        ->shouldReceive('charge')->with(100)->once()
+        ->andReturn(new PaymentResult(id: 'txn_123'));
+
+    $state = State::forTesting(['amount' => 100]);
+    ProcessPaymentAction::runWithState($state);
+
+    expect($state->context->get('transaction_id'))->toBe('txn_123');
+});
+```
+
+### With Machine::test() — Integration
+
+<!-- doctest-attr: ignore -->
+```php
+it('processes payment in the full machine', function () {
+    $this->mock(PaymentGateway::class)
+        ->shouldReceive('charge')->andReturn(new PaymentResult(id: 'txn_456'));
+
+    OrderMachine::test(['amount' => 100])
+        ->send('PROCESS_PAYMENT')
+        ->assertState('paid')
+        ->assertContext('transaction_id', 'txn_456');
+});
+```
+
+## Before/After Comparison
+
+### Before — Service Locator (anti-pattern)
+
+<!-- doctest-attr: ignore -->
+```php
+class ProcessPaymentAction extends ActionBehavior {
+    public function __invoke(ContextManager $context): void {
+        $gateway = app(PaymentGateway::class);  // hidden dependency
+        $result = $gateway->charge($context->get('amount'));
+    }
+}
+```
+
+### After — Constructor DI
+
+<!-- doctest-attr: ignore -->
+```php
+class ProcessPaymentAction extends ActionBehavior {
+    public function __construct(
+        private readonly PaymentGateway $gateway,
+        ?Collection $eventQueue = null,
+    ) {
+        parent::__construct($eventQueue);
+    }
+
+    public function __invoke(ContextManager $context): void {
+        $result = $this->gateway->charge($context->get('amount'));  // explicit
+    }
+}
+```
+
+## Decision Guide: Mock Service vs Mock Behavior
+
+| Approach | When | Example |
+|----------|------|---------|
+| Mock the **service** | Test behavior logic with controlled service responses | `$this->mock(PaymentGateway::class)` |
+| Mock the **behavior** | Test machine flow, skip behavior internals | `ProcessPaymentAction::fake()` |
+| Mock **neither** | E2E with real services (or test doubles in ServiceProvider) | Full integration test |
+
+::: tip Related
+See [Isolated Testing](/testing/isolated-testing) for `runWithState()` details,
+[Fakeable Behaviors](/testing/fakeable-behaviors) for the faking API,
+and [TestMachine](/testing/test-machine) for the fluent machine-level wrapper.
+
+For DI patterns beyond testing, see [Dependency Injection](/advanced/dependency-injection).
+:::
