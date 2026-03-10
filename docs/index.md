@@ -62,102 +62,6 @@ MachineDefinition::define(
 <div class="feature-section">
 <div class="feature-text">
 
-## Every Transition, Persisted
-
-**Event sourcing built in.** Every state change becomes an immutable event in your database. Complete audit trail without extra code.
-
-Know exactly what happened, when, and why. Compliance-ready from day one. Debug production issues by replaying history.
-
-[Learn about persistence &rarr;](/laravel-integration/persistence)
-
-</div>
-<div class="feature-code">
-
-<!-- doctest-attr: bootstrap="laravel,db" -->
-```php
-// [!code hide:start]
-use Tarfinlabs\EventMachine\Actor\Machine;
-use Tarfinlabs\EventMachine\Models\MachineEvent;
-use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-
-$order = Machine::create(
-    definition: MachineDefinition::define(
-        config: [
-            'id' => 'order',
-            'initial' => 'draft',
-            'context' => [],
-            'states' => [
-                'draft'    => ['on' => ['SUBMIT' => 'review']],
-                'review'   => ['on' => ['APPROVE' => 'approved']],
-                'approved' => ['type' => 'final'],
-            ],
-        ],
-    ),
-);
-// [!code hide:end]
-// Send an event
-$order->send(['type' => 'SUBMIT']);
-
-// Every transition is recorded in machine_events table
-// | id | type    | payload         | created_at          |
-// |----|---------|-----------------|---------------------|
-// | 1  | @init   | {}              | 2024-01-15 10:30:00 |
-// | 2  | SUBMIT  | {"user_id": 5}  | 2024-01-15 10:30:01 |
-// | 3  | APPROVE | {"by": "admin"} | 2024-01-15 11:45:00 |
-
-// Query event history by root_event_id
-$rootEventId = $order->state->history->first()->root_event_id;
-
-MachineEvent::where('root_event_id', $rootEventId)
-    ->oldest('sequence_number')
-    ->get();
-```
-
-</div>
-</div>
-
-<div class="feature-section">
-<div class="feature-text">
-
-## Complete Audit Trail
-
-**Compliance-ready history at your fingertips.** Filter events by type, date range, or payload. Know who did what and when - with evidence.
-
-Regulatory audit? Legal discovery? Customer dispute? Your machine history is queryable, filterable, and legally defensible.
-
-[Query your history &rarr;](/laravel-integration/persistence)
-
-</div>
-<div class="feature-code">
-
-<!-- doctest-attr: ignore -->
-```php
-// Find all approval events in date range
-MachineEvent::where('root_event_id', $rootEventId)
-    ->where('type', 'APPROVE')
-    ->whereBetween('created_at', [$start, $end])
-    ->get();
-
-// Get full state at any point in history
-$machine = OrderMachine::create(state: $rootEventId);
-$machine->state->history->each(function ($event) {
-    echo "{$event->type} at {$event->created_at}\n";
-    echo "Context: " . json_encode($event->context) . "\n";
-});
-
-// Who approved this order?
-$approval = $machine->state->history
-    ->where('type', 'APPROVE')
-    ->first();
-// {"by": "admin", "approved_at": "2024-01-15 11:45:00"}
-```
-
-</div>
-</div>
-
-<div class="feature-section">
-<div class="feature-text">
-
 ## Behaviors: Guards, Actions, Calculators
 
 **Calculators compute. Guards validate. Actions execute.** Each transition runs through a pipeline: calculate derived values, check conditions, then execute side effects.
@@ -224,136 +128,55 @@ class SendReceiptAction extends ActionBehavior
 <div class="feature-section">
 <div class="feature-text">
 
-## Test Everything, Fluently
+## Every Transition, Persisted
 
-**From unit tests to full workflows — one expressive API.** Test individual behaviors in isolation with `runWithState()`, or chain entire machine lifecycles with `Machine::test()` and 21+ assertion methods.
+**Event sourcing built in.** Every state change becomes an immutable event in your database. Complete audit trail without extra code.
 
-Fake behaviors, assert guards, verify paths, check context — all with contextual failure messages. No database needed.
+Know exactly what happened, when, and why. Compliance-ready from day one. Debug production issues by replaying history. Query by type, date range, or payload.
 
-[Testing guide &rarr;](/testing/overview)
-
-</div>
-<div class="feature-code">
-
-<!-- doctest-attr: ignore -->
-```php
-// Machine-level: fluent lifecycle testing
-OrderMachine::test(['amount' => 100])
-    ->withoutPersistence()
-    ->faking([SendEmailAction::class])
-    ->send('SUBMIT')
-    ->assertState('awaiting_payment')
-    ->send('PAY')
-    ->assertState('preparing')
-    ->assertBehaviorRan(SendEmailAction::class)
-    ->send('DELIVER')
-    ->assertState('delivered')
-    ->assertFinished();
-```
-
-<!-- doctest-attr: ignore -->
-```php
-// Unit-level: isolated behavior testing
-$state = State::forTesting(['total' => 50]);
-expect(MinimumOrderGuard::runWithState($state))->toBeFalse();
-
-// Guard and path assertions
-OrderMachine::test(['amount' => 0])
-    ->assertGuarded('SUBMIT')
-    ->assertGuardedBy('SUBMIT', MinimumAmountGuard::class);
-```
-
-</div>
-</div>
-
-<div class="feature-section">
-<div class="feature-text">
-
-## Archive Millions, Restore Any
-
-**Enterprise-grade event management.** Completed machines pile up? Archive them. Events compressed to a fraction of their size, but fully restorable when needed.
-
-Six months later, compliance asks about order #12847? One line brings the entire machine back with full context and history.
-
-[Archival & restoration &rarr;](/laravel-integration/archival)
+[Learn about persistence &rarr;](/laravel-integration/persistence)
 
 </div>
 <div class="feature-code">
 
-```bash
-# Archive inactive machines (30+ days by default)
-php artisan machine:archive-events
-
-# Events compressed: 847 events → 1 archived record
-# Storage: 2.3 MB → 127 KB
-```
-
-<!-- doctest-attr: ignore -->
+<!-- doctest-attr: bootstrap="laravel,db" -->
 ```php
-// Months later: restore the entire machine
-$archive = MachineEventArchive::where(
-    'root_event_id', $rootEventId
-)->first();
+// [!code hide:start]
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
-// Restore automatically decompresses events
-$order = OrderMachine::create(state: $archive->root_event_id);
+$order = Machine::create(
+    definition: MachineDefinition::define(
+        config: [
+            'id' => 'order',
+            'initial' => 'draft',
+            'context' => [],
+            'states' => [
+                'draft'    => ['on' => ['SUBMIT' => 'review']],
+                'review'   => ['on' => ['APPROVE' => 'approved']],
+                'approved' => ['type' => 'final'],
+            ],
+        ],
+    ),
+);
+// [!code hide:end]
+// Send an event
+$order->send(['type' => 'SUBMIT']);
 
-// Full machine restored with complete history
-$order->state->matches('completed');       // true
-$order->state->context->total;             // 15000
-$order->state->history->count();           // 847
-```
+// Every transition is recorded in machine_events table
+// | id | type    | payload         | created_at          |
+// |----|---------|-----------------|---------------------|
+// | 1  | @init   | {}              | 2024-01-15 10:30:00 |
+// | 2  | SUBMIT  | {"user_id": 5}  | 2024-01-15 10:30:01 |
+// | 3  | APPROVE | {"by": "admin"} | 2024-01-15 11:45:00 |
 
-</div>
-</div>
+// Restore full state from any point in history
+$rootEventId = $order->state->history->first()->root_event_id;
 
-<div class="feature-section">
-<div class="feature-text">
-
-## Type-Safe Context
-
-**Validated data at every step.** Context classes powered by Spatie Laravel Data give you typed properties, validation rules, and transformations.
-
-No more `$context['total']` typos. No more missing validation. IDE autocompletion everywhere.
-
-[Working with context &rarr;](/building/working-with-context)
-
-</div>
-<div class="feature-code">
-
-```php
-use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
-enum OrderStatus { case Draft; } // [!code hide]
-
-class OrderContext extends ContextManager
-{
-    public function __construct(
-        public array $items = [],
-
-        #[Min(0)]
-        public int $total = 0,
-
-        #[Email]
-        public ?string $customerEmail = null,
-
-        public OrderStatus $status = OrderStatus::Draft,
-    ) {
-        parent::__construct();
-    }
-
-    public function itemCount(): int
-    {
-        return count($this->items);
-    }
-}
-```
-
-<!-- doctest-attr: ignore -->
-```php
-// Type-safe access everywhere
-$order->state->context->total;        // int
-$order->state->context->itemCount();  // method calls work
-$order->state->context->status;       // enum
+MachineEvent::where('root_event_id', $rootEventId)
+    ->oldest('sequence_number')
+    ->get();
 ```
 
 </div>
@@ -426,6 +249,103 @@ $machine->send(['type' => 'SHIPPED']); // shipping → done
 <div class="feature-section">
 <div class="feature-text">
 
+## Test Everything, Fluently
+
+**From unit tests to full workflows — one expressive API.** Test individual behaviors in isolation with `runWithState()`, or chain entire machine lifecycles with `Machine::test()` and 21+ assertion methods.
+
+Fake behaviors, assert guards, verify paths, check context — all with contextual failure messages. No database needed.
+
+[Testing guide &rarr;](/testing/overview)
+
+</div>
+<div class="feature-code">
+
+<!-- doctest-attr: ignore -->
+```php
+// Machine-level: fluent lifecycle testing
+OrderMachine::test(['amount' => 100])
+    ->withoutPersistence()
+    ->faking([SendEmailAction::class])
+    ->send('SUBMIT')
+    ->assertState('awaiting_payment')
+    ->send('PAY')
+    ->assertState('preparing')
+    ->assertBehaviorRan(SendEmailAction::class)
+    ->send('DELIVER')
+    ->assertState('delivered')
+    ->assertFinished();
+```
+
+<!-- doctest-attr: ignore -->
+```php
+// Unit-level: isolated behavior testing
+$state = State::forTesting(['total' => 50]);
+expect(MinimumOrderGuard::runWithState($state))->toBeFalse();
+
+// Guard and path assertions
+OrderMachine::test(['amount' => 0])
+    ->assertGuarded('SUBMIT')
+    ->assertGuardedBy('SUBMIT', MinimumAmountGuard::class);
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
+## Type-Safe Context
+
+**Validated data at every step.** Context classes powered by Spatie Laravel Data give you typed properties, validation rules, and transformations.
+
+No more `$context['total']` typos. No more missing validation. IDE autocompletion everywhere.
+
+[Working with context &rarr;](/building/working-with-context)
+
+</div>
+<div class="feature-code">
+
+```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+enum OrderStatus { case Draft; } // [!code hide]
+
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        public array $items = [],
+
+        #[Min(0)]
+        public int $total = 0,
+
+        #[Email]
+        public ?string $customerEmail = null,
+
+        public OrderStatus $status = OrderStatus::Draft,
+    ) {
+        parent::__construct();
+    }
+
+    public function itemCount(): int
+    {
+        return count($this->items);
+    }
+}
+```
+
+<!-- doctest-attr: ignore -->
+```php
+// Type-safe access everywhere
+$order->state->context->total;        // int
+$order->state->context->itemCount();  // method calls work
+$order->state->context->status;       // enum
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
 ## Laravel Native
 
 **Built for Laravel, not bolted on.** Eloquent integration, dependency injection, service providers, Artisan commands - everything you expect.
@@ -470,6 +390,47 @@ class ProcessPaymentAction extends ActionBehavior
         $this->orders->markPaid($context->orderId);
     }
 }
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
+## Archive Millions, Restore Any
+
+**Enterprise-grade event management.** Completed machines pile up? Archive them. Events compressed to a fraction of their size, but fully restorable when needed.
+
+Six months later, compliance asks about order #12847? One line brings the entire machine back with full context and history.
+
+[Archival & restoration &rarr;](/laravel-integration/archival)
+
+</div>
+<div class="feature-code">
+
+```bash
+# Archive inactive machines (30+ days by default)
+php artisan machine:archive-events
+
+# Events compressed: 847 events → 1 archived record
+# Storage: 2.3 MB → 127 KB
+```
+
+<!-- doctest-attr: ignore -->
+```php
+// Months later: restore the entire machine
+$archive = MachineEventArchive::where(
+    'root_event_id', $rootEventId
+)->first();
+
+// Restore automatically decompresses events
+$order = OrderMachine::create(state: $archive->root_event_id);
+
+// Full machine restored with complete history
+$order->state->matches('completed');       // true
+$order->state->context->total;             // 15000
+$order->state->history->count();           // 847
 ```
 
 </div>
