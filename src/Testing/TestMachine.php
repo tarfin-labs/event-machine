@@ -137,8 +137,13 @@ class TestMachine
 
     public function assertState(string $expected): self
     {
+        $values = $this->machine->state->value;
+        $actual = count($values) > 1
+            ? "[\n  ".implode(",\n  ", $values)."\n]"
+            : '['.implode(', ', $values).']';
+
         expect($this->machine->state->matches($expected))->toBeTrue(
-            "Expected state [{$expected}] but got [".implode(', ', $this->machine->state->value).']'
+            "Expected state [{$expected}] but got {$actual}"
         );
 
         return $this;
