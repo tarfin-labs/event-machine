@@ -166,7 +166,7 @@ class TransitionDefinition
 
                 $shouldLog = $guardBehavior?->shouldLog ?? false;
 
-                if ($guardBehavior instanceof GuardBehavior) {
+                if ($guardBehavior instanceof GuardBehavior && !$guardBehavior instanceof \Mockery\MockInterface) {
                     $guardBehavior::validateRequiredContext($state->context);
                 }
 

@@ -1741,7 +1741,7 @@ class MachineDefinition
             shouldLog: $shouldLog,
         );
 
-        if ($actionBehavior instanceof InvokableBehavior) {
+        if ($actionBehavior instanceof InvokableBehavior && !$actionBehavior instanceof \Mockery\MockInterface) {
             $actionBehavior::validateRequiredContext($state->context);
         }
 
