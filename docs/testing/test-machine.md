@@ -27,8 +27,9 @@ TestMachine::for($machine)
 
 <!-- doctest-attr: ignore -->
 ```php
-->faking([SendEmailAction::class, ChargePaymentAction::class])  // selective behavior faking
+->faking([SendEmailAction::class, ChargePaymentAction::class])  // selective behavior faking (spy mode)
 ->withoutPersistence()                                            // skip DB writes
+->withoutParallelDispatch()                                       // run regions sequentially
 ```
 
 ## Sending Events
