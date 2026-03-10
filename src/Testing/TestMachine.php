@@ -56,7 +56,7 @@ class TestMachine
     public static function withContext(string $machineClass, array $context): self
     {
         /** @var MachineDefinition $definition */
-        $definition                = $machineClass::definition();
+        $definition                = clone $machineClass::definition();
         $definition->shouldPersist = false;
         $definition->machineClass  = $machineClass;
 
@@ -322,13 +322,18 @@ class TestMachine
             expect(false)->toBeTrue(
                 "Event not recognized — cannot verify guard [{$guardName}]"
             );
+
+            return $this; // Unreachable — expect() throws, but explicit for clarity
         }
 
         expect($this->machine->state->value)->toBe($before,
             "Expected event to be guarded by [{$guardName}], but a transition occurred"
         );
 
-        $machineId = $this->machine->state->currentStateDefinition->machine->id;
+        $stateDefinition = $this->machine->state->currentStateDefinition;
+        expect($stateDefinition)->not->toBeNull('Cannot assertGuardedBy: no current state definition');
+
+        $machineId = $stateDefinition->machine->id;
 
         // Derive the placeholder: inline keys are used as-is, FQCN uses classBasename
         $placeholder = class_exists($guardName)
@@ -434,9 +439,20 @@ class TestMachine
             }
         }
 
+        $position = 0;
+        $count    = count($visitedStates);
+
         foreach ($states as $expectedState) {
-            expect(in_array($expectedState, $visitedStates, true))->toBeTrue(
-                "Expected machine to have transitioned through [{$expectedState}], visited states: [".implode(', ', $visitedStates).']'
+            $found = false;
+            for ($i = $position; $i < $count; $i++) {
+                if ($visitedStates[$i] === $expectedState) {
+                    $position = $i + 1;
+                    $found    = true;
+                    break;
+                }
+            }
+            expect($found)->toBeTrue(
+                "Expected state [{$expectedState}] after position {$position} in visited states: [".implode(', ', $visitedStates).']'
             );
         }
 
@@ -559,7 +575,10 @@ class TestMachine
     /**
      * Debug guard evaluation results for an event.
      *
-     * Sends the event and inspects history for guard pass/fail events.
+     * WARNING: This method SENDS the event — it mutates machine state.
+     * If all guards pass, the machine will transition. Use only as a
+     * diagnostic tool when state mutation is acceptable.
+     *
      * Returns an associative array of guard names => bool (true = passed, false = failed).
      *
      * @return array<string, bool>

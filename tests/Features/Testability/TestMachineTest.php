@@ -348,6 +348,14 @@ it('withContext() disables persistence', function (): void {
     expect($test->machine()->definition->shouldPersist)->toBeFalse();
 });
 
+it('withContext() does not leak between calls', function (): void {
+    $test1 = TestabilityMachine::withContext(['count' => 100]);
+    $test2 = TestabilityMachine::withContext(['count' => 200]);
+
+    expect($test1->context()->get('count'))->toBe(100);
+    expect($test2->context()->get('count'))->toBe(200);
+});
+
 // ─── tap() ──────────────────────────────────────────────────
 
 it('executes callback via tap() and continues chain', function (): void {
@@ -425,6 +433,14 @@ it('asserts machine transitioned through expected states', function (): void {
     AllInvocationPointsMachine::test()
         ->send('PROCESS')
         ->assertTransitionedThrough(['idle', 'active']);
+});
+
+it('assertTransitionedThrough enforces order', function (): void {
+    // ['active', 'idle'] is wrong order — machine goes idle → active
+    expect(fn () => AllInvocationPointsMachine::test()
+        ->send('PROCESS')
+        ->assertTransitionedThrough(['active', 'idle'])
+    )->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
 });
 
 // ─── debugGuards() ──────────────────────────────────────────

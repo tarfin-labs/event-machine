@@ -9,7 +9,7 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\LogExitAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\LogEntryAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Guards\IsCountPositiveGuard;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\DoubleCountCalculator;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Calculators\DoubleCountCalculator;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\IncrementWithServiceAction;
 
 class AllInvocationPointsMachine extends Machine

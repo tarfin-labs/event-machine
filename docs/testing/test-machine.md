@@ -132,7 +132,7 @@ TestMachine::for($machine)
 // Execute a callback mid-chain for side-effect assertions
 ->tap(fn($test) => Notification::assertSentTo($user, ApprovalNotification::class))
 
-// Debug guard evaluation results
+// Debug guard evaluation results (WARNING: sends the event, mutates state)
 ->debugGuards('SUBMIT')  // returns ['IsValidGuard' => true, 'HasStockGuard' => false]
 ```
 

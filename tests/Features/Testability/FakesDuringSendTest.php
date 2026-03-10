@@ -6,7 +6,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\LogExitActi
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\LogEntryAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\AllInvocationPointsMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Guards\IsCountPositiveGuard;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\DoubleCountCalculator;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Calculators\DoubleCountCalculator;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\IncrementWithServiceAction;
 
 afterEach(function (): void {

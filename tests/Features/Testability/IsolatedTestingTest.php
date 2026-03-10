@@ -10,7 +10,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\LogEntryAct
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\AddValueAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\IncrementAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Guards\IsCountPositiveGuard;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\DoubleCountCalculator;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Calculators\DoubleCountCalculator;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\IncrementWithServiceAction;
 
 afterEach(function (): void {
