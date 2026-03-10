@@ -112,12 +112,16 @@ $mock = ProcessOrderAction::getFake();
 // Single behavior
 ProcessOrderAction::resetFakes();
 
-// All fakes globally
+// All fakes across ALL behavior classes (can be called from any class)
 IncrementAction::resetAllFakes();
 
 // Recommended: auto-cleanup in Pest
 afterEach(fn() => IncrementAction::resetAllFakes());
 ```
+
+::: info resetAllFakes() is global
+`resetAllFakes()` clears ALL faked behaviors across all classes, regardless of which class you call it from. The `$fakes` array is shared via `InvokableBehavior`, not per-child-class. You only need one `resetAllFakes()` call in your `afterEach()`.
+:::
 
 ::: tip Related
 See [Isolated Testing](/testing/isolated-testing) for unit-level `runWithState()` tests,
