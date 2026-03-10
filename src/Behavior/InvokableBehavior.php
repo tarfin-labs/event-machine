@@ -183,4 +183,32 @@ abstract class InvokableBehavior
     {
         return App::make(static::class)(...$args);
     }
+
+    /**
+     * Run the behavior using the engine's exact parameter injection logic.
+     *
+     * Resolves through container (supporting constructor DI and fakes),
+     * then uses injectInvokableBehaviorParameters to match the exact
+     * parameter order the engine would provide at runtime.
+     *
+     * @param  State  $state  The state to run against.
+     * @param  EventBehavior|null  $eventBehavior  Optional event behavior.
+     * @param  array|null  $arguments  Optional behavior arguments.
+     */
+    public static function runWithState(
+        State $state,
+        ?EventBehavior $eventBehavior = null,
+        ?array $arguments = null,
+    ): mixed {
+        $instance = App::make(static::class);
+
+        $params = static::injectInvokableBehaviorParameters(
+            actionBehavior: $instance,
+            state: $state,
+            eventBehavior: $eventBehavior,
+            actionArguments: $arguments,
+        );
+
+        return $instance(...$params);
+    }
 }
