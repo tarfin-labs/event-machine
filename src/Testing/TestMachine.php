@@ -33,7 +33,13 @@ class TestMachine
      */
     public static function create(string $machineClass, array $context = []): self
     {
-        return new self($machineClass::create($context));
+        $machine = $machineClass::create();
+
+        foreach ($context as $key => $value) {
+            $machine->state->context->set($key, $value);
+        }
+
+        return new self($machine);
     }
 
     /**
@@ -66,7 +72,7 @@ class TestMachine
     public function faking(array $behaviors): self
     {
         foreach ($behaviors as $behavior) {
-            $behavior::fake();
+            $behavior::spy();
             $this->fakedBehaviors[] = $behavior;
         }
 
