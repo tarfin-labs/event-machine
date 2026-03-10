@@ -466,6 +466,43 @@ class ProcessOrderAction extends ActionBehavior
 
 ## Testing Events
 
+### EventBehavior::forTesting()
+
+Events are **data**, not **behavior** — construct them easily, don't mock them:
+
+<!-- doctest-attr: ignore -->
+```php
+// Base — sensible defaults
+$event = IncreaseEvent::forTesting();
+expect($event->type)->toBe('INCREASE');
+
+// Override specific fields
+$event = AddValueEvent::forTesting(['payload' => ['value' => 42]]);
+expect($event->payload)->toBe(['value' => 42]);
+```
+
+### With runWithState
+
+<!-- doctest-attr: ignore -->
+```php
+$state = State::forTesting(['count' => 10]);
+$event = AddValueEvent::forTesting(['payload' => ['value' => 5]]);
+
+AddValueAction::runWithState($state, eventBehavior: $event);
+expect($state->context->count)->toBe(15);
+```
+
+### With Machine::test()
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->send(PaymentEvent::forTesting()->toArray())
+    ->assertState('paid');
+```
+
+### Validation Testing
+
 ```php no_run
 it('validates event payload', function () {
     $machine = OrderMachine::create();
@@ -477,18 +514,11 @@ it('validates event payload', function () {
         ],
     ]))->toThrow(MachineEventValidationException::class);
 });
-
-it('processes valid event', function () {
-    $machine = OrderMachine::create();
-
-    $machine->send(new AddItemEvent(
-        productId: 123,
-        quantity: 2,
-    ));
-
-    expect($machine->state->context->items)->toHaveCount(1);
-});
 ```
+
+::: tip Full Testing Guide
+See [Isolated Testing](/testing/isolated-testing) for `forTesting()` details.
+:::
 
 ## Best Practices
 

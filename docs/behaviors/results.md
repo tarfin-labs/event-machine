@@ -391,33 +391,52 @@ Pass arguments to results:
 
 ## Testing Results
 
-```php ignore
-it('returns correct result when completed', function () {
-    $machine = OrderMachine::create();
+### Via Machine::test()
 
-    $machine->send(['type' => 'ADD_ITEM', 'payload' => ['item' => [...]]]);
-    $machine->send(['type' => 'CHECKOUT']);
-    $machine->send(['type' => 'COMPLETE']);
+<!-- doctest-attr: ignore -->
+```php
+$test = OrderMachine::test(['order_id' => 'ord-123'])
+    ->sendMany(['SUBMIT', 'PAY', 'SHIP', 'DELIVER'])
+    ->assertFinished();
 
-    $result = $machine->result();
+$result = $test->machine()->result();
+expect($result)->toHaveKeys(['orderId', 'total', 'status']);
+expect($result['status'])->toBe('completed');
+```
 
-    expect($result)->toHaveKeys(['orderId', 'total', 'status'])
-        ->and($result['status'])->toBe('completed')
-        ->and($result['total'])->toBeGreaterThan(0);
-});
+### Isolated — Direct Invocation
 
-it('returns different result when cancelled', function () {
-    $machine = OrderMachine::create();
+<!-- doctest-attr: ignore -->
+```php
+$state = State::forTesting([
+    'order_id' => 'ord-123',
+    'total' => 250,
+]);
 
-    $machine->send(['type' => 'ADD_ITEM', 'payload' => ['item' => [...]]]);
-    $machine->send(['type' => 'CANCEL', 'payload' => ['reason' => 'Changed mind']]);
+$result = OrderResultBehavior::runWithState($state);
+expect($result['orderId'])->toBe('ord-123');
+expect($result['total'])->toBe(250);
+```
 
-    $result = $machine->result();
+### With Constructor DI
 
-    expect($result['status'])->toBe('cancelled')
-        ->and($result['reason'])->toBe('Changed mind');
+<!-- doctest-attr: ignore -->
+```php
+it('generates receipt via injected service', function () {
+    $this->mock(ReceiptGenerator::class)
+        ->shouldReceive('generate')
+        ->andReturn(new Receipt(url: 'https://example.com/receipt/123'));
+
+    $state = State::forTesting(['order_id' => 'ord-123']);
+    $result = OrderResultBehavior::runWithState($state);
+
+    expect($result['receiptUrl'])->toBe('https://example.com/receipt/123');
 });
 ```
+
+::: tip Full Testing Guide
+See [TestMachine](/testing/test-machine) for `assertFinished()` and result access.
+:::
 
 ## Best Practices
 
