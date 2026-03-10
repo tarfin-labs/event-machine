@@ -2,6 +2,154 @@
 
 Guide for upgrading between EventMachine versions.
 
+## Upgrading to v6.0
+
+v6.0 introduces a comprehensive testability layer with three breaking changes to behavior resolution. Most applications require **no code changes** — the breaking changes only affect behaviors with custom constructors.
+
+### Breaking Changes
+
+#### 1. Behavior Resolution via Container
+
+Behaviors are now resolved through Laravel's service container (`App::make()`) instead of direct instantiation (`new $class()`). This enables constructor dependency injection.
+
+**Before:**
+<!-- doctest-attr: ignore -->
+```php
+// MachineDefinition::getInvokableBehavior()
+return new $behaviorDefinition($this->eventQueue);
+```
+
+**After:**
+<!-- doctest-attr: ignore -->
+```php
+return App::make($behaviorDefinition, ['eventQueue' => $this->eventQueue]);
+```
+
+**Action required if you:**
+
+1. Override `InvokableBehavior::__construct()` with non-injectable parameters (plain `string`, `int`, `array` without defaults):
+   → Register a container binding for the parameter.
+
+2. Extend constructors positionally:
+   → Use named, typed parameters.
+
+**No action required if you:**
+- Use the default `InvokableBehavior` constructor (most behaviors)
+- Only override `__invoke()` (most behaviors)
+- Use typed service dependencies in constructors (new capability!)
+
+**Example migration:**
+
+<!-- doctest-attr: ignore -->
+```php
+// ❌ BREAKS — container can't resolve `string $prefix` automatically
+class BadBehavior extends ActionBehavior
+{
+    public function __construct(string $prefix, ?Collection $eventQueue = null)
+    {
+        parent::__construct($eventQueue);
+    }
+}
+
+// ✅ FIX — use a typed dependency or register a binding
+class FixedBehavior extends ActionBehavior
+{
+    public function __construct(PrefixConfig $config, ?Collection $eventQueue = null)
+    {
+        parent::__construct($eventQueue);
+    }
+}
+// OR: register in a service provider
+$this->app->when(BadBehavior::class)->needs('$prefix')->give('my_prefix');
+```
+
+::: info
+The `❌ BREAKS` scenario was already broken with `new $class($eventQueue)` — a Collection would be passed as the `$prefix` string parameter, causing a type mismatch. Container resolution **surfaces existing bugs** rather than creating new ones.
+:::
+
+#### 2. `InvokableBehavior::run()` Always Uses Container
+
+**Before:**
+<!-- doctest-attr: ignore -->
+```php
+$instance = static::isFaked() ? App::make(static::class) : new static();
+```
+
+**After:**
+<!-- doctest-attr: ignore -->
+```php
+$instance = App::make(static::class);
+```
+
+**Who is affected:** Code that calls `::run()` and relies on `new static()` bypassing the container. In practice, no one — this method was only used in tests.
+
+#### 3. `Fakeable::fake()` Uses `App::bind()` with Closure
+
+`Fakeable::fake()` now registers fakes via `App::bind($class, fn() => $mock)` instead of the previous dual storage approach. The closure always returns the same Mockery mock instance.
+
+**Why `App::bind()` instead of `App::instance()`:** Laravel's `App::instance()` bindings are **ignored** when `App::make()` is called with explicit parameters (e.g., `App::make(MyGuard::class, ['eventQueue' => $queue])`). Since `getInvokableBehavior()` always passes `['eventQueue' => $this->eventQueue]`, `App::instance()` would silently bypass the fake.
+
+**Cleanup change:** `resetFakes()` now uses `app()->offsetUnset($class)` instead of `App::forgetInstance($class)`, because `forgetInstance()` only removes instance bindings, not closure bindings. The public API is identical.
+
+### New Testing Features
+
+| Feature | Description |
+|---------|-------------|
+| `Machine::test()` | Livewire-style fluent test wrapper with 21+ assertion methods |
+| `State::forTesting()` | Lightweight state factory for unit tests |
+| `InvokableBehavior::runWithState()` | Isolated testing with engine-identical DI. For void actions, returns the `eventQueue` Collection so raised events are accessible. |
+| `EventBehavior::forTesting()` | Test factory for event construction |
+| Constructor DI | Behaviors can now inject service dependencies via `__construct()` |
+| `Fakeable::spy()` | Permissive mock that records all calls silently |
+| `Fakeable::allowToRun()` | Spy mode — allows and records `__invoke` calls |
+| `Fakeable::assertRanWith()` | Assert `__invoke` was called with matching arguments |
+| `Fakeable::assertRanTimes()` | Assert `__invoke` was called exactly N times |
+| `Fakeable::mayReturn()` | Set return value without "at least once" call expectation |
+
+### Migration Steps
+
+#### Step 1: Update Dependencies
+
+```bash
+composer require tarfinlabs/event-machine:^6.0
+```
+
+#### Step 2: Check Custom Constructors
+
+Search for behaviors that override `__construct()`:
+
+```bash
+grep -r "extends ActionBehavior\|extends GuardBehavior\|extends CalculatorBehavior" --include="*.php" -l | xargs grep "__construct"
+```
+
+If any have non-injectable parameters (plain `string`, `int`, `array` without type-hinted objects), register a binding:
+
+<!-- doctest-attr: ignore -->
+```php
+// In a service provider
+$this->app->when(MyBehavior::class)->needs('$paramName')->give('value');
+```
+
+#### Step 3: Update Test Fake Cleanup
+
+If you use `Fakeable::fake()` in tests, ensure `resetAllFakes()` is called in `afterEach` or Pest's global `afterEach` hook:
+
+<!-- doctest-attr: ignore -->
+```php
+// tests/Pest.php
+afterEach(function (): void {
+    InvokableBehavior::resetAllFakes();
+});
+```
+
+#### Step 4: Adopt New Testing APIs (Optional)
+
+Migrate from verbose testing patterns to the new fluent API. See the [Testing Migration Guide](/testing/migration-guide) for a complete pattern-by-pattern migration reference.
+
+For full testing documentation, see the [Testing Overview](/testing/overview).
+
+---
+
 ## Upgrading to v5.0
 
 v5.0 adds true parallel dispatch for parallel states with configurable region timeout.
@@ -429,6 +577,7 @@ Events use array format with `type` and `payload` keys.
 
 | EventMachine | PHP | Laravel |
 |--------------|-----|---------|
+| 6.x | 8.3+ | 11.x, 12.x |
 | 5.x | 8.3+ | 11.x, 12.x |
 | 4.x | 8.3+ | 11.x, 12.x |
 | 3.x | 8.2+ | 10.x, 11.x, 12.x |
