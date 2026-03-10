@@ -423,38 +423,19 @@ The create endpoint:
 
 Use the returned `machine_id` in subsequent requests to send events to this machine instance via `machineIdFor` endpoints.
 
-## Pre-Model Events (machineIdFor)
+## Route Registration Patterns
 
-Some workflows require sending events before an Eloquent model exists. For example, the first step might create the model as a side effect. Use `machineIdFor` to route these events by machine ID instead of model binding:
+`MachineRouter::register()` supports four routing patterns. Each endpoint is routed to a specific handler based on the `model` and `machineIdFor` options:
 
-<!-- doctest-attr: ignore -->
-```php
-MachineRouter::register(ApplicationMachine::class, [
-    'prefix'       => 'machines/application',
-    'model'        => Application::class,
-    'attribute'    => 'application_mre',
-    'create'       => true,
-    'machineIdFor' => ['START'],  // START uses machine ID, not model
-    'middleware'    => ['auth:api'],
-]);
-```
+| Condition | Handler | URI Pattern |
+|-----------|---------|-------------|
+| Event is in `machineIdFor` | `handleMachineIdBound` | `/{machineId}{uri}` |
+| `model` is set | `handleModelBound` | `/{model}{uri}` |
+| Neither | `handleStateless` | `{uri}` |
 
-This generates:
+### Pattern 1: Stateless
 
-| Method | URI | Handler |
-|--------|-----|---------|
-| POST | `/machines/application/create` | handleCreate |
-| POST | `/machines/application/{machineId}/start` | handleMachineIdBound |
-| POST | `/machines/application/{application}/farmer-saved` | handleModelBound |
-
-The typical flow:
-1. `POST /create` — returns `machine_id`
-2. `POST /{machineId}/start` — sends START event, which creates the model
-3. `POST /{application}/farmer-saved` — model now exists, uses model binding
-
-## Stateless Endpoints
-
-For machines that don't need persistence (e.g., calculators, validators), omit the `model` option entirely. Every request creates a fresh machine, processes the event, returns the result, and discards the machine:
+For machines that don't need persistence (e.g., calculators, validators). Every request creates a fresh machine, processes the event, returns the result, and discards the machine. Omit both `model` and `machineIdFor`:
 
 ```php no_run
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -502,6 +483,98 @@ MachineRouter::register(PriceCalculatorMachine::class, [
 ]);
 // POST /calculator/calculate -> fresh machine -> send -> result -> GC
 ```
+
+### Pattern 2: MachineId-Bound (Without Model)
+
+For workflows that need state persistence but don't require an Eloquent model. Use `create` to bootstrap a machine and `machineIdFor` to route events by machine ID:
+
+<!-- doctest-attr: ignore -->
+```php
+MachineRouter::register(OrderMachine::class, [
+    'prefix'       => 'orders',
+    'create'       => true,
+    'machineIdFor' => ['SUBMIT_ORDER', 'APPROVE_ORDER', 'CANCEL_ORDER'],
+]);
+```
+
+This generates:
+
+| Method | URI | Handler |
+|--------|-----|---------|
+| POST | `/orders/create` | handleCreate |
+| POST | `/orders/{machineId}/submit-order` | handleMachineIdBound |
+| POST | `/orders/{machineId}/approve-order` | handleMachineIdBound |
+| POST | `/orders/{machineId}/cancel-order` | handleMachineIdBound |
+
+The typical flow:
+1. `POST /orders/create` — returns `machine_id` with `201 Created`
+2. `POST /orders/{machineId}/submit-order` — restores machine from DB, sends event
+3. `POST /orders/{machineId}/approve-order` — continues the workflow
+
+This is ideal when your API is machine-centric rather than model-centric — the client tracks the `machine_id` returned from `create` and uses it in all subsequent requests.
+
+### Pattern 3: Model-Bound
+
+For machines tied to an Eloquent model. The model's attribute stores the machine's root event ID, and the `MachineCast` restores the machine automatically:
+
+<!-- doctest-attr: ignore -->
+```php
+MachineRouter::register(InvoiceMachine::class, [
+    'prefix'    => 'invoices',
+    'model'     => Invoice::class,
+    'attribute' => 'invoice_mre',
+]);
+```
+
+This generates:
+
+| Method | URI | Handler |
+|--------|-----|---------|
+| POST | `/invoices/{invoice}/send` | handleModelBound |
+| POST | `/invoices/{invoice}/pay` | handleModelBound |
+
+The model must use the machine cast so `handleModelBound` can access the machine instance:
+
+<!-- doctest-attr: ignore -->
+```php
+class Invoice extends Model
+{
+    use HasMachines;
+
+    protected $casts = [
+        'invoice_mre' => InvoiceMachine::class.':invoice',
+    ];
+}
+```
+
+### Pattern 4: Hybrid (Model + machineIdFor)
+
+Some workflows require sending events before an Eloquent model exists. For example, the first step might create the model as a side effect. Use `machineIdFor` to route these events by machine ID while the rest use model binding:
+
+<!-- doctest-attr: ignore -->
+```php
+MachineRouter::register(ApplicationMachine::class, [
+    'prefix'       => 'machines/application',
+    'model'        => Application::class,
+    'attribute'    => 'application_mre',
+    'create'       => true,
+    'machineIdFor' => ['START'],  // START uses machine ID, not model
+    'middleware'    => ['auth:api'],
+]);
+```
+
+This generates:
+
+| Method | URI | Handler |
+|--------|-----|---------|
+| POST | `/machines/application/create` | handleCreate |
+| POST | `/machines/application/{machineId}/start` | handleMachineIdBound |
+| POST | `/machines/application/{application}/farmer-saved` | handleModelBound |
+
+The typical flow:
+1. `POST /create` — returns `machine_id`
+2. `POST /{machineId}/start` — sends START event, which creates the model as a side effect
+3. `POST /{application}/farmer-saved` — model now exists, uses model binding
 
 ## Per-Event Middleware
 
