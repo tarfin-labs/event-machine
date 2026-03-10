@@ -490,7 +490,7 @@ class TestMachine
     public function assertRegionState(string $regionId, string $expectedState): self
     {
         $match = collect($this->machine->state->value)
-            ->first(function ($v) use ($regionId): bool {
+            ->first(function (mixed $v) use ($regionId): bool {
                 $segments = explode('.', $v);
 
                 return in_array($regionId, $segments, true);
@@ -525,7 +525,7 @@ class TestMachine
             $prefix = "{$machineId}.parallel.";
             $suffix = '.done';
             $found  = $history->contains(
-                fn ($type): bool => str_starts_with((string) $type, $prefix) && str_ends_with((string) $type, $suffix)
+                fn (mixed $type): bool => str_starts_with((string) $type, $prefix) && str_ends_with((string) $type, $suffix)
             );
 
             expect($found)->toBeTrue(
