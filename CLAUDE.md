@@ -76,6 +76,9 @@ All machine behaviors extend `InvokableBehavior` and include:
 - **Always use `composer test`** — never run `vendor/bin/pest` directly. `composer test` runs tests in parallel AND includes doctest and other tools. Running pest alone is slower (no parallelism) and incomplete.
 - Pre-existing doctest failures (currently 13) are known and can be ignored.
 
+### Documentation URLs
+- **Documentation site domain is `eventmachine.dev`** — always use `https://eventmachine.dev/...` when linking to docs (in release notes, README, PR descriptions, etc.). Never use `tarfin-labs.github.io/event-machine`.
+
 ### Pre-Commit Checks
 - **Always run `composer pint && composer rector`** before committing.
 - After Rector runs, **review what it changed** — Rector may apply refactorings (e.g., `instanceof` checks, type narrowing) that need verification. Check the diff before committing Rector's changes.
@@ -113,7 +116,7 @@ All behaviors should extend appropriate base classes:
 ### Code Style
 - PHP 8.2+ with strict types enabled
 - Laravel Pint with custom alignment rules for `=>` and `=` operators
-- PHPStan level 7 analysis
+- PHPStan level 5 analysis
 - All classes use declare(strict_types=1)
 
 ### Naming Conventions
