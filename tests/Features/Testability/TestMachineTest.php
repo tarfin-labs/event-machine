@@ -242,6 +242,22 @@ it('handles empty subset in assertContextIncludes', function (): void {
     $test->assertContextHas('count');
 });
 
+it('assertFinished passes when in final state', function (): void {
+    TestMachine::define([
+        'initial' => 'active',
+        'states'  => [
+            'active' => [
+                'on' => [
+                    'COMPLETE' => ['target' => 'done'],
+                ],
+            ],
+            'done' => [
+                'type' => 'final',
+            ],
+        ],
+    ])->send('COMPLETE')->assertFinished();
+});
+
 it('assertFinished fails when not in final state', function (): void {
     expect(fn () => TrafficLightsMachine::test()->assertFinished())
         ->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
