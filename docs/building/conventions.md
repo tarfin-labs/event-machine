@@ -24,6 +24,12 @@ Consistent naming makes your state machines easier to read, maintain, and debug.
 | Inline behavior key | camelCase | `{descriptiveName}{Type}` | `sendEmailAction` |
 | Scenario name | snake_case | `{descriptive_name}` | `express_checkout` |
 | Eloquent column | snake_case | `{domain}_mre` | `order_workflow_mre` |
+| Endpoint action class | PascalCase | `{DescriptiveName}EndpointAction` | `CancelEndpointAction` |
+| Endpoint action inline key | camelCase | `{descriptiveName}EndpointAction` | `cancelEndpointAction` |
+| Endpoint result class | PascalCase | `{EventDerived}EndpointResult` | `GuarantorSavedEndpointResult` |
+| Endpoint result inline key | camelCase | `{eventDerived}EndpointResult` | `guarantorSavedEndpointResult` |
+| Endpoint URI (auto) | kebab-case | from event type | `/farmer-saved` |
+| Route name (auto) | snake_case | from event type | `machines.application.farmer_saved` |
 
 ## Class Names vs Internal References
 
@@ -761,6 +767,72 @@ MachineDefinition::define(
 Internal framework keys use the `@` prefix: `@always`, `@done`, `@fail`. These are distinct from user-defined event types (`SCREAMING_SNAKE_CASE`) and state names (`snake_case`). The only remaining XState-inherited camelCase key is `scenarioType`.
 :::
 
+## Endpoints
+
+Endpoint-related classes follow the same suffix conventions as other behaviors but live in a dedicated `Endpoints/` directory.
+
+### Endpoint Action Classes
+
+Endpoint actions handle HTTP lifecycle hooks (before/after/onException). Name them with a **descriptive name** and an `EndpointAction` suffix:
+
+```php ignore
+// Class name: {DescriptiveName}EndpointAction — PascalCase
+class CancelEndpointAction extends MachineEndpointAction { ... }
+class StartEndpointAction extends MachineEndpointAction { ... }
+class ApproveEndpointAction extends MachineEndpointAction { ... }
+```
+
+Inline keys use camelCase:
+
+```php ignore
+'CANCEL' => [
+    'action' => CancelEndpointAction::class,
+],
+```
+
+### Endpoint Result Classes
+
+Endpoint results customize the HTTP response. Name them with the **event-derived name** and an `EndpointResult` suffix:
+
+```php ignore
+// Class name: {EventDerived}EndpointResult — PascalCase
+class GuarantorSavedEndpointResult extends ResultBehavior { ... }
+class ApprovedWithInitiativeEndpointResult extends ResultBehavior { ... }
+class PriceEndpointResult extends ResultBehavior { ... }
+```
+
+Inline keys use camelCase and are referenced in the endpoint definition:
+
+```php ignore
+'behavior' => [
+    'results' => [
+        'guarantorSavedEndpointResult' => GuarantorSavedEndpointResult::class,
+    ],
+],
+```
+
+### Endpoint URIs
+
+URIs are auto-generated from event types by converting `SCREAMING_SNAKE_CASE` to `kebab-case`:
+
+| Event Type | Auto-Generated URI |
+|------------|-------------------|
+| `FARMER_SAVED` | `/farmer-saved` |
+| `APPROVED_WITH_INITIATIVE` | `/approved-with-initiative` |
+| `CALCULATE` | `/calculate` |
+| `ORDER_SUBMITTED` | `/order-submitted` |
+
+You can override the auto-generated URI with an explicit `uri` key in the endpoint definition.
+
+### Route Names
+
+Route names are auto-generated from the machine name prefix and the event type in lowercase `snake_case`:
+
+| Name Prefix | Event Type | Route Name |
+|-------------|------------|------------|
+| `machines.application` | `FARMER_SAVED` | `machines.application.farmer_saved` |
+| `machines.application` | `APPROVED_WITH_INITIATIVE` | `machines.application.approved_with_initiative` |
+
 ## File Organization
 
 Organize behavior classes in a directory structure that mirrors the machine domain:
@@ -784,8 +856,14 @@ app/
         │   └── PaymentReceivedEvent.php
         ├── Calculators/
         │   └── OrderTotalCalculator.php
-        └── Results/
-            └── OrderConfirmationResult.php
+        ├── Results/
+        │   └── OrderConfirmationResult.php
+        └── Endpoints/
+            ├── Actions/
+            │   ├── CancelEndpointAction.php
+            │   └── StartEndpointAction.php
+            └── Results/
+                └── OrderDetailEndpointResult.php
 ```
 
 ## Summary
