@@ -12,6 +12,19 @@ uses(
 
 /*
 |--------------------------------------------------------------------------
+| Fake Cleanup
+|--------------------------------------------------------------------------
+|
+| Reset all Fakeable trait mocks between tests. Each test file should
+| call resetAllFakes() on any behavior classes it fakes. The Fakeable
+| trait uses per-class static storage, so each class that was faked
+| needs its own reset. For convenience, call resetAllFakes() on the
+| most commonly faked behavior in each test file's afterEach.
+|
+*/
+
+/*
+|--------------------------------------------------------------------------
 | Expectations
 |--------------------------------------------------------------------------
 |
