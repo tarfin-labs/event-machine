@@ -57,6 +57,19 @@ it('returns false from matchesAll() when currentStateDefinition is null', functi
     expect($state->matchesAll(['idle', 'active']))->toBeFalse();
 });
 
+// ─── runWithState() — eventQueue capture ─────────────────────
+
+it('captures raised events via runWithState', function (): void {
+    $state = State::forTesting(['execution_order' => []]);
+
+    $result = \Tarfinlabs\EventMachine\Tests\Stubs\Machines\EventProcessingOrder\Actions\TransitionActionWithRaise::runWithState($state);
+
+    // The action raises ['type' => 'NEXT'] — we need access to the eventQueue
+    expect($result)->toBeInstanceOf(\Illuminate\Support\Collection::class);
+    expect($result)->toHaveCount(1);
+    expect($result->first())->toBe(['type' => 'NEXT']);
+});
+
 // ─── runWithState() — guards ─────────────────────────────────
 
 it('runs guard with state and returns boolean', function (): void {

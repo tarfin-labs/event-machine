@@ -200,7 +200,8 @@ abstract class InvokableBehavior
         ?EventBehavior $eventBehavior = null,
         ?array $arguments = null,
     ): mixed {
-        $instance = App::make(static::class);
+        $eventQueue = new Collection();
+        $instance   = App::make(static::class, ['eventQueue' => $eventQueue]);
 
         $params = static::injectInvokableBehaviorParameters(
             actionBehavior: $instance,
@@ -209,6 +210,9 @@ abstract class InvokableBehavior
             actionArguments: $arguments,
         );
 
-        return $instance(...$params);
+        $result = $instance(...$params);
+
+        // For void actions (null return), return the eventQueue so raised events are accessible.
+        return $result ?? $eventQueue;
     }
 }
