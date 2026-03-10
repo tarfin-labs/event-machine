@@ -21,8 +21,11 @@ it('@fail handler throws → last-resort logging', function (): void {
         ->once()
         ->withArgs(function (string $message, array $context): bool {
             return str_contains($message, '@fail handler also failed')
+                && $context['machine_class'] === ParallelDispatchMachine::class
+                && $context['root_event_id'] === 'nonexistent-root-id'
                 && $context['region_id'] === 'nonexistent.region'
-                && $context['original_error'] === 'Original failure';
+                && $context['original_error'] === 'Original failure'
+                && isset($context['fail_handler_error']);
         });
 
     $job = new ParallelRegionJob(

@@ -154,6 +154,54 @@ it('records parallel_dispatch_guard_abort event when region advances between act
 // Grup 4: Abort event payload details
 // ============================================================
 
+it('abort event has correct version and incrementing sequence_number', function (): void {
+    config()->set('machine.parallel_dispatch.enabled', true);
+
+    $machine = ParallelDispatchGuardAbortMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // Get the last sequence number before abort
+    $lastSeqBefore = MachineEvent::where('root_event_id', $rootEventId)
+        ->max('sequence_number');
+
+    SimulateConcurrentModificationAction::$onExecute = function () use ($rootEventId): void {
+        $lastEvent = MachineEvent::where('root_event_id', $rootEventId)
+            ->orderBy('sequence_number', 'desc')
+            ->first();
+
+        MachineEvent::create([
+            'sequence_number' => $lastEvent->sequence_number + 1,
+            'created_at'      => now(),
+            'machine_id'      => $lastEvent->machine_id,
+            'machine_value'   => ['parallel_dispatch_guard_abort.completed'],
+            'root_event_id'   => $rootEventId,
+            'source'          => 'internal',
+            'type'            => 'parallel_dispatch_guard_abort.parallel.processing.done',
+            'version'         => 1,
+            'payload'         => null,
+            'context'         => $lastEvent->context,
+        ]);
+    };
+
+    (new ParallelRegionJob(
+        machineClass: ParallelDispatchGuardAbortMachine::class,
+        rootEventId: $rootEventId,
+        regionId: 'parallel_dispatch_guard_abort.processing.region_a',
+        initialStateId: 'parallel_dispatch_guard_abort.processing.region_a.working',
+    ))->handle();
+
+    $abortEvent = MachineEvent::where('root_event_id', $rootEventId)
+        ->where('type', 'like', '%region.guard_abort')
+        ->first();
+
+    // version must be 1 (not 0 or 2)
+    expect($abortEvent->version)->toBe(1);
+
+    // sequence_number must be greater than previous events
+    expect($abortEvent->sequence_number)->toBeGreaterThan($lastSeqBefore);
+});
+
 it('abort event records discarded raised event count', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
