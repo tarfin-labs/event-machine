@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Definition;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -546,21 +547,17 @@ class MachineDefinition
      */
     public function getInvokableBehavior(string $behaviorDefinition, BehaviorType $behaviorType): null|callable|InvokableBehavior
     {
-        // If the guard definition is an invokable GuardBehavior, create a new instance.
+        // If the behavior definition is an InvokableBehavior FQCN, resolve through container.
         if (is_subclass_of($behaviorDefinition, InvokableBehavior::class)) {
-            /* @var callable $behaviorDefinition */
-            return new $behaviorDefinition($this->eventQueue);
+            return App::make($behaviorDefinition, ['eventQueue' => $this->eventQueue]);
         }
 
         // If the guard definition is defined in the machine behavior, retrieve it.
         $invokableBehavior = $this->behavior[$behaviorType->value][$behaviorDefinition] ?? null;
 
-        // If the retrieved behavior is not null and not callable, create a new instance.
+        // If the retrieved behavior is not null and not callable, resolve through container.
         if ($invokableBehavior !== null && !is_callable($invokableBehavior)) {
-            /** @var InvokableBehavior $invokableInstance */
-            $invokableInstance = new $invokableBehavior($this->eventQueue);
-
-            return $invokableInstance;
+            return App::make($invokableBehavior, ['eventQueue' => $this->eventQueue]);
         }
 
         if ($invokableBehavior === null) {

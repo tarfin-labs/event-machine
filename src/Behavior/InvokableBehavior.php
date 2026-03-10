@@ -181,10 +181,6 @@ abstract class InvokableBehavior
      */
     public static function run(mixed ...$args): mixed
     {
-        $instance = static::isFaked()
-            ? App::make(static::class)
-            : new static();
-
-        return $instance(...$args);
+        return App::make(static::class)(...$args);
     }
 }

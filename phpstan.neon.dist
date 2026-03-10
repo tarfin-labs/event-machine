@@ -44,8 +44,6 @@ parameters:
         - identifier: return.phpDocType
         # Spatie Laravel Data attribute issues
         - identifier: attribute.target
-        # Unsafe new static() - intentional for factory pattern
-        - identifier: new.static
         # Covariant return types - Laravel framework patterns
         - identifier: method.childReturnType
 
