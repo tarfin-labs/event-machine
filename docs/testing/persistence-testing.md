@@ -2,6 +2,30 @@
 
 Testing EventMachine's database persistence and event sourcing capabilities.
 
+## Stateless Testing
+
+Skip DB entirely for logic-only tests:
+
+<!-- doctest-attr: ignore -->
+```php
+// No DB, no migrations needed
+OrderMachine::test(['amount' => 100])
+    ->withoutPersistence()
+    ->send('SUBMIT')
+    ->assertState('awaiting_payment');
+
+// Inline definitions are always stateless
+TestMachine::define(config: [
+    'initial' => 'idle',
+    'states' => [
+        'idle' => ['on' => ['GO' => ['target' => 'done']]],
+        'done' => [],
+    ],
+])
+    ->send('GO')
+    ->assertState('done');
+```
+
 ## Test Setup
 
 ### RefreshDatabase Trait
