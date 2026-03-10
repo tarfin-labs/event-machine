@@ -263,6 +263,23 @@ it('assertFinished fails when not in final state', function (): void {
         ->toThrow(\PHPUnit\Framework\ExpectationFailedException::class);
 });
 
+it('asserts result value with assertResult', function (): void {
+    // Final state with no result behavior returns null
+    TestMachine::define([
+        'initial' => 'active',
+        'states'  => [
+            'active' => [
+                'on' => [
+                    'COMPLETE' => ['target' => 'done'],
+                ],
+            ],
+            'done' => [
+                'type' => 'final',
+            ],
+        ],
+    ])->send('COMPLETE')->assertResult(null);
+});
+
 // ─── Validation assertions ──────────────────────────────────
 
 it('asserts validation failed with assertValidationFailed', function (): void {

@@ -167,6 +167,15 @@ class TestMachine
         return $this;
     }
 
+    public function assertResult(mixed $expected): self
+    {
+        expect($this->machine->result())->toBe($expected,
+            'Machine result did not match expected value'
+        );
+
+        return $this;
+    }
+
     // ═══════════════════════════════════════════
     //  Context Assertions
     // ═══════════════════════════════════════════

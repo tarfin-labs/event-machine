@@ -50,6 +50,7 @@ TestMachine::for($machine)
 ->assertState('checkout.payment')          // hierarchical
 ->assertNotState('cancelled')
 ->assertFinished()                         // current state is type:final
+->assertResult($expected)                  // final state result value
 ```
 
 ## Context Assertions
