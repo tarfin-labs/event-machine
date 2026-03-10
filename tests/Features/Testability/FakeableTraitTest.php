@@ -212,6 +212,21 @@ it('resets all behavior fakes across different classes', function (): void {
     expect(IsEvenGuard::isFaked())->toBeFalse();
 });
 
+it('resets all fakes when called from any behavior class', function (): void {
+    IncrementAction::fake();
+    IsEvenGuard::fake();
+
+    // Calling resetAllFakes() from IsEvenGuard clears both classes
+    IsEvenGuard::resetAllFakes();
+
+    expect(IncrementAction::isFaked())->toBeFalse();
+    expect(IsEvenGuard::isFaked())->toBeFalse();
+
+    // Container resolves fresh instances, not mocks
+    expect(App::make(IncrementAction::class))->not->toBeInstanceOf(Mockery\MockInterface::class);
+    expect(App::make(IsEvenGuard::class))->not->toBeInstanceOf(Mockery\MockInterface::class);
+});
+
 // ─── Different behavior classes maintain separate fakes ──────
 
 it('maintains separate fakes for different behavior classes', function (): void {
