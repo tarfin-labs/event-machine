@@ -7,6 +7,7 @@ use Tarfinlabs\EventMachine\Routing\MachineRouter;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestEndpointAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestEndpointMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestThrowingEndpointMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestThrowingNoActionMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestValidatedEndpointMachine;
 
 // ─── Setup ────────────────────────────────────────────────────────────
@@ -41,6 +42,12 @@ beforeEach(function (): void {
     MachineRouter::register(TestThrowingEndpointMachine::class, [
         'prefix' => '/api/throwing',
         'name'   => 'throwing',
+    ]);
+
+    // Stateless routes for TestThrowingNoActionMachine (no endpoint action)
+    MachineRouter::register(TestThrowingNoActionMachine::class, [
+        'prefix' => '/api/throwing-no-action',
+        'name'   => 'throwing_no_action',
     ]);
 
     // Refresh route lookups so the router can match our new routes
@@ -229,4 +236,39 @@ test('endpoint action onException re-throws when returning null', function (): v
 
     expect(fn () => $this->postJson('/api/throwing/start'))
         ->toThrow(RuntimeException::class, 'Action blew up');
+});
+
+// ─── Mutation Coverage: Validation Errors ────────────────────────────
+
+test('validation guard failure returns non-empty errors array', function (): void {
+    $response = $this->postJson('/api/validated/start');
+
+    $response->assertStatus(422);
+
+    $errors = $response->json('errors');
+
+    expect($errors)->not->toBeEmpty();
+});
+
+// ─── Mutation Coverage: Nullsafe on Action ───────────────────────────
+
+test('exception propagates without crash when no endpoint action is configured', function (): void {
+    $this->withoutExceptionHandling();
+
+    expect(fn () => $this->postJson('/api/throwing-no-action/start'))
+        ->toThrow(RuntimeException::class, 'Action blew up');
+});
+
+// ─── Mutation Coverage: withMachineContext Updates State ──────────────
+
+test('endpoint action receives post-transition state in after hook', function (): void {
+    TestEndpointAction::reset();
+
+    $response = $this->postJson('/api/endpoint/start');
+
+    $response->assertStatus(200);
+
+    // after() should have been called with the post-transition state
+    expect(TestEndpointAction::$stateValueInAfter)->not->toBeNull()
+        ->and(TestEndpointAction::$stateValueInAfter)->toContain('test_endpoint.started');
 });

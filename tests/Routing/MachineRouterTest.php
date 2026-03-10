@@ -110,6 +110,21 @@ test('model-bound route URI includes model parameter', function (): void {
     expect($route->uri())->toBe('api/model-uri/{order}/start');
 });
 
+test('model-bound routes register explicit Route::model binding', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'    => '/api/model-binding',
+        'model'     => 'App\\Models\\Order',
+        'attribute' => 'machine',
+    ]);
+
+    refreshRoutes();
+
+    // Route::model() registers a binding callback for the parameter name
+    $binder = app('router')->getBindingCallback('order');
+
+    expect($binder)->not->toBeNull();
+});
+
 // ─── Handler Selection: MachineId-Bound ───────────────────────────────
 
 test('machineIdFor events use handleMachineIdBound handler', function (): void {

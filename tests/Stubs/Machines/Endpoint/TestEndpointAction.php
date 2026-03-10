@@ -12,12 +12,14 @@ class TestEndpointAction extends MachineEndpointAction
     public static bool $beforeCalled         = false;
     public static bool $afterCalled          = false;
     public static ?\Throwable $lastException = null;
+    public static ?array $stateValueInAfter  = null;
 
     public static function reset(): void
     {
-        self::$beforeCalled  = false;
-        self::$afterCalled   = false;
-        self::$lastException = null;
+        self::$beforeCalled      = false;
+        self::$afterCalled       = false;
+        self::$lastException     = null;
+        self::$stateValueInAfter = null;
     }
 
     public function before(): void
@@ -27,7 +29,8 @@ class TestEndpointAction extends MachineEndpointAction
 
     public function after(): void
     {
-        self::$afterCalled = true;
+        self::$afterCalled       = true;
+        self::$stateValueInAfter = isset($this->state) ? $this->state->value : null;
     }
 
     public function onException(\Throwable $e): ?JsonResponse

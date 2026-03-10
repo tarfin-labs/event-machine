@@ -1,0 +1,44 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint;
+
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
+class TestThrowingNoActionMachine extends Machine
+{
+    public static function definition(): MachineDefinition
+    {
+        return MachineDefinition::define(
+            config: [
+                'id'      => 'throwing_no_action',
+                'initial' => 'idle',
+                'context' => [],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'START' => [
+                                'target'  => 'started',
+                                'actions' => 'throwAction',
+                            ],
+                        ],
+                    ],
+                    'started' => ['type' => 'final'],
+                ],
+            ],
+            behavior: [
+                'events' => [
+                    'START' => TestStartEvent::class,
+                ],
+                'actions' => [
+                    'throwAction' => TestThrowingAction::class,
+                ],
+            ],
+            endpoints: [
+                'START' => null,
+            ],
+        );
+    }
+}
