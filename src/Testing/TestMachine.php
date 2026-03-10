@@ -1,0 +1,332 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tarfinlabs\EventMachine\Testing;
+
+use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
+
+class TestMachine
+{
+    private readonly Machine $machine;
+
+    /** @var array<string> */
+    private array $fakedBehaviors = [];
+
+    private function __construct(Machine $machine)
+    {
+        $this->machine = $machine;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Construction
+    // ═══════════════════════════════════════════
+
+    /**
+     * From a Machine subclass.
+     */
+    public static function create(string $machineClass, array $context = []): self
+    {
+        return new self($machineClass::create($context));
+    }
+
+    /**
+     * From an inline definition (no persistence, no Machine class).
+     */
+    public static function define(array $config, array $behavior = []): self
+    {
+        $definition     = MachineDefinition::define(config: $config, behavior: $behavior);
+        $machine        = Machine::withDefinition($definition);
+        $machine->state = $definition->getInitialState();
+
+        return new self($machine);
+    }
+
+    /**
+     * Wrap an existing machine instance.
+     */
+    public static function for(Machine $machine): self
+    {
+        return new self($machine);
+    }
+
+    // ═══════════════════════════════════════════
+    //  Configuration
+    // ═══════════════════════════════════════════
+
+    /**
+     * Fake specific behaviors. Selective faking à la Bus::fake([...]).
+     */
+    public function faking(array $behaviors): self
+    {
+        foreach ($behaviors as $behavior) {
+            $behavior::fake();
+            $this->fakedBehaviors[] = $behavior;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Disable persistence for this test.
+     */
+    public function withoutPersistence(): self
+    {
+        $this->machine->definition->shouldPersist = false;
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Actions
+    // ═══════════════════════════════════════════
+
+    /**
+     * Send an event. Accepts EventBehavior, array, or string shorthand.
+     */
+    public function send(EventBehavior|array|string $event): self
+    {
+        if (is_string($event)) {
+            $event = ['type' => $event];
+        }
+
+        $this->machine->send($event);
+
+        return $this;
+    }
+
+    /**
+     * Send multiple events in sequence.
+     */
+    public function sendMany(array $events): self
+    {
+        foreach ($events as $event) {
+            $this->send($event);
+        }
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  State Assertions
+    // ═══════════════════════════════════════════
+
+    public function assertState(string $expected): self
+    {
+        expect($this->machine->state->matches($expected))->toBeTrue(
+            "Expected state [{$expected}] but got [".implode(', ', $this->machine->state->value).']'
+        );
+
+        return $this;
+    }
+
+    public function assertNotState(string $state): self
+    {
+        expect($this->machine->state->matches($state))->toBeFalse(
+            "Expected NOT to be in state [{$state}]"
+        );
+
+        return $this;
+    }
+
+    public function assertFinished(): self
+    {
+        expect($this->machine->state->currentStateDefinition?->type)
+            ->toBe(StateDefinitionType::FINAL, 'Expected a final state');
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Context Assertions
+    // ═══════════════════════════════════════════
+
+    public function assertContext(string $key, mixed $expected): self
+    {
+        expect($this->machine->state->context->get($key))->toBe($expected,
+            "context[{$key}]: expected ".json_encode($expected)
+        );
+
+        return $this;
+    }
+
+    public function assertContextHas(string $key): self
+    {
+        expect($this->machine->state->context->has($key))->toBeTrue(
+            "Expected context to have [{$key}]"
+        );
+
+        return $this;
+    }
+
+    public function assertContextMissing(string $key): self
+    {
+        expect($this->machine->state->context->has($key))->toBeFalse(
+            "Expected context NOT to have [{$key}]"
+        );
+
+        return $this;
+    }
+
+    public function assertContextIncludes(array $subset): self
+    {
+        foreach ($subset as $key => $value) {
+            $this->assertContext($key, $value);
+        }
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Transition Assertions
+    // ═══════════════════════════════════════════
+
+    /**
+     * Send + assertState in one call.
+     */
+    public function assertTransition(array|string $event, string $expectedState): self
+    {
+        return $this->send($event)->assertState($expectedState);
+    }
+
+    /**
+     * Assert an event is guarded (state unchanged).
+     */
+    public function assertGuarded(array|string $event): self
+    {
+        $before = $this->machine->state->value;
+        $this->send($event);
+        expect($this->machine->state->value)->toBe($before,
+            'Expected event to be guarded, but a transition occurred'
+        );
+
+        return $this;
+    }
+
+    /**
+     * Assert an event raises MachineValidationException.
+     */
+    public function assertValidationFailed(array|string $event, ?string $errorKey = null): self
+    {
+        try {
+            $this->send($event);
+            expect(false)->toBeTrue('Expected MachineValidationException');
+        } catch (MachineValidationException $e) {
+            if ($errorKey !== null) {
+                expect($e->errors())->toHaveKey($errorKey);
+            }
+        }
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  History Assertions
+    // ═══════════════════════════════════════════
+
+    public function assertHistoryContains(string ...$eventTypes): self
+    {
+        $history = $this->machine->state->history->pluck('type')->toArray();
+        foreach ($eventTypes as $type) {
+            expect($history)->toContain($type);
+        }
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Path Assertions
+    // ═══════════════════════════════════════════
+
+    /**
+     * @param  array<array{event: string|array, state: string, context?: array}>  $steps
+     */
+    public function assertPath(array $steps): self
+    {
+        foreach ($steps as $i => $step) {
+            $this->send($step['event']);
+            expect($this->machine->state->matches($step['state']))->toBeTrue(
+                "Step {$i}: expected [{$step['state']}], got [".implode(', ', $this->machine->state->value).']'
+            );
+            foreach ($step['context'] ?? [] as $key => $value) {
+                expect($this->machine->state->context->get($key))->toBe($value,
+                    "Step {$i}: context[{$key}]"
+                );
+            }
+        }
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Parallel Assertions
+    // ═══════════════════════════════════════════
+
+    public function assertRegionState(string $regionId, string $expectedState): self
+    {
+        $match = collect($this->machine->state->value)
+            ->first(fn ($v): bool => str_contains($v, $regionId));
+        expect($match)->not->toBeNull("No active state in region [{$regionId}]")
+            ->and($match)->toContain($expectedState);
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Behavior Assertions (convenience)
+    // ═══════════════════════════════════════════
+
+    public function assertBehaviorRan(string $class): self
+    {
+        $class::assertRan();
+
+        return $this;
+    }
+
+    public function assertBehaviorNotRan(string $class): self
+    {
+        $class::assertNotRan();
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Accessors
+    // ═══════════════════════════════════════════
+
+    public function machine(): Machine
+    {
+        return $this->machine;
+    }
+
+    public function state(): State
+    {
+        return $this->machine->state;
+    }
+
+    public function context(): ContextManager
+    {
+        return $this->machine->state->context;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Cleanup
+    // ═══════════════════════════════════════════
+
+    public function resetFakes(): self
+    {
+        foreach ($this->fakedBehaviors as $behavior) {
+            $behavior::resetFakes();
+        }
+
+        $this->fakedBehaviors = [];
+
+        return $this;
+    }
+}
