@@ -272,6 +272,56 @@ it('can mock guard to always pass', function () {
 <div class="feature-section">
 <div class="feature-text">
 
+## Fluent Machine Testing
+
+**Test entire workflows in a single chain.** `Machine::test()` gives you a Livewire-style fluent API with 21+ assertion methods and contextual failure messages.
+
+Send events, assert states, check context, verify guards, fake behaviors — all in one readable chain. No database needed.
+
+[Testing guide &rarr;](/testing/overview)
+
+</div>
+<div class="feature-code">
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test(['amount' => 100])
+    ->withoutPersistence()
+    ->faking([SendEmailAction::class])
+    ->send('SUBMIT')
+    ->assertState('awaiting_payment')
+    ->assertContext('amount', 100)
+    ->send('PAY')
+    ->assertState('preparing')
+    ->assertBehaviorRan(SendEmailAction::class)
+    ->send('SHIP')
+    ->assertState('shipped')
+    ->send('DELIVER')
+    ->assertState('delivered')
+    ->assertFinished();
+```
+
+<!-- doctest-attr: ignore -->
+```php
+// Test guard blocking
+OrderMachine::test(['amount' => 0])
+    ->assertGuarded('SUBMIT')
+    ->assertGuardedBy('SUBMIT', MinimumAmountGuard::class);
+
+// Test full path with context assertions
+OrderMachine::test()
+    ->assertPath([
+        ['event' => 'SUBMIT', 'state' => 'review'],
+        ['event' => 'APPROVE', 'state' => 'approved', 'context' => ['approved' => true]],
+    ]);
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
 ## Archive Millions, Restore Any
 
 **Enterprise-grade event management.** Completed machines pile up? Archive them. Events compressed to a fraction of their size, but fully restorable when needed.
