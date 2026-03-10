@@ -4,6 +4,83 @@ All notable changes to `event-machine` will be documented in this file.
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-03-10
+
+### Added
+- **Testability Layer**: Comprehensive testing infrastructure for state machines
+  - `Machine::test()` — Livewire-style fluent test wrapper with 21+ assertion methods
+  - `State::forTesting()` — Lightweight state factory for isolated behavior unit tests
+  - `InvokableBehavior::runWithState()` — Isolated testing with engine-identical parameter injection; returns `eventQueue` Collection for raised event capture
+  - `EventBehavior::forTesting()` — Test factory for event construction with payload/meta
+  - `TestMachine::define()` — Inline machine definitions for quick disposable tests
+- **TestMachine assertion methods**: `assertState()`, `assertNotState()`, `assertContext()`, `assertContextHas()`, `assertContextMissing()`, `assertContextIncludes()`, `assertContextMatches()`, `assertHistory()`, `assertHistoryContains()`, `assertHistoryOrder()`, `assertTransitionedThrough()`, `assertGuarded()`, `assertGuardedBy()`, `assertValidationFailed()`, `assertFinished()`, `assertNotFinished()`, `assertPath()`, `assertBehaviorRan()`, `assertBehaviorNotRan()`, `assertRegionState()`, `assertAllRegionsCompleted()`, `assertResult()`
+- **TestMachine configuration**: `withoutPersistence()`, `withScenario()`, `withContext()`, `withoutParallelDispatch()`, `faking()`, `tap()`, `debugGuards()`
+- **Fakeable enhancements**: `spy()`, `allowToRun()`, `assertRanWith()`, `assertRanTimes()`, `mayReturn()`
+- **Constructor DI**: Behaviors can inject typed service dependencies via `__construct()` (resolved by Laravel container)
+- Comprehensive testing documentation: overview, isolated testing, fakeable behaviors, constructor DI, TestMachine API, transitions & paths, recipes, persistence testing, parallel testing, migration guide
+
+### Changed
+- **Breaking:** Behavior resolution via Laravel container (`App::make()`) instead of `new $class()` — enables constructor DI but requires injectable parameters (see [Upgrading to v6.0](/getting-started/upgrading#upgrading-to-v6-0))
+- **Breaking:** `InvokableBehavior::run()` always uses `App::make()` (previously used `new static()` for non-faked behaviors)
+- **Breaking:** `Fakeable::fake()` uses `App::bind()` with Closure instead of dual storage — `resetFakes()` uses `app()->offsetUnset()` instead of `App::forgetInstance()`
+- `TestMachine::define()` auto-disables persistence
+- `TestMachine::faking()` uses `spy()` instead of `fake()` for non-intrusive tracking
+- `assertTransitionedThrough()` now enforces sequential order (previously only checked presence)
+
+### Fixed
+- `TestMachine::assertState()` failure message now shows actual state for parallel states
+- `TestMachine::assertNotState()` failure message shows actual state
+- `TestMachine::assertHistoryContains()` includes contextual failure message
+- `TestMachine::assertRegionState()` uses exact segment matching (prevents false positives from prefix collisions)
+- `TestMachine::assertGuarded()` handles unknown events with descriptive error
+- `TestMachine::assertValidationFailed()` catches all exceptions (not just specific types)
+- `State::matches()` and `matchesAll()` return `false` when `currentStateDefinition` is null (instead of throwing)
+- `Fakeable::spy()` after `fake()` now creates proper spy (teardown previous mock first)
+- `Fakeable::fake()` tears down previous mock before creating new one (prevents stale bindings)
+- `InvokableBehavior::runWithState()` passes `eventQueue` to container resolution
+- `TestMachine::withContext()` clones definition to prevent cross-test context leak
+- `DoubleCountCalculator` test stub moved to correct `Calculators/` namespace (was incorrectly extending `ActionBehavior`)
+
+## [5.1.2] - 2026-03-10
+
+### Added
+- Escape transitions documentation (action timing asymmetry, calculators support, backward-compat notes)
+- Tests for exit actions on nested parallel state completion
+- Tests for targetless `@done` (compound, parallel, guarded)
+- Tests for escape-to-compound-target in parallel states
+- Tests for compound `@done` via `ConditionalCompoundOnDoneMachine`
+- Tests for `@fail` and compound `@done` validation
+
+### Fixed
+- `MachineDefinition`: run branch actions on targetless `@done`/`@fail` transitions (XState semantic — actions without state change)
+- `MachineDefinition`: run exit actions on leaf states and nested parallel state in `processNestedParallelCompletion`
+- `MachineDefinition`: add delimiter suffix to `str_starts_with` in `areAllRegionsFinal` and `processNestedParallelCompletion` (prevent region ID prefix collision)
+- `MachineDefinition`: add `TRANSITION_START`/`FINISH` to `processParallelOnDone` and `processParallelOnFail`
+- `ParallelDispatchGuardAbortTest`: unskip benign abort test (`work_was_discarded=false`)
+
+### Removed
+- Dead null check in `StateConfigValidator::validateDoneFailConfig`
+
+## [5.1.1] - 2026-03-09
+
+### Fixed
+- `MachineDefinition`: handle root/parallel-level `on` events during parallel state (dedup `selectTransitions`, escape via `exitParallelStateAndTransitionToTarget`)
+
+## [5.1.0] - 2026-03-09
+
+### Added
+- **Conditional `@done`/`@fail`**: Guard support for `@done` and `@fail` transitions — conditional branching based on context, with fallback support
+  - Parallel `@done` with guards and multiple branches
+  - Parallel `@fail` with guards (retry pattern support)
+  - Compound `@done` with guards (standalone compound states)
+  - `resolveOnDoneOrFailBranch()` helper for guard evaluation
+  - `onDoneTransition` and `onFailTransition` properties on `StateDefinition`
+  - `@done`/`@fail` format validation in `StateConfigValidator` (string, object, conditional array)
+- Documentation for conditional `@done`/`@fail` with guards, async context notes
+
+### Changed
+- `MachineDefinition`: use `TransitionDefinition` in parallel process methods and `processCompoundOnDone` (conditional guard support)
+
 ## [5.0.0] - 2026-03-09
 
 ### Added
