@@ -158,12 +158,17 @@ export default withMermaid(
         },
         {
           text: 'Testing',
-          collapsed: true,
+          collapsed: false,
           items: [
             { text: 'Overview', link: '/testing/overview' },
+            { text: 'Isolated Testing', link: '/testing/isolated-testing' },
             { text: 'Fakeable Behaviors', link: '/testing/fakeable-behaviors' },
-            { text: 'State Assertions', link: '/testing/state-assertions' },
-            { text: 'Persistence Testing', link: '/testing/persistence-testing' }
+            { text: 'Constructor DI', link: '/testing/constructor-di' },
+            { text: 'Transitions & Paths', link: '/testing/transitions-and-paths' },
+            { text: 'TestMachine', link: '/testing/test-machine' },
+            { text: 'Parallel Testing', link: '/testing/parallel-testing' },
+            { text: 'Persistence Testing', link: '/testing/persistence-testing' },
+            { text: 'Recipes', link: '/testing/recipes' }
           ]
         }
       ],
