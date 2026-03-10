@@ -43,6 +43,20 @@ it('creates state with empty context by default', function (): void {
     expect($state->history)->not->toBeNull();
 });
 
+// ─── State::forTesting() — null-safe matches ────────────────
+
+it('returns false from matches() when currentStateDefinition is null', function (): void {
+    $state = State::forTesting(['count' => 0]);
+
+    expect($state->matches('idle'))->toBeFalse();
+});
+
+it('returns false from matchesAll() when currentStateDefinition is null', function (): void {
+    $state = State::forTesting();
+
+    expect($state->matchesAll(['idle', 'active']))->toBeFalse();
+});
+
 // ─── runWithState() — guards ─────────────────────────────────
 
 it('runs guard with state and returns boolean', function (): void {

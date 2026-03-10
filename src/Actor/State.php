@@ -191,6 +191,10 @@ class State
      */
     public function matches(string $value): bool
     {
+        if (!$this->currentStateDefinition instanceof StateDefinition) {
+            return false;
+        }
+
         $machineId = $this->currentStateDefinition->machine->id;
 
         if (!str_starts_with($value, $machineId)) {
@@ -211,6 +215,10 @@ class State
      */
     public function matchesAll(array $values): bool
     {
+        if (!$this->currentStateDefinition instanceof StateDefinition) {
+            return false;
+        }
+
         $machineId = $this->currentStateDefinition->machine->id;
 
         foreach ($values as $value) {
