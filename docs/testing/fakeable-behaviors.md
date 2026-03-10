@@ -34,13 +34,20 @@ ProcessOrderAction::shouldRun()->once();
 // Expect __invoke to NOT be called (implicitly fakes)
 SendEmailAction::shouldNotRun();
 
-// Preset return value (for guards)
+// Preset return value AND assert called (at least once)
 IsValidGuard::shouldReturn(true);
-IsValidGuard::shouldReturn(false);
+
+// Preset return value WITHOUT call assertion
+// If the guard is never invoked, Mockery will NOT fail
+IsValidGuard::mayReturn(false);
 
 // Spy mode — allow all calls, record them
 ProcessOrderAction::allowToRun();
 ```
+
+::: warning shouldReturn() vs mayReturn()
+`shouldReturn()` uses `shouldReceive()` which adds an implicit "at least once" expectation. If the behavior is never invoked, `Mockery::close()` will fail. Use `mayReturn()` when you just need a return value but the behavior might not be called.
+:::
 
 ## Assertions
 
@@ -64,6 +71,16 @@ OrderMachine::test(['order_id' => 1])
     ->assertState('awaiting_payment')
     ->assertBehaviorRan(SendEmailAction::class);
 ```
+
+::: info faking() uses spy() internally
+`TestMachine::faking()` creates spies (not strict mocks) via `spy()`. This means faked behaviors allow all calls silently and record them for assertions. Use `fake()` directly when you need strict expectations.
+
+| Method | Creates | Missing calls | Use when |
+|--------|---------|---------------|----------|
+| `fake()` | Strict mock | Throws `BadMethodCallException` | You need strict expectations |
+| `spy()` | Permissive spy | Silently ignored | You want to verify after the fact |
+| `faking([...])` | Spies (via `spy()`) | Silently ignored | Selective faking with TestMachine |
+:::
 
 ## Fakes Work During Machine::send()
 
