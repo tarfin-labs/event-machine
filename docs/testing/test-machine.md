@@ -59,6 +59,7 @@ TestMachine::for($machine)
 ->assertContext('total', 100)
 ->assertContextHas('paid_at')
 ->assertContextMissing('error')
+->assertContextMatches('amount', fn($v) => $v > 0 && $v < 10000)
 ->assertContextIncludes(['a' => 1, 'b' => 2])
 ```
 
@@ -76,6 +77,7 @@ TestMachine::for($machine)
 <!-- doctest-attr: ignore -->
 ```php
 ->assertHistoryContains('SUBMIT', 'PAY')
+->assertHistoryOrder('SUBMIT', 'PAY', 'SHIP')  // events appear in this order
 ```
 
 ## Path Assertions
