@@ -31,6 +31,10 @@ class TestMachine
 
     /**
      * From a Machine subclass.
+     *
+     * Context values are applied after machine initialization, so entry actions
+     * on the initial state run with the machine's default context — not these
+     * overrides.
      */
     public static function create(string $machineClass, array $context = []): self
     {

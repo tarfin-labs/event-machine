@@ -139,7 +139,10 @@ class Machine implements Castable, JsonSerializable, Stringable
     /**
      * Create a TestMachine wrapper for fluent testing.
      *
-     * @param  array  $context  Optional initial context.
+     * Context values are applied after machine start — entry actions on the
+     * initial state run with the machine's default context, not these overrides.
+     *
+     * @param  array  $context  Optional context overrides applied post-initialization.
      */
     public static function test(array $context = []): \Tarfinlabs\EventMachine\Testing\TestMachine
     {
