@@ -240,11 +240,15 @@ class TestMachine
     {
         try {
             $this->send($event);
-            expect(false)->toBeTrue('Expected MachineValidationException');
+            expect(false)->toBeTrue('Expected MachineValidationException but no exception was thrown');
         } catch (MachineValidationException $e) {
             if ($errorKey !== null) {
                 expect($e->errors())->toHaveKey($errorKey);
             }
+        } catch (\Throwable $e) {
+            expect(false)->toBeTrue(
+                'Expected MachineValidationException, got '.$e::class.': '.$e->getMessage()
+            );
         }
 
         return $this;
