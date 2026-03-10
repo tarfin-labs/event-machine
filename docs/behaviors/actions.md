@@ -372,25 +372,58 @@ class ProcessPaymentAction extends ActionBehavior
 
 ## Testing Actions
 
-```php no_run
-use Tests\Stubs\Actions\IncrementAction;
+### Isolated (Unit)
 
-it('increments the count', function () {
-    IncrementAction::fake();
+<!-- doctest-attr: ignore -->
+```php
+$state = State::forTesting(['count' => 0]);
+IncrementAction::runWithState($state);
+expect($state->context->get('count'))->toBe(1);
+```
 
-    IncrementAction::shouldRun()
-        ->once()
-        ->andReturnUsing(function (ContextManager $context) {
-            $context->count++;
-        });
+### Faked (Machine-Level)
 
-    $machine = CounterMachine::create();
-    $machine->send(['type' => 'INCREMENT']);
+<!-- doctest-attr: ignore -->
+```php
+IncrementAction::shouldRun()->once();
 
-    IncrementAction::assertRan();
-    expect($machine->state->context->count)->toBe(1);
+CounterMachine::test(['count' => 0])
+    ->send('INCREMENT')
+    ->assertBehaviorRan(IncrementAction::class);
+
+// Fake with custom side-effect
+ProcessOrderAction::shouldRun()
+    ->andReturnUsing(fn($ctx) => $ctx->set('order_id', 'fake-123'));
+```
+
+### With Constructor DI
+
+<!-- doctest-attr: ignore -->
+```php
+it('sends notification via injected service', function () {
+    $this->mock(NotificationService::class)
+        ->shouldReceive('send')->once();
+
+    $state = State::forTesting(['user_id' => 'user-1']);
+    SendNotificationAction::runWithState($state);
 });
 ```
+
+### Raised Events
+
+<!-- doctest-attr: ignore -->
+```php
+// Test the full raised event chain via machine
+OrderMachine::test()
+    ->send('VALIDATE')
+    ->assertHistoryContains('VALIDATION_PASSED')
+    ->assertState('validated');
+```
+
+::: tip Full Testing Guide
+See [Isolated Testing](/testing/isolated-testing), [Fakeable Behaviors](/testing/fakeable-behaviors),
+and [Testing Recipes](/testing/recipes) for raised event patterns.
+:::
 
 ## Best Practices
 

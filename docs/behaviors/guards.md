@@ -364,6 +364,50 @@ class DebugGuard extends GuardBehavior
 
 ## Testing Guards
 
+### Isolated (Unit)
+
+<!-- doctest-attr: ignore -->
+```php
+// Pure guard test — no machine needed
+$state = State::forTesting(['count' => 15]);
+expect(IsAboveTenGuard::runWithState($state))->toBeTrue();
+
+$state = State::forTesting(['count' => 5]);
+expect(IsAboveTenGuard::runWithState($state))->toBeFalse();
+```
+
+### Faked (Machine-Level)
+
+<!-- doctest-attr: ignore -->
+```php
+// Force guard to pass or fail during machine execution
+IsAboveTenGuard::shouldReturn(false);
+
+CounterMachine::test(['count' => 100])
+    ->assertGuarded('CHECK');  // guard blocked despite count > 10
+
+IsAboveTenGuard::shouldReturn(true);
+
+CounterMachine::test(['count' => 0])
+    ->assertTransition('CHECK', 'passed');  // guard passed despite count = 0
+```
+
+### With Constructor DI
+
+<!-- doctest-attr: ignore -->
+```php
+it('checks permission via auth service', function () {
+    $this->mock(AuthorizationService::class)
+        ->shouldReceive('can')->with('user-1', 'submit_order')
+        ->andReturn(true);
+
+    $state = State::forTesting(['user_id' => 'user-1']);
+    expect(HasPermissionGuard::runWithState($state))->toBeTrue();
+});
+```
+
+### Definition-Level Testing
+
 ```php no_run
 it('blocks transition when guard fails', function () {
     $machine = MachineDefinition::define(
@@ -399,6 +443,12 @@ it('blocks transition when guard fails', function () {
     expect($newState->matches('passed'))->toBeTrue();
 });
 ```
+
+::: tip Full Testing Guide
+See [Isolated Testing](/testing/isolated-testing) for `runWithState()` details,
+[Fakeable Behaviors](/testing/fakeable-behaviors) for the faking API,
+and [Transitions & Paths](/testing/transitions-and-paths) for guard testing in machines.
+:::
 
 ## Best Practices
 
