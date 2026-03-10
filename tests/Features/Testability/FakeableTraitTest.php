@@ -49,11 +49,22 @@ it('creates a spy and binds it in the container via spy()', function (): void {
     expect($resolved)->toBe($spy);
 });
 
-it('returns existing fake when spy() is called after fake()', function (): void {
-    $mock = IncrementAction::fake();
-    $spy  = IncrementAction::spy();
+it('creates a proper spy when spy() is called after fake()', function (): void {
+    IncrementAction::fake();
+    $spy = IncrementAction::spy();
 
-    expect($mock)->toBe($spy);
+    // spy() after fake() should create a real spy (allows all calls), not return the strict mock
+    $ctx = Mockery::mock(\Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext::class);
+    // A spy allows all calls silently — this should NOT throw BadMethodCallException
+    $spy->__invoke($ctx);
+    IncrementAction::assertRan();
+});
+
+it('returns same spy when spy() is called twice', function (): void {
+    $spy1 = IncrementAction::spy();
+    $spy2 = IncrementAction::spy();
+
+    expect($spy1)->toBe($spy2);
 });
 
 // ─── shouldRun() ─────────────────────────────────────────────

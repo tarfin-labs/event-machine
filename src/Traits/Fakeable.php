@@ -14,6 +14,9 @@ trait Fakeable
     /** @var array<class-string, MockInterface> Tracks faked classes for assertions and cleanup. */
     private static array $fakes = [];
 
+    /** @var array<class-string, bool> Tracks which fakes are spies (true) vs strict mocks (false). */
+    private static array $spies = [];
+
     // ─── Creation ─────────────────────────────────
 
     /**
@@ -31,6 +34,7 @@ trait Fakeable
 
         $mock                         = Mockery::mock(static::class);
         static::$fakes[static::class] = $mock;
+        static::$spies[static::class] = false;
         App::bind(static::class, fn () => $mock);
 
         return $mock;
@@ -41,12 +45,19 @@ trait Fakeable
      */
     public static function spy(): MockInterface
     {
-        if (isset(static::$fakes[static::class])) {
+        // If already a spy, return it (idempotent)
+        if (isset(static::$fakes[static::class]) && (static::$spies[static::class] ?? false)) {
             return static::$fakes[static::class];
+        }
+
+        // If a strict mock exists, teardown before creating spy
+        if (isset(static::$fakes[static::class])) {
+            static::resetFakes();
         }
 
         $spy                          = Mockery::spy(static::class);
         static::$fakes[static::class] = $spy;
+        static::$spies[static::class] = true;
         App::bind(static::class, fn () => $spy);
 
         return $spy;
@@ -182,7 +193,7 @@ trait Fakeable
             }
             $mock->mockery_teardown();
 
-            unset(static::$fakes[static::class]);
+            unset(static::$fakes[static::class], static::$spies[static::class]);
         }
     }
 
@@ -204,5 +215,6 @@ trait Fakeable
         }
 
         static::$fakes = [];
+        static::$spies = [];
     }
 }
