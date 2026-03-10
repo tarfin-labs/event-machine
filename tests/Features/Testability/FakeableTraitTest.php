@@ -98,6 +98,28 @@ it('sets return value for __invoke via shouldReturn()', function (): void {
     IsEvenGuard::resetFakes();
 });
 
+// ─── mayReturn() ─────────────────────────────────────────────
+
+it('sets return value without call expectation via mayReturn()', function (): void {
+    IsEvenGuard::mayReturn(true);
+
+    // NOT calling __invoke — Mockery should NOT fail at close
+    expect(IsEvenGuard::isFaked())->toBeTrue();
+
+    IsEvenGuard::resetFakes();
+});
+
+it('returns the configured value when invoked after mayReturn()', function (): void {
+    IsEvenGuard::mayReturn(false);
+
+    $ctx    = Mockery::mock(TrafficLightsContext::class);
+    $result = App::make(IsEvenGuard::class)->__invoke($ctx);
+
+    expect($result)->toBeFalse();
+
+    IsEvenGuard::resetFakes();
+});
+
 // ─── allowToRun() ────────────────────────────────────────────
 
 it('allows __invoke calls via spy with allowToRun()', function (): void {

@@ -82,11 +82,26 @@ trait Fakeable
     }
 
     /**
-     * Set return value for __invoke. Implicitly fakes.
+     * Set return value for __invoke and assert it will be called at least once.
+     *
+     * Uses shouldReceive() which adds an implicit "at least once" expectation.
+     * If the behavior is never invoked, Mockery::close() will fail the test.
+     * For a passive return value without call expectation, use mayReturn().
      */
     public static function shouldReturn(mixed $value): void
     {
         static::fake()->shouldReceive('__invoke')->andReturn($value);
+    }
+
+    /**
+     * Set return value for __invoke without asserting it will be called.
+     *
+     * Uses allows() (spy-style) — no call expectation. If the behavior
+     * is never invoked, Mockery::close() will NOT fail the test.
+     */
+    public static function mayReturn(mixed $value): void
+    {
+        static::spy()->allows('__invoke')->andReturn($value);
     }
 
     /**
