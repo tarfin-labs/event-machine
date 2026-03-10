@@ -86,12 +86,13 @@ $instance = App::make(static::class);
 |---------|-------------|
 | `Machine::test()` | Livewire-style fluent test wrapper |
 | `State::forTesting()` | Lightweight state factory for unit tests |
-| `InvokableBehavior::runWithState()` | Isolated testing with engine-identical DI |
+| `InvokableBehavior::runWithState()` | Isolated testing with engine-identical DI. For void actions, returns the `eventQueue` Collection so raised events are accessible. |
 | `EventBehavior::forTesting()` | Test factory for event construction |
 | Constructor DI | Behaviors can now inject service dependencies via `__construct()` |
 | `Fakeable::spy()` | Permissive mock that records all calls silently |
 | `Fakeable::allowToRun()` | Spy mode — allows and records `__invoke` calls |
 | `Fakeable::assertRanWith()` | Assert `__invoke` was called with matching arguments |
 | `Fakeable::assertRanTimes()` | Assert `__invoke` was called exactly N times |
+| `Fakeable::mayReturn()` | Set return value without "at least once" call expectation |
 
 See the [Testing Overview](/testing/overview) documentation for the complete guide.
