@@ -301,6 +301,29 @@ Both types block the transition when they return `false`. The difference is whet
 
 ## Testing Validation Guards
 
+### Via TestMachine — Exception Assertion
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->assertValidationFailed(
+        ['type' => 'SUBMIT', 'payload' => ['amount' => -100]],
+        'amount',  // expected error key
+    );
+```
+
+### Faked — Bypass Validation
+
+<!-- doctest-attr: ignore -->
+```php
+ValidateOrderGuard::shouldReturn(true);  // force pass
+
+OrderMachine::test(['items' => []])
+    ->assertTransition('SUBMIT', 'processing');  // validation skipped
+```
+
+### Integration Testing
+
 ```php no_run
 it('shows validation error when amount is too high', function () {
     $machine = TransferMachine::create();
@@ -327,6 +350,10 @@ it('passes validation with valid amount', function () {
     expect($machine->state->matches('transferred'))->toBeTrue();
 });
 ```
+
+::: tip Full Testing Guide
+See [Transitions & Paths](/testing/transitions-and-paths) for validation testing patterns.
+:::
 
 ## Best Practices
 

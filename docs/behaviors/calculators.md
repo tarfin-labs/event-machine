@@ -369,6 +369,44 @@ The internal event recorded on failure:
 
 ## Testing Calculators
 
+### Isolated (Unit)
+
+<!-- doctest-attr: ignore -->
+```php
+$state = State::forTesting([
+    'items' => [
+        ['price' => 10, 'quantity' => 2],
+        ['price' => 25, 'quantity' => 1],
+    ],
+]);
+
+CalculateTotalCalculator::runWithState($state);
+expect($state->context->get('total'))->toBe(45);
+```
+
+### With Arguments
+
+<!-- doctest-attr: ignore -->
+```php
+$state = State::forTesting(['value' => 10]);
+MultiplyCalculator::runWithState($state, arguments: ['3']);
+expect($state->context->get('value'))->toBe(30);
+```
+
+### Faked (Machine-Level)
+
+<!-- doctest-attr: ignore -->
+```php
+CalculateTotalCalculator::shouldRun()
+    ->andReturnUsing(fn($ctx) => $ctx->set('total', 999));
+
+OrderMachine::test()
+    ->send('CALCULATE')
+    ->assertContext('total', 999);
+```
+
+### Definition-Level Testing
+
 ```php no_run
 it('calculates order total correctly', function () {
     $machine = MachineDefinition::define(
@@ -405,6 +443,11 @@ it('calculates order total correctly', function () {
     expect($state->context->total)->toBe(45);
 });
 ```
+
+::: tip Full Testing Guide
+See [Isolated Testing](/testing/isolated-testing) and
+[Testing Recipes](/testing/recipes) for calculator ordering patterns.
+:::
 
 ## Best Practices
 
