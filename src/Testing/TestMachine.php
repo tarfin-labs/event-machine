@@ -151,8 +151,9 @@ class TestMachine
 
     public function assertNotState(string $state): self
     {
+        $actual = '['.implode(', ', $this->machine->state->value).']';
         expect($this->machine->state->matches($state))->toBeFalse(
-            "Expected NOT to be in state [{$state}]"
+            "Expected NOT to be in state [{$state}], but machine is in {$actual}"
         );
 
         return $this;
