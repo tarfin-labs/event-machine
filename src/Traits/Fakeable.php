@@ -77,7 +77,7 @@ trait Fakeable
     /**
      * Spy mode — records calls silently, allows all.
      */
-    public static function allowToRun(): Mockery\Expectation
+    public static function allowToRun(): Mockery\Expectation|Mockery\CompositeExpectation
     {
         return static::spy()->allows('__invoke');
     }
