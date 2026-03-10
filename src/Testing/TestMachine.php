@@ -89,6 +89,16 @@ class TestMachine
         return $this;
     }
 
+    /**
+     * Disable parallel region dispatch (run regions sequentially).
+     */
+    public function withoutParallelDispatch(): self
+    {
+        config(['machine.parallel_dispatch.enabled' => false]);
+
+        return $this;
+    }
+
     // ═══════════════════════════════════════════
     //  Actions
     // ═══════════════════════════════════════════
