@@ -77,6 +77,12 @@ class StateDefinition
     /** The transition definition for @fail, resolved at init time for guard support. */
     public ?TransitionDefinition $onFailTransition = null;
 
+    /** The transition definition for @timeout, resolved at init time. */
+    public ?TransitionDefinition $onTimeoutTransition = null;
+
+    /** Machine invoke definition when this state delegates to a child machine. */
+    public ?MachineInvokeDefinition $machineInvokeDefinition = null;
+
     /**
      * The action(s) to be executed upon entering the state definition.
      *
@@ -137,6 +143,7 @@ class StateDefinition
 
         $this->initializeEntryActions();
         $this->initializeExitActions();
+        $this->initializeMachineInvoke();
 
         $this->meta = $this->config['meta'] ?? null;
     }
@@ -391,6 +398,38 @@ class StateDefinition
     }
 
     /**
+     * Initialize machine invoke definition from the `machine` config key.
+     *
+     * Parses the state-level `machine` key and creates a MachineInvokeDefinition
+     * with context transfer (`with`), forwarding (`forward`), and async (`queue`) config.
+     */
+    protected function initializeMachineInvoke(): void
+    {
+        if (!isset($this->config['machine'])) {
+            return;
+        }
+
+        $machineClass = $this->config['machine'];
+        $with         = $this->config['with'] ?? null;
+        $forward      = $this->config['forward'] ?? [];
+        $queue        = $this->config['queue'] ?? null;
+        $connection   = $this->config['connection'] ?? null;
+        $timeout      = isset($this->config['@timeout']) ? ($this->config['@timeout']['timeout'] ?? null) : null;
+        $retry        = $this->config['retry'] ?? null;
+
+        $this->machineInvokeDefinition = new MachineInvokeDefinition(
+            machineClass: $machineClass,
+            with: $with,
+            forward: $forward,
+            async: $queue !== null,
+            queue: $queue,
+            connection: $connection,
+            timeout: $timeout,
+            retry: $retry,
+        );
+    }
+
+    /**
      * Get the type of the state definition.
      *
      * @return StateDefinitionType The type of the state definition.
@@ -444,6 +483,17 @@ class StateDefinition
                 transitionConfig: $this->config['@fail'],
                 source: $this,
                 event: '@fail',
+            );
+        }
+
+        if (isset($this->config['@timeout'])) {
+            $timeoutConfig = $this->config['@timeout'];
+
+            // @timeout may contain both a 'target' for transition and a 'timeout' for duration
+            $this->onTimeoutTransition = new TransitionDefinition(
+                transitionConfig: $timeoutConfig,
+                source: $this,
+                event: '@timeout',
             );
         }
 
@@ -502,6 +552,22 @@ class StateDefinition
 
         // Return the array of unique event names
         return $events === [] ? null : $events;
+    }
+
+    /**
+     * Check if this state delegates to a child machine.
+     */
+    public function hasMachineInvoke(): bool
+    {
+        return $this->machineInvokeDefinition instanceof MachineInvokeDefinition;
+    }
+
+    /**
+     * Get the machine invoke definition for this state.
+     */
+    public function getMachineInvokeDefinition(): ?MachineInvokeDefinition
+    {
+        return $this->machineInvokeDefinition;
     }
 
     /**
