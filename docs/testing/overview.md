@@ -27,6 +27,12 @@ TrafficLightsMachine::test()
     ->assertState('active')
     ->send('INCREASE')
     ->assertContext('count', 1);
+
+// 4. Inline faking — fake inline closures during machine execution
+OrderMachine::test()
+    ->faking(['broadcastAction', 'isValidGuard' => true])
+    ->send('SUBMIT')
+    ->assertBehaviorRan('broadcastAction');
 ```
 
 ## Test Setup
@@ -41,7 +47,7 @@ Reset all behavior fakes between tests to prevent state leaking across test case
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 afterEach(function (): void {
-    // Reset all fakes between tests
+    // Reset all fakes between tests (also clears inline behavior fakes)
     IncrementAction::resetAllFakes();
 });
 ```
@@ -64,6 +70,7 @@ For fast tests, use SQLite in-memory. This eliminates migration overhead and dis
 |-------|-------------|-------|
 | Behavior (Unit) | Individual guards, actions, calculators | [Isolated Testing](/testing/isolated-testing) |
 | Faking | Mock behaviors during execution | [Fakeable Behaviors](/testing/fakeable-behaviors) |
+| Inline Faking | Fake inline closures (actions, guards, calculators) | [Fakeable Behaviors — Inline](/testing/fakeable-behaviors#inline-behavior-faking) |
 | Constructor DI | Service injection + mocking | [Constructor DI](/testing/constructor-di) |
 | Transition (Integration) | Guard pass/fail, state changes, paths | [Transitions & Paths](/testing/transitions-and-paths) |
 | Machine (Acceptance) | Full fluent test wrapper | [TestMachine](/testing/test-machine) |
