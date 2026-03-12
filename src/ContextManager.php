@@ -151,6 +151,38 @@ class ContextManager extends Data
         return static::from($payload);
     }
 
+    // region Machine Identity
+
+    /**
+     * Get the machine's root_event_id.
+     *
+     * This is auto-injected into every machine's context during create()/start().
+     */
+    public function machineId(): string
+    {
+        return $this->get('_machine_id');
+    }
+
+    /**
+     * Get the parent machine's root_event_id (if this is a child machine).
+     *
+     * Returns null if this machine was not invoked by a parent.
+     */
+    public function parentMachineId(): ?string
+    {
+        return $this->get('_parent_root_event_id');
+    }
+
+    /**
+     * Check if this machine was invoked by a parent machine.
+     */
+    public function isChildMachine(): bool
+    {
+        return $this->has('_parent_root_event_id');
+    }
+
+    // endregion
+
     // region Magic Setup
 
     /**
