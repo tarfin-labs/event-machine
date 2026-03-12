@@ -8,6 +8,7 @@ use Mockery;
 use RuntimeException;
 use Mockery\MockInterface;
 use Illuminate\Support\Facades\App;
+use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 
 trait Fakeable
 {
@@ -231,5 +232,8 @@ trait Fakeable
 
         static::$fakes = [];
         static::$spies = [];
+
+        // Also reset inline behavior fakes
+        InlineBehaviorFake::resetAll();
     }
 }
