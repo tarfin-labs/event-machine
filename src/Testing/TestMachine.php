@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
@@ -19,6 +20,9 @@ class TestMachine
 
     /** @var array<string> */
     private array $fakedBehaviors = [];
+
+    /** @var array<string> Inline behavior keys registered via faking() */
+    private array $fakedInlineBehaviors = [];
 
     private function __construct(Machine $machine)
     {
@@ -99,15 +103,69 @@ class TestMachine
 
     /**
      * Fake specific behaviors. Selective faking à la Bus::fake([...]).
+     *
+     * Supports four formats in a single array:
+     *   - Numeric key + FQCN string:   SendEmailAction::class        → class-based spy
+     *   - Numeric key + string:         'broadcastAction'             → inline fake (no-op)
+     *   - String key + scalar value:    'isValidGuard' => false       → inline fake with return value
+     *   - String key + Closure:         'calcTax' => fn(...) => 0     → inline fake with custom replacement
      */
     public function faking(array $behaviors): self
     {
-        foreach ($behaviors as $behavior) {
-            $behavior::spy();
-            $this->fakedBehaviors[] = $behavior;
+        foreach ($behaviors as $key => $value) {
+            if (is_int($key)) {
+                // Numeric key: $value is the behavior identifier
+                if (is_string($value) && is_subclass_of($value, InvokableBehavior::class)) {
+                    // Class-based behavior → existing spy mechanism
+                    $value::spy();
+                    $this->fakedBehaviors[] = $value;
+                } elseif (is_string($value)) {
+                    // Inline behavior key → fake with no-op
+                    $this->validateInlineBehaviorKey($value);
+                    InlineBehaviorFake::fake($value);
+                    $this->fakedInlineBehaviors[] = $value;
+                }
+            } else {
+                // String key: inline behavior with specific return value or replacement
+                $this->validateInlineBehaviorKey($key);
+
+                if ($value instanceof \Closure) {
+                    // Custom replacement closure
+                    InlineBehaviorFake::fake($key, $value);
+                } else {
+                    // Scalar return value (most common: guard true/false)
+                    InlineBehaviorFake::shouldReturn($key, $value);
+                }
+
+                $this->fakedInlineBehaviors[] = $key;
+            }
         }
 
         return $this;
+    }
+
+    /**
+     * Validate that an inline behavior key exists in the machine's behavior array.
+     *
+     * Provides fail-fast typo detection similar to how PHP class loading catches FQCN typos.
+     * Only available through TestMachine::faking() (requires machine context).
+     *
+     * @throws \InvalidArgumentException If the key is not found
+     */
+    private function validateInlineBehaviorKey(string $key): void
+    {
+        $allBehaviorKeys = array_merge(
+            array_keys($this->machine->definition->behavior['actions'] ?? []),
+            array_keys($this->machine->definition->behavior['guards'] ?? []),
+            array_keys($this->machine->definition->behavior['calculators'] ?? []),
+        );
+
+        if (!in_array($key, $allBehaviorKeys, true)) {
+            throw new \InvalidArgumentException(
+                "Inline behavior key '{$key}' not found in machine definition. "
+                .'Available keys: ['.implode(', ', $allBehaviorKeys).']'
+            );
+        }
     }
 
     /**
@@ -540,30 +598,53 @@ class TestMachine
     //  Behavior Assertions (convenience)
     // ═══════════════════════════════════════════
 
-    public function assertBehaviorRan(string $class): self
+    public function assertBehaviorRan(string $classOrKey): self
     {
-        $class::assertRan();
+        if (is_subclass_of($classOrKey, InvokableBehavior::class)) {
+            $classOrKey::assertRan();
+        } else {
+            InlineBehaviorFake::assertRan($classOrKey);
+        }
 
         return $this;
     }
 
-    public function assertBehaviorNotRan(string $class): self
+    public function assertBehaviorNotRan(string $classOrKey): self
     {
-        $class::assertNotRan();
+        if (is_subclass_of($classOrKey, InvokableBehavior::class)) {
+            $classOrKey::assertNotRan();
+        } else {
+            InlineBehaviorFake::assertNotRan($classOrKey);
+        }
 
         return $this;
     }
 
-    public function assertBehaviorRanTimes(string $class, int $times): self
+    public function assertBehaviorRanTimes(string $classOrKey, int $times): self
     {
-        $class::assertRanTimes($times);
+        if (is_subclass_of($classOrKey, InvokableBehavior::class)) {
+            $classOrKey::assertRanTimes($times);
+        } else {
+            InlineBehaviorFake::assertRanTimes($classOrKey, $times);
+        }
 
         return $this;
     }
 
-    public function assertBehaviorRanWith(string $class, \Closure $callback): self
+    /**
+     * Assert behavior was called with matching arguments.
+     *
+     * For class-based behaviors: callback receives individual Mockery-recorded args.
+     * For inline behaviors: callback receives the full injected parameter array as
+     * a single argument (see InlineBehaviorFake::assertRanWith() docblock).
+     */
+    public function assertBehaviorRanWith(string $classOrKey, \Closure $callback): self
     {
-        $class::assertRanWith($callback);
+        if (is_subclass_of($classOrKey, InvokableBehavior::class)) {
+            $classOrKey::assertRanWith($callback);
+        } else {
+            InlineBehaviorFake::assertRanWith($classOrKey, $callback);
+        }
 
         return $this;
     }
@@ -657,8 +738,12 @@ class TestMachine
         foreach ($this->fakedBehaviors as $behavior) {
             $behavior::resetFakes();
         }
-
         $this->fakedBehaviors = [];
+
+        foreach ($this->fakedInlineBehaviors as $key) {
+            InlineBehaviorFake::reset($key);
+        }
+        $this->fakedInlineBehaviors = [];
 
         return $this;
     }
