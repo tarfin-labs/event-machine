@@ -19,6 +19,7 @@ use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
+use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Routing\MachineEndpointAction;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidEndpointDefinitionException;
@@ -1808,7 +1809,12 @@ class MachineDefinition
         );
 
         // Execute the action behavior
-        ($actionBehavior)(...$actionBehaviorParemeters);
+        if (InlineBehaviorFake::intercept($actionDefinition, $actionBehaviorParemeters)) {
+            $replacement = InlineBehaviorFake::getReplacement($actionDefinition);
+            ($replacement)(...$actionBehaviorParemeters);
+        } else {
+            ($actionBehavior)(...$actionBehaviorParemeters);
+        }
 
         // Get the number of events in the queue after the action is executed.
         $newNumberOfEventsInQueue = $this->eventQueue->count();
