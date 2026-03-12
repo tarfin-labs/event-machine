@@ -394,6 +394,13 @@ CounterMachine::test(['count' => 0])
 // Fake with custom side-effect
 ProcessOrderAction::shouldRun()
     ->andReturnUsing(fn($ctx) => $ctx->set('order_id', 'fake-123'));
+
+// Fake inline action via TestMachine
+CounterMachine::test(['count' => 0])
+    ->faking(['incrementAction'])
+    ->send('INCREMENT')
+    ->assertBehaviorRan('incrementAction')
+    ->assertContext('count', 0);  // original skipped, count unchanged
 ```
 
 ### With Constructor DI
