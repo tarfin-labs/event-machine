@@ -6,7 +6,7 @@ namespace Tarfinlabs\EventMachine;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Tarfinlabs\EventMachine\Commands\GenerateUmlCommand;
+use Tarfinlabs\EventMachine\Commands\ExportXStateCommand;
 use Tarfinlabs\EventMachine\Commands\ArchiveEventsCommand;
 use Tarfinlabs\EventMachine\Commands\ArchiveStatusCommand;
 use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
@@ -39,9 +39,9 @@ class MachineServiceProvider extends PackageServiceProvider
             ->hasMigration('add_archival_index_to_machine_events_table')
             ->hasMigration('create_machine_events_archive_table')
             ->hasMigration('create_machine_locks_table')
-            ->hasCommand(GenerateUmlCommand::class)
             ->hasCommand(ArchiveEventsCommand::class)
             ->hasCommand(ArchiveStatusCommand::class)
-            ->hasCommand(MachineConfigValidatorCommand::class);
+            ->hasCommand(MachineConfigValidatorCommand::class)
+            ->hasCommand(ExportXStateCommand::class);
     }
 }
