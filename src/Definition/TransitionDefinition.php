@@ -13,6 +13,7 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 
 /**
@@ -180,7 +181,12 @@ class TransitionDefinition
                 );
 
                 // Execute the guard behavior
-                $guardResult = ($guardBehavior)(...$guardBehaviorParameters);
+                if (InlineBehaviorFake::intercept($guardDefinition, $guardBehaviorParameters)) {
+                    $replacement = InlineBehaviorFake::getReplacement($guardDefinition);
+                    $guardResult = ($replacement)(...$guardBehaviorParameters);
+                } else {
+                    $guardResult = ($guardBehavior)(...$guardBehaviorParameters);
+                }
 
                 if ($guardResult === false) {
                     $guardsPassed = false;
@@ -256,7 +262,12 @@ class TransitionDefinition
                     actionArguments: $calculatorArguments,
                 );
 
-                ($calculatorBehavior)(...$calculatorParameters);
+                if (InlineBehaviorFake::intercept($calculatorDefinition, $calculatorParameters)) {
+                    $replacement = InlineBehaviorFake::getReplacement($calculatorDefinition);
+                    ($replacement)(...$calculatorParameters);
+                } else {
+                    ($calculatorBehavior)(...$calculatorParameters);
+                }
 
                 $state->setInternalEventBehavior(
                     type: InternalEvent::CALCULATOR_PASS,
