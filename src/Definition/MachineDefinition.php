@@ -977,6 +977,62 @@ class MachineDefinition
     }
 
     /**
+     * Handle machine delegation when entering a state with a `machine` key.
+     *
+     * In sync mode (no queue): creates the child machine with resolved context,
+     * injects parent identity, and runs the child inline to completion.
+     * The child's final state is returned for @done/@fail routing.
+     *
+     * @param  State  $state  The parent's current state.
+     * @param  StateDefinition  $stateDefinition  The state being entered.
+     * @param  EventBehavior|null  $eventBehavior  The triggering event.
+     *
+     * @return State|null The child's final state, or null if no machine invoke.
+     */
+    protected function handleMachineInvoke(State $state, StateDefinition $stateDefinition, ?EventBehavior $eventBehavior): ?State
+    {
+        if (!$stateDefinition->hasMachineInvoke()) {
+            return null;
+        }
+
+        $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
+
+        // Async mode is handled separately (async-dispatch task)
+        if ($invokeDefinition->async) {
+            return null;
+        }
+
+        // Resolve child context from parent via `with` config
+        $childContext = $invokeDefinition->resolveChildContext($state->context);
+
+        // Record child machine start event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::CHILD_MACHINE_START,
+            placeholder: $invokeDefinition->machineClass,
+        );
+
+        // Create and run child machine inline
+        $childMachineClass = $invokeDefinition->machineClass;
+
+        /** @var Machine $childMachine */
+        $childMachine = $childMachineClass::create(context: $childContext);
+
+        // Inject parent identity into child's context
+        $childState = $childMachine->state;
+        $parentId   = $state->context->machineId();
+        $childState->context->setMachineIdentity(
+            machineId: $childState->context->machineId(),
+            parentRootEventId: $parentId,
+        );
+
+        // Track child in parent's active children
+        $childRootEventId = $childState->history->first()->root_event_id;
+        $state->addActiveChild($childRootEventId);
+
+        return $childState;
+    }
+
+    /**
      * Process compound state onDone transitions.
      *
      * When a transition lands on a final state within a compound sub-state,
@@ -1714,6 +1770,11 @@ class MachineDefinition
 
         // Execute entry actions for the new state definition
         $targetStateDefinition?->runEntryActions($newState, $eventBehavior);
+
+        // Handle machine delegation (sync mode): launch child inline after entry actions
+        if ($targetStateDefinition !== null) {
+            $this->handleMachineInvoke($newState, $targetStateDefinition, $eventBehavior);
+        }
 
         // Process compound state onDone: when a non-parallel transition lands on a final
         // state that is a child of a compound parent, fire the compound state's @done.
