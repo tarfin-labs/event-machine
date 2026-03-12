@@ -392,6 +392,27 @@ CounterMachine::test(['count' => 0])
     ->assertTransition('CHECK', 'passed');  // guard passed despite count = 0
 ```
 
+### Inline Guard Faking
+
+<!-- doctest-attr: ignore -->
+```php
+// Force inline guard to block via key-value syntax
+OrderMachine::test()
+    ->faking(['hasItemsGuard' => false])
+    ->assertGuarded('SUBMIT');
+
+// Force inline guard to pass
+OrderMachine::test()
+    ->faking(['hasItemsGuard' => true])
+    ->send('SUBMIT')
+    ->assertState('submitted');
+
+// Verify which guard blocked
+OrderMachine::test()
+    ->faking(['hasItemsGuard' => false])
+    ->assertGuardedBy('SUBMIT', 'hasItemsGuard');
+```
+
 ### With Constructor DI
 
 <!-- doctest-attr: ignore -->
