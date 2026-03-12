@@ -163,6 +163,10 @@ ParallelMachine::test()
     ->assertAllRegionsCompleted();  // fails — inventory not final
 ```
 
+::: info Inline Fakes and Parallel Dispatch
+`InlineBehaviorFake` uses a static in-process registry. Inline fakes work with `withoutParallelDispatch()` and `sync` queue driver (same process). With `Queue::fake()`, jobs don't execute, so inline fakes are N/A. Real queue dispatch across processes does not support inline fakes — but that's not a testing pattern.
+:::
+
 ::: tip Related
 See [Overview](/testing/overview) for the testing pyramid,
 [TestMachine](/testing/test-machine) for the complete assertion API,
