@@ -19,6 +19,7 @@ class StateConfigValidator
 
     private const ALLOWED_STATE_KEYS = [
         'id', 'on', 'states', 'initial', 'type', 'meta', 'entry', 'exit', 'description', 'result', '@done', '@fail',
+        'machine', 'with', 'forward', 'queue', 'connection', '@timeout', 'retry',
     ];
 
     private const ALLOWED_TRANSITION_KEYS = [
@@ -144,6 +145,11 @@ class StateConfigValidator
         // Parallel state validations
         if (isset($stateConfig['type']) && $stateConfig['type'] === 'parallel') {
             self::validateParallelState(stateConfig: $stateConfig, path: $path);
+        }
+
+        // Validate machine delegation configuration
+        if (isset($stateConfig['machine'])) {
+            self::validateMachineConfig($stateConfig, $path);
         }
 
         // Validate @done/@fail configurations
@@ -435,6 +441,30 @@ class StateConfigValidator
             }
         } else {
             self::validateTransitionConfig(transitionConfig: $config, path: $path, eventName: $key);
+        }
+    }
+
+    /**
+     * Validates machine delegation configuration.
+     *
+     * @throws InvalidArgumentException
+     */
+    private static function validateMachineConfig(array $stateConfig, string $path): void
+    {
+        $machineClass = $stateConfig['machine'];
+
+        // machine value must be a string (FQCN)
+        if (!is_string($machineClass)) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has invalid 'machine' value. Must be a string (machine class FQCN)."
+            );
+        }
+
+        // machine + type:parallel are mutually exclusive
+        if (isset($stateConfig['type']) && $stateConfig['type'] === 'parallel') {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' cannot have both 'machine' and type 'parallel'. Machine delegation is only for atomic states."
+            );
         }
     }
 
