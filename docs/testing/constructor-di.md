@@ -2,6 +2,10 @@
 
 Behaviors support constructor dependency injection. Services are resolved by the Laravel container, making them fully mockable in tests.
 
+::: info Class-based behaviors only
+Constructor DI applies only to class-based behaviors resolved through `App::make()`. Inline closures bypass the container and do not receive constructor injection. For testing inline behaviors, see [Inline Behavior Faking](/testing/fakeable-behaviors#inline-behavior-faking).
+:::
+
 ## Two-Layer DI Architecture
 
 EventMachine uses two separate injection layers. The constructor receives long-lived services (database repositories, API clients) resolved once by Laravel's container. The `__invoke` method receives per-transition state (context, event, history) injected by the engine. This separation makes behaviors easy to test: mock the services, provide test state.
