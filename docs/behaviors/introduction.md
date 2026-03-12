@@ -267,7 +267,20 @@ $machine->send(['type' => 'PROCESS']);
 ProcessOrderAction::assertRan();
 ```
 
-See [Fakeable Behaviors](/testing/fakeable-behaviors) for details.
+Inline closures can also be faked:
+
+```php no_run
+// Spy on an inline behavior
+InlineBehaviorFake::spy('broadcastAction');
+
+// Run machine
+$machine->send(['type' => 'PROCESS']);
+
+// Assert
+InlineBehaviorFake::assertRan('broadcastAction');
+```
+
+See [Fakeable Behaviors](/testing/fakeable-behaviors) (including inline closures) for details.
 
 ## Best Practices
 
