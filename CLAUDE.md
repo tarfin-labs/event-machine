@@ -19,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `composer infection` - Run mutation testing
 
 ### Artisan Commands
-- `php artisan machine:generate-uml` - Generate UML diagrams for state machines
+- `php artisan machine:xstate` - Export machine definition to XState v5 JSON for Stately Studio
 - `php artisan machine:validate-config` - Validate machine configuration
 
 ## Architecture Overview
