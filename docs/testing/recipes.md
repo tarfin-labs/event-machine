@@ -348,6 +348,42 @@ it('validates all machines in project', function () {
 Add `php artisan machine:validate --all` to your CI pipeline alongside tests and static analysis. See [Artisan Commands](/laravel-integration/artisan-commands#machine-validate) for what it checks.
 :::
 
+## Recipe: Inline Behavior Testing
+
+Three strategies for testing inline closures defined in the `behavior` array.
+
+<!-- doctest-attr: ignore -->
+```php
+// Strategy 1: Fake inline action, test machine flow
+it('completes flow with faked inline action', function () {
+    OrderMachine::test()
+        ->faking(['broadcastAction'])
+        ->send('SUBMIT')
+        ->assertState('awaiting_payment')
+        ->assertBehaviorRan('broadcastAction');
+});
+
+// Strategy 2: Spy on inline action + assert side effects
+it('broadcasts event during transition', function () {
+    Event::fake();
+    InlineBehaviorFake::spy('broadcastAction');
+
+    OrderMachine::test()
+        ->send('SUBMIT')
+        ->assertState('awaiting_payment');
+
+    InlineBehaviorFake::assertRan('broadcastAction');
+    Event::assertDispatched(OrderSubmitted::class);
+});
+
+// Strategy 3: Fake inline guard to control transition path
+it('blocks transition when guard faked to false', function () {
+    OrderMachine::test()
+        ->faking(['isValidGuard' => false])
+        ->assertGuarded('SUBMIT');
+});
+```
+
 ::: tip Related
 See [Overview](/testing/overview) for the testing pyramid,
 [Isolated Testing](/testing/isolated-testing) for `runWithState()`,
