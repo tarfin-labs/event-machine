@@ -112,6 +112,86 @@ All 5 invocation points respect fakes:
 | Exit actions | `StateDefinition::runExitActions()` |
 | Entry actions | `StateDefinition::runEntryActions()` |
 
+## Inline Behavior Faking
+
+Inline closures (defined in the `behavior` array) can be faked just like class-based behaviors. The `InlineBehaviorFake` class provides a static registry that intercepts inline behaviors at invocation time — the original closure's reflection is still used for parameter injection, only the execution is replaced.
+
+### Via TestMachine (Recommended)
+
+<!-- doctest-attr: ignore -->
+```php
+// Fake inline action (skip original, record calls)
+OrderMachine::test()
+    ->faking(['sendEmailAction'])
+    ->send('SUBMIT')
+    ->assertBehaviorRan('sendEmailAction');
+
+// Fake inline guard with return value (key-value syntax)
+OrderMachine::test()
+    ->faking(['isValidGuard' => false])
+    ->assertGuarded('SUBMIT');
+
+// Custom replacement closure
+OrderMachine::test()
+    ->faking(['calculateTaxAction' => fn(ContextManager $ctx) => $ctx->set('tax', 0)])
+    ->send('SUBMIT')
+    ->assertContext('tax', 0);
+
+// Mix class-based and inline in a single faking() call
+OrderMachine::test()
+    ->faking([
+        SendEmailAction::class,         // class-based → spy
+        'broadcastAction',               // inline → no-op fake
+        'isValidGuard' => true,          // inline → return value
+    ]);
+```
+
+### Direct API
+
+For advanced use cases outside TestMachine:
+
+<!-- doctest-attr: ignore -->
+```php
+// Spy mode: record calls, still run original
+InlineBehaviorFake::spy('broadcastAction');
+
+// Fake mode: skip original, run no-op
+InlineBehaviorFake::fake('broadcastAction');
+
+// Fake with specific return value (guards)
+InlineBehaviorFake::shouldReturn('isValidGuard', false);
+
+// Assertions
+InlineBehaviorFake::assertRan('broadcastAction');
+InlineBehaviorFake::assertNotRan('someAction');
+InlineBehaviorFake::assertRanTimes('broadcastAction', 2);
+InlineBehaviorFake::assertRanWith('storeAction', fn(array $params) => $params[0]->get('stored') === true);
+```
+
+::: warning Guards need explicit return value when faked
+When faked without a return value (e.g., `faking(['myGuard'])`), the default replacement returns `null`. Since `null !== false`, the guard **silently passes**. Always use the key-value syntax for guards:
+
+```php ignore
+// Wrong — guard passes (null is not false)
+->faking(['myGuard'])
+
+// Correct — guard blocks
+->faking(['myGuard' => false])
+```
+:::
+
+::: info assertRanWith: array vs spread
+For inline behaviors, `assertBehaviorRanWith()` passes the full parameter array as a **single argument** (not spread). This differs from class-based behaviors which use Mockery's `withArgs()` spread:
+
+```php ignore
+// Class-based: callback receives individual args
+->assertBehaviorRanWith(SendEmailAction::class, fn($ctx, $event) => $ctx->get('sent'))
+
+// Inline: callback receives array
+->assertBehaviorRanWith('sendEmailAction', fn(array $params) => $params[0]->get('sent'))
+```
+:::
+
 ## Inspection
 
 `isFaked()` is useful in shared test helpers or base test classes where you want to conditionally configure a behavior only when it has not already been faked by the calling test — preventing accidental double-setup.
@@ -142,7 +222,7 @@ afterEach(fn() => IncrementAction::resetAllFakes());
 ```
 
 ::: info resetAllFakes() is global
-`resetAllFakes()` clears ALL faked behaviors across all classes, regardless of which class you call it from. The `$fakes` array is shared via `InvokableBehavior`, not per-child-class. You only need one `resetAllFakes()` call in your `afterEach()`.
+`resetAllFakes()` clears ALL faked behaviors across all classes — including inline behavior fakes — regardless of which class you call it from. The `$fakes` array is shared via `InvokableBehavior`, not per-child-class. You only need one `resetAllFakes()` call in your `afterEach()`.
 :::
 
 ::: tip Related
