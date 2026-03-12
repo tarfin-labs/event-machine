@@ -34,7 +34,10 @@ Chain configuration methods before sending events to customize machine behavior 
 
 <!-- doctest-attr: ignore -->
 ```php
-->faking([SendEmailAction::class, ChargePaymentAction::class])  // selective behavior faking (spy mode)
+->faking([SendEmailAction::class, ChargePaymentAction::class])  // class-based: spy mode
+->faking(['broadcastAction'])                                      // inline: fake with no-op
+->faking(['isValidGuard' => true])                                 // inline: fake with return value
+->faking(['calcTax' => fn(ContextManager $ctx) => $ctx->set('tax', 0)])  // inline: custom replacement
 ->withoutPersistence()                                            // skip DB writes
 ->withoutParallelDispatch()                                       // run regions sequentially
 ->withScenario('rush_order')                                      // set scenario type
@@ -114,10 +117,12 @@ Chain configuration methods before sending events to customize machine behavior 
 
 <!-- doctest-attr: ignore -->
 ```php
-->assertBehaviorRan(SendEmailAction::class)
+->assertBehaviorRan(SendEmailAction::class)        // class-based
+->assertBehaviorRan('broadcastAction')              // inline
 ->assertBehaviorNotRan(RefundAction::class)
 ->assertBehaviorRanTimes(SendEmailAction::class, 2)
 ->assertBehaviorRanWith(SendEmailAction::class, fn($ctx) => $ctx->get('email') !== null)
+->assertBehaviorRanWith('myAction', fn(array $params) => $params[0]->get('done'))  // inline: array param
 ```
 
 ## Accessors
