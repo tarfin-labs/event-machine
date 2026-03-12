@@ -313,6 +313,11 @@ class MachineDefinition
         // Record the internal machine init event.
         $initialState->setInternalEventBehavior(type: InternalEvent::MACHINE_START);
 
+        // Set machine identity (separate from context data — never pollutes the data array).
+        // Available before entry actions run, so behaviors can use $context->machineId().
+        $rootEventId = $initialState->history->first()->root_event_id;
+        $initialState->context->setMachineIdentity($rootEventId);
+
         // Handle parallel state initialization - enter all regions
         if ($this->initialStateDefinition->type === StateDefinitionType::PARALLEL) {
             $this->enterParallelState($initialState, $this->initialStateDefinition, $initialState->currentEventBehavior);
