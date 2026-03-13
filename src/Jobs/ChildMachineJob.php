@@ -82,6 +82,7 @@ class ChildMachineJob implements ShouldQueue
         $childMachine->state->context->setMachineIdentity(
             machineId: $childRootEventId,
             parentRootEventId: $this->parentRootEventId,
+            parentMachineClass: $this->parentMachineClass,
         );
 
         // 4. Update tracking record with child's root_event_id
