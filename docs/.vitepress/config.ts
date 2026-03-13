@@ -96,7 +96,9 @@ export default withMermaid(
             { text: 'Working with Context', link: '/building/working-with-context' },
             { text: 'Handling Events', link: '/building/handling-events' },
             { text: 'Configuration', link: '/building/configuration' },
-            { text: 'Naming Conventions', link: '/building/conventions' }
+            { text: 'Naming Conventions', link: '/building/conventions' },
+            { text: 'Custom Context Classes', link: '/advanced/custom-context' },
+            { text: 'Scenarios', link: '/advanced/scenarios' }
           ]
         },
         {
@@ -109,7 +111,8 @@ export default withMermaid(
             { text: 'Validation Guards', link: '/behaviors/validation-guards' },
             { text: 'Calculators', link: '/behaviors/calculators' },
             { text: 'Events', link: '/behaviors/events' },
-            { text: 'Results', link: '/behaviors/results' }
+            { text: 'Results', link: '/behaviors/results' },
+            { text: 'Dependency Injection', link: '/advanced/dependency-injection' }
           ]
         },
         {
@@ -147,15 +150,6 @@ export default withMermaid(
                 { text: 'sendTo & Testing', link: '/advanced/sendto-and-testing' }
               ]
             }
-          ]
-        },
-        {
-          text: 'Customization',
-          collapsed: true,
-          items: [
-            { text: 'Custom Context Classes', link: '/advanced/custom-context' },
-            { text: 'Dependency Injection', link: '/advanced/dependency-injection' },
-            { text: 'Scenarios', link: '/advanced/scenarios' }
           ]
         },
         {
