@@ -186,6 +186,12 @@ it('re-throws exception when no @fail is defined', function (): void {
 // Machine Identity Injection
 // ============================================================
 
+it('returns null from machineId() when identity has not been set', function (): void {
+    $context = ContextManager::from(['data' => ['key' => 'value']]);
+
+    expect($context->machineId())->toBeNull();
+});
+
 it('injects _machine_id accessible via machineId() on every machine', function (): void {
     $capturedId = null;
 
