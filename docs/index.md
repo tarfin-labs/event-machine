@@ -464,7 +464,7 @@ MachineDefinition::define(
     config: [...],
     behavior: [...],
     endpoints: [
-        'SUBMIT'  => null,              // POST /submit
+        'SUBMIT',                       // POST /submit
         'APPROVE' => [
             'method'     => 'PATCH',
             'middleware'  => ['auth:admin'],
