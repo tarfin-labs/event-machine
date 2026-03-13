@@ -39,7 +39,10 @@ class AsyncParentMachine extends Machine
                         'machine' => SimpleChildMachine::class,
                         'with'    => ['order_id'],
                         'queue'   => 'child-queue',
-                        '@done'   => [
+                        'on'      => [
+                            'CANCEL' => 'skipped',
+                        ],
+                        '@done' => [
                             'target'  => 'completed',
                             'actions' => 'captureResultAction',
                         ],
