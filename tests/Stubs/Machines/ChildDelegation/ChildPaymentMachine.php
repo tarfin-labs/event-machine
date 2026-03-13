@@ -11,8 +11,8 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 /**
  * A simple child machine stub for testing machine delegation.
  *
- * Flow: processing → completed (final)
- * Accepts PROCESS event to transition to final state.
+ * Flow: processing → completed (final) via @always auto-transition.
+ * Entry action sets payment_id and receipt_url, then auto-transitions.
  * Has a ResultBehavior that returns payment result data.
  */
 class ChildPaymentMachine extends Machine
@@ -33,12 +33,18 @@ class ChildPaymentMachine extends Machine
                     'processing' => [
                         'entry' => 'processPaymentAction',
                         'on'    => [
-                            'PROCESS' => 'completed',
+                            '@always' => 'completed',
                         ],
                     ],
                     'completed' => [
                         'type'   => 'final',
-                        'result' => 'paymentResultCalculator',
+                        'result' => function (ContextManager $context): array {
+                            return [
+                                'payment_id'  => $context->get('payment_id'),
+                                'receipt_url' => $context->get('receipt_url'),
+                                'amount'      => $context->get('amount'),
+                            ];
+                        },
                     ],
                     'failed' => [
                         'type' => 'final',
@@ -50,15 +56,6 @@ class ChildPaymentMachine extends Machine
                     'processPaymentAction' => function (ContextManager $context): void {
                         $context->set('payment_id', 'pay_'.uniqid());
                         $context->set('receipt_url', 'https://example.com/receipt/'.uniqid());
-                    },
-                ],
-                'calculators' => [
-                    'paymentResultCalculator' => function (ContextManager $context): array {
-                        return [
-                            'payment_id'  => $context->get('payment_id'),
-                            'receipt_url' => $context->get('receipt_url'),
-                            'amount'      => $context->get('amount'),
-                        ];
                     },
                 ],
             ],
