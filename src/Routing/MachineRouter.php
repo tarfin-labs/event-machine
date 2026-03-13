@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Routing;
 
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Route;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
 /**
  * Registers Laravel routes for machine endpoints.
@@ -49,9 +50,14 @@ class MachineRouter
             );
         }
 
-        $machineIdFor = $options['machineIdFor'] ?? [];
-        $middleware   = $options['middleware'] ?? [];
-        $namePrefix   = $options['name'] ?? $definition->id;
+        $machineIdFor = array_map(
+            static fn (string $entry): string => is_subclass_of($entry, EventBehavior::class)
+                ? $entry::getType()
+                : $entry,
+            $options['machineIdFor'] ?? [],
+        );
+        $middleware = $options['middleware'] ?? [];
+        $namePrefix = $options['name'] ?? $definition->id;
 
         Route::prefix($prefix)
             ->middleware($middleware)
