@@ -24,6 +24,18 @@ class EndpointDefinition
     ) {}
 
     /**
+     * Resolve an event key to its SCREAMING_SNAKE_CASE event type.
+     *
+     * Accepts either a plain string ('SUBMIT') or an EventBehavior class FQCN.
+     */
+    public static function resolveEventType(string $key): string
+    {
+        return is_subclass_of($key, EventBehavior::class)
+            ? $key::getType()
+            : $key;
+    }
+
+    /**
      * Create an EndpointDefinition from various configuration formats.
      *
      * Supported formats:
@@ -33,11 +45,9 @@ class EndpointDefinition
      *   'FARMER_SAVED' => ['uri' => '/farmer', ...]   (array config)
      *   FarmerSavedEvent::class => '/farmer'           (event class key)
      */
-    public static function fromConfig(string $key, string|array|null $config, ?array $behavior): self
+    public static function fromConfig(string $key, string|array|null $config = null): self
     {
-        $eventType = is_subclass_of($key, EventBehavior::class)
-            ? $key::getType()
-            : $key;
+        $eventType = self::resolveEventType($key);
 
         if (is_string($config)) {
             return new self(
