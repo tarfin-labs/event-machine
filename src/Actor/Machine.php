@@ -751,7 +751,17 @@ class Machine implements Castable, JsonSerializable, Stringable
         }
 
         foreach ($invocations as $context) {
-            if (array_intersect_key($expected, $context) === $expected) {
+            $matched = true;
+
+            foreach ($expected as $key => $value) {
+                if (!array_key_exists($key, $context) || $context[$key] !== $value) {
+                    $matched = false;
+
+                    break;
+                }
+            }
+
+            if ($matched) {
                 return;
             }
         }
