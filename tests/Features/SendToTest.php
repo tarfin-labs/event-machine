@@ -115,6 +115,30 @@ it('SendToMachineJob logs warning for non-existent machine', function (): void {
     expect(true)->toBeTrue();
 });
 
+it('SendToMachineJob logs warning when target machine cannot handle the event', function (): void {
+    // Create and persist target machine in 'idle' state
+    $target      = SimpleChildMachine::create();
+    $rootEventId = $target->state->history->first()->root_event_id;
+    $target->persist();
+
+    Log::shouldReceive('warning')
+        ->once()
+        ->withArgs(function (string $message, array $context): bool {
+            return str_contains($message, 'failed to deliver event')
+                && $context['event']['type'] === 'NONEXISTENT_EVENT';
+        });
+
+    $job = new SendToMachineJob(
+        machineClass: SimpleChildMachine::class,
+        rootEventId: $rootEventId,
+        event: ['type' => 'NONEXISTENT_EVENT'],
+    );
+
+    // Should not throw — handles gracefully
+    $job->handle();
+    expect(true)->toBeTrue();
+});
+
 // ─── sendToParent ────────────────────────────────────────────────
 
 it('sendToParent throws on non-child machine', function (): void {
