@@ -34,7 +34,7 @@ test('it strips the _EVENT suffix when generating a URI', function (): void {
 // === fromConfig with string key (event type) ===
 
 test('it creates an endpoint from null config with auto-generated URI', function (): void {
-    $endpoint = EndpointDefinition::fromConfig('FARMER_SAVED', null, null);
+    $endpoint = EndpointDefinition::fromConfig('FARMER_SAVED', null);
 
     expect($endpoint->eventType)->toBe('FARMER_SAVED')
         ->and($endpoint->uri)->toBe('/farmer-saved')
@@ -46,7 +46,7 @@ test('it creates an endpoint from null config with auto-generated URI', function
 });
 
 test('it creates an endpoint from string config shorthand', function (): void {
-    $endpoint = EndpointDefinition::fromConfig('FARMER_SAVED', '/farmer', null);
+    $endpoint = EndpointDefinition::fromConfig('FARMER_SAVED', '/farmer');
 
     expect($endpoint->eventType)->toBe('FARMER_SAVED')
         ->and($endpoint->uri)->toBe('/farmer')
@@ -65,7 +65,7 @@ test('it creates an endpoint from array config with all options', function (): v
         'result'     => 'farmerResultBehavior',
         'middleware' => ['auth', 'throttle'],
         'status'     => 201,
-    ], null);
+    ]);
 
     expect($endpoint->eventType)->toBe('FARMER_SAVED')
         ->and($endpoint->uri)->toBe('/custom-farmer')
@@ -79,7 +79,7 @@ test('it creates an endpoint from array config with all options', function (): v
 test('it creates an endpoint from array config with partial options using defaults', function (): void {
     $endpoint = EndpointDefinition::fromConfig('FARMER_SAVED', [
         'uri' => '/farmer',
-    ], null);
+    ]);
 
     expect($endpoint->eventType)->toBe('FARMER_SAVED')
         ->and($endpoint->uri)->toBe('/farmer')
@@ -91,7 +91,7 @@ test('it creates an endpoint from array config with partial options using defaul
 });
 
 test('it creates an endpoint from empty array config with auto-generated URI', function (): void {
-    $endpoint = EndpointDefinition::fromConfig('FARMER_SAVED', [], null);
+    $endpoint = EndpointDefinition::fromConfig('FARMER_SAVED', []);
 
     expect($endpoint->eventType)->toBe('FARMER_SAVED')
         ->and($endpoint->uri)->toBe('/farmer-saved')
@@ -101,14 +101,14 @@ test('it creates an endpoint from empty array config with auto-generated URI', f
 // === fromConfig with event class key ===
 
 test('it resolves event type from an EventBehavior class key', function (): void {
-    $endpoint = EndpointDefinition::fromConfig(SimpleEvent::class, '/simple', null);
+    $endpoint = EndpointDefinition::fromConfig(SimpleEvent::class, '/simple');
 
     expect($endpoint->eventType)->toBe('SIMPLE_EVENT')
         ->and($endpoint->uri)->toBe('/simple');
 });
 
 test('it resolves event type from an EventBehavior class key with null config', function (): void {
-    $endpoint = EndpointDefinition::fromConfig(SimpleEvent::class, null, null);
+    $endpoint = EndpointDefinition::fromConfig(SimpleEvent::class, null);
 
     expect($endpoint->eventType)->toBe('SIMPLE_EVENT')
         ->and($endpoint->uri)->toBe('/simple');
@@ -116,20 +116,8 @@ test('it resolves event type from an EventBehavior class key with null config', 
 
 // === List syntax (numeric key) ===
 
-test('it creates an endpoint from list syntax with string event type', function (): void {
-    $endpoint = EndpointDefinition::fromConfig('FARMER_SAVED', null, null);
-
-    expect($endpoint->eventType)->toBe('FARMER_SAVED')
-        ->and($endpoint->uri)->toBe('/farmer-saved')
-        ->and($endpoint->method)->toBe('POST')
-        ->and($endpoint->actionClass)->toBeNull()
-        ->and($endpoint->resultBehavior)->toBeNull()
-        ->and($endpoint->middleware)->toBe([])
-        ->and($endpoint->statusCode)->toBeNull();
-});
-
 test('it creates an endpoint from list syntax with event class', function (): void {
-    $endpoint = EndpointDefinition::fromConfig(SimpleEvent::class, null, null);
+    $endpoint = EndpointDefinition::fromConfig(SimpleEvent::class);
 
     expect($endpoint->eventType)->toBe('SIMPLE_EVENT')
         ->and($endpoint->uri)->toBe('/simple')
