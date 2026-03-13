@@ -159,15 +159,19 @@ class ContextManager extends Data
     /** The parent machine's root_event_id (if this is a child machine). */
     protected ?string $internalParentRootEventId = null;
 
+    /** The parent machine's FQCN (if this is a child machine). */
+    protected ?string $internalParentMachineClass = null;
+
     /**
      * Set machine identity properties.
      *
      * Called by the engine during create()/start() — not stored in the data array.
      */
-    public function setMachineIdentity(string $machineId, ?string $parentRootEventId = null): void
+    public function setMachineIdentity(string $machineId, ?string $parentRootEventId = null, ?string $parentMachineClass = null): void
     {
-        $this->internalMachineId         = $machineId;
-        $this->internalParentRootEventId = $parentRootEventId;
+        $this->internalMachineId          = $machineId;
+        $this->internalParentRootEventId  = $parentRootEventId;
+        $this->internalParentMachineClass = $parentMachineClass;
     }
 
     /**
@@ -186,6 +190,16 @@ class ContextManager extends Data
     public function parentMachineId(): ?string
     {
         return $this->internalParentRootEventId;
+    }
+
+    /**
+     * Get the parent machine's FQCN (if this is a child machine).
+     *
+     * Returns null if this machine was not invoked by a parent.
+     */
+    public function parentMachineClass(): ?string
+    {
+        return $this->internalParentMachineClass;
     }
 
     /**
