@@ -34,6 +34,9 @@ class TestCase extends Orchestra
         $locksMigration = include __DIR__.'/../database/migrations/create_machine_locks_table.php.stub';
         $locksMigration->up();
 
+        $childrenMigration = include __DIR__.'/../database/migrations/create_machine_children_table.php.stub';
+        $childrenMigration->up();
+
         Schema::create('model_a_s', function (Blueprint $table): void {
             $table->id();
             $table->string('value')->nullable();
