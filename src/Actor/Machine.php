@@ -48,6 +48,9 @@ class Machine implements Castable, JsonSerializable, Stringable
     /** Whether parallel region jobs were dispatched to the queue in this lifecycle */
     public bool $dispatched = false;
 
+    /** @var array<class-string, array{result: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>}> Machine-level fakes for testing. */
+    private static array $machineFakes = [];
+
     // endregion
 
     // region Constructors
@@ -614,6 +617,85 @@ class Machine implements Castable, JsonSerializable, Stringable
 
             throw MachineValidationException::withMessages($errorsWithMessage);
         }
+    }
+
+    // endregion
+
+    // region Machine Faking
+
+    /**
+     * Register a machine fake to short-circuit child machine execution in tests.
+     *
+     * When a parent machine delegates to a faked child, the child is never
+     * actually created. Instead, the parent immediately routes @done or @fail
+     * based on the fake configuration.
+     *
+     * Works for both sync and async delegation.
+     *
+     * @param  array|null  $result  The fake result to return via @done.
+     * @param  bool  $fail  Whether to trigger @fail instead of @done.
+     * @param  string|null  $error  The error message for @fail.
+     * @param  string|null  $finalState  The specific final state name (unused by routing, available for inspection).
+     */
+    public static function fake(
+        ?array $result = null,
+        bool $fail = false,
+        ?string $error = null,
+        ?string $finalState = null,
+    ): void {
+        self::$machineFakes[static::class] = [
+            'result'      => $result,
+            'fail'        => $fail,
+            'error'       => $error,
+            'finalState'  => $finalState,
+            'invocations' => [],
+        ];
+    }
+
+    /**
+     * Check if a machine class is currently faked.
+     */
+    public static function isMachineFaked(?string $class = null): bool
+    {
+        return isset(self::$machineFakes[$class ?? static::class]);
+    }
+
+    /**
+     * Get the fake configuration for a machine class.
+     *
+     * @return array{result: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>}|null
+     */
+    public static function getMachineFake(?string $class = null): ?array
+    {
+        return self::$machineFakes[$class ?? static::class] ?? null;
+    }
+
+    /**
+     * Record a machine invocation for assertion tracking.
+     */
+    public static function recordMachineInvocation(string $class, array $context): void
+    {
+        if (isset(self::$machineFakes[$class])) {
+            self::$machineFakes[$class]['invocations'][] = $context;
+        }
+    }
+
+    /**
+     * Get recorded invocations for a faked machine.
+     *
+     * @return list<array>
+     */
+    public static function getMachineInvocations(?string $class = null): array
+    {
+        return self::$machineFakes[$class ?? static::class]['invocations'] ?? [];
+    }
+
+    /**
+     * Reset all machine fakes.
+     */
+    public static function resetMachineFakes(): void
+    {
+        self::$machineFakes = [];
     }
 
     // endregion
