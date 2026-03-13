@@ -30,26 +30,9 @@ Parent Context
 
 ## Parent → Child: The `with` Key
 
-The `with` key controls what data the child receives from the parent. Three formats:
+The `with` key controls what data the child receives from the parent. Three formats are supported: same-named keys, key mapping, and closures.
 
-<!-- doctest-attr: ignore -->
-```php
-// Format 1: Same-named keys
-'with' => ['order_id', 'total_amount'],
-// Child context: { order_id: ..., total_amount: ... }
-
-// Format 2: Key mapping (child_key => parent_key)
-'with' => [
-    'id'     => 'order_id',        // child sees 'id', parent has 'order_id'
-    'amount' => 'total_amount',
-],
-
-// Format 3: Closure (dynamic)
-'with' => fn (ContextManager $ctx) => [
-    'order_id' => $ctx->get('order_id'),
-    'amount'   => $ctx->get('total_amount') * 100,
-],
-```
+See [Machine Delegation — `with` key](/advanced/machine-delegation#with-context-transfer) for format examples.
 
 Without `with`, the child starts with its own default context. No parent data is transferred automatically.
 
@@ -79,6 +62,40 @@ class StorePaymentResultAction extends ActionBehavior
     }
 }
 ```
+
+## Child → Parent: The `@fail` Event
+
+When the child machine throws an exception or reaches a failure state, `@fail` fires with a `ChildMachineFailEvent`:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
+
+class HandlePaymentFailureAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context, ChildMachineFailEvent $event): void
+    {
+        // Error message from the child failure
+        $context->set('error', $event->errorMessage());
+
+        // Child's context at the time of failure
+        $context->set('failed_amount', $event->childContext('amount'));
+
+        // Child identity
+        $childId    = $event->childMachineId();
+        $childClass = $event->childMachineClass();
+    }
+}
+```
+
+| Accessor | Return Type | Description |
+|----------|-------------|-------------|
+| `errorMessage()` | `?string` | Error message from exception or manual failure |
+| `childMachineId()` | `string` | Child's `root_event_id` |
+| `childMachineClass()` | `string` | Child's FQCN |
+| `childContext(?$key)` | `mixed` | Child's context at failure time (full array or single key) |
 
 ## Auto-Injected Context Keys
 
