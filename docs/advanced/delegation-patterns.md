@@ -193,7 +193,11 @@ Sibling machines should **not** communicate directly. Let the orchestrator handl
 // WRONG: PaymentMachine directly triggers ShippingMachine
 class NotifyShippingAction extends ActionBehavior {
     public function __invoke(ContextManager $ctx): void {
-        $this->sendTo(machine: $shippingMachineId, event: [...]);
+        $this->sendTo(
+            machineClass: ShippingMachine::class,
+            rootEventId: $ctx->get('shipping_machine_id'),
+            event: ['type' => 'START_SHIPPING'],
+        );
     }
 }
 
