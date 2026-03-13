@@ -72,4 +72,44 @@ class MachineInvokeDefinition
 
         return $childContext;
     }
+
+    /**
+     * Resolve whether an event type should be forwarded to the child machine.
+     *
+     * Supports two formats in the `forward` array:
+     * - Plain: `['APPROVE_PAYMENT']` → forward as-is
+     * - Rename: `['UPDATE_SHIPPING_INFO' => 'UPDATE_INFO']` → rename for child
+     *
+     * @param  string  $eventType  The parent event type.
+     *
+     * @return string|null The child event type to forward, or null if not forwarded.
+     */
+    public function resolveForwardEvent(string $eventType): ?string
+    {
+        if ($this->forward === []) {
+            return null;
+        }
+
+        foreach ($this->forward as $key => $value) {
+            if (is_int($key) && $value === $eventType) {
+                // Plain format: forward as-is
+                return $eventType;
+            }
+
+            if (is_string($key) && $key === $eventType) {
+                // Rename format: parent event → child event
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if this invoke definition has any forward events configured.
+     */
+    public function hasForward(): bool
+    {
+        return $this->forward !== [];
+    }
 }
