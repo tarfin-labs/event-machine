@@ -13,6 +13,7 @@ return new class extends Migration
 
             $table->ulid('parent_root_event_id')->index();
             $table->string('parent_state_id')->index();
+            $table->string('parent_machine_class');
 
             $table->string('child_machine_class');
             $table->ulid('child_root_event_id')->nullable()->index();
