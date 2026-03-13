@@ -1013,12 +1013,28 @@ class MachineDefinition
         );
 
         try {
+            // Create child machine without starting, so we can inject context first
             /** @var Machine $childMachine */
-            $childMachine = $childMachineClass::create(context: $childContext);
+            $childMachine                           = $childMachineClass::withDefinition($childMachineClass::definition());
+            $childMachine->definition->machineClass = $childMachineClass;
+
+            // Merge resolved `with` context into the child definition's initial context.
+            // Must mutate $definition->config['context'] (not root->config) because
+            // initializeContextFromState() reads from $this->config['context'].
+            if ($childContext !== []) {
+                $childMachine->definition->config['context'] = array_merge(
+                    $childMachine->definition->config['context'] ?? [],
+                    $childContext,
+                );
+            }
+
+            // Start the child (runs entry actions with merged context)
+            $childMachine->start();
+
+            $childState = $childMachine->state;
 
             // Inject parent identity into child's context
-            $childState = $childMachine->state;
-            $parentId   = $state->context->machineId();
+            $parentId = $state->context->machineId();
             $childState->context->setMachineIdentity(
                 machineId: $childState->context->machineId(),
                 parentRootEventId: $parentId,
@@ -1038,7 +1054,7 @@ class MachineDefinition
             $state->removeActiveChild($childRootEventId);
 
             // Route @done transition on parent
-            $this->routeChildDone($state, $stateDefinition, $childMachine);
+            $this->routeChildDone($state, $stateDefinition, $childMachine, $childMachineClass);
         } catch (\Throwable $e) {
             // Record child fail event
             $state->setInternalEventBehavior(
@@ -1057,7 +1073,7 @@ class MachineDefinition
      * Creates a ChildMachineDoneEvent with the child's result and context,
      * then resolves and executes the @done transition branch.
      */
-    protected function routeChildDone(State $state, StateDefinition $stateDefinition, Machine $childMachine): void
+    protected function routeChildDone(State $state, StateDefinition $stateDefinition, Machine $childMachine, string $childMachineClass): void
     {
         if (!$stateDefinition->onDoneTransition instanceof TransitionDefinition) {
             return;
@@ -1070,7 +1086,7 @@ class MachineDefinition
             'result'        => $childMachine->result(),
             'child_context' => $childMachine->state->context->data,
             'machine_id'    => $childRootEventId,
-            'machine_class' => $childMachine::class,
+            'machine_class' => $childMachineClass,
         ]);
 
         $branch = $this->resolveOnDoneOrFailBranch($stateDefinition->onDoneTransition, $state, $doneEvent);
@@ -1140,13 +1156,8 @@ class MachineDefinition
         // Resolve to initial state if the target is compound
         $initialTarget = $target->findInitialStateDefinition() ?? $target;
 
-        // Update state value
-        $values = $state->value;
-        $idx    = array_search($sourceState->id, $values, true);
-        if ($idx !== false) {
-            $values[$idx] = $initialTarget->id;
-            $state->setValues($values);
-        }
+        // Update both currentStateDefinition and value array
+        $state->setCurrentStateDefinition($initialTarget);
 
         // Record state enter
         $state->setInternalEventBehavior(
