@@ -1051,6 +1051,7 @@ class MachineDefinition
             $childState->context->setMachineIdentity(
                 machineId: $childState->context->machineId(),
                 parentRootEventId: $parentId,
+                parentMachineClass: $this->machineClass,
             );
 
             // Track child in parent's active children
