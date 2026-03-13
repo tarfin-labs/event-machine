@@ -17,6 +17,7 @@ use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionBranch;
 use Spatie\LaravelData\Support\Validation\ValidationPath;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
+use Tarfinlabs\EventMachine\Definition\MachineInvokeDefinition;
 
 class ExportXStateCommand extends Command
 {
@@ -180,20 +181,101 @@ class ExportXStateCommand extends Command
         // Transitions
         $this->addTransitions($node, $stateDefinition);
 
-        // @done transition → onDone
-        if ($stateDefinition->onDoneTransition instanceof TransitionDefinition) {
-            $node['onDone'] = $this->buildTransitionConfig($stateDefinition->onDoneTransition, $stateDefinition);
+        // Machine invoke → XState invoke
+        if ($stateDefinition->hasMachineInvoke()) {
+            $invoke = $this->buildInvokeNode($stateDefinition);
+
+            // @done → invoke.onDone
+            if ($stateDefinition->onDoneTransition instanceof TransitionDefinition) {
+                $invoke['onDone'] = $this->buildTransitionConfig($stateDefinition->onDoneTransition, $stateDefinition);
+            }
+
+            // @fail → invoke.onError
+            if ($stateDefinition->onFailTransition instanceof TransitionDefinition) {
+                $invoke['onError'] = $this->buildTransitionConfig($stateDefinition->onFailTransition, $stateDefinition);
+            }
+
+            $node['invoke'] = $invoke;
+        } else {
+            // @done transition → onDone (compound state completion)
+            if ($stateDefinition->onDoneTransition instanceof TransitionDefinition) {
+                $node['onDone'] = $this->buildTransitionConfig($stateDefinition->onDoneTransition, $stateDefinition);
+            }
+
+            // @fail transition → meta (no XState equivalent for non-invoke states)
+            if ($stateDefinition->onFailTransition instanceof TransitionDefinition) {
+                $failConfig   = $this->buildTransitionConfig($stateDefinition->onFailTransition, $stateDefinition);
+                $node['meta'] = array_merge($node['meta'] ?? [], [
+                    'eventMachine' => ['onFail' => $failConfig],
+                ]);
+            }
         }
 
-        // @fail transition → meta (no XState equivalent)
-        if ($stateDefinition->onFailTransition instanceof TransitionDefinition) {
-            $failConfig   = $this->buildTransitionConfig($stateDefinition->onFailTransition, $stateDefinition);
-            $node['meta'] = array_merge($node['meta'] ?? [], [
-                'eventMachine' => ['onFail' => $failConfig],
+        // @timeout → meta (no XState equivalent)
+        if ($stateDefinition->onTimeoutTransition instanceof TransitionDefinition) {
+            $timeoutConfig = $this->buildTransitionConfig($stateDefinition->onTimeoutTransition, $stateDefinition);
+            $node['meta']  = array_merge($node['meta'] ?? [], [
+                'eventMachine' => array_merge($node['meta']['eventMachine'] ?? [], ['onTimeout' => $timeoutConfig]),
             ]);
         }
 
         return $node;
+    }
+
+    /**
+     * Build the XState v5 invoke node from a MachineInvokeDefinition.
+     *
+     * Maps: machine → src, with → input, queue/timeout/forward → meta.eventMachine.
+     */
+    private function buildInvokeNode(StateDefinition $stateDefinition): array
+    {
+        $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
+
+        $invoke = [
+            'src' => class_basename($invokeDefinition->machineClass),
+        ];
+
+        // with → input (context transfer schema)
+        if ($invokeDefinition->with !== null && !$invokeDefinition->with instanceof \Closure) {
+            $input = [];
+            foreach ($invokeDefinition->with as $key => $value) {
+                if (is_int($key)) {
+                    $input[$value] = $value; // Same-name mapping
+                } else {
+                    $input[$key] = $value; // Renamed mapping
+                }
+            }
+            $invoke['input'] = $input;
+        }
+
+        // Custom properties not in XState spec → meta
+        $custom = [];
+
+        if ($invokeDefinition->queue !== null) {
+            $custom['queue'] = $invokeDefinition->queue;
+        }
+
+        if ($invokeDefinition->connection !== null) {
+            $custom['connection'] = $invokeDefinition->connection;
+        }
+
+        if ($invokeDefinition->timeout !== null) {
+            $custom['timeout'] = $invokeDefinition->timeout;
+        }
+
+        if ($invokeDefinition->retry !== null) {
+            $custom['retry'] = $invokeDefinition->retry;
+        }
+
+        if ($invokeDefinition->forward !== []) {
+            $custom['forward'] = $invokeDefinition->forward;
+        }
+
+        if ($custom !== []) {
+            $invoke['meta'] = ['eventMachine' => $custom];
+        }
+
+        return $invoke;
     }
 
     private function addTransitions(array &$node, StateDefinition $stateDefinition): void
