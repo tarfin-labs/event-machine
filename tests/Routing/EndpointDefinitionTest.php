@@ -25,6 +25,12 @@ test('it generates a URI from a multi-word event type', function (): void {
     expect($uri)->toBe('/approved-with-initiative');
 });
 
+test('it strips the _EVENT suffix when generating a URI', function (): void {
+    $uri = EndpointDefinition::generateUri('CONSENT_GRANTED_EVENT');
+
+    expect($uri)->toBe('/consent-granted');
+});
+
 // === fromConfig with string key (event type) ===
 
 test('it creates an endpoint from null config with auto-generated URI', function (): void {
@@ -105,5 +111,5 @@ test('it resolves event type from an EventBehavior class key with null config', 
     $endpoint = EndpointDefinition::fromConfig(SimpleEvent::class, null, null);
 
     expect($endpoint->eventType)->toBe('SIMPLE_EVENT')
-        ->and($endpoint->uri)->toBe('/simple-event');
+        ->and($endpoint->uri)->toBe('/simple');
 });
