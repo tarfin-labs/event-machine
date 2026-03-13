@@ -5,11 +5,14 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
+use Tarfinlabs\EventMachine\Locks\MachineLockHandle;
+use Tarfinlabs\EventMachine\Locks\MachineLockManager;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineTimeoutJob;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Definition\MachineInvokeDefinition;
+use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
@@ -383,6 +386,87 @@ it('MachineChild can be marked cancelled', function (): void {
     expect($childRecord->status)->toBe(MachineChild::STATUS_CANCELLED)
         ->and($childRecord->completed_at)->not->toBeNull()
         ->and($childRecord->isTerminal())->toBeTrue();
+});
+
+// ============================================================
+// Parallel + Async Machine Delegation
+// ============================================================
+
+it('multiple MachineChild records can be created for same parent', function (): void {
+    // Simulates parallel async children: multiple tracking records for one parent
+    $parentRootEventId = 'parallel-parent-root';
+
+    $childA = MachineChild::create([
+        'parent_root_event_id' => $parentRootEventId,
+        'parent_state_id'      => 'parent.region_a.delegating',
+        'child_machine_class'  => SimpleChildMachine::class,
+        'status'               => MachineChild::STATUS_RUNNING,
+        'created_at'           => now(),
+    ]);
+
+    $childB = MachineChild::create([
+        'parent_root_event_id' => $parentRootEventId,
+        'parent_state_id'      => 'parent.region_b.delegating',
+        'child_machine_class'  => SimpleChildMachine::class,
+        'status'               => MachineChild::STATUS_RUNNING,
+        'created_at'           => now(),
+    ]);
+
+    // Both children exist and are active
+    $activeChildren = MachineChild::where('parent_root_event_id', $parentRootEventId)
+        ->whereIn('status', [MachineChild::STATUS_PENDING, MachineChild::STATUS_RUNNING])
+        ->get();
+
+    expect($activeChildren)->toHaveCount(2)
+        ->and($childA->id)->not->toBe($childB->id);
+
+    // Complete one, other stays active
+    $childA->markCompleted();
+    $activeChildren = MachineChild::where('parent_root_event_id', $parentRootEventId)
+        ->whereIn('status', [MachineChild::STATUS_PENDING, MachineChild::STATUS_RUNNING])
+        ->get();
+
+    expect($activeChildren)->toHaveCount(1)
+        ->and($activeChildren->first()->id)->toBe($childB->id);
+});
+
+it('lock ensures sequential processing when multiple children complete simultaneously', function (): void {
+    // The MachineLockManager is always used by ChildMachineCompletionJob
+    // to prevent concurrent state mutations. This test verifies the lock
+    // manager correctly prevents concurrent access.
+
+    // Create two lock attempts for the same root_event_id
+    $rootEventId = 'test-lock-root-'.uniqid();
+
+    $handle1 = MachineLockManager::acquire(
+        rootEventId: $rootEventId,
+        timeout: 0,
+        ttl: 60,
+        context: 'completion_1',
+    );
+
+    // Second acquire should fail (lock is held)
+    expect(fn () => MachineLockManager::acquire(
+        rootEventId: $rootEventId,
+        timeout: 0,
+        ttl: 60,
+        context: 'completion_2',
+    ))->toThrow(MachineLockTimeoutException::class);
+
+    // Release first lock
+    $handle1->release();
+
+    // Now second acquire should succeed
+    $handle2 = MachineLockManager::acquire(
+        rootEventId: $rootEventId,
+        timeout: 0,
+        ttl: 60,
+        context: 'completion_2',
+    );
+
+    expect($handle2)->toBeInstanceOf(MachineLockHandle::class);
+
+    $handle2->release();
 });
 
 it('forward config is parsed correctly in state definition', function (): void {
