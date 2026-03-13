@@ -1068,10 +1068,10 @@ class MachineDefinition
     }
 
     /**
-     * Route a @done transition on the parent after child machine completion.
+     * Route a @done transition on the parent after child machine completion (sync mode).
      *
-     * Creates a ChildMachineDoneEvent with the child's result and context,
-     * then resolves and executes the @done transition branch.
+     * Builds a ChildMachineDoneEvent from the child machine and delegates
+     * to routeChildDoneEvent().
      */
     protected function routeChildDone(State $state, StateDefinition $stateDefinition, Machine $childMachine, string $childMachineClass): void
     {
@@ -1081,13 +1081,26 @@ class MachineDefinition
 
         $childRootEventId = $childMachine->state->history->first()->root_event_id;
 
-        // Build the ChildMachineDoneEvent with typed accessors
         $doneEvent = ChildMachineDoneEvent::forChild([
             'result'        => $childMachine->result(),
             'child_context' => $childMachine->state->context->data,
             'machine_id'    => $childRootEventId,
             'machine_class' => $childMachineClass,
         ]);
+
+        $this->routeChildDoneEvent($state, $stateDefinition, $doneEvent);
+    }
+
+    /**
+     * Route a @done transition using a pre-built ChildMachineDoneEvent.
+     *
+     * Used by both sync (handleMachineInvoke) and async (ChildMachineCompletionJob).
+     */
+    public function routeChildDoneEvent(State $state, StateDefinition $stateDefinition, ChildMachineDoneEvent $doneEvent): void
+    {
+        if (!$stateDefinition->onDoneTransition instanceof TransitionDefinition) {
+            return;
+        }
 
         $branch = $this->resolveOnDoneOrFailBranch($stateDefinition->onDoneTransition, $state, $doneEvent);
 
@@ -1099,10 +1112,9 @@ class MachineDefinition
     }
 
     /**
-     * Route a @fail transition on the parent after child machine failure.
+     * Route a @fail transition on the parent after child machine failure (sync mode).
      *
-     * Creates a ChildMachineFailEvent with error details,
-     * then resolves and executes the @fail transition branch.
+     * Builds a ChildMachineFailEvent and delegates to routeChildFailEvent().
      * If no @fail is defined, re-throws the exception.
      */
     protected function routeChildFail(State $state, StateDefinition $stateDefinition, string $childMachineClass, \Throwable $exception): void
@@ -1118,17 +1130,60 @@ class MachineDefinition
             'child_context' => [],
         ]);
 
+        $this->routeChildFailEvent($state, $stateDefinition, $failEvent, $exception);
+    }
+
+    /**
+     * Route a @fail transition using a pre-built ChildMachineFailEvent.
+     *
+     * Used by both sync (handleMachineInvoke) and async (ChildMachineCompletionJob).
+     * If no @fail branch matches and an exception is provided, re-throws it.
+     */
+    public function routeChildFailEvent(State $state, StateDefinition $stateDefinition, ChildMachineFailEvent $failEvent, ?\Throwable $exception = null): void
+    {
+        if (!$stateDefinition->onFailTransition instanceof TransitionDefinition) {
+            if ($exception instanceof \Throwable) {
+                throw $exception;
+            }
+
+            return;
+        }
+
         $branch = $this->resolveOnDoneOrFailBranch($stateDefinition->onFailTransition, $state, $failEvent);
 
         if (!$branch instanceof TransitionBranch) {
-            throw $exception;
+            if ($exception instanceof \Throwable) {
+                throw $exception;
+            }
+
+            return;
         }
 
         $this->executeChildTransitionBranch($state, $stateDefinition, $branch, $failEvent);
     }
 
     /**
-     * Execute a @done/@fail transition branch from child machine routing.
+     * Route a @timeout transition on the parent after child machine timeout.
+     *
+     * Used by ChildMachineTimeoutJob to fire the @timeout transition branch.
+     */
+    public function routeChildTimeoutEvent(State $state, StateDefinition $stateDefinition, EventBehavior $timeoutEvent): void
+    {
+        if (!$stateDefinition->onTimeoutTransition instanceof TransitionDefinition) {
+            return;
+        }
+
+        $branch = $this->resolveOnDoneOrFailBranch($stateDefinition->onTimeoutTransition, $state, $timeoutEvent);
+
+        if (!$branch instanceof TransitionBranch) {
+            return;
+        }
+
+        $this->executeChildTransitionBranch($state, $stateDefinition, $branch, $timeoutEvent);
+    }
+
+    /**
+     * Execute a @done/@fail/@timeout transition branch from child machine routing.
      *
      * Exits the invoking state, runs branch actions, enters the target state.
      */
