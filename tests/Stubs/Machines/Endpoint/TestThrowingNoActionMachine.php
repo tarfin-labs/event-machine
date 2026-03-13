@@ -37,7 +37,7 @@ class TestThrowingNoActionMachine extends Machine
                 ],
             ],
             endpoints: [
-                'START' => null,
+                'START',
             ],
         );
     }
