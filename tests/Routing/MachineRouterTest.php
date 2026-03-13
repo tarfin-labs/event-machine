@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Tarfinlabs\EventMachine\Routing\MachineRouter;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestCancelEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestEndpointAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestEndpointMachine;
@@ -29,9 +30,7 @@ function refreshRoutes(): void
 
 test('register creates routes for all parsed endpoints', function (): void {
     MachineRouter::register(TestEndpointMachine::class, [
-        'prefix'    => '/api/test',
-        'model'     => 'App\\Models\\Order',
-        'attribute' => 'machine',
+        'prefix' => '/api/test',
     ]);
 
     refreshRoutes();
@@ -47,9 +46,7 @@ test('register creates routes for all parsed endpoints', function (): void {
 
 test('routes follow namePrefix.event_type_lowercase naming pattern', function (): void {
     MachineRouter::register(TestEndpointMachine::class, [
-        'prefix'    => '/api/naming',
-        'model'     => 'App\\Models\\Order',
-        'attribute' => 'machine',
+        'prefix' => '/api/naming',
     ]);
 
     refreshRoutes();
@@ -79,11 +76,12 @@ test('custom name prefix overrides default machine id', function (): void {
 
 // ─── Handler Selection: Model-Bound ───────────────────────────────────
 
-test('model-bound routes use handleModelBound handler', function (): void {
+test('modelFor events use handleModelBound handler', function (): void {
     MachineRouter::register(TestEndpointMachine::class, [
         'prefix'    => '/api/model-bound',
         'model'     => 'App\\Models\\Order',
         'attribute' => 'machine',
+        'modelFor'  => ['START'],
     ]);
 
     refreshRoutes();
@@ -95,11 +93,12 @@ test('model-bound routes use handleModelBound handler', function (): void {
         ->and($route->getActionMethod())->toBe('handleModelBound');
 });
 
-test('model-bound route URI includes model parameter', function (): void {
+test('modelFor route URI includes model parameter', function (): void {
     MachineRouter::register(TestEndpointMachine::class, [
         'prefix'    => '/api/model-uri',
         'model'     => 'App\\Models\\Order',
         'attribute' => 'machine',
+        'modelFor'  => ['START'],
     ]);
 
     refreshRoutes();
@@ -111,11 +110,12 @@ test('model-bound route URI includes model parameter', function (): void {
     expect($route->uri())->toBe('api/model-uri/{order}/start');
 });
 
-test('model-bound routes register explicit Route::model binding', function (): void {
+test('modelFor routes register explicit Route::model binding', function (): void {
     MachineRouter::register(TestEndpointMachine::class, [
         'prefix'    => '/api/model-binding',
         'model'     => 'App\\Models\\Order',
         'attribute' => 'machine',
+        'modelFor'  => ['START'],
     ]);
 
     refreshRoutes();
@@ -126,13 +126,49 @@ test('model-bound routes register explicit Route::model binding', function (): v
     expect($binder)->not->toBeNull();
 });
 
+test('modelFor accepts event class keys', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'    => '/api/model-class',
+        'model'     => 'App\\Models\\Order',
+        'attribute' => 'machine',
+        'modelFor'  => [TestStartEvent::class],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+    $route  = $routes->getByName('test_endpoint.start');
+
+    expect($route)->not->toBeNull()
+        ->and($route->getActionMethod())->toBe('handleModelBound')
+        ->and($route->uri())->toBe('api/model-class/{order}/start');
+});
+
+test('non-modelFor events are stateless even when model is set', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'    => '/api/model-partial',
+        'model'     => 'App\\Models\\Order',
+        'attribute' => 'machine',
+        'modelFor'  => ['START'],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    // START → model-bound
+    expect($routes->getByName('test_endpoint.start')->getActionMethod())->toBe('handleModelBound');
+
+    // COMPLETE, CANCEL → stateless (not in modelFor)
+    expect($routes->getByName('test_endpoint.complete')->getActionMethod())->toBe('handleStateless')
+        ->and($routes->getByName('test_endpoint.cancel')->getActionMethod())->toBe('handleStateless');
+});
+
 // ─── Handler Selection: MachineId-Bound ───────────────────────────────
 
 test('machineIdFor events use handleMachineIdBound handler', function (): void {
     MachineRouter::register(TestEndpointMachine::class, [
         'prefix'       => '/api/machine-id',
-        'model'        => 'App\\Models\\Order',
-        'attribute'    => 'machine',
         'machineIdFor' => ['CANCEL'],
     ]);
 
@@ -148,8 +184,6 @@ test('machineIdFor events use handleMachineIdBound handler', function (): void {
 test('machineIdFor route URI includes machineId parameter', function (): void {
     MachineRouter::register(TestEndpointMachine::class, [
         'prefix'       => '/api/machine-id-uri',
-        'model'        => 'App\\Models\\Order',
-        'attribute'    => 'machine',
         'machineIdFor' => ['CANCEL'],
     ]);
 
@@ -164,8 +198,6 @@ test('machineIdFor route URI includes machineId parameter', function (): void {
 test('machineIdFor accepts event class keys', function (): void {
     MachineRouter::register(TestEndpointMachine::class, [
         'prefix'       => '/api/machine-id-class',
-        'model'        => 'App\\Models\\Order',
-        'attribute'    => 'machine',
         'machineIdFor' => [TestCancelEvent::class],
     ]);
 
@@ -179,25 +211,29 @@ test('machineIdFor accepts event class keys', function (): void {
         ->and($route->uri())->toBe('api/machine-id-class/{machineId}/cancel');
 });
 
-test('non-machineIdFor events still use handleModelBound', function (): void {
+// ─── Handler Selection: Hybrid (modelFor + machineIdFor) ─────────────
+
+test('modelFor and machineIdFor work together', function (): void {
     MachineRouter::register(TestEndpointMachine::class, [
-        'prefix'       => '/api/mixed',
+        'prefix'       => '/api/hybrid',
         'model'        => 'App\\Models\\Order',
         'attribute'    => 'machine',
-        'machineIdFor' => ['CANCEL'],
+        'machineIdFor' => ['START'],
+        'modelFor'     => ['COMPLETE', 'CANCEL'],
     ]);
 
     refreshRoutes();
 
     $routes = Route::getRoutes();
 
-    expect($routes->getByName('test_endpoint.start')->getActionMethod())->toBe('handleModelBound')
-        ->and($routes->getByName('test_endpoint.cancel')->getActionMethod())->toBe('handleMachineIdBound');
+    expect($routes->getByName('test_endpoint.start')->getActionMethod())->toBe('handleMachineIdBound')
+        ->and($routes->getByName('test_endpoint.complete')->getActionMethod())->toBe('handleModelBound')
+        ->and($routes->getByName('test_endpoint.cancel')->getActionMethod())->toBe('handleModelBound');
 });
 
 // ─── Handler Selection: Stateless ─────────────────────────────────────
 
-test('stateless routes use handleStateless when no model provided', function (): void {
+test('stateless routes use handleStateless when no model or machineId provided', function (): void {
     MachineRouter::register(TestEndpointMachine::class, [
         'prefix' => '/api/stateless',
     ]);
@@ -358,11 +394,12 @@ test('route defaults include result behavior and status code when set', function
         ->and($route->defaults['_status_code'])->toBe(201);
 });
 
-test('route defaults include model attribute when set', function (): void {
+test('route defaults include model attribute for modelFor events', function (): void {
     MachineRouter::register(TestEndpointMachine::class, [
         'prefix'    => '/api/attr-defaults',
         'model'     => 'App\\Models\\Order',
         'attribute' => 'machine_ref',
+        'modelFor'  => ['START'],
     ]);
 
     refreshRoutes();
@@ -401,10 +438,37 @@ test('machineIdFor without model falls back to stateless for other events', func
     $startRoute = Route::getRoutes()->getByName('test_endpoint.start');
     expect($startRoute->getActionMethod())->toBe('handleMachineIdBound');
 
-    // COMPLETE → stateless (not in machineIdFor, no model)
+    // COMPLETE → stateless (not in machineIdFor, no modelFor)
     $completeRoute = Route::getRoutes()->getByName('test_endpoint.complete');
     expect($completeRoute->getActionMethod())->toBe('handleStateless')
         ->and($completeRoute->uri())->toBe('api/mixed-standalone/complete');
+});
+
+// ─── Validation ──────────────────────────────────────────────────────
+
+test('modelFor without model throws InvalidArgumentException', function (): void {
+    expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'   => '/api/invalid',
+        'modelFor' => ['START'],
+    ]))->toThrow(InvalidArgumentException::class, "'model' and 'attribute' are required when 'modelFor' is set");
+});
+
+test('modelFor without attribute throws InvalidArgumentException', function (): void {
+    expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'   => '/api/invalid',
+        'model'    => 'App\\Models\\Order',
+        'modelFor' => ['START'],
+    ]))->toThrow(InvalidArgumentException::class, "'model' and 'attribute' are required when 'modelFor' is set");
+});
+
+test('overlapping machineIdFor and modelFor throws InvalidArgumentException', function (): void {
+    expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'       => '/api/invalid',
+        'model'        => 'App\\Models\\Order',
+        'attribute'    => 'machine',
+        'machineIdFor' => ['START'],
+        'modelFor'     => ['START'],
+    ]))->toThrow(InvalidArgumentException::class, "events cannot be in both 'machineIdFor' and 'modelFor'");
 });
 
 // ─── Empty Endpoints ──────────────────────────────────────────────────
