@@ -490,6 +490,24 @@ it('validates machine value must be a string', function (): void {
     );
 });
 
+it('validates forward requires queue', function (): void {
+    expect(fn () => MachineDefinition::define(
+        config: [
+            'id'      => 'invalid',
+            'initial' => 'test',
+            'states'  => [
+                'test' => [
+                    'machine' => SimpleChildMachine::class,
+                    'forward' => ['SOME_EVENT'],
+                ],
+            ],
+        ],
+    ))->toThrow(
+        InvalidArgumentException::class,
+        "has 'forward' without 'queue'"
+    );
+});
+
 it('uses ParentOrderMachine stub for full lifecycle', function (): void {
     $machine = ParentOrderMachine::create();
 
