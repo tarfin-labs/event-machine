@@ -114,31 +114,19 @@ export default withMermaid(
           ]
         },
         {
-          text: 'Examples',
-          collapsed: true,
-          items: [
-            { text: 'Quick Start', link: '/examples/quick-start' },
-            { text: 'Real World', link: '/examples/real-world' }
-          ]
-        },
-        {
-          text: 'Laravel Integration',
-          collapsed: true,
-          items: [
-            { text: 'Overview', link: '/laravel-integration/overview' },
-            { text: 'Eloquent Integration', link: '/laravel-integration/eloquent-integration' },
-            { text: 'Persistence', link: '/laravel-integration/persistence' },
-            { text: 'Endpoints', link: '/laravel-integration/endpoints' },
-            { text: 'Archival', link: '/laravel-integration/archival' },
-            { text: 'Compression', link: '/laravel-integration/compression' },
-            { text: 'Artisan Commands', link: '/laravel-integration/artisan-commands' }
-          ]
-        },
-        {
-          text: 'Advanced Topics',
+          text: 'State Features',
           collapsed: true,
           items: [
             { text: 'Hierarchical States', link: '/advanced/hierarchical-states' },
+            { text: 'Entry/Exit Actions', link: '/advanced/entry-exit-actions' },
+            { text: '@always Transitions', link: '/advanced/always-transitions' },
+            { text: 'Raised Events', link: '/advanced/raised-events' }
+          ]
+        },
+        {
+          text: 'Composition',
+          collapsed: true,
+          items: [
             {
               text: 'Parallel States',
               collapsed: true,
@@ -159,18 +147,34 @@ export default withMermaid(
                 { text: 'Patterns', link: '/advanced/delegation-patterns' },
                 { text: 'sendTo & Testing', link: '/advanced/sendto-and-testing' }
               ]
-            },
-            { text: '@always Transitions', link: '/advanced/always-transitions' },
-            { text: 'Raised Events', link: '/advanced/raised-events' },
-            { text: 'Entry/Exit Actions', link: '/advanced/entry-exit-actions' },
-            { text: 'Scenarios', link: '/advanced/scenarios' },
+            }
+          ]
+        },
+        {
+          text: 'Customization',
+          collapsed: true,
+          items: [
             { text: 'Custom Context Classes', link: '/advanced/custom-context' },
-            { text: 'Dependency Injection', link: '/advanced/dependency-injection' }
+            { text: 'Dependency Injection', link: '/advanced/dependency-injection' },
+            { text: 'Scenarios', link: '/advanced/scenarios' }
+          ]
+        },
+        {
+          text: 'Laravel Integration',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/laravel-integration/overview' },
+            { text: 'Eloquent Integration', link: '/laravel-integration/eloquent-integration' },
+            { text: 'Persistence', link: '/laravel-integration/persistence' },
+            { text: 'Endpoints', link: '/laravel-integration/endpoints' },
+            { text: 'Archival', link: '/laravel-integration/archival' },
+            { text: 'Compression', link: '/laravel-integration/compression' },
+            { text: 'Artisan Commands', link: '/laravel-integration/artisan-commands' }
           ]
         },
         {
           text: 'Testing',
-          collapsed: false,
+          collapsed: true,
           items: [
             { text: 'Overview', link: '/testing/overview' },
             { text: 'Isolated Testing', link: '/testing/isolated-testing' },
@@ -181,6 +185,14 @@ export default withMermaid(
             { text: 'Parallel Testing', link: '/testing/parallel-testing' },
             { text: 'Persistence Testing', link: '/testing/persistence-testing' },
             { text: 'Recipes', link: '/testing/recipes' }
+          ]
+        },
+        {
+          text: 'Examples',
+          collapsed: true,
+          items: [
+            { text: 'Quick Start', link: '/examples/quick-start' },
+            { text: 'Real World', link: '/examples/real-world' }
           ]
         }
       ],
