@@ -129,7 +129,7 @@ class ChildAction extends ActionBehavior
 
 ## Context Isolation
 
-Child context is **completely isolated** from the parent. There is no automatic merge. This differs from [parallel regions](/advanced/parallel-states), where context IS merged because parallel regions share the same machine instance.
+Child context is **completely isolated** from the parent. There is no automatic merge. This differs from [parallel regions](/advanced/parallel-states/), where context IS merged because parallel regions share the same machine instance.
 
 **Why isolated?**
 - Child has a different machine definition with different context keys
