@@ -409,19 +409,33 @@ class StateDefinition
             return;
         }
 
-        $machineClass = $this->config['machine'];
-        $with         = $this->config['with'] ?? null;
-        $forward      = $this->config['forward'] ?? [];
-        $queue        = $this->config['queue'] ?? null;
-        $connection   = $this->config['connection'] ?? null;
-        $timeout      = isset($this->config['@timeout']) ? ($this->config['@timeout']['timeout'] ?? null) : null;
-        $retry        = $this->config['retry'] ?? null;
+        $machineClass  = $this->config['machine'];
+        $with          = $this->config['with'] ?? null;
+        $forward       = $this->config['forward'] ?? [];
+        $rawQueue      = $this->config['queue'] ?? null;
+        $rawConnection = $this->config['connection'] ?? null;
+        $timeout       = isset($this->config['@timeout']) ? ($this->config['@timeout']['timeout'] ?? null) : null;
+        $rawRetry      = $this->config['retry'] ?? null;
+
+        // Normalize queue config: true → default, string → queue name, array → detailed
+        $async      = $rawQueue !== null;
+        $queue      = null;
+        $connection = $rawConnection;
+        $retry      = $rawRetry;
+
+        if (is_string($rawQueue)) {
+            $queue = $rawQueue;
+        } elseif (is_array($rawQueue)) {
+            $queue      = $rawQueue['queue'] ?? null;
+            $connection = $rawQueue['connection'] ?? $connection;
+            $retry      = $rawQueue['retry'] ?? $retry;
+        }
 
         $this->machineInvokeDefinition = new MachineInvokeDefinition(
             machineClass: $machineClass,
             with: $with,
             forward: $forward,
-            async: $queue !== null,
+            async: $async,
             queue: $queue,
             connection: $connection,
             timeout: $timeout,
