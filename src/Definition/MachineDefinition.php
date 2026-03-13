@@ -1460,6 +1460,14 @@ class MachineDefinition
             );
         }
 
+        // Mark MachineChild DB records as cancelled (async mode)
+        $parentRootEventId = $state->history->first()?->root_event_id;
+        if ($parentRootEventId !== null) {
+            MachineChild::forParent($parentRootEventId)
+                ->active()
+                ->each(fn (MachineChild $child) => $child->markCancelled());
+        }
+
         // Clear all active children
         $state->activeChildren = [];
     }
