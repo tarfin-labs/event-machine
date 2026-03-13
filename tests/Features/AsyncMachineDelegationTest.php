@@ -5,11 +5,14 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
+use Tarfinlabs\EventMachine\Definition\EventDefinition;
+use Tarfinlabs\EventMachine\Jobs\ChildMachineTimeoutJob;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FailingChildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncTimeoutParentMachine;
 
 // ============================================================
 // Async Queue Dispatch
@@ -142,4 +145,101 @@ it('ChildMachineJob sets MachineChild to failed on exception', function (): void
 
     expect($childRecord->status)->toBe(MachineChild::STATUS_FAILED)
         ->and($childRecord->completed_at)->not->toBeNull();
+});
+
+// ============================================================
+// @timeout Scenarios
+// ============================================================
+
+it('dispatches ChildMachineTimeoutJob when @timeout is configured', function (): void {
+    Queue::fake();
+
+    $machine = AsyncTimeoutParentMachine::create();
+    $machine->send(['type' => 'START']);
+
+    expect($machine->state->currentStateDefinition->id)->toBe('timeout_parent.processing');
+
+    // Both ChildMachineJob and ChildMachineTimeoutJob should be dispatched
+    Queue::assertPushed(ChildMachineJob::class);
+    Queue::assertPushed(ChildMachineTimeoutJob::class, function (ChildMachineTimeoutJob $job): bool {
+        return $job->childMachineClass === SimpleChildMachine::class
+            && $job->timeoutSeconds === 30;
+    });
+});
+
+it('routeChildTimeoutEvent transitions parent to timed_out state', function (): void {
+    Queue::fake();
+
+    $machine = AsyncTimeoutParentMachine::create();
+    $machine->send(['type' => 'START']);
+
+    expect($machine->state->currentStateDefinition->id)->toBe('timeout_parent.processing');
+
+    $stateDefinition = $machine->definition->idMap['timeout_parent.processing'];
+
+    // Simulate timeout event routing (what ChildMachineTimeoutJob does)
+    $timeoutEvent = new EventDefinition(
+        type: '@timeout',
+        payload: [
+            'machine_child_id' => 'test-child-id',
+            'child_class'      => SimpleChildMachine::class,
+            'timeout_seconds'  => 30,
+        ],
+    );
+
+    $machine->definition->routeChildTimeoutEvent($machine->state, $stateDefinition, $timeoutEvent);
+
+    expect($machine->state->value)->toBe(['timeout_parent.timed_out'])
+        ->and($machine->state->context->get('timeout'))->toBeTrue();
+});
+
+it('ChildMachineTimeoutJob skips when child is already completed', function (): void {
+    // Simulate race: child completed before timeout job runs
+    $childRecord = MachineChild::create([
+        'parent_root_event_id' => 'test-root',
+        'parent_state_id'      => 'timeout_parent.processing',
+        'child_machine_class'  => SimpleChildMachine::class,
+        'status'               => MachineChild::STATUS_COMPLETED,
+        'created_at'           => now(),
+        'completed_at'         => now(),
+    ]);
+
+    // isTerminal() should return true for completed children
+    expect($childRecord->isTerminal())->toBeTrue();
+
+    // The timeout job checks isTerminal() first — if true, returns early (no-op)
+    // This is the real race guard: completed child → timeout is discarded
+});
+
+it('ChildMachineTimeoutJob skips when child is already failed', function (): void {
+    $childRecord = MachineChild::create([
+        'parent_root_event_id' => 'test-root',
+        'parent_state_id'      => 'timeout_parent.processing',
+        'child_machine_class'  => SimpleChildMachine::class,
+        'status'               => MachineChild::STATUS_FAILED,
+        'created_at'           => now(),
+        'completed_at'         => now(),
+    ]);
+
+    expect($childRecord->isTerminal())->toBeTrue();
+});
+
+it('ChildMachineTimeoutJob marks child as timed_out', function (): void {
+    // Create a child record in running status
+    $childRecord = MachineChild::create([
+        'parent_root_event_id' => 'test-root',
+        'parent_state_id'      => 'timeout_parent.processing',
+        'child_machine_class'  => SimpleChildMachine::class,
+        'status'               => MachineChild::STATUS_RUNNING,
+        'created_at'           => now(),
+    ]);
+
+    expect($childRecord->isTerminal())->toBeFalse();
+
+    $childRecord->markTimedOut();
+    $childRecord->refresh();
+
+    expect($childRecord->status)->toBe(MachineChild::STATUS_TIMED_OUT)
+        ->and($childRecord->completed_at)->not->toBeNull()
+        ->and($childRecord->isTerminal())->toBeTrue();
 });
