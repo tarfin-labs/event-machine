@@ -16,6 +16,7 @@ use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionBranch;
 use Spatie\LaravelData\Support\Validation\ValidationPath;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineInvokeDefinition;
 
@@ -77,7 +78,7 @@ class ExportXStateCommand extends Command
         return self::SUCCESS;
     }
 
-    private function buildMachineNode($definition): array
+    private function buildMachineNode(MachineDefinition $definition): array
     {
         $node = [
             'id' => $definition->id,
@@ -439,7 +440,7 @@ class ExportXStateCommand extends Command
      *
      * Handles both array-based context and typed ContextManager subclasses.
      */
-    private function extractContext($definition): array
+    private function extractContext(MachineDefinition $definition): array
     {
         // Typed ContextManager class is moved to behavior['context'] during setupContextManager()
         $contextClass = $definition->behavior[BehaviorType::Context->value] ?? null;
@@ -520,7 +521,7 @@ class ExportXStateCommand extends Command
      * This is included as meta information for documentation purposes,
      * since XState only references behaviors by name.
      */
-    private function buildBehaviorCatalog($definition): array
+    private function buildBehaviorCatalog(MachineDefinition $definition): array
     {
         $catalog = [];
 
@@ -666,7 +667,7 @@ class ExportXStateCommand extends Command
         return base_path(dirname($filePath).'/'.$machineKey.'-machine.'.$extension);
     }
 
-    private function wrapOutput(string $json, string $machineId, $definition = null): string
+    private function wrapOutput(string $json, string $machineId, ?MachineDefinition $definition = null): string
     {
         if ($this->option('format') === 'js') {
             $typesBlock = $this->buildEventTypesBlock($definition);
@@ -700,9 +701,9 @@ class ExportXStateCommand extends Command
      *
      * Produces: {} as | { type: "EVENT_A"; field: number } | { type: "EVENT_B" }
      */
-    private function buildEventTypesBlock($definition): string
+    private function buildEventTypesBlock(?MachineDefinition $definition): string
     {
-        if ($definition === null) {
+        if (!$definition instanceof MachineDefinition) {
             return '';
         }
 
