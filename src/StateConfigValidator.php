@@ -466,6 +466,13 @@ class StateConfigValidator
                 message: "State '{$path}' cannot have both 'machine' and type 'parallel'. Machine delegation is only for atomic states."
             );
         }
+
+        // forward requires queue (only valid in async mode)
+        if (!empty($stateConfig['forward']) && !isset($stateConfig['queue'])) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has 'forward' without 'queue'. Event forwarding is only valid in async mode."
+            );
+        }
     }
 
     /**
