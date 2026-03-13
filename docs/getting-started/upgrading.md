@@ -111,6 +111,7 @@ The `machine:xstate` Artisan command now maps `machine` keys to XState v5 `invok
 | `@timeout` | `array` | Transition when child times out (async only) |
 | `queue` | `bool\|string\|array` | Run child on a Laravel queue |
 | `forward` | `array` | Event types to forward from parent to running child |
+| `on` | `array` | Additional events the parent can handle while child is running |
 
 ### New Files
 
