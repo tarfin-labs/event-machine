@@ -6,7 +6,6 @@ namespace Tarfinlabs\EventMachine\Routing;
 
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Route;
-use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
 /**
  * Registers Laravel routes for machine endpoints.
@@ -45,15 +44,8 @@ class MachineRouter
         $attribute = $options['attribute'] ?? null;
         $create    = $options['create'] ?? false;
 
-        $resolveEventTypes = static fn (array $entries): array => array_map(
-            static fn (string $entry): string => is_subclass_of($entry, EventBehavior::class)
-                ? $entry::getType()
-                : $entry,
-            $entries,
-        );
-
-        $machineIdFor = $resolveEventTypes($options['machineIdFor'] ?? []);
-        $modelFor     = $resolveEventTypes($options['modelFor'] ?? []);
+        $machineIdFor = array_map(EndpointDefinition::resolveEventType(...), $options['machineIdFor'] ?? []);
+        $modelFor     = array_map(EndpointDefinition::resolveEventType(...), $options['modelFor'] ?? []);
 
         if ($modelFor !== [] && ($model === null || $attribute === null)) {
             throw new \InvalidArgumentException(
