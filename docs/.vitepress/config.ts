@@ -56,7 +56,6 @@ export default withMermaid(
 
       nav: [
         { text: 'Guide', link: '/getting-started/what-is-event-machine' },
-        { text: 'Examples', link: '/examples/quick-start' },
         {
           text: `v${gitTag}`,
           items: [
@@ -187,14 +186,6 @@ export default withMermaid(
             { text: 'Recipes', link: '/testing/recipes' }
           ]
         },
-        {
-          text: 'Examples',
-          collapsed: true,
-          items: [
-            { text: 'Quick Start', link: '/examples/quick-start' },
-            { text: 'Real World', link: '/examples/real-world' }
-          ]
-        }
       ],
 
       socialLinks: [
