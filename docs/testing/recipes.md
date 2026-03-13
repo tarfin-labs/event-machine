@@ -453,7 +453,7 @@ it('dispatches async event to target machine', function () {
 ```
 
 ::: tip
-For the full `Machine::fake()` API (`result`, `fail`, `error`, `finalState`) and assertion methods, see [sendTo & Testing — Machine Faking](/advanced/sendto-and-testing#machine-faking).
+For the full `Machine::fake()` API (`result`, `fail`, `error`, `finalState`) and assertion methods, see [Inter-Machine Testing](/testing/delegation-testing).
 :::
 
 ::: tip Related
