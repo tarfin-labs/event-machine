@@ -149,6 +149,17 @@ export default withMermaid(
                 { text: 'Parallel Dispatch', link: '/advanced/parallel-states/parallel-dispatch' }
               ]
             },
+            {
+              text: 'Machine Delegation',
+              collapsed: true,
+              items: [
+                { text: 'Overview', link: '/advanced/machine-delegation' },
+                { text: 'Sync vs Async', link: '/advanced/async-delegation' },
+                { text: 'Data Flow', link: '/advanced/delegation-data-flow' },
+                { text: 'Patterns', link: '/advanced/delegation-patterns' },
+                { text: 'sendTo & Testing', link: '/advanced/sendto-and-testing' }
+              ]
+            },
             { text: '@always Transitions', link: '/advanced/always-transitions' },
             { text: 'Raised Events', link: '/advanced/raised-events' },
             { text: 'Entry/Exit Actions', link: '/advanced/entry-exit-actions' },
