@@ -27,7 +27,8 @@ class EndpointDefinition
      * Create an EndpointDefinition from various configuration formats.
      *
      * Supported formats:
-     *   'FARMER_SAVED' => null                        (URI auto-generated)
+     *   'FARMER_SAVED'                                (list syntax, auto-generated)
+     *   FarmerSavedEvent::class                       (list syntax with event class)
      *   'FARMER_SAVED' => '/farmer'                   (string shorthand)
      *   'FARMER_SAVED' => ['uri' => '/farmer', ...]   (array config)
      *   FarmerSavedEvent::class => '/farmer'           (event class key)
