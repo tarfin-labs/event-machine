@@ -180,7 +180,7 @@ class MachineDefinition
 
             $endpoint = EndpointDefinition::fromConfig($key, $config, $this->behavior);
 
-            if (!isset($this->behavior['events'][$endpoint->eventType])) {
+            if ($this->events === null || !in_array($endpoint->eventType, $this->events, true)) {
                 throw InvalidEndpointDefinitionException::undefinedEvent($endpoint->eventType);
             }
 
