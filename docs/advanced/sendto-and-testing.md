@@ -60,6 +60,14 @@ class ReportProgressAction extends ActionBehavior
 
 `sendToParent()` uses `$context->parentMachineId()` and `$context->parentMachineClass()` internally. Throws `RuntimeException` if the machine was not invoked by a parent.
 
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `$context` | `ContextManager` | — | The child's context (used to resolve parent identity) |
+| `$event` | `EventBehavior\|array` | — | The event to send to the parent |
+| `$async` | `bool` | `false` | When `true`, dispatches `SendToMachineJob` instead of sending immediately |
+
 ### Progress Reporting Pattern
 
 Combine `sendToParent()` with the parent's `on` map for bidirectional communication:
@@ -113,6 +121,15 @@ PaymentMachine::fake(result: ['status' => 'ok'], finalState: 'approved');
 ```
 
 When a faked machine is invoked via the `machine` key, it short-circuits: no child machine is actually created. Instead, it records the invocation and immediately routes `@done` (or `@fail`) on the parent.
+
+**`Machine::fake()` options:**
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `result` | `array` | The result the child "returns" via `@done` |
+| `fail` | `bool` | When `true`, triggers `@fail` instead of `@done` |
+| `error` | `string` | Error message passed to `ChildMachineFailEvent` |
+| `finalState` | `string` | Override the final state name reported to the parent |
 
 ### Assertion Methods
 
