@@ -113,3 +113,29 @@ test('it resolves event type from an EventBehavior class key with null config', 
     expect($endpoint->eventType)->toBe('SIMPLE_EVENT')
         ->and($endpoint->uri)->toBe('/simple');
 });
+
+// === List syntax (numeric key) ===
+
+test('it creates an endpoint from list syntax with string event type', function (): void {
+    $endpoint = EndpointDefinition::fromConfig('FARMER_SAVED', null, null);
+
+    expect($endpoint->eventType)->toBe('FARMER_SAVED')
+        ->and($endpoint->uri)->toBe('/farmer-saved')
+        ->and($endpoint->method)->toBe('POST')
+        ->and($endpoint->actionClass)->toBeNull()
+        ->and($endpoint->resultBehavior)->toBeNull()
+        ->and($endpoint->middleware)->toBe([])
+        ->and($endpoint->statusCode)->toBeNull();
+});
+
+test('it creates an endpoint from list syntax with event class', function (): void {
+    $endpoint = EndpointDefinition::fromConfig(SimpleEvent::class, null, null);
+
+    expect($endpoint->eventType)->toBe('SIMPLE_EVENT')
+        ->and($endpoint->uri)->toBe('/simple')
+        ->and($endpoint->method)->toBe('POST')
+        ->and($endpoint->actionClass)->toBeNull()
+        ->and($endpoint->resultBehavior)->toBeNull()
+        ->and($endpoint->middleware)->toBe([])
+        ->and($endpoint->statusCode)->toBeNull();
+});
