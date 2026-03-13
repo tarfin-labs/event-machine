@@ -23,11 +23,8 @@ beforeEach(function (): void {
     ]);
 
     // MachineId-bound routes for TestEndpointMachine
-    // machineIdFor requires a model to be set (otherwise stateless is used)
     MachineRouter::register(TestEndpointMachine::class, [
         'prefix'       => '/api/endpoint-mid',
-        'model'        => 'App\\Models\\Dummy',
-        'attribute'    => 'machine',
         'machineIdFor' => ['START', 'COMPLETE', 'CANCEL'],
         'name'         => 'endpoint_mid',
     ]);
