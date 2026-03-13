@@ -179,6 +179,35 @@ it('does not dispatch completion when MachineChild is timed out', function (): v
     Queue::assertNotPushed(ChildMachineCompletionJob::class);
 });
 
+it('does not dispatch completion when MachineChild has already failed', function (): void {
+    Queue::fake();
+
+    $childMachine = SimpleChildMachine::create();
+    $childMachine->persist();
+    $childRootEventId = $childMachine->state->history->first()->root_event_id;
+
+    // Tracking record already failed
+    MachineChild::create([
+        'parent_root_event_id' => 'parent-root-id',
+        'parent_state_id'      => 'async_parent.processing',
+        'parent_machine_class' => AsyncParentMachine::class,
+        'child_machine_class'  => SimpleChildMachine::class,
+        'child_root_event_id'  => $childRootEventId,
+        'status'               => MachineChild::STATUS_FAILED,
+        'created_at'           => now(),
+        'completed_at'         => now(),
+    ]);
+
+    $state = $childMachine->send(['type' => 'COMPLETE']);
+
+    $controller = new MachineController();
+    $reflection = new ReflectionMethod($controller, 'dispatchChildCompletionIfFinal');
+    $reflection->invoke($controller, $childMachine, $state);
+
+    // Discarded — child already failed (parent already routed @fail)
+    Queue::assertNotPushed(ChildMachineCompletionJob::class);
+});
+
 // ─── End-to-End: webhook → completion → parent transition ───────
 
 it('full webhook flow: child endpoint → final → completion job → parent @done', function (): void {
