@@ -177,7 +177,7 @@ class ContextManager extends Data
     /**
      * Get the machine's root_event_id.
      */
-    public function machineId(): string
+    public function machineId(): ?string
     {
         return $this->internalMachineId;
     }
