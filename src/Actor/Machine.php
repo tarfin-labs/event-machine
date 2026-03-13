@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Actor;
 use Stringable;
 use JsonSerializable;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
@@ -688,6 +689,76 @@ class Machine implements Castable, JsonSerializable, Stringable
     public static function getMachineInvocations(?string $class = null): array
     {
         return self::$machineFakes[$class ?? static::class]['invocations'] ?? [];
+    }
+
+    /**
+     * Assert the machine was invoked as a child at least once.
+     */
+    public static function assertInvoked(): void
+    {
+        $invocations = self::getMachineInvocations(static::class);
+
+        if ($invocations === []) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class.'] to be invoked, but it was not.'
+            );
+        }
+    }
+
+    /**
+     * Assert the machine was never invoked as a child.
+     */
+    public static function assertNotInvoked(): void
+    {
+        $invocations = self::getMachineInvocations(static::class);
+
+        if ($invocations !== []) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class.'] not to be invoked, but it was invoked '.count($invocations).' time(s).'
+            );
+        }
+    }
+
+    /**
+     * Assert the machine was invoked exactly N times as a child.
+     */
+    public static function assertInvokedTimes(int $times): void
+    {
+        $invocations = self::getMachineInvocations(static::class);
+        $actual      = count($invocations);
+
+        if ($actual !== $times) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class."] to be invoked {$times} time(s), but it was invoked {$actual} time(s)."
+            );
+        }
+    }
+
+    /**
+     * Assert the machine was invoked with context containing the given subset.
+     *
+     * Checks that at least one invocation's context contains all key-value
+     * pairs from the expected array (subset match, not exact).
+     */
+    public static function assertInvokedWith(array $expected): void
+    {
+        $invocations = self::getMachineInvocations(static::class);
+
+        if ($invocations === []) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class.'] to be invoked with '.json_encode($expected).', but it was never invoked.'
+            );
+        }
+
+        foreach ($invocations as $context) {
+            if (array_intersect_key($expected, $context) === $expected) {
+                return;
+            }
+        }
+
+        throw new AssertionFailedError(
+            'Expected machine ['.static::class.'] to be invoked with '.json_encode($expected).', but no invocation matched. Actual invocations: '.json_encode($invocations)
+        );
     }
 
     /**
