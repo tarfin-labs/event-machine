@@ -126,30 +126,24 @@ export default withMermaid(
           ]
         },
         {
-          text: 'Composition',
+          text: 'Parallel States',
           collapsed: true,
           items: [
-            {
-              text: 'Parallel States',
-              collapsed: true,
-              items: [
-                { text: 'Overview', link: '/advanced/parallel-states/' },
-                { text: 'Event Handling', link: '/advanced/parallel-states/event-handling' },
-                { text: 'Persistence', link: '/advanced/parallel-states/persistence' },
-                { text: 'Parallel Dispatch', link: '/advanced/parallel-states/parallel-dispatch' }
-              ]
-            },
-            {
-              text: 'Machine Delegation',
-              collapsed: true,
-              items: [
-                { text: 'Overview', link: '/advanced/machine-delegation' },
-                { text: 'Sync vs Async', link: '/advanced/async-delegation' },
-                { text: 'Data Flow', link: '/advanced/delegation-data-flow' },
-                { text: 'Patterns', link: '/advanced/delegation-patterns' },
-                { text: 'sendTo & Testing', link: '/advanced/sendto-and-testing' }
-              ]
-            }
+            { text: 'Overview', link: '/advanced/parallel-states/' },
+            { text: 'Event Handling', link: '/advanced/parallel-states/event-handling' },
+            { text: 'Persistence', link: '/advanced/parallel-states/persistence' },
+            { text: 'Parallel Dispatch', link: '/advanced/parallel-states/parallel-dispatch' }
+          ]
+        },
+        {
+          text: 'Inter-Machine',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/advanced/machine-delegation' },
+            { text: 'Sync vs Async', link: '/advanced/async-delegation' },
+            { text: 'Data Flow', link: '/advanced/delegation-data-flow' },
+            { text: 'Patterns', link: '/advanced/delegation-patterns' },
+            { text: 'sendTo & Testing', link: '/advanced/sendto-and-testing' }
           ]
         },
         {
