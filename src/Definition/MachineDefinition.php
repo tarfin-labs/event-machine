@@ -1103,6 +1103,7 @@ class MachineDefinition
         $childRecord = MachineChild::create([
             'parent_root_event_id' => $state->history->first()->root_event_id,
             'parent_state_id'      => $stateDefinition->id,
+            'parent_machine_class' => $this->machineClass,
             'child_machine_class'  => $childMachineClass,
             'status'               => MachineChild::STATUS_PENDING,
             'created_at'           => now(),
