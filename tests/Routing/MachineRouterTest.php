@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Tarfinlabs\EventMachine\Routing\MachineRouter;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestCancelEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestEndpointAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestEndpointMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestNoEndpointMachine;
@@ -158,6 +159,24 @@ test('machineIdFor route URI includes machineId parameter', function (): void {
     $route  = $routes->getByName('test_endpoint.cancel');
 
     expect($route->uri())->toBe('api/machine-id-uri/{machineId}/cancel');
+});
+
+test('machineIdFor accepts event class keys', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'       => '/api/machine-id-class',
+        'model'        => 'App\\Models\\Order',
+        'attribute'    => 'machine',
+        'machineIdFor' => [TestCancelEvent::class],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+    $route  = $routes->getByName('test_endpoint.cancel');
+
+    expect($route)->not->toBeNull()
+        ->and($route->getActionMethod())->toBe('handleMachineIdBound')
+        ->and($route->uri())->toBe('api/machine-id-class/{machineId}/cancel');
 });
 
 test('non-machineIdFor events still use handleModelBound', function (): void {
