@@ -26,6 +26,7 @@ class MachineRouter
      *     attribute?: string,
      *     create?: bool,
      *     machineIdFor?: string[],
+     *     modelFor?: string[],
      *     middleware?: string[],
      *     name?: string,
      * }  $options  Router configuration.
@@ -44,18 +45,30 @@ class MachineRouter
         $attribute = $options['attribute'] ?? null;
         $create    = $options['create'] ?? false;
 
-        if ($model !== null && $attribute === null) {
-            throw new \InvalidArgumentException(
-                "MachineRouter: 'attribute' is required when 'model' is set."
-            );
-        }
-
-        $machineIdFor = array_map(
+        $resolveEventTypes = static fn (array $entries): array => array_map(
             static fn (string $entry): string => is_subclass_of($entry, EventBehavior::class)
                 ? $entry::getType()
                 : $entry,
-            $options['machineIdFor'] ?? [],
+            $entries,
         );
+
+        $machineIdFor = $resolveEventTypes($options['machineIdFor'] ?? []);
+        $modelFor     = $resolveEventTypes($options['modelFor'] ?? []);
+
+        if ($modelFor !== [] && ($model === null || $attribute === null)) {
+            throw new \InvalidArgumentException(
+                "MachineRouter: 'model' and 'attribute' are required when 'modelFor' is set."
+            );
+        }
+
+        $overlap = array_intersect($machineIdFor, $modelFor);
+
+        if ($overlap !== []) {
+            throw new \InvalidArgumentException(
+                "MachineRouter: events cannot be in both 'machineIdFor' and 'modelFor': ".implode(', ', $overlap)
+            );
+        }
+
         $middleware = $options['middleware'] ?? [];
         $namePrefix = $options['name'] ?? $definition->id;
 
@@ -63,7 +76,7 @@ class MachineRouter
             ->middleware($middleware)
             ->group(function () use (
                 $endpoints, $machineClass, $model, $attribute,
-                $create, $machineIdFor, $namePrefix,
+                $create, $machineIdFor, $modelFor, $namePrefix,
             ): void {
                 if ($create) {
                     Route::post('/create', [MachineController::class, 'handleCreate'])
@@ -73,17 +86,18 @@ class MachineRouter
 
                 $modelParam = $model !== null ? Str::camel(class_basename($model)) : null;
 
-                if ($modelParam !== null) {
+                if ($modelParam !== null && $modelFor !== []) {
                     Route::model($modelParam, $model);
                 }
 
                 foreach ($endpoints as $eventType => $endpoint) {
                     $isMachineIdBound = in_array($eventType, $machineIdFor, true);
+                    $isModelBound     = in_array($eventType, $modelFor, true);
 
                     if ($isMachineIdBound) {
                         $routeUri = "/{machineId}{$endpoint->uri}";
                         $handler  = 'handleMachineIdBound';
-                    } elseif ($model !== null && $modelParam !== null) {
+                    } elseif ($isModelBound && $modelParam !== null) {
                         $routeUri = "/{{$modelParam}}{$endpoint->uri}";
                         $handler  = 'handleModelBound';
                     } else {
