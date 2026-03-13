@@ -166,6 +166,12 @@ class MachineDefinition
         $this->parsedEndpoints = [];
 
         foreach ($this->endpoints as $key => $config) {
+            // List syntax: ['SUBMIT'] or [SubmitEvent::class]
+            if (is_int($key)) {
+                $key    = $config;
+                $config = null;
+            }
+
             $endpoint = EndpointDefinition::fromConfig($key, $config, $this->behavior);
 
             if (!isset($this->behavior['events'][$endpoint->eventType])) {
