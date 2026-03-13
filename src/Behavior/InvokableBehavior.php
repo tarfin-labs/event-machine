@@ -96,14 +96,27 @@ abstract class InvokableBehavior
      * Shorthand for sendTo(parentMachineClass, parentMachineId, event).
      * Throws if called on a machine that was not invoked by a parent.
      *
+     * @param  ContextManager  $context  The child machine's context (contains parent identity).
      * @param  EventBehavior|array  $event  The event to send to the parent.
      * @param  bool  $async  Whether to dispatch via queue instead of inline.
      *
      * @throws \RuntimeException If this machine has no parent.
      */
-    public function sendToParent(EventBehavior|array $event, bool $async = false): void
+    public function sendToParent(ContextManager $context, EventBehavior|array $event, bool $async = false): void
     {
-        throw new \RuntimeException('sendToParent requires context injection — will be fully wired in Phase 5.');
+        $parentRootEventId  = $context->parentMachineId();
+        $parentMachineClass = $context->parentMachineClass();
+
+        if ($parentRootEventId === null || $parentMachineClass === null) {
+            throw new \RuntimeException('Cannot sendToParent: this machine was not invoked by a parent.');
+        }
+
+        $this->sendTo(
+            machineClass: $parentMachineClass,
+            rootEventId: $parentRootEventId,
+            event: $event,
+            async: $async,
+        );
     }
 
     /**
