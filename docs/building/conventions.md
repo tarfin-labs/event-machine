@@ -853,10 +853,11 @@ When registering routes via `MachineRouter::register()`, options use `camelCase`
 | Option | Type | Description |
 |--------|------|-------------|
 | `prefix` | `string` | URL prefix for all routes |
-| `model` | `string` | Eloquent model FQCN for model-bound routes |
-| `attribute` | `string` | Model attribute that returns the Machine (required when `model` is set) |
+| `model` | `string` | Eloquent model FQCN (required when `modelFor` is set) |
+| `attribute` | `string` | Model attribute that returns the Machine (required when `modelFor` is set) |
 | `create` | `bool` | Generate `POST /create` endpoint |
-| `machineIdFor` | `string[]` | Event types that use machineId-bound handler instead of model-bound |
+| `machineIdFor` | `string[]` | Event types routed by machine ID |
+| `modelFor` | `string[]` | Event types routed by Eloquent model binding |
 | `middleware` | `string[]` | Middleware applied to all routes in the group |
 | `name` | `string` | Route name prefix (defaults to machine ID) |
 
