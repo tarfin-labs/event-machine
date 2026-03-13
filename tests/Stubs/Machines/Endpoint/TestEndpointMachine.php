@@ -50,7 +50,7 @@ class TestEndpointMachine extends Machine
                     'result' => 'testEndpointResult',
                     'status' => 201,
                 ],
-                'CANCEL' => null,
+                TestCancelEvent::class,
             ],
         );
     }
