@@ -384,6 +384,78 @@ it('blocks transition when guard faked to false', function () {
 });
 ```
 
+## Recipe: Child Machine Faking
+
+Short-circuit child machines with `Machine::fake()` — no child actually runs. Test the parent's flow in isolation:
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Actor\Machine;
+
+it('routes @done when child succeeds', function () {
+    PaymentMachine::fake(result: ['payment_id' => 'pay_123']);
+
+    $machine = OrderWorkflowMachine::create();
+    $machine->send(['type' => 'START']);
+
+    expect($machine->state->matches('shipping'))->toBeTrue()
+        ->and($machine->state->context->get('payment_id'))->toBe('pay_123');
+
+    PaymentMachine::assertInvoked();
+    PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
+
+    Machine::resetMachineFakes();
+});
+
+it('routes @fail when child fails', function () {
+    PaymentMachine::fake(fail: true, error: 'Insufficient funds');
+
+    $machine = OrderWorkflowMachine::create();
+    $machine->send(['type' => 'START']);
+
+    expect($machine->state->matches('payment_failed'))->toBeTrue()
+        ->and($machine->state->context->get('error'))->toBe('Insufficient funds');
+
+    Machine::resetMachineFakes();
+});
+
+it('child not invoked when transition is guarded', function () {
+    PaymentMachine::fake(result: []);
+
+    $machine = OrderWorkflowMachine::create();
+    // Don't send START — child should NOT be invoked
+
+    PaymentMachine::assertNotInvoked();
+
+    Machine::resetMachineFakes();
+});
+```
+
+## Recipe: Async sendTo Testing
+
+Test `sendTo()` and `sendToParent()` dispatches with `Queue::fake()`:
+
+<!-- doctest-attr: ignore -->
+```php
+use Illuminate\Support\Facades\Queue;
+use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
+
+it('dispatches async event to target machine', function () {
+    Queue::fake();
+
+    // ... trigger action that calls sendTo(async: true) ...
+
+    Queue::assertPushed(SendToMachineJob::class, function (SendToMachineJob $job): bool {
+        return $job->machineClass === TargetMachine::class
+            && $job->event['type'] === 'NOTIFICATION';
+    });
+});
+```
+
+::: tip
+For the full `Machine::fake()` API (`result`, `fail`, `error`, `finalState`) and assertion methods, see [sendTo & Testing — Machine Faking](/advanced/sendto-and-testing#machine-faking).
+:::
+
 ::: tip Related
 See [Overview](/testing/overview) for the testing pyramid,
 [Isolated Testing](/testing/isolated-testing) for `runWithState()`,
