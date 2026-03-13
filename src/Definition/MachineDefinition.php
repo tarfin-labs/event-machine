@@ -1001,6 +1001,13 @@ class MachineDefinition
 
         $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
 
+        // Short-circuit if child machine is faked (testing)
+        if (Machine::isMachineFaked($invokeDefinition->machineClass)) {
+            $this->handleFakedMachineInvoke($state, $stateDefinition, $invokeDefinition);
+
+            return;
+        }
+
         // Async mode: dispatch child machine to queue
         if ($invokeDefinition->async) {
             $this->handleAsyncMachineInvoke($state, $stateDefinition, $invokeDefinition);
@@ -1140,6 +1147,61 @@ class MachineDefinition
             }
 
             dispatch($timeoutJob)->afterCommit()->delay($invokeDefinition->timeout);
+        }
+    }
+
+    /**
+     * Handle a faked machine invocation (testing short-circuit).
+     *
+     * Instead of creating a real child machine, immediately routes @done or @fail
+     * based on the fake configuration. Works for both sync and async delegation.
+     */
+    protected function handleFakedMachineInvoke(State $state, StateDefinition $stateDefinition, MachineInvokeDefinition $invokeDefinition): void
+    {
+        $childMachineClass = $invokeDefinition->machineClass;
+        $childContext      = $invokeDefinition->resolveChildContext($state->context);
+
+        // Record the invocation for assertion tracking
+        Machine::recordMachineInvocation($childMachineClass, $childContext);
+
+        // Record child machine start event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::CHILD_MACHINE_START,
+            placeholder: $childMachineClass,
+        );
+
+        $fake = Machine::getMachineFake($childMachineClass);
+
+        if ($fake['fail']) {
+            // Record child fail event
+            $state->setInternalEventBehavior(
+                type: InternalEvent::CHILD_MACHINE_FAIL,
+                placeholder: $childMachineClass,
+            );
+
+            $failEvent = ChildMachineFailEvent::forChild([
+                'error_message' => $fake['error'] ?? 'Faked failure',
+                'machine_id'    => '',
+                'machine_class' => $childMachineClass,
+                'child_context' => $childContext,
+            ]);
+
+            $this->routeChildFailEvent($state, $stateDefinition, $failEvent);
+        } else {
+            // Record child done event
+            $state->setInternalEventBehavior(
+                type: InternalEvent::CHILD_MACHINE_DONE,
+                placeholder: $childMachineClass,
+            );
+
+            $doneEvent = ChildMachineDoneEvent::forChild([
+                'result'        => $fake['result'],
+                'child_context' => $childContext,
+                'machine_id'    => '',
+                'machine_class' => $childMachineClass,
+            ]);
+
+            $this->routeChildDoneEvent($state, $stateDefinition, $doneEvent);
         }
     }
 
