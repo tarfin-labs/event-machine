@@ -13,6 +13,8 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
+use Tarfinlabs\EventMachine\Models\MachineChild;
+use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
 use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
@@ -20,9 +22,11 @@ use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
+use Tarfinlabs\EventMachine\Jobs\ChildMachineTimeoutJob;
 use Tarfinlabs\EventMachine\Routing\MachineEndpointAction;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
+use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidEndpointDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
@@ -997,8 +1001,10 @@ class MachineDefinition
 
         $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
 
-        // Async mode is handled separately (async-dispatch task)
+        // Async mode: dispatch child machine to queue
         if ($invokeDefinition->async) {
+            $this->handleAsyncMachineInvoke($state, $stateDefinition, $invokeDefinition);
+
             return;
         }
 
@@ -1065,6 +1071,139 @@ class MachineDefinition
             // Route @fail transition on parent
             $this->routeChildFail($state, $stateDefinition, $childMachineClass, $e);
         }
+    }
+
+    /**
+     * Handle async machine delegation: dispatch child machine to queue.
+     *
+     * Creates a MachineChild tracking record, dispatches ChildMachineJob,
+     * and optionally dispatches ChildMachineTimeoutJob with configured delay.
+     * Parent stays in the invoking state waiting for completion.
+     */
+    protected function handleAsyncMachineInvoke(State $state, StateDefinition $stateDefinition, MachineInvokeDefinition $invokeDefinition): void
+    {
+        $childMachineClass = $invokeDefinition->machineClass;
+        $childContext      = $invokeDefinition->resolveChildContext($state->context);
+
+        // Record child machine start event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::CHILD_MACHINE_START,
+            placeholder: $childMachineClass,
+        );
+
+        // Create tracking record
+        $childRecord = MachineChild::create([
+            'parent_root_event_id' => $state->history->first()->root_event_id,
+            'parent_state_id'      => $stateDefinition->id,
+            'child_machine_class'  => $childMachineClass,
+            'status'               => MachineChild::STATUS_PENDING,
+            'created_at'           => now(),
+        ]);
+
+        // Track child in parent's active children
+        $state->addActiveChild($childRecord->id);
+
+        // Dispatch child machine job
+        $job = new ChildMachineJob(
+            parentRootEventId: $state->history->first()->root_event_id,
+            parentMachineClass: $this->machineClass,
+            parentStateId: $stateDefinition->id,
+            childMachineClass: $childMachineClass,
+            machineChildId: $childRecord->id,
+            childContext: $childContext,
+            retry: $invokeDefinition->retry ?? 1,
+        );
+
+        if ($invokeDefinition->queue !== null) {
+            $job->onQueue($invokeDefinition->queue);
+        }
+
+        if ($invokeDefinition->connection !== null) {
+            $job->onConnection($invokeDefinition->connection);
+        }
+
+        dispatch($job)->afterCommit();
+
+        // Dispatch timeout job if @timeout is configured
+        if ($invokeDefinition->timeout !== null && $stateDefinition->onTimeoutTransition instanceof TransitionDefinition) {
+            $timeoutJob = new ChildMachineTimeoutJob(
+                parentRootEventId: $state->history->first()->root_event_id,
+                parentMachineClass: $this->machineClass,
+                parentStateId: $stateDefinition->id,
+                machineChildId: $childRecord->id,
+                childMachineClass: $childMachineClass,
+                timeoutSeconds: $invokeDefinition->timeout,
+            );
+
+            if ($invokeDefinition->queue !== null) {
+                $timeoutJob->onQueue($invokeDefinition->queue);
+            }
+
+            dispatch($timeoutJob)->afterCommit()->delay($invokeDefinition->timeout);
+        }
+    }
+
+    /**
+     * Try to forward an unhandled event to a running async child machine.
+     *
+     * Checks if the current state has forward configuration and if the event type
+     * matches. If so, restores the child from DB, sends the forwarded event,
+     * and dispatches completion if the child reaches a final state.
+     *
+     * @return bool True if the event was forwarded, false otherwise.
+     */
+    protected function tryForwardEventToChild(State $state, StateDefinition $stateDefinition, EventBehavior $eventBehavior): bool
+    {
+        if (!$stateDefinition->hasMachineInvoke()) {
+            return false;
+        }
+
+        $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
+
+        if (!$invokeDefinition->hasForward()) {
+            return false;
+        }
+
+        $childEventType = $invokeDefinition->resolveForwardEvent($eventBehavior->type);
+
+        if ($childEventType === null) {
+            return false;
+        }
+
+        // Find the running child machine from active children
+        $childRecord = MachineChild::forParent($state->history->first()->root_event_id)
+            ->withStatus(MachineChild::STATUS_RUNNING)
+            ->first();
+
+        if ($childRecord === null || $childRecord->child_root_event_id === null) {
+            return false;
+        }
+
+        // Restore and send the forwarded event to the child
+        $childMachineClass = $invokeDefinition->machineClass;
+        /** @var Machine $childMachine */
+        $childMachine = $childMachineClass::create(state: $childRecord->child_root_event_id);
+
+        // Send the event (possibly renamed) to the child
+        $childMachine->send(['type' => $childEventType, 'payload' => $eventBehavior->payload]);
+
+        // If child reached a final state, dispatch completion
+        if ($childMachine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
+            $childRecord->markCompleted();
+
+            dispatch(new ChildMachineCompletionJob(
+                parentRootEventId: $state->history->first()->root_event_id,
+                parentMachineClass: $this->machineClass,
+                parentStateId: $stateDefinition->id,
+                childMachineClass: $childMachineClass,
+                childRootEventId: $childRecord->child_root_event_id,
+                success: true,
+                result: $childMachine->result(),
+                childContextData: $childMachine->state->context->data,
+            ));
+        }
+
+        return true;
     }
 
     /**
@@ -1898,12 +2037,21 @@ class MachineDefinition
             return $this->transitionParallelState($state, $eventBehavior);
         }
 
-        /**
+        /*
          * Get the transition definition for the current event type.
          *
          * @var null|array|TransitionDefinition $transitionDefinition
          */
-        $transitionDefinition = $this->findTransitionDefinition($currentStateDefinition, $eventBehavior);
+        try {
+            $transitionDefinition = $this->findTransitionDefinition($currentStateDefinition, $eventBehavior);
+        } catch (NoTransitionDefinitionFoundException $e) {
+            // Check if event should be forwarded to a running child machine
+            if ($this->tryForwardEventToChild($state, $currentStateDefinition, $eventBehavior)) {
+                return $state;
+            }
+
+            throw $e;
+        }
 
         // Record transition start event
         $state->setInternalEventBehavior(
@@ -1917,7 +2065,7 @@ class MachineDefinition
         );
 
         // If no valid transition branch is found, return the current state
-        if ($transitionBranch === null) {
+        if (!$transitionBranch instanceof TransitionBranch) {
             // Record transition abort event
             $state->setInternalEventBehavior(
                 type: InternalEvent::TRANSITION_FAIL,
@@ -1957,7 +2105,7 @@ class MachineDefinition
 
         // Get scenario state if exists
         $newState = $this->getScenarioStateIfAvailable(state: $newState, eventBehavior: $eventBehavior);
-        if ($targetStateDefinition !== null && $targetStateDefinition->id !== $newState->currentStateDefinition->id) {
+        if ($targetStateDefinition instanceof StateDefinition && $targetStateDefinition->id !== $newState->currentStateDefinition->id) {
             $targetStateDefinition = $newState->currentStateDefinition;
         }
 
