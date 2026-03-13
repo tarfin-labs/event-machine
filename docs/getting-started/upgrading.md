@@ -71,7 +71,7 @@ class ReportProgressAction extends ActionBehavior
 }
 ```
 
-For full documentation, see [sendTo & Testing](/advanced/sendto-and-testing).
+For full documentation, see [sendTo & sendToParent](/advanced/sendto) and [Inter-Machine Testing](/testing/delegation-testing).
 
 ### New Feature: Machine Faking
 
