@@ -12,6 +12,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
+use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
 /**
  * Queue job that sends an event to a target machine asynchronously.
@@ -48,6 +49,12 @@ class SendToMachineJob implements ShouldQueue
             $targetMachine->send($this->event);
         } catch (RestoringStateException) {
             Log::warning('SendToMachineJob: target machine not found, discarding event.', [
+                'machine_class' => $this->machineClass,
+                'root_event_id' => $this->rootEventId,
+                'event'         => $this->event,
+            ]);
+        } catch (NoTransitionDefinitionFoundException) {
+            Log::warning('SendToMachineJob: failed to deliver event, target machine cannot handle it in current state.', [
                 'machine_class' => $this->machineClass,
                 'root_event_id' => $this->rootEventId,
                 'event'         => $this->event,
