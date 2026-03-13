@@ -2,6 +2,173 @@
 
 Guide for upgrading between EventMachine versions.
 
+## Upgrading to v7.0
+
+v7.0 introduces **machine delegation** — the ability for a state to delegate its work to another machine. This is a feature release with **no breaking changes**. All existing machines continue to work unchanged.
+
+### New Feature: Machine Delegation
+
+A state can now invoke a child machine via the `machine` key. The child runs its own lifecycle, and when it completes, the parent's `@done` or `@fail` transition fires.
+
+<!-- doctest-attr: ignore -->
+```php
+'processing_payment' => [
+    'machine' => PaymentMachine::class,
+    'with'    => ['order_id', 'total_amount'],
+    '@done'   => 'shipping',
+    '@fail'   => 'payment_failed',
+],
+```
+
+**Two execution modes:**
+- **Sync (default):** Child runs inline within the parent's transition. Simplest option.
+- **Async (queue):** Child runs on a Laravel queue worker. Parent stays in the delegating state until completion.
+
+<!-- doctest-attr: ignore -->
+```php
+// Async: child dispatched to queue
+'processing_payment' => [
+    'machine'  => PaymentMachine::class,
+    'queue'    => 'payments',
+    '@done'    => 'shipping',
+    '@fail'    => 'payment_failed',
+    '@timeout' => [
+        'after'  => 300,
+        'target' => 'payment_timed_out',
+    ],
+],
+```
+
+For full documentation, see [Machine Delegation](/advanced/machine-delegation).
+
+### New Feature: Cross-Machine Communication
+
+Behaviors can now send events to other machine instances via `sendTo()` and `sendToParent()`:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+
+class ReportProgressAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        // Send event to parent machine (child → parent)
+        $this->sendToParent($context, [
+            'type'    => 'CHILD_PROGRESS',
+            'payload' => ['percent' => 50],
+        ]);
+
+        // Send event to any machine (sync or async)
+        $this->sendTo(
+            machineClass: TargetMachine::class,
+            rootEventId: $context->get('target_id'),
+            event: ['type' => 'NOTIFICATION'],
+            async: true,
+        );
+    }
+}
+```
+
+For full documentation, see [sendTo & Testing](/advanced/sendto-and-testing).
+
+### New Feature: Machine Faking
+
+Short-circuit child machines in tests — no child actually runs:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Actor\Machine;
+
+PaymentMachine::fake(result: ['payment_id' => 'pay_123']);
+
+$machine = OrderWorkflowMachine::create();
+$machine->send(['type' => 'START']);
+
+PaymentMachine::assertInvoked();
+PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
+
+Machine::resetMachineFakes();
+```
+
+### New Feature: Machine Identity
+
+Every machine now has access to its own identity via `$context->machineId()`. Child machines also know their parent via `$context->parentMachineId()`.
+
+### New Feature: XState Export for Delegation
+
+The `machine:xstate` Artisan command now maps `machine` keys to XState v5 `invoke` blocks, enabling visualization in [Stately Studio](https://stately.ai).
+
+### New Config Keys
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `machine` | `string` (FQCN) | Child machine class to invoke |
+| `with` | `array\|Closure` | Data to pass from parent to child context |
+| `@done` | `string\|array` | Transition when child reaches final state |
+| `@fail` | `string\|array` | Transition when child fails |
+| `@timeout` | `array` | Transition when child times out (async only) |
+| `queue` | `bool\|string\|array` | Run child on a Laravel queue |
+| `forward` | `array` | Event types to forward from parent to running child |
+
+### New Files
+
+| File | Description |
+|------|-------------|
+| `src/Behavior/ChildMachineDoneEvent.php` | Typed event for `@done` with result/context accessors |
+| `src/Behavior/ChildMachineFailEvent.php` | Typed event for `@fail` with error accessors |
+| `src/Definition/MachineInvokeDefinition.php` | Value object for machine delegation config |
+| `src/Jobs/ChildMachineJob.php` | Queue job for async child creation |
+| `src/Jobs/ChildMachineCompletionJob.php` | Queue job for routing `@done`/`@fail` back to parent |
+| `src/Jobs/ChildMachineTimeoutJob.php` | Delayed check job for `@timeout` |
+| `src/Jobs/SendToMachineJob.php` | Queue job for async `sendTo()` |
+| `src/Models/MachineChild.php` | Eloquent model for async child tracking |
+
+### New Database Table
+
+v7.0 adds a `machine_children` table for tracking async child machine instances. Publish and run migrations:
+
+```bash
+php artisan vendor:publish --tag=machine-migrations
+php artisan migrate
+```
+
+::: info
+The `machine_children` table is only used when you have async delegation (`queue` key). If you only use sync delegation, the table will remain empty but should still be created.
+:::
+
+### New Internal Events
+
+| Event | Purpose |
+|-------|---------|
+| `CHILD_MACHINE_STARTED` | Child machine created and running |
+| `CHILD_MACHINE_DONE` | Child reached final state |
+| `CHILD_MACHINE_FAILED` | Child threw an exception |
+| `CHILD_MACHINE_CANCELLED` | Parent left delegating state, child cancelled |
+| `CHILD_MACHINE_TIMED_OUT` | Child did not complete within `@timeout` period |
+
+### Migration Steps
+
+#### Step 1: Update Dependencies
+
+```bash
+composer require tarfinlabs/event-machine:^7.0
+```
+
+#### Step 2: Publish and Run Migrations
+
+```bash
+php artisan vendor:publish --tag=machine-migrations
+php artisan migrate
+```
+
+#### Step 3: Start Using Delegation (Optional)
+
+No existing code needs to change. Add `machine` keys to state definitions when you're ready to delegate work to child machines.
+
+---
+
 ## Upgrading to v6.0
 
 v6.0 introduces a comprehensive testability layer with three breaking changes to behavior resolution. Most applications require **no code changes** — the breaking changes only affect behaviors with custom constructors.
@@ -713,6 +880,7 @@ Events use array format with `type` and `payload` keys.
 
 | EventMachine | PHP | Laravel |
 |--------------|-----|---------|
+| 7.x | 8.3+ | 11.x, 12.x |
 | 6.x | 8.3+ | 11.x, 12.x |
 | 5.x | 8.3+ | 11.x, 12.x |
 | 4.x | 8.3+ | 11.x, 12.x |
