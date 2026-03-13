@@ -490,3 +490,36 @@ it('forward config is parsed correctly in state definition', function (): void {
         ->and($invokeDefinition->resolveForwardEvent('PARENT_UPDATE'))->toBe('CHILD_UPDATE')
         ->and($invokeDefinition->resolveForwardEvent('NONEXISTENT'))->toBeNull();
 });
+
+// ============================================================
+// Cleanup Active Children
+// ============================================================
+
+it('marks MachineChild DB records as cancelled when parent leaves delegating state', function (): void {
+    Queue::fake();
+
+    // 1. Start parent machine → enters processing state (async delegation)
+    $machine = AsyncParentMachine::create();
+    $machine->send(['type' => 'START']);
+
+    $parentRootEventId = $machine->state->history->first()->root_event_id;
+
+    // 2. Manually create MachineChild record (simulating what handleAsyncMachineInvoke did)
+    $childRecord = MachineChild::create([
+        'parent_root_event_id' => $parentRootEventId,
+        'parent_state_id'      => 'async_parent.processing',
+        'parent_machine_class' => AsyncParentMachine::class,
+        'child_machine_class'  => SimpleChildMachine::class,
+        'child_root_event_id'  => 'child-root-event-id',
+        'status'               => MachineChild::STATUS_RUNNING,
+        'created_at'           => now(),
+    ]);
+
+    // 3. Send CANCEL to parent → leaves processing state → cleanupActiveChildren fires
+    $machine->send(['type' => 'CANCEL']);
+
+    // 4. MachineChild DB record should be marked as cancelled
+    $childRecord->refresh();
+    expect($childRecord->status)->toBe(MachineChild::STATUS_CANCELLED)
+        ->and($childRecord->completed_at)->not->toBeNull();
+});
