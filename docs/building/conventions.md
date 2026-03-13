@@ -815,13 +815,13 @@ Inline keys use camelCase and are referenced in the endpoint definition:
 
 ### Endpoint URIs
 
-URIs are auto-generated from event types by converting `SCREAMING_SNAKE_CASE` to `kebab-case`:
+URIs are auto-generated from event types by converting `SCREAMING_SNAKE_CASE` to `kebab-case`. If the event type ends with `_EVENT`, that suffix is automatically stripped:
 
 | Event Type | Auto-Generated URI |
 |------------|-------------------|
 | `FARMER_SAVED` | `/farmer-saved` |
 | `APPROVED_WITH_INITIATIVE` | `/approved-with-initiative` |
-| `CALCULATE` | `/calculate` |
+| `CONSENT_GRANTED_EVENT` | `/consent-granted` |
 | `ORDER_SUBMITTED` | `/order-submitted` |
 
 You can override the auto-generated URI with an explicit `uri` key in the endpoint definition.
