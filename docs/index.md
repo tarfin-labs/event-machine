@@ -436,6 +436,7 @@ MachineRouter::register(OrderMachine::class, [
     'model'     => Order::class,
     'attribute' => 'order_mre',
     'create'    => true,
+    'modelFor'  => ['SUBMIT', 'APPROVE', 'CANCEL'],
 ]);
 // POST   /orders/create
 // POST   /orders/{order}/submit
