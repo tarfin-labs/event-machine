@@ -49,10 +49,10 @@ MachineDefinition::define(
     config: [...],
     behavior: [...],
     endpoints: [
-        'SUBMIT'  => null,           // POST /submit (auto-generated)
-        'APPROVE' => null,           // POST /approve
-        'CANCEL'  => null,           // POST /cancel
-        'SHIP'    => null,           // POST /ship
+        'SUBMIT',            // POST /submit (auto-generated)
+        'APPROVE',           // POST /approve
+        'CANCEL',            // POST /cancel
+        'SHIP',              // POST /ship
     ],
 );
 ```
@@ -84,15 +84,18 @@ MachineDefinition::define(
 );
 ```
 
-### Four Definition Formats
+### Definition Formats
 
 EventMachine supports four formats for defining endpoints, from minimal to fully configured:
 
-**1. Null — auto-generate everything:**
+**1. List — auto-generate everything:**
 
 ```php ignore
-'SUBMIT' => null,
+'SUBMIT',
 // POST /submit — URI and method auto-generated
+
+SubmitEvent::class,
+// POST /submit — resolves event type via getType()
 ```
 
 **2. String — explicit URI:**
@@ -118,10 +121,14 @@ EventMachine supports four formats for defining endpoints, from minimal to fully
 **4. Event class key — use class instead of type string:**
 
 ```php ignore
-OrderSubmittedEvent::class => null,
-// Resolves to 'ORDER_SUBMITTED' via getType()
-// POST /order-submitted
+SubmitEvent::class => '/custom-submit',
+// Resolves to event type via getType(), explicit URI
+
+SubmitEvent::class => ['method' => 'PATCH'],
+// Resolves to event type via getType(), full config
 ```
+
+All four formats can be mixed freely in the same `endpoints` array.
 
 ### Array Configuration Options
 
@@ -136,14 +143,14 @@ OrderSubmittedEvent::class => null,
 
 ### URI Auto-Generation
 
-When no URI is specified, EventMachine converts the event type from `SCREAMING_SNAKE_CASE` to `kebab-case`:
+When no URI is specified, EventMachine converts the event type from `SCREAMING_SNAKE_CASE` to `kebab-case`. If the event type ends with `_EVENT`, that suffix is automatically stripped:
 
 | Event Type | Generated URI |
 |------------|--------------|
 | `SUBMIT` | `/submit` |
 | `FARMER_SAVED` | `/farmer-saved` |
 | `APPROVED_WITH_INITIATIVE` | `/approved-with-initiative` |
-| `PAYMENT_RECEIVED` | `/payment-received` |
+| `CONSENT_GRANTED_EVENT` | `/consent-granted` |
 
 ## Route Registration
 
@@ -594,7 +601,7 @@ MachineRouter::register(OrderMachine::class, [
 ```php
 // In your machine definition
 endpoints: [
-    'SUBMIT'  => null,                     // auth:api only
+    'SUBMIT',                              // auth:api only
     'APPROVE' => [
         'middleware' => ['auth:admin'],     // auth:api + auth:admin
     ],
@@ -736,7 +743,7 @@ class ApplicationMachine extends Machine
                 'START' => [
                     'action' => StartEndpointAction::class,
                 ],
-                'FARMER_SAVED'    => null,
+                'FARMER_SAVED',
                 'CANCEL'          => [
                     'action' => CancelEndpointAction::class,
                 ],
@@ -850,8 +857,8 @@ Add the `endpoints` parameter to your machine definition:
 <!-- doctest-attr: ignore -->
 ```php
 endpoints: [
-    'SUBMIT' => null,
-    'APPROVE' => null,
+    'SUBMIT',
+    'APPROVE',
     // ... one entry per event that has a controller method
 ],
 ```
