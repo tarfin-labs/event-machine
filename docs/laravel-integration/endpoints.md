@@ -65,6 +65,7 @@ MachineRouter::register(OrderMachine::class, [
     'prefix'    => 'orders',
     'model'     => Order::class,
     'attribute' => 'order_mre',
+    'modelFor'  => ['SUBMIT', 'APPROVE', 'CANCEL', 'SHIP'],
 ]);
 ```
 
@@ -165,6 +166,7 @@ MachineRouter::register(OrderMachine::class, [
     'attribute'    => 'order_mre',
     'create'       => true,
     'machineIdFor' => ['START'],
+    'modelFor'     => ['SUBMIT', 'APPROVE'],
     'middleware'    => ['auth:api'],
     'name'         => 'machines.order',
 ]);
@@ -175,12 +177,15 @@ MachineRouter::register(OrderMachine::class, [
 | Option | Type | Required | Default | Description |
 |--------|------|----------|---------|-------------|
 | `prefix` | `string` | Yes | — | URL prefix for all endpoints |
-| `model` | `string` | No | `null` | Eloquent model class for model-bound endpoints |
-| `attribute` | `string` | No | `null` | `HasMachines` property name on the model |
+| `model` | `string` | No | `null` | Eloquent model class (required when `modelFor` is set) |
+| `attribute` | `string` | No | `null` | `HasMachines` property name on the model (required when `modelFor` is set) |
 | `create` | `bool` | No | `false` | Enable `POST /create` endpoint |
-| `machineIdFor` | `array` | No | `[]` | Event types that use machine ID instead of model binding |
+| `machineIdFor` | `array` | No | `[]` | Event types routed by machine ID |
+| `modelFor` | `array` | No | `[]` | Event types routed by Eloquent model binding |
 | `middleware` | `array` | No | `[]` | Middleware applied to all endpoints |
 | `name` | `string` | No | Machine ID | Route name prefix |
+
+Both `machineIdFor` and `modelFor` accept event type strings (`'SUBMIT'`) or event class references (`SubmitEvent::class`). Events not listed in either array are routed as stateless.
 
 ### Generated Routes
 
@@ -195,13 +200,13 @@ Given the registration above, EventMachine generates these routes:
 
 ### Three Handler Types
 
-The router selects the handler based on your configuration:
+Each endpoint is routed to a handler based on your `machineIdFor` and `modelFor` configuration:
 
-| Handler | Model | Machine ID | When |
-|---------|-------|-----------|------|
-| `handleModelBound` | Yes | — | Default for all events when `model` is set |
-| `handleMachineIdBound` | — | Yes | Event type is in `machineIdFor` array |
-| `handleStateless` | — | — | No `model` option provided |
+| Handler | When |
+|---------|------|
+| `handleMachineIdBound` | Event is in `machineIdFor` |
+| `handleModelBound` | Event is in `modelFor` |
+| `handleStateless` | Event is in neither |
 
 **handleModelBound** resolves the Eloquent model via route model binding, loads the machine from the model attribute, and sends the event.
 
@@ -405,6 +410,7 @@ MachineRouter::register(OrderMachine::class, [
     'prefix'    => 'orders',
     'model'     => Order::class,
     'attribute' => 'order_mre',
+    'modelFor'  => ['SUBMIT', 'APPROVE'],
     'create'    => true,   // Enables POST /orders/create
 ]);
 ```
@@ -432,17 +438,17 @@ Use the returned `machine_id` in subsequent requests to send events to this mach
 
 ## Route Registration Patterns
 
-`MachineRouter::register()` supports four routing patterns. Each endpoint is routed to a specific handler based on the `model` and `machineIdFor` options:
+`MachineRouter::register()` supports four routing patterns. Each endpoint is routed to a specific handler based on the `machineIdFor` and `modelFor` options:
 
 | Condition | Handler | URI Pattern |
 |-----------|---------|-------------|
 | Event is in `machineIdFor` | `handleMachineIdBound` | `/{machineId}{uri}` |
-| `model` is set | `handleModelBound` | `/{model}{uri}` |
+| Event is in `modelFor` | `handleModelBound` | `/{model}{uri}` |
 | Neither | `handleStateless` | `{uri}` |
 
 ### Pattern 1: Stateless
 
-For machines that don't need persistence (e.g., calculators, validators). Every request creates a fresh machine, processes the event, returns the result, and discards the machine. Omit both `model` and `machineIdFor`:
+For machines that don't need persistence (e.g., calculators, validators). Every request creates a fresh machine, processes the event, returns the result, and discards the machine. Omit both `machineIdFor` and `modelFor`:
 
 ```php no_run
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -480,7 +486,7 @@ class PriceCalculatorMachine extends Machine
 }
 ```
 
-Register without `model` or `create`:
+Register without `machineIdFor`, `modelFor`, or `create`:
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -522,7 +528,7 @@ This is ideal when your API is machine-centric rather than model-centric — the
 
 ### Pattern 3: Model-Bound
 
-For machines tied to an Eloquent model. The model's attribute stores the machine's root event ID, and the `MachineCast` restores the machine automatically:
+For machines tied to an Eloquent model. Use `modelFor` to specify which events are routed by model binding. The model's attribute stores the machine's root event ID, and the `MachineCast` restores the machine automatically:
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -530,6 +536,7 @@ MachineRouter::register(InvoiceMachine::class, [
     'prefix'    => 'invoices',
     'model'     => Invoice::class,
     'attribute' => 'invoice_mre',
+    'modelFor'  => ['SEND', 'PAY'],
 ]);
 ```
 
@@ -554,9 +561,9 @@ class Invoice extends Model
 }
 ```
 
-### Pattern 4: Hybrid (Model + machineIdFor)
+### Pattern 4: Hybrid (machineIdFor + modelFor)
 
-Some workflows require sending events before an Eloquent model exists. For example, the first step might create the model as a side effect. Use `machineIdFor` to route these events by machine ID while the rest use model binding:
+Some workflows require sending events before an Eloquent model exists. For example, the first step might create the model as a side effect. Use `machineIdFor` for pre-model events and `modelFor` for model-bound events:
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -565,7 +572,8 @@ MachineRouter::register(ApplicationMachine::class, [
     'model'        => Application::class,
     'attribute'    => 'application_mre',
     'create'       => true,
-    'machineIdFor' => ['START'],  // START uses machine ID, not model
+    'machineIdFor' => ['START'],
+    'modelFor'     => ['FARMER_SAVED', 'CANCEL'],
     'middleware'    => ['auth:api'],
 ]);
 ```
@@ -593,6 +601,7 @@ MachineRouter::register(OrderMachine::class, [
     'prefix'     => 'orders',
     'model'      => Order::class,
     'attribute'  => 'order_mre',
+    'modelFor'   => ['SUBMIT', 'APPROVE'],
     'middleware'  => ['auth:api'],         // Applied to all endpoints
 ]);
 ```
@@ -773,6 +782,7 @@ MachineRouter::register(ApplicationMachine::class, [
     'attribute'    => 'application_mre',
     'create'       => true,
     'machineIdFor' => ['START'],
+    'modelFor'     => ['FARMER_SAVED', 'CANCEL', 'GUARANTOR_SAVED', 'APPROVED_WITH_INITIATIVE'],
     'middleware'    => ['auth:retailer'],
     'name'         => 'machines.application',
 ]);
@@ -919,6 +929,7 @@ MachineRouter::register(OrderMachine::class, [
     'prefix'    => 'orders',
     'model'     => Order::class,
     'attribute' => 'order_mre',
+    'modelFor'  => ['SUBMIT', 'APPROVE', 'CANCEL'],
 ]);
 ```
 
