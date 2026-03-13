@@ -68,10 +68,15 @@ class EndpointDefinition
      * Generate a URI from an event type.
      *
      * FARMER_SAVED → /farmer-saved
+     * CONSENT_GRANTED_EVENT → /consent-granted
      * APPROVED_WITH_INITIATIVE → /approved-with-initiative
      */
     public static function generateUri(string $eventType): string
     {
+        if (str_ends_with($eventType, '_EVENT')) {
+            $eventType = substr($eventType, 0, -6);
+        }
+
         return '/'.str_replace('_', '-', strtolower($eventType));
     }
 }
