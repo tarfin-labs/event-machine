@@ -78,7 +78,7 @@ For fast tests, use SQLite in-memory. This eliminates migration overhead and dis
 | Transition (Integration) | Guard pass/fail, state changes, paths | [Transitions & Paths](/testing/transitions-and-paths) |
 | Machine (Acceptance) | Full fluent test wrapper | [TestMachine](/testing/test-machine) |
 | Parallel | Dispatch verification, region isolation | [Parallel Testing](/testing/parallel-testing) |
-| Inter-Machine | Child machine faking, sendTo assertions | [Inter-Machine Testing](/advanced/sendto-and-testing#testing-machine-delegation) |
+| Inter-Machine | Child machine faking, sendTo assertions | [Inter-Machine Testing](/testing/delegation-testing) |
 | Persistence | DB, restoration, archival | [Persistence Testing](/testing/persistence-testing) |
 | Recipes | Common real-world patterns | [Recipes](/testing/recipes) |
 | Migration | Upgrading from legacy test patterns | [Migration Patterns](/getting-started/upgrading#testing-migration-patterns) |
