@@ -15,6 +15,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Traits\Fakeable;
+use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
 /**
@@ -68,8 +69,23 @@ abstract class InvokableBehavior
      */
     public function sendTo(string $machineClass, string $rootEventId, EventBehavior|array $event, bool $async = false): void
     {
+        if ($async) {
+            $eventArray = $event instanceof EventBehavior
+                ? ['type' => $event->type, 'payload' => $event->payload]
+                : $event;
+
+            dispatch(new SendToMachineJob(
+                machineClass: $machineClass,
+                rootEventId: $rootEventId,
+                event: $eventArray,
+            ));
+
+            return;
+        }
+
         /** @var Machine $targetMachine */
-        $targetMachine = $machineClass::withDefinition($machineClass::definition());
+        $targetMachine                           = $machineClass::withDefinition($machineClass::definition());
+        $targetMachine->definition->machineClass = $machineClass;
         $targetMachine->start($rootEventId);
         $targetMachine->send($event);
     }
