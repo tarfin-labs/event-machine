@@ -34,7 +34,7 @@ class TestValidatedEndpointMachine extends Machine
                 ],
             ],
             endpoints: [
-                'START' => null,
+                'START',
             ],
         );
     }
