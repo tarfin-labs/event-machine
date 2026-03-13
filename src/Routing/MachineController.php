@@ -227,7 +227,7 @@ class MachineController extends Controller
 
         // Find the MachineChild tracking record for this child
         $childRecord = MachineChild::where('child_root_event_id', $rootEventId)
-            ->whereNotIn('status', [MachineChild::STATUS_COMPLETED, MachineChild::STATUS_CANCELLED, MachineChild::STATUS_TIMED_OUT])
+            ->whereNotIn('status', [MachineChild::STATUS_COMPLETED, MachineChild::STATUS_FAILED, MachineChild::STATUS_CANCELLED, MachineChild::STATUS_TIMED_OUT])
             ->first();
 
         if ($childRecord === null) {
