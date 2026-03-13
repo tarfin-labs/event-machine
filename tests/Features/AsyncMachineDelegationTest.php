@@ -9,9 +9,12 @@ use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineTimeoutJob;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Definition\MachineInvokeDefinition;
+use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FailingChildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncForwardParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncTimeoutParentMachine;
 
 // ============================================================
@@ -242,4 +245,96 @@ it('ChildMachineTimeoutJob marks child as timed_out', function (): void {
     expect($childRecord->status)->toBe(MachineChild::STATUS_TIMED_OUT)
         ->and($childRecord->completed_at)->not->toBeNull()
         ->and($childRecord->isTerminal())->toBeTrue();
+});
+
+// ============================================================
+// Forward Event Routing
+// ============================================================
+
+it('resolveForwardEvent returns event type for plain forward config', function (): void {
+    $invoke = new MachineInvokeDefinition(
+        machineClass: SimpleChildMachine::class,
+        forward: ['APPROVE', 'REJECT'],
+        async: true,
+        queue: 'default',
+    );
+
+    expect($invoke->resolveForwardEvent('APPROVE'))->toBe('APPROVE')
+        ->and($invoke->resolveForwardEvent('REJECT'))->toBe('REJECT')
+        ->and($invoke->resolveForwardEvent('UNKNOWN'))->toBeNull();
+});
+
+it('resolveForwardEvent maps parent event to child event for rename format', function (): void {
+    $invoke = new MachineInvokeDefinition(
+        machineClass: SimpleChildMachine::class,
+        forward: ['PARENT_UPDATE' => 'CHILD_UPDATE', 'APPROVE'],
+        async: true,
+        queue: 'default',
+    );
+
+    expect($invoke->resolveForwardEvent('PARENT_UPDATE'))->toBe('CHILD_UPDATE')
+        ->and($invoke->resolveForwardEvent('APPROVE'))->toBe('APPROVE')
+        ->and($invoke->resolveForwardEvent('CHILD_UPDATE'))->toBeNull();
+});
+
+it('hasForward returns true only when forward events are configured', function (): void {
+    $withForward = new MachineInvokeDefinition(
+        machineClass: SimpleChildMachine::class,
+        forward: ['APPROVE'],
+        async: true,
+        queue: 'default',
+    );
+
+    $withoutForward = new MachineInvokeDefinition(
+        machineClass: SimpleChildMachine::class,
+        async: true,
+        queue: 'default',
+    );
+
+    expect($withForward->hasForward())->toBeTrue()
+        ->and($withoutForward->hasForward())->toBeFalse();
+});
+
+it('tryForwardEventToChild returns false when no forward config exists', function (): void {
+    Queue::fake();
+
+    // AsyncParentMachine has no forward config
+    $machine = AsyncParentMachine::create();
+    $machine->send(['type' => 'START']);
+
+    // Sending an unhandled event should throw, not forward
+    expect(fn () => $machine->send(['type' => 'UNKNOWN_EVENT']))
+        ->toThrow(NoTransitionDefinitionFoundException::class);
+});
+
+it('tryForwardEventToChild returns false when child has no running record', function (): void {
+    Queue::fake();
+
+    // AsyncForwardParentMachine has forward config but child is only faked/dispatched (not running)
+    $machine = AsyncForwardParentMachine::create();
+    $machine->send(['type' => 'START']);
+
+    // No MachineChild record with 'running' status exists (Queue::fake prevents actual job)
+    // The child record exists in 'pending' status from handleAsyncMachineInvoke
+    $childRecord = MachineChild::first();
+    expect($childRecord->status)->toBe(MachineChild::STATUS_PENDING);
+
+    // Forward should fail because there's no running child with child_root_event_id
+    expect(fn () => $machine->send(['type' => 'APPROVE']))
+        ->toThrow(NoTransitionDefinitionFoundException::class);
+});
+
+it('forward config is parsed correctly in state definition', function (): void {
+    Queue::fake();
+
+    $machine = AsyncForwardParentMachine::create();
+    $machine->send(['type' => 'START']);
+
+    $stateDefinition  = $machine->definition->idMap['forward_parent.processing'];
+    $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
+
+    expect($invokeDefinition->hasForward())->toBeTrue()
+        ->and($invokeDefinition->resolveForwardEvent('APPROVE'))->toBe('APPROVE')
+        ->and($invokeDefinition->resolveForwardEvent('PARENT_UPDATE'))->toBe('CHILD_UPDATE')
+        ->and($invokeDefinition->resolveForwardEvent('NONEXISTENT'))->toBeNull();
 });
