@@ -249,6 +249,55 @@ $machine->send(['type' => 'SHIPPED']); // shipping → done
 <div class="feature-section">
 <div class="feature-text">
 
+## Machine Delegation
+
+**Break complex workflows into composable machines.** A parent state delegates work to a child machine. When the child completes, `@done` fires. When it fails, `@fail` fires. Sync or async — your choice.
+
+Run children inline for simple cases, or dispatch to a queue for external I/O and webhooks. Fake child machines in tests with `Machine::fake()`. No child actually runs — assertions verify the invocation.
+
+[Machine delegation &rarr;](/advanced/machine-delegation)
+
+</div>
+<div class="feature-code">
+
+<!-- doctest-attr: ignore -->
+```php
+'processing_payment' => [
+    'machine' => PaymentMachine::class,
+    'with'    => ['order_id', 'total_amount'],
+    'queue'   => 'payments',
+    '@done'   => [
+        'target'  => 'shipping',
+        'actions' => 'storePaymentResultAction',
+    ],
+    '@fail'    => 'payment_failed',
+    '@timeout' => [
+        'after'  => 300,
+        'target' => 'payment_timed_out',
+    ],
+],
+```
+
+<!-- doctest-attr: ignore -->
+```php
+// Test without running the real child machine
+PaymentMachine::fake(result: ['payment_id' => 'pay_123']);
+
+$machine = OrderWorkflowMachine::create();
+$machine->send(['type' => 'START']);
+
+PaymentMachine::assertInvoked();
+PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
+
+Machine::resetMachineFakes();
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
 ## Test Everything, Fluently
 
 **From unit tests to full workflows — one expressive API.** Test individual behaviors in isolation with `runWithState()`, or chain entire machine lifecycles with `Machine::test()` and 21+ assertion methods.
