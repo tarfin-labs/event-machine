@@ -115,24 +115,9 @@ When the child machine reaches a final state, the parent's `@done` transition fi
 
 ### Accessing Child Result Data
 
-When `@done` fires, the event is a `ChildMachineDoneEvent` with typed accessors:
+When `@done` fires, the event is a `ChildMachineDoneEvent` with typed accessors for `result()`, `childContext()`, `childMachineId()`, and `childMachineClass()`. When `@fail` fires, the event is a `ChildMachineFailEvent` with `errorMessage()`, `childContext()`, and identity accessors.
 
-<!-- doctest-attr: no_run -->
-```php
-use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
-use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
-
-class StorePaymentResultAction extends ActionBehavior
-{
-    public function __invoke(ContextManager $context, ChildMachineDoneEvent $event): void
-    {
-        $context->set('payment_id', $event->result('payment_id'));
-        $context->set('receipt', $event->childContext('receipt_url'));
-        // Also available: $event->childMachineId(), $event->childMachineClass()
-    }
-}
-```
+See [Data Flow — `@done` Event](/advanced/delegation-data-flow#child-parent-the-done-event) and [Data Flow — `@fail` Event](/advanced/delegation-data-flow#child-parent-the-fail-event) for typed accessor examples.
 
 ## `@fail` — Child Failure
 
@@ -211,41 +196,9 @@ Forward parent events to the running child machine. Useful when the child needs 
 
 ## Delegation Inside Parallel States
 
-The `machine` key works at any state level, including within parallel regions:
+The `machine` key works at any state level, including within parallel regions. Each region runs its own child machine. The region's `@done` fires when its child completes. The parallel state's `@done` fires when **all** regions reach final.
 
-<!-- doctest-attr: ignore -->
-```php
-'processing' => [
-    'type'   => 'parallel',
-    '@done'  => 'shipping',
-    'states' => [
-        'payment' => [
-            'initial' => 'charging',
-            'states'  => [
-                'charging' => [
-                    'machine' => PaymentMachine::class,
-                    'with'    => ['order_id', 'total_amount'],
-                    '@done'   => 'charged',
-                ],
-                'charged' => ['type' => 'final'],
-            ],
-        ],
-        'inventory' => [
-            'initial' => 'reserving',
-            'states'  => [
-                'reserving' => [
-                    'machine' => InventoryMachine::class,
-                    'with'    => ['order_id'],
-                    '@done'   => 'reserved',
-                ],
-                'reserved' => ['type' => 'final'],
-            ],
-        ],
-    ],
-],
-```
-
-Each region runs its own child machine. The region's `@done` fires when its child completes. The parallel state's `@done` fires when **all** regions reach final.
+See [Delegation Patterns — Parallel Orchestration](/advanced/delegation-patterns#parallel-orchestration) for a full example.
 
 ## Testing with Machine Faking
 
@@ -266,6 +219,7 @@ $machine->send(['type' => 'START']);
 PaymentMachine::assertInvoked();
 PaymentMachine::assertInvokedTimes(1);
 PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
+PaymentMachine::assertNotInvoked(); // or verify it was NOT invoked
 
 // Fake a failure
 PaymentMachine::fake(fail: true, error: 'Insufficient funds');
