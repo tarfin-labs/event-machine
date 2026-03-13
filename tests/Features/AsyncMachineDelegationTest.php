@@ -131,6 +131,7 @@ it('ChildMachineJob sets MachineChild to failed on exception', function (): void
     $childRecord = MachineChild::create([
         'parent_root_event_id' => 'test-root-event-id',
         'parent_state_id'      => 'async_parent.processing',
+        'parent_machine_class' => AsyncParentMachine::class,
         'child_machine_class'  => FailingChildMachine::class,
         'status'               => MachineChild::STATUS_RUNNING,
         'created_at'           => now(),
@@ -204,6 +205,7 @@ it('ChildMachineTimeoutJob skips when child is already completed', function (): 
     $childRecord = MachineChild::create([
         'parent_root_event_id' => 'test-root',
         'parent_state_id'      => 'timeout_parent.processing',
+        'parent_machine_class' => AsyncTimeoutParentMachine::class,
         'child_machine_class'  => SimpleChildMachine::class,
         'status'               => MachineChild::STATUS_COMPLETED,
         'created_at'           => now(),
@@ -221,6 +223,7 @@ it('ChildMachineTimeoutJob skips when child is already failed', function (): voi
     $childRecord = MachineChild::create([
         'parent_root_event_id' => 'test-root',
         'parent_state_id'      => 'timeout_parent.processing',
+        'parent_machine_class' => AsyncTimeoutParentMachine::class,
         'child_machine_class'  => SimpleChildMachine::class,
         'status'               => MachineChild::STATUS_FAILED,
         'created_at'           => now(),
@@ -235,6 +238,7 @@ it('ChildMachineTimeoutJob marks child as timed_out', function (): void {
     $childRecord = MachineChild::create([
         'parent_root_event_id' => 'test-root',
         'parent_state_id'      => 'timeout_parent.processing',
+        'parent_machine_class' => AsyncTimeoutParentMachine::class,
         'child_machine_class'  => SimpleChildMachine::class,
         'status'               => MachineChild::STATUS_RUNNING,
         'created_at'           => now(),
@@ -375,6 +379,7 @@ it('MachineChild can be marked cancelled', function (): void {
     $childRecord = MachineChild::create([
         'parent_root_event_id' => 'test-root',
         'parent_state_id'      => 'async_parent.processing',
+        'parent_machine_class' => AsyncParentMachine::class,
         'child_machine_class'  => SimpleChildMachine::class,
         'status'               => MachineChild::STATUS_RUNNING,
         'created_at'           => now(),
@@ -399,6 +404,7 @@ it('multiple MachineChild records can be created for same parent', function (): 
     $childA = MachineChild::create([
         'parent_root_event_id' => $parentRootEventId,
         'parent_state_id'      => 'parent.region_a.delegating',
+        'parent_machine_class' => AsyncParentMachine::class,
         'child_machine_class'  => SimpleChildMachine::class,
         'status'               => MachineChild::STATUS_RUNNING,
         'created_at'           => now(),
@@ -407,6 +413,7 @@ it('multiple MachineChild records can be created for same parent', function (): 
     $childB = MachineChild::create([
         'parent_root_event_id' => $parentRootEventId,
         'parent_state_id'      => 'parent.region_b.delegating',
+        'parent_machine_class' => AsyncParentMachine::class,
         'child_machine_class'  => SimpleChildMachine::class,
         'status'               => MachineChild::STATUS_RUNNING,
         'created_at'           => now(),
