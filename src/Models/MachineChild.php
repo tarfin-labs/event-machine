@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
  * @property string $id ULID primary key.
  * @property string $parent_root_event_id The parent machine's root_event_id.
  * @property string $parent_state_id The parent state that invoked this child.
+ * @property string $parent_machine_class The FQCN of the parent machine.
  * @property string $child_machine_class The FQCN of the child machine.
  * @property string|null $child_root_event_id The child machine's root_event_id (set after creation).
  * @property string $status Current status: pending, running, completed, failed, cancelled, timed_out.
@@ -47,6 +48,7 @@ class MachineChild extends Model
         'id',
         'parent_root_event_id',
         'parent_state_id',
+        'parent_machine_class',
         'child_machine_class',
         'child_root_event_id',
         'status',
@@ -57,6 +59,7 @@ class MachineChild extends Model
         'id'                   => 'string',
         'parent_root_event_id' => 'string',
         'parent_state_id'      => 'string',
+        'parent_machine_class' => 'string',
         'child_machine_class'  => 'string',
         'child_root_event_id'  => 'string',
         'status'               => 'string',
