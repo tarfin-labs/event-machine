@@ -137,7 +137,7 @@ export default withMermaid(
             { text: 'Sync vs Async', link: '/advanced/async-delegation' },
             { text: 'Data Flow', link: '/advanced/delegation-data-flow' },
             { text: 'Patterns', link: '/advanced/delegation-patterns' },
-            { text: 'sendTo & Testing', link: '/advanced/sendto-and-testing' }
+            { text: 'sendTo & sendToParent', link: '/advanced/sendto' }
           ]
         },
         {
@@ -165,6 +165,7 @@ export default withMermaid(
             { text: 'TestMachine', link: '/testing/test-machine' },
             { text: 'Parallel Testing', link: '/testing/parallel-testing' },
             { text: 'Persistence Testing', link: '/testing/persistence-testing' },
+            { text: 'Inter-Machine Testing', link: '/testing/delegation-testing' },
             { text: 'Recipes', link: '/testing/recipes' }
           ]
         },
