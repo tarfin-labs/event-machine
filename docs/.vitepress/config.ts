@@ -73,23 +73,17 @@ export default withMermaid(
             { text: 'What is EventMachine?', link: '/getting-started/what-is-event-machine' },
             { text: 'Comparison', link: '/getting-started/comparison' },
             { text: 'Installation', link: '/getting-started/installation' },
-            { text: 'Upgrading', link: '/getting-started/upgrading' },
-            { text: 'Your First Machine', link: '/getting-started/your-first-machine' }
-          ]
-        },
-        {
-          text: 'Understanding',
-          collapsed: false,
-          items: [
+            { text: 'Your First Machine', link: '/getting-started/your-first-machine' },
             { text: 'States & Transitions', link: '/understanding/states-and-transitions' },
             { text: 'Events', link: '/understanding/events' },
             { text: 'Context', link: '/understanding/context' },
-            { text: 'Machine Lifecycle', link: '/understanding/machine-lifecycle' }
+            { text: 'Machine Lifecycle', link: '/understanding/machine-lifecycle' },
+            { text: 'Upgrading', link: '/getting-started/upgrading' }
           ]
         },
         {
           text: 'Building Machines',
-          collapsed: false,
+          collapsed: true,
           items: [
             { text: 'Defining States', link: '/building/defining-states' },
             { text: 'Writing Transitions', link: '/building/writing-transitions' },
@@ -103,7 +97,7 @@ export default withMermaid(
         },
         {
           text: 'Behaviors',
-          collapsed: false,
+          collapsed: true,
           items: [
             { text: 'Introduction', link: '/behaviors/introduction' },
             { text: 'Actions', link: '/behaviors/actions' },
