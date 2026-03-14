@@ -88,6 +88,25 @@ jobs:
       - name: Execute type coverage
         run: vendor/bin/pest --type-coverage --min=100 --colors=always
 
+  coverage:
+    name: Coverage
+    needs: [pint, rector]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: pcov
+
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Execute tests with coverage
+        run: vendor/bin/pest --coverage --min=80 --colors=always --order-by=random
+
   pest:
     name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.stability }}
     needs: [pint, rector]
@@ -108,8 +127,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo
-          coverage: xdebug
-          ini-values: xdebug.mode=coverage
+          coverage: none
 
       - name: Setup problem matchers
         run: |
@@ -127,7 +145,7 @@ jobs:
         run: composer show -D
 
       - name: Execute tests
-        run: vendor/bin/pest --coverage --colors=always --order-by=random
+        run: vendor/bin/pest --parallel --colors=always --order-by=random
 
   doctest:
     name: DocTest
