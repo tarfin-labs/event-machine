@@ -125,8 +125,47 @@ it('sends event synchronously to target', function (): void {
 });
 ```
 
+## Testing Job Actors
+
+Job actors dispatch `ChildJobJob` internally. Use `Queue::fake()` to verify:
+
+<!-- doctest-attr: no_run -->
+```php
+use Illuminate\Support\Facades\Queue;
+use Tarfinlabs\EventMachine\Jobs\ChildJobJob;
+
+it('dispatches job actor', function (): void {
+    Queue::fake();
+
+    // ... transition to a state with job key ...
+
+    Queue::assertPushed(ChildJobJob::class, function (ChildJobJob $job): bool {
+        return $job->jobClass === SendEmailJob::class
+            && $job->jobData === ['email' => 'test@example.com'];
+    });
+});
+```
+
+For fire-and-forget jobs, verify the parent transitions immediately:
+
+<!-- doctest-attr: no_run -->
+```php
+it('fire-and-forget job transitions parent immediately', function (): void {
+    Queue::fake();
+
+    // ... transition to a state with job + target ...
+
+    // Parent should be at target state, not waiting
+    expect($state->value)->toBe(['parent.next_state']);
+
+    // Job was dispatched
+    Queue::assertPushed(ChildJobJob::class);
+});
+```
+
 ::: tip Related
 See [Cross-Machine Messaging](/advanced/sendto) for the API reference,
+[Job Actors](/advanced/job-actors) for configuration,
 [Machine Delegation](/advanced/machine-delegation) for delegation configuration,
 and [Recipes — Child Machine Faking](/testing/recipes#recipe-child-machine-faking) for more examples.
 :::
