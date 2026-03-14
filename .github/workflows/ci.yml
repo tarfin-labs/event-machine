@@ -145,7 +145,7 @@ jobs:
         run: composer show -D
 
       - name: Execute tests
-        run: vendor/bin/pest --parallel --colors=always --order-by=random
+        run: vendor/bin/pest --parallel --no-coverage --colors=always --order-by=random
 
   doctest:
     name: DocTest
