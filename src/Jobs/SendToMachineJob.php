@@ -17,7 +17,7 @@ use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 /**
  * Queue job that sends an event to a target machine asynchronously.
  *
- * Dispatched by InvokableBehavior::sendTo() when async mode is used.
+ * Dispatched by InvokableBehavior::dispatchTo() and dispatchToParent().
  * Restores the target machine from its root_event_id, sends the event,
  * and handles the case where the target machine no longer exists.
  */
