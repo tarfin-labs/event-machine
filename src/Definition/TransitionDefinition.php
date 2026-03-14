@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Definition;
 use Throwable;
 use Mockery\MockInterface;
 use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\Support\Timer;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
@@ -37,6 +38,9 @@ class TransitionDefinition
     /** This variable determines whether the condition is always false. */
     public bool $isAlways = false;
 
+    /** Timer definition for this transition (after/every key), or null if no timer. */
+    public ?TimerDefinition $timerDefinition = null;
+
     // endregion
 
     // region Constructor
@@ -58,6 +62,9 @@ class TransitionDefinition
         }
 
         $this->description = $this->transitionConfig['description'] ?? null;
+
+        // Extract timer config (after/every/max/then) before processing branches
+        $this->extractTimerConfig();
 
         if ($this->transitionConfig === null) {
             $this->branches[] = new TransitionBranch(
@@ -94,6 +101,50 @@ class TransitionDefinition
     // endregion
 
     // region Protected Methods
+
+    /**
+     * Extract timer configuration (after/every/max/then) from transition config.
+     *
+     * Handles both single-branch configs (associative array with 'after'/'every')
+     * and multi-branch configs (mixed array with numeric branch entries + string timer keys).
+     * Removes timer keys from transitionConfig so branch parsing is unaffected.
+     */
+    protected function extractTimerConfig(): void
+    {
+        if (!is_array($this->transitionConfig)) {
+            return;
+        }
+
+        $after = $this->transitionConfig['after'] ?? null;
+        $every = $this->transitionConfig['every'] ?? null;
+
+        if ($after === null && $every === null) {
+            return;
+        }
+
+        $stateId = $this->source->id;
+        $max     = $this->transitionConfig['max'] ?? null;
+        $then    = $this->transitionConfig['then'] ?? null;
+
+        if ($after instanceof Timer) {
+            $this->timerDefinition = TimerDefinition::fromAfter($after, $this->event, $stateId);
+        } elseif ($every instanceof Timer) {
+            $this->timerDefinition = TimerDefinition::fromEvery($every, $this->event, $stateId, $max, $then);
+        }
+
+        // Remove timer keys from config so branch parsing is clean
+        unset(
+            $this->transitionConfig['after'],
+            $this->transitionConfig['every'],
+            $this->transitionConfig['max'],
+            $this->transitionConfig['then'],
+        );
+
+        // If config is now empty (timer was the only content), set to null
+        if ($this->transitionConfig === []) {
+            $this->transitionConfig = null;
+        }
+    }
 
     /**
      * Determines if the given transition configuration represents a multi-path guarded transition.
