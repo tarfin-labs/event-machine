@@ -87,9 +87,9 @@ it('processes order through payment', function (): void {
 });
 ```
 
-## Testing sendTo / sendToParent
+## Testing dispatchTo / dispatchToParent
 
-For `sendTo()` and `sendToParent()` with async mode, fake the queue:
+For async messaging via `dispatchTo()` and `dispatchToParent()`, fake the queue:
 
 <!-- doctest-attr: no_run -->
 ```php
@@ -99,7 +99,7 @@ use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 it('dispatches progress to parent', function (): void {
     Queue::fake();
 
-    // ... invoke action that calls sendToParent(async: true) ...
+    // ... invoke action that calls dispatchToParent() ...
 
     Queue::assertPushed(SendToMachineJob::class, function (SendToMachineJob $job): bool {
         return $job->event['type'] === 'CHILD_PROGRESS'
@@ -108,10 +108,25 @@ it('dispatches progress to parent', function (): void {
 });
 ```
 
-For sync mode, verify the target machine's state directly after the `sendTo()` call.
+## Testing sendTo / sendToParent
+
+For sync messaging, verify the target machine's state directly after the call:
+
+<!-- doctest-attr: no_run -->
+```php
+it('sends event synchronously to target', function (): void {
+    $target = TargetMachine::create();
+    $target->persist();
+
+    // ... invoke action that calls sendTo() ...
+
+    $restored = TargetMachine::create(state: $rootEventId);
+    expect($restored->state->currentStateDefinition->id)->toBe('target.completed');
+});
+```
 
 ::: tip Related
-See [sendTo & sendToParent](/advanced/sendto) for the API reference,
+See [Cross-Machine Messaging](/advanced/sendto) for the API reference,
 [Machine Delegation](/advanced/machine-delegation) for delegation configuration,
 and [Recipes — Child Machine Faking](/testing/recipes#recipe-child-machine-faking) for more examples.
 :::
