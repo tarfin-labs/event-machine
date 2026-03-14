@@ -479,6 +479,13 @@ class StateConfigValidator
                 message: "State '{$path}' has 'forward' without 'queue'. Event forwarding is only valid in async mode."
             );
         }
+
+        // target is only valid for job actors, not machine delegation
+        if (isset($stateConfig['target'])) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has 'target' with 'machine'. The 'target' key is only valid for job actors. Use '@done' for machine delegation."
+            );
+        }
     }
 
     /**
@@ -508,6 +515,13 @@ class StateConfigValidator
         if (isset($stateConfig['type']) && $stateConfig['type'] === 'parallel') {
             throw new InvalidArgumentException(
                 message: "State '{$path}' cannot have both 'job' and type 'parallel'."
+            );
+        }
+
+        // forward is only valid for machine delegation, not jobs
+        if (!empty($stateConfig['forward'])) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has 'forward' with 'job'. Event forwarding is only valid for machine delegation."
             );
         }
 
