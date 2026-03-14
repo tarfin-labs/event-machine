@@ -214,3 +214,53 @@ class NotifyShippingAction extends ActionBehavior {
 ```
 
 **`sendTo()` / `dispatchTo()` are escape hatches**, not the primary communication pattern. Their main use case is `sendToParent()` / `dispatchToParent()` for progress reporting.
+
+## Fire-and-Forget Pattern
+
+Fire-and-forget means dispatching work without tracking the result. Use it for side effects where the parent doesn't care about the outcome.
+
+### Job Actor (recommended)
+
+The cleanest fire-and-forget — dispatch a job and move on:
+
+<!-- doctest-attr: ignore -->
+```php
+'logging' => [
+    'job'    => AuditLogJob::class,
+    'with'   => ['action', 'user_id'],
+    'target' => 'next_state',           // no @done → fire-and-forget
+],
+```
+
+### dispatchTo() from an Action
+
+For sending an event to an existing machine without waiting:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+
+class SendAlertAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        $this->dispatchTo(
+            machineClass: AlertMachine::class,
+            rootEventId: $context->get('alert_machine_id'),
+            event: ['type' => 'SEND_ALERT'],
+        );
+    }
+}
+```
+
+### What About `machine` Key?
+
+The `machine` key always creates a managed parent-child relationship and requires `@done`. Fire-and-forget with `machine` key is **not supported by design** — if you don't care about the result, use a job actor or `dispatchTo()`.
+
+| Mechanism | Tracks Result | Parent Waits | Use Case |
+|-----------|--------------|-------------|----------|
+| `job` + `target` | No | No | Single-step async (logging, notification) |
+| `dispatchTo()` | No | No | Event to existing machine |
+| `job` + `@done` | Yes | Yes | Managed async job |
+| `machine` + `@done` | Yes | Yes | Complex stateful delegation |
