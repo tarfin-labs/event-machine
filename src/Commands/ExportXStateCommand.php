@@ -295,6 +295,13 @@ class ExportXStateCommand extends Command
             $eventName = str_replace('@', '', $event);
             $node['on'] ??= [];
             $node['on'][$eventName] = $this->buildTransitionConfig($transitionDefinition, $stateDefinition);
+
+            // Map timer definitions to XState v5 `after` format
+            if ($transitionDefinition->timerDefinition !== null && $transitionDefinition->timerDefinition->isAfter()) {
+                $delay = $transitionDefinition->timerDefinition->delaySeconds * 1000; // XState uses ms
+                $node['after'] ??= [];
+                $node['after'][$delay] = $this->buildTransitionConfig($transitionDefinition, $stateDefinition);
+            }
         }
     }
 
