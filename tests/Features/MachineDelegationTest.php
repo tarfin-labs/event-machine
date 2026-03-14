@@ -72,7 +72,7 @@ it('transfers context to child via with array (same-name format)', function (): 
         behavior: [
             'actions' => [
                 'captureResultAction' => function (ContextManager $context, EventBehavior $event): void {
-                    $context->set('received_order_id', $event->payload['child_context']['order_id'] ?? null);
+                    $context->set('received_order_id', $event->payload['output']['order_id'] ?? null);
                 },
             ],
         ],
@@ -454,7 +454,7 @@ it('ChildMachineDoneEvent has typed accessors', function (): void {
 
     expect($receivedEvent)->toBeInstanceOf(ChildMachineDoneEvent::class)
         ->and($receivedEvent->result('payment_id'))->toBe('pay_abc')
-        ->and($receivedEvent->childContext('payment_id'))->toBe('pay_abc')
+        ->and($receivedEvent->output('payment_id'))->toBe('pay_abc')
         ->and($receivedEvent->childMachineClass())->toBe(ResultChildMachine::class);
 });
 

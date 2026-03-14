@@ -83,7 +83,7 @@ it('routeChildDoneEvent is safe when parent already transitioned', function (): 
 
     $doneEvent = ChildMachineDoneEvent::forChild([
         'result'        => ['status' => 'ok'],
-        'child_context' => [],
+        'output'        => [],
         'machine_id'    => '',
         'machine_class' => SimpleChildMachine::class,
     ]);
