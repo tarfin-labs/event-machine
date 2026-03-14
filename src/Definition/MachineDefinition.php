@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Jobs\ChildJobJob;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Models\MachineChild;
@@ -1007,6 +1008,13 @@ class MachineDefinition
 
         $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
 
+        // Job actor: dispatch as Laravel job
+        if ($invokeDefinition->isJob()) {
+            $this->handleJobInvoke($state, $stateDefinition, $invokeDefinition);
+
+            return;
+        }
+
         // Short-circuit if child machine is faked (testing)
         if (Machine::isMachineFaked($invokeDefinition->machineClass)) {
             $this->handleFakedMachineInvoke($state, $stateDefinition, $invokeDefinition);
@@ -1089,6 +1097,59 @@ class MachineDefinition
 
     /**
      * Handle async machine delegation: dispatch child machine to queue.
+     *
+     * Handle a job actor invocation.
+     *
+     * Dispatches a ChildJobJob to run the Laravel job.
+     * For fire-and-forget (target set, no @done), transitions parent immediately.
+     * For managed jobs (@done set), parent stays waiting for completion.
+     */
+    protected function handleJobInvoke(State $state, StateDefinition $stateDefinition, MachineInvokeDefinition $invokeDefinition): void
+    {
+        $jobClass        = $invokeDefinition->jobClass;
+        $jobData         = $invokeDefinition->resolveChildContext($state->context);
+        $isFireAndForget = $invokeDefinition->target !== null;
+
+        // Record job start
+        $state->setInternalEventBehavior(
+            type: InternalEvent::CHILD_MACHINE_START,
+            placeholder: $jobClass,
+        );
+
+        // Dispatch the job
+        $childJobJob = new ChildJobJob(
+            parentRootEventId: $state->history->first()->root_event_id,
+            parentMachineClass: $this->machineClass,
+            parentStateId: $stateDefinition->id,
+            jobClass: $jobClass,
+            jobData: $jobData,
+            fireAndForget: $isFireAndForget,
+        );
+
+        if ($invokeDefinition->queue !== null) {
+            $childJobJob->onQueue($invokeDefinition->queue);
+        }
+
+        if ($invokeDefinition->connection !== null) {
+            $childJobJob->onConnection($invokeDefinition->connection);
+        }
+
+        dispatch($childJobJob);
+
+        // Fire-and-forget: transition to target immediately
+        if ($isFireAndForget) {
+            $targetState = $this->idMap[$this->id.'.'.$invokeDefinition->target]
+                ?? $this->idMap[$invokeDefinition->target]
+                ?? null;
+
+            if ($targetState instanceof StateDefinition) {
+                $state->setCurrentStateDefinition($targetState);
+            }
+        }
+    }
+
+    /**
+     * Handle an asynchronous child machine invocation.
      *
      * Creates a MachineChild tracking record, dispatches ChildMachineJob,
      * and optionally dispatches ChildMachineTimeoutJob with configured delay.
