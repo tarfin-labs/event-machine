@@ -121,6 +121,27 @@ The `machine:xstate` Artisan command now maps `machine` keys to XState v5 `invok
 | `job` | `string` (FQCN) | Laravel Job class to invoke as actor |
 | `target` | `string` | Target state for fire-and-forget jobs |
 | `output` | `array\|Closure` | Filter child context exposed to parent via `@done` |
+| `after` | `Timer` | One-shot timer on transition (auto-trigger after duration) |
+| `every` | `Timer` | Recurring timer on transition (auto-trigger at interval) |
+| `max` | `int` | Max fire count for `every` timer |
+| `then` | `string` | Event to send after `max` reached |
+
+### New Feature: Time-Based Events
+
+Define `after` and `every` timers directly on transitions. The sweep command auto-discovers machines and processes timers:
+
+<!-- doctest-attr: ignore -->
+```php
+'awaiting_payment' => [
+    'on' => [
+        'PAY'           => 'processing',
+        'ORDER_EXPIRED' => ['target' => 'cancelled', 'after' => Timer::days(7)],
+        'REMINDER'      => ['actions' => 'sendReminderAction', 'every' => Timer::days(1)],
+    ],
+],
+```
+
+For full documentation, see [Time-Based Events](/advanced/time-based-events) and [Time-Based Testing](/testing/time-based-testing).
 
 ### New Files
 
@@ -136,6 +157,15 @@ The `machine:xstate` Artisan command now maps `machine` keys to XState v5 `invok
 | `src/Jobs/ChildJobJob.php` | Queue job for job actor execution |
 | `src/Contracts/ReturnsResult.php` | Interface for jobs that return output to parent |
 | `src/Models/MachineChild.php` | Eloquent model for async child tracking |
+| `src/Models/MachineCurrentState.php` | Tracks current state of machine instances |
+| `src/Models/MachineTimerFire.php` | Timer dedup and recurring state tracking |
+| `src/Support/Timer.php` | Duration value object for timer config |
+| `src/Definition/TimerDefinition.php` | Parsed timer config from transitions |
+| `src/Enums/TimerResolution.php` | Sweep frequency enum |
+| `src/Commands/ProcessTimersCommand.php` | Sweep command for time-based events |
+| `src/Commands/TimerStatusCommand.php` | Timer status display |
+| `src/Commands/MachineCacheCommand.php` | Cache machine discovery for production |
+| `src/Commands/MachineClearCommand.php` | Clear machine discovery cache |
 
 ### New Database Table
 
