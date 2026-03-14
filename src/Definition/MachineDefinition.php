@@ -1191,7 +1191,7 @@ class MachineDefinition
                 'error_message' => $fake['error'] ?? 'Faked failure',
                 'machine_id'    => '',
                 'machine_class' => $childMachineClass,
-                'child_context' => $childContext,
+                'output'        => $childContext,
             ]);
 
             $this->routeChildFailEvent($state, $stateDefinition, $failEvent);
@@ -1204,7 +1204,7 @@ class MachineDefinition
 
             $doneEvent = ChildMachineDoneEvent::forChild([
                 'result'        => $fake['result'],
-                'child_context' => $childContext,
+                'output'        => $childContext,
                 'machine_id'    => '',
                 'machine_class' => $childMachineClass,
             ]);
@@ -1270,6 +1270,10 @@ class MachineDefinition
                 success: true,
                 result: $childMachine->result(),
                 childContextData: $childMachine->state->context->data,
+                outputData: self::resolveChildOutput(
+                    $childMachine->state->currentStateDefinition,
+                    $childMachine->state->context,
+                ),
             ));
         }
 
@@ -1289,15 +1293,44 @@ class MachineDefinition
         }
 
         $childRootEventId = $childMachine->state->history->first()->root_event_id;
+        $childContext     = $childMachine->state->context->data;
 
         $doneEvent = ChildMachineDoneEvent::forChild([
             'result'        => $childMachine->result(),
-            'child_context' => $childMachine->state->context->data,
+            'output'        => self::resolveChildOutput($childMachine->state->currentStateDefinition, $childMachine->state->context) ?? $childContext,
             'machine_id'    => $childRootEventId,
             'machine_class' => $childMachineClass,
         ]);
 
         $this->routeChildDoneEvent($state, $stateDefinition, $doneEvent);
+    }
+
+    /**
+     * Resolve the output from a child machine's final state definition.
+     *
+     * If `output` is an array of key names, filters the context to those keys.
+     * If `output` is a Closure, calls it with the context manager.
+     * If `output` is null, returns null (caller falls back to full context).
+     */
+    public static function resolveChildOutput(StateDefinition $finalState, ContextManager $context): ?array
+    {
+        if ($finalState->output === null) {
+            return null;
+        }
+
+        if ($finalState->output instanceof \Closure) {
+            return ($finalState->output)($context);
+        }
+
+        // Array of key names — filter context to those keys
+        $output = [];
+        foreach ($finalState->output as $key) {
+            if ($context->has($key)) {
+                $output[$key] = $context->get($key);
+            }
+        }
+
+        return $output;
     }
 
     /**
@@ -1336,7 +1369,7 @@ class MachineDefinition
             'error_message' => $exception->getMessage(),
             'machine_id'    => '',
             'machine_class' => $childMachineClass,
-            'child_context' => [],
+            'output'        => [],
         ]);
 
         $this->routeChildFailEvent($state, $stateDefinition, $failEvent, $exception);
