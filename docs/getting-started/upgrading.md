@@ -43,7 +43,7 @@ For full documentation, see [Machine Delegation](/advanced/machine-delegation).
 
 ### New Feature: Cross-Machine Communication
 
-Behaviors can now send events to other machine instances via `sendTo()` and `sendToParent()`:
+Behaviors can now send events to other machine instances. Sync methods (`sendTo`, `sendToParent`) deliver immediately. Async methods (`dispatchTo`, `dispatchToParent`) dispatch via queue:
 
 <!-- doctest-attr: no_run -->
 ```php
@@ -54,24 +54,30 @@ class ReportProgressAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        // Send event to parent machine (child → parent)
-        $this->sendToParent($context, [
+        // Async: dispatch progress to parent via queue
+        $this->dispatchToParent($context, [
             'type'    => 'CHILD_PROGRESS',
             'payload' => ['percent' => 50],
         ]);
 
-        // Send event to any machine (sync or async)
-        $this->sendTo(
+        // Async: dispatch event to any machine via queue
+        $this->dispatchTo(
             machineClass: TargetMachine::class,
             rootEventId: $context->get('target_id'),
             event: ['type' => 'NOTIFICATION'],
-            async: true,
+        );
+
+        // Sync: send event immediately (blocking)
+        $this->sendTo(
+            machineClass: TargetMachine::class,
+            rootEventId: $context->get('target_id'),
+            event: ['type' => 'URGENT_NOTIFICATION'],
         );
     }
 }
 ```
 
-For full documentation, see [sendTo & sendToParent](/advanced/sendto) and [Inter-Machine Testing](/testing/delegation-testing).
+For full documentation, see [Cross-Machine Messaging](/advanced/sendto) and [Inter-Machine Testing](/testing/delegation-testing).
 
 ### New Feature: Machine Faking
 
@@ -123,7 +129,7 @@ The `machine:xstate` Artisan command now maps `machine` keys to XState v5 `invok
 | `src/Jobs/ChildMachineJob.php` | Queue job for async child creation |
 | `src/Jobs/ChildMachineCompletionJob.php` | Queue job for routing `@done`/`@fail` back to parent |
 | `src/Jobs/ChildMachineTimeoutJob.php` | Delayed check job for `@timeout` |
-| `src/Jobs/SendToMachineJob.php` | Queue job for async `sendTo()` |
+| `src/Jobs/SendToMachineJob.php` | Queue job for `dispatchTo()` / `dispatchToParent()` |
 | `src/Models/MachineChild.php` | Eloquent model for async child tracking |
 
 ### New Database Table
