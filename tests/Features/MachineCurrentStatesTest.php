@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
 
 // ─── Basic Sync ──────────────────────────────────────────────────
@@ -92,6 +94,52 @@ it('deletes current state rows when machine reaches final state', function (): v
     $rows = MachineCurrentState::forInstance($rootEventId)->get();
     expect($rows)->toHaveCount(1)
         ->and($rows->first()->state_id)->toBe('after_timer.completed');
+});
+
+it('parallel machine creates N rows on persist', function (): void {
+    $machine = Machine::withDefinition(
+        MachineDefinition::define(
+            config: [
+                'id'      => 'parallel_test',
+                'initial' => 'active',
+                'states'  => [
+                    'active' => [
+                        'type'   => 'parallel',
+                        '@done'  => 'completed',
+                        'states' => [
+                            'region_a' => [
+                                'initial' => 'a1',
+                                'states'  => [
+                                    'a1'      => ['on' => ['DONE_A' => 'a_final']],
+                                    'a_final' => ['type' => 'final'],
+                                ],
+                            ],
+                            'region_b' => [
+                                'initial' => 'b1',
+                                'states'  => [
+                                    'b1'      => ['on' => ['DONE_B' => 'b_final']],
+                                    'b_final' => ['type' => 'final'],
+                                ],
+                            ],
+                        ],
+                    ],
+                    'completed' => ['type' => 'final'],
+                ],
+            ],
+        )
+    );
+
+    $machine->start();
+    $machine->persist();
+
+    $rootEventId = $machine->state->history->first()->root_event_id;
+    $rows        = MachineCurrentState::forInstance($rootEventId)->get();
+
+    // Parallel: 2 rows (one per region)
+    expect($rows)->toHaveCount(2);
+
+    $stateIds = $rows->pluck('state_id')->sort()->values()->toArray();
+    expect($stateIds)->toBe(['parallel_test.active.region_a.a1', 'parallel_test.active.region_b.b1']);
 });
 
 it('handles forSweep scope correctly', function (): void {
