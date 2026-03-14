@@ -46,19 +46,18 @@ it('sends event to a target machine synchronously via sendTo', function (): void
     expect($restored->state->currentStateDefinition->id)->toBe('simple_child.done');
 });
 
-// ─── Async sendTo ────────────────────────────────────────────────
+// ─── Async dispatchTo ───────────────────────────────────────────
 
-it('dispatches SendToMachineJob when async mode is used', function (): void {
+it('dispatches SendToMachineJob via dispatchTo', function (): void {
     Queue::fake();
 
     $action = new class() extends ActionBehavior {
         public function __invoke(ContextManager $ctx): void
         {
-            $this->sendTo(
+            $this->dispatchTo(
                 machineClass: SimpleChildMachine::class,
                 rootEventId: 'some-root-event-id',
                 event: ['type' => 'COMPLETE'],
-                async: true,
             );
         }
     };
@@ -155,17 +154,48 @@ it('sendToParent throws on non-child machine', function (): void {
     $action->__invoke($ctx);
 })->throws(RuntimeException::class, 'Cannot sendToParent');
 
-it('sendToParent resolves parent identity from context', function (): void {
+it('sendToParent sends event synchronously to parent', function (): void {
+    // Use SimpleChildMachine as "parent" — it starts in idle, can receive COMPLETE
+    $parentMachine = SimpleChildMachine::create();
+    $parentMachine->persist();
+    $parentRootEventId = $parentMachine->state->history->first()->root_event_id;
+
+    expect($parentMachine->state->currentStateDefinition->id)->toBe('simple_child.idle');
+
+    $action = new class() extends ActionBehavior {
+        public function __invoke(ContextManager $ctx): void
+        {
+            $this->sendToParent($ctx, ['type' => 'COMPLETE']);
+        }
+    };
+
+    // Create child context with parent identity
+    $ctx = ContextManager::validateAndCreate(['data' => []]);
+    $ctx->setMachineIdentity(
+        machineId: 'child-id',
+        parentRootEventId: $parentRootEventId,
+        parentMachineClass: SimpleChildMachine::class,
+    );
+
+    $action->__invoke($ctx);
+
+    // Verify: parent machine received the COMPLETE event and transitioned to done
+    $restored = SimpleChildMachine::create(state: $parentRootEventId);
+    expect($restored->state->currentStateDefinition->id)->toBe('simple_child.done');
+});
+
+// ─── dispatchToParent ────────────────────────────────────────────
+
+it('dispatchToParent dispatches SendToMachineJob to parent', function (): void {
     Queue::fake();
 
-    // Create a parent machine first
     $parent            = ParentOrderMachine::create();
     $parentRootEventId = $parent->state->history->first()->root_event_id;
 
     $action = new class() extends ActionBehavior {
         public function __invoke(ContextManager $ctx): void
         {
-            $this->sendToParent($ctx, ['type' => 'START_PAYMENT'], async: true);
+            $this->dispatchToParent($ctx, ['type' => 'START_PAYMENT']);
         }
     };
 
@@ -187,7 +217,20 @@ it('sendToParent resolves parent identity from context', function (): void {
     });
 });
 
-it('sendTo converts EventBehavior to array for async dispatch', function (): void {
+it('dispatchToParent throws on non-child machine', function (): void {
+    $action = new class() extends ActionBehavior {
+        public function __invoke(ContextManager $ctx): void
+        {
+            $this->dispatchToParent($ctx, ['type' => 'PROGRESS']);
+        }
+    };
+
+    $ctx = ContextManager::validateAndCreate(['data' => []]);
+
+    $action->__invoke($ctx);
+})->throws(RuntimeException::class, 'Cannot dispatchToParent');
+
+it('dispatchTo converts EventBehavior to array for dispatch', function (): void {
     Queue::fake();
 
     $action = new class() extends ActionBehavior {
@@ -200,11 +243,10 @@ it('sendTo converts EventBehavior to array for async dispatch', function (): voi
                 'source'  => SourceType::EXTERNAL,
             ]);
 
-            $this->sendTo(
+            $this->dispatchTo(
                 machineClass: SimpleChildMachine::class,
                 rootEventId: 'some-id',
                 event: $event,
-                async: true,
             );
         }
     };
