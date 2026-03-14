@@ -14,13 +14,13 @@ Parent Context
     │                                │
     │                                └── Child reaches final state
     │                                      │
-    │                                      ├── ResultBehavior output (if defined)
-    │                                      └── Child's final context
+    │                                      ├── 'output' filters (if defined)
+    │                                      └── ResultBehavior (if defined)
     │
     ├── Available in @done event ◄───────┘
     │     {
     │       result:        <ResultBehavior output>,
-    │       child_context: <child's final context>,
+    │       output:        <filtered context or full context>,
     │       machine_id:    <child's root_event_id>,
     │       machine_class: <child's FQCN>,
     │     }
@@ -36,6 +36,37 @@ See [Machine Delegation — `with` key](/advanced/machine-delegation#with-contex
 
 Without `with`, the child starts with its own default context. No parent data is transferred automatically.
 
+## Child → Parent: The `output` Key
+
+The `output` key on a final state controls which context values are exposed to the parent. This creates a symmetric data flow: `with` controls input, `output` controls output.
+
+### Array Format
+
+<!-- doctest-attr: ignore -->
+```php
+'approved' => [
+    'type'   => 'final',
+    'output' => ['payment_id', 'status'],  // only these keys are exposed
+],
+```
+
+### Closure Format
+
+<!-- doctest-attr: ignore -->
+```php
+'approved' => [
+    'type'   => 'final',
+    'output' => fn(ContextManager $ctx) => [
+        'payment_id' => $ctx->get('payment_id'),
+        'total'      => $ctx->get('amount') + $ctx->get('tax'),
+    ],
+],
+```
+
+### No Output Key
+
+When no `output` key is defined, the full child context is returned (default behavior).
+
 ## Child → Parent: The `@done` Event
 
 When the child reaches a final state, `@done` fires with a `ChildMachineDoneEvent` that provides typed accessors:
@@ -50,11 +81,12 @@ class StorePaymentResultAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, ChildMachineDoneEvent $event): void
     {
-        // ResultBehavior output from child (if defined)
-        $context->set('payment_id', $event->result('payment_id'));
+        // Filtered output (respects child's output key)
+        $context->set('payment_id', $event->output('payment_id'));
+        $context->set('status', $event->output('status'));
 
-        // Child's final context values
-        $context->set('receipt', $event->childContext('receipt_url'));
+        // ResultBehavior output from child (if defined)
+        $context->set('receipt', $event->result('receipt_url'));
 
         // Child identity
         $childId    = $event->childMachineId();
@@ -62,6 +94,13 @@ class StorePaymentResultAction extends ActionBehavior
     }
 }
 ```
+
+| Accessor | Return Type | Description |
+|----------|-------------|-------------|
+| `output(?$key)` | `mixed` | Filtered output (or full context if no `output` key defined) |
+| `result(?$key)` | `mixed` | ResultBehavior output (if defined on final state) |
+| `childMachineId()` | `string` | Child's `root_event_id` |
+| `childMachineClass()` | `string` | Child's FQCN |
 
 ## Child → Parent: The `@fail` Event
 
@@ -81,7 +120,7 @@ class HandlePaymentFailureAction extends ActionBehavior
         $context->set('error', $event->errorMessage());
 
         // Child's context at the time of failure
-        $context->set('failed_amount', $event->childContext('amount'));
+        $context->set('failed_amount', $event->output('amount'));
 
         // Child identity
         $childId    = $event->childMachineId();
@@ -95,7 +134,14 @@ class HandlePaymentFailureAction extends ActionBehavior
 | `errorMessage()` | `?string` | Error message from exception or manual failure |
 | `childMachineId()` | `string` | Child's `root_event_id` |
 | `childMachineClass()` | `string` | Child's FQCN |
-| `childContext(?$key)` | `mixed` | Child's context at failure time (full array or single key) |
+| `output(?$key)` | `mixed` | Child's context at failure time (full array or single key) |
+
+## with/output Symmetry
+
+| Direction | Config Key | Formats | Purpose |
+|-----------|-----------|---------|---------|
+| Parent → Child | `with` | array, rename map, closure | Controls what data child receives |
+| Child → Parent | `output` | array, closure | Controls what data parent receives |
 
 ## Auto-Injected Context Keys
 
@@ -110,54 +156,9 @@ Access via typed methods:
 
 <!-- doctest-attr: no_run -->
 ```php
-use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
-
-class ChildAction extends ActionBehavior
-{
-    public function __invoke(ContextManager $context): void
-    {
-        $myId     = $context->machineId();        // own root_event_id
-        $parentId = $context->parentMachineId();   // parent's root_event_id
-    }
-}
+$context->machineId();           // child's own root_event_id
+$context->parentMachineId();     // parent's root_event_id
+$context->parentMachineClass();  // parent's FQCN
 ```
 
-::: info
-`_machine_id` is injected for **all** machines — not just children. Every machine can access its own identity via `$context->machineId()`.
-:::
-
-## Context Isolation
-
-Child context is **completely isolated** from the parent. There is no automatic merge. This differs from [parallel regions](/advanced/parallel-states/), where context IS merged because parallel regions share the same machine instance.
-
-**Why isolated?**
-- Child has a different machine definition with different context keys
-- Automatic merge could pollute parent context with unexpected keys
-- Explicit mapping via `@done` actions is safer and more readable
-- Consistent with EventMachine's "data flows through actions" principle
-
-**Example of isolation:**
-
-<!-- doctest-attr: ignore -->
-```php
-// Parent context: { order_id: 'ORD-1', total: 100 }
-// Child context (via with): { order_id: 'ORD-1' }
-
-// Child sets order_id to something else:
-$context->set('order_id', 'CHILD-MODIFIED');
-// Parent's order_id is STILL 'ORD-1' — completely unaffected
-```
-
-## State Isolation
-
-Parent's `State::$value` does **not** include child machine states:
-
-<!-- doctest-attr: ignore -->
-```php
-// Parent is in 'processing_payment', child is in 'awaiting_charge'
-$state->value; // ['order_workflow.processing_payment']
-// NOT: ['processing_payment' => ['payment' => 'awaiting_charge']]
-```
-
-Child states are the child's business. The parent interacts with the child only through `@done`, `@fail`, and `forward` — never by inspecting its internal state.
+These are stored as separate properties on `ContextManager`, **not** in the `data` array. They don't appear in context diffs or persist beyond the current lifecycle.
