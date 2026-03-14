@@ -78,6 +78,7 @@ export default withMermaid(
             { text: 'Events', link: '/understanding/events' },
             { text: 'Context', link: '/understanding/context' },
             { text: 'Machine Lifecycle', link: '/understanding/machine-lifecycle' },
+            { text: 'The Actor Model', link: '/getting-started/actor-model' },
             { text: 'Upgrading', link: '/getting-started/upgrading' }
           ]
         },
