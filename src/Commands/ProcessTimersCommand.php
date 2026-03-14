@@ -171,14 +171,25 @@ class ProcessTimersCommand extends Command
 
         // Update fire tracking
         foreach ($instances as $instance) {
-            MachineTimerFire::updateOrCreate(
-                ['root_event_id' => $instance->root_event_id, 'timer_key' => $timer->key()],
-                [
+            $existing = MachineTimerFire::where('root_event_id', $instance->root_event_id)
+                ->where('timer_key', $timer->key())
+                ->first();
+
+            if ($existing instanceof MachineTimerFire) {
+                $existing->update([
                     'last_fired_at' => now(),
-                    'fire_count'    => DB::raw('COALESCE(fire_count, 0) + 1'),
+                    'fire_count'    => $existing->fire_count + 1,
                     'status'        => MachineTimerFire::STATUS_ACTIVE,
-                ],
-            );
+                ]);
+            } else {
+                MachineTimerFire::create([
+                    'root_event_id' => $instance->root_event_id,
+                    'timer_key'     => $timer->key(),
+                    'last_fired_at' => now(),
+                    'fire_count'    => 1,
+                    'status'        => MachineTimerFire::STATUS_ACTIVE,
+                ]);
+            }
         }
     }
 
