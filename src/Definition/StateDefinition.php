@@ -427,11 +427,13 @@ class StateDefinition
      */
     protected function initializeMachineInvoke(): void
     {
-        if (!isset($this->config['machine'])) {
+        $hasMachine = isset($this->config['machine']);
+        $hasJob     = isset($this->config['job']);
+
+        if (!$hasMachine && !$hasJob) {
             return;
         }
 
-        $machineClass  = $this->config['machine'];
         $with          = $this->config['with'] ?? null;
         $forward       = $this->config['forward'] ?? [];
         $rawQueue      = $this->config['queue'] ?? null;
@@ -453,8 +455,13 @@ class StateDefinition
             $retry      = $rawQueue['retry'] ?? $retry;
         }
 
+        // Job actors are always async (they dispatch Laravel jobs)
+        if ($hasJob) {
+            $async = true;
+        }
+
         $this->machineInvokeDefinition = new MachineInvokeDefinition(
-            machineClass: $machineClass,
+            machineClass: $hasMachine ? $this->config['machine'] : '',
             with: $with,
             forward: $forward,
             async: $async,
@@ -462,6 +469,8 @@ class StateDefinition
             connection: $connection,
             timeout: $timeout,
             retry: $retry,
+            jobClass: $hasJob ? $this->config['job'] : null,
+            target: $this->config['target'] ?? null,
         );
     }
 
