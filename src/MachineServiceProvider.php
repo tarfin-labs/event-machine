@@ -14,8 +14,11 @@ use Illuminate\Console\Scheduling\Schedule;
 use Tarfinlabs\EventMachine\Enums\TimerResolution;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tarfinlabs\EventMachine\Definition\TimerDefinition;
+use Tarfinlabs\EventMachine\Commands\TimerStatusCommand;
 use Tarfinlabs\EventMachine\Commands\ExportXStateCommand;
+use Tarfinlabs\EventMachine\Commands\MachineCacheCommand;
 use Tarfinlabs\EventMachine\Commands\MachineClassVisitor;
+use Tarfinlabs\EventMachine\Commands\MachineClearCommand;
 use Tarfinlabs\EventMachine\Commands\ArchiveEventsCommand;
 use Tarfinlabs\EventMachine\Commands\ArchiveStatusCommand;
 use Tarfinlabs\EventMachine\Commands\ProcessTimersCommand;
@@ -56,7 +59,10 @@ class MachineServiceProvider extends PackageServiceProvider
             ->hasCommand(ArchiveStatusCommand::class)
             ->hasCommand(MachineConfigValidatorCommand::class)
             ->hasCommand(ExportXStateCommand::class)
-            ->hasCommand(ProcessTimersCommand::class);
+            ->hasCommand(ProcessTimersCommand::class)
+            ->hasCommand(TimerStatusCommand::class)
+            ->hasCommand(MachineCacheCommand::class)
+            ->hasCommand(MachineClearCommand::class);
     }
 
     public function boot(): void
@@ -79,7 +85,10 @@ class MachineServiceProvider extends PackageServiceProvider
             (string) config('machine.timers.resolution', 'everyMinute')
         ) ?? TimerResolution::EVERY_MINUTE;
 
-        $timerMachines = $this->discoverTimerMachines();
+        $cachePath     = $this->app->bootstrapPath('cache/machines.php');
+        $timerMachines = file_exists($cachePath)
+            ? require $cachePath
+            : $this->discoverTimerMachines();
 
         foreach ($timerMachines as $machineClass) {
             $schedule->command("machine:process-timers --class={$machineClass}")
