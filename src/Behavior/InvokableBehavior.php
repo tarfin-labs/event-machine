@@ -57,32 +57,16 @@ abstract class InvokableBehavior
     }
 
     /**
-     * Send an event to another machine by its root_event_id.
+     * Send an event synchronously to another machine by its root_event_id.
      *
-     * In sync mode, restores the target machine and calls send() directly.
-     * In async mode, dispatches a job to handle it on the queue.
+     * Restores the target machine and calls send() directly (blocking).
      *
      * @param  string  $machineClass  The FQCN of the target Machine subclass.
      * @param  string  $rootEventId  The target machine's root_event_id.
      * @param  EventBehavior|array  $event  The event to send.
-     * @param  bool  $async  Whether to dispatch via queue instead of inline.
      */
-    public function sendTo(string $machineClass, string $rootEventId, EventBehavior|array $event, bool $async = false): void
+    public function sendTo(string $machineClass, string $rootEventId, EventBehavior|array $event): void
     {
-        if ($async) {
-            $eventArray = $event instanceof EventBehavior
-                ? ['type' => $event->type, 'payload' => $event->payload]
-                : $event;
-
-            dispatch(new SendToMachineJob(
-                machineClass: $machineClass,
-                rootEventId: $rootEventId,
-                event: $eventArray,
-            ));
-
-            return;
-        }
-
         /** @var Machine $targetMachine */
         $targetMachine                           = $machineClass::withDefinition($machineClass::definition());
         $targetMachine->definition->machineClass = $machineClass;
@@ -91,18 +75,39 @@ abstract class InvokableBehavior
     }
 
     /**
-     * Send an event to the parent machine that invoked this child.
+     * Dispatch an event asynchronously to another machine via queue.
+     *
+     * Dispatches a SendToMachineJob to deliver the event on the queue.
+     *
+     * @param  string  $machineClass  The FQCN of the target Machine subclass.
+     * @param  string  $rootEventId  The target machine's root_event_id.
+     * @param  EventBehavior|array  $event  The event to send.
+     */
+    public function dispatchTo(string $machineClass, string $rootEventId, EventBehavior|array $event): void
+    {
+        $eventArray = $event instanceof EventBehavior
+            ? ['type' => $event->type, 'payload' => $event->payload]
+            : $event;
+
+        dispatch(new SendToMachineJob(
+            machineClass: $machineClass,
+            rootEventId: $rootEventId,
+            event: $eventArray,
+        ));
+    }
+
+    /**
+     * Send an event synchronously to the parent machine that invoked this child.
      *
      * Shorthand for sendTo(parentMachineClass, parentMachineId, event).
      * Throws if called on a machine that was not invoked by a parent.
      *
      * @param  ContextManager  $context  The child machine's context (contains parent identity).
      * @param  EventBehavior|array  $event  The event to send to the parent.
-     * @param  bool  $async  Whether to dispatch via queue instead of inline.
      *
      * @throws \RuntimeException If this machine has no parent.
      */
-    public function sendToParent(ContextManager $context, EventBehavior|array $event, bool $async = false): void
+    public function sendToParent(ContextManager $context, EventBehavior|array $event): void
     {
         $parentRootEventId  = $context->parentMachineId();
         $parentMachineClass = $context->parentMachineClass();
@@ -115,7 +120,33 @@ abstract class InvokableBehavior
             machineClass: $parentMachineClass,
             rootEventId: $parentRootEventId,
             event: $event,
-            async: $async,
+        );
+    }
+
+    /**
+     * Dispatch an event asynchronously to the parent machine via queue.
+     *
+     * Shorthand for dispatchTo(parentMachineClass, parentMachineId, event).
+     * Throws if called on a machine that was not invoked by a parent.
+     *
+     * @param  ContextManager  $context  The child machine's context (contains parent identity).
+     * @param  EventBehavior|array  $event  The event to send to the parent.
+     *
+     * @throws \RuntimeException If this machine has no parent.
+     */
+    public function dispatchToParent(ContextManager $context, EventBehavior|array $event): void
+    {
+        $parentRootEventId  = $context->parentMachineId();
+        $parentMachineClass = $context->parentMachineClass();
+
+        if ($parentRootEventId === null || $parentMachineClass === null) {
+            throw new \RuntimeException('Cannot dispatchToParent: this machine was not invoked by a parent.');
+        }
+
+        $this->dispatchTo(
+            machineClass: $parentMachineClass,
+            rootEventId: $parentRootEventId,
+            event: $event,
         );
     }
 
