@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\OutputChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ParentOrderMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ResultChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
@@ -456,6 +458,90 @@ it('ChildMachineDoneEvent has typed accessors', function (): void {
         ->and($receivedEvent->result('payment_id'))->toBe('pay_abc')
         ->and($receivedEvent->output('payment_id'))->toBe('pay_abc')
         ->and($receivedEvent->childMachineClass())->toBe(ResultChildMachine::class);
+});
+
+// ─── Output Filtering ────────────────────────────────────────────
+
+it('output key filters child context to only specified keys', function (): void {
+    $receivedEvent = null;
+
+    $machine = MachineDefinition::define(
+        config: [
+            'id'      => 'output_parent',
+            'initial' => 'idle',
+            'context' => [],
+            'states'  => [
+                'idle' => [
+                    'on' => ['GO' => 'processing'],
+                ],
+                'processing' => [
+                    'machine' => OutputChildMachine::class,
+                    '@done'   => [
+                        'target'  => 'done',
+                        'actions' => 'captureOutputAction',
+                    ],
+                ],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'captureOutputAction' => function (ContextManager $context, ChildMachineDoneEvent $event) use (&$receivedEvent): void {
+                    $receivedEvent = $event;
+                },
+            ],
+        ],
+    );
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    expect($receivedEvent)->toBeInstanceOf(ChildMachineDoneEvent::class)
+        ->and($receivedEvent->output('payment_id'))->toBe('pay_xyz')
+        ->and($receivedEvent->output('status'))->toBe('approved')
+        ->and($receivedEvent->output('internal_retry_count'))->toBeNull() // not exposed
+        ->and($receivedEvent->output())->toBe(['payment_id' => 'pay_xyz', 'status' => 'approved']);
+});
+
+it('output falls back to full context when no output key defined', function (): void {
+    $receivedEvent = null;
+
+    $machine = MachineDefinition::define(
+        config: [
+            'id'      => 'no_output_parent',
+            'initial' => 'idle',
+            'context' => [],
+            'states'  => [
+                'idle' => [
+                    'on' => ['GO' => 'processing'],
+                ],
+                'processing' => [
+                    'machine' => ResultChildMachine::class,
+                    '@done'   => [
+                        'target'  => 'done',
+                        'actions' => 'captureOutputAction',
+                    ],
+                ],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'captureOutputAction' => function (ContextManager $context, ChildMachineDoneEvent $event) use (&$receivedEvent): void {
+                    $receivedEvent = $event;
+                },
+            ],
+        ],
+    );
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    // ResultChildMachine has no output key → full context returned (payment_id, status)
+    expect($receivedEvent)->toBeInstanceOf(ChildMachineDoneEvent::class)
+        ->and($receivedEvent->output())->toBeArray()
+        ->and($receivedEvent->output('payment_id'))->toBe('pay_abc')
+        ->and($receivedEvent->output('status'))->toBe('approved');
 });
 
 it('validates machine + parallel type mutual exclusivity', function (): void {
