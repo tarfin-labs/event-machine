@@ -137,6 +137,7 @@ export default withMermaid(
             { text: 'Sync vs Async', link: '/advanced/async-delegation' },
             { text: 'Data Flow', link: '/advanced/delegation-data-flow' },
             { text: 'Patterns', link: '/advanced/delegation-patterns' },
+            { text: 'Job Actors', link: '/advanced/job-actors' },
             { text: 'Cross-Machine Messaging', link: '/advanced/sendto' }
           ]
         },

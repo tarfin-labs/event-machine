@@ -118,6 +118,9 @@ The `machine:xstate` Artisan command now maps `machine` keys to XState v5 `invok
 | `queue` | `bool\|string\|array` | Run child on a Laravel queue |
 | `forward` | `array` | Event types to forward from parent to running child |
 | `on` | `array` | Additional events the parent can handle while child is running |
+| `job` | `string` (FQCN) | Laravel Job class to invoke as actor |
+| `target` | `string` | Target state for fire-and-forget jobs |
+| `output` | `array\|Closure` | Filter child context exposed to parent via `@done` |
 
 ### New Files
 
@@ -130,6 +133,8 @@ The `machine:xstate` Artisan command now maps `machine` keys to XState v5 `invok
 | `src/Jobs/ChildMachineCompletionJob.php` | Queue job for routing `@done`/`@fail` back to parent |
 | `src/Jobs/ChildMachineTimeoutJob.php` | Delayed check job for `@timeout` |
 | `src/Jobs/SendToMachineJob.php` | Queue job for `dispatchTo()` / `dispatchToParent()` |
+| `src/Jobs/ChildJobJob.php` | Queue job for job actor execution |
+| `src/Contracts/ReturnsResult.php` | Interface for jobs that return output to parent |
 | `src/Models/MachineChild.php` | Eloquent model for async child tracking |
 
 ### New Database Table
