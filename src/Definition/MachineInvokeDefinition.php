@@ -8,15 +8,15 @@ use Closure;
 use Tarfinlabs\EventMachine\ContextManager;
 
 /**
- * Value object that holds machine delegation configuration.
+ * Value object that holds machine/job delegation configuration.
  *
- * Parsed from the `machine` key in a state definition config.
+ * Parsed from the `machine` or `job` key in a state definition config.
  * Handles context transfer resolution via the `with` key.
  */
 class MachineInvokeDefinition
 {
     /**
-     * @param  string  $machineClass  The FQCN of the child machine definition.
+     * @param  string  $machineClass  The FQCN of the child machine definition (empty string for job actors).
      * @param  array|Closure|null  $with  Context transfer configuration (3 formats).
      * @param  array  $forward  Event types to forward to the child machine.
      * @param  bool  $async  Whether the child runs asynchronously.
@@ -24,9 +24,11 @@ class MachineInvokeDefinition
      * @param  string|null  $connection  Queue connection for async execution.
      * @param  int|null  $timeout  Timeout in seconds for @timeout handling.
      * @param  int|null  $retry  Number of retry attempts for async execution.
+     * @param  string|null  $jobClass  The FQCN of the job class (for job actors).
+     * @param  string|null  $target  Target state for fire-and-forget jobs (no @done).
      */
     public function __construct(
-        public readonly string $machineClass,
+        public readonly string $machineClass = '',
         public readonly array|Closure|null $with = null,
         public readonly array $forward = [],
         public readonly bool $async = false,
@@ -34,7 +36,17 @@ class MachineInvokeDefinition
         public readonly ?string $connection = null,
         public readonly ?int $timeout = null,
         public readonly ?int $retry = null,
+        public readonly ?string $jobClass = null,
+        public readonly ?string $target = null,
     ) {}
+
+    /**
+     * Whether this invoke definition is a job actor (not a machine).
+     */
+    public function isJob(): bool
+    {
+        return $this->jobClass !== null;
+    }
 
     /**
      * Resolve the child machine's initial context from the parent context.
