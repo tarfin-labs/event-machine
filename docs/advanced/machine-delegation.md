@@ -119,6 +119,10 @@ When `@done` fires, the event is a `ChildMachineDoneEvent` with typed accessors 
 
 See [Data Flow — `@done` Event](/advanced/delegation-data-flow#child-parent-the-done-event) and [Data Flow — `@fail` Event](/advanced/delegation-data-flow#child-parent-the-fail-event) for typed accessor examples.
 
+::: tip Time-Based Events
+You can add `after` and `every` timers to transitions on delegation states. `@timeout` (child deadline) and `after`/`every` (state timers) coexist — they serve different purposes. See [Time-Based Events](/advanced/time-based-events).
+:::
+
 ## `@fail` — Child Failure
 
 Fires when the child machine throws an exception or reaches a failure state:
