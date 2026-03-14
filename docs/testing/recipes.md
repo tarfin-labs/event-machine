@@ -431,9 +431,9 @@ it('child not invoked when transition is guarded', function () {
 });
 ```
 
-## Recipe: Async sendTo Testing
+## Recipe: Async dispatchTo Testing
 
-Test `sendTo()` and `sendToParent()` dispatches with `Queue::fake()`:
+Test `dispatchTo()` and `dispatchToParent()` dispatches with `Queue::fake()`:
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -443,7 +443,7 @@ use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 it('dispatches async event to target machine', function () {
     Queue::fake();
 
-    // ... trigger action that calls sendTo(async: true) ...
+    // ... trigger action that calls dispatchTo() ...
 
     Queue::assertPushed(SendToMachineJob::class, function (SendToMachineJob $job): bool {
         return $job->machineClass === TargetMachine::class
