@@ -20,6 +20,7 @@ class StateConfigValidator
     private const ALLOWED_STATE_KEYS = [
         'id', 'on', 'states', 'initial', 'type', 'meta', 'entry', 'exit', 'description', 'result', '@done', '@fail',
         'machine', 'with', 'forward', 'queue', 'connection', '@timeout', 'retry', 'output',
+        'job', 'target',
     ];
 
     private const ALLOWED_TRANSITION_KEYS = [
@@ -150,6 +151,11 @@ class StateConfigValidator
         // Validate machine delegation configuration
         if (isset($stateConfig['machine'])) {
             self::validateMachineConfig($stateConfig, $path);
+        }
+
+        // Validate job actor configuration
+        if (isset($stateConfig['job'])) {
+            self::validateJobConfig($stateConfig, $path);
         }
 
         // Validate @done/@fail configurations
@@ -471,6 +477,51 @@ class StateConfigValidator
         if (!empty($stateConfig['forward']) && !isset($stateConfig['queue'])) {
             throw new InvalidArgumentException(
                 message: "State '{$path}' has 'forward' without 'queue'. Event forwarding is only valid in async mode."
+            );
+        }
+    }
+
+    /**
+     * Validates job actor configuration.
+     *
+     * @throws InvalidArgumentException
+     */
+    private static function validateJobConfig(array $stateConfig, string $path): void
+    {
+        $jobClass = $stateConfig['job'];
+
+        // job value must be a string (FQCN)
+        if (!is_string($jobClass)) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has invalid 'job' value. Must be a string (job class FQCN)."
+            );
+        }
+
+        // job + machine are mutually exclusive
+        if (isset($stateConfig['machine'])) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' cannot have both 'job' and 'machine'. Use one or the other."
+            );
+        }
+
+        // job + type:parallel are mutually exclusive
+        if (isset($stateConfig['type']) && $stateConfig['type'] === 'parallel') {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' cannot have both 'job' and type 'parallel'."
+            );
+        }
+
+        // Fire-and-forget: job without @done requires target
+        if (!isset($stateConfig['@done']) && !isset($stateConfig['target'])) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has 'job' without '@done' or 'target'. Either define '@done' (managed) or 'target' (fire-and-forget)."
+            );
+        }
+
+        // Ambiguous: @done + target
+        if (isset($stateConfig['@done']) && isset($stateConfig['target'])) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' cannot have both '@done' and 'target'. Use '@done' for managed jobs or 'target' for fire-and-forget."
             );
         }
     }
