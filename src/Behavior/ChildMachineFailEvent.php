@@ -44,21 +44,21 @@ class ChildMachineFailEvent extends EventBehavior
     }
 
     /**
-     * Get the child's context at the time of failure (as array).
+     * Get the child's context at the time of failure.
      *
      * @param  string|null  $key  Dot-notation key to retrieve a specific value.
      */
-    public function childContext(?string $key = null): mixed
+    public function output(?string $key = null): mixed
     {
-        $context = $this->payload['child_context'] ?? [];
+        $output = $this->payload['output'] ?? [];
 
-        return $key !== null ? data_get($context, $key) : $context;
+        return $key !== null ? data_get($output, $key) : $output;
     }
 
     /**
      * Create an instance for internal use.
      *
-     * @param  array  $payload  The payload containing error_message, machine_id, machine_class, child_context.
+     * @param  array  $payload  The payload containing error_message, machine_id, machine_class, output.
      */
     public static function forChild(array $payload): static
     {

@@ -32,15 +32,18 @@ class ChildMachineDoneEvent extends EventBehavior
     }
 
     /**
-     * Get the child's final context (as array).
+     * Get the child's output data.
+     *
+     * If the child machine defines an `output` key on its final state, returns
+     * only the exposed keys. Otherwise, returns the full child context.
      *
      * @param  string|null  $key  Dot-notation key to retrieve a specific value.
      */
-    public function childContext(?string $key = null): mixed
+    public function output(?string $key = null): mixed
     {
-        $context = $this->payload['child_context'] ?? [];
+        $output = $this->payload['output'] ?? [];
 
-        return $key !== null ? data_get($context, $key) : $context;
+        return $key !== null ? data_get($output, $key) : $output;
     }
 
     /**
@@ -62,7 +65,7 @@ class ChildMachineDoneEvent extends EventBehavior
     /**
      * Create an instance for internal use.
      *
-     * @param  array  $payload  The payload containing result, child_context, machine_id, machine_class.
+     * @param  array  $payload  The payload containing result, output, machine_id, machine_class.
      */
     public static function forChild(array $payload): static
     {

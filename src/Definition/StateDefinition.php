@@ -105,6 +105,14 @@ class StateDefinition
      */
     public ?array $meta = null;
 
+    /**
+     * Output definition for final states. Controls which context keys
+     * are exposed to the parent machine via ChildMachineDoneEvent.
+     *
+     * @var null|array<string>|\Closure
+     */
+    public null|array|\Closure $output = null;
+
     // endregion
 
     // region Constructor
@@ -135,6 +143,7 @@ class StateDefinition
 
         if ($this->type === StateDefinitionType::FINAL) {
             $this->initializeResults();
+            $this->initializeOutput();
         }
 
         $this->events = $this->collectUniqueEvents();
@@ -239,6 +248,19 @@ class StateDefinition
     {
         if (isset($this->config['result'])) {
             $this->machine->behavior[BehaviorType::Result->value][$this->id] = $this->config['result'];
+        }
+    }
+
+    /**
+     * Initialize the output definition for this final state.
+     *
+     * Output controls which context keys are exposed to the parent
+     * via ChildMachineDoneEvent. Accepts an array of key names or a Closure.
+     */
+    protected function initializeOutput(): void
+    {
+        if (isset($this->config['output'])) {
+            $this->output = $this->config['output'];
         }
     }
 
