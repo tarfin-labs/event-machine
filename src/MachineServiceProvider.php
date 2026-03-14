@@ -9,6 +9,7 @@ use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tarfinlabs\EventMachine\Commands\ExportXStateCommand;
 use Tarfinlabs\EventMachine\Commands\ArchiveEventsCommand;
 use Tarfinlabs\EventMachine\Commands\ArchiveStatusCommand;
+use Tarfinlabs\EventMachine\Commands\ProcessTimersCommand;
 use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
 
 /**
@@ -45,6 +46,7 @@ class MachineServiceProvider extends PackageServiceProvider
             ->hasCommand(ArchiveEventsCommand::class)
             ->hasCommand(ArchiveStatusCommand::class)
             ->hasCommand(MachineConfigValidatorCommand::class)
-            ->hasCommand(ExportXStateCommand::class);
+            ->hasCommand(ExportXStateCommand::class)
+            ->hasCommand(ProcessTimersCommand::class);
     }
 }
