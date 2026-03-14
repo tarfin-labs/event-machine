@@ -1,6 +1,6 @@
 # Delegation Patterns
 
-This page covers common machine delegation patterns: orchestrator, saga/compensation, and when to use `sendTo()` vs the orchestrator pattern.
+This page covers common machine delegation patterns: orchestrator, saga/compensation, and when to use cross-machine messaging vs the orchestrator pattern.
 
 ## Orchestrator Pattern
 
@@ -179,10 +179,12 @@ Both children run. The parallel state's `@done` fires when **all** regions reach
 | Pattern | Mechanism | Best For |
 |---------|-----------|----------|
 | **Orchestration** | `machine` key | All inter-machine workflows (primary pattern) |
-| **Progress reporting** | `sendToParent()` | Child → parent status updates |
+| **Sync progress** | `sendToParent()` | Child → parent immediate updates |
+| **Async progress** | `dispatchToParent()` | Child → parent via queue |
 | **External interaction** | Endpoints (webhooks) | Third-party callbacks |
 | **Loose coupling** | Laravel Events | Cross-model, fire-and-forget |
-| **Escape hatch** | `sendTo()` | Edge cases that don't fit orchestration |
+| **Sync escape hatch** | `sendTo()` | Direct cross-machine messaging |
+| **Async escape hatch** | `dispatchTo()` | Queued cross-machine messaging |
 
 ### Design Rule: Orchestrator First
 
@@ -211,4 +213,4 @@ class NotifyShippingAction extends ActionBehavior {
 ],
 ```
 
-**`sendTo()` is an escape hatch**, not the primary communication pattern. Its main use case is `sendToParent()` for progress reporting.
+**`sendTo()` / `dispatchTo()` are escape hatches**, not the primary communication pattern. Their main use case is `sendToParent()` / `dispatchToParent()` for progress reporting.
