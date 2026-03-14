@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Bus;
 use Tarfinlabs\EventMachine\Support\Timer;
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Definition\TimerDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
@@ -126,6 +127,74 @@ it('mixed array: multi-branch guarded transition with after key', function (): v
     // Branches still work (2 branches)
     expect($transition->branches)->toHaveCount(2)
         ->and($transition->isGuarded)->toBeTrue();
+});
+
+// ─── Multi-Branch Guard + Timer Execution ───────────────────────
+
+it('multi-branch guarded after: guard pass goes to first branch', function (): void {
+    $machine = MachineDefinition::define(
+        config: [
+            'id'      => 'mb_guard',
+            'initial' => 'waiting',
+            'context' => ['is_expired' => true],
+            'states'  => [
+                'waiting' => [
+                    'on' => [
+                        'TIMEOUT' => [
+                            ['target' => 'cancelled', 'guards' => 'isExpiredGuard'],
+                            ['target' => 'extended'],
+                            'after'   => Timer::days(7),
+                        ],
+                    ],
+                ],
+                'cancelled' => ['type' => 'final'],
+                'extended'  => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'guards' => [
+                'isExpiredGuard' => fn (ContextManager $ctx): bool => $ctx->get('is_expired'),
+            ],
+        ],
+    );
+
+    $state = $machine->getInitialState();
+    // Guard passes → first branch (cancelled)
+    $state = $machine->transition(event: ['type' => 'TIMEOUT'], state: $state);
+    expect($state->value)->toBe(['mb_guard.cancelled']);
+});
+
+it('multi-branch guarded after: guard fail goes to fallback branch', function (): void {
+    $machine = MachineDefinition::define(
+        config: [
+            'id'      => 'mb_fallback',
+            'initial' => 'waiting',
+            'context' => ['is_expired' => false],
+            'states'  => [
+                'waiting' => [
+                    'on' => [
+                        'TIMEOUT' => [
+                            ['target' => 'cancelled', 'guards' => 'isExpiredGuard'],
+                            ['target' => 'extended'],
+                            'after'   => Timer::days(7),
+                        ],
+                    ],
+                ],
+                'cancelled' => ['type' => 'final'],
+                'extended'  => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'guards' => [
+                'isExpiredGuard' => fn (ContextManager $ctx): bool => $ctx->get('is_expired'),
+            ],
+        ],
+    );
+
+    $state = $machine->getInitialState();
+    // Guard fails → fallback branch (extended)
+    $state = $machine->transition(event: ['type' => 'TIMEOUT'], state: $state);
+    expect($state->value)->toBe(['mb_fallback.extended']);
 });
 
 // ─── Multiple after + every on same state ───────────────────────

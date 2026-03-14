@@ -149,6 +149,59 @@ it('every does NOT fire before interval', function (): void {
     Bus::assertNothingBatched();
 });
 
+it('every fires multiple times at correct intervals', function (): void {
+    Bus::fake();
+
+    $machine = EveryTimerMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // First fire: backdate past interval
+    MachineCurrentState::forInstance($rootEventId)
+        ->update(['state_entered_at' => now()->subDays(31)]);
+
+    $this->artisan('machine:process-timers', ['--class' => EveryTimerMachine::class]);
+    Bus::assertBatched(fn ($batch) => $batch->jobs->count() === 1);
+
+    $fire = MachineTimerFire::where('root_event_id', $rootEventId)->first();
+    expect($fire->fire_count)->toBe(1);
+
+    Bus::fake();
+
+    // Second fire: backdate last_fired_at past interval
+    MachineTimerFire::where('root_event_id', $rootEventId)
+        ->update(['last_fired_at' => now()->subDays(31)]);
+
+    $this->artisan('machine:process-timers', ['--class' => EveryTimerMachine::class]);
+    Bus::assertBatched(fn ($batch) => $batch->jobs->count() === 1);
+
+    $fire->refresh();
+    expect($fire->fire_count)->toBe(2);
+});
+
+it('every interval resets from last fire not state entry', function (): void {
+    Bus::fake();
+
+    $machine = EveryTimerMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    MachineCurrentState::forInstance($rootEventId)
+        ->update(['state_entered_at' => now()->subDays(60)]);
+
+    // Last fire was only 10 days ago (not past 30-day interval)
+    MachineTimerFire::create([
+        'root_event_id' => $rootEventId,
+        'timer_key'     => 'every_timer.active:BILLING:2592000',
+        'last_fired_at' => now()->subDays(10),
+        'fire_count'    => 1,
+        'status'        => MachineTimerFire::STATUS_ACTIVE,
+    ]);
+
+    $this->artisan('machine:process-timers', ['--class' => EveryTimerMachine::class]);
+    Bus::assertNothingBatched();
+});
+
 it('every respects max count', function (): void {
     Bus::fake();
 
