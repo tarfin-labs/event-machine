@@ -10,8 +10,12 @@ use Illuminate\Routing\Controller;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Validation\ValidationException;
+use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 
 class MachineController extends Controller
@@ -145,6 +149,9 @@ class MachineController extends Controller
 
         $action?->after();
 
+        // Auto-dispatch completion if child reached final state and has a parent
+        $this->dispatchChildCompletionIfFinal($machine, $state);
+
         return $this->buildResponse($state, $machine, $resultKey, $statusCode);
     }
 
@@ -199,5 +206,50 @@ class MachineController extends Controller
         );
 
         return $resultBehavior(...$params);
+    }
+
+    /**
+     * If the machine reached a final state and is a tracked child, dispatch completion to parent.
+     *
+     * This enables the webhook pattern: child machine receives endpoint event,
+     * transitions to final, and auto-dispatches ChildMachineCompletionJob.
+     */
+    protected function dispatchChildCompletionIfFinal(Machine $machine, State $state): void
+    {
+        if ($state->currentStateDefinition->type !== StateDefinitionType::FINAL) {
+            return;
+        }
+
+        $rootEventId = $state->history->first()?->root_event_id;
+
+        if ($rootEventId === null) {
+            return;
+        }
+
+        // Find the MachineChild tracking record for this child
+        $childRecord = MachineChild::where('child_root_event_id', $rootEventId)
+            ->whereNotIn('status', [MachineChild::STATUS_COMPLETED, MachineChild::STATUS_FAILED, MachineChild::STATUS_CANCELLED, MachineChild::STATUS_TIMED_OUT])
+            ->first();
+
+        if ($childRecord === null) {
+            return;
+        }
+
+        $childRecord->markCompleted();
+
+        dispatch(new ChildMachineCompletionJob(
+            parentRootEventId: $childRecord->parent_root_event_id,
+            parentMachineClass: $childRecord->parent_machine_class ?? $machine->definition->machineClass ?? '',
+            parentStateId: $childRecord->parent_state_id,
+            childMachineClass: $childRecord->child_machine_class,
+            childRootEventId: $rootEventId,
+            success: true,
+            result: $machine->result(),
+            childContextData: $state->context->data,
+            outputData: MachineDefinition::resolveChildOutput(
+                $state->currentStateDefinition,
+                $state->context,
+            ),
+        ));
     }
 }

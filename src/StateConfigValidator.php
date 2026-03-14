@@ -19,6 +19,8 @@ class StateConfigValidator
 
     private const ALLOWED_STATE_KEYS = [
         'id', 'on', 'states', 'initial', 'type', 'meta', 'entry', 'exit', 'description', 'result', '@done', '@fail',
+        'machine', 'with', 'forward', 'queue', 'connection', '@timeout', 'retry', 'output',
+        'job', 'target',
     ];
 
     private const ALLOWED_TRANSITION_KEYS = [
@@ -144,6 +146,16 @@ class StateConfigValidator
         // Parallel state validations
         if (isset($stateConfig['type']) && $stateConfig['type'] === 'parallel') {
             self::validateParallelState(stateConfig: $stateConfig, path: $path);
+        }
+
+        // Validate machine delegation configuration
+        if (isset($stateConfig['machine'])) {
+            self::validateMachineConfig($stateConfig, $path);
+        }
+
+        // Validate job actor configuration
+        if (isset($stateConfig['job'])) {
+            self::validateJobConfig($stateConfig, $path);
         }
 
         // Validate @done/@fail configurations
@@ -435,6 +447,96 @@ class StateConfigValidator
             }
         } else {
             self::validateTransitionConfig(transitionConfig: $config, path: $path, eventName: $key);
+        }
+    }
+
+    /**
+     * Validates machine delegation configuration.
+     *
+     * @throws InvalidArgumentException
+     */
+    private static function validateMachineConfig(array $stateConfig, string $path): void
+    {
+        $machineClass = $stateConfig['machine'];
+
+        // machine value must be a string (FQCN)
+        if (!is_string($machineClass)) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has invalid 'machine' value. Must be a string (machine class FQCN)."
+            );
+        }
+
+        // machine + type:parallel are mutually exclusive
+        if (isset($stateConfig['type']) && $stateConfig['type'] === 'parallel') {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' cannot have both 'machine' and type 'parallel'. Machine delegation is only for atomic states."
+            );
+        }
+
+        // forward requires queue (only valid in async mode)
+        if (!empty($stateConfig['forward']) && !isset($stateConfig['queue'])) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has 'forward' without 'queue'. Event forwarding is only valid in async mode."
+            );
+        }
+
+        // target is only valid for job actors, not machine delegation
+        if (isset($stateConfig['target'])) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has 'target' with 'machine'. The 'target' key is only valid for job actors. Use '@done' for machine delegation."
+            );
+        }
+    }
+
+    /**
+     * Validates job actor configuration.
+     *
+     * @throws InvalidArgumentException
+     */
+    private static function validateJobConfig(array $stateConfig, string $path): void
+    {
+        $jobClass = $stateConfig['job'];
+
+        // job value must be a string (FQCN)
+        if (!is_string($jobClass)) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has invalid 'job' value. Must be a string (job class FQCN)."
+            );
+        }
+
+        // job + machine are mutually exclusive
+        if (isset($stateConfig['machine'])) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' cannot have both 'job' and 'machine'. Use one or the other."
+            );
+        }
+
+        // job + type:parallel are mutually exclusive
+        if (isset($stateConfig['type']) && $stateConfig['type'] === 'parallel') {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' cannot have both 'job' and type 'parallel'."
+            );
+        }
+
+        // forward is only valid for machine delegation, not jobs
+        if (!empty($stateConfig['forward'])) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has 'forward' with 'job'. Event forwarding is only valid for machine delegation."
+            );
+        }
+
+        // Fire-and-forget: job without @done requires target
+        if (!isset($stateConfig['@done']) && !isset($stateConfig['target'])) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has 'job' without '@done' or 'target'. Either define '@done' (managed) or 'target' (fire-and-forget)."
+            );
+        }
+
+        // Ambiguous: @done + target
+        if (isset($stateConfig['@done']) && isset($stateConfig['target'])) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' cannot have both '@done' and 'target'. Use '@done' for managed jobs or 'target' for fire-and-forget."
+            );
         }
     }
 

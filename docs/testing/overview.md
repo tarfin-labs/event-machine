@@ -47,8 +47,11 @@ Reset all behavior fakes between tests to prevent state leaking across test case
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 afterEach(function (): void {
-    // Reset all fakes between tests (also clears inline behavior fakes)
+    // Reset all behavior fakes between tests (also clears inline behavior fakes)
     IncrementAction::resetAllFakes();
+
+    // Reset all machine fakes (child machine short-circuits)
+    Machine::resetMachineFakes();
 });
 ```
 
@@ -75,6 +78,8 @@ For fast tests, use SQLite in-memory. This eliminates migration overhead and dis
 | Transition (Integration) | Guard pass/fail, state changes, paths | [Transitions & Paths](/testing/transitions-and-paths) |
 | Machine (Acceptance) | Full fluent test wrapper | [TestMachine](/testing/test-machine) |
 | Parallel | Dispatch verification, region isolation | [Parallel Testing](/testing/parallel-testing) |
+| Inter-Machine | Child machine faking, sendTo/dispatchTo assertions | [Inter-Machine Testing](/testing/delegation-testing) |
+| Job Actors | Job dispatch verification, fire-and-forget | [Inter-Machine Testing — Job Actors](/testing/delegation-testing#testing-job-actors) |
 | Persistence | DB, restoration, archival | [Persistence Testing](/testing/persistence-testing) |
 | Recipes | Common real-world patterns | [Recipes](/testing/recipes) |
 | Migration | Upgrading from legacy test patterns | [Migration Patterns](/getting-started/upgrading#testing-migration-patterns) |

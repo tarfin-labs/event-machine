@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Actor;
 use Stringable;
 use JsonSerializable;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
@@ -47,6 +48,9 @@ class Machine implements Castable, JsonSerializable, Stringable
 
     /** Whether parallel region jobs were dispatched to the queue in this lifecycle */
     public bool $dispatched = false;
+
+    /** @var array<class-string, array{result: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>}> Machine-level fakes for testing. */
+    private static array $machineFakes = [];
 
     // endregion
 
@@ -614,6 +618,165 @@ class Machine implements Castable, JsonSerializable, Stringable
 
             throw MachineValidationException::withMessages($errorsWithMessage);
         }
+    }
+
+    // endregion
+
+    // region Machine Faking
+
+    /**
+     * Register a machine fake to short-circuit child machine execution in tests.
+     *
+     * When a parent machine delegates to a faked child, the child is never
+     * actually created. Instead, the parent immediately routes @done or @fail
+     * based on the fake configuration.
+     *
+     * Works for both sync and async delegation.
+     *
+     * @param  array|null  $result  The fake result to return via @done.
+     * @param  bool  $fail  Whether to trigger @fail instead of @done.
+     * @param  string|null  $error  The error message for @fail.
+     * @param  string|null  $finalState  The specific final state name (unused by routing, available for inspection).
+     */
+    public static function fake(
+        ?array $result = null,
+        bool $fail = false,
+        ?string $error = null,
+        ?string $finalState = null,
+    ): void {
+        self::$machineFakes[static::class] = [
+            'result'      => $result,
+            'fail'        => $fail,
+            'error'       => $error,
+            'finalState'  => $finalState,
+            'invocations' => [],
+        ];
+    }
+
+    /**
+     * Check if a machine class is currently faked.
+     */
+    public static function isMachineFaked(?string $class = null): bool
+    {
+        return isset(self::$machineFakes[$class ?? static::class]);
+    }
+
+    /**
+     * Get the fake configuration for a machine class.
+     *
+     * @return array{result: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>}|null
+     */
+    public static function getMachineFake(?string $class = null): ?array
+    {
+        return self::$machineFakes[$class ?? static::class] ?? null;
+    }
+
+    /**
+     * Record a machine invocation for assertion tracking.
+     */
+    public static function recordMachineInvocation(string $class, array $context): void
+    {
+        if (isset(self::$machineFakes[$class])) {
+            self::$machineFakes[$class]['invocations'][] = $context;
+        }
+    }
+
+    /**
+     * Get recorded invocations for a faked machine.
+     *
+     * @return list<array>
+     */
+    public static function getMachineInvocations(?string $class = null): array
+    {
+        return self::$machineFakes[$class ?? static::class]['invocations'] ?? [];
+    }
+
+    /**
+     * Assert the machine was invoked as a child at least once.
+     */
+    public static function assertInvoked(): void
+    {
+        $invocations = self::getMachineInvocations(static::class);
+
+        if ($invocations === []) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class.'] to be invoked, but it was not.'
+            );
+        }
+    }
+
+    /**
+     * Assert the machine was never invoked as a child.
+     */
+    public static function assertNotInvoked(): void
+    {
+        $invocations = self::getMachineInvocations(static::class);
+
+        if ($invocations !== []) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class.'] not to be invoked, but it was invoked '.count($invocations).' time(s).'
+            );
+        }
+    }
+
+    /**
+     * Assert the machine was invoked exactly N times as a child.
+     */
+    public static function assertInvokedTimes(int $times): void
+    {
+        $invocations = self::getMachineInvocations(static::class);
+        $actual      = count($invocations);
+
+        if ($actual !== $times) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class."] to be invoked {$times} time(s), but it was invoked {$actual} time(s)."
+            );
+        }
+    }
+
+    /**
+     * Assert the machine was invoked with context containing the given subset.
+     *
+     * Checks that at least one invocation's context contains all key-value
+     * pairs from the expected array (subset match, not exact).
+     */
+    public static function assertInvokedWith(array $expected): void
+    {
+        $invocations = self::getMachineInvocations(static::class);
+
+        if ($invocations === []) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class.'] to be invoked with '.json_encode($expected).', but it was never invoked.'
+            );
+        }
+
+        foreach ($invocations as $context) {
+            $matched = true;
+
+            foreach ($expected as $key => $value) {
+                if (!array_key_exists($key, $context) || $context[$key] !== $value) {
+                    $matched = false;
+
+                    break;
+                }
+            }
+
+            if ($matched) {
+                return;
+            }
+        }
+
+        throw new AssertionFailedError(
+            'Expected machine ['.static::class.'] to be invoked with '.json_encode($expected).', but no invocation matched. Actual invocations: '.json_encode($invocations)
+        );
+    }
+
+    /**
+     * Reset all machine fakes.
+     */
+    public static function resetMachineFakes(): void
+    {
+        self::$machineFakes = [];
     }
 
     // endregion
