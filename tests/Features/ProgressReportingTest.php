@@ -11,32 +11,23 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 
-// ─── Progress Reporting: child → parent via sendToParent ─────────
+// ─── Progress Reporting: child → parent via dispatchToParent ─────
 
-it('child reports progress to parent via sendToParent and parent updates context', function (): void {
-    // Create a parent machine that handles CHILD_PROGRESS on its processing state.
-    // The parent delegates to a child that immediately completes (sync).
-    // We test that sendToParent dispatches correctly.
-
-    // Since sync delegation runs child inline and immediately routes @done,
-    // sendToParent during a sync child would need to send back to an already-transitioning parent.
-    // The real use case is async: child runs on queue, sends progress events back.
-    // For this test, we verify sendToParent dispatches SendToMachineJob (async path).
-
+it('child reports progress to parent via dispatchToParent and parent updates context', function (): void {
     Queue::fake();
 
-    // Simulate: a child action calls sendToParent with progress data
+    // Simulate: a child action calls dispatchToParent with progress data
     $action = new class() extends ActionBehavior {
         public function __invoke(ContextManager $ctx): void
         {
-            $this->sendToParent($ctx, [
+            $this->dispatchToParent($ctx, [
                 'type'    => 'CHILD_PROGRESS',
                 'payload' => [
                     'percent'   => 50,
                     'processed' => 5,
                     'total'     => 10,
                 ],
-            ], async: true);
+            ]);
         }
     };
 
