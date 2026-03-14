@@ -25,6 +25,7 @@ class StateConfigValidator
 
     private const ALLOWED_TRANSITION_KEYS = [
         'target', 'guards', 'actions', 'description', 'calculators',
+        'after', 'every', 'max', 'then',
     ];
 
     /** Valid state types matching StateDefinitionType enum */
