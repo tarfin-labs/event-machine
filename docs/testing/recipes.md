@@ -463,5 +463,6 @@ See [Overview](/testing/overview) for the testing pyramid,
 [Constructor DI](/testing/constructor-di) for service mocking,
 [Transitions & Paths](/testing/transitions-and-paths) for guard and path testing,
 [TestMachine](/testing/test-machine) for the fluent wrapper,
-and [Persistence Testing](/testing/persistence-testing) for DB-level testing.
+[Persistence Testing](/testing/persistence-testing) for DB-level testing,
+and [Time-Based Testing](/testing/time-based-testing) for timer sweep testing.
 :::
