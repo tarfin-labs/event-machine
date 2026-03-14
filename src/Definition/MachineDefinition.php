@@ -1118,8 +1118,8 @@ class MachineDefinition
 
         // Dispatch the job
         $childJobJob = new ChildJobJob(
-            parentRootEventId: $state->history->first()->root_event_id,
-            parentMachineClass: $this->machineClass,
+            parentRootEventId: $state->history?->first()?->root_event_id ?? '',
+            parentMachineClass: $this->machineClass ?? '',
             parentStateId: $stateDefinition->id,
             jobClass: $jobClass,
             jobData: $jobData,

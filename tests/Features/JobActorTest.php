@@ -1,0 +1,255 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Queue;
+use Tarfinlabs\EventMachine\Jobs\ChildJobJob;
+use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+
+// ─── Job Actor Config Validation ──────────────────────────────────
+
+it('validates job + machine mutual exclusivity', function (): void {
+    MachineDefinition::define(
+        config: [
+            'id'      => 'invalid',
+            'initial' => 'test',
+            'states'  => [
+                'test' => [
+                    'job'     => 'App\\Jobs\\SomeJob',
+                    'machine' => 'App\\Machines\\SomeMachine',
+                    '@done'   => 'done',
+                ],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+    );
+})->throws(InvalidArgumentException::class, "cannot have both 'job' and 'machine'");
+
+it('validates job without @done requires target', function (): void {
+    MachineDefinition::define(
+        config: [
+            'id'      => 'invalid',
+            'initial' => 'test',
+            'states'  => [
+                'test' => [
+                    'job' => 'App\\Jobs\\SomeJob',
+                    // no @done, no target
+                ],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+    );
+})->throws(InvalidArgumentException::class, "without '@done' or 'target'");
+
+it('validates @done + target ambiguity', function (): void {
+    MachineDefinition::define(
+        config: [
+            'id'      => 'invalid',
+            'initial' => 'test',
+            'states'  => [
+                'test' => [
+                    'job'    => 'App\\Jobs\\SomeJob',
+                    '@done'  => 'done',
+                    'target' => 'done',
+                ],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+    );
+})->throws(InvalidArgumentException::class, "cannot have both '@done' and 'target'");
+
+// ─── Managed Job Actor (@done) ────────────────────────────────────
+
+it('dispatches ChildJobJob when entering a state with job key', function (): void {
+    Queue::fake();
+
+    $machine = MachineDefinition::define(
+        config: [
+            'id'      => 'job_parent',
+            'initial' => 'idle',
+            'context' => ['email' => 'test@example.com'],
+            'states'  => [
+                'idle' => [
+                    'on' => ['START' => 'sending'],
+                ],
+                'sending' => [
+                    'job'   => 'App\\Jobs\\SendEmailJob',
+                    'with'  => ['email'],
+                    '@done' => 'sent',
+                    '@fail' => 'failed',
+                ],
+                'sent'   => ['type' => 'final'],
+                'failed' => ['type' => 'final'],
+            ],
+        ],
+    );
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'START'], state: $state);
+
+    Queue::assertPushed(ChildJobJob::class, function (ChildJobJob $job): bool {
+        return $job->jobClass === 'App\\Jobs\\SendEmailJob'
+            && $job->jobData === ['email' => 'test@example.com']
+            && $job->fireAndForget === false;
+    });
+});
+
+// ─── Fire-and-Forget Job Actor ────────────────────────────────────
+
+it('dispatches fire-and-forget job and transitions immediately', function (): void {
+    Queue::fake();
+
+    $machine = MachineDefinition::define(
+        config: [
+            'id'      => 'ff_parent',
+            'initial' => 'idle',
+            'context' => ['action' => 'login'],
+            'states'  => [
+                'idle' => [
+                    'on' => ['START' => 'logging'],
+                ],
+                'logging' => [
+                    'job'    => 'App\\Jobs\\AuditLogJob',
+                    'with'   => ['action'],
+                    'target' => 'next_state',
+                ],
+                'next_state' => ['type' => 'final'],
+            ],
+        ],
+    );
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'START'], state: $state);
+
+    // Parent should have transitioned immediately to target
+    expect($state->value)->toBe(['ff_parent.next_state']);
+
+    // Job should be dispatched as fire-and-forget
+    Queue::assertPushed(ChildJobJob::class, function (ChildJobJob $job): bool {
+        return $job->jobClass === 'App\\Jobs\\AuditLogJob'
+            && $job->fireAndForget === true;
+    });
+});
+
+// ─── ChildJobJob execution ───────────────────────────────────────
+
+it('ChildJobJob runs job and dispatches completion with result', function (): void {
+    Queue::fake();
+
+    // Create a test job that implements ReturnsResult
+    $testJobClass = new class() implements ReturnsResult {
+        public string $messageId = '';
+
+        public function handle(): void
+        {
+            $this->messageId = 'msg_123';
+        }
+
+        public function result(): array
+        {
+            return ['message_id' => $this->messageId];
+        }
+    };
+
+    // Bind the anonymous class in the container
+    $className = $testJobClass::class;
+    app()->bind($className, fn () => new $className());
+
+    $job = new ChildJobJob(
+        parentRootEventId: 'parent-root-id',
+        parentMachineClass: 'App\\Machines\\ParentMachine',
+        parentStateId: 'parent.sending',
+        jobClass: $className,
+    );
+
+    $job->handle();
+
+    Queue::assertPushed(ChildMachineCompletionJob::class, function (ChildMachineCompletionJob $completionJob): bool {
+        return $completionJob->success === true
+            && $completionJob->outputData === ['message_id' => 'msg_123'];
+    });
+});
+
+it('ChildJobJob dispatches failure on exception', function (): void {
+    Queue::fake();
+
+    $failingJobClass = new class() {
+        public function handle(): void
+        {
+            throw new RuntimeException('Email service unavailable');
+        }
+    };
+
+    $className = $failingJobClass::class;
+    app()->bind($className, fn () => new $className());
+
+    $job = new ChildJobJob(
+        parentRootEventId: 'parent-root-id',
+        parentMachineClass: 'App\\Machines\\ParentMachine',
+        parentStateId: 'parent.sending',
+        jobClass: $className,
+    );
+
+    $job->failed(new RuntimeException('Email service unavailable'));
+
+    Queue::assertPushed(ChildMachineCompletionJob::class, function (ChildMachineCompletionJob $completionJob): bool {
+        return $completionJob->success === false
+            && $completionJob->errorMessage === 'Email service unavailable';
+    });
+});
+
+it('ChildJobJob fire-and-forget does not dispatch completion', function (): void {
+    Queue::fake();
+
+    $testJobClass = new class() {
+        public function handle(): void
+        {
+            // do nothing
+        }
+    };
+
+    $className = $testJobClass::class;
+    app()->bind($className, fn () => new $className());
+
+    $job = new ChildJobJob(
+        parentRootEventId: 'parent-root-id',
+        parentMachineClass: 'App\\Machines\\ParentMachine',
+        parentStateId: 'parent.logging',
+        jobClass: $className,
+        fireAndForget: true,
+    );
+
+    $job->handle();
+
+    Queue::assertNotPushed(ChildMachineCompletionJob::class);
+});
+
+it('ChildJobJob without ReturnsResult returns empty output', function (): void {
+    Queue::fake();
+
+    $simpleJobClass = new class() {
+        public function handle(): void
+        {
+            // no ReturnsResult
+        }
+    };
+
+    $className = $simpleJobClass::class;
+    app()->bind($className, fn () => new $className());
+
+    $job = new ChildJobJob(
+        parentRootEventId: 'parent-root-id',
+        parentMachineClass: 'App\\Machines\\ParentMachine',
+        parentStateId: 'parent.processing',
+        jobClass: $className,
+    );
+
+    $job->handle();
+
+    Queue::assertPushed(ChildMachineCompletionJob::class, function (ChildMachineCompletionJob $completionJob): bool {
+        return $completionJob->success === true
+            && $completionJob->outputData === [];
+    });
+});
