@@ -115,7 +115,7 @@ When the child machine reaches a final state, the parent's `@done` transition fi
 
 ### Accessing Child Result Data
 
-When `@done` fires, the event is a `ChildMachineDoneEvent` with typed accessors for `result()`, `childContext()`, `childMachineId()`, and `childMachineClass()`. When `@fail` fires, the event is a `ChildMachineFailEvent` with `errorMessage()`, `childContext()`, and identity accessors.
+When `@done` fires, the event is a `ChildMachineDoneEvent` with typed accessors for `output()`, `result()`, `childMachineId()`, and `childMachineClass()`. When `@fail` fires, the event is a `ChildMachineFailEvent` with `errorMessage()`, `output()`, and identity accessors.
 
 See [Data Flow — `@done` Event](/advanced/delegation-data-flow#child-parent-the-done-event) and [Data Flow — `@fail` Event](/advanced/delegation-data-flow#child-parent-the-fail-event) for typed accessor examples.
 
