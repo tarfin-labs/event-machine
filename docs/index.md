@@ -343,6 +343,32 @@ OrderMachine::test(['amount' => 0])
 <div class="feature-section">
 <div class="feature-text">
 
+## Time-Based Events
+
+**Declarative timers on transitions.** Define `after` (one-shot) and `every` (recurring) timers directly in your machine config. Auto-discovered, auto-scheduled — no Kernel.php setup needed.
+
+[Time-Based Events &rarr;](/advanced/time-based-events)
+
+</div>
+<div class="feature-code">
+
+<!-- doctest-attr: ignore -->
+```php
+'awaiting_payment' => [
+    'on' => [
+        'PAY'           => 'processing',
+        'ORDER_EXPIRED' => ['target' => 'cancelled', 'after' => Timer::days(7)],
+        'REMINDER'      => ['actions' => 'sendReminderAction', 'every' => Timer::days(1)],
+    ],
+],
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
 ## Type-Safe Context
 
 **Validated data at every step.** Context classes powered by Spatie Laravel Data give you typed properties, validation rules, and transformations.
