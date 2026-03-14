@@ -44,7 +44,7 @@ class ChildMachineFailEvent extends EventBehavior
     }
 
     /**
-     * Get the child's context at the time of failure.
+     * Get the child's output data at the time of failure.
      *
      * @param  string|null  $key  Dot-notation key to retrieve a specific value.
      */

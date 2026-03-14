@@ -1096,8 +1096,6 @@ class MachineDefinition
     }
 
     /**
-     * Handle async machine delegation: dispatch child machine to queue.
-     *
      * Handle a job actor invocation.
      *
      * Dispatches a ChildJobJob to run the Laravel job.
@@ -1252,7 +1250,7 @@ class MachineDefinition
                 'error_message' => $fake['error'] ?? 'Faked failure',
                 'machine_id'    => '',
                 'machine_class' => $childMachineClass,
-                'output'        => $childContext,
+                'output'        => [],
             ]);
 
             $this->routeChildFailEvent($state, $stateDefinition, $failEvent);
@@ -1265,7 +1263,7 @@ class MachineDefinition
 
             $doneEvent = ChildMachineDoneEvent::forChild([
                 'result'        => $fake['result'],
-                'output'        => $childContext,
+                'output'        => $fake['result'] ?? [],
                 'machine_id'    => '',
                 'machine_class' => $childMachineClass,
             ]);
