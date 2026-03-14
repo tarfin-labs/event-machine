@@ -12,6 +12,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 /**
  * Queue job that creates and runs a child machine asynchronously.
@@ -105,6 +106,10 @@ class ChildMachineJob implements ShouldQueue
                 success: true,
                 result: $childMachine->result(),
                 childContextData: $childMachine->state->context->data,
+                outputData: MachineDefinition::resolveChildOutput(
+                    $childMachine->state->currentStateDefinition,
+                    $childMachine->state->context,
+                ),
             ));
         }
 

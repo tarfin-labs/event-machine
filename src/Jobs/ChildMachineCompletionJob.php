@@ -39,6 +39,7 @@ class ChildMachineCompletionJob implements ShouldQueue
      * @param  mixed  $result  The child's ResultBehavior output (for @done).
      * @param  array  $childContextData  The child's final context data (for @done).
      * @param  string|null  $errorMessage  Error message (for @fail).
+     * @param  array|null  $outputData  The child's filtered output (from final state `output` key).
      */
     public function __construct(
         public readonly string $parentRootEventId,
@@ -50,6 +51,7 @@ class ChildMachineCompletionJob implements ShouldQueue
         public readonly mixed $result = null,
         public readonly array $childContextData = [],
         public readonly ?string $errorMessage = null,
+        public readonly ?array $outputData = null,
     ) {}
 
     public function handle(): void
@@ -101,7 +103,7 @@ class ChildMachineCompletionJob implements ShouldQueue
 
                 $doneEvent = ChildMachineDoneEvent::forChild([
                     'result'        => $this->result,
-                    'child_context' => $this->childContextData,
+                    'output'        => $this->outputData,
                     'machine_id'    => $this->childRootEventId ?? '',
                     'machine_class' => $this->childMachineClass,
                 ]);
@@ -121,7 +123,7 @@ class ChildMachineCompletionJob implements ShouldQueue
                     'error_message' => $this->errorMessage ?? 'Unknown error',
                     'machine_id'    => $this->childRootEventId ?? '',
                     'machine_class' => $this->childMachineClass,
-                    'child_context' => $this->childContextData,
+                    'output'        => $this->outputData ?? $this->childContextData,
                 ]);
 
                 $freshParent->definition->routeChildFailEvent(

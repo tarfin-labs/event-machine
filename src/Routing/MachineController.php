@@ -14,6 +14,7 @@ use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 
@@ -245,6 +246,10 @@ class MachineController extends Controller
             success: true,
             result: $machine->result(),
             childContextData: $state->context->data,
+            outputData: MachineDefinition::resolveChildOutput(
+                $state->currentStateDefinition,
+                $state->context,
+            ),
         ));
     }
 }
