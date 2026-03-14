@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class() extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('machine_current_states', function (Blueprint $table): void {
+            $table->string('root_event_id', 26);
+            $table->string('machine_class');
+            $table->string('state_id');
+            $table->timestamp('state_entered_at');
+
+            $table->primary(['root_event_id', 'state_id']);
+            $table->index(['machine_class', 'state_id', 'state_entered_at'], 'idx_sweep');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('machine_current_states');
+    }
+};
