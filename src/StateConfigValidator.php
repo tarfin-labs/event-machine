@@ -328,17 +328,22 @@ class StateConfigValidator
             );
         }
 
-        // If it's an array of conditions (guarded transitions)
-        if (array_is_list($transition)) {
-            self::validateGuardedTransitions($transition, $path, $eventName);
-            foreach ($transition as &$condition) {
+        // Strip timer keys (after/every/max/then) before validating transition structure
+        $timerKeys               = ['after', 'every', 'max', 'then'];
+        $transitionWithoutTimers = array_diff_key($transition, array_flip($timerKeys));
+
+        // If it's a list (guarded transitions) — includes empty lists
+        if (array_is_list($transitionWithoutTimers)) {
+            self::validateGuardedTransitions($transitionWithoutTimers, $path, $eventName);
+            foreach ($transitionWithoutTimers as &$condition) {
                 self::validateTransitionConfig(transitionConfig: $condition, path: $path, eventName: $eventName);
             }
 
             return;
         }
 
-        self::validateTransitionConfig(transitionConfig: $transition, path: $path, eventName: $eventName);
+        // Standard single-branch config
+        self::validateTransitionConfig(transitionConfig: $transitionWithoutTimers, path: $path, eventName: $eventName);
     }
 
     /**
