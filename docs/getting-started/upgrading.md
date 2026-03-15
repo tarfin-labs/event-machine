@@ -4,7 +4,14 @@ Guide for upgrading between EventMachine versions.
 
 ## Upgrading to v7.0
 
-v7.0 introduces **machine delegation** — the ability for a state to delegate its work to another machine. This is a feature release with **no breaking changes**. All existing machines continue to work unchanged.
+v7.0 is a major feature release with **no breaking changes**. All existing machines continue to work unchanged. New capabilities:
+
+- **Machine Delegation** — invoke child machines via `machine`/`job` keys with `@done`/`@fail` lifecycle
+- **Cross-Machine Communication** — `sendTo()`, `dispatchTo()`, `sendToParent()`, `dispatchToParent()`, `raise()`
+- **Time-Based Events** — `after` (one-shot) and `every` (recurring) timers on transitions
+- **Scheduled Events** — cron-based batch operations via `schedules` key and `MachineScheduler`
+- **Machine Faking** — short-circuit child machines in tests
+- **Machine Identity** — `$context->machineId()` and `$context->parentMachineId()`
 
 ### New Feature: Machine Delegation
 
@@ -200,9 +207,17 @@ For full documentation, see [Scheduled Events](/advanced/scheduled-events) and [
 | `src/Scheduling/MachineScheduler.php` | Registration API for scheduled events |
 | `src/Commands/ProcessScheduledCommand.php` | Processes scheduled events for machine instances |
 
-### New Database Table
+### New Database Tables
 
-v7.0 adds a `machine_children` table for tracking async child machine instances. Publish and run migrations:
+v7.0 adds three new tables:
+
+| Table | Purpose |
+|-------|---------|
+| `machine_children` | Tracks async child machine instances (delegation with `queue` key) |
+| `machine_current_states` | Normalized current state per machine instance (for timers and scheduled events) |
+| `machine_timer_fires` | Timer dedup and recurring fire tracking (`after`/`every` transitions) |
+
+Publish and run migrations:
 
 ```bash
 php artisan vendor:publish --tag=machine-migrations
@@ -210,8 +225,30 @@ php artisan migrate
 ```
 
 ::: info
-The `machine_children` table is only used when you have async delegation (`queue` key). If you only use sync delegation, the table will remain empty but should still be created.
+Tables are only populated when their respective features are used. If you only use basic state machines without delegation, timers, or schedules, the tables will remain empty but should still be created.
 :::
+
+### New Artisan Commands
+
+| Command | Purpose |
+|---------|---------|
+| `machine:process-timers` | Sweep command for `after`/`every` timers (auto-registered via ServiceProvider) |
+| `machine:process-scheduled` | Processes scheduled events (called by `MachineScheduler` via Laravel Scheduler) |
+| `machine:timer-status` | Display timer status for machine instances |
+| `machine:cache` | Cache machine class discovery for production |
+| `machine:clear` | Clear machine discovery cache |
+
+### New Testing Helpers
+
+| Helper | Purpose |
+|--------|---------|
+| `advanceTimers(Timer $duration)` | Backdate state entry and run timer sweep inline |
+| `processTimers()` | Run timer sweep without time change |
+| `assertHasTimer(string $event)` | Assert timer exists on current state |
+| `assertTimerFired(string $event)` | Assert timer has fired |
+| `assertTimerNotFired(string $event)` | Assert timer has NOT fired |
+| `runSchedule(string $event)` | Send scheduled event inline (bypasses queue) |
+| `assertHasSchedule(string $event)` | Assert schedule exists in definition |
 
 ### New Internal Events
 
