@@ -115,8 +115,8 @@ class MachineDefinition
         public string $id,
         public ?string $version,
         public ?array $scenarios,
-        public ?array $endpoints = null,
-        public ?array $schedules = null,
+        private readonly ?array $endpoints = null,
+        private readonly ?array $schedules = null,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
         StateConfigValidator::validate($config);
