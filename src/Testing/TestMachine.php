@@ -977,6 +977,47 @@ class TestMachine
     }
 
     // ═══════════════════════════════════════════
+    //  Schedule Helpers
+    // ═══════════════════════════════════════════
+
+    /**
+     * Simulate running a scheduled event inline (bypasses queue).
+     *
+     * Sends the event directly to the machine, as if ProcessScheduledCommand
+     * had resolved this instance and dispatched it.
+     */
+    public function runSchedule(string $eventType): self
+    {
+        $schedules = $this->machine->definition->parsedSchedules ?? [];
+
+        if (!isset($schedules[$eventType])) {
+            throw new AssertionFailedError(
+                "Schedule '{$eventType}' is not defined on this machine. "
+                .'Available schedules: '.(empty($schedules) ? 'none' : implode(', ', array_keys($schedules))).'.'
+            );
+        }
+
+        return $this->send(['type' => $eventType]);
+    }
+
+    /**
+     * Assert that the machine definition has a schedule for the given event type.
+     */
+    public function assertHasSchedule(string $eventType): self
+    {
+        $schedules = $this->machine->definition->parsedSchedules ?? [];
+
+        if (!isset($schedules[$eventType])) {
+            throw new AssertionFailedError(
+                "Expected machine to have schedule '{$eventType}', but it does not. "
+                .'Available schedules: '.(empty($schedules) ? 'none' : implode(', ', array_keys($schedules))).'.'
+            );
+        }
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
     //  Accessors
     // ═══════════════════════════════════════════
 
