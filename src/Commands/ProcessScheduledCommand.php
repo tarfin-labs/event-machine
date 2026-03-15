@@ -179,14 +179,28 @@ class ProcessScheduledCommand extends Command
             return []; // root handles it → all states
         }
 
-        $states = [];
+        $handlerStates = [];
         foreach ($definition->idMap as $stateId => $stateDef) {
             if ($stateDef->transitionDefinitions !== null
                 && isset($stateDef->transitionDefinitions[$eventType])) {
-                $states[] = $stateId;
+                $handlerStates[] = $stateId;
             }
         }
 
-        return $states;
+        // Expand parent states to include all descendant IDs.
+        // machine_current_states records leaf state IDs, but event bubbling
+        // means child states inherit parent's transitions.
+        $expanded = [];
+        foreach ($handlerStates as $handlerStateId) {
+            $expanded[] = $handlerStateId;
+
+            foreach (array_keys($definition->idMap) as $childId) {
+                if (str_starts_with((string) $childId, $handlerStateId.'.')) {
+                    $expanded[] = $childId;
+                }
+            }
+        }
+
+        return array_values(array_unique($expanded));
     }
 }

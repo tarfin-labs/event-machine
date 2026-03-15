@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Bus;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines\ScheduledMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines\CompoundScheduledMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines\AutoDetectScheduledMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines\ExpiredApplicationsResolver;
 
@@ -144,4 +145,21 @@ it('dispatches single instance correctly', function (): void {
     Bus::assertBatched(fn ($batch) => $batch->jobs->count() === 1
         && $batch->jobs->first()->rootEventId === 'mre-single'
     );
+});
+
+it('auto-detect expands compound parent state to include child states', function (): void {
+    // CompoundScheduledMachine: 'payment' parent handles CHECK_EXPIRY
+    // machine_current_states records leaf: compound_scheduled.payment.pending
+    MachineCurrentState::insert([
+        ['root_event_id' => 'mre-pending', 'machine_class' => CompoundScheduledMachine::class, 'state_id' => 'compound_scheduled.payment.pending', 'state_entered_at' => now()],
+        ['root_event_id' => 'mre-processing', 'machine_class' => CompoundScheduledMachine::class, 'state_id' => 'compound_scheduled.payment.processing', 'state_entered_at' => now()],
+    ]);
+
+    $this->artisan('machine:process-scheduled', [
+        '--class' => CompoundScheduledMachine::class,
+        '--event' => 'CHECK_EXPIRY',
+    ])->assertSuccessful();
+
+    // Both child states should be targeted (expanded from parent 'payment')
+    Bus::assertBatched(fn ($batch) => $batch->jobs->count() === 2);
 });
