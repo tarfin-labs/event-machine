@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Definition;
 
 use Closure;
-use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
 
 /**
  * Value object representing a single schedule definition.
@@ -29,7 +29,7 @@ class ScheduleDefinition
     public static function fromConfig(string $key, string|Closure|null $resolver): self
     {
         return new self(
-            eventType: self::resolveEventType($key),
+            eventType: EndpointDefinition::resolveEventType($key),
             resolver: $resolver,
         );
     }
@@ -42,20 +42,5 @@ class ScheduleDefinition
     public function hasResolver(): bool
     {
         return $this->resolver !== null;
-    }
-
-    /**
-     * Resolve an event key to its SCREAMING_SNAKE_CASE event type.
-     *
-     * Accepts either a plain string ('CHECK_EXPIRY') or an EventBehavior class FQCN.
-     * Same logic as EndpointDefinition::resolveEventType().
-     */
-    private static function resolveEventType(string $key): string
-    {
-        if (is_subclass_of($key, EventBehavior::class)) {
-            return $key::getType();
-        }
-
-        return $key;
     }
 }

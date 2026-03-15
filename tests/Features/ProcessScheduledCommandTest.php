@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Bus;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines\ScheduledMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines\AutoDetectScheduledMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines\ExpiredApplicationsResolver;
 
 beforeEach(function (): void {
@@ -92,21 +93,21 @@ it('auto-detect dispatches nothing when no matching instances', function (): voi
 });
 
 it('auto-detect filters by state for state-level event', function (): void {
-    // CHECK_EXPIRY is on 'active' state only, not root-level on
+    // AutoDetectScheduledMachine has CHECK_EXPIRY only on 'active' state (null resolver)
     MachineCurrentState::insert([
-        ['root_event_id' => 'mre-active', 'machine_class' => ScheduledMachine::class, 'state_id' => 'active', 'state_entered_at' => now()],
-        ['root_event_id' => 'mre-expired', 'machine_class' => ScheduledMachine::class, 'state_id' => 'expired', 'state_entered_at' => now()],
+        ['root_event_id' => 'mre-active', 'machine_class' => AutoDetectScheduledMachine::class, 'state_id' => 'auto_detect_scheduled.active', 'state_entered_at' => now()],
+        ['root_event_id' => 'mre-suspended', 'machine_class' => AutoDetectScheduledMachine::class, 'state_id' => 'auto_detect_scheduled.suspended', 'state_entered_at' => now()],
     ]);
 
-    // Use auto-detect by creating a machine with null resolver for CHECK_EXPIRY
-    // We can't easily test this with ScheduledMachine since CHECK_EXPIRY has a class resolver
-    // Instead, test that DAILY_REPORT (root-level) returns both
     $this->artisan('machine:process-scheduled', [
-        '--class' => ScheduledMachine::class,
-        '--event' => 'DAILY_REPORT',
+        '--class' => AutoDetectScheduledMachine::class,
+        '--event' => 'CHECK_EXPIRY',
     ])->assertSuccessful();
 
-    Bus::assertBatched(fn ($batch) => $batch->jobs->count() === 2);
+    // Only 'active' state handles CHECK_EXPIRY, so only mre-active should be dispatched
+    Bus::assertBatched(fn ($batch) => $batch->jobs->count() === 1
+        && $batch->jobs->first()->rootEventId === 'mre-active'
+    );
 });
 
 it('fails when --class is missing', function (): void {

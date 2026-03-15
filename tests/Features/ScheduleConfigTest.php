@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\ScheduleDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Events\SimpleEvent;
+use Tarfinlabs\EventMachine\Exceptions\InvalidScheduleDefinitionException;
 
 it('define() accepts schedules parameter with class resolver', function (): void {
     $definition = MachineDefinition::define(
@@ -158,3 +159,18 @@ it('define() accepts multiple schedules', function (): void {
         ->toHaveCount(2)
         ->toHaveKeys(['CHECK_EXPIRY', 'SEND_REMINDER']);
 });
+
+it('throws when schedule references undefined event type', function (): void {
+    MachineDefinition::define(
+        config: [
+            'id'      => 'bad_schedule',
+            'initial' => 'active',
+            'states'  => [
+                'active' => [],
+            ],
+        ],
+        schedules: [
+            'NONEXISTENT_EVENT' => null,
+        ],
+    );
+})->throws(InvalidScheduleDefinitionException::class, 'NONEXISTENT_EVENT');

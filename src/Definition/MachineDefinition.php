@@ -30,6 +30,7 @@ use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidEndpointDefinitionException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidScheduleDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
@@ -217,6 +218,7 @@ class MachineDefinition
      *
      * Converts raw schedule config into ScheduleDefinition value objects
      * keyed by resolved event type string (FQCN keys are normalized).
+     * Validates that each scheduled event type exists in the machine's event list.
      */
     private function parseSchedules(): void
     {
@@ -224,6 +226,10 @@ class MachineDefinition
 
         foreach ($this->schedules as $key => $resolver) {
             $schedule = ScheduleDefinition::fromConfig((string) $key, $resolver);
+
+            if ($this->events === null || !in_array($schedule->eventType, $this->events, true)) {
+                throw InvalidScheduleDefinitionException::undefinedEvent($schedule->eventType);
+            }
 
             $this->parsedSchedules[$schedule->eventType] = $schedule;
         }

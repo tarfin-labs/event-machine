@@ -13,7 +13,7 @@ use Tarfinlabs\EventMachine\Contracts\ScheduleResolver;
 class ExpiredApplicationsResolver implements ScheduleResolver
 {
     /** @var Collection<int, string> */
-    public static Collection $ids;
+    public static ?Collection $ids = null;
 
     public static function setUp(array $ids): void
     {
