@@ -160,3 +160,13 @@ it('does not extract timer when no after/every key', function (): void {
 
     expect($transition->timerDefinition)->toBeNull();
 });
+
+// ─── Negative Validation Tests ──────────────────────────────────
+
+it('Timer rejects zero duration', function (): void {
+    Timer::seconds(0);
+})->throws(InvalidArgumentException::class, 'must be positive');
+
+it('Timer rejects negative duration', function (): void {
+    Timer::days(-1);
+})->throws(InvalidArgumentException::class, 'must be positive');

@@ -218,7 +218,7 @@ Guards work exactly like standard guarded transitions. `after`/`every` fires onc
 
 | Command | Description |
 |---------|-------------|
-| `machine:process-timers --class=X` | Run timer sweep for a machine class |
+| `machine:process-timers --class=X` | Run timer sweep for a machine class (`--class` is required) |
 | `machine:timer-status` | Show timer status for all instances |
 | `machine:cache` | Cache machine discovery for production |
 | `machine:clear` | Clear machine cache (fall back to runtime discovery) |

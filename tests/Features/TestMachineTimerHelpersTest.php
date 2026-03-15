@@ -107,11 +107,16 @@ it('assertTimerFired passes after timer fires', function (): void {
         ->assertState('cancelled');
 });
 
-it('assertTimerFired fails before deadline', function (): void {
+it('assertTimerNotFired passes when no sweep has run', function (): void {
     AfterTimerMachine::test()
         ->assertTimerNotFired('ORDER_EXPIRED')
         ->assertState('awaiting_payment');
 });
+
+it('assertTimerFired throws when timer has not fired', function (): void {
+    AfterTimerMachine::test()
+        ->assertTimerFired('ORDER_EXPIRED');
+})->throws(AssertionFailedError::class, 'no matching record found');
 
 it('assertTimerNotFired passes before deadline', function (): void {
     AfterTimerMachine::test()

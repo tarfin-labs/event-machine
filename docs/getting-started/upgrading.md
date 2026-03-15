@@ -205,9 +205,14 @@ php artisan vendor:publish --tag=machine-migrations
 php artisan migrate
 ```
 
-#### Step 3: Start Using Delegation (Optional)
+This creates the following new tables:
+- `machine_children` — Async child machine tracking
+- `machine_current_states` — Current state tracking (required for time-based events)
+- `machine_timer_fires` — Timer dedup and recurring fire tracking
 
-No existing code needs to change. Add `machine` keys to state definitions when you're ready to delegate work to child machines.
+#### Step 3: Start Using Features (Optional)
+
+No existing code needs to change. Add `machine`/`job` keys, `after`/`every` timers, and `output` keys when you're ready.
 
 ---
 
