@@ -12,6 +12,13 @@ use Tarfinlabs\EventMachine\MachineServiceProvider;
 
 class TestCase extends Orchestra
 {
+    protected function defineEnvironment($app): void
+    {
+        // Bus::batch requires explicit batching config pointing to the test connection
+        $app['config']->set('queue.batching.database', $app['config']->get('database.default'));
+        $app['config']->set('queue.batching.table', 'job_batches');
+    }
+
     protected function getPackageProviders($app): array
     {
         return [
