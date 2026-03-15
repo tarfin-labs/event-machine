@@ -31,6 +31,14 @@ class MachineScheduler
      */
     public static function register(string $machineClass, string $eventType): SchedulingEvent
     {
+        $definition = $machineClass::definition();
+
+        if ($definition->parsedSchedules === null || !isset($definition->parsedSchedules[$eventType])) {
+            throw new \InvalidArgumentException(
+                "Event '{$eventType}' is not defined in schedules for {$machineClass}."
+            );
+        }
+
         /** @var Schedule $schedule */
         $schedule = resolve(Schedule::class);
 
