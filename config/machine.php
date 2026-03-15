@@ -76,4 +76,28 @@ return [
         // Set to 0 to disable (default).
         'region_timeout' => env('MACHINE_PARALLEL_DISPATCH_REGION_TIMEOUT', 0),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Timer Settings
+    |--------------------------------------------------------------------------
+    |
+    | These settings control how time-based events (`after` and `every` keys
+    | on transitions) are processed. The sweep command runs at the configured
+    | resolution and checks all machine instances for due timers.
+    |
+    */
+    'timers' => [
+        // How often the sweep command runs. Maps to Laravel Scheduler method names.
+        // Use TimerResolution enum values: everyMinute, everyFiveMinutes, etc.
+        'resolution' => env('MACHINE_TIMER_RESOLUTION', 'everyMinute'),
+
+        // Maximum instances to process per sweep query batch.
+        // Higher values process more instances per sweep but use more memory.
+        'batch_size' => env('MACHINE_TIMER_BATCH_SIZE', 100),
+
+        // Skip sweep if queue has more pending jobs than this threshold.
+        // Prevents overwhelming the queue when it's already saturated.
+        'backpressure_threshold' => env('MACHINE_TIMER_BACKPRESSURE_THRESHOLD', 10000),
+    ],
 ];

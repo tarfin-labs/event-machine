@@ -25,6 +25,7 @@ use Tarfinlabs\EventMachine\Traits\ResolvesBehaviors;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionTimeoutJob;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
@@ -375,7 +376,51 @@ class Machine implements Castable, JsonSerializable, Stringable
             uniqueBy: ['id']
         );
 
+        // Sync machine_current_states table (diff-based: only update changed states)
+        $this->syncCurrentStates();
+
         return $this->state;
+    }
+
+    /**
+     * Sync the machine_current_states table with the current state value.
+     *
+     * Diff-based: only adds newly entered states and removes exited states.
+     * Unchanged states keep their original state_entered_at timestamp.
+     * Self-loops (same state) produce no changes.
+     */
+    protected function syncCurrentStates(): void
+    {
+        $rootEventId = $this->state->history->first()?->root_event_id;
+
+        if ($rootEventId === null) {
+            return;
+        }
+
+        $newStates = $this->state->value ?? [];
+        $existing  = MachineCurrentState::forInstance($rootEventId)->pluck('state_id')->toArray();
+
+        $added   = array_diff($newStates, $existing);
+        $removed = array_diff($existing, $newStates);
+
+        // Remove states no longer active
+        if ($removed !== []) {
+            MachineCurrentState::forInstance($rootEventId)
+                ->whereIn('state_id', $removed)
+                ->delete();
+        }
+
+        // Add newly entered states (state_entered_at = now)
+        foreach ($added as $stateId) {
+            MachineCurrentState::create([
+                'root_event_id'    => $rootEventId,
+                'machine_class'    => $this->definition->machineClass ?? static::class,
+                'state_id'         => $stateId,
+                'state_entered_at' => now(),
+            ]);
+        }
+
+        // Unchanged states are NOT touched → state_entered_at preserved
     }
 
     // endregion

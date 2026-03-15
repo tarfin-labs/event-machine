@@ -18,6 +18,8 @@ Consistent naming makes your state machines easier to read, maintain, and debug.
 | Machine class | PascalCase | `{Domain}Machine` | `OrderWorkflowMachine` |
 | Machine ID | snake_case | `{domain_name}` | `order_workflow` |
 | Context class | PascalCase | `{Domain}Context` | `OrderWorkflowContext` |
+| Timer event | SCREAMING_SNAKE_CASE | Same as event types | `ORDER_EXPIRED`, `BILLING` |
+| `then` event | SCREAMING_SNAKE_CASE | Same as event types | `MAX_RETRIES` |
 | Context keys (array) | snake_case | `{descriptive_name}` | `total_amount` |
 | Context properties (typed) | camelCase | `$descriptiveName` | `$totalAmount` |
 | Config keys | snake_case | `{descriptive_name}` | `should_persist` |

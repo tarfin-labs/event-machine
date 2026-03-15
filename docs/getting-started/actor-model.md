@@ -62,6 +62,18 @@ If you've used other actor frameworks, here's how EventMachine maps:
 | **XState** | `sendTo(actorRef)` | `sendTo(machineClass, rootEventId)` |
 | **XState** | `fromPromise` | `job` key |
 
+## Event Sources
+
+EventMachine receives events from multiple sources:
+
+| Source | Mechanism | Example |
+|--------|-----------|---------|
+| HTTP | Endpoints | User submits a form → machine receives `SUBMIT` |
+| Time | `after`/`every` on transitions | 7 days pass → machine receives `ORDER_EXPIRED` |
+| Child lifecycle | `@done`/`@fail`/`@timeout` | Child machine completes → parent receives `@done` |
+| Cross-machine | `sendTo()`/`dispatchTo()` | Another machine sends an event |
+| Self | `raise()` | Machine raises an internal event |
+
 ## What EventMachine Is NOT
 
 - **Not an in-memory actor system** — State is database-backed, not in process memory

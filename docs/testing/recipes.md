@@ -456,6 +456,58 @@ it('dispatches async event to target machine', function () {
 For the full `Machine::fake()` API (`result`, `fail`, `error`, `finalState`) and assertion methods, see [Inter-Machine Testing](/testing/delegation-testing).
 :::
 
+## Recipe: Testing Order Cancellation After Timeout
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Support\Timer;
+
+it('cancels order after 7 days without payment', function (): void {
+    OrderMachine::test(['order_id' => 'ORD-123'])
+        ->assertState('awaiting_payment')
+        ->assertHasTimer('ORDER_EXPIRED')
+        ->advanceTimers(Timer::days(8))
+        ->assertState('cancelled')
+        ->assertTimerFired('ORDER_EXPIRED')
+        ->assertFinished();
+});
+```
+
+## Recipe: Testing Recurring Billing
+
+<!-- doctest-attr: no_run -->
+```php
+it('bills subscription every 30 days', function (): void {
+    SubscriptionMachine::test()
+        ->assertState('active')
+        ->advanceTimers(Timer::days(31))
+        ->assertContext('billing_count', 1)
+        ->advanceTimers(Timer::days(31))
+        ->assertContext('billing_count', 2)
+        ->assertState('active');
+});
+```
+
+## Recipe: Testing Retry with Max Attempts
+
+<!-- doctest-attr: no_run -->
+```php
+it('retries payment 3 times then fails', function (): void {
+    $test = RetryMachine::test()->assertState('retrying');
+
+    // 3 retries
+    for ($i = 1; $i <= 3; $i++) {
+        $test->advanceTimers(Timer::hours(7))
+            ->assertContext('retry_count', $i);
+    }
+
+    // After max → fails
+    $test->advanceTimers(Timer::hours(7))
+        ->assertState('failed')
+        ->assertFinished();
+});
+```
+
 ::: tip Related
 See [Overview](/testing/overview) for the testing pyramid,
 [Isolated Testing](/testing/isolated-testing) for `runWithState()`,
@@ -463,5 +515,6 @@ See [Overview](/testing/overview) for the testing pyramid,
 [Constructor DI](/testing/constructor-di) for service mocking,
 [Transitions & Paths](/testing/transitions-and-paths) for guard and path testing,
 [TestMachine](/testing/test-machine) for the fluent wrapper,
-and [Persistence Testing](/testing/persistence-testing) for DB-level testing.
+[Persistence Testing](/testing/persistence-testing) for DB-level testing,
+and [Time-Based Testing](/testing/time-based-testing) for timer sweep testing.
 :::

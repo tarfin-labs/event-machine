@@ -125,6 +125,28 @@ Chain configuration methods before sending events to customize machine behavior 
 ->assertBehaviorRanWith('myAction', fn(array $params) => $params[0]->get('done'))  // inline: array param
 ```
 
+## Timer Testing
+
+Methods for testing time-based events (`after`/`every` on transitions).
+
+<!-- doctest-attr: ignore -->
+```php
+// Advance time and run timer sweep
+->advanceTimers(Timer::days(7))
+
+// Run sweep without advancing time
+->processTimers()
+
+// Assert timer exists on current state
+->assertHasTimer('ORDER_EXPIRED')
+
+// Assert timer fired / not fired
+->assertTimerFired('ORDER_EXPIRED')
+->assertTimerNotFired('ORDER_EXPIRED')
+```
+
+See [Time-Based Testing](/testing/time-based-testing) for complete examples.
+
 ## Accessors
 
 When you need direct access to the underlying machine, state, or context — for example, to perform custom assertions not covered by the built-in methods.
