@@ -55,7 +55,7 @@ class ProcessScheduledCommand extends Command
         }
 
         $scheduleDef  = $definition->parsedSchedules[$eventType];
-        $rootEventIds = $this->resolveInstances($scheduleDef, $machineClass);
+        $rootEventIds = $this->resolveInstances($scheduleDef, $definition, $machineClass, $eventType);
 
         if ($rootEventIds->isEmpty()) {
             $this->info('No matching instances found.');
@@ -88,12 +88,29 @@ class ProcessScheduledCommand extends Command
      */
     protected function resolveInstances(
         ScheduleDefinition $scheduleDef,
+        MachineDefinition $definition,
         string $machineClass,
+        string $eventType,
     ): Collection {
-        if (!$scheduleDef->hasResolver()) {
-            return collect();
+        // Priority 1: Resolver (class or closure) — model-level query
+        if ($scheduleDef->hasResolver()) {
+            return $this->resolveViaResolver($scheduleDef, $machineClass);
         }
 
+        // Priority 2: Auto-detect from idMap — machine_current_states query
+        return $this->resolveViaAutoDetect($definition, $machineClass, $eventType);
+    }
+
+    /**
+     * Resolve instances using the schedule's class or closure resolver.
+     *
+     * Cross-checks returned IDs against machine_current_states
+     * to filter out IDs belonging to a different machine class.
+     */
+    protected function resolveViaResolver(
+        ScheduleDefinition $scheduleDef,
+        string $machineClass,
+    ): Collection {
         try {
             $resolver = is_string($scheduleDef->resolver)
                 ? resolve($scheduleDef->resolver)
@@ -115,5 +132,54 @@ class ProcessScheduledCommand extends Command
             ->whereIn('root_event_id', $rootEventIds)
             ->where('machine_class', $machineClass)
             ->pluck('root_event_id');
+    }
+
+    /**
+     * Auto-detect target instances by scanning the definition's idMap.
+     *
+     * - Root-level `on` handler → send to ALL instances of this machine class
+     * - State-level handlers → send only to instances in those states
+     */
+    protected function resolveViaAutoDetect(
+        MachineDefinition $definition,
+        string $machineClass,
+        string $eventType,
+    ): Collection {
+        $targetStates = $this->detectTargetStates($definition, $eventType);
+        $isRootLevel  = isset($definition->root->transitionDefinitions[$eventType]);
+
+        $query = MachineCurrentState::query()
+            ->where('machine_class', $machineClass);
+
+        if (!$isRootLevel && $targetStates !== []) {
+            $query->whereIn('state_id', $targetStates);
+        }
+
+        return $query->pluck('root_event_id');
+    }
+
+    /**
+     * Find states that handle the given event type.
+     *
+     * If a root-level `on` handler exists, returns empty array
+     * (means all states via event bubbling).
+     *
+     * @return array<string>
+     */
+    protected function detectTargetStates(MachineDefinition $definition, string $eventType): array
+    {
+        if (isset($definition->root->transitionDefinitions[$eventType])) {
+            return []; // root handles it → all states
+        }
+
+        $states = [];
+        foreach ($definition->idMap as $stateId => $stateDef) {
+            if ($stateDef->transitionDefinitions !== null
+                && isset($stateDef->transitionDefinitions[$eventType])) {
+                $states[] = $stateId;
+            }
+        }
+
+        return $states;
     }
 }
