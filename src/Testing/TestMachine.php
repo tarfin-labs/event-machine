@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Testing;
 
+use Illuminate\Support\Facades\Artisan;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Support\Timer;
+use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
@@ -699,6 +704,160 @@ class TestMachine
     public function tap(callable $callback): self
     {
         $callback($this);
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Timer Testing
+    // ═══════════════════════════════════════════
+
+    /**
+     * Advance time and run the timer sweep for this machine.
+     *
+     * Persists the machine, backdates state_entered_at by the given duration,
+     * runs the sweep logic inline, and refreshes the machine state.
+     *
+     * @throws \RuntimeException If machine has no persistence (withoutPersistence mode).
+     */
+    public function advanceTimers(Timer $duration): self
+    {
+        if ($this->machine->definition->shouldPersist === false) {
+            throw new \RuntimeException('advanceTimers() requires persistence. Remove withoutPersistence() to use timer testing.');
+        }
+
+        // Persist to sync machine_current_states
+        $this->machine->persist();
+
+        $rootEventId = $this->machine->state->history->first()?->root_event_id;
+
+        if ($rootEventId === null) {
+            return $this;
+        }
+
+        // Backdate state_entered_at
+        MachineCurrentState::forInstance($rootEventId)
+            ->update(['state_entered_at' => now()->subSeconds($duration->inSeconds())]);
+
+        // Also backdate last_fired_at for @every timers so interval check works
+        MachineTimerFire::where('root_event_id', $rootEventId)
+            ->where('status', MachineTimerFire::STATUS_ACTIVE)
+            ->update(['last_fired_at' => now()->subSeconds($duration->inSeconds())]);
+
+        // Run sweep inline
+        $this->processTimers();
+
+        return $this;
+    }
+
+    /**
+     * Run the timer sweep for this machine class without advancing time.
+     *
+     * Useful when time has been manually manipulated (Carbon::setTestNow)
+     * or MachineCurrentState has been updated directly.
+     */
+    public function processTimers(): self
+    {
+        // Persist if needed
+        if ($this->machine->state->history->isNotEmpty()) {
+            $this->machine->persist();
+        }
+
+        $machineClass = $this->machine->definition->machineClass ?? $this->machine::class;
+
+        // Run sweep inline via artisan
+        Artisan::call('machine:process-timers', [
+            '--class' => $machineClass,
+        ]);
+
+        // Refresh machine state from DB
+        $rootEventId = $this->machine->state->history->first()?->root_event_id;
+
+        if ($rootEventId !== null) {
+            try {
+                $fresh                = $machineClass::create(state: $rootEventId);
+                $this->machine->state = $fresh->state;
+            } catch (\Throwable) {
+                // Machine may not have DB events (definition-only test)
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Assert that the current state has a timer-configured transition for the given event.
+     */
+    public function assertHasTimer(string $eventName): self
+    {
+        $currentState = $this->machine->state->currentStateDefinition;
+        $transitions  = $currentState->transitionDefinitions ?? [];
+
+        if (!isset($transitions[$eventName])) {
+            throw new AssertionFailedError(
+                "Expected state '{$currentState->id}' to have a timer for event '{$eventName}', but no transition exists for this event."
+                .' Available events: '.implode(', ', array_keys($transitions))
+            );
+        }
+
+        $timerDef = $transitions[$eventName]->timerDefinition;
+
+        if ($timerDef === null) {
+            $timerEvents = collect($transitions)
+                ->filter(fn ($t) => $t->timerDefinition !== null)
+                ->keys()
+                ->implode(', ');
+
+            throw new AssertionFailedError(
+                "Expected event '{$eventName}' in state '{$currentState->id}' to have a timer (after/every), but it has none."
+                .' Events with timers: '.($timerEvents ?: 'none')
+            );
+        }
+
+        return $this;
+    }
+
+    /**
+     * Assert that a timer event has been fired (recorded in machine_timer_fires).
+     */
+    public function assertTimerFired(string $eventName): self
+    {
+        $rootEventId = $this->machine->state->history->first()?->root_event_id;
+
+        $fired = MachineTimerFire::where('root_event_id', $rootEventId)
+            ->where('timer_key', 'LIKE', "%:{$eventName}:%")
+            ->whereIn('status', [
+                MachineTimerFire::STATUS_FIRED,
+                MachineTimerFire::STATUS_ACTIVE,
+                MachineTimerFire::STATUS_EXHAUSTED,
+            ])
+            ->exists();
+
+        if (!$fired) {
+            throw new AssertionFailedError(
+                "Expected timer event '{$eventName}' to have been fired, but no matching record found in machine_timer_fires."
+            );
+        }
+
+        return $this;
+    }
+
+    /**
+     * Assert that a timer event has NOT been fired.
+     */
+    public function assertTimerNotFired(string $eventName): self
+    {
+        $rootEventId = $this->machine->state->history->first()?->root_event_id;
+
+        $fired = MachineTimerFire::where('root_event_id', $rootEventId)
+            ->where('timer_key', 'LIKE', "%:{$eventName}:%")
+            ->exists();
+
+        if ($fired) {
+            throw new AssertionFailedError(
+                "Expected timer event '{$eventName}' to NOT have been fired, but a record was found in machine_timer_fires."
+            );
+        }
 
         return $this;
     }
