@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Testing;
 
-use Illuminate\Support\Facades\Artisan;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Support\Timer;
@@ -14,6 +13,7 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Definition\TimerDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
@@ -753,8 +753,9 @@ class TestMachine
     /**
      * Run the timer sweep for this machine class without advancing time.
      *
-     * Useful when time has been manually manipulated (Carbon::setTestNow)
-     * or MachineCurrentState has been updated directly.
+     * Instead of dispatching jobs via Bus::batch (which requires job_batches table),
+     * this method directly sends timer events to the machine — faster and no queue
+     * infrastructure needed in tests.
      */
     public function processTimers(): self
     {
@@ -764,25 +765,138 @@ class TestMachine
         }
 
         $machineClass = $this->machine->definition->machineClass ?? $this->machine::class;
+        $rootEventId  = $this->machine->state->history->first()?->root_event_id;
 
-        // Run sweep inline via artisan
-        Artisan::call('machine:process-timers', [
-            '--class' => $machineClass,
-        ]);
+        if ($rootEventId === null) {
+            return $this;
+        }
 
-        // Refresh machine state from DB
-        $rootEventId = $this->machine->state->history->first()?->root_event_id;
+        // Collect timer definitions from current machine's definition
+        $definition = $machineClass::definition();
 
-        if ($rootEventId !== null) {
-            try {
-                $fresh                = $machineClass::create(state: $rootEventId);
-                $this->machine->state = $fresh->state;
-            } catch (\Throwable) {
-                // Machine may not have DB events (definition-only test)
+        foreach ($definition->idMap as $stateDefinition) {
+            if ($stateDefinition->transitionDefinitions === null) {
+                continue;
+            }
+
+            foreach ($stateDefinition->transitionDefinitions as $eventName => $transitionDef) {
+                if ($transitionDef->timerDefinition === null) {
+                    continue;
+                }
+
+                $timer    = $transitionDef->timerDefinition;
+                $instance = MachineCurrentState::forInstance($rootEventId)
+                    ->where('state_id', $timer->stateId)
+                    ->first();
+
+                if ($instance === null) {
+                    continue;
+                }
+
+                if ($timer->isAfter()) {
+                    $this->processAfterTimerInline($instance, $timer, $machineClass, $rootEventId);
+                } elseif ($timer->isEvery()) {
+                    $this->processEveryTimerInline($instance, $timer, $machineClass, $rootEventId);
+                }
             }
         }
 
+        // No need to refresh — we used $this->machine->send() directly
+
         return $this;
+    }
+
+    /**
+     * Process an after timer inline (no queue, direct send).
+     */
+    private function processAfterTimerInline(MachineCurrentState $instance, TimerDefinition $timer, string $machineClass, string $rootEventId): void
+    {
+        $deadline = now()->subSeconds($timer->delaySeconds);
+
+        if ($instance->state_entered_at->greaterThan($deadline)) {
+            return; // Not past deadline
+        }
+
+        // Check dedup
+        $alreadyFired = MachineTimerFire::where('root_event_id', $rootEventId)
+            ->where('timer_key', $timer->key())
+            ->where('status', MachineTimerFire::STATUS_FIRED)
+            ->exists();
+
+        if ($alreadyFired) {
+            return;
+        }
+
+        // Send event directly using THIS machine instance (preserves inline behaviors)
+        $this->machine->send(['type' => $timer->eventName]);
+        $this->machine->persist();
+
+        // Record fire
+        MachineTimerFire::create([
+            'root_event_id' => $rootEventId,
+            'timer_key'     => $timer->key(),
+            'last_fired_at' => now(),
+            'fire_count'    => 1,
+            'status'        => MachineTimerFire::STATUS_FIRED,
+        ]);
+    }
+
+    /**
+     * Process an every timer inline (no queue, direct send).
+     */
+    private function processEveryTimerInline(MachineCurrentState $instance, TimerDefinition $timer, string $machineClass, string $rootEventId): void
+    {
+        $lastFire = MachineTimerFire::where('root_event_id', $rootEventId)
+            ->where('timer_key', $timer->key())
+            ->first();
+
+        if ($lastFire?->isExhausted()) {
+            return;
+        }
+
+        $lastFiredAt = $lastFire?->last_fired_at ?? $instance->state_entered_at;
+
+        if (now()->diffInSeconds($lastFiredAt, absolute: true) < $timer->delaySeconds) {
+            return;
+        }
+
+        $currentCount = $lastFire?->fire_count ?? 0;
+
+        // Check max/then
+        if ($timer->max !== null && $currentCount >= $timer->max) {
+            if ($timer->then !== null) {
+                $this->machine->send(['type' => $timer->then]);
+                $this->machine->persist();
+            }
+
+            MachineTimerFire::updateOrCreate(
+                ['root_event_id' => $rootEventId, 'timer_key' => $timer->key()],
+                ['status' => MachineTimerFire::STATUS_EXHAUSTED, 'last_fired_at' => now()],
+            );
+
+            return;
+        }
+
+        // Send event directly using THIS machine instance
+        $this->machine->send(['type' => $timer->eventName]);
+        $this->machine->persist();
+
+        // Track fire
+        if ($lastFire instanceof MachineTimerFire) {
+            $lastFire->update([
+                'last_fired_at' => now(),
+                'fire_count'    => $lastFire->fire_count + 1,
+                'status'        => MachineTimerFire::STATUS_ACTIVE,
+            ]);
+        } else {
+            MachineTimerFire::create([
+                'root_event_id' => $rootEventId,
+                'timer_key'     => $timer->key(),
+                'last_fired_at' => now(),
+                'fire_count'    => 1,
+                'status'        => MachineTimerFire::STATUS_ACTIVE,
+            ]);
+        }
     }
 
     /**

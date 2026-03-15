@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Jobs;
 
+use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\SerializesModels;
@@ -23,6 +24,7 @@ use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
  */
 class SendToMachineJob implements ShouldQueue
 {
+    use Batchable;
     use Dispatchable;
     use InteractsWithQueue;
     use Queueable;
