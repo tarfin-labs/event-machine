@@ -92,6 +92,9 @@ class MachineDefinition
     /** @var array<string, EndpointDefinition>|null Parsed endpoint definitions. */
     public ?array $parsedEndpoints = null;
 
+    /** @var array<string, ScheduleDefinition>|null Parsed schedule definitions keyed by resolved event type. */
+    public ?array $parsedSchedules = null;
+
     // endregion
 
     // region Constructor
@@ -112,6 +115,7 @@ class MachineDefinition
         public ?string $version,
         public ?array $scenarios,
         public ?array $endpoints = null,
+        public ?array $schedules = null,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
         StateConfigValidator::validate($config);
@@ -152,6 +156,10 @@ class MachineDefinition
 
         if ($this->endpoints !== null) {
             $this->parseEndpoints();
+        }
+
+        if ($this->schedules !== null) {
+            $this->parseSchedules();
         }
     }
 
@@ -204,6 +212,23 @@ class MachineDefinition
         }
     }
 
+    /**
+     * Parse and normalize schedule definitions.
+     *
+     * Converts raw schedule config into ScheduleDefinition value objects
+     * keyed by resolved event type string (FQCN keys are normalized).
+     */
+    private function parseSchedules(): void
+    {
+        $this->parsedSchedules = [];
+
+        foreach ($this->schedules as $key => $resolver) {
+            $schedule = ScheduleDefinition::fromConfig((string) $key, $resolver);
+
+            $this->parsedSchedules[$schedule->eventType] = $schedule;
+        }
+    }
+
     // endregion
 
     // region Static Constructors
@@ -221,6 +246,7 @@ class MachineDefinition
         ?array $behavior = null,
         ?array $scenarios = null,
         ?array $endpoints = null,
+        ?array $schedules = null,
     ): self {
         return new self(
             config: $config ?? null,
@@ -229,6 +255,7 @@ class MachineDefinition
             version: $config['version'] ?? null,
             scenarios: $scenarios,
             endpoints: $endpoints,
+            schedules: $schedules,
             delimiter: $config['delimiter'] ?? self::STATE_DELIMITER,
         );
     }
