@@ -1010,7 +1010,7 @@ class TestMachine
 
         if (!isset($schedules[$eventType])) {
             throw new AssertionFailedError(
-                "Expected machine to have schedule '{$eventType}', but it does not. "
+                "Schedule '{$eventType}' is not defined on this machine. "
                 .'Available schedules: '.(empty($schedules) ? 'none' : implode(', ', array_keys($schedules))).'.'
             );
         }

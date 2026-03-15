@@ -44,7 +44,7 @@ it('assertHasSchedule passes for defined schedule', function (): void {
 it('assertHasSchedule throws for nonexistent schedule', function (): void {
     ScheduledMachine::test()
         ->assertHasSchedule('NONEXISTENT');
-})->throws(AssertionFailedError::class, 'does not');
+})->throws(AssertionFailedError::class, 'not defined');
 
 // ═══════════════════════════════════════════
 //  Combined Lifecycle Tests
