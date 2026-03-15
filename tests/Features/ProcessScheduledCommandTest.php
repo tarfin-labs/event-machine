@@ -129,15 +129,12 @@ it('fails when event is not in schedules', function (): void {
     ])->assertFailed();
 });
 
-it('dispatches with closure resolver', function (): void {
-    // Create a machine with a closure schedule for testing
+it('dispatches single instance correctly', function (): void {
     MachineCurrentState::insert([
-        ['root_event_id' => 'mre-closure', 'machine_class' => ScheduledMachine::class, 'state_id' => 'active', 'state_entered_at' => now()],
+        ['root_event_id' => 'mre-single', 'machine_class' => ScheduledMachine::class, 'state_id' => 'active', 'state_entered_at' => now()],
     ]);
 
-    // Use the class-based resolver since closure can't be tested via artisan command
-    // (closures defined in definition are instantiated at define() time)
-    ExpiredApplicationsResolver::setUp(['mre-closure']);
+    ExpiredApplicationsResolver::setUp(['mre-single']);
 
     $this->artisan('machine:process-scheduled', [
         '--class' => ScheduledMachine::class,
@@ -145,6 +142,6 @@ it('dispatches with closure resolver', function (): void {
     ])->assertSuccessful();
 
     Bus::assertBatched(fn ($batch) => $batch->jobs->count() === 1
-        && $batch->jobs->first()->rootEventId === 'mre-closure'
+        && $batch->jobs->first()->rootEventId === 'mre-single'
     );
 });

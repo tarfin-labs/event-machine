@@ -224,7 +224,7 @@ class MachineDefinition
     {
         $this->parsedSchedules = [];
 
-        foreach ($this->schedules as $key => $resolver) {
+        foreach ($this->schedules ?? [] as $key => $resolver) {
             $schedule = ScheduleDefinition::fromConfig((string) $key, $resolver);
 
             if ($this->events === null || !in_array($schedule->eventType, $this->events, true)) {

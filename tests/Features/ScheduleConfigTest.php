@@ -132,6 +132,21 @@ it('parsedSchedules is null when no schedules provided', function (): void {
     expect($definition->parsedSchedules)->toBeNull();
 });
 
+it('empty schedules array results in empty parsedSchedules', function (): void {
+    $definition = MachineDefinition::define(
+        config: [
+            'id'      => 'empty_schedules',
+            'initial' => 'idle',
+            'states'  => [
+                'idle' => [],
+            ],
+        ],
+        schedules: [],
+    );
+
+    expect($definition->parsedSchedules)->toBeArray()->toBeEmpty();
+});
+
 it('define() accepts multiple schedules', function (): void {
     $definition = MachineDefinition::define(
         config: [

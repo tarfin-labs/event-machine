@@ -117,13 +117,13 @@ class ProcessScheduledCommand extends Command
                 : $scheduleDef->resolver;
 
             $rootEventIds = $resolver();
+
+            if (!$rootEventIds instanceof Collection || $rootEventIds->isEmpty()) {
+                return collect();
+            }
         } catch (Throwable $e) {
             $this->error("Resolver failed: {$e->getMessage()}");
 
-            return collect();
-        }
-
-        if ($rootEventIds->isEmpty()) {
             return collect();
         }
 
@@ -145,13 +145,20 @@ class ProcessScheduledCommand extends Command
         string $machineClass,
         string $eventType,
     ): Collection {
-        $targetStates = $this->detectTargetStates($definition, $eventType);
         $isRootLevel  = isset($definition->root->transitionDefinitions[$eventType]);
+        $targetStates = $this->detectTargetStates($definition, $eventType);
+
+        // Guard: event is not root-level and no state handles it → nothing to dispatch
+        if (!$isRootLevel && $targetStates === []) {
+            $this->warn("Event '{$eventType}' is not handled by any state. Dispatching nothing.");
+
+            return collect();
+        }
 
         $query = MachineCurrentState::query()
             ->where('machine_class', $machineClass);
 
-        if (!$isRootLevel && $targetStates !== []) {
+        if (!$isRootLevel) {
             $query->whereIn('state_id', $targetStates);
         }
 
