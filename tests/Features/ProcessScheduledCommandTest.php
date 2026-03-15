@@ -3,18 +3,13 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Contracts\Console\Kernel;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
-use Tarfinlabs\EventMachine\Commands\ProcessScheduledCommand;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines\ScheduledMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines\ExpiredApplicationsResolver;
 
 beforeEach(function (): void {
     Bus::fake();
-    $this->app->make(Kernel::class)->registerCommand(
-        resolve(ProcessScheduledCommand::class)
-    );
 });
 
 it('dispatches batch jobs for resolver-returned instances', function (): void {
