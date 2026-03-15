@@ -70,6 +70,7 @@ EventMachine receives events from multiple sources:
 |--------|-----------|---------|
 | HTTP | Endpoints | User submits a form → machine receives `SUBMIT` |
 | Time | `after`/`every` on transitions | 7 days pass → machine receives `ORDER_EXPIRED` |
+| Cron | `schedules` + `MachineScheduler` | Daily at 00:10 → all expired instances receive `CHECK_EXPIRY` |
 | Child lifecycle | `@done`/`@fail`/`@timeout` | Child machine completes → parent receives `@done` |
 | Cross-machine | `sendTo()`/`dispatchTo()` | Another machine sends an event |
 | Self | `raise()` | Machine raises an internal event |

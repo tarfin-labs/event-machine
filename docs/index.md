@@ -369,6 +369,36 @@ OrderMachine::test(['amount' => 0])
 <div class="feature-section">
 <div class="feature-text">
 
+## Scheduled Events
+
+**Cron-based batch operations for machines.** Define `schedules` in your machine definition, register timing in `routes/console.php`. Resolvers query your models, EventMachine dispatches to all matching instances.
+
+[Scheduled Events &rarr;](/advanced/scheduled-events)
+
+</div>
+<div class="feature-code">
+
+<!-- doctest-attr: ignore -->
+```php
+MachineDefinition::define(
+    config: [...],
+    schedules: [
+        'CHECK_EXPIRY' => ExpiredApplicationsResolver::class,
+        'DAILY_REPORT' => null,  // auto-detect
+    ],
+)
+
+// routes/console.php
+MachineScheduler::register(AppMachine::class, 'CHECK_EXPIRY')
+    ->dailyAt('00:10')->onOneServer();
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
 ## Type-Safe Context
 
 **Validated data at every step.** Context classes powered by Spatie Laravel Data give you typed properties, validation rules, and transformations.

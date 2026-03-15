@@ -140,6 +140,7 @@ export default withMermaid(
             { text: 'Patterns', link: '/advanced/delegation-patterns' },
             { text: 'Job Actors', link: '/advanced/job-actors' },
             { text: 'Time-Based Events', link: '/advanced/time-based-events' },
+            { text: 'Scheduled Events', link: '/advanced/scheduled-events' },
             { text: 'Cross-Machine Messaging', link: '/advanced/sendto' }
           ]
         },
@@ -170,6 +171,7 @@ export default withMermaid(
             { text: 'Persistence Testing', link: '/testing/persistence-testing' },
             { text: 'Inter-Machine Testing', link: '/testing/delegation-testing' },
             { text: 'Time-Based Testing', link: '/testing/time-based-testing' },
+            { text: 'Scheduled Testing', link: '/testing/scheduled-testing' },
             { text: 'Recipes', link: '/testing/recipes' }
           ]
         },

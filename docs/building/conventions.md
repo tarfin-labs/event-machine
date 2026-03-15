@@ -30,6 +30,7 @@ Consistent naming makes your state machines easier to read, maintain, and debug.
 | Endpoint action inline key | camelCase | `{descriptiveName}EndpointAction` | `cancelEndpointAction` |
 | Endpoint result class | PascalCase | `{EventDerived}EndpointResult` | `GuarantorSavedEndpointResult` |
 | Endpoint result inline key | camelCase | `{eventDerived}EndpointResult` | `guarantorSavedEndpointResult` |
+| Resolver class | PascalCase | `{Description}Resolver` | `ExpiredApplicationsResolver` |
 | Endpoint URI (auto) | kebab-case | from event type | `/farmer-saved` |
 | Route name (auto) | snake_case | from event type | `machines.application.farmer_saved` |
 
@@ -872,6 +873,33 @@ Route names are auto-generated from the machine name prefix and the event type i
 | `machines.application` | `FARMER_SAVED` | `machines.application.farmer_saved` |
 | `machines.application` | `APPROVED_WITH_INITIATIVE` | `machines.application.approved_with_initiative` |
 
+## Resolvers
+
+Resolvers determine which machine instances receive a scheduled event. Name them with a **descriptive name** and a `Resolver` suffix.
+
+### Resolver Classes
+
+```php ignore
+// Class name: {Description}Resolver — PascalCase
+class ExpiredApplicationsResolver implements ScheduleResolver { ... }
+class UnpaidOrdersResolver implements ScheduleResolver { ... }
+class ActiveSubscriptionsResolver implements ScheduleResolver { ... }
+```
+
+The description should indicate **which instances** the resolver targets, not the event type:
+
+| Good | Why |
+|------|-----|
+| `ExpiredApplicationsResolver` | Describes the instances it finds |
+| `UnpaidOrdersResolver` | Clear business meaning |
+| `ActiveSubscriptionsResolver` | Self-documenting |
+
+| Avoid | Why |
+|-------|-----|
+| `CheckExpiryResolver` | Describes the event, not the instances |
+| `ApplicationResolver` | Too generic — which applications? |
+| `DailyResolver` | Describes the schedule, not the target |
+
 ## File Organization
 
 Organize behavior classes in a directory structure that mirrors the machine domain:
@@ -897,12 +925,14 @@ app/
         │   └── OrderTotalCalculator.php
         ├── Results/
         │   └── OrderConfirmationResult.php
-        └── Endpoints/
-            ├── Actions/
-            │   ├── CancelEndpointAction.php
-            │   └── StartEndpointAction.php
-            └── Results/
-                └── OrderDetailEndpointResult.php
+        ├── Endpoints/
+        │   ├── Actions/
+        │   │   ├── CancelEndpointAction.php
+        │   │   └── StartEndpointAction.php
+        │   └── Results/
+        │       └── OrderDetailEndpointResult.php
+        └── Resolvers/
+            └── ExpiredApplicationsResolver.php
 ```
 
 ## Summary

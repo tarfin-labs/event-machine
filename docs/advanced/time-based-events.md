@@ -231,3 +231,7 @@ Guards work exactly like standard guarded transitions. `after`/`every` fires onc
 | `every` | `Timer` | Auto-trigger at interval (recurring) |
 | `max` | `int` | Max fire count (requires `every`) |
 | `then` | `string` | Event type or EventBehavior FQCN after max reached |
+
+## Related
+
+- [Scheduled Events](/advanced/scheduled-events) — Cron-based batch operations targeting all matching instances (different scope than per-instance timers)

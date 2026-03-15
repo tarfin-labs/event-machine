@@ -125,6 +125,7 @@ The `machine:xstate` Artisan command now maps `machine` keys to XState v5 `invok
 | `every` | `Timer` | Recurring timer on transition (auto-trigger at interval) |
 | `max` | `int` | Max fire count for `every` timer |
 | `then` | `string` | Event to send after `max` reached |
+| `schedules` | `array` | Schedule definitions: event → resolver mapping |
 
 ### New Feature: Time-Based Events
 
@@ -142,6 +143,34 @@ Define `after` and `every` timers directly on transitions. The sweep command aut
 ```
 
 For full documentation, see [Time-Based Events](/advanced/time-based-events) and [Time-Based Testing](/testing/time-based-testing).
+
+### New Feature: Scheduled Events
+
+Define cron-based batch operations that target all matching machine instances. The `schedules` key on `MachineDefinition::define()` pairs event types with resolvers:
+
+<!-- doctest-attr: ignore -->
+```php
+MachineDefinition::define(
+    config: [...],
+    schedules: [
+        'CHECK_EXPIRY' => ExpiredApplicationsResolver::class,
+        'DAILY_REPORT' => null,  // auto-detect from idMap
+    ],
+)
+```
+
+Register the cron schedule in `routes/console.php`:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Scheduling\MachineScheduler;
+
+MachineScheduler::register(ApplicationMachine::class, 'CHECK_EXPIRY')
+    ->dailyAt('00:10')
+    ->onOneServer();
+```
+
+For full documentation, see [Scheduled Events](/advanced/scheduled-events) and [Scheduled Testing](/testing/scheduled-testing).
 
 ### New Files
 
@@ -166,6 +195,10 @@ For full documentation, see [Time-Based Events](/advanced/time-based-events) and
 | `src/Commands/TimerStatusCommand.php` | Timer status display |
 | `src/Commands/MachineCacheCommand.php` | Cache machine discovery for production |
 | `src/Commands/MachineClearCommand.php` | Clear machine discovery cache |
+| `src/Contracts/ScheduleResolver.php` | Interface for schedule instance resolution |
+| `src/Definition/ScheduleDefinition.php` | Value object for schedule config |
+| `src/Scheduling/MachineScheduler.php` | Registration API for scheduled events |
+| `src/Commands/ProcessScheduledCommand.php` | Processes scheduled events for machine instances |
 
 ### New Database Table
 
