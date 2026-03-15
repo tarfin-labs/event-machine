@@ -1,130 +1,154 @@
 # Testing Time-Based Events
 
-Test timer transitions using `Carbon::setTestNow()` to control time and the `machine:process-timers` Artisan command to trigger sweeps.
+Test timer transitions using TestMachine's fluent API. `advanceTimers()` simulates time passing — no need to interact with internal tables or artisan commands.
 
 ## Testing `after` Timers
 
 <!-- doctest-attr: no_run -->
 ```php
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Bus;
-use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+OrderMachine::test()
+    ->assertState('awaiting_payment')
+    ->advanceTimers(Timer::days(8))     // 8 days > 7 day deadline
+    ->assertState('cancelled')
+    ->assertTimerFired('ORDER_EXPIRED');
+```
 
-it('cancels order after 7 days', function (): void {
-    Bus::fake();
+Timer not yet past deadline:
 
-    $machine = OrderMachine::create();
-    $machine->persist();
-    $rootEventId = $machine->state->history->first()->root_event_id;
-
-    // Backdate state entry to 8 days ago
-    MachineCurrentState::forInstance($rootEventId)
-        ->update(['state_entered_at' => now()->subDays(8)]);
-
-    // Run the sweep
-    $this->artisan('machine:process-timers', ['--class' => OrderMachine::class]);
-
-    // Verify: ORDER_EXPIRED was dispatched
-    Bus::assertBatched(fn ($batch) => $batch->jobs->count() === 1);
-});
+<!-- doctest-attr: no_run -->
+```php
+OrderMachine::test()
+    ->assertState('awaiting_payment')
+    ->advanceTimers(Timer::days(3))     // 3 days < 7 day deadline
+    ->assertState('awaiting_payment')   // still waiting
+    ->assertTimerNotFired('ORDER_EXPIRED');
 ```
 
 ## Testing `every` Timers
 
 <!-- doctest-attr: no_run -->
 ```php
-it('sends billing event every 30 days', function (): void {
-    Bus::fake();
-
-    $machine = SubscriptionMachine::create();
-    $machine->persist();
-    $rootEventId = $machine->state->history->first()->root_event_id;
-
-    // Backdate past interval
-    MachineCurrentState::forInstance($rootEventId)
-        ->update(['state_entered_at' => now()->subDays(31)]);
-
-    $this->artisan('machine:process-timers', ['--class' => SubscriptionMachine::class]);
-
-    Bus::assertBatched(fn ($batch) => $batch->jobs->count() === 1);
-});
+SubscriptionMachine::test()
+    ->assertState('active')
+    ->advanceTimers(Timer::days(31))    // past 30-day interval
+    ->assertState('active')             // stays in state
+    ->assertContext('billing_count', 1) // action ran
+    ->advanceTimers(Timer::days(31))    // another cycle
+    ->assertContext('billing_count', 2);
 ```
 
 ## Testing `every` with max/then
 
 <!-- doctest-attr: no_run -->
 ```php
-use Tarfinlabs\EventMachine\Models\MachineTimerFire;
-use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
+use Tarfinlabs\EventMachine\Support\Timer;
 
-it('sends MAX_RETRIES after 3 retries', function (): void {
-    Bus::fake();
-
-    $machine = RetryMachine::create();
-    $machine->persist();
-    $rootEventId = $machine->state->history->first()->root_event_id;
-
-    MachineCurrentState::forInstance($rootEventId)
-        ->update(['state_entered_at' => now()->subHours(25)]);
-
-    // Simulate 3 previous fires
-    MachineTimerFire::create([
-        'root_event_id' => $rootEventId,
-        'timer_key'     => 'retry.retrying:RETRY:21600',
-        'last_fired_at' => now()->subHours(7),
-        'fire_count'    => 3,
-        'status'        => MachineTimerFire::STATUS_ACTIVE,
-    ]);
-
-    $this->artisan('machine:process-timers', ['--class' => RetryMachine::class]);
-
-    // MAX_RETRIES event dispatched, not RETRY
-    Bus::assertBatched(fn ($batch) => $batch->jobs->first()->event['type'] === 'MAX_RETRIES');
-});
+RetryMachine::test()
+    ->assertState('retrying')
+    ->advanceTimers(Timer::hours(7))    // retry 1
+    ->assertContext('retry_count', 1)
+    ->advanceTimers(Timer::hours(7))    // retry 2
+    ->assertContext('retry_count', 2)
+    ->advanceTimers(Timer::hours(7))    // retry 3 (max)
+    ->assertContext('retry_count', 3)
+    ->advanceTimers(Timer::hours(7))    // past max → MAX_RETRIES sent
+    ->assertState('failed')
+    ->assertFinished();
 ```
 
 ## Testing Implicit Cancel
 
+When the machine leaves a state, its timers are implicitly cancelled:
+
 <!-- doctest-attr: no_run -->
 ```php
-it('timer does not fire after leaving state', function (): void {
-    Bus::fake();
+OrderMachine::test()
+    ->assertState('awaiting_payment')
+    ->send('PAY')                       // leave the state
+    ->assertState('processing')
+    ->advanceTimers(Timer::days(8))     // timer would have fired, but...
+    ->assertState('processing');         // no effect — timer cancelled
+```
 
-    $machine = OrderMachine::create();
-    $machine->persist();
+## Timer Assertions
 
-    // Transition out of the state with the timer
-    $machine->send(['type' => 'PAY']);
-    $machine->persist();
+<!-- doctest-attr: no_run -->
+```php
+OrderMachine::test()
+    ->assertState('awaiting_payment')
 
-    // Even with backdate, instance is no longer in awaiting_payment
-    $this->artisan('machine:process-timers', ['--class' => OrderMachine::class]);
+    // Assert that a timer exists on the current state
+    ->assertHasTimer('ORDER_EXPIRED')
 
-    Bus::assertNothingBatched();
-});
+    // Assert timer has NOT fired yet
+    ->assertTimerNotFired('ORDER_EXPIRED')
+
+    // Advance time past deadline
+    ->advanceTimers(Timer::days(8))
+
+    // Assert timer HAS fired
+    ->assertTimerFired('ORDER_EXPIRED');
+```
+
+## Full Lifecycle Example
+
+<!-- doctest-attr: no_run -->
+```php
+OrderMachine::test(['order_id' => 'ORD-123'])
+    ->assertState('awaiting_payment')
+    ->assertHasTimer('ORDER_EXPIRED')
+    ->assertHasTimer('PAYMENT_REMINDER')
+
+    // Day 1: reminder fires
+    ->advanceTimers(Timer::days(1))
+    ->assertState('awaiting_payment')
+    ->assertBehaviorRan('sendReminderAction')
+
+    // Day 7: order expired
+    ->advanceTimers(Timer::days(7))
+    ->assertState('cancelled')
+    ->assertTimerFired('ORDER_EXPIRED')
+    ->assertFinished();
 ```
 
 ## Testing Timer Events Manually
 
-Timer events are just regular events — you can send them manually in tests:
+Timer events are regular events — you can send them directly without the sweep:
 
 <!-- doctest-attr: no_run -->
 ```php
-it('handles ORDER_EXPIRED event', function (): void {
-    $machine = OrderMachine::create();
-    $machine->send(['type' => 'ORDER_EXPIRED']);
-
-    expect($machine->state->currentStateDefinition->id)->toBe('order.cancelled');
-});
+OrderMachine::test()
+    ->send('ORDER_EXPIRED')              // manual send, no advanceTimers needed
+    ->assertState('cancelled');
 ```
 
-## Key Testing Patterns
+## Advanced: Using processTimers()
 
-| Pattern | Approach |
-|---------|----------|
-| Backdate state entry | `MachineCurrentState::forInstance($id)->update(['state_entered_at' => ...])` |
-| Simulate previous fires | Create `MachineTimerFire` records directly |
-| Verify dispatch | `Bus::fake()` + `Bus::assertBatched()` |
-| Verify no dispatch | `Bus::assertNothingBatched()` |
-| Manual event send | `$machine->send(['type' => 'EVENT'])` — no sweep needed |
-| Self-loop preservation | Persist without state change, check `state_entered_at` unchanged |
+For fine-grained control, use `processTimers()` (runs sweep without advancing time):
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+
+// Manually backdate and sweep
+$test = OrderMachine::test();
+$test->machine()->persist();
+
+$rootEventId = $test->machine()->state->history->first()->root_event_id;
+
+MachineCurrentState::forInstance($rootEventId)
+    ->update(['state_entered_at' => now()->subDays(8)]);
+
+$test->processTimers()
+    ->assertState('cancelled');
+```
+
+## Timer Testing Methods Reference
+
+| Method | Description |
+|--------|-------------|
+| `advanceTimers(Timer $duration)` | Advance time by duration and run timer sweep |
+| `processTimers()` | Run timer sweep without advancing time |
+| `assertHasTimer(string $event)` | Assert current state has a timer for this event |
+| `assertTimerFired(string $event)` | Assert timer event was fired |
+| `assertTimerNotFired(string $event)` | Assert timer event was NOT fired |
