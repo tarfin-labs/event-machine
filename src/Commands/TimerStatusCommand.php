@@ -55,7 +55,7 @@ class TimerStatusCommand extends Command
 
         $this->table(
             ['Root Event ID', 'Machine Class', 'State', 'Entered At', 'Timer Key', 'Last Fired', 'Fire Count', 'Status'],
-            $results->map(fn ($row) => [
+            $results->map(fn ($row): array => [
                 $row->root_event_id,
                 class_basename($row->machine_class),
                 $row->state_id,
@@ -64,7 +64,7 @@ class TimerStatusCommand extends Command
                 $row->last_fired_at ?? '-',
                 $row->fire_count ?? '-',
                 $row->timer_status ?? '-',
-            ])->toArray()
+            ])->all()
         );
 
         // Summary

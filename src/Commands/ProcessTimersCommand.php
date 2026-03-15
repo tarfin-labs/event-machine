@@ -259,7 +259,7 @@ class ProcessTimersCommand extends Command
             event: ['type' => $eventName],
         ));
 
-        Bus::batch($jobs->toArray())
+        Bus::batch($jobs->all())
             ->name("timer:{$machineClass}:{$eventName}")
             ->allowFailures()
             ->dispatch();

@@ -779,7 +779,7 @@ class TestMachine
                 continue;
             }
 
-            foreach ($stateDefinition->transitionDefinitions as $eventName => $transitionDef) {
+            foreach ($stateDefinition->transitionDefinitions as $transitionDef) {
                 if ($transitionDef->timerDefinition === null) {
                     continue;
                 }
@@ -918,7 +918,7 @@ class TestMachine
 
         if ($timerDef === null) {
             $timerEvents = collect($transitions)
-                ->filter(fn ($t) => $t->timerDefinition !== null)
+                ->filter(fn ($t): bool => $t->timerDefinition instanceof TimerDefinition)
                 ->keys()
                 ->implode(', ');
 
