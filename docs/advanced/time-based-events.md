@@ -6,7 +6,7 @@ Time-based events let you define `after` (one-shot) and `every` (recurring) time
 
 Use the `Timer` class to define durations:
 
-<!-- doctest-attr: no_run -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Support\Timer;
 

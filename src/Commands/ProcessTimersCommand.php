@@ -9,6 +9,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\JoinClause;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Models\MachineTimerFire;
@@ -114,7 +116,7 @@ class ProcessTimersCommand extends Command
             ->where('machine_class', $machineClass)
             ->where('state_id', $timer->stateId)
             ->where('state_entered_at', '<=', $deadline)
-            ->whereNotExists(function ($query) use ($timer): void {
+            ->whereNotExists(function (Builder $query) use ($timer): void {
                 $query->from('machine_timer_fires')
                     ->whereColumn('machine_timer_fires.root_event_id', 'machine_current_states.root_event_id')
                     ->where('machine_timer_fires.timer_key', $timer->key())
@@ -165,11 +167,11 @@ class ProcessTimersCommand extends Command
             ->select('machine_current_states.*')
             ->where('machine_current_states.machine_class', $machineClass)
             ->where('machine_current_states.state_id', $timer->stateId)
-            ->leftJoin('machine_timer_fires', function ($join) use ($timer): void {
+            ->leftJoin('machine_timer_fires', function (JoinClause $join) use ($timer): void {
                 $join->on('machine_timer_fires.root_event_id', '=', 'machine_current_states.root_event_id')
                     ->where('machine_timer_fires.timer_key', '=', $timer->key());
             })
-            ->where(function ($query): void {
+            ->where(function (Builder $query): void {
                 $query->whereNull('machine_timer_fires.status')
                     ->orWhere('machine_timer_fires.status', MachineTimerFire::STATUS_ACTIVE);
             })
@@ -223,7 +225,7 @@ class ProcessTimersCommand extends Command
             ->select('machine_current_states.*')
             ->where('machine_current_states.machine_class', $machineClass)
             ->where('machine_current_states.state_id', $timer->stateId)
-            ->join('machine_timer_fires', function ($join) use ($timer): void {
+            ->join('machine_timer_fires', function (JoinClause $join) use ($timer): void {
                 $join->on('machine_timer_fires.root_event_id', '=', 'machine_current_states.root_event_id')
                     ->where('machine_timer_fires.timer_key', '=', $timer->key());
             })
@@ -253,7 +255,7 @@ class ProcessTimersCommand extends Command
      */
     protected function dispatchTimerJobs(string $machineClass, string $eventName, Collection $instances): void
     {
-        $jobs = $instances->map(fn ($instance): SendToMachineJob => new SendToMachineJob(
+        $jobs = $instances->map(fn (object $instance): SendToMachineJob => new SendToMachineJob(
             machineClass: $machineClass,
             rootEventId: $instance->root_event_id,
             event: ['type' => $eventName],

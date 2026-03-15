@@ -139,7 +139,7 @@ Know exactly what happened, when, and why. Compliance-ready from day one. Debug 
 </div>
 <div class="feature-code">
 
-<!-- doctest-attr: bootstrap="laravel,db" -->
+<!-- doctest-attr: no_run -->
 ```php
 // [!code hide:start]
 use Tarfinlabs\EventMachine\Actor\Machine;

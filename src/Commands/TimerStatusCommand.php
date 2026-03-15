@@ -55,7 +55,7 @@ class TimerStatusCommand extends Command
 
         $this->table(
             ['Root Event ID', 'Machine Class', 'State', 'Entered At', 'Timer Key', 'Last Fired', 'Fire Count', 'Status'],
-            $results->map(fn ($row): array => [
+            $results->map(fn (object $row): array => [
                 $row->root_event_id,
                 class_basename($row->machine_class),
                 $row->state_id,

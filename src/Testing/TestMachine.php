@@ -16,6 +16,7 @@ use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\TimerDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
@@ -918,7 +919,7 @@ class TestMachine
 
         if ($timerDef === null) {
             $timerEvents = collect($transitions)
-                ->filter(fn ($t): bool => $t->timerDefinition instanceof TimerDefinition)
+                ->filter(fn (TransitionDefinition $t): bool => $t->timerDefinition instanceof TimerDefinition)
                 ->keys()
                 ->implode(', ');
 
