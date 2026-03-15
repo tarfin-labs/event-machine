@@ -39,7 +39,7 @@ class MachineCurrentState extends Model
     /**
      * Scope: instances of a specific machine class in a specific state.
      */
-    protected function scopeForSweep(Builder $query, string $machineClass, string $stateId): Builder
+    public function scopeForSweep(Builder $query, string $machineClass, string $stateId): Builder
     {
         return $query
             ->where('machine_class', $machineClass)
@@ -49,7 +49,7 @@ class MachineCurrentState extends Model
     /**
      * Scope: instances that entered the state before a given deadline.
      */
-    protected function scopePastDeadline(Builder $query, Carbon $deadline): Builder
+    public function scopePastDeadline(Builder $query, Carbon $deadline): Builder
     {
         return $query->where('state_entered_at', '<=', $deadline);
     }
@@ -57,7 +57,7 @@ class MachineCurrentState extends Model
     /**
      * Scope: all states for a specific instance.
      */
-    protected function scopeForInstance(Builder $query, string $rootEventId): Builder
+    public function scopeForInstance(Builder $query, string $rootEventId): Builder
     {
         return $query->where('root_event_id', $rootEventId);
     }

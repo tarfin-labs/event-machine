@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Queue;
@@ -13,6 +14,7 @@ use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Definition\TimerDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 /**
  * Sweep command that processes time-based events (after/every on transitions).
@@ -53,7 +55,13 @@ class ProcessTimersCommand extends Command
 
     protected function processClass(string $machineClass, int $batchSize): void
     {
-        $definition = $machineClass::definition();
+        try {
+            $definition = $machineClass::definition();
+        } catch (\Throwable $e) {
+            $this->error("Failed to load definition for {$machineClass}: {$e->getMessage()}");
+
+            return;
+        }
 
         $timerDefinitions = $this->collectTimerDefinitions($definition);
 
@@ -75,7 +83,7 @@ class ProcessTimersCommand extends Command
      *
      * @return array<TimerDefinition>
      */
-    protected function collectTimerDefinitions($definition): array
+    protected function collectTimerDefinitions(MachineDefinition $definition): array
     {
         $timers = [];
 
@@ -119,17 +127,26 @@ class ProcessTimersCommand extends Command
             return;
         }
 
-        $this->dispatchTimerJobs($machineClass, $timer->eventName, $instances);
+        // Atomic dedup: insert fire records BEFORE dispatching to prevent race conditions.
+        // Only dispatch for instances where the insert actually succeeded (not already fired).
+        $toDispatch = collect();
 
-        // Mark as fired (one-shot dedup)
         foreach ($instances as $instance) {
-            MachineTimerFire::create([
+            $inserted = DB::table('machine_timer_fires')->insertOrIgnore([
                 'root_event_id' => $instance->root_event_id,
                 'timer_key'     => $timer->key(),
                 'last_fired_at' => now(),
                 'fire_count'    => 1,
                 'status'        => MachineTimerFire::STATUS_FIRED,
             ]);
+
+            if ($inserted > 0) {
+                $toDispatch->push($instance);
+            }
+        }
+
+        if ($toDispatch->isNotEmpty()) {
+            $this->dispatchTimerJobs($machineClass, $timer->eventName, $toDispatch);
         }
     }
 
@@ -139,7 +156,7 @@ class ProcessTimersCommand extends Command
     protected function processEveryTimer(string $machineClass, TimerDefinition $timer, int $batchSize): void
     {
         // Handle max/then: find instances at max count
-        if ($timer->max !== null) {
+        if ($timer->max !== null && $timer->then !== null) {
             $this->processEveryMaxThen($machineClass, $timer, $batchSize);
         }
 
@@ -234,7 +251,7 @@ class ProcessTimersCommand extends Command
     /**
      * Dispatch SendToMachineJob for a collection of instances via Bus::batch.
      */
-    protected function dispatchTimerJobs(string $machineClass, string $eventName, $instances): void
+    protected function dispatchTimerJobs(string $machineClass, string $eventName, Collection $instances): void
     {
         $jobs = $instances->map(fn ($instance): SendToMachineJob => new SendToMachineJob(
             machineClass: $machineClass,

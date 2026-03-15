@@ -66,7 +66,7 @@ class MachineTimerFire extends Model
     /**
      * Scope: find a specific timer record for an instance.
      */
-    protected function scopeForTimer(Builder $query, string $rootEventId, string $timerKey): Builder
+    public function scopeForTimer(Builder $query, string $rootEventId, string $timerKey): Builder
     {
         return $query
             ->where('root_event_id', $rootEventId)

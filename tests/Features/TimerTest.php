@@ -39,3 +39,11 @@ it('Timer::days(1) equals Timer::hours(24)', function (): void {
 it('Timer::weeks(1) equals Timer::days(7)', function (): void {
     expect(Timer::weeks(1)->inSeconds())->toBe(Timer::days(7)->inSeconds());
 });
+
+it('Timer rejects zero duration', function (): void {
+    Timer::seconds(0);
+})->throws(InvalidArgumentException::class, 'must be positive');
+
+it('Timer rejects negative duration', function (): void {
+    Timer::minutes(-5);
+})->throws(InvalidArgumentException::class, 'must be positive');

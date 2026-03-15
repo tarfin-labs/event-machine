@@ -794,9 +794,9 @@ class TestMachine
                 }
 
                 if ($timer->isAfter()) {
-                    $this->processAfterTimerInline($instance, $timer, $machineClass, $rootEventId);
+                    $this->processAfterTimerInline($instance, $timer, $rootEventId);
                 } elseif ($timer->isEvery()) {
-                    $this->processEveryTimerInline($instance, $timer, $machineClass, $rootEventId);
+                    $this->processEveryTimerInline($instance, $timer, $rootEventId);
                 }
             }
         }
@@ -809,7 +809,7 @@ class TestMachine
     /**
      * Process an after timer inline (no queue, direct send).
      */
-    private function processAfterTimerInline(MachineCurrentState $instance, TimerDefinition $timer, string $machineClass, string $rootEventId): void
+    private function processAfterTimerInline(MachineCurrentState $instance, TimerDefinition $timer, string $rootEventId): void
     {
         $deadline = now()->subSeconds($timer->delaySeconds);
 
@@ -844,7 +844,7 @@ class TestMachine
     /**
      * Process an every timer inline (no queue, direct send).
      */
-    private function processEveryTimerInline(MachineCurrentState $instance, TimerDefinition $timer, string $machineClass, string $rootEventId): void
+    private function processEveryTimerInline(MachineCurrentState $instance, TimerDefinition $timer, string $rootEventId): void
     {
         $lastFire = MachineTimerFire::where('root_event_id', $rootEventId)
             ->where('timer_key', $timer->key())

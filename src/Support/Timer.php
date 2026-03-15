@@ -14,7 +14,11 @@ class Timer
 {
     private function __construct(
         private readonly int $totalSeconds,
-    ) {}
+    ) {
+        if ($this->totalSeconds <= 0) {
+            throw new \InvalidArgumentException("Timer duration must be positive, got {$this->totalSeconds} seconds.");
+        }
+    }
 
     public static function seconds(int $value): self
     {
