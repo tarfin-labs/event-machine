@@ -139,7 +139,7 @@ Know exactly what happened, when, and why. Compliance-ready from day one. Debug 
 </div>
 <div class="feature-code">
 
-<!-- doctest-attr: bootstrap="laravel,db" -->
+<!-- doctest-attr: no_run -->
 ```php
 // [!code hide:start]
 use Tarfinlabs\EventMachine\Actor\Machine;
@@ -249,6 +249,55 @@ $machine->send(['type' => 'SHIPPED']); // shipping → done
 <div class="feature-section">
 <div class="feature-text">
 
+## Machine Delegation
+
+**Break complex workflows into composable machines.** A parent state delegates work to a child machine. When the child completes, `@done` fires. When it fails, `@fail` fires. Sync or async — your choice.
+
+Run children inline for simple cases, or dispatch to a queue for external I/O and webhooks. Fake child machines in tests with `Machine::fake()`. No child actually runs — assertions verify the invocation.
+
+[Machine delegation &rarr;](/advanced/machine-delegation)
+
+</div>
+<div class="feature-code">
+
+<!-- doctest-attr: ignore -->
+```php
+'processing_payment' => [
+    'machine' => PaymentMachine::class,
+    'with'    => ['order_id', 'total_amount'],
+    'queue'   => 'payments',
+    '@done'   => [
+        'target'  => 'shipping',
+        'actions' => 'storePaymentResultAction',
+    ],
+    '@fail'    => 'payment_failed',
+    '@timeout' => [
+        'after'  => 300,
+        'target' => 'payment_timed_out',
+    ],
+],
+```
+
+<!-- doctest-attr: ignore -->
+```php
+// Test without running the real child machine
+PaymentMachine::fake(result: ['payment_id' => 'pay_123']);
+
+$machine = OrderWorkflowMachine::create();
+$machine->send(['type' => 'START']);
+
+PaymentMachine::assertInvoked();
+PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
+
+Machine::resetMachineFakes();
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
 ## Test Everything, Fluently
 
 **From unit tests to full workflows — one expressive API.** Test individual behaviors in isolation with `runWithState()`, or chain entire machine lifecycles with `Machine::test()` and 21+ assertion methods.
@@ -286,6 +335,62 @@ expect(MinimumOrderGuard::runWithState($state))->toBeFalse();
 OrderMachine::test(['amount' => 0])
     ->assertGuarded('SUBMIT')
     ->assertGuardedBy('SUBMIT', MinimumAmountGuard::class);
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
+## Time-Based Events
+
+**Declarative timers on transitions.** Define `after` (one-shot) and `every` (recurring) timers directly in your machine config. Auto-discovered, auto-scheduled — no Kernel.php setup needed.
+
+[Time-Based Events &rarr;](/advanced/time-based-events)
+
+</div>
+<div class="feature-code">
+
+<!-- doctest-attr: ignore -->
+```php
+'awaiting_payment' => [
+    'on' => [
+        'PAY'           => 'processing',
+        'ORDER_EXPIRED' => ['target' => 'cancelled', 'after' => Timer::days(7)],
+        'REMINDER'      => ['actions' => 'sendReminderAction', 'every' => Timer::days(1)],
+    ],
+],
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
+## Scheduled Events
+
+**Cron-based batch operations for machines.** Define `schedules` in your machine definition, register timing in `routes/console.php`. Resolvers query your models, EventMachine dispatches to all matching instances.
+
+[Scheduled Events &rarr;](/advanced/scheduled-events)
+
+</div>
+<div class="feature-code">
+
+<!-- doctest-attr: ignore -->
+```php
+MachineDefinition::define(
+    config: [...],
+    schedules: [
+        'CHECK_EXPIRY' => ExpiredApplicationsResolver::class,
+        'DAILY_REPORT' => null,  // auto-detect
+    ],
+)
+
+// routes/console.php
+MachineScheduler::register(AppMachine::class, 'CHECK_EXPIRY')
+    ->dailyAt('00:10')->onOneServer();
 ```
 
 </div>

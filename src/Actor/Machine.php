@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Actor;
 use Stringable;
 use JsonSerializable;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
@@ -24,6 +25,7 @@ use Tarfinlabs\EventMachine\Traits\ResolvesBehaviors;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionTimeoutJob;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
@@ -47,6 +49,9 @@ class Machine implements Castable, JsonSerializable, Stringable
 
     /** Whether parallel region jobs were dispatched to the queue in this lifecycle */
     public bool $dispatched = false;
+
+    /** @var array<class-string, array{result: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>}> Machine-level fakes for testing. */
+    private static array $machineFakes = [];
 
     // endregion
 
@@ -371,7 +376,51 @@ class Machine implements Castable, JsonSerializable, Stringable
             uniqueBy: ['id']
         );
 
+        // Sync machine_current_states table (diff-based: only update changed states)
+        $this->syncCurrentStates();
+
         return $this->state;
+    }
+
+    /**
+     * Sync the machine_current_states table with the current state value.
+     *
+     * Diff-based: only adds newly entered states and removes exited states.
+     * Unchanged states keep their original state_entered_at timestamp.
+     * Self-loops (same state) produce no changes.
+     */
+    protected function syncCurrentStates(): void
+    {
+        $rootEventId = $this->state->history->first()?->root_event_id;
+
+        if ($rootEventId === null) {
+            return;
+        }
+
+        $newStates = $this->state->value ?? [];
+        $existing  = MachineCurrentState::forInstance($rootEventId)->pluck('state_id')->toArray();
+
+        $added   = array_diff($newStates, $existing);
+        $removed = array_diff($existing, $newStates);
+
+        // Remove states no longer active
+        if ($removed !== []) {
+            MachineCurrentState::forInstance($rootEventId)
+                ->whereIn('state_id', $removed)
+                ->delete();
+        }
+
+        // Add newly entered states (state_entered_at = now)
+        foreach ($added as $stateId) {
+            MachineCurrentState::create([
+                'root_event_id'    => $rootEventId,
+                'machine_class'    => $this->definition->machineClass ?? static::class,
+                'state_id'         => $stateId,
+                'state_entered_at' => now(),
+            ]);
+        }
+
+        // Unchanged states are NOT touched → state_entered_at preserved
     }
 
     // endregion
@@ -614,6 +663,165 @@ class Machine implements Castable, JsonSerializable, Stringable
 
             throw MachineValidationException::withMessages($errorsWithMessage);
         }
+    }
+
+    // endregion
+
+    // region Machine Faking
+
+    /**
+     * Register a machine fake to short-circuit child machine execution in tests.
+     *
+     * When a parent machine delegates to a faked child, the child is never
+     * actually created. Instead, the parent immediately routes @done or @fail
+     * based on the fake configuration.
+     *
+     * Works for both sync and async delegation.
+     *
+     * @param  array|null  $result  The fake result to return via @done.
+     * @param  bool  $fail  Whether to trigger @fail instead of @done.
+     * @param  string|null  $error  The error message for @fail.
+     * @param  string|null  $finalState  The specific final state name (unused by routing, available for inspection).
+     */
+    public static function fake(
+        ?array $result = null,
+        bool $fail = false,
+        ?string $error = null,
+        ?string $finalState = null,
+    ): void {
+        self::$machineFakes[static::class] = [
+            'result'      => $result,
+            'fail'        => $fail,
+            'error'       => $error,
+            'finalState'  => $finalState,
+            'invocations' => [],
+        ];
+    }
+
+    /**
+     * Check if a machine class is currently faked.
+     */
+    public static function isMachineFaked(?string $class = null): bool
+    {
+        return isset(self::$machineFakes[$class ?? static::class]);
+    }
+
+    /**
+     * Get the fake configuration for a machine class.
+     *
+     * @return array{result: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>}|null
+     */
+    public static function getMachineFake(?string $class = null): ?array
+    {
+        return self::$machineFakes[$class ?? static::class] ?? null;
+    }
+
+    /**
+     * Record a machine invocation for assertion tracking.
+     */
+    public static function recordMachineInvocation(string $class, array $context): void
+    {
+        if (isset(self::$machineFakes[$class])) {
+            self::$machineFakes[$class]['invocations'][] = $context;
+        }
+    }
+
+    /**
+     * Get recorded invocations for a faked machine.
+     *
+     * @return list<array>
+     */
+    public static function getMachineInvocations(?string $class = null): array
+    {
+        return self::$machineFakes[$class ?? static::class]['invocations'] ?? [];
+    }
+
+    /**
+     * Assert the machine was invoked as a child at least once.
+     */
+    public static function assertInvoked(): void
+    {
+        $invocations = self::getMachineInvocations(static::class);
+
+        if ($invocations === []) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class.'] to be invoked, but it was not.'
+            );
+        }
+    }
+
+    /**
+     * Assert the machine was never invoked as a child.
+     */
+    public static function assertNotInvoked(): void
+    {
+        $invocations = self::getMachineInvocations(static::class);
+
+        if ($invocations !== []) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class.'] not to be invoked, but it was invoked '.count($invocations).' time(s).'
+            );
+        }
+    }
+
+    /**
+     * Assert the machine was invoked exactly N times as a child.
+     */
+    public static function assertInvokedTimes(int $times): void
+    {
+        $invocations = self::getMachineInvocations(static::class);
+        $actual      = count($invocations);
+
+        if ($actual !== $times) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class."] to be invoked {$times} time(s), but it was invoked {$actual} time(s)."
+            );
+        }
+    }
+
+    /**
+     * Assert the machine was invoked with context containing the given subset.
+     *
+     * Checks that at least one invocation's context contains all key-value
+     * pairs from the expected array (subset match, not exact).
+     */
+    public static function assertInvokedWith(array $expected): void
+    {
+        $invocations = self::getMachineInvocations(static::class);
+
+        if ($invocations === []) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class.'] to be invoked with '.json_encode($expected).', but it was never invoked.'
+            );
+        }
+
+        foreach ($invocations as $context) {
+            $matched = true;
+
+            foreach ($expected as $key => $value) {
+                if (!array_key_exists($key, $context) || $context[$key] !== $value) {
+                    $matched = false;
+
+                    break;
+                }
+            }
+
+            if ($matched) {
+                return;
+            }
+        }
+
+        throw new AssertionFailedError(
+            'Expected machine ['.static::class.'] to be invoked with '.json_encode($expected).', but no invocation matched. Actual invocations: '.json_encode($invocations)
+        );
+    }
+
+    /**
+     * Reset all machine fakes.
+     */
+    public static function resetMachineFakes(): void
+    {
+        self::$machineFakes = [];
     }
 
     // endregion

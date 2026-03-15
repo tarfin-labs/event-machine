@@ -56,7 +56,6 @@ export default withMermaid(
 
       nav: [
         { text: 'Guide', link: '/getting-started/what-is-event-machine' },
-        { text: 'Examples', link: '/examples/quick-start' },
         {
           text: `v${gitTag}`,
           items: [
@@ -74,35 +73,32 @@ export default withMermaid(
             { text: 'What is EventMachine?', link: '/getting-started/what-is-event-machine' },
             { text: 'Comparison', link: '/getting-started/comparison' },
             { text: 'Installation', link: '/getting-started/installation' },
-            { text: 'Upgrading', link: '/getting-started/upgrading' },
-            { text: 'Your First Machine', link: '/getting-started/your-first-machine' }
-          ]
-        },
-        {
-          text: 'Understanding',
-          collapsed: false,
-          items: [
+            { text: 'Your First Machine', link: '/getting-started/your-first-machine' },
             { text: 'States & Transitions', link: '/understanding/states-and-transitions' },
             { text: 'Events', link: '/understanding/events' },
             { text: 'Context', link: '/understanding/context' },
-            { text: 'Machine Lifecycle', link: '/understanding/machine-lifecycle' }
+            { text: 'Machine Lifecycle', link: '/understanding/machine-lifecycle' },
+            { text: 'The Actor Model', link: '/getting-started/actor-model' },
+            { text: 'Upgrading', link: '/getting-started/upgrading' }
           ]
         },
         {
           text: 'Building Machines',
-          collapsed: false,
+          collapsed: true,
           items: [
             { text: 'Defining States', link: '/building/defining-states' },
             { text: 'Writing Transitions', link: '/building/writing-transitions' },
             { text: 'Working with Context', link: '/building/working-with-context' },
             { text: 'Handling Events', link: '/building/handling-events' },
             { text: 'Configuration', link: '/building/configuration' },
-            { text: 'Naming Conventions', link: '/building/conventions' }
+            { text: 'Naming Conventions', link: '/building/conventions' },
+            { text: 'Custom Context Classes', link: '/advanced/custom-context' },
+            { text: 'Scenarios', link: '/advanced/scenarios' }
           ]
         },
         {
           text: 'Behaviors',
-          collapsed: false,
+          collapsed: true,
           items: [
             { text: 'Introduction', link: '/behaviors/introduction' },
             { text: 'Actions', link: '/behaviors/actions' },
@@ -110,15 +106,42 @@ export default withMermaid(
             { text: 'Validation Guards', link: '/behaviors/validation-guards' },
             { text: 'Calculators', link: '/behaviors/calculators' },
             { text: 'Events', link: '/behaviors/events' },
-            { text: 'Results', link: '/behaviors/results' }
+            { text: 'Results', link: '/behaviors/results' },
+            { text: 'Dependency Injection', link: '/advanced/dependency-injection' }
           ]
         },
         {
-          text: 'Examples',
+          text: 'State Features',
           collapsed: true,
           items: [
-            { text: 'Quick Start', link: '/examples/quick-start' },
-            { text: 'Real World', link: '/examples/real-world' }
+            { text: 'Hierarchical States', link: '/advanced/hierarchical-states' },
+            { text: 'Entry/Exit Actions', link: '/advanced/entry-exit-actions' },
+            { text: '@always Transitions', link: '/advanced/always-transitions' },
+            { text: 'Raised Events', link: '/advanced/raised-events' }
+          ]
+        },
+        {
+          text: 'Parallel States',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/advanced/parallel-states/' },
+            { text: 'Event Handling', link: '/advanced/parallel-states/event-handling' },
+            { text: 'Persistence', link: '/advanced/parallel-states/persistence' },
+            { text: 'Parallel Dispatch', link: '/advanced/parallel-states/parallel-dispatch' }
+          ]
+        },
+        {
+          text: 'Inter-Machine',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/advanced/machine-delegation' },
+            { text: 'Sync vs Async', link: '/advanced/async-delegation' },
+            { text: 'Data Flow', link: '/advanced/delegation-data-flow' },
+            { text: 'Patterns', link: '/advanced/delegation-patterns' },
+            { text: 'Job Actors', link: '/advanced/job-actors' },
+            { text: 'Time-Based Events', link: '/advanced/time-based-events' },
+            { text: 'Scheduled Events', link: '/advanced/scheduled-events' },
+            { text: 'Cross-Machine Messaging', link: '/advanced/sendto' }
           ]
         },
         {
@@ -135,31 +158,8 @@ export default withMermaid(
           ]
         },
         {
-          text: 'Advanced Topics',
-          collapsed: true,
-          items: [
-            { text: 'Hierarchical States', link: '/advanced/hierarchical-states' },
-            {
-              text: 'Parallel States',
-              collapsed: true,
-              items: [
-                { text: 'Overview', link: '/advanced/parallel-states/' },
-                { text: 'Event Handling', link: '/advanced/parallel-states/event-handling' },
-                { text: 'Persistence', link: '/advanced/parallel-states/persistence' },
-                { text: 'Parallel Dispatch', link: '/advanced/parallel-states/parallel-dispatch' }
-              ]
-            },
-            { text: '@always Transitions', link: '/advanced/always-transitions' },
-            { text: 'Raised Events', link: '/advanced/raised-events' },
-            { text: 'Entry/Exit Actions', link: '/advanced/entry-exit-actions' },
-            { text: 'Scenarios', link: '/advanced/scenarios' },
-            { text: 'Custom Context Classes', link: '/advanced/custom-context' },
-            { text: 'Dependency Injection', link: '/advanced/dependency-injection' }
-          ]
-        },
-        {
           text: 'Testing',
-          collapsed: false,
+          collapsed: true,
           items: [
             { text: 'Overview', link: '/testing/overview' },
             { text: 'Isolated Testing', link: '/testing/isolated-testing' },
@@ -169,9 +169,12 @@ export default withMermaid(
             { text: 'TestMachine', link: '/testing/test-machine' },
             { text: 'Parallel Testing', link: '/testing/parallel-testing' },
             { text: 'Persistence Testing', link: '/testing/persistence-testing' },
+            { text: 'Inter-Machine Testing', link: '/testing/delegation-testing' },
+            { text: 'Time-Based Testing', link: '/testing/time-based-testing' },
+            { text: 'Scheduled Testing', link: '/testing/scheduled-testing' },
             { text: 'Recipes', link: '/testing/recipes' }
           ]
-        }
+        },
       ],
 
       socialLinks: [

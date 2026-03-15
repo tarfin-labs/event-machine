@@ -10,8 +10,11 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\OrderMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\GuardedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ElevatorMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Events\MachineRegisteredEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\EventResolution\EventResolutionMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncForwardParentMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncTimeoutParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Compound\ConditionalCompoundOnDoneMachine;
 
 // region Basic Export
@@ -344,6 +347,86 @@ it('resolves class-based behavior names to short types', function (): void {
 
     // Parameterized behavior strips params
     expect($method->invoke($command, 'guardName:param1,param2'))->toBe('guardName');
+});
+
+// endregion
+
+// region Machine Invoke → XState Invoke
+
+it('maps machine key to XState invoke with src, input, onDone, onError', function (): void {
+    $machine = AsyncParentMachine::create();
+
+    $command = new ExportXStateCommand();
+    $method  = new ReflectionMethod($command, 'buildMachineNode');
+    $xstate  = $method->invoke($command, $machine->definition);
+
+    // processing state should have invoke
+    expect($xstate['states']['processing'])->toHaveKey('invoke');
+
+    $invoke = $xstate['states']['processing']['invoke'];
+
+    // machine → invoke.src (class basename)
+    expect($invoke['src'])->toBe('SimpleChildMachine');
+
+    // with → invoke.input
+    expect($invoke)->toHaveKey('input');
+    expect($invoke['input'])->toBe(['order_id' => 'order_id']);
+
+    // @done → invoke.onDone
+    expect($invoke)->toHaveKey('onDone');
+    $onDone = $invoke['onDone'];
+    expect($onDone)->toHaveKey('target', 'completed');
+    expect($onDone)->toHaveKey('actions');
+
+    // @fail → invoke.onError
+    expect($invoke)->toHaveKey('onError');
+    $onError = $invoke['onError'];
+    expect($onError)->toHaveKey('target', 'failed');
+
+    // queue → invoke.meta.eventMachine.queue
+    expect($invoke)->toHaveKey('meta');
+    expect($invoke['meta']['eventMachine']['queue'])->toBe('child-queue');
+
+    // processing state should NOT have top-level onDone (it's inside invoke)
+    expect($xstate['states']['processing'])->not->toHaveKey('onDone');
+});
+
+it('exports machine with invoke via artisan command', function (): void {
+    $this->artisan('machine:xstate', [
+        'machine'  => AsyncParentMachine::class,
+        '--stdout' => true,
+    ])->assertSuccessful();
+});
+
+it('maps machine invoke with timeout to meta', function (): void {
+    $machine = AsyncTimeoutParentMachine::create();
+
+    $command = new ExportXStateCommand();
+    $method  = new ReflectionMethod($command, 'buildMachineNode');
+    $xstate  = $method->invoke($command, $machine->definition);
+
+    // processing state should have invoke and timeout in meta
+    expect($xstate['states']['processing'])->toHaveKey('invoke');
+
+    $invoke = $xstate['states']['processing']['invoke'];
+    expect($invoke['meta']['eventMachine']['timeout'])->toBe(30);
+
+    // @timeout → state meta.eventMachine.onTimeout
+    expect($xstate['states']['processing'])->toHaveKey('meta');
+    expect($xstate['states']['processing']['meta']['eventMachine'])->toHaveKey('onTimeout');
+});
+
+it('maps forward events to invoke meta', function (): void {
+    $machine = AsyncForwardParentMachine::create();
+
+    $command = new ExportXStateCommand();
+    $method  = new ReflectionMethod($command, 'buildMachineNode');
+    $xstate  = $method->invoke($command, $machine->definition);
+
+    expect($xstate['states']['processing'])->toHaveKey('invoke');
+
+    $invoke = $xstate['states']['processing']['invoke'];
+    expect($invoke['meta']['eventMachine'])->toHaveKey('forward');
 });
 
 // endregion

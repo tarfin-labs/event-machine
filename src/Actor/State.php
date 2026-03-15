@@ -31,6 +31,13 @@ class State implements \JsonSerializable
     public array $value;
 
     /**
+     * Active child machine root_event_ids for the current state.
+     *
+     * @var array<string>
+     */
+    public array $activeChildren = [];
+
+    /**
      * Constructs a new instance of the class.
      *
      * @param  ContextManager  $context  The context manager instance.
@@ -257,6 +264,59 @@ class State implements \JsonSerializable
 
         return $this;
     }
+
+    // region Active Children
+
+    /**
+     * Add a child machine to the active children list.
+     *
+     * @param  string  $childRootEventId  The child machine's root_event_id.
+     */
+    public function addActiveChild(string $childRootEventId): self
+    {
+        if (!in_array($childRootEventId, $this->activeChildren, true)) {
+            $this->activeChildren[] = $childRootEventId;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Remove a child machine from the active children list.
+     *
+     * @param  string  $childRootEventId  The child machine's root_event_id.
+     */
+    public function removeActiveChild(string $childRootEventId): self
+    {
+        $this->activeChildren = array_values(
+            array_filter(
+                $this->activeChildren,
+                fn (string $id): bool => $id !== $childRootEventId
+            )
+        );
+
+        return $this;
+    }
+
+    /**
+     * Check if a child machine is in the active children list.
+     *
+     * @param  string  $childRootEventId  The child machine's root_event_id.
+     */
+    public function hasActiveChild(string $childRootEventId): bool
+    {
+        return in_array($childRootEventId, $this->activeChildren, true);
+    }
+
+    /**
+     * Check if there are any active child machines.
+     */
+    public function hasActiveChildren(): bool
+    {
+        return $this->activeChildren !== [];
+    }
+
+    // endregion
 
     /**
      * Serialize the state to an array.

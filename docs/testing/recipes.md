@@ -384,6 +384,130 @@ it('blocks transition when guard faked to false', function () {
 });
 ```
 
+## Recipe: Child Machine Faking
+
+Short-circuit child machines with `Machine::fake()` — no child actually runs. Test the parent's flow in isolation:
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Actor\Machine;
+
+it('routes @done when child succeeds', function () {
+    PaymentMachine::fake(result: ['payment_id' => 'pay_123']);
+
+    $machine = OrderWorkflowMachine::create();
+    $machine->send(['type' => 'START']);
+
+    expect($machine->state->matches('shipping'))->toBeTrue()
+        ->and($machine->state->context->get('payment_id'))->toBe('pay_123');
+
+    PaymentMachine::assertInvoked();
+    PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
+
+    Machine::resetMachineFakes();
+});
+
+it('routes @fail when child fails', function () {
+    PaymentMachine::fake(fail: true, error: 'Insufficient funds');
+
+    $machine = OrderWorkflowMachine::create();
+    $machine->send(['type' => 'START']);
+
+    expect($machine->state->matches('payment_failed'))->toBeTrue()
+        ->and($machine->state->context->get('error'))->toBe('Insufficient funds');
+
+    Machine::resetMachineFakes();
+});
+
+it('child not invoked when transition is guarded', function () {
+    PaymentMachine::fake(result: []);
+
+    $machine = OrderWorkflowMachine::create();
+    // Don't send START — child should NOT be invoked
+
+    PaymentMachine::assertNotInvoked();
+
+    Machine::resetMachineFakes();
+});
+```
+
+## Recipe: Async dispatchTo Testing
+
+Test `dispatchTo()` and `dispatchToParent()` dispatches with `Queue::fake()`:
+
+<!-- doctest-attr: ignore -->
+```php
+use Illuminate\Support\Facades\Queue;
+use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
+
+it('dispatches async event to target machine', function () {
+    Queue::fake();
+
+    // ... trigger action that calls dispatchTo() ...
+
+    Queue::assertPushed(SendToMachineJob::class, function (SendToMachineJob $job): bool {
+        return $job->machineClass === TargetMachine::class
+            && $job->event['type'] === 'NOTIFICATION';
+    });
+});
+```
+
+::: tip
+For the full `Machine::fake()` API (`result`, `fail`, `error`, `finalState`) and assertion methods, see [Inter-Machine Testing](/testing/delegation-testing).
+:::
+
+## Recipe: Testing Order Cancellation After Timeout
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Support\Timer;
+
+it('cancels order after 7 days without payment', function (): void {
+    OrderMachine::test(['order_id' => 'ORD-123'])
+        ->assertState('awaiting_payment')
+        ->assertHasTimer('ORDER_EXPIRED')
+        ->advanceTimers(Timer::days(8))
+        ->assertState('cancelled')
+        ->assertTimerFired('ORDER_EXPIRED')
+        ->assertFinished();
+});
+```
+
+## Recipe: Testing Recurring Billing
+
+<!-- doctest-attr: no_run -->
+```php
+it('bills subscription every 30 days', function (): void {
+    SubscriptionMachine::test()
+        ->assertState('active')
+        ->advanceTimers(Timer::days(31))
+        ->assertContext('billing_count', 1)
+        ->advanceTimers(Timer::days(31))
+        ->assertContext('billing_count', 2)
+        ->assertState('active');
+});
+```
+
+## Recipe: Testing Retry with Max Attempts
+
+<!-- doctest-attr: no_run -->
+```php
+it('retries payment 3 times then fails', function (): void {
+    $test = RetryMachine::test()->assertState('retrying');
+
+    // 3 retries
+    for ($i = 1; $i <= 3; $i++) {
+        $test->advanceTimers(Timer::hours(7))
+            ->assertContext('retry_count', $i);
+    }
+
+    // After max → fails
+    $test->advanceTimers(Timer::hours(7))
+        ->assertState('failed')
+        ->assertFinished();
+});
+```
+
 ::: tip Related
 See [Overview](/testing/overview) for the testing pyramid,
 [Isolated Testing](/testing/isolated-testing) for `runWithState()`,
@@ -391,5 +515,6 @@ See [Overview](/testing/overview) for the testing pyramid,
 [Constructor DI](/testing/constructor-di) for service mocking,
 [Transitions & Paths](/testing/transitions-and-paths) for guard and path testing,
 [TestMachine](/testing/test-machine) for the fluent wrapper,
-and [Persistence Testing](/testing/persistence-testing) for DB-level testing.
+[Persistence Testing](/testing/persistence-testing) for DB-level testing,
+and [Time-Based Testing](/testing/time-based-testing) for timer sweep testing.
 :::

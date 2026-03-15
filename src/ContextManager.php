@@ -151,6 +151,67 @@ class ContextManager extends Data
         return static::from($payload);
     }
 
+    // region Machine Identity
+
+    /** The machine's root_event_id — separate from context data to avoid polluting serialized state. */
+    protected ?string $internalMachineId = null;
+
+    /** The parent machine's root_event_id (if this is a child machine). */
+    protected ?string $internalParentRootEventId = null;
+
+    /** The parent machine's FQCN (if this is a child machine). */
+    protected ?string $internalParentMachineClass = null;
+
+    /**
+     * Set machine identity properties.
+     *
+     * Called by the engine during create()/start() — not stored in the data array.
+     */
+    public function setMachineIdentity(string $machineId, ?string $parentRootEventId = null, ?string $parentMachineClass = null): void
+    {
+        $this->internalMachineId          = $machineId;
+        $this->internalParentRootEventId  = $parentRootEventId;
+        $this->internalParentMachineClass = $parentMachineClass;
+    }
+
+    /**
+     * Get the machine's root_event_id.
+     */
+    public function machineId(): ?string
+    {
+        return $this->internalMachineId;
+    }
+
+    /**
+     * Get the parent machine's root_event_id (if this is a child machine).
+     *
+     * Returns null if this machine was not invoked by a parent.
+     */
+    public function parentMachineId(): ?string
+    {
+        return $this->internalParentRootEventId;
+    }
+
+    /**
+     * Get the parent machine's FQCN (if this is a child machine).
+     *
+     * Returns null if this machine was not invoked by a parent.
+     */
+    public function parentMachineClass(): ?string
+    {
+        return $this->internalParentMachineClass;
+    }
+
+    /**
+     * Check if this machine was invoked by a parent machine.
+     */
+    public function isChildMachine(): bool
+    {
+        return $this->internalParentRootEventId !== null;
+    }
+
+    // endregion
+
     // region Magic Setup
 
     /**

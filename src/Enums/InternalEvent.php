@@ -47,6 +47,12 @@ enum InternalEvent: string
     case PARALLEL_DONE               = '{machine}.parallel.{placeholder}.done';
     case PARALLEL_FAIL               = '{machine}.parallel.{placeholder}.fail';
 
+    case CHILD_MACHINE_START     = '{machine}.child.{placeholder}.start';
+    case CHILD_MACHINE_DONE      = '{machine}.child.{placeholder}.done';
+    case CHILD_MACHINE_FAIL      = '{machine}.child.{placeholder}.fail';
+    case CHILD_MACHINE_TIMEOUT   = '{machine}.child.{placeholder}.timeout';
+    case CHILD_MACHINE_CANCELLED = '{machine}.child.{placeholder}.cancelled';
+
     /**
      * Generate an internal event name based on the machine ID and an optional placeholder.
      *
