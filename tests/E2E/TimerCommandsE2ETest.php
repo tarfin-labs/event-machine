@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Artisan;
 use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
@@ -13,8 +14,13 @@ it('E2E: timer-status shows machine instances', function (): void {
     $machine = AfterTimerMachine::create();
     $machine->persist();
 
-    $this->artisan('machine:timer-status')
-        ->assertExitCode(0);
+    // Capture output via Artisan::call
+    Artisan::call('machine:timer-status');
+    $output = Artisan::output();
+
+    expect($output)->toContain('AfterTimerMachine')
+        ->and($output)->toContain('after_timer.awaiting_payment')
+        ->and($output)->toContain('Total tracked instances');
 });
 
 it('E2E: timer-status shows fired timers', function (): void {
@@ -27,8 +33,10 @@ it('E2E: timer-status shows fired timers', function (): void {
 
     $this->artisan('machine:process-timers', ['--class' => AfterTimerMachine::class]);
 
-    $this->artisan('machine:timer-status')
-        ->assertExitCode(0);
+    Artisan::call('machine:timer-status');
+    $output = Artisan::output();
+
+    expect($output)->toContain('fired');
 
     // Verify fire record exists
     expect(MachineTimerFire::where('root_event_id', $rootEventId)->first()->status)
@@ -43,8 +51,11 @@ it('E2E: timer-status filters by class', function (): void {
     $every = EveryTimerMachine::create();
     $every->persist();
 
-    $this->artisan('machine:timer-status', ['--class' => AfterTimerMachine::class])
-        ->assertExitCode(0);
+    Artisan::call('machine:timer-status', ['--class' => AfterTimerMachine::class]);
+    $output = Artisan::output();
+
+    expect($output)->toContain('AfterTimerMachine')
+        ->and($output)->not->toContain('EveryTimerMachine');
 });
 
 // ─── Backpressure ───────────────────────────────────────────────

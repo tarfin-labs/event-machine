@@ -201,6 +201,8 @@ it('routeChildTimeoutEvent transitions parent to timed_out state', function (): 
 });
 
 it('ChildMachineTimeoutJob skips when child is already completed', function (): void {
+    Queue::fake();
+
     // Simulate race: child completed before timeout job runs
     $childRecord = MachineChild::create([
         'parent_root_event_id' => 'test-root',
@@ -215,11 +217,29 @@ it('ChildMachineTimeoutJob skips when child is already completed', function (): 
     // isTerminal() should return true for completed children
     expect($childRecord->isTerminal())->toBeTrue();
 
-    // The timeout job checks isTerminal() first — if true, returns early (no-op)
-    // This is the real race guard: completed child → timeout is discarded
+    // Run the actual job handle() — should be a no-op
+    $job = new ChildMachineTimeoutJob(
+        parentRootEventId: 'test-root',
+        parentMachineClass: AsyncTimeoutParentMachine::class,
+        parentStateId: 'timeout_parent.processing',
+        machineChildId: $childRecord->id,
+        childMachineClass: SimpleChildMachine::class,
+        timeoutSeconds: 30,
+    );
+
+    $job->handle();
+
+    // Child status should remain completed (not changed to timed_out)
+    $childRecord->refresh();
+    expect($childRecord->status)->toBe(MachineChild::STATUS_COMPLETED);
+
+    // No completion job dispatched
+    Queue::assertNotPushed(ChildMachineCompletionJob::class);
 });
 
 it('ChildMachineTimeoutJob skips when child is already failed', function (): void {
+    Queue::fake();
+
     $childRecord = MachineChild::create([
         'parent_root_event_id' => 'test-root',
         'parent_state_id'      => 'timeout_parent.processing',
@@ -231,6 +251,22 @@ it('ChildMachineTimeoutJob skips when child is already failed', function (): voi
     ]);
 
     expect($childRecord->isTerminal())->toBeTrue();
+
+    // Run the actual job handle() — should be a no-op
+    $job = new ChildMachineTimeoutJob(
+        parentRootEventId: 'test-root',
+        parentMachineClass: AsyncTimeoutParentMachine::class,
+        parentStateId: 'timeout_parent.processing',
+        machineChildId: $childRecord->id,
+        childMachineClass: SimpleChildMachine::class,
+        timeoutSeconds: 30,
+    );
+
+    $job->handle();
+
+    // Child status should remain failed
+    $childRecord->refresh();
+    expect($childRecord->status)->toBe(MachineChild::STATUS_FAILED);
 });
 
 it('ChildMachineTimeoutJob marks child as timed_out', function (): void {
