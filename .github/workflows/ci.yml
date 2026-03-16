@@ -86,7 +86,7 @@ jobs:
         uses: ramsey/composer-install@v3
 
       - name: Execute type coverage
-        run: vendor/bin/pest --type-coverage --min=100 --colors=always
+        run: vendor/bin/pest --type-coverage --min=100 --colors=always --testsuite='Tarfinlabs Test Suite'
 
   coverage:
     name: Coverage
@@ -105,7 +105,7 @@ jobs:
         uses: ramsey/composer-install@v3
 
       - name: Execute tests with coverage
-        run: vendor/bin/pest --coverage --min=80 --colors=always --order-by=random
+        run: vendor/bin/pest --coverage --min=80 --colors=always --order-by=random --testsuite='Tarfinlabs Test Suite'
 
   pest:
     name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.stability }}
@@ -145,7 +145,7 @@ jobs:
         run: composer show -D
 
       - name: Execute tests
-        run: vendor/bin/pest --parallel --no-coverage --colors=always --order-by=random
+        run: vendor/bin/pest --parallel --no-coverage --colors=always --order-by=random --testsuite='Tarfinlabs Test Suite'
 
   doctest:
     name: DocTest
