@@ -217,7 +217,7 @@ A well-designed event taxonomy for an order workflow:
 // Timer events
 'ORDER_EXPIRED'
 'PAYMENT_REMINDER'
-'RETRY_PAYMENT'
+'PAYMENT_RETRY_REQUESTED'
 ```
 
 Notice the pattern: `{DOMAIN}_{PAST_PARTICIPLE}` for external facts, `{DOMAIN}_{PAST_PARTICIPLE}` for internal progression, `{DOMAIN}_{NOUN}` for recurring timer events.

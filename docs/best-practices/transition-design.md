@@ -15,7 +15,7 @@ A self-transition targets the _current state_. The machine exits and re-enters t
     'entry' => 'sendPaymentReminderAction',
     'exit'  => 'logPaymentAttemptAction',
     'on'    => [
-        'RETRY_PAYMENT' => [
+        'PAYMENT_RETRY_REQUESTED' => [
             'target'  => 'awaiting_payment',   // self-transition: exit + re-enter
             'actions' => 'incrementRetryAction',
         ],
@@ -23,7 +23,7 @@ A self-transition targets the _current state_. The machine exits and re-enters t
 ],
 ```
 
-When `RETRY_PAYMENT` fires: `logPaymentAttemptAction` (exit) -> `incrementRetryAction` (transition) -> `sendPaymentReminderAction` (entry). The state "restarts".
+When `PAYMENT_RETRY_REQUESTED` fires: `logPaymentAttemptAction` (exit) -> `incrementRetryAction` (transition) -> `sendPaymentReminderAction` (entry). The state "restarts".
 
 ### Targetless Transition
 
@@ -60,12 +60,12 @@ Every `@always` chain must eventually reach a state without `@always`, or use gu
     'on'    => [
         '@always' => [
             ['target' => 'approved', 'guards' => 'isScoreHighGuard'],
-            ['target' => 'review'],    // fallback -- no @always, terminates
+            ['target' => 'under_review'],    // fallback -- no @always, terminates
         ],
     ],
 ],
 'approved' => [],
-'review'   => [],
+'under_review'   => [],
 ```
 
 ```php ignore
@@ -85,9 +85,9 @@ Multi-branch `@always` transitions should end with an unguarded fallback:
 
 ```php ignore
 '@always' => [
-    ['target' => 'express',  'guards' => 'isExpressGuard'],
-    ['target' => 'priority', 'guards' => 'isPriorityGuard'],
-    ['target' => 'standard'],   // always reachable
+    ['target' => 'express_processing',  'guards' => 'isExpressGuard'],
+    ['target' => 'prioritized',         'guards' => 'isPriorityGuard'],
+    ['target' => 'standard_processing'],   // always reachable
 ],
 ```
 
@@ -102,8 +102,8 @@ When an event has multiple possible targets, guards determine which branch wins.
     'on' => [
         'APPROVAL_SUBMITTED' => [
             ['target' => 'auto_approved',     'guards' => 'isUnderAutoLimitGuard'],
-            ['target' => 'manager_review',    'guards' => 'isUnderManagerLimitGuard'],
-            ['target' => 'director_review'],  // fallback
+            ['target' => 'awaiting_manager_approval',   'guards' => 'isUnderManagerLimitGuard'],
+            ['target' => 'awaiting_director_approval'],  // fallback
         ],
     ],
 ],
@@ -116,7 +116,7 @@ When an event has multiple possible targets, guards determine which branch wins.
 
 'APPROVAL_SUBMITTED' => [
     ['target' => 'auto_approved',  'guards' => 'isLowRiskGuard'],
-    ['target' => 'manual_review',  'guards' => 'isHighRiskGuard'],
+    ['target' => 'under_manual_review',  'guards' => 'isHighRiskGuard'],
     // What if neither guard passes? No transition fires.
 ],
 ```
@@ -126,7 +126,7 @@ When an event has multiple possible targets, guards determine which branch wins.
 ```php ignore
 'APPROVAL_SUBMITTED' => [
     ['target' => 'auto_approved',  'guards' => 'isLowRiskGuard'],
-    ['target' => 'manual_review',  'guards' => 'isHighRiskGuard'],
+    ['target' => 'under_manual_review',  'guards' => 'isHighRiskGuard'],
     ['target' => 'pending_review'],  // explicit fallback
 ],
 ```

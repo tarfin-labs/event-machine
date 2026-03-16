@@ -56,12 +56,12 @@ Bubbling can surprise you when a parent accidentally handles an event that a chi
 'processing' => [
     'initial' => 'attempting',
     'on' => [
-        'RETRY' => 'attempting',           // Parent handler
+        'RETRY_REQUESTED' => 'attempting',           // Parent handler
     ],
     'states' => [
         'attempting' => [
             'on' => [
-                'RETRY' => [               // Never reached!
+                'RETRY_REQUESTED' => [               // Never reached!
                     'target'  => 'attempting',
                     'actions' => 'logRetryAction',
                 ],

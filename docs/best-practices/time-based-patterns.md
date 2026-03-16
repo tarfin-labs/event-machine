@@ -41,7 +41,7 @@ Use `every` for recurring work like billing cycles, health checks, or periodic n
 ```php ignore
 'retrying_payment' => [
     'on' => [
-        'RETRY_PAYMENT'    => [
+        'PAYMENT_RETRY_REQUESTED'    => [
             'actions' => 'retryPaymentAction',
             'every'   => Timer::hours(6),
             'max'     => 3,
@@ -187,7 +187,7 @@ A complete pattern combining `after`, `every`, `max`, and `then`:
     ],
     'retrying_payment' => [
         'on' => [
-            'RETRY_PAYMENT' => [
+            'PAYMENT_RETRY_REQUESTED' => [
                 'actions' => 'retryPaymentAction',
                 'every'   => Timer::hours(6),               // retry every 6 hours
                 'max'     => 3,                              // up to 3 times
