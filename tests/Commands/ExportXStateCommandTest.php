@@ -191,7 +191,7 @@ it('produces valid XState JSON for TrafficLights with class-based behaviors', fu
 // region File Path Resolution
 
 it('resolves machine from absolute file path', function (): void {
-    $filePath = realpath(__DIR__.'/Stubs/Machines/GuardedMachine.php');
+    $filePath = realpath(__DIR__.'/../Stubs/Machines/GuardedMachine.php');
 
     $this->artisan('machine:xstate', [
         'machine'  => $filePath,

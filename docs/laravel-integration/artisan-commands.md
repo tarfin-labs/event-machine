@@ -238,7 +238,7 @@ php artisan machine:process-timers --class="App\Machines\OrderMachine"
 
 ### Configuration
 
-```php
+```php ignore
 // config/machine.php
 'timers' => [
     'resolution'              => 'everyMinute',

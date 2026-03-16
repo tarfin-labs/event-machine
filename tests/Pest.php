@@ -8,7 +8,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(
     TestCase::class,
     RefreshDatabase::class,
-)->in(__DIR__);
+)->in(
+    'Actor', 'Architecture', 'Behavior', 'Commands', 'Definition',
+    'E2E', 'Examples', 'Features', 'Integration', 'Jobs',
+    'Models', 'Routing', 'Services', 'Support',
+);
 
 /*
 |--------------------------------------------------------------------------
