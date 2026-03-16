@@ -43,6 +43,10 @@ class SendToMachineJob implements ShouldQueue
 
     public function handle(): void
     {
+        if (!is_subclass_of($this->machineClass, Machine::class)) {
+            throw new \InvalidArgumentException("Machine class '{$this->machineClass}' must extend ".Machine::class.'.');
+        }
+
         try {
             /** @var Machine $targetMachine */
             $targetMachine                           = $this->machineClass::withDefinition($this->machineClass::definition());

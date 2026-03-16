@@ -54,6 +54,10 @@ class ChildMachineJob implements ShouldQueue
 
     public function handle(): void
     {
+        if (!is_subclass_of($this->childMachineClass, Machine::class)) {
+            throw new \InvalidArgumentException("Machine class '{$this->childMachineClass}' must extend ".Machine::class.'.');
+        }
+
         // 1. Update tracking record to running
         $childRecord = MachineChild::find($this->machineChildId);
         if ($childRecord === null || $childRecord->isTerminal()) {

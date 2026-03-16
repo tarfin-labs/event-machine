@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Jobs\ChildJobJob;
+use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
+use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
@@ -225,6 +227,56 @@ it('ChildJobJob fire-and-forget does not dispatch completion', function (): void
 
     Queue::assertNotPushed(ChildMachineCompletionJob::class);
 });
+
+// ─── Class validation ────────────────────────────────────────────
+
+it('ChildJobJob rejects non-existent job class', function (): void {
+    $job = new ChildJobJob(
+        parentRootEventId: 'parent-root-id',
+        parentMachineClass: 'App\\Machines\\ParentMachine',
+        parentStateId: 'parent.sending',
+        jobClass: 'App\\Jobs\\NonExistentJob',
+    );
+
+    $job->handle();
+})->throws(InvalidArgumentException::class, 'does not exist');
+
+it('ChildJobJob rejects job class without handle method', function (): void {
+    $noHandleClass = new class() {};
+    $className     = $noHandleClass::class;
+    app()->bind($className, fn () => new $className());
+
+    $job = new ChildJobJob(
+        parentRootEventId: 'parent-root-id',
+        parentMachineClass: 'App\\Machines\\ParentMachine',
+        parentStateId: 'parent.sending',
+        jobClass: $className,
+    );
+
+    $job->handle();
+})->throws(InvalidArgumentException::class, 'must have a handle() method');
+
+it('SendToMachineJob rejects non-Machine class', function (): void {
+    $job = new SendToMachineJob(
+        machineClass: 'stdClass',
+        rootEventId: 'test-root-id',
+        event: ['type' => 'TEST'],
+    );
+
+    $job->handle();
+})->throws(InvalidArgumentException::class, 'must extend');
+
+it('ChildMachineJob rejects non-Machine class', function (): void {
+    $job = new ChildMachineJob(
+        parentRootEventId: 'parent-root-id',
+        parentMachineClass: 'App\\Machines\\ParentMachine',
+        parentStateId: 'parent.processing',
+        childMachineClass: 'stdClass',
+        machineChildId: 'test-child-id',
+    );
+
+    $job->handle();
+})->throws(InvalidArgumentException::class, 'must extend');
 
 it('ChildJobJob without ReturnsResult returns empty output', function (): void {
     Queue::fake();

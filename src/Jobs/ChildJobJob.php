@@ -15,8 +15,13 @@ use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
  * Queue job that runs a Laravel job as an actor.
  *
  * Dispatched when a parent state with `job` key is entered.
- * Creates the job, runs it, and dispatches ChildMachineCompletionJob
- * to route @done/@fail back to the parent.
+ * Creates the job via app()->make(), calls handle() directly, and dispatches
+ * ChildMachineCompletionJob to route @done/@fail back to the parent.
+ *
+ * NOTE: The inner job's handle() is called directly — this intentionally bypasses
+ * Laravel's queue middleware, rate limiters, retry/backoff, and ShouldBeUnique.
+ * Inner jobs should be simple service objects, not full queue jobs.
+ * See ReturnsResult contract for the full contract documentation.
  */
 class ChildJobJob implements ShouldQueue
 {
@@ -46,7 +51,16 @@ class ChildJobJob implements ShouldQueue
 
     public function handle(): void
     {
-        // 1. Create and run the job
+        // 1. Validate that the job class exists and has a handle() method
+        if (!class_exists($this->jobClass)) {
+            throw new \InvalidArgumentException("Job class '{$this->jobClass}' does not exist.");
+        }
+
+        if (!method_exists($this->jobClass, 'handle')) {
+            throw new \InvalidArgumentException("Job class '{$this->jobClass}' must have a handle() method.");
+        }
+
+        // 2. Create and run the job
         $job = app()->make($this->jobClass, $this->jobData);
         $job->handle();
 
