@@ -282,6 +282,7 @@ it('LocalQA: concurrent child machines do not share mutated definition context',
 // ═══════════════════════════════════════════════════════════════
 
 it('LocalQA: completion job succeeds with retry config (lock released)', function (): void {
+    // Use APPROVE forward which sends child to final → triggers completion automatically
     $parent = ForwardParentMachine::create();
     $parent->send(['type' => 'START']);
     $parent->persist();
@@ -298,13 +299,9 @@ it('LocalQA: completion job succeeds with retry config (lock released)', functio
 
     expect($childRunning)->toBeTrue();
 
-    $childRecord      = MachineChild::where('parent_root_event_id', $parentRootEventId)->first();
-    $childRootEventId = $childRecord->child_root_event_id;
-
-    // Complete the child — triggers ChildMachineCompletionJob
-    $child = ForwardableChildMachine::create(state: $childRootEventId);
-    $child->send(['type' => 'COMPLETE']);
-    $child->persist();
+    // Forward APPROVE → child reaches final state → ChildMachineCompletionJob auto-dispatched
+    $restoredParent = ForwardParentMachine::create(state: $parentRootEventId);
+    $restoredParent->send(['type' => 'APPROVE']);
 
     // Wait for parent to complete via @done
     $parentCompleted = LocalQATestCase::waitFor(function () use ($parentRootEventId) {

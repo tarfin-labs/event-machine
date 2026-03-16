@@ -264,7 +264,7 @@ it('SendToMachineJob rejects non-Machine class', function (): void {
     );
 
     $job->handle();
-})->throws(InvalidArgumentException::class, 'must extend');
+})->throws(InvalidArgumentException::class, 'must exist and extend');
 
 it('ChildMachineJob rejects non-Machine class', function (): void {
     $job = new ChildMachineJob(
@@ -276,7 +276,7 @@ it('ChildMachineJob rejects non-Machine class', function (): void {
     );
 
     $job->handle();
-})->throws(InvalidArgumentException::class, 'must extend');
+})->throws(InvalidArgumentException::class, 'must exist and extend');
 
 it('ChildJobJob without ReturnsResult returns empty output', function (): void {
     Queue::fake();

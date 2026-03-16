@@ -33,7 +33,7 @@ class LocalQATestCase extends Orchestra
             'prefix'    => '',
         ]);
 
-        // Redis queue
+        // Redis queue + cache
         $app['config']->set('queue.default', 'redis');
         $app['config']->set('cache.default', 'redis');
 
