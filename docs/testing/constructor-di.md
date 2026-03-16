@@ -54,7 +54,7 @@ it('processes payment in the full machine', function () {
 
 ## Before/After Comparison
 
-Before v6, behaviors that needed external services used the service locator pattern (calling `app()` inside `__invoke`). Constructor DI is cleaner: dependencies are explicit, testable, and visible in the class signature.
+Previously, behaviors that needed external services used the service locator pattern (calling `app()` inside `__invoke`). Constructor DI is cleaner: dependencies are explicit, testable, and visible in the class signature.
 
 ### Before — Service Locator (anti-pattern)
 

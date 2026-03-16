@@ -224,68 +224,11 @@ Parallel states have specific validation rules:
 
 ## Best Practices
 
-### 1. Use Meaningful Region Names
-
-Name regions after what they represent, not their position:
-
-```php ignore
-// Good
-'states' => [
-    'playback' => [...],
-    'volume' => [...],
-]
-
-// Avoid
-'states' => [
-    'region1' => [...],
-    'region2' => [...],
-]
-```
-
-### 2. Keep Regions Independent
+### 1. Keep Regions Independent
 
 Design regions to be as independent as possible. If regions frequently need to know about each other's state, consider whether parallel states are the right choice.
 
-### 3. Use Guards for Cross-Region Logic
-
-When you need to check another region's state before transitioning:
-
-```php ignore
-MachineDefinition::define(
-    config: [
-        'states' => [
-            'parallel' => [
-                'type' => 'parallel',
-                'states' => [
-                    'region1' => [
-                        'initial' => 'waiting',
-                        'states' => [
-                            'waiting' => [
-                                'on' => [
-                                    'PROCEED' => [
-                                        'target' => 'done',
-                                        'guards' => 'isRegion2ReadyGuard',
-                                    ],
-                                ],
-                            ],
-                            'done' => [],
-                        ],
-                    ],
-                    'region2' => [...],
-                ],
-            ],
-        ],
-    ],
-    behavior: [
-        'guards' => [
-            'isRegion2ReadyGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state)
-                => $state->matches('parallel.region2.ready'),
-        ],
-    ]
-);
-```
-
-### 4. Prefer `@done` for Synchronization
+### 2. Prefer `@done` for Synchronization
 
 Use `@done` instead of complex guards when you need to wait for all regions to complete. For conditional routing based on region results, use [conditional `@done` with guards](./event-handling#conditional-done-with-guards):
 
@@ -296,85 +239,11 @@ Use `@done` instead of complex guards when you need to wait for all regions to c
 ],
 ```
 
-### 5. Use `@always` for Cross-Region Synchronization
+### 3. Consider Parallel Dispatch for Slow Entry Actions
 
-When one region needs to wait for a sibling region to reach a certain state, use `@always` transitions with a guard that checks the sibling's state:
+When region entry actions contain expensive operations (API calls, file processing), enable [Parallel Dispatch](./parallel-dispatch) to run them concurrently via Laravel queue jobs. Each region should write to its own context keys to avoid conflicts.
 
-<!-- doctest-attr: bootstrap="laravel" -->
-```php
-use Tarfinlabs\EventMachine\Actor\State;
-use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-
-MachineDefinition::define(
-    config: [
-        'id' => 'workflow',
-        'initial' => 'processing',
-        'states' => [
-            'processing' => [
-                'type' => 'parallel',
-                '@done' => 'completed',
-                'states' => [
-                    'dealer' => [
-                        'initial' => 'pricing',
-                        'states' => [
-                            'pricing' => [
-                                'on' => ['PRICING_COMPLETED' => 'awaiting_approval'],
-                            ],
-                            'awaiting_approval' => [
-                                'on' => [
-                                    '@always' => [
-                                        ['target' => 'selecting_payment', 'guards' => 'isApprovalPassedGuard'],
-                                    ],
-                                ],
-                            ],
-                            'selecting_payment' => [
-                                'on' => ['PAYMENT_COMPLETED' => 'completed'],
-                            ],
-                            'completed' => ['type' => 'final'],
-                        ],
-                    ],
-                    'customer' => [
-                        'initial' => 'awaiting_consent',
-                        'states' => [
-                            'awaiting_consent' => [
-                                'on' => ['CONSENT_GIVEN' => 'approved'],
-                            ],
-                            'approved' => [
-                                'on' => ['SUBMITTED' => 'completed'],
-                            ],
-                            'completed' => ['type' => 'final'],
-                        ],
-                    ],
-                ],
-            ],
-            'completed' => ['type' => 'final'],
-        ],
-    ],
-    behavior: [
-        'guards' => [
-            'isApprovalPassedGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state)
-                => $state->matches('processing.customer.approved')
-                || $state->matches('processing.customer.completed'),
-        ],
-    ]
-);
-```
-
-When a region transitions, `@always` guards in **all active regions** are re-evaluated. If the guard passes, the waiting region transitions automatically. If the guard fails, the region simply stays in its current state.
-
-This follows the SCXML specification: *"By using `in` guards it is possible to coordinate the different regions."*
-
-For more details and examples, see [@always Transitions — Cross-Region Synchronization](../always-transitions.md#cross-region-synchronization-in-parallel-states).
-
-### 6. Document Region Dependencies
-
-If regions have implicit dependencies (e.g., one region writes context that another reads), document this clearly in your machine definition.
-
-### 7. Consider Parallel Dispatch for Slow Entry Actions
-
-When region entry actions contain expensive operations (API calls, file processing), enable [Parallel Dispatch](./parallel-dispatch) to run them concurrently via Laravel queue jobs. This reduces wall-clock time from the sum of all actions to the duration of the slowest one. Each region should write to its own context keys — shared keys are detected and recorded as `PARALLEL_CONTEXT_CONFLICT` events. Regions that complete without advancing are recorded as `PARALLEL_REGION_STALLED` events for observability.
+See the linked guide for more patterns.
 
 ::: tip Detailed Guide
 For comprehensive design guidelines with Do/Don't examples, see [Parallel Patterns](/best-practices/parallel-patterns).
