@@ -1025,17 +1025,34 @@ Events use array format with `type` and `payload` keys.
 
 ---
 
+## Support Policy
+
+Only the **latest major version** receives bug fixes, new features, and security patches. All previous versions are end of life.
+
+| Version | Status |
+|---------|--------|
+| **7.x** | **Active** — bug fixes, features, security |
+| 6.x and below | End of life — upgrade to latest |
+
+**Why only latest?**
+
+EventMachine evolved rapidly from v1 to v7 with a small team. Maintaining multiple branches is not sustainable. More importantly, the upgrade barrier is low: v4 through v7 have **zero breaking changes to machine definitions** — the only breaking changes were PHP/Laravel version requirements (v4) and behavior constructor resolution (v6). A typical multi-version upgrade takes minutes, not days.
+
+::: tip Upgrading from any version
+Each section above has step-by-step migration instructions with before/after examples. For multi-version jumps (e.g., v3 → v7), follow each guide in sequence. No data migration is required between any versions — the `machine_events` table format has not changed since v1.
+:::
+
 ## Version Compatibility
 
-| EventMachine | PHP | Laravel |
-|--------------|-----|---------|
-| 7.x | 8.3+ | 11.x, 12.x |
-| 6.x | 8.3+ | 11.x, 12.x |
-| 5.x | 8.3+ | 11.x, 12.x |
-| 4.x | 8.3+ | 11.x, 12.x |
-| 3.x | 8.2+ | 10.x, 11.x, 12.x |
-| 2.x | 8.1+ | 9.x, 10.x |
-| 1.x | 8.0+ | 8.x, 9.x |
+| EventMachine | PHP | Laravel | Status |
+|--------------|-----|---------|--------|
+| **7.x** | 8.3+ | 11.x, 12.x | **Active** |
+| 6.x | 8.3+ | 11.x, 12.x | End of life |
+| 5.x | 8.3+ | 11.x, 12.x | End of life |
+| 4.x | 8.3+ | 11.x, 12.x | End of life |
+| 3.x | 8.2+ | 10.x, 11.x, 12.x | End of life |
+| 2.x | 8.1+ | 9.x, 10.x | End of life |
+| 1.x | 8.0+ | 8.x, 9.x | End of life |
 
 ---
 

@@ -81,6 +81,10 @@ php artisan vendor:publish --tag="event-machine-migrations"
 php artisan migrate
 ```
 
+## Support Policy
+
+Only the **latest major version** (currently v7) receives bug fixes and security patches. All previous versions are end of life. See the [Upgrading Guide](https://eventmachine.dev/getting-started/upgrading) for step-by-step migration from any version.
+
 ## Eloquent Integration
 
 ```php
