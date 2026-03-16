@@ -2,6 +2,7 @@ import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import { transformerHideLines } from 'shiki-hide-lines'
 import { execSync } from 'node:child_process'
+import llmstxt from 'vitepress-plugin-llms'
 
 const gitTag = (() => {
   // Try local git tags first (works in full clones)
@@ -211,6 +212,10 @@ export default withMermaid(
           reveal: true,
         })
       ]
+    },
+
+    vite: {
+      plugins: [llmstxt()],
     },
 
     mermaid: {
