@@ -935,6 +935,14 @@ app/
             └── ExpiredApplicationsResolver.php
 ```
 
+## @always Chain Termination
+
+Every `@always` transition chain must eventually reach either:
+- A state without `@always` (terminal)
+- A guard that will eventually fail (conditional exit)
+
+The `max_transition_depth` config (default: 100) acts as a safety net, not flow control. If your legitimate chain exceeds 100 steps, increase the limit rather than relying on it as a loop breaker.
+
 ## Summary
 
 The key principles behind these conventions:

@@ -12,6 +12,7 @@ v7.0 is a major feature release with **no breaking changes**. All existing machi
 - **Scheduled Events** — cron-based batch operations via `schedules` key and `MachineScheduler`
 - **Machine Faking** — short-circuit child machines in tests
 - **Machine Identity** — `$context->machineId()` and `$context->parentMachineId()`
+- **Infinite Loop Protection** — Configurable `max_transition_depth` (default 100) prevents stack overflow from `@always` loops and `raise()` cycles. See [Infinite Loop Protection](/advanced/always-transitions#infinite-loop-protection)
 
 ### New Feature: Machine Delegation
 

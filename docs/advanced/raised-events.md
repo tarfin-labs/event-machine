@@ -429,6 +429,10 @@ Raised events are processed within the same macrostep. If an action raises an ev
 
 See [@always Transitions — Infinite Loop Protection](/advanced/always-transitions#infinite-loop-protection) for details.
 
+::: tip sendTo() propagation
+`sendTo()` is synchronous — if the target machine's transition triggers an infinite loop, the `MaxTransitionDepthExceededException` propagates back to the calling action's macrostep.
+:::
+
 ### 5. Avoid Raising Too Many Events
 
 

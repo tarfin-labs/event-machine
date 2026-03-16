@@ -505,6 +505,13 @@ Always ensure at least one branch leads to a state without `@always`, or use gua
 | Mixed `@always` + `raise()` loops | Yes |
 | Normal event-driven cycles (external `transition()` calls) | No (each is a separate macrostep) |
 
+### Scope and Reset Rules
+
+- **External events:** Each `send()` / `transition()` call starts a fresh counter at 0
+- **Sync child machines:** Each child has its own independent depth counter — a child's deep chain does not consume the parent's budget
+- **Queue-dispatched events:** Timer events, scheduled events, and `dispatchTo()` are separate macrosteps — the counter resets for each queued job
+- **Configurable:** Set `max_transition_depth` in `config/machine.php` (default: 100). Override via `MACHINE_MAX_TRANSITION_DEPTH` env variable
+
 ::: details Technical Background
 This protection is inspired by IBM Rhapsody's `DEFAULT_MAX_NULL_STEPS` (default: 100 for C++/C), the industry-standard approach from David Harel's own statechart implementation. The W3C SCXML specification leaves loop prevention to implementations, and the UML spec relies on the designer to ensure termination.
 :::
