@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Tarfinlabs\EventMachine\Routing\MachineRouter;
+use Tarfinlabs\EventMachine\Routing\MachineController;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestEndpointAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestEndpointMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestRecoveringEndpointAction;
@@ -149,4 +150,43 @@ test('multiple create calls produce different machine instances', function (): v
     $id2 = $response2->json('data.machine_id');
 
     expect($id1)->not->toBe($id2);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Null safety: handleModelBound with misconfigured route
+// ═══════════════════════════════════════════════════════════════
+
+test('handleModelBound with empty parameterNames throws descriptive error', function (): void {
+    // Register a route that goes to handleModelBound but has no model parameter
+    Route::post('/api/broken-model/test', [MachineController::class, 'handleModelBound'])
+        ->defaults('_model_attribute', 'machine');
+
+    Route::getRoutes()->refreshNameLookups();
+    Route::getRoutes()->refreshActionLookups();
+
+    $response = $this->postJson('/api/broken-model/test');
+
+    $response->assertStatus(500);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  resolveEvent with unknown event type returns 422 not 500
+// ═══════════════════════════════════════════════════════════════
+
+test('resolveEvent with unknown event type returns 422', function (): void {
+    // Register a machineId-bound route with a non-existent event type
+    Route::post('/api/edge-bad/{machineId}/bad-event', [MachineController::class, 'handleMachineIdBound'])
+        ->defaults('_machine_class', TestEndpointMachine::class)
+        ->defaults('_event_type', 'NON_EXISTENT_EVENT');
+
+    Route::getRoutes()->refreshNameLookups();
+    Route::getRoutes()->refreshActionLookups();
+
+    $createResponse = $this->postJson('/api/edge/create');
+    $machineId      = $createResponse->json('data.machine_id');
+
+    $response = $this->postJson("/api/edge-bad/{$machineId}/bad-event");
+
+    $response->assertStatus(422)
+        ->assertJsonPath('message', fn ($m) => str_contains($m, 'NON_EXISTENT_EVENT'));
 });

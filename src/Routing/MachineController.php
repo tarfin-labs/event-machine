@@ -26,11 +26,22 @@ class MachineController extends Controller
      */
     public function handleModelBound(Request $request): JsonResponse
     {
-        $route = $request->route();
+        $route          = $request->route();
+        $parameterNames = $route->parameterNames();
 
-        $modelParam = $route->parameterNames()[0];
-        $model      = $route->parameter($modelParam);
-        $machine    = $model->{$route->defaults['_model_attribute']};
+        if ($parameterNames === []) {
+            abort(500, 'Model-bound endpoint requires a route model parameter.');
+        }
+
+        $modelParam     = $parameterNames[0];
+        $model          = $route->parameter($modelParam);
+        $modelAttribute = $route->defaults['_model_attribute'] ?? null;
+
+        if ($model === null || $modelAttribute === null) {
+            abort(500, 'Route model or model attribute not found for model-bound endpoint.');
+        }
+
+        $machine = $model->{$modelAttribute};
 
         return $this->handleEndpoint($machine, $request);
     }
@@ -99,8 +110,11 @@ class MachineController extends Controller
      */
     protected function resolveEvent(Machine $machine, string $eventType, Request $request): EventBehavior
     {
-        $eventClass = $machine->definition->behavior['events'][$eventType]
-            ?? throw new \RuntimeException("Event type '{$eventType}' not found in behavior.");
+        $eventClass = $machine->definition->behavior['events'][$eventType] ?? null;
+
+        if ($eventClass === null) {
+            abort(422, "Event type '{$eventType}' not found in behavior.");
+        }
 
         return $eventClass::validateAndCreate($request->all());
     }
