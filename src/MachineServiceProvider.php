@@ -87,10 +87,16 @@ class MachineServiceProvider extends PackageServiceProvider
             (string) config('machine.timers.resolution', 'everyMinute')
         ) ?? TimerResolution::EVERY_MINUTE;
 
-        $cachePath     = $this->app->bootstrapPath('cache/machines.php');
-        $timerMachines = file_exists($cachePath)
-            ? require $cachePath
-            : $this->discoverTimerMachines();
+        $cachePath = $this->app->bootstrapPath('cache/machines.php');
+
+        if (file_exists($cachePath)) {
+            $timerMachines = require $cachePath;
+        } elseif ($this->app->environment('local', 'testing')) {
+            $timerMachines = $this->discoverTimerMachines();
+        } else {
+            logger()->warning('EventMachine: timer machine cache not found. Run `php artisan machine:cache` in production. Timer sweeps will not be registered.');
+            $timerMachines = [];
+        }
 
         foreach ($timerMachines as $machineClass) {
             $schedule->command("machine:process-timers --class={$machineClass}")
