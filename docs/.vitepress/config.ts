@@ -60,8 +60,7 @@ export default withMermaid(
         {
           text: gitTag.startsWith('v') ? gitTag : `v${gitTag}`,
           items: [
-            { text: 'Changelog', link: 'https://github.com/tarfin-labs/event-machine/releases' },
-            { text: 'Contributing', link: 'https://github.com/tarfin-labs/event-machine/blob/main/CONTRIBUTING.md' }
+            { text: 'Changelog', link: 'https://github.com/tarfin-labs/event-machine/releases' }
           ]
         }
       ],
