@@ -77,6 +77,12 @@ class StateDefinition
     /** The transition definition for @fail, resolved at init time for guard support. */
     public ?TransitionDefinition $onFailTransition = null;
 
+    /** The transition definition for @timeout, resolved at init time. */
+    public ?TransitionDefinition $onTimeoutTransition = null;
+
+    /** Machine invoke definition when this state delegates to a child machine. */
+    public ?MachineInvokeDefinition $machineInvokeDefinition = null;
+
     /**
      * The action(s) to be executed upon entering the state definition.
      *
@@ -98,6 +104,14 @@ class StateDefinition
      * @var null|array<mixed>
      */
     public ?array $meta = null;
+
+    /**
+     * Output definition for final states. Controls which context keys
+     * are exposed to the parent machine via ChildMachineDoneEvent.
+     *
+     * @var null|array<string>|\Closure
+     */
+    public null|array|\Closure $output = null;
 
     // endregion
 
@@ -129,6 +143,7 @@ class StateDefinition
 
         if ($this->type === StateDefinitionType::FINAL) {
             $this->initializeResults();
+            $this->initializeOutput();
         }
 
         $this->events = $this->collectUniqueEvents();
@@ -137,6 +152,7 @@ class StateDefinition
 
         $this->initializeEntryActions();
         $this->initializeExitActions();
+        $this->initializeMachineInvoke();
 
         $this->meta = $this->config['meta'] ?? null;
     }
@@ -232,6 +248,19 @@ class StateDefinition
     {
         if (isset($this->config['result'])) {
             $this->machine->behavior[BehaviorType::Result->value][$this->id] = $this->config['result'];
+        }
+    }
+
+    /**
+     * Initialize the output definition for this final state.
+     *
+     * Output controls which context keys are exposed to the parent
+     * via ChildMachineDoneEvent. Accepts an array of key names or a Closure.
+     */
+    protected function initializeOutput(): void
+    {
+        if (isset($this->config['output'])) {
+            $this->output = $this->config['output'];
         }
     }
 
@@ -391,6 +420,61 @@ class StateDefinition
     }
 
     /**
+     * Initialize machine invoke definition from the `machine` config key.
+     *
+     * Parses the state-level `machine` key and creates a MachineInvokeDefinition
+     * with context transfer (`with`), forwarding (`forward`), and async (`queue`) config.
+     */
+    protected function initializeMachineInvoke(): void
+    {
+        $hasMachine = isset($this->config['machine']);
+        $hasJob     = isset($this->config['job']);
+
+        if (!$hasMachine && !$hasJob) {
+            return;
+        }
+
+        $with          = $this->config['with'] ?? null;
+        $forward       = $this->config['forward'] ?? [];
+        $rawQueue      = $this->config['queue'] ?? null;
+        $rawConnection = $this->config['connection'] ?? null;
+        $timeout       = isset($this->config['@timeout']) ? ($this->config['@timeout']['timeout'] ?? null) : null;
+        $rawRetry      = $this->config['retry'] ?? null;
+
+        // Normalize queue config: true → default, string → queue name, array → detailed
+        $async      = $rawQueue !== null;
+        $queue      = null;
+        $connection = $rawConnection;
+        $retry      = $rawRetry;
+
+        if (is_string($rawQueue)) {
+            $queue = $rawQueue;
+        } elseif (is_array($rawQueue)) {
+            $queue      = $rawQueue['queue'] ?? null;
+            $connection = $rawQueue['connection'] ?? $connection;
+            $retry      = $rawQueue['retry'] ?? $retry;
+        }
+
+        // Job actors are always async (they dispatch Laravel jobs)
+        if ($hasJob) {
+            $async = true;
+        }
+
+        $this->machineInvokeDefinition = new MachineInvokeDefinition(
+            machineClass: $hasMachine ? $this->config['machine'] : '',
+            with: $with,
+            forward: $forward,
+            async: $async,
+            queue: $queue,
+            connection: $connection,
+            timeout: $timeout,
+            retry: $retry,
+            jobClass: $hasJob ? $this->config['job'] : null,
+            target: $this->config['target'] ?? null,
+        );
+    }
+
+    /**
      * Get the type of the state definition.
      *
      * @return StateDefinitionType The type of the state definition.
@@ -444,6 +528,17 @@ class StateDefinition
                 transitionConfig: $this->config['@fail'],
                 source: $this,
                 event: '@fail',
+            );
+        }
+
+        if (isset($this->config['@timeout'])) {
+            $timeoutConfig = $this->config['@timeout'];
+
+            // @timeout may contain both a 'target' for transition and a 'timeout' for duration
+            $this->onTimeoutTransition = new TransitionDefinition(
+                transitionConfig: $timeoutConfig,
+                source: $this,
+                event: '@timeout',
             );
         }
 
@@ -502,6 +597,22 @@ class StateDefinition
 
         // Return the array of unique event names
         return $events === [] ? null : $events;
+    }
+
+    /**
+     * Check if this state delegates to a child machine.
+     */
+    public function hasMachineInvoke(): bool
+    {
+        return $this->machineInvokeDefinition instanceof MachineInvokeDefinition;
+    }
+
+    /**
+     * Get the machine invoke definition for this state.
+     */
+    public function getMachineInvokeDefinition(): ?MachineInvokeDefinition
+    {
+        return $this->machineInvokeDefinition;
     }
 
     /**

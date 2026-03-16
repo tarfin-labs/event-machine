@@ -105,6 +105,7 @@ class MachineRouter
                         '_action_class'    => $endpoint->actionClass,
                         '_result_behavior' => $endpoint->resultBehavior,
                         '_status_code'     => $endpoint->statusCode ?? 200,
+                        '_context_keys'    => $endpoint->contextKeys,
                     ];
 
                     if ($handler === 'handleModelBound') {

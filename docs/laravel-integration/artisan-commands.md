@@ -206,6 +206,92 @@ Machine Events Archive Status
 Compression: 85% saved (1.02 GB)
 ```
 
+## machine:xstate
+
+Export machine definition to XState v5 JSON for visualization in [Stately Studio](https://stately.ai).
+
+### Usage
+
+```bash
+php artisan machine:xstate "App\Machines\OrderMachine"
+```
+
+Maps states, transitions, guards, actions, and delegation (`machine` key → XState `invoke` blocks).
+
+## machine:process-timers
+
+Sweep command for time-based events (`after`/`every` on transitions). Auto-registered via `MachineServiceProvider` — runs on schedule, no manual setup needed.
+
+### Usage
+
+```bash
+# Process timers for a specific machine class
+php artisan machine:process-timers --class="App\Machines\OrderMachine"
+```
+
+### How It Works
+
+1. Discovers machine classes with timer-configured transitions
+2. Queries `machine_current_states` for instances past deadline
+3. Inserts `machine_timer_fires` records (atomic dedup via `insertOrIgnore`)
+4. Dispatches `SendToMachineJob` via `Bus::batch`
+
+### Configuration
+
+```php ignore
+// config/machine.php
+'timers' => [
+    'resolution'              => 'everyMinute',
+    'batch_size'              => 100,
+    'backpressure_threshold'  => 10000,
+],
+```
+
+## machine:process-scheduled
+
+Processes a scheduled event for machine instances. Called by `MachineScheduler` via Laravel Scheduler — not typically run manually.
+
+### Usage
+
+```bash
+php artisan machine:process-scheduled --class="App\Machines\OrderMachine" --event=CHECK_EXPIRY
+```
+
+### How It Works
+
+1. Loads definition, finds resolver for the event
+2. Resolver returns root_event_ids, cross-checked against `machine_current_states`
+3. Null resolver auto-detects target states from idMap
+4. Dispatches `SendToMachineJob` via `Bus::batch`
+
+## machine:timer-status
+
+Display timer status for machine instances — useful for debugging.
+
+### Usage
+
+```bash
+php artisan machine:timer-status
+```
+
+Shows: root_event_id, machine class, state, entered_at, timer key, last fired, fire count, status.
+
+## machine:cache
+
+Cache machine class discovery for production. Prevents filesystem scanning on every sweep.
+
+```bash
+php artisan machine:cache
+```
+
+## machine:clear
+
+Clear machine discovery cache.
+
+```bash
+php artisan machine:clear
+```
+
 ## Scheduling Commands
 
 Add commands to your scheduler:

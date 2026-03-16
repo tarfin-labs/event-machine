@@ -6,11 +6,17 @@ namespace Tarfinlabs\EventMachine\Testing;
 
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Support\Timer;
+use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Definition\TimerDefinition;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
@@ -699,6 +705,315 @@ class TestMachine
     public function tap(callable $callback): self
     {
         $callback($this);
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Timer Testing
+    // ═══════════════════════════════════════════
+
+    /**
+     * Advance time and run the timer sweep for this machine.
+     *
+     * Persists the machine, backdates state_entered_at by the given duration,
+     * runs the sweep logic inline, and refreshes the machine state.
+     *
+     * @throws \RuntimeException If machine has no persistence (withoutPersistence mode).
+     */
+    public function advanceTimers(Timer $duration): self
+    {
+        if ($this->machine->definition->shouldPersist === false) {
+            throw new \RuntimeException('advanceTimers() requires persistence. Remove withoutPersistence() to use timer testing.');
+        }
+
+        // Persist to sync machine_current_states
+        $this->machine->persist();
+
+        $rootEventId = $this->machine->state->history->first()?->root_event_id;
+
+        if ($rootEventId === null) {
+            return $this;
+        }
+
+        // Backdate state_entered_at
+        MachineCurrentState::forInstance($rootEventId)
+            ->update(['state_entered_at' => now()->subSeconds($duration->inSeconds())]);
+
+        // Also backdate last_fired_at for @every timers so interval check works
+        MachineTimerFire::where('root_event_id', $rootEventId)
+            ->where('status', MachineTimerFire::STATUS_ACTIVE)
+            ->update(['last_fired_at' => now()->subSeconds($duration->inSeconds())]);
+
+        // Run sweep inline
+        $this->processTimers();
+
+        return $this;
+    }
+
+    /**
+     * Run the timer sweep for this machine class without advancing time.
+     *
+     * Instead of dispatching jobs via Bus::batch (which requires job_batches table),
+     * this method directly sends timer events to the machine — faster and no queue
+     * infrastructure needed in tests.
+     */
+    public function processTimers(): self
+    {
+        // Persist if needed
+        if ($this->machine->state->history->isNotEmpty()) {
+            $this->machine->persist();
+        }
+
+        $machineClass = $this->machine->definition->machineClass ?? $this->machine::class;
+        $rootEventId  = $this->machine->state->history->first()?->root_event_id;
+
+        if ($rootEventId === null) {
+            return $this;
+        }
+
+        // Collect timer definitions from current machine's definition
+        $definition = $machineClass::definition();
+
+        foreach ($definition->idMap as $stateDefinition) {
+            if ($stateDefinition->transitionDefinitions === null) {
+                continue;
+            }
+
+            foreach ($stateDefinition->transitionDefinitions as $transitionDef) {
+                if ($transitionDef->timerDefinition === null) {
+                    continue;
+                }
+
+                $timer    = $transitionDef->timerDefinition;
+                $instance = MachineCurrentState::forInstance($rootEventId)
+                    ->where('state_id', $timer->stateId)
+                    ->first();
+
+                if ($instance === null) {
+                    continue;
+                }
+
+                if ($timer->isAfter()) {
+                    $this->processAfterTimerInline($instance, $timer, $rootEventId);
+                } elseif ($timer->isEvery()) {
+                    $this->processEveryTimerInline($instance, $timer, $rootEventId);
+                }
+            }
+        }
+
+        // No need to refresh — we used $this->machine->send() directly
+
+        return $this;
+    }
+
+    /**
+     * Process an after timer inline (no queue, direct send).
+     */
+    private function processAfterTimerInline(MachineCurrentState $instance, TimerDefinition $timer, string $rootEventId): void
+    {
+        $deadline = now()->subSeconds($timer->delaySeconds);
+
+        if ($instance->state_entered_at->greaterThan($deadline)) {
+            return; // Not past deadline
+        }
+
+        // Check dedup
+        $alreadyFired = MachineTimerFire::where('root_event_id', $rootEventId)
+            ->where('timer_key', $timer->key())
+            ->where('status', MachineTimerFire::STATUS_FIRED)
+            ->exists();
+
+        if ($alreadyFired) {
+            return;
+        }
+
+        // Send event directly using THIS machine instance (preserves inline behaviors)
+        $this->machine->send(['type' => $timer->eventName]);
+        $this->machine->persist();
+
+        // Record fire
+        MachineTimerFire::create([
+            'root_event_id' => $rootEventId,
+            'timer_key'     => $timer->key(),
+            'last_fired_at' => now(),
+            'fire_count'    => 1,
+            'status'        => MachineTimerFire::STATUS_FIRED,
+        ]);
+    }
+
+    /**
+     * Process an every timer inline (no queue, direct send).
+     */
+    private function processEveryTimerInline(MachineCurrentState $instance, TimerDefinition $timer, string $rootEventId): void
+    {
+        $lastFire = MachineTimerFire::where('root_event_id', $rootEventId)
+            ->where('timer_key', $timer->key())
+            ->first();
+
+        if ($lastFire?->isExhausted()) {
+            return;
+        }
+
+        $lastFiredAt = $lastFire?->last_fired_at ?? $instance->state_entered_at;
+
+        if (now()->diffInSeconds($lastFiredAt, absolute: true) < $timer->delaySeconds) {
+            return;
+        }
+
+        $currentCount = $lastFire?->fire_count ?? 0;
+
+        // Check max/then
+        if ($timer->max !== null && $currentCount >= $timer->max) {
+            if ($timer->then !== null) {
+                $this->machine->send(['type' => $timer->then]);
+                $this->machine->persist();
+            }
+
+            MachineTimerFire::updateOrCreate(
+                ['root_event_id' => $rootEventId, 'timer_key' => $timer->key()],
+                ['status' => MachineTimerFire::STATUS_EXHAUSTED, 'last_fired_at' => now()],
+            );
+
+            return;
+        }
+
+        // Send event directly using THIS machine instance
+        $this->machine->send(['type' => $timer->eventName]);
+        $this->machine->persist();
+
+        // Track fire
+        if ($lastFire instanceof MachineTimerFire) {
+            $lastFire->update([
+                'last_fired_at' => now(),
+                'fire_count'    => $lastFire->fire_count + 1,
+                'status'        => MachineTimerFire::STATUS_ACTIVE,
+            ]);
+        } else {
+            MachineTimerFire::create([
+                'root_event_id' => $rootEventId,
+                'timer_key'     => $timer->key(),
+                'last_fired_at' => now(),
+                'fire_count'    => 1,
+                'status'        => MachineTimerFire::STATUS_ACTIVE,
+            ]);
+        }
+    }
+
+    /**
+     * Assert that the current state has a timer-configured transition for the given event.
+     */
+    public function assertHasTimer(string $eventName): self
+    {
+        $currentState = $this->machine->state->currentStateDefinition;
+        $transitions  = $currentState->transitionDefinitions ?? [];
+
+        if (!isset($transitions[$eventName])) {
+            throw new AssertionFailedError(
+                "Expected state '{$currentState->id}' to have a timer for event '{$eventName}', but no transition exists for this event."
+                .' Available events: '.implode(', ', array_keys($transitions))
+            );
+        }
+
+        $timerDef = $transitions[$eventName]->timerDefinition;
+
+        if ($timerDef === null) {
+            $timerEvents = collect($transitions)
+                ->filter(fn (TransitionDefinition $t): bool => $t->timerDefinition instanceof TimerDefinition)
+                ->keys()
+                ->implode(', ');
+
+            throw new AssertionFailedError(
+                "Expected event '{$eventName}' in state '{$currentState->id}' to have a timer (after/every), but it has none."
+                .' Events with timers: '.($timerEvents ?: 'none')
+            );
+        }
+
+        return $this;
+    }
+
+    /**
+     * Assert that a timer event has been fired (recorded in machine_timer_fires).
+     */
+    public function assertTimerFired(string $eventName): self
+    {
+        $rootEventId = $this->machine->state->history->first()?->root_event_id;
+
+        $fired = MachineTimerFire::where('root_event_id', $rootEventId)
+            ->where('timer_key', 'LIKE', "%:{$eventName}:%")
+            ->whereIn('status', [
+                MachineTimerFire::STATUS_FIRED,
+                MachineTimerFire::STATUS_ACTIVE,
+                MachineTimerFire::STATUS_EXHAUSTED,
+            ])
+            ->exists();
+
+        if (!$fired) {
+            throw new AssertionFailedError(
+                "Expected timer event '{$eventName}' to have been fired, but no matching record found in machine_timer_fires."
+            );
+        }
+
+        return $this;
+    }
+
+    /**
+     * Assert that a timer event has NOT been fired.
+     */
+    public function assertTimerNotFired(string $eventName): self
+    {
+        $rootEventId = $this->machine->state->history->first()?->root_event_id;
+
+        $fired = MachineTimerFire::where('root_event_id', $rootEventId)
+            ->where('timer_key', 'LIKE', "%:{$eventName}:%")
+            ->exists();
+
+        if ($fired) {
+            throw new AssertionFailedError(
+                "Expected timer event '{$eventName}' to NOT have been fired, but a record was found in machine_timer_fires."
+            );
+        }
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Schedule Helpers
+    // ═══════════════════════════════════════════
+
+    /**
+     * Simulate running a scheduled event inline (bypasses queue).
+     *
+     * Sends the event directly to the machine, as if ProcessScheduledCommand
+     * had resolved this instance and dispatched it.
+     */
+    public function runSchedule(string $eventType): self
+    {
+        $schedules = $this->machine->definition->parsedSchedules ?? [];
+
+        if (!isset($schedules[$eventType])) {
+            throw new AssertionFailedError(
+                "Schedule '{$eventType}' is not defined on this machine. "
+                .'Available schedules: '.(empty($schedules) ? 'none' : implode(', ', array_keys($schedules))).'.'
+            );
+        }
+
+        return $this->send(['type' => $eventType]);
+    }
+
+    /**
+     * Assert that the machine definition has a schedule for the given event type.
+     */
+    public function assertHasSchedule(string $eventType): self
+    {
+        $schedules = $this->machine->definition->parsedSchedules ?? [];
+
+        if (!isset($schedules[$eventType])) {
+            throw new AssertionFailedError(
+                "Schedule '{$eventType}' is not defined on this machine. "
+                .'Available schedules: '.(empty($schedules) ? 'none' : implode(', ', array_keys($schedules))).'.'
+            );
+        }
 
         return $this;
     }

@@ -425,22 +425,50 @@ Instead of checking sibling state, you can use context flags:
 
 Both approaches work. State checking is more declarative; context flags are simpler.
 
-## Avoiding Infinite Loops
+## Infinite Loop Protection
 
-::: danger
-Be careful not to create infinite loops:
+EventMachine includes built-in protection against infinite loops caused by `@always` transitions or [raised events](/advanced/raised-events). If the recursive transition depth within a single macrostep exceeds **100**, a `MaxTransitionDepthExceededException` is thrown.
+
+::: info What is a macrostep?
+A **macrostep** is everything that happens from a single external `transition()` call (or `getInitialState()`) until the machine settles. This includes `@always` chains and raised event processing — all handled within one call stack. Normal event-driven transitions (where each event is sent externally) are separate macrosteps and are **not** affected by this limit.
 :::
+
+### How It Works
 
 <!-- doctest-attr: ignore -->
 ```php
-// DON'T DO THIS - infinite loop!
+// This will throw MaxTransitionDepthExceededException
 'state_a' => [
     'on' => ['@always' => 'state_b'],
 ],
 'state_b' => [
-    'on' => ['@always' => 'state_a'],
+    'on' => ['@always' => 'state_a'],  // Infinite loop!
 ],
 ```
+
+```php no_run
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\MaxTransitionDepthExceededException;
+
+// The exception provides a clear message with the state route
+try {
+    $definition = MachineDefinition::define(
+        config: [
+            'id'      => 'example',
+            'initial' => 'a',
+            'states'  => [
+                'a' => ['on' => ['@always' => 'b']],
+                'b' => ['on' => ['@always' => 'a']],
+            ],
+        ],
+    );
+    $definition->getInitialState();
+} catch (MaxTransitionDepthExceededException $e) {
+    assert(str_contains($e->getMessage(), 'Maximum transition depth of 100 exceeded'));
+}
+```
+
+### Safe Patterns
 
 ::: tip
 Always ensure at least one branch leads to a state without `@always`, or use guards that will eventually fail.
@@ -459,6 +487,34 @@ Always ensure at least one branch leads to a state without `@always`, or use gua
     ],
 ],
 ```
+
+<!-- doctest-attr: ignore -->
+```php
+// Safe - linear chain (no cycle)
+'a' => ['on' => ['@always' => 'b']],
+'b' => ['on' => ['@always' => 'c']],
+'c' => [],  // Terminal state
+```
+
+### What Triggers the Limit
+
+| Scenario | Protected? |
+|----------|-----------|
+| `@always` transitions cycling (A → B → A) | Yes |
+| `raise()` event loops (action raises event that leads back) | Yes |
+| Mixed `@always` + `raise()` loops | Yes |
+| Normal event-driven cycles (external `transition()` calls) | No (each is a separate macrostep) |
+
+### Scope and Reset Rules
+
+- **External events:** Each `send()` / `transition()` call starts a fresh counter at 0
+- **Sync child machines:** Each child has its own independent depth counter — a child's deep chain does not consume the parent's budget
+- **Queue-dispatched events:** Timer events, scheduled events, and `dispatchTo()` are separate macrosteps — the counter resets for each queued job
+- **Configurable:** Set `max_transition_depth` in `config/machine.php` (default: 100). Override via `MACHINE_MAX_TRANSITION_DEPTH` env variable
+
+::: details Technical Background
+This protection is inspired by IBM Rhapsody's `DEFAULT_MAX_NULL_STEPS` (default: 100 for C++/C), the industry-standard approach from David Harel's own statechart implementation. The W3C SCXML specification leaves loop prevention to implementations, and the UML spec relies on the designer to ensure termination.
+:::
 
 ## Testing @always Transitions
 

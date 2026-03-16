@@ -12,8 +12,10 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Traits\Fakeable;
+use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
 /**
@@ -52,6 +54,100 @@ abstract class InvokableBehavior
     public function raise(EventBehavior|array $eventBehavior): void
     {
         $this->eventQueue->push($eventBehavior);
+    }
+
+    /**
+     * Send an event synchronously to another machine by its root_event_id.
+     *
+     * Restores the target machine and calls send() directly (blocking).
+     *
+     * @param  string  $machineClass  The FQCN of the target Machine subclass.
+     * @param  string  $rootEventId  The target machine's root_event_id.
+     * @param  EventBehavior|array  $event  The event to send.
+     */
+    public function sendTo(string $machineClass, string $rootEventId, EventBehavior|array $event): void
+    {
+        /** @var Machine $targetMachine */
+        $targetMachine                           = $machineClass::withDefinition($machineClass::definition());
+        $targetMachine->definition->machineClass = $machineClass;
+        $targetMachine->start($rootEventId);
+        $targetMachine->send($event);
+    }
+
+    /**
+     * Dispatch an event asynchronously to another machine via queue.
+     *
+     * Dispatches a SendToMachineJob to deliver the event on the queue.
+     *
+     * @param  string  $machineClass  The FQCN of the target Machine subclass.
+     * @param  string  $rootEventId  The target machine's root_event_id.
+     * @param  EventBehavior|array  $event  The event to send.
+     */
+    public function dispatchTo(string $machineClass, string $rootEventId, EventBehavior|array $event): void
+    {
+        $eventArray = $event instanceof EventBehavior
+            ? ['type' => $event->type, 'payload' => $event->payload]
+            : $event;
+
+        dispatch(new SendToMachineJob(
+            machineClass: $machineClass,
+            rootEventId: $rootEventId,
+            event: $eventArray,
+        ));
+    }
+
+    /**
+     * Send an event synchronously to the parent machine that invoked this child.
+     *
+     * Shorthand for sendTo(parentMachineClass, parentMachineId, event).
+     * Throws if called on a machine that was not invoked by a parent.
+     *
+     * @param  ContextManager  $context  The child machine's context (contains parent identity).
+     * @param  EventBehavior|array  $event  The event to send to the parent.
+     *
+     * @throws \RuntimeException If this machine has no parent.
+     */
+    public function sendToParent(ContextManager $context, EventBehavior|array $event): void
+    {
+        $parentRootEventId  = $context->parentMachineId();
+        $parentMachineClass = $context->parentMachineClass();
+
+        if ($parentRootEventId === null || $parentMachineClass === null) {
+            throw new \RuntimeException('Cannot sendToParent: this machine was not invoked by a parent.');
+        }
+
+        $this->sendTo(
+            machineClass: $parentMachineClass,
+            rootEventId: $parentRootEventId,
+            event: $event,
+        );
+    }
+
+    /**
+     * Dispatch an event asynchronously to the parent machine via queue.
+     *
+     * Shorthand for dispatchTo(parentMachineClass, parentMachineId, event).
+     * Throws if called on a machine that was not invoked by a parent.
+     *
+     * @param  ContextManager  $context  The child machine's context (contains parent identity).
+     * @param  EventBehavior|array  $event  The event to send to the parent.
+     *
+     * @throws \RuntimeException If this machine has no parent.
+     */
+    public function dispatchToParent(ContextManager $context, EventBehavior|array $event): void
+    {
+        $parentRootEventId  = $context->parentMachineId();
+        $parentMachineClass = $context->parentMachineClass();
+
+        if ($parentRootEventId === null || $parentMachineClass === null) {
+            throw new \RuntimeException('Cannot dispatchToParent: this machine was not invoked by a parent.');
+        }
+
+        $this->dispatchTo(
+            machineClass: $parentMachineClass,
+            rootEventId: $parentRootEventId,
+            event: $event,
+        );
     }
 
     /**

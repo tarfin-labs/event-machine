@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class() extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('machine_timer_fires', function (Blueprint $table): void {
+            $table->string('root_event_id', 26);
+            $table->string('timer_key');
+            $table->timestamp('last_fired_at');
+            $table->unsignedInteger('fire_count')->default(0);
+            $table->string('status', 20)->default('active');
+
+            $table->primary(['root_event_id', 'timer_key']);
+            $table->index(['root_event_id', 'timer_key', 'status'], 'idx_timer_lookup');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('machine_timer_fires');
+    }
+};

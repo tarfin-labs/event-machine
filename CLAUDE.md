@@ -21,6 +21,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Artisan Commands
 - `php artisan machine:xstate` - Export machine definition to XState v5 JSON for Stately Studio
 - `php artisan machine:validate-config` - Validate machine configuration
+- `php artisan machine:process-timers` - Sweep command for after/every timers (auto-registered)
+- `php artisan machine:process-scheduled` - Process scheduled events (called by MachineScheduler)
+- `php artisan machine:timer-status` - Display timer status for machine instances
+- `php artisan machine:cache` - Cache machine class discovery for production
+- `php artisan machine:clear` - Clear machine discovery cache
+
+### Local QA Testing
+- `composer test:localqa` - Run local QA tests (requires MySQL + Redis + Horizon)
+- QA tests live in `tests/LocalQA/` and are excluded from `composer test`
+- See `tests/LocalQA/README.md` for setup instructions
 
 ## Architecture Overview
 
@@ -40,6 +50,9 @@ EventMachine is a Laravel package for creating event-driven state machines, heav
 - Event handling and transitions
 - Database integration with machine_events table
 - Validation guard processing
+- Machine delegation (sync/async child machines)
+- Cross-machine communication (sendTo/dispatchTo)
+- Machine faking for tests
 
 **State** (`src/Actor/State.php`): Represents current machine state:
 - Current state definition
@@ -66,6 +79,19 @@ All machine behaviors extend `InvokableBehavior` and include:
 - Machine events are persisted in `machine_events` table via `MachineEvent` model
 - State can be restored from any point using root event IDs
 - Incremental context changes are stored to optimize database usage
+- `machine_current_states`: normalized current state per instance (for timers + schedules)
+- `machine_timer_fires`: timer dedup and recurring fire tracking
+- `machine_children`: async child machine tracking (delegation)
+- `machine_locks`: concurrent state mutation prevention
+
+### v7 Features
+
+- **Machine Delegation**: `machine`/`job` keys on states, `@done`/`@fail`/`@timeout` transitions
+- **Cross-Machine Communication**: `sendTo()`, `dispatchTo()`, `sendToParent()`, `dispatchToParent()`, `raise()`
+- **Time-Based Events**: `after` (one-shot) and `every` (recurring) timers on transitions via `Timer` VO
+- **Scheduled Events**: `schedules` key + `MachineScheduler::register()` for cron-based batch operations
+- **Machine Faking**: `Machine::fake()` short-circuits child delegation in tests
+- **Machine Identity**: `$context->machineId()`, `$context->parentMachineId()`
 
 ## Workflow Rules
 
@@ -74,7 +100,7 @@ All machine behaviors extend `InvokableBehavior` and include:
 
 ### Quality Gate
 - **Always use `composer test`** — never run `vendor/bin/pest` directly. `composer test` runs tests in parallel AND includes doctest and other tools. Running pest alone is slower (no parallelism) and incomplete.
-- Pre-existing doctest failures (currently 13) are known and can be ignored.
+- DocTest should pass with 0 failures. If a new code block causes failure, add appropriate doctest attribute (`ignore`, `no_run`, or `bootstrap`).
 
 ### Documentation URLs
 - **Documentation site domain is `eventmachine.dev`** — always use `https://eventmachine.dev/...` when linking to docs (in release notes, README, PR descriptions, etc.). Never use `tarfin-labs.github.io/event-machine`.
@@ -110,8 +136,10 @@ All behaviors should extend appropriate base classes:
 
 ### Testing Structure
 - Test stubs in `tests/Stubs/` provide examples of machine implementations
-- Machine examples include TrafficLights, Calculator, Elevator patterns
-- Tests use `RefreshDatabase` trait and in-memory SQLite
+- Machine examples include TrafficLights, Calculator, Elevator, ChildDelegation, TimerMachines, ScheduledMachines
+- Package tests use `RefreshDatabase` trait and in-memory SQLite
+- Local QA tests in `tests/LocalQA/` use real MySQL + Redis + Horizon (excluded from `composer test`)
+- E2E tests in `tests/E2E/` test full pipeline with real artisan commands
 
 ### Code Style
 - PHP 8.2+ with strict types enabled
@@ -131,13 +159,23 @@ All code, tests, and documentation **must** follow the naming conventions define
 ## Package Structure
 
 - `src/Actor/` - Runtime machine and state classes
-- `src/Behavior/` - Base behavior classes and implementations  
-- `src/Definition/` - Machine definition and configuration classes
+- `src/Behavior/` - Base behavior classes and implementations
+- `src/Commands/` - Artisan commands (timers, schedules, cache, xstate)
+- `src/Contracts/` - Interfaces (ScheduleResolver, ReturnsResult)
+- `src/Definition/` - Machine definition, state, transition, timer, schedule definitions
 - `src/Enums/` - Type definitions and constants
 - `src/Exceptions/` - Custom exception classes
+- `src/Jobs/` - Queue jobs (ChildMachineJob, SendToMachineJob, ChildJobJob, etc.)
+- `src/Locks/` - Machine lock manager for concurrent access
+- `src/Models/` - Eloquent models (MachineEvent, MachineChild, MachineCurrentState, MachineTimerFire)
+- `src/Routing/` - HTTP endpoint routing (MachineRouter, MachineController, EndpointDefinition)
+- `src/Scheduling/` - Schedule registration (MachineScheduler)
+- `src/Support/` - Value objects (Timer)
+- `src/Testing/` - Test helpers (TestMachine)
 - `src/Traits/` - Reusable traits like `Fakeable` and `HasMachines`
+- `tests/LocalQA/` - Local QA tests requiring real MySQL + Redis + Horizon
 - `tests/Stubs/` - Example machine implementations for testing
 - `config/machine.php` - Package configuration
-- `database/migrations/` - Database schema for machine events
+- `database/migrations/` - Database schema stubs
 
 The package integrates with Laravel through the `MachineServiceProvider` and provides Eloquent model casting via `MachineCast`.
