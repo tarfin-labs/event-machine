@@ -255,7 +255,7 @@ test('guarded @always in parallel state does not trigger depth limit', function 
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
-                    'onDone' => 'completed',
+                    '@done'  => 'completed',
                     'states' => [
                         'regionA' => [
                             'initial' => 'waiting',
