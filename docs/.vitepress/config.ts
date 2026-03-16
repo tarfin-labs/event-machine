@@ -56,9 +56,8 @@ export default withMermaid(
       },
 
       nav: [
-        { text: 'Guide', link: '/getting-started/what-is-event-machine' },
         {
-          text: gitTag.startsWith('v') ? gitTag : `v${gitTag}`,
+          text: gitTag,
           items: [
             { text: 'Changelog', link: 'https://github.com/tarfin-labs/event-machine/releases' }
           ]
