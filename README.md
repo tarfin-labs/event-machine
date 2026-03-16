@@ -6,12 +6,12 @@
 </picture>
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/tarfin-labs/event-machine.svg?style=flat-square)](https://packagist.org/packages/tarfin-labs/event-machine)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/tarfin-labs/event-machine/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/tarfin-labs/event-machine/actions?query=workflow%3Arun-tests+branch%3Amain)
+[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/tarfin-labs/event-machine/ci.yml?branch=main&label=tests&style=flat-square)](https://github.com/tarfin-labs/event-machine/actions?query=workflow%3ACI+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/tarfin-labs/event-machine.svg?style=flat-square)](https://packagist.org/packages/tarfin-labs/event-machine)
 
 **Event-driven state machines for Laravel**
 
-[Documentation](https://event-machine.tarfin.com) · [Installation](#installation) · [Why EventMachine?](#why-eventmachine)
+[Documentation](https://eventmachine.dev) · [Installation](#installation) · [Why EventMachine?](#why-eventmachine)
 
 </div>
 
