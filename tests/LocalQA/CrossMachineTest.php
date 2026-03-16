@@ -38,7 +38,7 @@ it('LocalQA: dispatchTo delivers event via Horizon SendToMachineJob', function (
     $processed = LocalQATestCase::waitFor(function () use ($targetId) {
         $cs = MachineCurrentState::where('root_event_id', $targetId)->first();
 
-        return $cs && str_contains($cs->state_id, 'delegating');
+        return $cs && str_contains($cs->state_id, 'processing');
     }, timeoutSeconds: 30);
 
     expect($processed)->toBeTrue('SendToMachineJob not processed by Horizon');

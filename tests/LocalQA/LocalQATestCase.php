@@ -51,8 +51,11 @@ class LocalQATestCase extends Orchestra
     }
 
     /**
-     * Truncate all machine-related tables.
+     * Truncate all machine-related tables and drain Redis queues.
      * Used instead of RefreshDatabase so queue workers can see data.
+     *
+     * Also drains Redis queues to prevent leftover jobs from previous tests
+     * from interfering with the current test's machines.
      */
     public static function cleanTables(): void
     {
@@ -73,6 +76,19 @@ class LocalQATestCase extends Orchestra
         }
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+        // Drain Redis queues — delete queue lists but keep Horizon metadata intact.
+        // This prevents leftover jobs from previous tests from processing against
+        // new test data (different root_event_ids).
+        $redis  = app('redis');
+        $prefix = config('database.redis.options.prefix', 'laravel_database_');
+
+        foreach (['default', 'child-queue'] as $queue) {
+            $redis->del("{$prefix}queues:{$queue}");
+            $redis->del("{$prefix}queues:{$queue}:delayed");
+            $redis->del("{$prefix}queues:{$queue}:reserved");
+            $redis->del("{$prefix}queues:{$queue}:notify");
+        }
     }
 
     /**

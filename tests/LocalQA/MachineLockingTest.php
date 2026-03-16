@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncAutoCompleteParentMachine;
 
 uses(LocalQATestCase::class);
 
@@ -16,7 +16,7 @@ beforeEach(function (): void {
 });
 
 it('LocalQA: async completion releases lock — no stale locks after processing', function (): void {
-    $parent = AsyncParentMachine::create();
+    $parent = AsyncAutoCompleteParentMachine::create();
     $parent->send(['type' => 'START']);
     $parent->persist();
     $rootEventId = $parent->state->history->first()->root_event_id;
@@ -37,7 +37,7 @@ it('LocalQA: async completion releases lock — no stale locks after processing'
 it('LocalQA: 5 parallel async delegations do not deadlock', function (): void {
     $ids = [];
     for ($i = 0; $i < 5; $i++) {
-        $p = AsyncParentMachine::create();
+        $p = AsyncAutoCompleteParentMachine::create();
         $p->send(['type' => 'START']);
         $p->persist();
         $ids[] = $p->state->history->first()->root_event_id;

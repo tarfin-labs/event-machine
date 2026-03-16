@@ -6,8 +6,8 @@ use Illuminate\Support\Facades\DB;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncAutoCompleteParentMachine;
 
 uses(LocalQATestCase::class);
 
@@ -40,7 +40,7 @@ it('LocalQA: machineId preserved after restore from MySQL', function (): void {
 });
 
 it('LocalQA: machineId correct after async delegation completes via Horizon', function (): void {
-    $parent = AsyncParentMachine::create();
+    $parent = AsyncAutoCompleteParentMachine::create();
     $parent->send(['type' => 'START']);
     $parent->persist();
     $rootEventId = $parent->state->history->first()->root_event_id;
@@ -53,6 +53,6 @@ it('LocalQA: machineId correct after async delegation completes via Horizon', fu
 
     expect($completed)->toBeTrue();
 
-    $restored = AsyncParentMachine::create(state: $rootEventId);
+    $restored = AsyncAutoCompleteParentMachine::create(state: $rootEventId);
     expect($restored->state->context->machineId())->toBe($rootEventId);
 });

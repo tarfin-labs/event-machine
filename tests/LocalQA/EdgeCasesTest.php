@@ -8,10 +8,10 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines\ScheduledMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines\ExpiredApplicationsResolver;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncAutoCompleteParentMachine;
 
 uses(LocalQATestCase::class);
 
@@ -72,7 +72,7 @@ it('LocalQA: timer and schedule on different instances work independently via Ho
 // ═══════════════════════════════════════════════════════════════
 
 it('LocalQA: async completion is idempotent — only one done event in history', function (): void {
-    $parent = AsyncParentMachine::create();
+    $parent = AsyncAutoCompleteParentMachine::create();
     $parent->send(['type' => 'START']);
     $parent->persist();
     $rootEventId = $parent->state->history->first()->root_event_id;
@@ -99,9 +99,9 @@ it('LocalQA: async completion is idempotent — only one done event in history',
 // ═══════════════════════════════════════════════════════════════
 
 it('LocalQA: machine faking intercepts async delegation on Horizon', function (): void {
-    SimpleChildMachine::fake(result: ['test' => 'faked']);
+    ImmediateChildMachine::fake(result: ['test' => 'faked']);
 
-    $parent = AsyncParentMachine::create();
+    $parent = AsyncAutoCompleteParentMachine::create();
     $parent->send(['type' => 'START']);
     $parent->persist();
     $rootEventId = $parent->state->history->first()->root_event_id;
@@ -114,7 +114,7 @@ it('LocalQA: machine faking intercepts async delegation on Horizon', function ()
 
     expect($completed)->toBeTrue('Faked async delegation not completed');
 
-    SimpleChildMachine::assertInvoked();
+    ImmediateChildMachine::assertInvoked();
     Machine::resetMachineFakes();
 });
 
