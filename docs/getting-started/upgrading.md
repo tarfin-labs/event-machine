@@ -468,7 +468,7 @@ $eventQueue = MyAction::runWithState($state, $event);
 
 **When `run()` is still acceptable:** In tests where you're testing the fake/mock mechanism itself, not behavior logic.
 
-#### Pattern 2: `new Behavior()()` → `runWithState()`
+#### Pattern 2: `new Behavior()` + `__invoke()` → `runWithState()`
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -666,6 +666,37 @@ php artisan vendor:publish --tag=machine-config
 6. Ensure your cache and queue drivers are configured
 
 For full details, see [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch).
+
+---
+
+## Upgrading to v4.0
+
+v4.0 adds parallel states support with full lifecycle management.
+
+### Breaking Changes
+
+- **Dropped Laravel 10 support** — requires Laravel 11+
+- **Dropped PHP 8.2 support** — requires PHP 8.3+ (Pest v4 dependency)
+- **Dropped Orchestra Testbench ^8.x** — requires ^9.0+
+
+### New Features
+
+- **Parallel States** — `type: 'parallel'` with multiple concurrent regions, `onDone` auto-transitions when all regions reach final states
+- **Compound State `onDone`** — XState-compatible `onDone` transitions for compound states within parallel regions, with recursive chaining
+- **Cross-Region Synchronization** — `@always` transitions with guards for cross-region state checking
+- **DocTest Integration** — Documentation code blocks tested automatically via `testflowlabs/doctest`
+- **Multi-value state support** — `matches()`, `matchesAll()`, `isInParallelState()` for parallel regions
+
+### Migration Steps
+
+1. Upgrade to PHP 8.3+ and Laravel 11+ first
+
+2. Update the package:
+```bash
+composer require tarfinlabs/event-machine:^4.0
+```
+
+3. Review any custom `StateConfigValidator` usage — parallel state validation now uses `InvalidParallelStateDefinitionException`
 
 ---
 
