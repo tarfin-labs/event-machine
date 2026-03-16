@@ -186,29 +186,41 @@ class ProcessTimersCommand extends Command
             return;
         }
 
-        $this->dispatchTimerJobs($machineClass, $timer->eventName, $instances);
+        // Atomic dedup: upsert fire records BEFORE dispatching (mirrors after-timer pattern).
+        // This prevents double-fire if the process crashes between dispatch and tracking update.
+        $now        = now();
+        $toDispatch = collect();
 
-        // Update fire tracking
         foreach ($instances as $instance) {
-            $existing = MachineTimerFire::where('root_event_id', $instance->root_event_id)
+            $updated = DB::table('machine_timer_fires')
+                ->where('root_event_id', $instance->root_event_id)
                 ->where('timer_key', $timer->key())
-                ->first();
-
-            if ($existing instanceof MachineTimerFire) {
-                $existing->update([
-                    'last_fired_at' => now(),
-                    'fire_count'    => $existing->fire_count + 1,
-                    'status'        => MachineTimerFire::STATUS_ACTIVE,
+                ->where('status', MachineTimerFire::STATUS_ACTIVE)
+                ->update([
+                    'last_fired_at' => $now,
+                    'fire_count'    => DB::raw('fire_count + 1'),
                 ]);
+
+            if ($updated > 0) {
+                $toDispatch->push($instance);
             } else {
-                MachineTimerFire::create([
+                // First fire — no existing record yet
+                $inserted = DB::table('machine_timer_fires')->insertOrIgnore([
                     'root_event_id' => $instance->root_event_id,
                     'timer_key'     => $timer->key(),
-                    'last_fired_at' => now(),
+                    'last_fired_at' => $now,
                     'fire_count'    => 1,
                     'status'        => MachineTimerFire::STATUS_ACTIVE,
                 ]);
+
+                if ($inserted > 0) {
+                    $toDispatch->push($instance);
+                }
             }
+        }
+
+        if ($toDispatch->isNotEmpty()) {
+            $this->dispatchTimerJobs($machineClass, $timer->eventName, $toDispatch);
         }
     }
 
@@ -238,16 +250,21 @@ class ProcessTimersCommand extends Command
             return;
         }
 
-        // Send then event
-        $this->dispatchTimerJobs($machineClass, $timer->then, $instances);
+        // Wrap dispatch + status update in a transaction to prevent partial failure:
+        // If dispatch succeeds but status update fails, the instance would receive the
+        // 'then' event AND still be eligible for regular fires on the next sweep.
+        DB::transaction(function () use ($machineClass, $timer, $instances): void {
+            // Mark exhausted BEFORE dispatching (prevents re-fire on next sweep if dispatch succeeds)
+            MachineTimerFire::where('timer_key', $timer->key())
+                ->whereIn('root_event_id', $instances->pluck('root_event_id'))
+                ->update([
+                    'status'        => MachineTimerFire::STATUS_EXHAUSTED,
+                    'last_fired_at' => now(),
+                ]);
 
-        // Mark exhausted (prevents re-sending then)
-        MachineTimerFire::where('timer_key', $timer->key())
-            ->whereIn('root_event_id', $instances->pluck('root_event_id'))
-            ->update([
-                'status'        => MachineTimerFire::STATUS_EXHAUSTED,
-                'last_fired_at' => now(),
-            ]);
+            // Send then event
+            $this->dispatchTimerJobs($machineClass, $timer->then, $instances);
+        });
     }
 
     /**

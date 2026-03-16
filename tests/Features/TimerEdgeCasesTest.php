@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\Definition\TimerDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\EveryTimerMachine;
 
 // ─── Self-Loop Edge Case ────────────────────────────────────────
 
@@ -231,4 +232,57 @@ it('after and every coexist on same state different events', function (): void {
         ->and($expired->timerDefinition->isAfter())->toBeTrue()
         ->and($heartbeat->timerDefinition)->not->toBeNull()
         ->and($heartbeat->timerDefinition->isEvery())->toBeTrue();
+});
+
+// ─── @every Atomic Dedup — fire record BEFORE dispatch ──────────
+
+it('@every timer creates fire record before dispatching jobs', function (): void {
+    Bus::fake();
+
+    $machine = EveryTimerMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // Backdate past interval
+    MachineCurrentState::forInstance($rootEventId)
+        ->update(['state_entered_at' => now()->subDays(31)]);
+
+    // Run sweep
+    $this->artisan('machine:process-timers', ['--class' => EveryTimerMachine::class])
+        ->assertExitCode(0);
+
+    // Fire record must exist AFTER sweep (atomic dedup pattern)
+    $fire = MachineTimerFire::where('root_event_id', $rootEventId)->first();
+    expect($fire)->not->toBeNull()
+        ->and($fire->fire_count)->toBe(1)
+        ->and($fire->status)->toBe(MachineTimerFire::STATUS_ACTIVE);
+
+    // Jobs dispatched
+    Bus::assertBatched(fn ($batch) => $batch->jobs->count() === 1);
+});
+
+it('@every timer second sweep only fires if fire record allows it', function (): void {
+    Bus::fake();
+
+    $machine = EveryTimerMachine::create();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // Backdate past interval
+    MachineCurrentState::forInstance($rootEventId)
+        ->update(['state_entered_at' => now()->subDays(31)]);
+
+    // First sweep
+    $this->artisan('machine:process-timers', ['--class' => EveryTimerMachine::class]);
+    Bus::assertBatched(fn ($batch) => $batch->jobs->count() === 1);
+
+    Bus::fake(); // reset
+
+    // Second sweep immediately — fire record last_fired_at is recent, should NOT fire
+    $this->artisan('machine:process-timers', ['--class' => EveryTimerMachine::class]);
+    Bus::assertNothingBatched();
+
+    // Fire count should still be 1
+    $fire = MachineTimerFire::where('root_event_id', $rootEventId)->first();
+    expect($fire->fire_count)->toBe(1);
 });
