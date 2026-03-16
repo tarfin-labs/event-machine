@@ -237,3 +237,11 @@ Machine::resetMachineFakes();
 - `fail: true` — Child triggers `@fail` instead of `@done`
 - `error: string` — Error message for `@fail`
 - `finalState: string` — Override the final state name
+
+## Infinite Loop Protection
+
+Each machine — parent and child — has its own independent depth counter. A sync child with a deep `@always` chain does not consume the parent's depth budget.
+
+::: warning Known Limitation
+When `@done` or `@fail` routes the parent to a new state, `@always` transitions on that new state are **not** automatically evaluated. This is because child completion routing uses an internal bypass path (`executeChildTransitionBranch`) that does not go through the standard `transition()` method. This may be addressed in a future release.
+:::

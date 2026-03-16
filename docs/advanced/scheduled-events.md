@@ -198,6 +198,10 @@ SendToMachineJob (existing)
 | Resolver returns IDs for wrong machine class | Cross-check filters them out |
 | No instances match | Empty dispatch, success exit |
 
+## Infinite Loop Protection
+
+Scheduled events are dispatched via queue. Each job is a separate macrostep — the depth counter resets. If a scheduled event triggers an `@always` loop, only that job fails. Other instances in the batch continue normally.
+
 ## Comparison with Endpoints
 
 | Aspect | `endpoints` | `schedules` |

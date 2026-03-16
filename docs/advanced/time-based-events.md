@@ -254,6 +254,10 @@ php artisan machine:cache
 
 Timer sweeps check queue size before processing. If the queue exceeds the configured threshold (`machine.timers.backpressure_threshold`, default: 10000), the sweep is skipped entirely to prevent queue saturation. Monitor the `Timer sweep skipped` warning in your logs.
 
+### Infinite Loop Protection
+
+Timer events are dispatched via queue (`Bus::batch`). Each queued job is a separate macrostep — the recursive transition depth counter resets for each job. If a timer event triggers an `@always` loop, only that specific job fails with `MaxTransitionDepthExceededException`. Other timer instances in the same batch are not affected.
+
 ## Related
 
 - [Scheduled Events](/advanced/scheduled-events) — Cron-based batch operations targeting all matching instances (different scope than per-instance timers)

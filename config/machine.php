@@ -100,4 +100,25 @@ return [
         // Prevents overwhelming the queue when it's already saturated.
         'backpressure_threshold' => env('MACHINE_TIMER_BACKPRESSURE_THRESHOLD', 10000),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Infinite Loop Protection
+    |--------------------------------------------------------------------------
+    |
+    | Maximum recursive transition depth allowed within a single macrostep.
+    | Prevents stack overflow from @always transition loops and raise() cycles.
+    |
+    | Inspired by IBM Rhapsody's DEFAULT_MAX_NULL_STEPS (default: 100),
+    | the industry-standard approach from David Harel's statechart implementation.
+    |
+    | Each external send()/transition() call starts at depth 0. Internal recursive
+    | calls (@always, event queue processing) increment the counter. When the limit
+    | is reached, MaxTransitionDepthExceededException is thrown.
+    |
+    | Child machines (sync delegation) have their own independent counter.
+    | Queue-dispatched events (timers, scheduled, dispatchTo) start fresh macrosteps.
+    |
+    */
+    'max_transition_depth' => env('MACHINE_MAX_TRANSITION_DEPTH', 100),
 ];
