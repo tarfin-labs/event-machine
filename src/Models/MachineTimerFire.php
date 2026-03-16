@@ -27,8 +27,12 @@ class MachineTimerFire extends Model
     public $incrementing = false;
     protected $table     = 'machine_timer_fires';
 
-    /** @var string|null Composite PK (root_event_id, timer_key) — Eloquent find() is unsupported, use query scopes. */
-    protected $primaryKey;
+    /**
+     * Composite PK (root_event_id, timer_key) — Eloquent find() is unsupported, use query scopes.
+     *
+     * @var string
+     */
+    protected $primaryKey = 'root_event_id';
 
     public $keyType = 'string';
 

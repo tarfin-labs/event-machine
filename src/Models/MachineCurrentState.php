@@ -25,8 +25,12 @@ class MachineCurrentState extends Model
     public $incrementing = false;
     protected $table     = 'machine_current_states';
 
-    /** @var string|null Composite PK (root_event_id, state_id) — Eloquent find() is unsupported, use query scopes. */
-    protected $primaryKey;
+    /**
+     * Composite PK (root_event_id, state_id) — Eloquent find() is unsupported, use query scopes.
+     *
+     * @var string
+     */
+    protected $primaryKey = 'root_event_id';
 
     public $keyType     = 'string';
     protected $fillable = [

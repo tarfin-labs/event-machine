@@ -29,7 +29,9 @@ parameters:
         # Boolean expression analysis - PHPDoc type inference
         - identifier: booleanNot.alwaysFalse
         # is_subclass_of checks - intentional for polymorphism
-        - identifier: function.impossibleType
+        -
+            identifier: function.impossibleType
+            reportUnmatched: false
         # Static method on dynamic types
         -
             identifier: staticMethod.nonObject
