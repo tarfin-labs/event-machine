@@ -232,6 +232,28 @@ Guards work exactly like standard guarded transitions. `after`/`every` fires onc
 | `max` | `int` | Max fire count (requires `every`) |
 | `then` | `string` | Event type or EventBehavior FQCN after max reached |
 
+## Operational Notes
+
+### Missed Sweeps
+
+If a timer sweep is missed (deployment, server restart, queue saturation triggering backpressure skip):
+
+- **`after` timers:** Fire as soon as the next sweep runs after the deadline. No events are lost — the deadline check is absolute (`state_entered_at <= now - delay`).
+- **`every` timers:** The next fire happens on the first sweep after `last_fired_at + interval`. The effective interval becomes `configured_interval + missed_sweep_duration`. There is **no catch-up mechanism** — missed intervals are not retroactively fired.
+
+### Production Deployment
+
+You **must** run `php artisan machine:cache` as part of your deployment pipeline. Without the cache file, timer sweeps are not registered in production (the runtime PhpParser scan is disabled outside `local`/`testing` environments for performance).
+
+```bash
+# Add to your deploy script (after composer install):
+php artisan machine:cache
+```
+
+### Backpressure
+
+Timer sweeps check queue size before processing. If the queue exceeds the configured threshold (`machine.timers.backpressure_threshold`, default: 10000), the sweep is skipped entirely to prevent queue saturation. Monitor the `Timer sweep skipped` warning in your logs.
+
 ## Related
 
 - [Scheduled Events](/advanced/scheduled-events) — Cron-based batch operations targeting all matching instances (different scope than per-instance timers)

@@ -350,6 +350,12 @@ it('tryForwardEventToChild returns false when no forward config exists', functio
         ->toThrow(NoTransitionDefinitionFoundException::class);
 });
 
+// NOTE: Full forward routing E2E (parent → running child → event delivered → child transitions)
+// requires a real async pipeline (Queue + Horizon) because tryForwardEventToChild
+// restores the child from DB synchronously — the child must be persisted by a real
+// ChildMachineJob run. This is covered in LocalQA tests.
+// Unit-level forward config tests are above (resolveForwardEvent, hasForward).
+
 it('tryForwardEventToChild returns false when child has no running record', function (): void {
     Queue::fake();
 
