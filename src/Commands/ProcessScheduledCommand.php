@@ -127,11 +127,20 @@ class ProcessScheduledCommand extends Command
             return collect();
         }
 
-        // Safety cross-check: only keep IDs for this machine class
-        return MachineCurrentState::query()
-            ->whereIn('root_event_id', $rootEventIds)
-            ->where('machine_class', $machineClass)
-            ->pluck('root_event_id');
+        // Safety cross-check: only keep IDs for this machine class.
+        // Chunk the whereIn to avoid exceeding database placeholder limits.
+        $validated = collect();
+
+        foreach ($rootEventIds->chunk(1000) as $chunk) {
+            $validated = $validated->merge(
+                MachineCurrentState::query()
+                    ->whereIn('root_event_id', $chunk)
+                    ->where('machine_class', $machineClass)
+                    ->pluck('root_event_id')
+            );
+        }
+
+        return $validated;
     }
 
     /**

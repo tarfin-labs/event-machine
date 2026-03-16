@@ -4,13 +4,8 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Commands;
 
-use PhpParser\PhpVersion;
-use PhpParser\NodeTraverser;
-use PhpParser\ParserFactory;
 use Illuminate\Console\Command;
-use Symfony\Component\Finder\Finder;
-use Tarfinlabs\EventMachine\Actor\Machine;
-use Tarfinlabs\EventMachine\Definition\TimerDefinition;
+use Tarfinlabs\EventMachine\Support\MachineDiscovery;
 
 /**
  * Cache machine class discovery results for production.
@@ -29,7 +24,7 @@ class MachineCacheCommand extends Command
 
         $this->info('Scanning for machine classes...');
 
-        $timerMachines = $this->discoverTimerMachines();
+        $timerMachines = MachineDiscovery::findTimerMachines();
 
         $content = '<?php return '.var_export($timerMachines, true).';'.PHP_EOL;
 
@@ -44,70 +39,5 @@ class MachineCacheCommand extends Command
     protected function getCachePath(): string
     {
         return $this->laravel->bootstrapPath('cache/machines.php');
-    }
-
-    /**
-     * @return array<string>
-     */
-    protected function discoverTimerMachines(): array
-    {
-        $parser    = (new ParserFactory())->createForVersion(PhpVersion::getHostVersion());
-        $traverser = new NodeTraverser();
-        $visitor   = new MachineClassVisitor();
-        $traverser->addVisitor($visitor);
-
-        $allMachines   = [];
-        $timerMachines = [];
-
-        if (!is_dir(app_path())) {
-            return [];
-        }
-
-        $finder = new Finder();
-        $finder->files()->name('*.php')->in(app_path());
-
-        foreach ($finder as $file) {
-            try {
-                $code = $file->getContents();
-                $ast  = $parser->parse($code);
-
-                $visitor->setCurrentFile($file->getRealPath());
-                $traverser->traverse($ast);
-
-                $allMachines[] = $visitor->getMachineClasses();
-            } catch (\Throwable) {
-                continue;
-            }
-        }
-
-        $allMachines = array_merge(...$allMachines);
-
-        foreach ($allMachines as $machineClass) {
-            if (!is_subclass_of($machineClass, Machine::class)) {
-                continue;
-            }
-
-            try {
-                $definition = $machineClass::definition();
-
-                foreach ($definition->idMap as $stateDefinition) {
-                    if ($stateDefinition->transitionDefinitions === null) {
-                        continue;
-                    }
-
-                    foreach ($stateDefinition->transitionDefinitions as $transitionDef) {
-                        if ($transitionDef->timerDefinition instanceof TimerDefinition) {
-                            $timerMachines[] = $machineClass;
-
-                            continue 3;
-                        }
-                    }
-                }
-            } catch (\Throwable) {
-                continue;
-            }
-        }
-
-        return $timerMachines;
     }
 }

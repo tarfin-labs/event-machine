@@ -4,20 +4,14 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine;
 
-use PhpParser\PhpVersion;
-use PhpParser\NodeTraverser;
-use PhpParser\ParserFactory;
-use Symfony\Component\Finder\Finder;
 use Spatie\LaravelPackageTools\Package;
-use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Console\Scheduling\Schedule;
 use Tarfinlabs\EventMachine\Enums\TimerResolution;
+use Tarfinlabs\EventMachine\Support\MachineDiscovery;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Tarfinlabs\EventMachine\Definition\TimerDefinition;
 use Tarfinlabs\EventMachine\Commands\TimerStatusCommand;
 use Tarfinlabs\EventMachine\Commands\ExportXStateCommand;
 use Tarfinlabs\EventMachine\Commands\MachineCacheCommand;
-use Tarfinlabs\EventMachine\Commands\MachineClassVisitor;
 use Tarfinlabs\EventMachine\Commands\MachineClearCommand;
 use Tarfinlabs\EventMachine\Commands\ArchiveEventsCommand;
 use Tarfinlabs\EventMachine\Commands\ArchiveStatusCommand;
@@ -92,7 +86,7 @@ class MachineServiceProvider extends PackageServiceProvider
         if (file_exists($cachePath)) {
             $timerMachines = require $cachePath;
         } elseif ($this->app->environment('local', 'testing')) {
-            $timerMachines = $this->discoverTimerMachines();
+            $timerMachines = MachineDiscovery::findTimerMachines();
         } else {
             logger()->warning('EventMachine: timer machine cache not found. Run `php artisan machine:cache` in production. Timer sweeps will not be registered.');
             $timerMachines = [];
@@ -104,84 +98,5 @@ class MachineServiceProvider extends PackageServiceProvider
                 ->withoutOverlapping()
                 ->runInBackground();
         }
-    }
-
-    /**
-     * Discover all Machine subclasses that have timer-configured transitions.
-     *
-     * Uses PhpParser + MachineClassVisitor for auto-discovery (same as MachineConfigValidatorCommand),
-     * then checks each definition for after/every keys on transitions.
-     *
-     * @return array<string> Machine class FQCNs with timer config
-     */
-    protected function discoverTimerMachines(): array
-    {
-        if (!is_dir(app_path())) {
-            return [];
-        }
-
-        $allMachines   = $this->findAllMachineClasses();
-        $timerMachines = [];
-
-        foreach ($allMachines as $machineClass) {
-            if (!is_subclass_of($machineClass, Machine::class)) {
-                continue;
-            }
-
-            try {
-                $definition = $machineClass::definition();
-
-                foreach ($definition->idMap as $stateDefinition) {
-                    if ($stateDefinition->transitionDefinitions === null) {
-                        continue;
-                    }
-
-                    foreach ($stateDefinition->transitionDefinitions as $transitionDef) {
-                        if ($transitionDef->timerDefinition instanceof TimerDefinition) {
-                            $timerMachines[] = $machineClass;
-
-                            continue 3;
-                        }
-                    }
-                }
-            } catch (\Throwable) {
-                continue;
-            }
-        }
-
-        return $timerMachines;
-    }
-
-    /**
-     * Find all Machine class FQCNs in the application using PhpParser.
-     *
-     * @return array<string>
-     */
-    protected function findAllMachineClasses(): array
-    {
-        $parser    = (new ParserFactory())->createForVersion(PhpVersion::getHostVersion());
-        $traverser = new NodeTraverser();
-        $visitor   = new MachineClassVisitor();
-        $traverser->addVisitor($visitor);
-
-        $machines = [];
-        $finder   = new Finder();
-        $finder->files()->name('*.php')->in(app_path());
-
-        foreach ($finder as $file) {
-            try {
-                $code = $file->getContents();
-                $ast  = $parser->parse($code);
-
-                $visitor->setCurrentFile($file->getRealPath());
-                $traverser->traverse($ast);
-
-                $machines[] = $visitor->getMachineClasses();
-            } catch (\Throwable) {
-                continue;
-            }
-        }
-
-        return array_merge(...$machines);
     }
 }
