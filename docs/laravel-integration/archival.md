@@ -374,6 +374,10 @@ MACHINE_EVENTS_ARCHIVAL_QUEUE=archival
 php artisan queue:work --queue=archival
 ```
 
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Best Practices Overview](/best-practices/).
+:::
+
 ## Real-World Scenarios
 
 ### High-Volume Order Processing

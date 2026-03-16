@@ -493,3 +493,7 @@ $machine->send([
     'payload' => ['scenarioType' => 'test'],
 ]);
 ```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [State Design](/best-practices/state-design).
+:::

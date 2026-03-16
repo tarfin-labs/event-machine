@@ -416,3 +416,7 @@ MachineEvent::where('payload->orderId', 123)->get();
 ```bash
 php artisan machine:archive-events --days=30
 ```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Testing Strategy](/best-practices/testing-strategy).
+:::

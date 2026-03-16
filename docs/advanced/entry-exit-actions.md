@@ -507,3 +507,7 @@ Exit actions should be reliable:
 // Risky - external API might fail
 'exit' => 'notifyExternalServiceAction',
 ```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Action Design](/best-practices/action-design).
+:::

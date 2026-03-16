@@ -505,3 +505,7 @@ it('handles empty context', function () { ... });
 it('handles large payloads', function () { ... });
 it('handles special characters', function () { ... });
 ```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Testing Strategy](/best-practices/testing-strategy).
+:::

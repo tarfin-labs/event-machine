@@ -573,3 +573,7 @@ public function actor(ContextManager $context): mixed
     return auth()->user() ?? 'anonymous';
 }
 ```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Event Design](/best-practices/event-design).
+:::

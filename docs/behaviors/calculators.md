@@ -503,3 +503,7 @@ public function __invoke(ContextManager $context): void
     $context->total = collect($items)->sum('price');
 }
 ```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Guard Design](/best-practices/guard-design).
+:::

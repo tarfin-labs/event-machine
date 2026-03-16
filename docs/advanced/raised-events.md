@@ -470,6 +470,10 @@ class MyAction extends ActionBehavior
 ],
 ```
 
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Action Design](/best-practices/action-design).
+:::
+
 ## Raised Events with Parallel Dispatch
 
 When [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch) is enabled, raised events from region entry actions are captured and processed **under lock** in the same job scope:

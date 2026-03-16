@@ -305,6 +305,10 @@ it('works without parallel dispatch', function (): void {
 });
 ```
 
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Parallel Patterns](/best-practices/parallel-patterns).
+:::
+
 ## Stall Detection
 
 When a region's entry action completes successfully but does **not** call `$this->raise()`, the region stays at its initial state. The job completes from Laravel's perspective (no retry), but the region never advances toward a final state.

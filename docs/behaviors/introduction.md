@@ -356,6 +356,10 @@ class SendNotificationAction extends ActionBehavior
 }
 ```
 
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Best Practices Overview](/best-practices/).
+:::
+
 ## Testing Behaviors
 
 All behaviors are fully testable at every level — isolated unit tests, faked during machine execution, and with constructor DI mocking. Each behavior page below includes a "Testing" section with concrete examples.

@@ -534,3 +534,7 @@ $context = OrderContext::validateAndCreate($input);
 // Or self-validate
 $context->selfValidate();
 ```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Context Design](/best-practices/context-design).
+:::

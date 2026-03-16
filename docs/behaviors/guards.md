@@ -531,3 +531,7 @@ class ValidateAmountGuard extends ValidationGuardBehavior
     }
 }
 ```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Guard Design](/best-practices/guard-design).
+:::

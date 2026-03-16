@@ -390,3 +390,7 @@ class SendEmailAction extends ActionBehavior
     }
 }
 ```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Best Practices Overview](/best-practices/).
+:::

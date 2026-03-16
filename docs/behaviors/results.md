@@ -484,3 +484,7 @@ return [
 'failed' => ['type' => 'final', 'result' => FailureResult::class],
 'cancelled' => ['type' => 'final', 'result' => CancelledResult::class],
 ```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Testing Strategy](/best-practices/testing-strategy).
+:::

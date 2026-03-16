@@ -375,3 +375,7 @@ If regions have implicit dependencies (e.g., one region writes context that anot
 ### 7. Consider Parallel Dispatch for Slow Entry Actions
 
 When region entry actions contain expensive operations (API calls, file processing), enable [Parallel Dispatch](./parallel-dispatch) to run them concurrently via Laravel queue jobs. This reduces wall-clock time from the sum of all actions to the duration of the slowest one. Each region should write to its own context keys — shared keys are detected and recorded as `PARALLEL_CONTEXT_CONFLICT` events. Regions that complete without advancing are recorded as `PARALLEL_REGION_STALLED` events for observability.
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Parallel Patterns](/best-practices/parallel-patterns).
+:::

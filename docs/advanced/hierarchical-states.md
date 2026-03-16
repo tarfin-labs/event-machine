@@ -510,3 +510,7 @@ The `matches()` method requires the full path to the leaf state. Partial paths o
     ],
 ],
 ```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [State Design](/best-practices/state-design) and [Event Bubbling](/best-practices/event-bubbling).
+:::

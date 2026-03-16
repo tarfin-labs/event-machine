@@ -406,3 +406,7 @@ $this->errorMessage = sprintf(
 // Avoid - one monolithic guard
 'guards' => ValidateEverythingGuard::class,
 ```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Guard Design](/best-practices/guard-design).
+:::

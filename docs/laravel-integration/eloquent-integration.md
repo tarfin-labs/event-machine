@@ -436,3 +436,7 @@ public function submit(Order $order)
     return redirect()->route('orders.show', $order);
 }
 ```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Best Practices Overview](/best-practices/).
+:::

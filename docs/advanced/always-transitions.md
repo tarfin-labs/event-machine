@@ -609,3 +609,7 @@ it('automatically routes based on condition', function () {
     ],
 ],
 ```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Transition Design](/best-practices/transition-design).
+:::
