@@ -19,6 +19,10 @@
   <testsuites>
     <testsuite name="Tarfinlabs Test Suite">
       <directory>tests</directory>
+      <exclude>tests/LocalQA</exclude>
+    </testsuite>
+    <testsuite name="LocalQA">
+      <directory>tests/LocalQA</directory>
     </testsuite>
   </testsuites>
     <php>
