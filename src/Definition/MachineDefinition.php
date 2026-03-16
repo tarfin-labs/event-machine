@@ -2230,9 +2230,10 @@ class MachineDefinition
         ?State $state = null,
         int $recursionDepth = 0,
     ): State {
-        if ($recursionDepth >= self::DEFAULT_MAX_TRANSITION_DEPTH) {
+        $maxDepth = max(1, (int) config('machine.max_transition_depth', self::DEFAULT_MAX_TRANSITION_DEPTH));
+        if ($recursionDepth >= $maxDepth) {
             throw MaxTransitionDepthExceededException::exceeded(
-                limit: self::DEFAULT_MAX_TRANSITION_DEPTH,
+                limit: $maxDepth,
                 route: $state?->currentStateDefinition->route ?? 'unknown',
             );
         }
