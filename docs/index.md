@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: EventMachine
-  text: State Machines with Complete History
-  tagline: Define states. Transition safely. Track everything. Restore anytime.
+  text: State Machines That Compose
+  tagline: Delegation. Timers. Event sourcing. Parallel execution. All declarative, all Laravel.
   image:
     light: /logo-light.svg
     dark: /logo-dark.svg
