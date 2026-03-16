@@ -102,6 +102,7 @@ class MachineController extends Controller
             actionClass: $defaults['_action_class'] ?? null,
             resultKey: $defaults['_result_behavior'] ?? null,
             statusCode: $defaults['_status_code'] ?? 200,
+            contextKeys: $defaults['_context_keys'] ?? null,
         );
     }
 
@@ -128,6 +129,7 @@ class MachineController extends Controller
         ?string $actionClass,
         ?string $resultKey,
         int $statusCode,
+        ?array $contextKeys = null,
     ): JsonResponse {
         $action = $actionClass !== null
             ? resolve($actionClass)->withMachineContext($machine, $machine->state)
@@ -166,7 +168,7 @@ class MachineController extends Controller
         // Auto-dispatch completion if child reached final state and has a parent
         $this->dispatchChildCompletionIfFinal($machine, $state);
 
-        return $this->buildResponse($state, $machine, $resultKey, $statusCode);
+        return $this->buildResponse($state, $machine, $resultKey, $statusCode, $contextKeys);
     }
 
     /**
@@ -177,6 +179,7 @@ class MachineController extends Controller
         Machine $machine,
         ?string $resultKey,
         int $statusCode,
+        ?array $contextKeys = null,
     ): JsonResponse {
         if ($resultKey !== null) {
             $result = $this->resolveAndRunResult($resultKey, $state, $machine);
@@ -185,12 +188,18 @@ class MachineController extends Controller
         }
 
         $rootEventId = $state->history->first()?->root_event_id;
+        $contextData = $state->context->toArray();
+
+        // Filter context keys if specified in endpoint config
+        if ($contextKeys !== null) {
+            $contextData = array_intersect_key($contextData, array_flip($contextKeys));
+        }
 
         return response()->json([
             'data' => [
                 'machine_id' => $rootEventId,
                 'value'      => $state->value,
-                'context'    => $state->context->toArray(),
+                'context'    => $contextData,
             ],
         ], $statusCode);
     }

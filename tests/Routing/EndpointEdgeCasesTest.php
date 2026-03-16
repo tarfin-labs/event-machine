@@ -173,6 +173,44 @@ test('handleModelBound with empty parameterNames throws descriptive error', func
 //  resolveEvent with unknown event type returns 422 not 500
 // ═══════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════
+//  contextKeys filtering in default response
+// ═══════════════════════════════════════════════════════════════
+
+test('endpoint with contextKeys filters response context', function (): void {
+    // Register route that passes _context_keys via defaults
+    Route::post('/api/filtered/{machineId}/start', [MachineController::class, 'handleMachineIdBound'])
+        ->defaults('_machine_class', TestEndpointMachine::class)
+        ->defaults('_event_type', 'START')
+        ->defaults('_context_keys', ['allowed_key']);
+
+    Route::getRoutes()->refreshNameLookups();
+    Route::getRoutes()->refreshActionLookups();
+
+    $createResponse = $this->postJson('/api/edge/create');
+    $machineId      = $createResponse->json('data.machine_id');
+
+    $response = $this->postJson("/api/filtered/{$machineId}/start");
+
+    $response->assertStatus(200);
+    $context = $response->json('data.context');
+
+    // Context should only contain keys listed in _context_keys (empty because machine has no 'allowed_key')
+    expect($context)->toBe([]);
+});
+
+test('endpoint without contextKeys returns full context (backwards compat)', function (): void {
+    $createResponse = $this->postJson('/api/edge/create');
+    $machineId      = $createResponse->json('data.machine_id');
+
+    // Use default START route (no _context_keys set)
+    $response = $this->postJson("/api/edge/{$machineId}/start");
+
+    $response->assertStatus(200);
+    // Should have 'data.context' key present (full context)
+    expect($response->json('data.context'))->toBeArray();
+});
+
 test('resolveEvent with unknown event type returns 422', function (): void {
     // Register a machineId-bound route with a non-existent event type
     Route::post('/api/edge-bad/{machineId}/bad-event', [MachineController::class, 'handleMachineIdBound'])

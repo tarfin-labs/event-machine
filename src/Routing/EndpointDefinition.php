@@ -13,6 +13,9 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
  */
 class EndpointDefinition
 {
+    /**
+     * @param  array<string>|null  $contextKeys  When set, only these context keys are included in the default response. Null = all keys (backwards compatible).
+     */
     public function __construct(
         public readonly string $eventType,
         public readonly string $uri,
@@ -21,6 +24,7 @@ class EndpointDefinition
         public readonly ?string $resultBehavior,
         public readonly array $middleware,
         public readonly ?int $statusCode,
+        public readonly ?array $contextKeys = null,
     ) {}
 
     /**
@@ -72,6 +76,7 @@ class EndpointDefinition
             resultBehavior: $config['result'] ?? null,
             middleware: $config['middleware'] ?? [],
             statusCode: $config['status'] ?? null,
+            contextKeys: $config['contextKeys'] ?? null,
         );
     }
 
