@@ -98,24 +98,6 @@ export default withMermaid(
           ]
         },
         {
-          text: 'Best Practices',
-          collapsed: true,
-          items: [
-            { text: 'Overview', link: '/best-practices/' },
-            { text: 'Event Bubbling', link: '/best-practices/event-bubbling' },
-            { text: 'State Design', link: '/best-practices/state-design' },
-            { text: 'Guard Design', link: '/best-practices/guard-design' },
-            { text: 'Action Design', link: '/best-practices/action-design' },
-            { text: 'Context Design', link: '/best-practices/context-design' },
-            { text: 'Transition Design', link: '/best-practices/transition-design' },
-            { text: 'Machine Decomposition', link: '/best-practices/machine-decomposition' },
-            { text: 'Event Design', link: '/best-practices/event-design' },
-            { text: 'Time-Based Patterns', link: '/best-practices/time-based-patterns' },
-            { text: 'Parallel Patterns', link: '/best-practices/parallel-patterns' },
-            { text: 'Testing Strategy', link: '/best-practices/testing-strategy' },
-          ]
-        },
-        {
           text: 'Behaviors',
           collapsed: true,
           items: [
@@ -192,6 +174,24 @@ export default withMermaid(
             { text: 'Time-Based Testing', link: '/testing/time-based-testing' },
             { text: 'Scheduled Testing', link: '/testing/scheduled-testing' },
             { text: 'Recipes', link: '/testing/recipes' }
+          ]
+        },
+        {
+          text: 'Best Practices',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/best-practices/' },
+            { text: 'Event Bubbling', link: '/best-practices/event-bubbling' },
+            { text: 'State Design', link: '/best-practices/state-design' },
+            { text: 'Guard Design', link: '/best-practices/guard-design' },
+            { text: 'Action Design', link: '/best-practices/action-design' },
+            { text: 'Context Design', link: '/best-practices/context-design' },
+            { text: 'Transition Design', link: '/best-practices/transition-design' },
+            { text: 'Machine Decomposition', link: '/best-practices/machine-decomposition' },
+            { text: 'Event Design', link: '/best-practices/event-design' },
+            { text: 'Time-Based Patterns', link: '/best-practices/time-based-patterns' },
+            { text: 'Parallel Patterns', link: '/best-practices/parallel-patterns' },
+            { text: 'Testing Strategy', link: '/best-practices/testing-strategy' },
           ]
         },
       ],
