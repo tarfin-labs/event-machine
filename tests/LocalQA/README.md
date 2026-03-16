@@ -44,13 +44,14 @@ cp .env.localqa.example .env.localqa
 
 | File | Feature | Async? |
 |------|---------|--------|
-| `SyncDelegationTest.php` | Sync child delegation | No |
 | `AsyncDelegationTest.php` | Async child via Horizon | Yes |
+| `AsyncEdgeCasesTest.php` | @timeout, @fail, sequential delegation, concurrent sends | Yes |
 | `CrossMachineTest.php` | sendTo/dispatchTo | Yes |
-| `TimerSweepTest.php` | after/every via Bus::batch | Yes |
-| `ScheduledEventsTest.php` | Resolver + auto-detect | Yes |
-| `JobActorsTest.php` | Job actor via Horizon | Yes |
-| `MachineLockingTest.php` | Lock acquire/release | Yes |
-| `WebhookCompletionTest.php` | Webhook auto-completion | Yes |
-| `MachineIdentityTest.php` | machineId after restore | No |
 | `EdgeCasesTest.php` | Combo features, regression | Yes |
+| `InfiniteLoopQATest.php` | Loop protection under Horizon | Yes |
+| `JobActorsTest.php` | Job actor success + failure via Horizon | Yes |
+| `MachineLockingTest.php` | Lock acquire/release | Yes |
+| `MachineIdentityTest.php` | machineId after restore | Mixed |
+| `ReviewFixesTest.php` | Timer dedup, forward routing, context isolation | Yes |
+| `ScheduledEventsTest.php` | Resolver + auto-detect | Yes |
+| `TimerSweepTest.php` | after/every via Bus::batch | Yes |
