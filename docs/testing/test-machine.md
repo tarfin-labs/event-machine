@@ -217,10 +217,59 @@ expect($machine->state->context->has('paid_at'))->toBeTrue();
 expect($machine->state->history->pluck('type'))->toContain('SUBMIT');
 ```
 
+## Timer Helpers
+
+For testing time-based events (`after`/`every` on transitions):
+
+<!-- doctest-attr: ignore -->
+```php
+// Advance time and trigger timer sweep inline
+$machine->test()
+    ->advanceTimers(Timer::days(8))
+    ->assertState('expired');
+
+// Run timer sweep without advancing time
+$machine->test()
+    ->processTimers()
+    ->assertState('active');  // no timers due yet
+
+// Assert timer exists / fired / not fired
+$machine->test()
+    ->assertHasTimer('ORDER_EXPIRED')
+    ->advanceTimers(Timer::days(8))
+    ->assertTimerFired('ORDER_EXPIRED');
+
+$machine->test()
+    ->assertTimerNotFired('ORDER_EXPIRED');
+```
+
+See [Time-Based Testing](/testing/time-based-testing) for full details.
+
+## Schedule Helpers
+
+For testing scheduled events (`schedules` key on definition):
+
+<!-- doctest-attr: ignore -->
+```php
+// Send scheduled event inline (bypasses queue)
+$machine->test()
+    ->runSchedule('CHECK_EXPIRY')
+    ->assertState('expired');
+
+// Assert schedule exists
+$machine->test()
+    ->assertHasSchedule('CHECK_EXPIRY')
+    ->assertHasSchedule('DAILY_REPORT');
+```
+
+See [Scheduled Testing](/testing/scheduled-testing) for full details.
+
 ::: tip Related
 See [Isolated Testing](/testing/isolated-testing) for unit-level `runWithState()`,
 [Fakeable Behaviors](/testing/fakeable-behaviors) for the faking API,
 [Transitions & Paths](/testing/transitions-and-paths) for guard and path testing,
 [Parallel Testing](/testing/parallel-testing) for parallel state testing,
-and [Persistence Testing](/testing/persistence-testing) for DB-level testing.
+[Persistence Testing](/testing/persistence-testing) for DB-level testing,
+[Time-Based Testing](/testing/time-based-testing) for timer testing,
+and [Scheduled Testing](/testing/scheduled-testing) for schedule testing.
 :::
