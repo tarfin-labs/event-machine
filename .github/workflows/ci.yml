@@ -23,7 +23,7 @@ jobs:
           coverage: none
 
       - name: Install composer dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@v4
 
       - name: Check code style
         run: composer test:pint
@@ -41,7 +41,7 @@ jobs:
           coverage: none
 
       - name: Install composer dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@v4
 
       - name: Check Rector
         run: composer test:rector
@@ -63,7 +63,7 @@ jobs:
           coverage: none
 
       - name: Install composer dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@v4
 
       - name: Run PHPStan
         run: ./vendor/bin/phpstan analyse --error-format=github
@@ -83,7 +83,7 @@ jobs:
           coverage: none
 
       - name: Install composer dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@v4
 
       - name: Execute type coverage
         run: vendor/bin/pest --type-coverage --min=100 --colors=always
@@ -143,7 +143,7 @@ jobs:
           coverage: none
 
       - name: Install composer dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@v4
 
       - name: Run DocTest
         run: composer test:doc
@@ -166,7 +166,7 @@ jobs:
           coverage: pcov
 
       - name: Install composer dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@v4
 
       - name: Run Infection
         run: composer test:mutation
