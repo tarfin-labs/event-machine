@@ -60,12 +60,27 @@ Built and committed `tests/LocalQA/` — 23 tests covering all async features:
 - Skipped `MakeModelScopesProtectedRector` (Laravel scopes must be public)
 - Added type hints for 100% type coverage
 
+## Additional Work
+
+### More Documentation Improvements
+- `docs/testing/test-machine.md`: Added Timer Helpers and Schedule Helpers sections
+- `docs/laravel-integration/artisan-commands.md`: Added 6 new v7 commands (process-timers, process-scheduled, timer-status, xstate, cache, clear)
+- `CLAUDE.md`: Complete v7 update — architecture, commands, package structure, testing, features
+
+### More Codebase Maintenance
+- Moved `ExportXStateCommandTest.php` from root to `tests/Commands/`
+- `composer.json`: Added `--testsuite` to `test:unit`, new `test:localqa` script
+- `Pest.php`: Explicit directory list (excludes LocalQA from default binding)
+- `phpunit.xml.dist`: Separate `LocalQA` test suite with exclude
+- Fixed doctest config block attribute in artisan-commands.md
+
 ## Final Stats
 
 - **1180 package tests** passing (SQLite, sync)
-- **23 LocalQA tests** (MySQL, Redis, Horizon)
-- **42 /tmp QA tests** (ad-hoc, non-permanent)
+- **23 LocalQA tests** ready (MySQL, Redis, Horizon)
 - **Type coverage**: 100%
+- **PHPStan**: 0 errors
 - **DocTest**: 0 failures
 - **CI**: All green on PR #122
 - **Bugs found and fixed**: 1 (machineId null after restore)
+- **Total commits this session**: 12
