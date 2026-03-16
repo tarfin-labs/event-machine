@@ -97,6 +97,7 @@ All machine behaviors extend `InvokableBehavior` and include:
 
 ### Releases
 - **NEVER create a release (gh release, git tag) without explicit user approval.** Always ask first.
+- **Tag names: NO `v` prefix.** Use `7.0.0`, not `v7.0.0`. All existing tags follow this convention (`6.4.0`, `5.0.0`, etc.).
 
 ### Quality Gate
 - **Always use `composer test`** — never run `vendor/bin/pest` directly. `composer test` runs tests in parallel AND includes doctest and other tools. Running pest alone is slower (no parallelism) and incomplete.
