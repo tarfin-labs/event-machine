@@ -29,6 +29,9 @@ class ChildMachineCompletionJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    public int $tries   = 5;
+    public int $backoff = 5;
+
     /**
      * @param  string  $parentRootEventId  The parent machine's root_event_id.
      * @param  string  $parentMachineClass  FQCN of the parent machine.

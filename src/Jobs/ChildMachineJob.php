@@ -71,8 +71,10 @@ class ChildMachineJob implements ShouldQueue
         $childMachine                           = $this->childMachineClass::withDefinition($this->childMachineClass::definition());
         $childMachine->definition->machineClass = $this->childMachineClass;
 
-        // Merge parent's `with` context into child's initial context
+        // Clone definition before mutating to avoid shared state if definitions are cached.
+        // Merge parent's `with` context into child's initial context.
         if ($this->childContext !== []) {
+            $childMachine->definition                    = clone $childMachine->definition;
             $childMachine->definition->config['context'] = array_merge(
                 $childMachine->definition->config['context'] ?? [],
                 $this->childContext,

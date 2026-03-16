@@ -26,7 +26,10 @@ class MachineTimerFire extends Model
     public $timestamps   = false;
     public $incrementing = false;
     protected $table     = 'machine_timer_fires';
+
+    /** @var string|null Composite PK (root_event_id, timer_key) — Eloquent find() is unsupported, use query scopes. */
     protected $primaryKey;
+
     public $keyType = 'string';
 
     public const STATUS_ACTIVE = 'active';

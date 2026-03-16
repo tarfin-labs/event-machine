@@ -31,7 +31,11 @@ class MachineScheduler
      */
     public static function register(string $machineClass, string $eventType): SchedulingEvent
     {
-        $definition = $machineClass::definition();
+        try {
+            $definition = $machineClass::definition();
+        } catch (\Throwable $e) {
+            throw new \InvalidArgumentException("MachineScheduler::register() failed to load definition for {$machineClass}: {$e->getMessage()}", $e->getCode(), previous: $e);
+        }
 
         if ($definition->parsedSchedules === null || !isset($definition->parsedSchedules[$eventType])) {
             throw new \InvalidArgumentException(
