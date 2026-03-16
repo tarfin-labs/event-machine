@@ -188,7 +188,13 @@ class Machine implements Castable, JsonSerializable, Stringable
         };
 
         if ($this->state instanceof State && $this->state->history?->first() !== null) {
-            $this->definition->rootEventId = $this->state->history->first()->root_event_id;
+            $rootEventId                   = $this->state->history->first()->root_event_id;
+            $this->definition->rootEventId = $rootEventId;
+
+            // Ensure machine identity is set on context (survives restore from DB)
+            if ($this->state->context->machineId() === null) {
+                $this->state->context->setMachineIdentity($rootEventId);
+            }
         }
 
         return $this;
