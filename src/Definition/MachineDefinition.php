@@ -2344,7 +2344,8 @@ class MachineDefinition
                                     'type'  => TransitionProperty::Always->value,
                                     'actor' => $eventBehavior->actor($newState->context),
                                 ],
-                                state: $newState
+                                state: $newState,
+                                recursionDepth: $recursionDepth + 1,
                             );
                         }
                     }
@@ -2356,7 +2357,7 @@ class MachineDefinition
                 $firstEvent    = $this->eventQueue->shift();
                 $eventBehavior = $this->initializeEvent($firstEvent, $newState);
 
-                return $this->transition($eventBehavior, $newState);
+                return $this->transition($eventBehavior, $newState, recursionDepth: $recursionDepth + 1);
             }
 
             return $newState;
