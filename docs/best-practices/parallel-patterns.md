@@ -203,11 +203,11 @@ Sometimes one region needs to wait for a sibling. The standard approach is an `@
 ],
 ```
 
-```php no_run
-use Tarfinlabs\EventMachine\Actor\State;
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
-use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+```php
+use Tarfinlabs\EventMachine\Actor\State; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 
 class IsCustomerApprovedGuard extends GuardBehavior
 {
