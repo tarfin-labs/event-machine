@@ -524,6 +524,25 @@ class StateConfigValidator
                 );
             }
         }
+
+        // target validation (fire-and-forget with immediate transition)
+        if (isset($stateConfig['target'])) {
+            // target requires queue (sync fire-and-forget with transition is contradictory)
+            if (!isset($stateConfig['queue'])) {
+                throw new InvalidArgumentException(
+                    message: "State '{$path}' has 'machine' with 'target' but no 'queue'. "
+                           .'Fire-and-forget with immediate transition requires async execution.'
+                );
+            }
+
+            // target + @done is ambiguous
+            if (isset($stateConfig['@done'])) {
+                throw new InvalidArgumentException(
+                    message: "State '{$path}' cannot have both '@done' and 'target' with 'machine'. "
+                           ."Use '@done' for managed delegation or 'target' for fire-and-forget."
+                );
+            }
+        }
     }
 
     /**
