@@ -184,16 +184,35 @@ class ExportXStateCommand extends Command
 
         // Machine invoke → XState invoke
         if ($stateDefinition->hasMachineInvoke()) {
-            $invoke = $this->buildInvokeNode($stateDefinition);
+            $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
+            $invoke           = $this->buildInvokeNode($stateDefinition);
 
-            // @done → invoke.onDone
-            if ($stateDefinition->onDoneTransition instanceof TransitionDefinition) {
-                $invoke['onDone'] = $this->buildTransitionConfig($stateDefinition->onDoneTransition, $stateDefinition);
-            }
+            $isFireAndForget = !$stateDefinition->onDoneTransition instanceof TransitionDefinition
+                && !$invokeDefinition->isJob();
 
-            // @fail → invoke.onError
-            if ($stateDefinition->onFailTransition instanceof TransitionDefinition) {
-                $invoke['onError'] = $this->buildTransitionConfig($stateDefinition->onFailTransition, $stateDefinition);
+            if ($isFireAndForget) {
+                // Fire-and-forget: no onDone/onError, add metadata
+                $ffMeta = ['fireAndForget' => true];
+                if ($invokeDefinition->target !== null) {
+                    $ffMeta['target'] = $invokeDefinition->target;
+                }
+
+                $invoke['meta'] = array_merge($invoke['meta'] ?? [], [
+                    'eventMachine' => array_merge(
+                        $invoke['meta']['eventMachine'] ?? [],
+                        $ffMeta,
+                    ),
+                ]);
+            } else {
+                // Managed: @done → invoke.onDone
+                if ($stateDefinition->onDoneTransition instanceof TransitionDefinition) {
+                    $invoke['onDone'] = $this->buildTransitionConfig($stateDefinition->onDoneTransition, $stateDefinition);
+                }
+
+                // @fail → invoke.onError
+                if ($stateDefinition->onFailTransition instanceof TransitionDefinition) {
+                    $invoke['onError'] = $this->buildTransitionConfig($stateDefinition->onFailTransition, $stateDefinition);
+                }
             }
 
             $node['invoke'] = $invoke;
