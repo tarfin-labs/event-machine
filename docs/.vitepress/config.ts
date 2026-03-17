@@ -177,8 +177,8 @@ export default withMermaid(
           text: 'Best Practices',
           collapsed: true,
           items: [
-            { text: 'Naming & Style', link: '/building/conventions' },
             { text: 'Overview', link: '/best-practices/' },
+            { text: 'Naming & Style', link: '/building/conventions' },
             { text: 'Event Bubbling', link: '/best-practices/event-bubbling' },
             { text: 'State Design', link: '/best-practices/state-design' },
             { text: 'Guard Design', link: '/best-practices/guard-design' },
