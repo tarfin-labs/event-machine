@@ -6,6 +6,8 @@ namespace Tarfinlabs\EventMachine\Definition;
 
 use Closure;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
+use Tarfinlabs\EventMachine\Routing\ForwardedEndpointDefinition;
 
 /**
  * Value object that holds machine/job delegation configuration.
@@ -103,14 +105,21 @@ class MachineInvokeDefinition
         }
 
         foreach ($this->forward as $key => $value) {
-            if (is_int($key) && $value === $eventType) {
-                // Plain format: forward as-is
+            if (is_int($key) && is_string($value) && $value === $eventType) {
+                // Format 1: plain forward as-is
                 return $eventType;
             }
 
             if (is_string($key) && $key === $eventType) {
-                // Rename format: parent event → child event
-                return $value;
+                if (is_string($value)) {
+                    // Format 2: rename — parent event → child event
+                    return $value;
+                }
+
+                if (is_array($value)) {
+                    // Format 3: full config — child_event or same name
+                    return $value['child_event'] ?? $eventType;
+                }
             }
         }
 
@@ -123,5 +132,64 @@ class MachineInvokeDefinition
     public function hasForward(): bool
     {
         return $this->forward !== [];
+    }
+
+    /**
+     * Resolve forward entries into ForwardedEndpointDefinition objects.
+     *
+     * Uses the child machine's definition to discover EventBehavior classes.
+     *
+     * @param  MachineDefinition  $childDefinition  The child machine's definition.
+     *
+     * @return array<string, ForwardedEndpointDefinition> Keyed by parent event type.
+     */
+    public function resolveForwardEndpoints(MachineDefinition $childDefinition): array
+    {
+        if ($this->forward === []) {
+            return [];
+        }
+
+        $endpoints = [];
+
+        foreach ($this->forward as $key => $value) {
+            if (is_int($key) && is_string($value)) {
+                // Format 1: plain — 'PROVIDE_CARD'
+                $parentEventType = $value;
+                $childEventType  = $value;
+                $config          = [];
+            } elseif (is_string($key) && is_string($value)) {
+                // Format 2: rename — 'CANCEL_ORDER' => 'ABORT'
+                $parentEventType = $key;
+                $childEventType  = $value;
+                $config          = [];
+            } elseif (is_string($key) && is_array($value)) {
+                // Format 3: full config
+                $parentEventType = $key;
+                $childEventType  = $value['child_event'] ?? $key;
+                $config          = $value;
+            } else {
+                continue;
+            }
+
+            // Discover child's EventBehavior class
+            $childEventClass = $childDefinition->behavior['events'][$childEventType] ?? null;
+
+            $endpoints[$parentEventType] = new ForwardedEndpointDefinition(
+                parentEventType: $parentEventType,
+                childEventType: $childEventType,
+                childMachineClass: $this->machineClass,
+                childEventClass: $childEventClass ?? '',
+                uri: $config['uri'] ?? EndpointDefinition::generateUri($parentEventType),
+                method: $config['method'] ?? 'POST',
+                actionClass: $config['action'] ?? null,
+                resultBehavior: $config['result'] ?? null,
+                contextKeys: $config['contextKeys'] ?? null,
+                statusCode: $config['status'] ?? null,
+                middleware: $config['middleware'] ?? [],
+                availableEvents: $config['available_events'] ?? null,
+            );
+        }
+
+        return $endpoints;
     }
 }
