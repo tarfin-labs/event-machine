@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'paths'     => ['docs'],
-    'exclude'   => ['docs/node_modules'],
+    'exclude'   => ['docs/node_modules', 'docs/.vitepress'],
     'bootstrap' => 'vendor/autoload.php',
     'execution' => [
         'timeout'      => 30,
