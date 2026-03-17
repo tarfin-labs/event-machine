@@ -486,12 +486,6 @@ class StateConfigValidator
             );
         }
 
-        // target is only valid for job actors, not machine delegation
-        if (isset($stateConfig['target'])) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has 'target' with 'machine'. The 'target' key is only valid for job actors. Use '@done' for machine delegation."
-            );
-        }
     }
 
     /**
