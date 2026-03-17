@@ -888,6 +888,18 @@ class Machine implements Castable, JsonSerializable, Stringable
      *
      * @return mixed The result of the state machine.
      */
+    /**
+     * Get the events that can currently be sent to this machine.
+     *
+     * Convenience proxy to $this->state->availableEvents().
+     *
+     * @return array<int, array{type: string, source: string, region?: string}>
+     */
+    public function availableEvents(): array
+    {
+        return $this->state->availableEvents();
+    }
+
     public function result(): mixed
     {
         $currentStateDefinition = $this->state->currentStateDefinition;

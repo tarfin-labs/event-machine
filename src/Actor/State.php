@@ -537,8 +537,9 @@ class State implements \JsonSerializable
     public function toArray(): array
     {
         return [
-            'value'   => $this->value,
-            'context' => $this->context->toArray(),
+            'value'            => $this->value,
+            'context'          => $this->context->toArray(),
+            'available_events' => $this->availableEvents(),
         ];
     }
 
