@@ -10,11 +10,15 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
+use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+use Tarfinlabs\EventMachine\Definition\MachineInvokeDefinition;
 
 /**
  * Class State.
@@ -340,6 +344,187 @@ class State implements \JsonSerializable
     public function getForwardedChildState(): ?self
     {
         return $this->forwardedChildState;
+    }
+
+    // endregion
+
+    // region Available Events
+
+    /**
+     * Get the events that can currently be sent to this machine.
+     *
+     * Returns parent on-events (non-internal) + forward events (if child accepts them).
+     * Core introspection method — used by HTTP responses, TestMachine, toArray(), etc.
+     *
+     * @return array<int, array{type: string, source: string, region?: string}>
+     */
+    public function availableEvents(): array
+    {
+        if (!$this->currentStateDefinition instanceof StateDefinition) {
+            return [];
+        }
+
+        // For parallel states, collect from all active regions
+        if ($this->isInParallelState()) {
+            return $this->availableEventsForParallelState();
+        }
+
+        $events = [];
+
+        // 1. Parent's own on-events (non-internal)
+        if ($this->currentStateDefinition->transitionDefinitions !== null) {
+            foreach (array_keys($this->currentStateDefinition->transitionDefinitions) as $eventName) {
+                if ($this->isUserSendableEvent($eventName)) {
+                    $events[] = ['type' => $eventName, 'source' => 'parent'];
+                }
+            }
+        }
+
+        // 2. Forward events (if delegating state with running child)
+        if ($this->currentStateDefinition->hasMachineInvoke()) {
+            $invokeDefinition = $this->currentStateDefinition->getMachineInvokeDefinition();
+
+            if ($invokeDefinition->hasForward()) {
+                $childStateDef = $this->resolveChildCurrentStateDef($invokeDefinition);
+
+                foreach ($invokeDefinition->forward as $key => $value) {
+                    $parentEventType = is_int($key) ? $value : $key;
+
+                    if (!is_string($parentEventType)) {
+                        continue;
+                    }
+
+                    $childEventType = $invokeDefinition->resolveForwardEvent($parentEventType);
+
+                    if ($childEventType === null) {
+                        continue;
+                    }
+
+                    // Only include if child's current state accepts this event
+                    if ($childStateDef instanceof StateDefinition && $this->childStateAcceptsEvent($childStateDef, $childEventType)) {
+                        $events[] = ['type' => $parentEventType, 'source' => 'forward'];
+                    }
+                }
+            }
+        }
+
+        return $events;
+    }
+
+    /**
+     * Collect available events from all active regions in a parallel state.
+     *
+     * @return array<int, array{type: string, source: string, region?: string}>
+     */
+    protected function availableEventsForParallelState(): array
+    {
+        $events        = [];
+        $parallelState = $this->currentStateDefinition;
+
+        if ($parallelState->stateDefinitions === null) {
+            return $events;
+        }
+
+        foreach ($this->value as $activeStateId) {
+            $activeStateDef = $parallelState->machine->idMap[$activeStateId] ?? null;
+
+            if ($activeStateDef === null) {
+                continue;
+            }
+
+            // Determine region name from the active state's path
+            $regionName = $activeStateDef->parent?->key;
+
+            if ($activeStateDef->transitionDefinitions !== null) {
+                foreach ($activeStateDef->transitionDefinitions as $eventName => $td) {
+                    if ($this->isUserSendableEvent($eventName)) {
+                        $event = ['type' => $eventName, 'source' => 'parent'];
+
+                        if ($regionName !== null) {
+                            $event['region'] = $regionName;
+                        }
+
+                        $events[] = $event;
+                    }
+                }
+            }
+        }
+
+        return $events;
+    }
+
+    /**
+     * Check if an event type is user-sendable (not internal/timer).
+     */
+    protected function isUserSendableEvent(string $eventType): bool
+    {
+        // Exclude internal events
+        if ($eventType === TransitionProperty::Always->value) {
+            return false;
+        }
+
+        // Exclude @done, @fail, @timeout (they start with @)
+        if (str_starts_with($eventType, '@')) {
+            return false;
+        }
+
+        // Exclude internal event enums
+        $internalTypes = array_map(
+            fn (InternalEvent $e): string => $e->value,
+            InternalEvent::cases()
+        );
+
+        return !in_array($eventType, $internalTypes, true);
+    }
+
+    /**
+     * Resolve the child machine's current state definition for forward event checking.
+     * Uses forwardedChildState if available, otherwise checks MachineCurrentState table.
+     */
+    protected function resolveChildCurrentStateDef(
+        MachineInvokeDefinition $invokeDefinition,
+    ): ?StateDefinition {
+        // If we have a stashed child state from a recent forward, use it
+        if ($this->forwardedChildState instanceof State) {
+            return $this->forwardedChildState->currentStateDefinition;
+        }
+
+        // Otherwise, try lightweight lookup via MachineCurrentState table
+        $rootEventId = $this->history->first()?->root_event_id;
+
+        if ($rootEventId === null) {
+            return null;
+        }
+
+        $childRecord = MachineChild::where('parent_root_event_id', $rootEventId)
+            ->whereIn('status', [MachineChild::STATUS_PENDING, MachineChild::STATUS_RUNNING])
+            ->first();
+
+        if ($childRecord === null || $childRecord->child_root_event_id === null) {
+            return null;
+        }
+
+        $childCurrentState = MachineCurrentState::where('root_event_id', $childRecord->child_root_event_id)->first();
+
+        if ($childCurrentState === null) {
+            return null;
+        }
+
+        $childDef = $invokeDefinition->machineClass::definition();
+
+        return $childDef->idMap[$childCurrentState->state_id] ?? null;
+    }
+
+    /**
+     * Check if a child state definition accepts a given event type.
+     */
+    protected function childStateAcceptsEvent(StateDefinition $childStateDef, string $eventType): bool
+    {
+        if ($childStateDef->transitionDefinitions === null) {
+            return false;
+        }
+
+        return isset($childStateDef->transitionDefinitions[$eventType]);
     }
 
     // endregion
