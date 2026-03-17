@@ -516,7 +516,9 @@ class StateConfigValidator
                 );
             }
 
-            // forward is invalid — no running child to forward to
+            // forward is invalid — no running child to forward to.
+            // Note: the no-queue + forward case is already rejected above (line 483).
+            // This branch only fires when queue IS present but @done is absent.
             if (!empty($stateConfig['forward'])) {
                 throw new InvalidArgumentException(
                     message: "State '{$path}' has 'forward' without '@done'. "

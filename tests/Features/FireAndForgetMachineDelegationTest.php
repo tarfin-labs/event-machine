@@ -530,3 +530,34 @@ it('job fire-and-forget still works unchanged (regression)', function (): void {
 
     expect($state->value)->toBe(['job_ff_regression.done']);
 });
+
+it('silently stays in state when target references nonexistent state', function (): void {
+    Queue::fake();
+
+    $machine = MachineDefinition::define(
+        config: [
+            'id'      => 'ff_bad_target',
+            'initial' => 'idle',
+            'context' => [],
+            'states'  => [
+                'idle' => [
+                    'on' => ['GO' => 'dispatching'],
+                ],
+                'dispatching' => [
+                    'machine' => ImmediateChildMachine::class,
+                    'queue'   => true,
+                    'target'  => 'nonexistent_state',
+                ],
+            ],
+        ],
+    );
+
+    $machine->machineClass = 'App\\Machines\\TestMachine';
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    // Parent stays in dispatching — target didn't resolve
+    expect($state->currentStateDefinition->id)->toBe('ff_bad_target.dispatching');
+    Queue::assertPushed(ChildMachineJob::class);
+});

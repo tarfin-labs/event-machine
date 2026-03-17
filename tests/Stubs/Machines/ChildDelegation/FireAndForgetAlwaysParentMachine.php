@@ -38,7 +38,6 @@ class FireAndForgetAlwaysParentMachine extends Machine
                     'prevented' => [
                         'on' => ['RETRY' => 'idle'],
                     ],
-                    'closed' => ['type' => 'final'],
                 ],
             ],
         );

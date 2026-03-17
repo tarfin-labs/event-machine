@@ -1253,7 +1253,8 @@ class MachineDefinition
                 }
             }
 
-            // If no target: method returns, @always check runs at the caller (line 2387)
+            // If no target: method returns, then @always transitions are checked
+            // by the caller (transition method) after handleMachineInvoke completes.
             return;
         }
 
