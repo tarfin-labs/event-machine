@@ -6,6 +6,7 @@ Designing a state machine is different from writing procedural code. In a statec
 
 | Topic | One-Liner |
 |-------|-----------|
+| [Naming & Style](/building/conventions) | Consistent naming for states, events, behaviors, and context |
 | [State Design](./state-design) | Model conditions, not steps; avoid state explosion |
 | [Event Design](./event-design) | Events are past-tense facts, not commands |
 | [Transition Design](./transition-design) | Self vs targetless, `@always` chains, multi-branch |
