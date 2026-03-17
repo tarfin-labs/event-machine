@@ -128,8 +128,8 @@ If `total` gets out of sync with `item_quantity` and `item_price`, guards readin
 
 For machines with more than a handful of context keys, a typed `ContextManager` subclass provides autocompletion, type safety, and documentation in one place.
 
-```php no_run
-use Tarfinlabs\EventMachine\ContextManager;
+```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 class OrderWorkflowContext extends ContextManager
 {
@@ -143,9 +143,9 @@ class OrderWorkflowContext extends ContextManager
 
 Access in actions and guards is direct property access rather than string-key lookups:
 
-```php no_run
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
-use Tarfinlabs\EventMachine\ContextManager;
+```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 class IsRetryAllowedGuard extends GuardBehavior
 {
