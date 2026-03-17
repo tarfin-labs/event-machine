@@ -72,9 +72,9 @@ EventMachine supports three action positions. Each serves a distinct purpose.
 
 ## Anti-Pattern: Action That Throws to Prevent Transition
 
-```php no_run
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
-use Tarfinlabs\EventMachine\ContextManager;
+```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 // Anti-pattern: using exception as flow control
 
@@ -147,9 +147,9 @@ Action execution order within an array is sequential and guaranteed, but couplin
 
 ## Anti-Pattern: Mega-Action
 
-```php no_run
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
-use Tarfinlabs\EventMachine\ContextManager;
+```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 // Anti-pattern: one action doing five things
 
