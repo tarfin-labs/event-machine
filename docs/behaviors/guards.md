@@ -6,7 +6,7 @@ Guards are conditions that control whether a transition can occur. They evaluate
 
 ### Inline Guard
 
-```php no_run
+```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
@@ -21,6 +21,7 @@ MachineDefinition::define(
                     ],
                 ],
             ],
+            'submitted' => [], // [!code hide]
         ],
     ],
     behavior: [
