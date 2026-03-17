@@ -86,7 +86,7 @@ All machine behaviors extend `InvokableBehavior` and include:
 
 ### v7 Features
 
-- **Machine Delegation**: `machine`/`job` keys on states, `@done`/`@fail`/`@timeout` transitions
+- **Machine Delegation**: `machine`/`job` keys on states, `@done`/`@fail`/`@timeout` transitions, fire-and-forget (omit `@done` with `queue`)
 - **Cross-Machine Communication**: `sendTo()`, `dispatchTo()`, `sendToParent()`, `dispatchToParent()`, `raise()`
 - **Time-Based Events**: `after` (one-shot) and `every` (recurring) timers on transitions via `Timer` VO
 - **Scheduled Events**: `schedules` key + `MachineScheduler::register()` for cron-based batch operations
