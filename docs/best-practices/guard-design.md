@@ -68,9 +68,9 @@ class IsPaymentValidGuard extends GuardBehavior
 
 ## Anti-Pattern: Guard That Writes Context
 
-```php no_run
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
-use Tarfinlabs\EventMachine\ContextManager;
+```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 // Anti-pattern: guard mutates context
 
@@ -102,9 +102,9 @@ If the guard is evaluated multiple times (multi-branch transitions try guards in
 ],
 ```
 
-```php no_run
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
-use Tarfinlabs\EventMachine\ContextManager;
+```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 // Guard only reads -- pure
 class HasSufficientBalanceGuard extends GuardBehavior
@@ -148,9 +148,9 @@ This guard returns different results depending on when it is called -- violating
 
 ## What Good Guards Look Like
 
-```php no_run
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
-use Tarfinlabs\EventMachine\ContextManager;
+```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 // Simple comparison
 class IsPaymentValidGuard extends GuardBehavior
@@ -162,9 +162,9 @@ class IsPaymentValidGuard extends GuardBehavior
 }
 ```
 
-```php no_run
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
-use Tarfinlabs\EventMachine\ContextManager;
+```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 // Threshold check
 class HasSufficientBalanceGuard extends GuardBehavior
@@ -176,9 +176,9 @@ class HasSufficientBalanceGuard extends GuardBehavior
 }
 ```
 
-```php no_run
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
-use Tarfinlabs\EventMachine\ContextManager;
+```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 // Boolean flag
 class IsRetryAllowedGuard extends GuardBehavior
