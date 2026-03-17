@@ -90,7 +90,6 @@ export default withMermaid(
             { text: 'Working with Context', link: '/building/working-with-context' },
             { text: 'Handling Events', link: '/building/handling-events' },
             { text: 'Configuration', link: '/building/configuration' },
-            { text: 'Naming Conventions', link: '/building/conventions' },
             { text: 'Custom Context Classes', link: '/advanced/custom-context' },
             { text: 'Scenarios', link: '/advanced/scenarios' }
           ]
@@ -178,6 +177,7 @@ export default withMermaid(
           text: 'Best Practices',
           collapsed: true,
           items: [
+            { text: 'Naming Conventions', link: '/building/conventions' },
             { text: 'Overview', link: '/best-practices/' },
             { text: 'Event Bubbling', link: '/best-practices/event-bubbling' },
             { text: 'State Design', link: '/best-practices/state-design' },
