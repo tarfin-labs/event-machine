@@ -151,7 +151,11 @@ For events with multiple words, ensure every word is clearly separated:
 
 Raised events follow the same naming rules. When an action raises an event internally, use `SCREAMING_SNAKE_CASE`:
 
-```php no_run
+```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+
 class ProcessPaymentAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): void
@@ -621,7 +625,9 @@ class UserOnboardingMachine extends MachineDefinition { ... }
 
 Use `snake_case` for machine IDs in configuration. The ID is derived from the domain name without the `Machine` suffix:
 
-```php no_run
+```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+
 MachineDefinition::define(
     config: [
         'id' => 'order_workflow',      // snake_case, no Machine suffix
@@ -680,7 +686,9 @@ When defining context as an inline array, use `snake_case`:
 
 When using a custom `ContextManager` subclass, properties follow **PHP convention** — `camelCase`:
 
-```php no_run
+```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
 class OrderWorkflowContext extends ContextManager
 {
     public int $totalAmount = 0;
