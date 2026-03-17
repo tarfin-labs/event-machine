@@ -1195,6 +1195,7 @@ class MachineDefinition
     {
         $childMachineClass = $invokeDefinition->machineClass;
         $childContext      = $invokeDefinition->resolveChildContext($state->context);
+        $isFireAndForget   = !$stateDefinition->onDoneTransition instanceof TransitionDefinition;
 
         // Record child machine start event
         $state->setInternalEventBehavior(
@@ -1202,18 +1203,21 @@ class MachineDefinition
             placeholder: $childMachineClass,
         );
 
-        // Create tracking record
-        $childRecord = MachineChild::create([
-            'parent_root_event_id' => $state->history->first()->root_event_id,
-            'parent_state_id'      => $stateDefinition->id,
-            'parent_machine_class' => $this->machineClass,
-            'child_machine_class'  => $childMachineClass,
-            'status'               => MachineChild::STATUS_PENDING,
-            'created_at'           => now(),
-        ]);
+        // Create tracking record (managed only — fire-and-forget skips this)
+        $machineChildId = '';
+        if (!$isFireAndForget) {
+            $childRecord = MachineChild::create([
+                'parent_root_event_id' => $state->history->first()->root_event_id,
+                'parent_state_id'      => $stateDefinition->id,
+                'parent_machine_class' => $this->machineClass,
+                'child_machine_class'  => $childMachineClass,
+                'status'               => MachineChild::STATUS_PENDING,
+                'created_at'           => now(),
+            ]);
 
-        // Track child in parent's active children
-        $state->addActiveChild($childRecord->id);
+            $state->addActiveChild($childRecord->id);
+            $machineChildId = $childRecord->id;
+        }
 
         // Dispatch child machine job
         $job = new ChildMachineJob(
@@ -1221,9 +1225,10 @@ class MachineDefinition
             parentMachineClass: $this->machineClass,
             parentStateId: $stateDefinition->id,
             childMachineClass: $childMachineClass,
-            machineChildId: $childRecord->id,
+            machineChildId: $machineChildId,
             childContext: $childContext,
             retry: $invokeDefinition->retry ?? 1,
+            fireAndForget: $isFireAndForget,
         );
 
         if ($invokeDefinition->queue !== null) {
@@ -1236,7 +1241,23 @@ class MachineDefinition
 
         dispatch($job)->afterCommit();
 
-        // Dispatch timeout job if @timeout is configured
+        // Fire-and-forget: optionally transition to target, then return
+        if ($isFireAndForget) {
+            if ($invokeDefinition->target !== null) {
+                $targetState = $this->idMap[$this->id.'.'.$invokeDefinition->target]
+                    ?? $this->idMap[$invokeDefinition->target]
+                    ?? null;
+
+                if ($targetState instanceof StateDefinition) {
+                    $state->setCurrentStateDefinition($targetState);
+                }
+            }
+
+            // If no target: method returns, @always check runs at the caller (line 2387)
+            return;
+        }
+
+        // Managed: dispatch timeout job if @timeout is configured
         if ($invokeDefinition->timeout !== null && $stateDefinition->onTimeoutTransition instanceof TransitionDefinition) {
             $timeoutJob = new ChildMachineTimeoutJob(
                 parentRootEventId: $state->history->first()->root_event_id,
