@@ -164,7 +164,7 @@ The `machine:xstate` Artisan command now maps `machine` keys to XState v5 `invok
 | `forward` | `array` | Event types to forward from parent to running child |
 | `on` | `array` | Additional events the parent can handle while child is running |
 | `job` | `string` (FQCN) | Laravel Job class to invoke as actor |
-| `target` | `string` | Target state for fire-and-forget jobs |
+| `target` | `string` | Target state for fire-and-forget (jobs and machine delegation) |
 | `output` | `array\|Closure` | Filter child context exposed to parent via `@done` |
 | `after` | `Timer` | One-shot timer on transition (auto-trigger after duration) |
 | `every` | `Timer` | Recurring timer on transition (auto-trigger at interval) |

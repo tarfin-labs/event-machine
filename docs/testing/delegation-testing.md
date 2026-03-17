@@ -163,6 +163,51 @@ it('fire-and-forget job transitions parent immediately', function (): void {
 });
 ```
 
+## Testing Fire-and-Forget Machine Delegation
+
+For fire-and-forget machine delegation (`machine` + `queue`, no `@done`), use `Machine::fake()` to verify the child was invoked and the parent stayed in state (or transitioned):
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Actor\Machine;
+
+it('fire-and-forget machine delegation stays in state', function (): void {
+    VerificationMachine::fake(result: []);
+
+    $machine = ParentMachine::create();
+    $machine->send(['type' => 'START']);
+
+    // Parent stays in the delegating state
+    expect($machine->state->currentStateDefinition->id)->toContain('processing');
+
+    // Child was invoked
+    VerificationMachine::assertInvoked();
+    VerificationMachine::assertInvokedWith(['tckn' => '12345678901']);
+
+    Machine::resetMachineFakes();
+});
+```
+
+Without faking, use `Queue::fake()` to verify the `ChildMachineJob` dispatch:
+
+<!-- doctest-attr: no_run -->
+```php
+use Illuminate\Support\Facades\Queue;
+use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
+
+it('dispatches fire-and-forget ChildMachineJob', function (): void {
+    Queue::fake();
+
+    $machine = ParentMachine::create();
+    $machine->send(['type' => 'START']);
+
+    Queue::assertPushed(ChildMachineJob::class, function (ChildMachineJob $job): bool {
+        return $job->childMachineClass === VerificationMachine::class
+            && $job->fireAndForget === true;
+    });
+});
+```
+
 ::: tip Related
 See [Cross-Machine Messaging](/advanced/sendto) for the API reference,
 [Job Actors](/advanced/job-actors) for configuration,

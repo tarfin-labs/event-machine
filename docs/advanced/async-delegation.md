@@ -169,13 +169,14 @@ class InitiateChargeAction extends ActionBehavior
 
 ## Comparison Table
 
-| Aspect | Sync | Async (Queue) |
-|--------|------|---------------|
-| Child execution | Inline, blocking | On queue worker |
-| Parent state | Transitions immediately | Stays in delegating state |
-| Persistence | Optional | Required (parent + child) |
-| External I/O | Not recommended | Designed for it |
-| Webhook support | No | Yes |
-| `@timeout` | Not applicable | Supported |
-| `forward` | Not applicable | Supported |
-| Complexity | Simple | More moving parts |
+| Aspect | Sync | Async (Queue) | Fire-and-Forget (Queue, no `@done`) |
+|--------|------|---------------|-------------------------------------|
+| Child execution | Inline, blocking | On queue worker | On queue worker |
+| Parent state | Transitions immediately | Stays in delegating state | Stays or transitions (`@always`/`target`) |
+| Persistence | Optional | Required (parent + child) | Required (child only) |
+| External I/O | Not recommended | Designed for it | Designed for it |
+| Webhook support | No | Yes | No (parent doesn't track child) |
+| `@timeout` | Not applicable | Supported | Not applicable |
+| `forward` | Not applicable | Supported | Not applicable |
+| `MachineChild` record | No | Yes | No |
+| Complexity | Simple | More moving parts | Simple (no lifecycle tracking) |

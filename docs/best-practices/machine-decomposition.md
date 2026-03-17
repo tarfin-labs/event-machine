@@ -132,16 +132,17 @@ A machine with one or two states that always transitions immediately adds overhe
 
 **Fix:** If two machines cannot operate independently -- if every state change in one requires a corresponding change in the other -- merge them. Use hierarchical states instead of delegation.
 
-## Sync vs Async Decision
+## Sync vs Async vs Fire-and-Forget Decision
 
-| Factor | Sync (`machine` key) | Async (`job` key) |
-|--------|----------------------|-------------------|
-| Duration | Under 1 second | Seconds to minutes |
-| External input | None | Waits for webhook, API, human |
-| Failure recovery | Immediate exception | Queue retry policies |
-| Testing | `Machine::fake()` | `Machine::fake()` + queue assertions |
+| Factor | Sync (`machine`) | Async (`machine` + `queue`) | Fire-and-Forget (`queue`, no `@done`) |
+|--------|-------------------|----------------------------|---------------------------------------|
+| Duration | Under 1 second | Seconds to minutes | Any (parent doesn't wait) |
+| External input | None | Waits for webhook, API, human | Parent doesn't care |
+| Result needed | Yes | Yes | No |
+| Failure recovery | Immediate exception | Queue retry + `@fail` | Child handles own failures |
+| Testing | `Machine::fake()` | `Machine::fake()` + queue | `Machine::fake()` + queue |
 
-Generally: if the child completes within a single HTTP request without waiting for external input, use sync delegation. Otherwise, use async.
+Generally: if the child completes within a single HTTP request without waiting for external input, use sync delegation. If you need the result, use async. If you don't need the result, use fire-and-forget.
 
 ## Parent Orchestrates, Child Specialises
 

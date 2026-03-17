@@ -89,7 +89,7 @@ Jobs that do **not** implement `ReturnsResult` return an empty output (`[]`).
 | Stateful | Yes (multiple states) | No (single step) |
 | Context | Own ContextManager | Data from `with` |
 | Lifecycle | `@done` / `@fail` / `@timeout` | `@done` / `@fail` / `@timeout` |
-| Fire-and-forget | No (`@done` required) | Yes (`target` key) |
+| Fire-and-forget | Yes (omit `@done`, requires `queue`) | Yes (`target` key) |
 | Output | `output` key on final state | `ReturnsResult` interface |
 | Testing | `Machine::fake()` | `Queue::fake()` + `ChildJobJob` |
 | Use case | Complex stateful workflows | Single-step async operations |

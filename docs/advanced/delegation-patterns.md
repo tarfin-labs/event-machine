@@ -219,16 +219,45 @@ class NotifyShippingAction extends ActionBehavior {
 
 Fire-and-forget means dispatching work without tracking the result. Use it for side effects where the parent doesn't care about the outcome.
 
-### Job Actor (recommended)
+### Machine Delegation (stay in state)
 
-The cleanest fire-and-forget — dispatch a job and move on:
+Omit `@done` to make a machine delegation fire-and-forget. The parent stays in the state and handles its own events:
+
+<!-- doctest-attr: ignore -->
+```php
+'prevented' => [
+    'machine' => VerificationMachine::class,
+    'with'    => ['tckn'],
+    'queue'   => 'verifications',
+    // No @done → fire-and-forget
+    'on' => ['RETRY' => 'retrying'],
+],
+```
+
+### Machine Delegation (spawn and transition)
+
+Use `@always` or `target` to spawn and immediately move to the next state:
+
+<!-- doctest-attr: ignore -->
+```php
+'dispatching_verification' => [
+    'machine' => VerificationMachine::class,
+    'with'    => ['tckn'],
+    'queue'   => 'verifications',
+    'on'      => ['@always' => 'prevented'],
+],
+```
+
+### Job Actor
+
+For single-step async operations:
 
 <!-- doctest-attr: ignore -->
 ```php
 'logging' => [
     'job'    => AuditLogJob::class,
     'with'   => ['action', 'user_id'],
-    'target' => 'next_state',           // no @done → fire-and-forget
+    'target' => 'next_state',
 ],
 ```
 
@@ -254,13 +283,12 @@ class SendAlertAction extends ActionBehavior
 }
 ```
 
-### What About `machine` Key?
-
-The `machine` key always creates a managed parent-child relationship and requires `@done`. Fire-and-forget with `machine` key is **not supported by design** — if you don't care about the result, use a job actor or `dispatchTo()`.
+### Choosing the Right Mechanism
 
 | Mechanism | Tracks Result | Parent Waits | Use Case |
 |-----------|--------------|-------------|----------|
+| `machine + queue` (no `@done`) | No | No | Stateful child (multiple states, webhooks) |
 | `job` + `target` | No | No | Single-step async (logging, notification) |
 | `dispatchTo()` | No | No | Event to existing machine |
-| `job` + `@done` | Yes | Yes | Managed async job |
 | `machine` + `@done` | Yes | Yes | Complex stateful delegation |
+| `job` + `@done` | Yes | Yes | Managed async job |

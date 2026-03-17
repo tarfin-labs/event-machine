@@ -59,12 +59,13 @@ class OrderWorkflowMachine extends Machine
 |-----|------|----------|-------------|
 | `machine` | `string` (FQCN) | Yes | Child machine class. Must extend `Machine`. |
 | `with` | `array\|Closure` | No | Data to pass from parent context to child. |
-| `@done` | `string\|array` | No | Fires when child reaches a final state. |
-| `@fail` | `string\|array` | No | Fires when child fails (exception or failure final state). |
-| `@timeout` | `array` | No | Fires when child doesn't complete within the given time. Async only. |
-| `queue` | `bool\|string\|array` | No | Run child asynchronously on a queue. |
-| `forward` | `array` | No | Event types to forward from parent to the running child. |
+| `@done` | `string\|array` | No | Fires when child reaches a final state. Absence signals fire-and-forget. |
+| `@fail` | `string\|array` | No | Fires when child fails. Not valid without `@done`. |
+| `@timeout` | `array` | No | Fires when child doesn't complete within the given time. Async only. Not valid without `@done`. |
+| `queue` | `bool\|string\|array` | No | Run child asynchronously on a queue. **Required** for fire-and-forget. |
+| `forward` | `array` | No | Event types to forward from parent to the running child. Not valid without `@done`. |
 | `on` | `array` | No | Additional events the parent can handle while child is running. |
+| `target` | `string` | No | Fire-and-forget + immediate transition. Requires `queue`. Mutually exclusive with `@done`. |
 
 ## `with` — Context Transfer
 
@@ -156,6 +157,63 @@ Only meaningful in async mode. Fires when the child doesn't complete within the 
     ],
 ],
 ```
+
+## Fire-and-Forget
+
+When you need to spawn a child machine without tracking its result, omit `@done`. The child runs independently — its completion or failure does not affect the parent.
+
+### Stay in State (primary pattern)
+
+The state spawns the child on entry and continues functioning normally with its own `on` events:
+
+<!-- doctest-attr: ignore -->
+```php
+'prevented' => [
+    'machine' => VerificationMachine::class,
+    'with'    => ['tckn'],
+    'queue'   => 'verifications',
+    // No @done → fire-and-forget
+    'on' => ['RETRY' => 'retrying'],
+],
+```
+
+**Reads as:** "When entering `prevented`, spawn `VerificationMachine` in the background. The state handles its own events normally."
+
+### Spawn and Move On (with @always)
+
+Use `@always` to immediately transition after spawning the child:
+
+<!-- doctest-attr: ignore -->
+```php
+'dispatching_verification' => [
+    'machine' => VerificationMachine::class,
+    'with'    => ['tckn'],
+    'queue'   => 'verifications',
+    'on'      => ['@always' => 'prevented'],
+],
+```
+
+### Spawn and Move On (with target)
+
+Alternatively, use `target` for an explicit fire-and-forget transition (consistent with the `job` key pattern):
+
+<!-- doctest-attr: ignore -->
+```php
+'dispatching_verification' => [
+    'machine' => VerificationMachine::class,
+    'with'    => ['tckn'],
+    'queue'   => 'verifications',
+    'target'  => 'prevented',
+],
+```
+
+### Rules
+
+- Fire-and-forget requires `queue` — the child must run asynchronously.
+- `@done` absence is the signal — no new keyword needed.
+- `@fail`, `@timeout`, `output`, and `forward` are not valid without `@done`.
+- The child still persists its own `MachineEvent` records (observability).
+- The child receives parent identity (`sendToParent()` still works).
 
 ## `queue` — Async Execution
 
