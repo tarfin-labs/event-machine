@@ -16,6 +16,8 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\EventResolution\EventResolution
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncForwardParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncTimeoutParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Compound\ConditionalCompoundOnDoneMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FireAndForgetParentMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FireAndForgetTargetParentMachine;
 
 // region Basic Export
 
@@ -427,6 +429,44 @@ it('maps forward events to invoke meta', function (): void {
 
     $invoke = $xstate['states']['processing']['invoke'];
     expect($invoke['meta']['eventMachine'])->toHaveKey('forward');
+});
+
+// endregion
+
+// region Fire-and-Forget Export
+
+it('exports fire-and-forget machine delegation with meta', function (): void {
+    $command = new ExportXStateCommand();
+    $method  = new ReflectionMethod($command, 'buildMachineNode');
+    $method->setAccessible(true);
+
+    $definition = FireAndForgetParentMachine::definition();
+    $xstate     = $method->invoke($command, $definition);
+
+    $invoke = $xstate['states']['processing']['invoke'];
+
+    expect($invoke['meta']['eventMachine'])->toHaveKey('fireAndForget')
+        ->and($invoke['meta']['eventMachine']['fireAndForget'])->toBeTrue()
+        ->and($invoke)->not->toHaveKey('onDone')
+        ->and($invoke)->not->toHaveKey('onError');
+});
+
+it('exports fire-and-forget with target in meta', function (): void {
+    $command = new ExportXStateCommand();
+    $method  = new ReflectionMethod($command, 'buildMachineNode');
+    $method->setAccessible(true);
+
+    $definition = FireAndForgetTargetParentMachine::definition();
+    $xstate     = $method->invoke($command, $definition);
+
+    $invoke = $xstate['states']['dispatching_verification']['invoke'];
+
+    expect($invoke['meta']['eventMachine'])->toHaveKey('fireAndForget')
+        ->and($invoke['meta']['eventMachine']['fireAndForget'])->toBeTrue()
+        ->and($invoke['meta']['eventMachine'])->toHaveKey('target')
+        ->and($invoke['meta']['eventMachine']['target'])->toBe('prevented')
+        ->and($invoke)->not->toHaveKey('onDone')
+        ->and($invoke)->not->toHaveKey('onError');
 });
 
 // endregion
