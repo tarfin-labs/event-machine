@@ -1357,22 +1357,22 @@ class MachineDefinition
      *
      * @return bool True if the event was forwarded, false otherwise.
      */
-    protected function tryForwardEventToChild(State $state, StateDefinition $stateDefinition, EventBehavior $eventBehavior): bool
+    protected function tryForwardEventToChild(State $state, StateDefinition $stateDefinition, EventBehavior $eventBehavior): ?State
     {
         if (!$stateDefinition->hasMachineInvoke()) {
-            return false;
+            return null;
         }
 
         $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
 
         if (!$invokeDefinition->hasForward()) {
-            return false;
+            return null;
         }
 
         $childEventType = $invokeDefinition->resolveForwardEvent($eventBehavior->type);
 
         if ($childEventType === null) {
-            return false;
+            return null;
         }
 
         // Find the running child machine from active children
@@ -1381,7 +1381,7 @@ class MachineDefinition
             ->first();
 
         if ($childRecord === null || $childRecord->child_root_event_id === null) {
-            return false;
+            return null;
         }
 
         // Restore and send the forwarded event to the child
@@ -1412,7 +1412,7 @@ class MachineDefinition
             ));
         }
 
-        return true;
+        return $childMachine->state;
     }
 
     /**
@@ -2305,7 +2305,11 @@ class MachineDefinition
             $transitionDefinition = $this->findTransitionDefinition($currentStateDefinition, $eventBehavior);
         } catch (NoTransitionDefinitionFoundException $e) {
             // Check if event should be forwarded to a running child machine
-            if ($this->tryForwardEventToChild($state, $currentStateDefinition, $eventBehavior)) {
+            $childState = $this->tryForwardEventToChild($state, $currentStateDefinition, $eventBehavior);
+
+            if ($childState instanceof State) {
+                $state->setForwardedChildState($childState);
+
                 return $state;
             }
 
