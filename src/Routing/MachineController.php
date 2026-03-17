@@ -237,6 +237,174 @@ class MachineController extends Controller
      * This enables the webhook pattern: child machine receives endpoint event,
      * transitions to final, and auto-dispatches ChildMachineCompletionJob.
      */
+    /**
+     * Forwarded model-bound endpoint handler.
+     * Route: /{model}/{uri} — resolves parent machine via Eloquent model binding.
+     */
+    public function handleForwardedModelBound(Request $request): JsonResponse
+    {
+        $route          = $request->route();
+        $parameterNames = $route->parameterNames();
+        $modelParam     = $parameterNames[0];
+        $model          = $route->parameter($modelParam);
+        $modelAttribute = $route->defaults['_model_attribute'];
+        $machine        = $model->{$modelAttribute};
+
+        return $this->executeForwardedEndpoint($machine, $request);
+    }
+
+    /**
+     * Forwarded machineId-bound endpoint handler.
+     * Route: /{machineId}/{uri} — resolves parent machine via root_event_id.
+     */
+    public function handleForwardedMachineIdBound(Request $request): JsonResponse
+    {
+        $route        = $request->route();
+        $machineClass = $route->defaults['_machine_class'];
+        $machine      = $machineClass::create(state: $route->parameter('machineId'));
+
+        return $this->executeForwardedEndpoint($machine, $request);
+    }
+
+    /**
+     * Shared forwarded endpoint logic: validate with child's EventBehavior,
+     * run parent action lifecycle, send to parent (triggers tryForwardEventToChild),
+     * build response with child state.
+     */
+    protected function executeForwardedEndpoint(Machine $machine, Request $request): JsonResponse
+    {
+        $defaults = $request->route()->defaults;
+
+        // 1. Resolve event using CHILD's EventBehavior class
+        $childEventClass = $defaults['_child_event_class'];
+        $event           = $childEventClass::validateAndCreate($request->all());
+
+        // 2. Run parent-level action.before() if configured
+        $actionClass = $defaults['_action_class'] ?? null;
+        $action      = $actionClass !== null
+            ? resolve($actionClass)->withMachineContext($machine, $machine->state)
+            : null;
+
+        $action?->before();
+
+        // 3. Send to parent (triggers tryForwardEventToChild internally)
+        try {
+            $state = $machine->send(event: $event);
+        } catch (MachineValidationException $e) { // @phpstan-ignore catch.neverThrown
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors'  => method_exists($e, 'errors') ? $e->errors() : [],
+            ], 422);
+        } catch (ValidationException $e) { // @phpstan-ignore catch.neverThrown
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors'  => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            $response = $action?->onException($e);
+
+            if ($response !== null) {
+                return $response;
+            }
+
+            throw $e;
+        }
+
+        // 4. Run parent-level action.after()
+        if ($action !== null) {
+            $action->withMachineContext($machine, $state);
+        }
+
+        $action?->after();
+
+        // 5. Build response with child state info
+        return $this->buildForwardedResponse($machine, $state, $defaults);
+    }
+
+    /**
+     * Build response for forwarded endpoints — includes parent + child state.
+     */
+    protected function buildForwardedResponse(Machine $machine, State $state, array $defaults): JsonResponse
+    {
+        $resultKey   = $defaults['_result_behavior'] ?? null;
+        $contextKeys = $defaults['_context_keys'] ?? null;
+        $statusCode  = $defaults['_status_code'] ?? 200;
+
+        $childState = $state->getForwardedChildState();
+
+        // Custom result behavior — runs on PARENT with ForwardContext injected
+        if ($resultKey !== null && $childState instanceof State) {
+            $result = $this->resolveAndRunForwardedResult(
+                resultKey: $resultKey,
+                parentState: $state,
+                parentMachine: $machine,
+                childState: $childState,
+            );
+
+            return response()->json(['data' => $result], $statusCode);
+        }
+
+        // Default response: parent state + child state
+        $rootEventId = $state->history->first()?->root_event_id;
+
+        $response = [
+            'machine_id' => $rootEventId,
+            'value'      => $state->value,
+        ];
+
+        if ($childState instanceof State) {
+            $childContext = $childState->context->toArray();
+
+            if ($contextKeys !== null) {
+                $childContext = array_intersect_key($childContext, array_flip($contextKeys));
+            }
+
+            $response['child'] = [
+                'value'   => $childState->value,
+                'context' => $childContext,
+            ];
+        }
+
+        return response()->json(['data' => $response], $statusCode);
+    }
+
+    /**
+     * Resolve and run a ResultBehavior with ForwardContext injection.
+     */
+    protected function resolveAndRunForwardedResult(
+        string $resultKey,
+        State $parentState,
+        Machine $parentMachine,
+        State $childState,
+    ): mixed {
+        $resultClass = class_exists($resultKey)
+            ? $resultKey
+            : ($parentMachine->definition->behavior['results'][$resultKey] ?? null);
+
+        if ($resultClass === null) {
+            throw new \RuntimeException("Result behavior '{$resultKey}' not found.");
+        }
+
+        $resultBehavior = resolve($resultClass);
+
+        $forwardContext = new ForwardContext(
+            childContext: $childState->context,
+            childState: $childState,
+        );
+
+        $params = InvokableBehavior::injectInvokableBehaviorParameters(
+            actionBehavior: $resultBehavior,
+            state: $parentState,
+            eventBehavior: $parentState->currentEventBehavior,
+            forwardContext: $forwardContext,
+        );
+
+        return $resultBehavior(...$params);
+    }
+
+    /**
+     * If the machine reached a final state and is a tracked child, dispatch completion to parent.
+     */
     protected function dispatchChildCompletionIfFinal(Machine $machine, State $state): void
     {
         if ($state->currentStateDefinition->type !== StateDefinitionType::FINAL) {
