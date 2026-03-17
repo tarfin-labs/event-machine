@@ -486,6 +486,44 @@ class StateConfigValidator
             );
         }
 
+        // Fire-and-forget detection: async (queue) + no @done
+        $isFireAndForget = isset($stateConfig['queue']) && !isset($stateConfig['@done']);
+
+        if ($isFireAndForget) {
+            // @fail is invalid — fire-and-forget doesn't track child failures
+            if (isset($stateConfig['@fail'])) {
+                throw new InvalidArgumentException(
+                    message: "State '{$path}' has '@fail' without '@done'. "
+                           .'Fire-and-forget machine delegation does not support failure callbacks. '
+                           ."Add '@done' for managed delegation, or remove '@fail'."
+                );
+            }
+
+            // @timeout is invalid — fire-and-forget doesn't track timing
+            if (isset($stateConfig['@timeout'])) {
+                throw new InvalidArgumentException(
+                    message: "State '{$path}' has '@timeout' without '@done'. "
+                           .'Fire-and-forget machine delegation does not support timeout callbacks. '
+                           ."Add '@done' for managed delegation, or remove '@timeout'."
+                );
+            }
+
+            // output is invalid — fire-and-forget doesn't receive results
+            if (isset($stateConfig['output'])) {
+                throw new InvalidArgumentException(
+                    message: "State '{$path}' has 'output' without '@done'. "
+                           .'Fire-and-forget machine delegation does not produce output for the parent.'
+                );
+            }
+
+            // forward is invalid — no running child to forward to
+            if (!empty($stateConfig['forward'])) {
+                throw new InvalidArgumentException(
+                    message: "State '{$path}' has 'forward' without '@done'. "
+                           .'Fire-and-forget machine delegation does not support event forwarding.'
+                );
+            }
+        }
     }
 
     /**
