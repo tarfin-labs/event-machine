@@ -1281,6 +1281,7 @@ class MachineDefinition
      *
      * Instead of creating a real child machine, immediately routes @done or @fail
      * based on the fake configuration. Works for both sync and async delegation.
+     * For fire-and-forget (no @done), records invocation and optionally transitions to target.
      */
     protected function handleFakedMachineInvoke(State $state, StateDefinition $stateDefinition, MachineInvokeDefinition $invokeDefinition): void
     {
@@ -1295,6 +1296,21 @@ class MachineDefinition
             type: InternalEvent::CHILD_MACHINE_START,
             placeholder: $childMachineClass,
         );
+
+        // Fire-and-forget faked: optionally transition to target, no @done/@fail routing
+        if (!$stateDefinition->onDoneTransition instanceof TransitionDefinition) {
+            if ($invokeDefinition->target !== null) {
+                $targetState = $this->idMap[$this->id.'.'.$invokeDefinition->target]
+                    ?? $this->idMap[$invokeDefinition->target]
+                    ?? null;
+
+                if ($targetState instanceof StateDefinition) {
+                    $state->setCurrentStateDefinition($targetState);
+                }
+            }
+
+            return;
+        }
 
         $fake = Machine::getMachineFake($childMachineClass);
 
