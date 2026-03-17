@@ -208,7 +208,7 @@ You can customize the delimiter:
 
 ## Complete Example
 
-```php no_run
+```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 MachineDefinition::define(
