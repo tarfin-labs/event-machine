@@ -318,6 +318,32 @@ class State implements \JsonSerializable
 
     // endregion
 
+    // region Forwarded Child State
+
+    /** The child machine's state after a forward event was processed. */
+    private ?self $forwardedChildState = null;
+
+    /**
+     * Stash the child machine's state after a successful forward.
+     *
+     * Called by tryForwardEventToChild() so the controller can
+     * include child state in the HTTP response without a second DB query.
+     */
+    public function setForwardedChildState(self $childState): void
+    {
+        $this->forwardedChildState = $childState;
+    }
+
+    /**
+     * Get the forwarded child state, or null if no forward happened.
+     */
+    public function getForwardedChildState(): ?self
+    {
+        return $this->forwardedChildState;
+    }
+
+    // endregion
+
     /**
      * Serialize the state to an array.
      *
