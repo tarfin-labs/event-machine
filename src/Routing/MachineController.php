@@ -103,6 +103,7 @@ class MachineController extends Controller
             resultKey: $defaults['_result_behavior'] ?? null,
             statusCode: $defaults['_status_code'] ?? 200,
             contextKeys: $defaults['_context_keys'] ?? null,
+            includeAvailableEvents: $defaults['_available_events'] ?? true,
         );
     }
 
@@ -130,6 +131,7 @@ class MachineController extends Controller
         ?string $resultKey,
         int $statusCode,
         ?array $contextKeys = null,
+        ?bool $includeAvailableEvents = true,
     ): JsonResponse {
         $action = $actionClass !== null
             ? resolve($actionClass)->withMachineContext($machine, $machine->state)
@@ -168,7 +170,7 @@ class MachineController extends Controller
         // Auto-dispatch completion if child reached final state and has a parent
         $this->dispatchChildCompletionIfFinal($machine, $state);
 
-        return $this->buildResponse($state, $machine, $resultKey, $statusCode, $contextKeys);
+        return $this->buildResponse($state, $machine, $resultKey, $statusCode, $contextKeys, $includeAvailableEvents);
     }
 
     /**
@@ -180,6 +182,7 @@ class MachineController extends Controller
         ?string $resultKey,
         int $statusCode,
         ?array $contextKeys = null,
+        ?bool $includeAvailableEvents = true,
     ): JsonResponse {
         if ($resultKey !== null) {
             $result = $this->resolveAndRunResult($resultKey, $state, $machine);
@@ -195,13 +198,17 @@ class MachineController extends Controller
             $contextData = array_intersect_key($contextData, array_flip($contextKeys));
         }
 
-        return response()->json([
-            'data' => [
-                'machine_id' => $rootEventId,
-                'value'      => $state->value,
-                'context'    => $contextData,
-            ],
-        ], $statusCode);
+        $response = [
+            'machine_id' => $rootEventId,
+            'value'      => $state->value,
+            'context'    => $contextData,
+        ];
+
+        if ($includeAvailableEvents !== false) {
+            $response['available_events'] = $state->availableEvents();
+        }
+
+        return response()->json(['data' => $response], $statusCode);
     }
 
     /**

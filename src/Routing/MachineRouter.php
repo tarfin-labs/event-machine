@@ -101,12 +101,13 @@ class MachineRouter
                     $routeName = "{$namePrefix}.".strtolower($eventType);
 
                     $defaults = [
-                        '_machine_class'   => $machineClass,
-                        '_event_type'      => $eventType,
-                        '_action_class'    => $endpoint->actionClass,
-                        '_result_behavior' => $endpoint->resultBehavior,
-                        '_status_code'     => $endpoint->statusCode ?? 200,
-                        '_context_keys'    => $endpoint->contextKeys,
+                        '_machine_class'    => $machineClass,
+                        '_event_type'       => $eventType,
+                        '_action_class'     => $endpoint->actionClass,
+                        '_result_behavior'  => $endpoint->resultBehavior,
+                        '_status_code'      => $endpoint->statusCode ?? 200,
+                        '_context_keys'     => $endpoint->contextKeys,
+                        '_available_events' => $endpoint->availableEvents,
                     ];
 
                     if ($handler === 'handleModelBound') {
