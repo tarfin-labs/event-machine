@@ -21,6 +21,9 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
  * Creates the child machine, runs it to completion (or leaves it waiting
  * for external events in webhook patterns), then dispatches a
  * ChildMachineCompletionJob to route @done/@fail back to the parent.
+ *
+ * In fire-and-forget mode (no @done on parent), the child runs independently:
+ * no MachineChild tracking, no ChildMachineCompletionJob.
  */
 class ChildMachineJob implements ShouldQueue
 {
@@ -36,9 +39,10 @@ class ChildMachineJob implements ShouldQueue
      * @param  string  $parentMachineClass  FQCN of the parent machine.
      * @param  string  $parentStateId  The parent state that invoked this child.
      * @param  string  $childMachineClass  FQCN of the child machine.
-     * @param  string  $machineChildId  The MachineChild tracking record ID.
+     * @param  string  $machineChildId  The MachineChild tracking record ID (empty for fire-and-forget).
      * @param  array  $childContext  Resolved context from parent's `with` config.
      * @param  int  $retry  Number of retry attempts (from machine config).
+     * @param  bool  $fireAndForget  Whether this is a fire-and-forget invocation (no @done).
      */
     public function __construct(
         public readonly string $parentRootEventId,
@@ -48,6 +52,7 @@ class ChildMachineJob implements ShouldQueue
         public readonly string $machineChildId,
         public readonly array $childContext = [],
         int $retry = 1,
+        public readonly bool $fireAndForget = false,
     ) {
         $this->tries = $retry;
     }
@@ -58,13 +63,15 @@ class ChildMachineJob implements ShouldQueue
             throw new \InvalidArgumentException("Machine class '{$this->childMachineClass}' must exist and extend ".Machine::class.'.');
         }
 
-        // 1. Update tracking record to running
-        $childRecord = MachineChild::find($this->machineChildId);
-        if ($childRecord === null || $childRecord->isTerminal()) {
-            return;
-        }
+        // 1. Update tracking record to running (skip for fire-and-forget)
+        if (!$this->fireAndForget) {
+            $childRecord = MachineChild::find($this->machineChildId);
+            if ($childRecord === null || $childRecord->isTerminal()) {
+                return;
+            }
 
-        $childRecord->update(['status' => MachineChild::STATUS_RUNNING]);
+            $childRecord->update(['status' => MachineChild::STATUS_RUNNING]);
+        }
 
         // 2. Create child machine with merged context
         /** @var Machine $childMachine */
@@ -92,13 +99,20 @@ class ChildMachineJob implements ShouldQueue
             parentMachineClass: $this->parentMachineClass,
         );
 
-        // 4. Update tracking record with child's root_event_id
+        // 4. Fire-and-forget: persist child and stop (no tracking, no completion)
+        if ($this->fireAndForget) {
+            $childMachine->persist();
+
+            return;
+        }
+
+        // 5. Update tracking record with child's root_event_id
         $childRecord->update(['child_root_event_id' => $childRootEventId]);
 
-        // 5. Persist child state
+        // 6. Persist child state
         $childMachine->persist();
 
-        // 6. Check if child reached a final state
+        // 7. Check if child reached a final state
         if ($childMachine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
             $childRecord->markCompleted();
 
@@ -126,6 +140,11 @@ class ChildMachineJob implements ShouldQueue
 
     public function failed(\Throwable $exception): void
     {
+        // Fire-and-forget: no parent notification on failure
+        if ($this->fireAndForget) {
+            return;
+        }
+
         // Update tracking record
         $childRecord = MachineChild::find($this->machineChildId);
         $childRecord?->markFailed();
