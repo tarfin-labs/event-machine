@@ -172,17 +172,17 @@ For fire-and-forget machine delegation (`machine` + `queue`, no `@done`), use `M
 use Tarfinlabs\EventMachine\Actor\Machine;
 
 it('fire-and-forget machine delegation stays in state', function (): void {
-    VerificationMachine::fake(result: []);
+    AuditMachine::fake(result: []);
 
-    $machine = ParentMachine::create();
-    $machine->send(['type' => 'START']);
+    $machine = AccountMachine::create();
+    $machine->send(['type' => 'SUSPEND']);
 
     // Parent stays in the delegating state
-    expect($machine->state->currentStateDefinition->id)->toContain('processing');
+    expect($machine->state->currentStateDefinition->id)->toContain('suspended');
 
     // Child was invoked
-    VerificationMachine::assertInvoked();
-    VerificationMachine::assertInvokedWith(['tckn' => '12345678901']);
+    AuditMachine::assertInvoked();
+    AuditMachine::assertInvokedWith(['user_id' => 'usr_123']);
 
     Machine::resetMachineFakes();
 });
@@ -198,11 +198,11 @@ use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
 it('dispatches fire-and-forget ChildMachineJob', function (): void {
     Queue::fake();
 
-    $machine = ParentMachine::create();
-    $machine->send(['type' => 'START']);
+    $machine = AccountMachine::create();
+    $machine->send(['type' => 'SUSPEND']);
 
     Queue::assertPushed(ChildMachineJob::class, function (ChildMachineJob $job): bool {
-        return $job->childMachineClass === VerificationMachine::class
+        return $job->childMachineClass === AuditMachine::class
             && $job->fireAndForget === true;
     });
 });

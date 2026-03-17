@@ -168,16 +168,16 @@ The state spawns the child on entry and continues functioning normally with its 
 
 <!-- doctest-attr: ignore -->
 ```php
-'prevented' => [
-    'machine' => VerificationMachine::class,
-    'with'    => ['tckn'],
-    'queue'   => 'verifications',
+'suspended' => [
+    'machine' => AuditMachine::class,
+    'with'    => ['user_id'],
+    'queue'   => 'background',
     // No @done → fire-and-forget
-    'on' => ['RETRY' => 'retrying'],
+    'on' => ['REACTIVATE' => 'active'],
 ],
 ```
 
-**Reads as:** "When entering `prevented`, spawn `VerificationMachine` in the background. The state handles its own events normally."
+**Reads as:** "When entering `suspended`, spawn `AuditMachine` in the background. The state handles its own events normally."
 
 ### Spawn and Move On (with @always)
 
@@ -185,11 +185,11 @@ Use `@always` to immediately transition after spawning the child:
 
 <!-- doctest-attr: ignore -->
 ```php
-'dispatching_verification' => [
-    'machine' => VerificationMachine::class,
-    'with'    => ['tckn'],
-    'queue'   => 'verifications',
-    'on'      => ['@always' => 'prevented'],
+'dispatching_audit' => [
+    'machine' => AuditMachine::class,
+    'with'    => ['user_id'],
+    'queue'   => 'background',
+    'on'      => ['@always' => 'suspended'],
 ],
 ```
 
@@ -199,11 +199,11 @@ Alternatively, use `target` for an explicit fire-and-forget transition (consiste
 
 <!-- doctest-attr: ignore -->
 ```php
-'dispatching_verification' => [
-    'machine' => VerificationMachine::class,
-    'with'    => ['tckn'],
-    'queue'   => 'verifications',
-    'target'  => 'prevented',
+'dispatching_audit' => [
+    'machine' => AuditMachine::class,
+    'with'    => ['user_id'],
+    'queue'   => 'background',
+    'target'  => 'suspended',
 ],
 ```
 

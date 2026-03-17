@@ -225,12 +225,12 @@ Omit `@done` to make a machine delegation fire-and-forget. The parent stays in t
 
 <!-- doctest-attr: ignore -->
 ```php
-'prevented' => [
-    'machine' => VerificationMachine::class,
-    'with'    => ['tckn'],
-    'queue'   => 'verifications',
+'suspended' => [
+    'machine' => AuditMachine::class,
+    'with'    => ['user_id'],
+    'queue'   => 'background',
     // No @done → fire-and-forget
-    'on' => ['RETRY' => 'retrying'],
+    'on' => ['REACTIVATE' => 'active'],
 ],
 ```
 
@@ -240,11 +240,11 @@ Use `@always` or `target` to spawn and immediately move to the next state:
 
 <!-- doctest-attr: ignore -->
 ```php
-'dispatching_verification' => [
-    'machine' => VerificationMachine::class,
-    'with'    => ['tckn'],
-    'queue'   => 'verifications',
-    'on'      => ['@always' => 'prevented'],
+'dispatching_audit' => [
+    'machine' => AuditMachine::class,
+    'with'    => ['user_id'],
+    'queue'   => 'background',
+    'on'      => ['@always' => 'suspended'],
 ],
 ```
 
