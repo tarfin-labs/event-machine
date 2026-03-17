@@ -68,7 +68,13 @@ $items = $state->context->get('items');
 
 ### Using `set()`
 
-```php no_run
+```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+$context = new ContextManager(); // [!code hide]
+$userData = ['name' => 'Alice']; // [!code hide]
+$items = ['item1']; // [!code hide]
+$newItem = 'item2'; // [!code hide]
+
 $context->set('count', 5);
 $context->set('user', $userData);
 $context->set('items', [...$items, $newItem]);
@@ -78,7 +84,10 @@ $context->set('items', [...$items, $newItem]);
 
 The ContextManager supports magic property access:
 
-```php no_run
+```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+$context = new ContextManager(); // [!code hide]
+
 // Reading
 $count = $context->count;
 
@@ -97,7 +106,11 @@ $context->count = 5;
 
 ### Checking Existence
 
-```php no_run
+```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+$context = new ContextManager(); // [!code hide]
+$context->set('user', new stdClass()); // [!code hide]
+
 if ($context->has('user')) {
     // Key exists
 }
