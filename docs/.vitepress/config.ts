@@ -4,20 +4,25 @@ import { transformerHideLines } from 'shiki-hide-lines'
 import { execSync } from 'node:child_process'
 import llmstxt from 'vitepress-plugin-llms'
 
-const gitTag = (() => {
-  // Try local git tags first (works in full clones)
+const gitTag = await (async () => {
+  // Try GitHub API first — always returns the latest published release
   try {
-    return execSync('git describe --tags --abbrev=0', { encoding: 'utf-8' }).trim()
+    const res = await fetch('https://api.github.com/repos/tarfin-labs/event-machine/releases/latest')
+    if (res.ok) {
+      const data = await res.json()
+      if (data.tag_name) return data.tag_name
+    }
+  } catch { /* offline or API error */ }
+
+  // Fallback: local git tags sorted by version (works in full clones)
+  try {
+    return execSync('git tag --sort=-v:refname', { encoding: 'utf-8' }).split('\n').filter(Boolean)[0]
   } catch { /* shallow clone - no tags available */ }
 
-  // Fallback: fetch latest release from GitHub API (works in Cloudflare Pages)
+  // Last resort: git describe
   try {
-    const json = execSync(
-      'curl -sf https://api.github.com/repos/tarfin-labs/event-machine/releases/latest',
-      { encoding: 'utf-8', timeout: 5000 }
-    )
-    return JSON.parse(json).tag_name
-  } catch { /* offline or API error */ }
+    return execSync('git describe --tags --abbrev=0', { encoding: 'utf-8' }).trim()
+  } catch { /* no tags at all */ }
 
   return 'dev'
 })()
