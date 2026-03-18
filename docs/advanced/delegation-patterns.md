@@ -292,3 +292,169 @@ class SendAlertAction extends ActionBehavior
 | `dispatchTo()` | No | No | Event to existing machine |
 | `machine` + `@done` | Yes | Yes | Complex stateful delegation |
 | `job` + `@done` | Yes | Yes | Managed async job |
+
+## Interactive Delegation Pattern
+
+The interactive delegation pattern is for multi-step workflows where the **child machine needs user input** before it can proceed. Unlike the webhook pattern (third-party callbacks) or orchestrator pattern (autonomous child), the interactive pattern **forwards HTTP requests from the parent's endpoint directly to the running child**.
+
+**When to use:** Approval flows, payment flows, document submission, KYC verification — any workflow where a child machine is waiting for a human to provide data or confirm an action.
+
+### Example: Loan Application
+
+A loan application machine delegates to an identity verification child. The child needs the user to upload documents and confirm their identity — those events arrive via the parent's endpoints and are forwarded to the child.
+
+```php no_run
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
+class LoanApplicationMachine extends Machine
+{
+    public static function definition(): MachineDefinition
+    {
+        return MachineDefinition::define(
+            config: [
+                'id'      => 'loan_application',
+                'initial' => 'collecting_info',
+                'context' => [
+                    'applicant_id'      => null,
+                    'loan_amount'       => 0,
+                    'verification_result' => null,
+                ],
+                'states' => [
+                    'collecting_info' => [
+                        'on' => ['SUBMIT_APPLICATION' => 'identity_verification'],
+                    ],
+                    'identity_verification' => [
+                        'machine' => IdentityVerificationMachine::class,
+                        'with'    => ['applicant_id'],
+                        'queue'   => 'verification',
+                        'forward' => [
+                            'UPLOAD_DOCUMENT',
+                            'CONFIRM_IDENTITY',
+                        ],
+                        '@done' => [
+                            'target'  => 'underwriting',
+                            'actions' => 'storeVerificationResultAction',
+                        ],
+                        '@fail' => 'verification_failed',
+                        'on'    => ['CANCEL' => 'cancelled'],
+                    ],
+                    'underwriting'        => ['type' => 'final'],
+                    'verification_failed' => ['type' => 'final'],
+                    'cancelled'           => ['type' => 'final'],
+                ],
+            ],
+            behavior: [
+                'events' => [
+                    'SUBMIT_APPLICATION' => SubmitApplicationEvent::class,
+                    'CANCEL'             => CancelEvent::class,
+                ],
+            ],
+        );
+    }
+}
+```
+
+The `forward` key tells EventMachine:
+1. Auto-discover the child's `UPLOAD_DOCUMENT` and `CONFIRM_IDENTITY` event classes
+2. Register HTTP endpoints on the parent's route prefix
+3. Validate incoming requests using the **child's** `EventBehavior` class
+4. Route the event through the parent to the running child
+5. Return a response with both parent and child state
+
+No duplication needed — the child's event definitions are the single source of truth.
+
+### Choosing the Right Pattern
+
+| Need | Pattern | Example |
+|------|---------|---------|
+| Child runs autonomously | Orchestrator | Validation, batch processing |
+| Child waits for external callback | Webhook | Stripe, bank callbacks |
+| Child waits for user input | Interactive (forward) | Document upload, approval |
+| Child runs independently | Fire-and-forget | Background verification |
+
+### Orphan Strategy
+
+When a parent leaves the delegating state (via the `on` key or `@timeout`) while a child is still running, you have an orphaned child. Choose a strategy based on your domain:
+
+| Strategy | Implementation | When |
+|----------|---------------|------|
+| Guard | `'guards' => 'noActiveChildGuard'` | Child must complete before parent can leave |
+| Exit action | `'exit' => 'cancelChildAction'` | Child is cancellable (clean shutdown) |
+| Accept orphan | No special handling | Child is harmless (logging, audit) |
+
+The guard approach prevents the parent from leaving:
+
+```php ignore
+'identity_verification' => [
+    'machine' => IdentityVerificationMachine::class,
+    'queue'   => 'verification',
+    'forward' => ['UPLOAD_DOCUMENT'],
+    '@done'   => 'underwriting',
+    'on'      => [
+        'CANCEL' => [
+            'target' => 'cancelled',
+            'guards' => 'noActiveChildGuard',
+        ],
+    ],
+],
+```
+
+The exit action approach cancels the child:
+
+```php ignore
+'identity_verification' => [
+    'machine' => IdentityVerificationMachine::class,
+    'queue'   => 'verification',
+    'forward' => ['UPLOAD_DOCUMENT'],
+    '@done'   => 'underwriting',
+    'exit'    => 'cancelChildAction',
+    'on'      => ['CANCEL' => 'cancelled'],
+],
+```
+
+### Forward + Parallel States
+
+| Scenario | Supported | Notes |
+|----------|-----------|-------|
+| Parent in parallel state | Not yet | Parallel states do not support `machine` key on regions (documented gap) |
+| Child in parallel state | Yes | Child's internal structure is independent |
+| Nested delegation (grandchild) | Chains one level | Response shows the immediate child only, not grandchildren |
+
+### Async Child Lifecycle
+
+The full lifecycle of an interactive delegation with forward events:
+
+```
+Parent Machine
+  │
+  └── 'identity_verification' state
+        │
+        ├── machine: IdentityVerificationMachine (async, queue)
+        │     │
+        │     ├── awaiting_document
+        │     │     │
+        │     │     └── User POSTs UPLOAD_DOCUMENT ──→ Parent endpoint
+        │     │                                         │
+        │     │         Parent.tryForwardEventToChild() ─┘
+        │     │         │
+        │     ├── awaiting_confirmation ◄───────────────┘
+        │     │     │
+        │     │     └── User POSTs CONFIRM_IDENTITY ──→ Parent endpoint
+        │     │                                          │
+        │     │         Parent.tryForwardEventToChild() ──┘
+        │     │         │
+        │     ├── verified (final) ◄─────────────────────┘
+        │     │
+        │     └── (parent receives @done with verification result)
+        │
+        └── @done → underwriting
+```
+
+Each forwarded request:
+1. Arrives at the **parent's** registered endpoint
+2. Is validated using the **child's** `EventBehavior` class
+3. Is sent to the parent, which detects the forward config
+4. The parent calls `tryForwardEventToChild()` on the running child
+5. The child transitions to its next state
+6. The response includes both parent state and child state
