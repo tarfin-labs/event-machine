@@ -127,6 +127,10 @@ class MachineRouter
                 // Register forwarded endpoints (auto-discovered from forward config)
                 $hasModelBinding = $model !== null && $attribute !== null;
 
+                if ($hasModelBinding && $modelParam !== null && $forwardedEndpoints !== []) {
+                    Route::model($modelParam, $model);
+                }
+
                 foreach ($forwardedEndpoints as $eventType => $fwdEndpoint) {
                     if ($hasModelBinding && $modelParam !== null) {
                         $fwdRouteUri = "/{{$modelParam}}{$fwdEndpoint->uri}";
@@ -151,10 +155,6 @@ class MachineRouter
 
                     if ($hasModelBinding) {
                         $fwdDefaults['_model_attribute'] = $attribute;
-                    }
-
-                    if ($hasModelBinding && $modelParam !== null) {
-                        Route::model($modelParam, $model);
                     }
 
                     Route::match(
