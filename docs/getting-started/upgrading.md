@@ -322,6 +322,244 @@ This creates the following new tables:
 
 No existing code needs to change. Add `machine`/`job` keys, `after`/`every` timers, and `output` keys when you're ready.
 
+### Forward-Aware Endpoints (Breaking Change)
+
+::: warning Breaking Change
+If you have parent machines that manually duplicate forwarded child events in their own `behavior.events` and `endpoints`, you must migrate. The validator now **rejects overlap** between forward config and parent endpoints/behavior.events.
+:::
+
+#### What Changed
+
+Forward events declared in a state's `forward` config are now **auto-discovered** from the child machine's definition. The parent no longer needs to:
+- Redeclare the child's `EventBehavior` class in its own `behavior.events`
+- Add the forwarded event to the parent's `endpoints` array
+
+The child's event definitions are the **single source of truth**. If the same event type appears in both the `forward` config AND the parent's `endpoints` or `behavior.events`, the `MachineDefinition` validator throws an `InvalidArgumentException`.
+
+#### Why
+
+Previously, forwarded events required manual duplication across three locations: the child's `behavior.events`, the parent's `behavior.events`, and the parent's `endpoints`. This created ambiguity about which `EventBehavior` class to use for validation, and silent bugs when the parent and child event classes diverged.
+
+With forward-aware endpoints, there is a single source of truth: the `forward` key on the delegating state. The parent auto-generates endpoints from the child's definition.
+
+#### Migration Steps
+
+**1. Find parent machines with `forward` config:**
+
+Search for states that use the `forward` key in machine definitions.
+
+**2. Remove forwarded events from `behavior.events`:**
+
+```php no_run
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
+// BEFORE — duplicated event class in parent's behavior.events
+class PaymentFlowMachine extends Machine
+{
+    public static function definition(): MachineDefinition
+    {
+        return MachineDefinition::define(
+            config: [
+                'id'      => 'payment_flow',
+                'initial' => 'collecting',
+                'context' => ['order_id' => null],
+                'states'  => [
+                    'collecting' => [
+                        'on' => ['START' => 'processing'],
+                    ],
+                    'processing' => [
+                        'machine' => PaymentChildMachine::class,
+                        'queue'   => 'payments',
+                        'forward' => ['PROVIDE_CARD'],
+                        '@done'   => 'completed',
+                    ],
+                    'completed' => ['type' => 'final'],
+                ],
+            ],
+            behavior: [
+                'events' => [
+                    'START'        => StartEvent::class,
+                    'PROVIDE_CARD' => ProvideCardEvent::class, // REMOVE — auto-discovered from child
+                ],
+            ],
+        );
+    }
+}
+```
+
+```php no_run
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
+// AFTER — forward auto-discovers child's EventBehavior
+class PaymentFlowMachine extends Machine
+{
+    public static function definition(): MachineDefinition
+    {
+        return MachineDefinition::define(
+            config: [
+                'id'      => 'payment_flow',
+                'initial' => 'collecting',
+                'context' => ['order_id' => null],
+                'states'  => [
+                    'collecting' => [
+                        'on' => ['START' => 'processing'],
+                    ],
+                    'processing' => [
+                        'machine' => PaymentChildMachine::class,
+                        'queue'   => 'payments',
+                        'forward' => ['PROVIDE_CARD'],
+                        '@done'   => 'completed',
+                    ],
+                    'completed' => ['type' => 'final'],
+                ],
+            ],
+            behavior: [
+                'events' => [
+                    'START' => StartEvent::class,
+                    // PROVIDE_CARD removed — child owns it
+                ],
+            ],
+        );
+    }
+}
+```
+
+**3. Remove forwarded events from the `endpoints` array:**
+
+```php no_run
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
+// BEFORE — PROVIDE_CARD in both forward and endpoints
+class PaymentFlowMachine extends Machine
+{
+    public static function definition(): MachineDefinition
+    {
+        return MachineDefinition::define(
+            config: [
+                'id'      => 'payment_flow',
+                'initial' => 'collecting',
+                'context' => ['order_id' => null],
+                'states'  => [
+                    'collecting' => [
+                        'on' => ['START' => 'processing'],
+                    ],
+                    'processing' => [
+                        'machine' => PaymentChildMachine::class,
+                        'queue'   => 'payments',
+                        'forward' => ['PROVIDE_CARD'],
+                        '@done'   => 'completed',
+                    ],
+                    'completed' => ['type' => 'final'],
+                ],
+            ],
+            behavior: [
+                'events' => [
+                    'START' => StartEvent::class,
+                ],
+            ],
+            endpoints: [
+                'START',
+                'PROVIDE_CARD', // REMOVE — auto-generated from forward
+            ],
+        );
+    }
+}
+```
+
+```php no_run
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
+// AFTER — only parent events in endpoints
+class PaymentFlowMachine extends Machine
+{
+    public static function definition(): MachineDefinition
+    {
+        return MachineDefinition::define(
+            config: [
+                'id'      => 'payment_flow',
+                'initial' => 'collecting',
+                'context' => ['order_id' => null],
+                'states'  => [
+                    'collecting' => [
+                        'on' => ['START' => 'processing'],
+                    ],
+                    'processing' => [
+                        'machine' => PaymentChildMachine::class,
+                        'queue'   => 'payments',
+                        'forward' => ['PROVIDE_CARD'],
+                        '@done'   => 'completed',
+                    ],
+                    'completed' => ['type' => 'final'],
+                ],
+            ],
+            behavior: [
+                'events' => [
+                    'START' => StartEvent::class,
+                ],
+            ],
+            endpoints: [
+                'START',
+                // PROVIDE_CARD removed — forward generates its endpoint automatically
+            ],
+        );
+    }
+}
+```
+
+**4. Move customization to Format 3 (if needed):**
+
+If you had custom URI, middleware, or result behavior on the forwarded endpoint, move that configuration into the `forward` array using Format 3 (full config):
+
+```php ignore
+// Format 3: full config for forward entries
+'forward' => [
+    'PROVIDE_CARD' => [
+        'uri'        => '/custom-card-endpoint',
+        'method'     => 'PUT',
+        'action'     => CustomForwardAction::class,
+        'result'     => PaymentStepResult::class,
+        'middleware'  => ['auth:sanctum'],
+        'contextKeys' => ['card_last4', 'status'],
+        'status'     => 201,
+    ],
+],
+```
+
+**5. Update tests for the new response format:**
+
+Forwarded endpoint responses now include both parent and child state:
+
+```json
+// BEFORE — parent-only response
+{
+    "data": {
+        "machine_id": "root-event-id",
+        "value": ["payment_flow.processing"],
+        "context": { "order_id": 1 }
+    }
+}
+```
+
+```json
+// AFTER — parent + child response
+{
+    "data": {
+        "machine_id": "root-event-id",
+        "value": ["payment_flow.processing"],
+        "child": {
+            "value": ["payment_child.awaiting_confirmation"],
+            "context": { "card_last4": "4242" }
+        }
+    }
+}
+```
+
+Update any test assertions that check forwarded endpoint response structure to expect the `child` key in the response body.
+
 ---
 
 ## Upgrading to v6.0
