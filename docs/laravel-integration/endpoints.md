@@ -141,6 +141,7 @@ All four formats can be mixed freely in the same `endpoints` array.
 | `result` | `string` | `null` | ResultBehavior inline key or FQCN |
 | `middleware` | `array` | `[]` | Per-event middleware (additive) |
 | `status` | `int` | `200` | HTTP status code |
+| `available_events` | `bool` | `true` | Include `available_events` in the default response |
 
 ### URI Auto-Generation
 
@@ -227,12 +228,20 @@ When no `result` is specified, the endpoint returns the machine state as JSON:
         "context": {
             "total_amount": 15000,
             "customer_email": "user@example.com"
-        }
+        },
+        "available_events": [
+            { "type": "APPROVE", "source": "parent" },
+            { "type": "CANCEL", "source": "parent" }
+        ]
     }
 }
 ```
 
-For parallel states, `value` contains multiple active state paths:
+The `available_events` array uses HATEOAS-style discoverability — the response tells the consumer which events the machine can accept in its current state. Each entry includes a `type` (the event name to send) and a `source` (`parent` for direct events, `forward` for forwarded child events). See the [Available Events](./available-events) page for full details.
+
+By default `available_events` is included in every response. To opt out for a specific endpoint, set `available_events` to `false` in its array config.
+
+For parallel states, `value` contains multiple active state paths and each available event includes a `region` key:
 
 <!-- doctest-attr: ignore -->
 ```json
@@ -244,7 +253,12 @@ For parallel states, `value` contains multiple active state paths:
             "fulfillment.shipping.preparing",
             "fulfillment.documents.awaiting"
         ],
-        "context": {}
+        "context": {},
+        "available_events": [
+            { "type": "PAY", "source": "parent", "region": "payment" },
+            { "type": "SHIP", "source": "parent", "region": "shipping" },
+            { "type": "UPLOAD_DOC", "source": "parent", "region": "documents" }
+        ]
     }
 }
 ```
@@ -445,6 +459,12 @@ Use the returned `machine_id` in subsequent requests to send events to this mach
 | Event is in `machineIdFor` | `handleMachineIdBound` | `/{machineId}{uri}` |
 | Event is in `modelFor` | `handleModelBound` | `/{model}{uri}` |
 | Neither | `handleStateless` | `{uri}` |
+| Forwarded (model-bound parent) | `handleForwardedModelBound` | `/{model}{uri}` |
+| Forwarded (machineId-bound parent) | `handleForwardedMachineIdBound` | `/{machineId}{uri}` |
+
+::: tip Forwarded Routes
+Forwarded routes from the `forward` config appear in the route table alongside explicit endpoints. They are auto-discovered at definition time — no `endpoints` entry is needed for forwarded events.
+:::
 
 ### Pattern 1: Stateless
 
@@ -851,6 +871,199 @@ class GuarantorSavedEndpointResult extends ResultBehavior
     }
 }
 ```
+
+## Forward-Aware Endpoints
+
+When a parent machine delegates to an async child machine, the child may need user input (e.g., card details for a payment child). Normally you would declare a separate endpoint on the child machine and wire up routing manually. With forward-aware endpoints, the parent machine automatically exposes forwarded events as its own endpoints — no duplicate declarations needed.
+
+Forward events are defined in the `forward` key of a delegating state's `machine` config. EventMachine parses them at definition time and registers routes alongside the parent's explicit endpoints.
+
+### Forward Syntax
+
+EventMachine supports three forward formats, from minimal to fully configured:
+
+**Format 1 — Plain (same event type):**
+
+```php ignore
+'forward' => ['PROVIDE_CARD'],
+// Parent receives PROVIDE_CARD, forwards as PROVIDE_CARD to child
+```
+
+You can also use an `EventBehavior` class reference:
+
+```php ignore
+'forward' => [ProvideCardEvent::class],
+// Resolves to the event type via getType()
+```
+
+**Format 2 — Rename (different parent/child event types):**
+
+```php ignore
+'forward' => ['CANCEL_ORDER' => 'ABORT'],
+// Parent receives CANCEL_ORDER, forwards as ABORT to child
+```
+
+**Format 3 — Full array (endpoint customization):**
+
+```php ignore
+'forward' => [
+    'PROVIDE_CARD' => [
+        'child_event'      => 'SUBMIT_CARD',      // optional — defaults to parent event type
+        'uri'              => '/card',             // optional — auto-generated if omitted
+        'method'           => 'PATCH',             // optional — default: POST
+        'middleware'        => ['auth:customer'],   // optional — additive
+        'action'           => CardEndpointAction::class,   // optional — parent-level action
+        'result'           => 'cardSubmittedResult',       // optional — ResultBehavior key or FQCN
+        'contextKeys'      => ['card_token', 'last_four'], // optional — filter child context keys
+        'status'           => 200,                 // optional — default: 200
+        'available_events' => true,                // optional — include available_events in response
+    ],
+],
+```
+
+#### Format 3 Configuration Options
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `child_event` | `string` | Parent event type | Child event type to forward to |
+| `uri` | `string` | Auto-generated | URI path for the endpoint |
+| `method` | `string` | `'POST'` | HTTP method |
+| `middleware` | `array` | `[]` | Per-event middleware (additive) |
+| `action` | `string` | `null` | `MachineEndpointAction` subclass FQCN |
+| `result` | `string` | `null` | ResultBehavior inline key or FQCN |
+| `contextKeys` | `array` | `null` | Filter child context keys in default response |
+| `status` | `int` | `200` | HTTP status code |
+| `available_events` | `bool` | `null` | Include `available_events` in response |
+
+### Example: Payment Delegation with Forwarding
+
+```php no_run
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Actor\Machine;
+
+class OrderMachine extends Machine
+{
+    public static function definition(): MachineDefinition
+    {
+        return MachineDefinition::define(
+            config: [
+                'id'      => 'order',
+                'initial' => 'created',
+                'context' => ['order_id' => null],
+                'states'  => [
+                    'created' => ['on' => ['SUBMIT' => 'processing_payment']],
+                    'processing_payment' => [
+                        'machine'  => PaymentMachine::class,
+                        'queue'    => 'payments',
+                        'with'     => ['order_id'],
+                        'forward'  => ['PROVIDE_CARD', 'CANCEL_ORDER' => 'ABORT'],
+                        'on'       => [
+                            '@done' => 'paid',
+                            '@fail' => 'payment_failed',
+                        ],
+                    ],
+                    'paid'           => ['type' => 'final'],
+                    'payment_failed' => ['type' => 'final'],
+                ],
+            ],
+            behavior: [
+                'events' => [
+                    'SUBMIT' => SubmitEvent::class,
+                ],
+            ],
+            endpoints: [
+                'SUBMIT',
+            ],
+        );
+    }
+}
+```
+
+In this example, `PROVIDE_CARD` and `CANCEL_ORDER` are automatically registered as endpoints on the parent machine. No explicit `endpoints` entry is needed for them — the `forward` config is the single source of truth.
+
+### Forwarded Endpoint Response
+
+When no `result` is specified, forwarded endpoints return both parent and child state:
+
+<!-- doctest-attr: ignore -->
+```json
+{
+    "data": {
+        "machine_id": "01JARX5Z8KQVN...",
+        "value": ["processing_payment"],
+        "child": {
+            "value": ["awaiting_verification"],
+            "context": {
+                "card_token": "tok_abc123",
+                "last_four": "4242"
+            }
+        }
+    }
+}
+```
+
+Use `contextKeys` in Format 3 to filter which child context keys appear in the response. When `contextKeys` is `null` (the default), all child context keys are included.
+
+### Route Registration for Forwarded Endpoints
+
+Forwarded routes are registered automatically by `MachineRouter::register()`. The router determines the handler based on whether the parent uses model binding or machine ID binding:
+
+- **Model-bound parent**: forwarded routes use `/{model}/{uri}` and `handleForwardedModelBound`
+- **MachineId-bound parent**: forwarded routes use `/{machineId}/{uri}` and `handleForwardedMachineIdBound`
+
+Forwarded routes appear alongside explicit endpoints in the route table. No extra registration is needed.
+
+### How It Works
+
+```
+1. Parent machine definition includes:
+   forward: ['PROVIDE_CARD']
+
+2. MachineDefinition::define() parses forward config
+   → creates ForwardedEndpointDefinition objects
+   → discovers child's EventBehavior class
+
+3. MachineRouter::register() auto-registers forwarded routes
+   → POST /orders/{order}/provide-card
+
+4. HTTP request hits forwarded endpoint
+
+5. MachineController::handleForwardedModelBound()
+   → Validates with child's EventBehavior class
+   → Runs parent-level EndpointAction lifecycle
+   → Sends event to parent machine
+   → Parent internally forwards to child (tryForwardEventToChild)
+   → Returns combined parent + child state
+```
+
+## ForwardContext
+
+When a forwarded endpoint has a custom `ResultBehavior`, you often need access to the child machine's context and state. Type-hint `ForwardContext` in your result's `__invoke()` method to receive it automatically:
+
+```php no_run
+use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Routing\ForwardContext;
+
+class CardSubmittedResult extends ResultBehavior
+{
+    public function __invoke(ContextManager $context, ForwardContext $forwardContext): array
+    {
+        return [
+            'order_id'    => $context->get('order_id'),
+            'card_status' => $forwardContext->childContext->get('status'),
+            'child_state' => $forwardContext->childState->value,
+        ];
+    }
+}
+```
+
+`ForwardContext` is a value object with two properties:
+
+- `childContext` (`ContextManager`) — the child machine's context after the forwarded event
+- `childState` (`State`) — the child machine's full state after the forwarded event
+
+`ForwardContext` is only injected for forwarded endpoints. In regular endpoints, it is not available. The injection uses the same `InvokableBehavior` parameter resolution that all behaviors use — no special setup is needed.
 
 ## Migration Guide
 
