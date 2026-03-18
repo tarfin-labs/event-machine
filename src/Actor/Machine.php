@@ -767,7 +767,7 @@ class Machine implements Castable, JsonSerializable, Stringable
     /**
      * Get the fake configuration for a machine class.
      *
-     * @return array{result: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>}|null
+     * @return array{result: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>, creations: list<array>, sends: list<array>}|null
      */
     public static function getMachineFake(?string $class = null): ?array
     {
