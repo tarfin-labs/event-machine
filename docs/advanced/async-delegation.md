@@ -49,6 +49,10 @@ Parent.send(EVENT)
 
 **Use when:** Child has I/O operations, needs external webhooks, or should run independently.
 
+::: tip @done.{state} in Async Mode
+`@done.{state}` routing works identically in async mode. The `ChildMachineCompletionJob` carries the child's final state key through the pipeline and routes to the matching `@done.{state}` transition on the parent. See [Per-Final-State Routing](/advanced/machine-delegation#per-final-state-routing).
+:::
+
 ## Queue Configuration
 
 <!-- doctest-attr: ignore -->
