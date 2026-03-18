@@ -122,8 +122,12 @@ class StateConfigValidator
             );
         }
 
-        // Validate state keys
-        $invalidKeys = array_diff(array_keys($stateConfig), self::ALLOWED_STATE_KEYS);
+        // Validate state keys (filter out dynamic @done.{state} keys before checking)
+        $configKeysToValidate = array_filter(
+            array_keys($stateConfig),
+            fn (string $k): bool => !str_starts_with($k, '@done.'),
+        );
+        $invalidKeys = array_diff($configKeysToValidate, self::ALLOWED_STATE_KEYS);
         if ($invalidKeys !== []) {
             throw new InvalidArgumentException(
                 message: "State '{$path}' has invalid keys: ".implode(separator: ', ', array: $invalidKeys).
@@ -165,6 +169,21 @@ class StateConfigValidator
         }
         if (isset($stateConfig['@fail'])) {
             self::validateDoneFailConfig($stateConfig['@fail'], '@fail', $path);
+        }
+
+        // Validate @done.{state} configurations
+        foreach ($stateConfig as $key => $value) {
+            if (str_starts_with((string) $key, '@done.')) {
+                $suffix = substr((string) $key, 6);
+
+                if ($suffix === '') {
+                    throw new InvalidArgumentException(
+                        message: "State '{$path}' has invalid key '@done.' — final state name after the dot cannot be empty."
+                    );
+                }
+
+                self::validateDoneFailConfig($value, $key, $path);
+            }
         }
 
         // Process nested states first to ensure proper context
