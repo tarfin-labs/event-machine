@@ -16,6 +16,8 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ChildPaymentMac
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FailingChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ContextMutatingChildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateApprovedChildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateRejectedChildMachine;
 
 // ============================================================
 // Basic Sync Machine Delegation Lifecycle
@@ -599,6 +601,128 @@ it('validates forward requires queue', function (): void {
         "has 'forward' without 'queue'"
     );
 });
+
+// ============================================================
+// @done.{finalState} — Declarative Final State Routing
+// ============================================================
+
+it('routes to correct target based on child final state key via @done.{state} (T1)', function (): void {
+    // Parent with child that auto-completes in 'approved'
+    $machineA = MachineDefinition::define(config: [
+        'id'     => 'parent_a', 'initial' => 'idle', 'context' => [],
+        'states' => [
+            'idle'       => ['on' => ['GO' => 'delegating']],
+            'delegating' => [
+                'machine'        => ImmediateApprovedChildMachine::class,
+                '@done.approved' => 'target_a',
+                '@done.rejected' => 'target_b',
+            ],
+            'target_a' => ['type' => 'final'],
+            'target_b' => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $machineA->getInitialState();
+    $state = $machineA->transition(event: ['type' => 'GO'], state: $state);
+    expect($state->value)->toBe(['parent_a.target_a']);
+
+    // Parent with child that auto-completes in 'rejected'
+    $machineB = MachineDefinition::define(config: [
+        'id'     => 'parent_b', 'initial' => 'idle', 'context' => [],
+        'states' => [
+            'idle'       => ['on' => ['GO' => 'delegating']],
+            'delegating' => [
+                'machine'        => ImmediateRejectedChildMachine::class,
+                '@done.approved' => 'target_a',
+                '@done.rejected' => 'target_b',
+            ],
+            'target_a' => ['type' => 'final'],
+            'target_b' => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $machineB->getInitialState();
+    $state = $machineB->transition(event: ['type' => 'GO'], state: $state);
+    expect($state->value)->toBe(['parent_b.target_b']);
+});
+
+it('@done.{state} supports config with actions (T2)', function (): void {
+    $capturedFinalState = null;
+
+    $machine = MachineDefinition::define(
+        config: [
+            'id'     => 'action_parent', 'initial' => 'idle', 'context' => ['child_decision' => null],
+            'states' => [
+                'idle'       => ['on' => ['GO' => 'delegating']],
+                'delegating' => [
+                    'machine'        => ImmediateApprovedChildMachine::class,
+                    '@done.approved' => ['target' => 'completed', 'actions' => 'storeDecisionAction'],
+                ],
+                'completed' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'storeDecisionAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedFinalState): void {
+                    $ctx->set('child_decision', $event->output('decision'));
+                    $capturedFinalState = $event->finalState();
+                },
+            ],
+        ],
+    );
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    expect($state->value)->toBe(['action_parent.completed'])
+        ->and($state->context->get('child_decision'))->toBe('yes')
+        ->and($capturedFinalState)->toBe('approved');
+});
+
+it('falls through to @done catch-all when child reaches unmatched final state (T3)', function (): void {
+    // ImmediateChildMachine completes in 'done' — not matched by @done.approved
+    $machine = MachineDefinition::define(config: [
+        'id'     => 'fallback_parent', 'initial' => 'idle', 'context' => [],
+        'states' => [
+            'idle'       => ['on' => ['GO' => 'delegating']],
+            'delegating' => [
+                'machine'        => ImmediateChildMachine::class,
+                '@done.approved' => 'completed',
+                '@done'          => 'fallback',
+            ],
+            'completed' => ['type' => 'final'],
+            'fallback'  => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    expect($state->value)->toBe(['fallback_parent.fallback']);
+});
+
+it('@done.{state} works without catch-all when final state matches (T6)', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'id'     => 'no_catchall', 'initial' => 'idle', 'context' => [],
+        'states' => [
+            'idle'       => ['on' => ['GO' => 'delegating']],
+            'delegating' => [
+                'machine'        => ImmediateApprovedChildMachine::class,
+                '@done.approved' => 'completed',
+            ],
+            'completed' => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    expect($state->value)->toBe(['no_catchall.completed']);
+});
+
+// ============================================================
+// Existing Tests
+// ============================================================
 
 it('uses ParentOrderMachine stub for full lifecycle', function (): void {
     $machine = ParentOrderMachine::create();
