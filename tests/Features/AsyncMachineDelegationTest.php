@@ -3,12 +3,14 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Queue;
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
 use Tarfinlabs\EventMachine\Locks\MachineLockHandle;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineTimeoutJob;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Definition\MachineInvokeDefinition;
@@ -17,6 +19,7 @@ use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FailingChildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\MultiOutcomeChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncForwardParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncTimeoutParentMachine;
 
@@ -564,4 +567,94 @@ it('marks MachineChild DB records as cancelled when parent leaves delegating sta
     $childRecord->refresh();
     expect($childRecord->status)->toBe(MachineChild::STATUS_CANCELLED)
         ->and($childRecord->completed_at)->not->toBeNull();
+});
+
+// ============================================================
+// @done.{state} routing — async path
+// ============================================================
+
+it('async child completion routes via @done.{state} (T15)', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'id'     => 'async_done_dot', 'initial' => 'delegating', 'context' => [],
+        'states' => [
+            'delegating' => [
+                'machine'        => MultiOutcomeChildMachine::class,
+                '@done.approved' => 'completed',
+                '@done.rejected' => 'declined',
+                '@done.expired'  => 'declined',
+            ],
+            'completed' => ['type' => 'final'],
+            'declined'  => ['type' => 'final'],
+        ],
+    ]);
+
+    // Start in delegating state (simulates async parent waiting for child)
+    $state     = $machine->getInitialState();
+    $stateDefn = $state->currentStateDefinition;
+
+    // Simulate ChildMachineDoneEvent with finalState='approved'
+    $doneEvent = ChildMachineDoneEvent::forChild([
+        'result'        => null,
+        'output'        => ['decision' => 'yes'],
+        'machine_id'    => 'child-123',
+        'machine_class' => MultiOutcomeChildMachine::class,
+        'final_state'   => 'approved',
+    ]);
+
+    $machine->routeChildDoneEvent($state, $stateDefn, $doneEvent);
+
+    expect($state->currentStateDefinition->id)->toBe('async_done_dot.completed');
+});
+
+it('async @done.{state} falls through to catch-all (T16)', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'id'     => 'async_fallback', 'initial' => 'delegating', 'context' => [],
+        'states' => [
+            'delegating' => [
+                'machine'        => MultiOutcomeChildMachine::class,
+                '@done.approved' => 'completed',
+                '@done'          => 'fallback',
+            ],
+            'completed' => ['type' => 'final'],
+            'fallback'  => ['type' => 'final'],
+        ],
+    ]);
+
+    $state     = $machine->getInitialState();
+    $stateDefn = $state->currentStateDefinition;
+
+    $doneEvent = ChildMachineDoneEvent::forChild([
+        'result'        => null,
+        'output'        => [],
+        'machine_id'    => 'child-456',
+        'machine_class' => MultiOutcomeChildMachine::class,
+        'final_state'   => 'expired',
+    ]);
+
+    $machine->routeChildDoneEvent($state, $stateDefn, $doneEvent);
+
+    expect($state->currentStateDefinition->id)->toBe('async_fallback.fallback');
+});
+
+it('ChildMachineDoneEvent carries finalState from CompletionJob (T17)', function (): void {
+    $doneEvent = ChildMachineDoneEvent::forChild([
+        'result'        => null,
+        'output'        => [],
+        'machine_id'    => 'child-123',
+        'machine_class' => MultiOutcomeChildMachine::class,
+        'final_state'   => 'rejected',
+    ]);
+
+    expect($doneEvent->finalState())->toBe('rejected')
+        ->and($doneEvent->childMachineClass())->toBe(MultiOutcomeChildMachine::class);
+
+    // Legacy event without final_state
+    $legacyEvent = ChildMachineDoneEvent::forChild([
+        'result'        => null,
+        'output'        => [],
+        'machine_id'    => 'child-456',
+        'machine_class' => MultiOutcomeChildMachine::class,
+    ]);
+
+    expect($legacyEvent->finalState())->toBeNull();
 });
