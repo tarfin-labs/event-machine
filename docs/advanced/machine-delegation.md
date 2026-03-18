@@ -60,7 +60,8 @@ class OrderWorkflowMachine extends Machine
 | `machine` | `string` (FQCN) | Yes | Child machine class. Must extend `Machine`. |
 | `with` | `array\|Closure` | No | Data to pass from parent context to child. |
 | `@done` | `string\|array` | No | Fires when child reaches a final state. Absence signals fire-and-forget. |
-| `@fail` | `string\|array` | No | Fires when child fails. Not valid without `@done`. |
+| `@done.{state}` | `string\|array` | No | Fires when child reaches the specific final state `{state}`. Same format as `@done`. |
+| `@fail` | `string\|array` | No | Fires when child fails. Not valid without `@done` or `@done.{state}`. |
 | `@timeout` | `array` | No | Fires when child doesn't complete within the given time. Async only. Not valid without `@done`. |
 | `queue` | `bool\|string\|array` | No | Run child asynchronously on a queue. **Required** for fire-and-forget. |
 | `forward` | `array` | No | Event types to forward from parent to the running child. Not valid without `@done`. |
@@ -113,6 +114,54 @@ When the child machine reaches a final state, the parent's `@done` transition fi
     ['target' => 'review',   'actions' => 'requestReviewAction'],
 ],
 ```
+
+### Per-Final-State Routing
+
+When a child machine has multiple final states with different meanings, use `@done.{state}` to route based on which final state the child reached:
+
+<!-- doctest-attr: ignore -->
+```php
+'verifying' => [
+    'machine' => VerificationMachine::class,
+    'with'    => ['applicant_id'],
+
+    '@done.approved' => 'processing',
+    '@done.rejected' => 'declined',
+    '@done.expired'  => 'timed_out',
+
+    '@fail' => 'system_error',
+],
+```
+
+**Reads as:** "`verifying` delegates to `VerificationMachine`. If the child finishes in `approved`, go to `processing`. If `rejected`, go to `declined`. If `expired`, go to `timed_out`."
+
+Each `@done.{state}` supports the same formats as `@done` — string target, config with actions, or multi-branch with guards:
+
+<!-- doctest-attr: ignore -->
+```php
+// Per-state with actions
+'@done.approved' => [
+    'target'  => 'processing',
+    'actions' => 'storeApprovalAction',
+],
+
+// Per-state with guards
+'@done.approved' => [
+    ['target' => 'vip_processing', 'guards' => 'isHighValueGuard'],
+    ['target' => 'standard_processing'],
+],
+```
+
+**Resolution priority:**
+1. `@done.{childFinalState}` — specific match
+2. `@done` — catch-all fallback
+3. No match — no transition
+
+If a guard on `@done.approved` fails, resolution falls through to the `@done` catch-all (if defined).
+
+::: warning Final State Coverage
+When using `@done.{state}` without a `@done` catch-all, all child final states must be covered. Run `php artisan machine:validate` to verify — it throws if any child final state is uncovered.
+:::
 
 ### Accessing Child Result Data
 
@@ -294,7 +343,7 @@ Machine::resetMachineFakes();
 - `result: array` — The result the child "returns" via `@done`
 - `fail: true` — Child triggers `@fail` instead of `@done`
 - `error: string` — Error message for `@fail`
-- `finalState: string` — Override the final state name
+- `finalState: string` — The child's final state key — determines which `@done.{state}` route fires on the parent
 
 ## Infinite Loop Protection
 
