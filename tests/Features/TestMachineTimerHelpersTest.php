@@ -62,11 +62,13 @@ it('advanceTimers with every fires multiple times', function (): void {
         ->assertContext('billing_count', 2);
 });
 
-it('advanceTimers throws on withoutPersistence mode', function (): void {
+it('advanceTimers works in-memory when persistence is off', function (): void {
     AfterTimerMachine::test()
         ->withoutPersistence()
-        ->advanceTimers(Timer::days(8));
-})->throws(RuntimeException::class, 'advanceTimers() requires persistence');
+        ->assertState('awaiting_payment')
+        ->advanceTimers(Timer::days(8))
+        ->assertState('cancelled');
+});
 
 // ═══════════════════════════════════════════
 //  assertHasTimer() Tests
