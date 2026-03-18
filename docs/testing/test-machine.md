@@ -218,6 +218,8 @@ Call `resetFakes()` when you need to clear fakes mid-test. In most cases, the gl
 ->resetFakes()  // cleanup faked behaviors registered via faking()
 ```
 
+> **Note:** As of v7.4, `resetFakes()` also clears `Machine::fake()` registrations and CommunicationRecorder state.
+
 ## Complete Example
 
 <!-- doctest-attr: ignore -->
@@ -301,6 +303,129 @@ $machine->test()
 ```
 
 See [Scheduled Testing](/testing/scheduled-testing) for full details.
+
+## Child Delegation Assertions
+
+When a state delegates to a child machine, use `fakingChild()` to short-circuit the delegation and control the outcome. Then assert what happened using the child assertion methods.
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->fakingChild(PaymentMachine::class, result: ['id' => 'pay_1'], finalState: 'approved')
+    ->send('PLACE_ORDER')
+    ->assertChildInvoked(PaymentMachine::class)
+    ->assertChildNotInvoked(AuditMachine::class)
+    ->assertChildInvokedTimes(PaymentMachine::class, 1)
+    ->assertChildInvokedWith(PaymentMachine::class, ['order_id' => 'ORD-1'])
+    ->assertRoutedViaDoneState('approved')
+```
+
+| Method | Description |
+|--------|-------------|
+| `fakingChild(class, result, finalState)` | Short-circuit child delegation with a given outcome |
+| `assertChildInvoked(class)` | Assert the child machine was invoked at least once |
+| `assertChildNotInvoked(class)` | Assert the child machine was never invoked |
+| `assertChildInvokedTimes(class, int)` | Assert invocation count |
+| `assertChildInvokedWith(class, array)` | Assert initial context passed to the child |
+| `assertRoutedViaDoneState(string)` | Assert the `@done` routing used a specific child final state |
+
+::: tip
+Chain multiple `fakingChild()` calls for multiple children. This keeps the API simple and each call explicit.
+:::
+
+<!-- doctest-attr: ignore -->
+```php
+// Complete fluent delegation testing pattern
+OrderMachine::test()
+    ->fakingChild(PaymentMachine::class, result: ['id' => 'pay_1'], finalState: 'approved')
+    ->fakingChild(FraudCheckMachine::class, result: ['score' => 0.1], finalState: 'clear')
+    ->send('PLACE_ORDER')
+    ->assertChildInvoked(PaymentMachine::class)
+    ->assertChildInvoked(FraudCheckMachine::class)
+    ->assertRoutedViaDoneState('approved')
+    ->assertState('order_confirmed')
+    ->assertContext('payment_id', 'pay_1')
+```
+
+## Async Simulation
+
+Use `simulateChild*` methods to trigger completion on a parent that is already waiting for a child — as opposed to `fakingChild()` which short-circuits at the delegation entry point.
+
+<!-- doctest-attr: ignore -->
+```php
+->simulateChildDone(PaymentMachine::class, result: ['id' => 'pay_1'], finalState: 'approved')
+->simulateChildFail(PaymentMachine::class, errorMessage: 'Insufficient funds')
+->simulateChildTimeout(PaymentMachine::class)
+```
+
+| Method | Description |
+|--------|-------------|
+| `simulateChildDone(class, result, finalState)` | Trigger `@done` transition as if the child completed successfully |
+| `simulateChildFail(class, errorMessage)` | Trigger `@fail` transition as if the child threw an error |
+| `simulateChildTimeout(class)` | Trigger `@timeout` transition as if the child exceeded its deadline |
+
+::: info
+The `result` parameter populates both `output()` and `result()` accessors on the event, matching `Machine::fake()` behavior. For distinct output/result values, build a `ChildMachineDoneEvent` manually and call `routeChildDoneEvent()` directly.
+:::
+
+**`fakingChild()` vs `simulateChildDone()`:**
+
+- `fakingChild()` — short-circuits at delegation entry. The child is never dispatched. Use this for most unit tests where you control the happy/failure path.
+- `simulateChild*()` — the parent has already entered the waiting state (child was dispatched). Use this when testing a parent that was constructed around an in-progress child, or when you need to test the parent's response to a completion event independently.
+
+## Cross-Machine Communication Assertions
+
+Assert that the machine sent events to other machines, dispatched async messages, or raised internal events.
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->recordingCommunication()
+    ->send('SHIP')
+    ->assertSentTo(WarehouseMachine::class)
+    ->assertSentTo(WarehouseMachine::class, 'PICK_ORDER')
+    ->assertNotSentTo(RefundMachine::class)
+    ->assertDispatchedTo(AuditMachine::class)
+    ->assertRaisedEvent('RETRY')
+```
+
+| Method | Description |
+|--------|-------------|
+| `recordingCommunication()` | Enable communication recording (skips actual `sendTo` calls) |
+| `assertSentTo(class)` | Assert at least one synchronous `sendTo` was made to the target |
+| `assertSentTo(class, string)` | Assert a specific event type was sent to the target |
+| `assertNotSentTo(class)` | Assert no `sendTo` calls were made to the target |
+| `assertDispatchedTo(class)` | Assert a `dispatchTo` (queued) call was made to the target |
+| `assertRaisedEvent(string)` | Assert an internal `raise()` was called and the event was processed |
+
+::: info
+`assertRaisedEvent()` asserts the event was raised AND processed (appears in history). This is a stronger assertion than checking the raise call alone. To test raise behavior when the event may be guarded, test the action in isolation with `State::forTesting()`.
+:::
+
+> **Note:** `assertDispatchedTo` requires `Queue::fake()` to intercept queued jobs.
+> `recordingCommunication()` skips actual `sendTo` calls — the target machine does not need to exist in the database.
+
+## Forward Endpoint Helpers
+
+When testing delegation states that expose a `forward` endpoint, use `withRunningChild()` to simulate an already-running child so the parent can accept forwarded events.
+
+<!-- doctest-attr: ignore -->
+```php
+TestMachine::create(OrderMachine::class)
+    ->withRunningChild(PaymentMachine::class)
+    ->send('PROVIDE_CARD', ['number' => '4111...'])
+    ->assertForwardAvailable('PROVIDE_CARD')
+```
+
+| Method | Description |
+|--------|-------------|
+| `withRunningChild(class)` | Simulate a running child machine so the parent can receive forwarded events |
+
+::: tip
+The child starts in its initial state. If you need the child in a specific state for forward testing, create it separately with `TestMachine::for()` and send events to reach the desired state.
+:::
+
+> **Note:** `withRunningChild()` requires persistence to be enabled. Use with `TestMachine::create()`, not `TestMachine::define()`.
 
 ## When to Use TestMachine
 
