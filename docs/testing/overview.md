@@ -81,6 +81,8 @@ For fast tests, use SQLite in-memory. This eliminates migration overhead and dis
 | Inter-Machine | Child machine faking, sendTo/dispatchTo assertions | [Inter-Machine Testing](/testing/delegation-testing) |
 | Job Actors | Job dispatch verification, fire-and-forget | [Inter-Machine Testing — Job Actors](/testing/delegation-testing#testing-job-actors) |
 | Fire-and-Forget | Machine + `queue` (no `@done`) delegation testing | [Inter-Machine Testing — Fire-and-Forget](/testing/delegation-testing#testing-fire-and-forget-machine-delegation) |
+| Available Events | Which events current state accepts, forward event availability | [TestMachine — Available Events](/testing/test-machine#available-events-assertions) |
+| Scheduled Events | Cron-based batch operations via `runSchedule()`, `assertHasSchedule()` | [Scheduled Testing](/testing/scheduled-testing) |
 | Time-Based | `advanceTimers()`, `assertHasTimer()`, timer lifecycle testing | [Time-Based Testing](/testing/time-based-testing) |
 | Persistence | DB, restoration, archival | [Persistence Testing](/testing/persistence-testing) |
 | Recipes | Common real-world patterns | [Recipes](/testing/recipes) |
