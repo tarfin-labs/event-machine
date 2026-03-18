@@ -153,16 +153,6 @@ class StateConfigValidator
             self::validateParallelState(stateConfig: $stateConfig, path: $path);
         }
 
-        // Validate machine delegation configuration
-        if (isset($stateConfig['machine'])) {
-            self::validateMachineConfig($stateConfig, $path);
-        }
-
-        // Validate job actor configuration
-        if (isset($stateConfig['job'])) {
-            self::validateJobConfig($stateConfig, $path);
-        }
-
         // Validate @done/@fail configurations
         if (isset($stateConfig['@done'])) {
             self::validateDoneFailConfig($stateConfig['@done'], '@done', $path);
@@ -171,7 +161,7 @@ class StateConfigValidator
             self::validateDoneFailConfig($stateConfig['@fail'], '@fail', $path);
         }
 
-        // Validate @done.{state} configurations
+        // Validate @done.{state} configurations (before machine config, so coverage check sees valid keys)
         foreach ($stateConfig as $key => $value) {
             if (str_starts_with((string) $key, '@done.')) {
                 $suffix = substr((string) $key, 6);
@@ -184,6 +174,16 @@ class StateConfigValidator
 
                 self::validateDoneFailConfig($value, $key, $path);
             }
+        }
+
+        // Validate machine delegation configuration (after @done.{state} validation)
+        if (isset($stateConfig['machine'])) {
+            self::validateMachineConfig($stateConfig, $path);
+        }
+
+        // Validate job actor configuration
+        if (isset($stateConfig['job'])) {
+            self::validateJobConfig($stateConfig, $path);
         }
 
         // Process nested states first to ensure proper context
@@ -529,8 +529,9 @@ class StateConfigValidator
             }
         }
 
-        // Fire-and-forget detection: async (queue) + no @done
-        $isFireAndForget = isset($stateConfig['queue']) && !isset($stateConfig['@done']);
+        // Fire-and-forget detection: async (queue) + no @done (including @done.{state})
+        $hasDoneRouting  = isset($stateConfig['@done']) || self::hasDoneDotKeys($stateConfig);
+        $isFireAndForget = isset($stateConfig['queue']) && !$hasDoneRouting;
 
         if ($isFireAndForget) {
             // @fail is invalid — fire-and-forget doesn't track child failures
@@ -588,6 +589,9 @@ class StateConfigValidator
                 );
             }
         }
+
+        // Validate @done.{state} coverage against child machine's final states
+        self::validateChildFinalStateCoverage($stateConfig, $path);
     }
 
     /**
@@ -662,5 +666,91 @@ class StateConfigValidator
         }
 
         throw new InvalidArgumentException('Value must be string, array or null');
+    }
+
+    /**
+     * Check if config contains any @done.{state} keys.
+     */
+    private static function hasDoneDotKeys(array $config): bool
+    {
+        foreach (array_keys($config) as $key) {
+            if (str_starts_with((string) $key, '@done.')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Validate that all child machine final states are covered by @done.{state} keys or a @done catch-all.
+     *
+     * Only runs when @done.{state} keys are present. Skips gracefully if child class is unresolvable.
+     *
+     * @throws InvalidArgumentException When child final states are uncovered.
+     */
+    private static function validateChildFinalStateCoverage(array $stateConfig, string $path): void
+    {
+        $doneStateKeys = [];
+
+        foreach (array_keys($stateConfig) as $key) {
+            if (str_starts_with((string) $key, '@done.')) {
+                $doneStateKeys[] = substr((string) $key, 6);
+            }
+        }
+
+        // No dot notation used → skip (backward compatible)
+        if ($doneStateKeys === []) {
+            return;
+        }
+
+        // Has catch-all @done → all states covered
+        if (isset($stateConfig['@done'])) {
+            return;
+        }
+
+        // Resolve child machine's final states
+        $machineClass = $stateConfig['machine'];
+
+        if (!is_string($machineClass) || !class_exists($machineClass)) {
+            return;
+        }
+
+        try {
+            $childDefinition = $machineClass::definition();
+        } catch (\Throwable) {
+            return;
+        }
+
+        $childFinalStates = self::collectFinalStateKeys($childDefinition->config);
+
+        $uncovered = array_diff($childFinalStates, $doneStateKeys);
+
+        if ($uncovered !== []) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has @done.{state} routing but child machine "
+                    ."'{$machineClass}' has uncovered final states: "
+                    .implode(', ', $uncovered)
+                    .". Add specific '@done.{state}' keys or a catch-all '@done' to handle all outcomes."
+            );
+        }
+    }
+
+    /**
+     * Collect root-level final state key names from a machine config.
+     *
+     * @return array<string>
+     */
+    private static function collectFinalStateKeys(array $config): array
+    {
+        $finals = [];
+
+        foreach ($config['states'] ?? [] as $name => $stateConfig) {
+            if (isset($stateConfig['type']) && $stateConfig['type'] === 'final') {
+                $finals[] = $name;
+            }
+        }
+
+        return $finals;
     }
 }
