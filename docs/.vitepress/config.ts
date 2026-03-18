@@ -14,10 +14,16 @@ const gitTag = await (async () => {
     }
   } catch { /* offline or API error */ }
 
-  // Fallback: local git tags sorted by version (works in full clones)
+  // Shallow clones (CI/Cloudflare) don't have tags — fetch them first
   try {
-    return execSync('git tag --sort=-v:refname', { encoding: 'utf-8' }).split('\n').filter(Boolean)[0]
-  } catch { /* shallow clone - no tags available */ }
+    execSync('git fetch --tags --quiet 2>/dev/null', { encoding: 'utf-8' })
+  } catch { /* fetch failed — continue with whatever tags are available */ }
+
+  // Fallback: local git tags sorted by version
+  try {
+    const tag = execSync('git tag --sort=-v:refname', { encoding: 'utf-8' }).split('\n').filter(Boolean)[0]
+    if (tag) return tag
+  } catch { /* no tags available */ }
 
   // Last resort: git describe
   try {
