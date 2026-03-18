@@ -518,3 +518,99 @@ See [Overview](/testing/overview) for the testing pyramid,
 [Persistence Testing](/testing/persistence-testing) for DB-level testing,
 and [Time-Based Testing](/testing/time-based-testing) for timer sweep testing.
 :::
+
+## Recipe: Forward Endpoint Testing
+
+Minimal setup for testing a forwarded event through the parent to a running child:
+
+<!-- doctest-attr: no_run -->
+```php
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tarfinlabs\EventMachine\Routing\MachineRouter;
+
+uses(RefreshDatabase::class);
+
+it('forwards PROVIDE_CARD to child via parent endpoint', function (): void {
+    MachineRouter::register(OrderMachine::class, 'orders', 'order_mre');
+
+    $order   = Order::create(['status' => 'pending']);
+    $machine = $order->order_mre;
+    $machine->send(['type' => 'START']);
+
+    $response = $this->postJson("/orders/{$order->id}/provide-card", [
+        'card_number' => '4111111111111111',
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('data.child.value.0', 'payment_child.card_provided');
+});
+```
+
+For full forward endpoint patterns including `contextKeys`, `result`, `available_events`, and `ForwardContext` injection, see [Inter-Machine Testing — Forward Endpoints](/testing/delegation-testing#testing-forward-endpoints).
+
+## Recipe: Available Events Introspection
+
+Test which events your machine accepts at each state — especially useful with forward endpoints:
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test(['order_id' => 'ORD-1'])
+    ->assertAvailableEvent('SUBMIT_ORDER')            // initial state accepts SUBMIT
+    ->send('SUBMIT_ORDER')
+    ->assertNotAvailableEvent('SUBMIT_ORDER')          // no longer in initial state
+    ->assertAvailableEvent('CANCEL')                   // can cancel while processing
+    ->assertForwardAvailable('PROVIDE_CARD')           // forward event from child
+    ->send('COMPLETE')
+    ->assertNoAvailableEvents();                       // final state — no events
+```
+
+See [TestMachine — Available Events Assertions](/testing/test-machine#available-events-assertions) for the full API reference.
+
+## Recipe: Per-Final-State Routing with @done.{state}
+
+Test which `@done.{state}` route fires using `Machine::fake(finalState: ...)`:
+
+<!-- doctest-attr: ignore -->
+```php
+PaymentMachine::fake(finalState: 'approved');
+
+OrderMachine::test()
+    ->send('START_PAYMENT')
+    ->assertState('completed');
+
+Machine::resetMachineFakes();
+```
+
+For the full pattern including catch-all fallback and result data, see [Inter-Machine Testing — Testing Per-Final-State Routing](/testing/delegation-testing#testing-per-final-state-routing).
+
+## Recipe: Fire-and-Forget Machine Delegation
+
+Verify fire-and-forget dispatch without tracking the child result:
+
+<!-- doctest-attr: ignore -->
+```php
+AuditMachine::fake(result: []);
+
+AccountMachine::test()
+    ->send('SUSPEND')
+    ->assertState('suspended');
+
+AuditMachine::assertInvoked();
+Machine::resetMachineFakes();
+```
+
+For `Queue::fake()` patterns and `target` transitions, see [Inter-Machine Testing — Testing Fire-and-Forget](/testing/delegation-testing#testing-fire-and-forget-machine-delegation).
+
+## Recipe: Scheduled Event Testing
+
+Verify scheduled events fire and process correctly:
+
+<!-- doctest-attr: ignore -->
+```php
+BillingMachine::test()
+    ->assertHasSchedule('MONTHLY_BILLING')
+    ->runSchedule('MONTHLY_BILLING')
+    ->assertState('billing_processed');
+```
+
+For `ScheduleResolver` testing, `ProcessScheduledCommand` integration, and E2E patterns, see [Scheduled Testing](/testing/scheduled-testing).
