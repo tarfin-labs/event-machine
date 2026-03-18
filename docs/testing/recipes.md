@@ -403,8 +403,6 @@ it('routes @done when child succeeds', function () {
 
     PaymentMachine::assertInvoked();
     PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
-
-    Machine::resetMachineFakes();
 });
 
 it('routes @fail when child fails', function () {
@@ -415,8 +413,6 @@ it('routes @fail when child fails', function () {
 
     expect($machine->state->matches('payment_failed'))->toBeTrue()
         ->and($machine->state->context->get('error'))->toBe('Insufficient funds');
-
-    Machine::resetMachineFakes();
 });
 
 it('child not invoked when transition is guarded', function () {
@@ -426,8 +422,6 @@ it('child not invoked when transition is guarded', function () {
     // Don't send START — child should NOT be invoked
 
     PaymentMachine::assertNotInvoked();
-
-    Machine::resetMachineFakes();
 });
 ```
 
@@ -508,6 +502,40 @@ it('retries payment 3 times then fails', function (): void {
 });
 ```
 
+## Recipe: Controller Testing with Machine::fake()
+
+Isolate controller tests from machine pipeline -- verify DB operations without running state transitions:
+
+<!-- doctest-attr: ignore -->
+```php
+it('approves consent link without running machine', function (): void {
+    CarSalesMachine::fake();
+
+    $consentLink = ConsentLink::factory()->create([
+        'machine_root_event_id' => 'evt_123',
+        'status' => ConsentLinkStatus::PENDING,
+    ]);
+
+    $this->postJson("/consent/{$consentLink->hash}/approve")
+        ->assertOk()
+        ->assertJson(['status' => 'approved']);
+
+    // DB assertion — machine didn't actually run
+    expect($consentLink->fresh()->status)->toBe(ConsentLinkStatus::APPROVED);
+
+    // Machine assertions — verify it was touched
+    CarSalesMachine::assertCreated();
+    CarSalesMachine::assertSent(ConsentGrantedEvent::getType());
+    // No cleanup needed — InteractsWithMachines handles it
+});
+```
+
+`Machine::fake()` makes `create()` return a stub where `send()` and `persist()` are no-ops. The machine records what was called for assertion purposes but doesn't execute transitions or write to the database.
+
+::: warning Don't combine fake() with test()
+`Machine::fake()` is for skipping the machine. `Machine::test()` is for exercising it. Don't use both on the same class in the same test.
+:::
+
 ::: tip Related
 See [Overview](/testing/overview) for the testing pyramid,
 [Isolated Testing](/testing/isolated-testing) for `runWithState()`,
@@ -577,8 +605,6 @@ PaymentMachine::fake(finalState: 'approved');
 OrderMachine::test()
     ->send('START_PAYMENT')
     ->assertState('completed');
-
-Machine::resetMachineFakes();
 ```
 
 For the full pattern including catch-all fallback and result data, see [Inter-Machine Testing — Testing Per-Final-State Routing](/testing/delegation-testing#testing-per-final-state-routing).
@@ -596,7 +622,6 @@ AccountMachine::test()
     ->assertState('suspended');
 
 AuditMachine::assertInvoked();
-Machine::resetMachineFakes();
 ```
 
 For `Queue::fake()` patterns and `target` transitions, see [Inter-Machine Testing — Testing Fire-and-Forget](/testing/delegation-testing#testing-fire-and-forget-machine-delegation).

@@ -54,9 +54,6 @@ PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
 
 // Was it NOT invoked?
 PaymentMachine::assertNotInvoked();
-
-// Reset all fakes between tests
-Machine::resetMachineFakes();
 ```
 
 `assertInvokedWith()` checks that **at least one** invocation contains the expected key-value pairs (subset matching).
@@ -91,6 +88,33 @@ OrderMachine::test()
 
 See [TestMachine — Child Delegation Assertions](/testing/test-machine#child-delegation-assertions) and [TestMachine — Async Simulation](/testing/test-machine#async-simulation) for the full API reference.
 
+## Faking Standalone Machines
+
+When testing controllers or services that use `Machine::create()`, you can fake the machine to isolate your test from the machine pipeline:
+
+<!-- doctest-attr: ignore -->
+```php
+// Without fake: controller triggers full machine restore + transition + persist
+// With fake: Machine::create() returns a stub — send/persist are no-ops
+
+CarSalesMachine::fake();
+
+$response = $this->postJson("/consent/{$hash}/approve");
+
+$response->assertOk();
+CarSalesMachine::assertCreated();
+CarSalesMachine::assertSent('CONSENT_GRANTED');
+// No resetMachineFakes() needed — InteractsWithMachines handles it
+```
+
+::: info Instance-Level No-Ops
+Only instances created via the fake intercept are no-ops. Real instances of the same class (e.g., child delegation via `withDefinition()`) work normally.
+:::
+
+::: info Separate Tracking
+`assertCreated()` and `assertSent()` use separate tracking from `assertInvoked()`. Child delegation and standalone usage don't interfere with each other.
+:::
+
 ## Testing Per-Final-State Routing
 
 When a child machine has multiple final states, use `Machine::fake(finalState: ...)` to test which `@done.{state}` route fires:
@@ -118,8 +142,6 @@ PaymentMachine::fake();
 $machine = OrderWorkflowMachine::create();
 $machine->send(['type' => 'START']);
 expect($machine->state->currentStateDefinition->id)->toContain('fallback');
-
-Machine::resetMachineFakes();
 ```
 
 ::: tip finalState is routing-relevant
@@ -146,9 +168,7 @@ it('processes order through payment', function (): void {
 
     // Assert: parent received child result and transitioned
     expect($machine->state->context->get('payment_id'))->toBe('pay_456');
-
-    // Cleanup
-    Machine::resetMachineFakes();
+    // No cleanup needed — InteractsWithMachines handles it
 });
 ```
 
@@ -248,8 +268,7 @@ it('fire-and-forget machine delegation stays in state', function (): void {
     // Child was invoked
     AuditMachine::assertInvoked();
     AuditMachine::assertInvokedWith(['user_id' => 'usr_123']);
-
-    Machine::resetMachineFakes();
+    // No cleanup needed — InteractsWithMachines handles it
 });
 ```
 

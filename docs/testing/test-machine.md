@@ -220,6 +220,8 @@ Call `resetFakes()` when you need to clear fakes mid-test. In most cases, the gl
 
 > **Note:** As of v7.4, `resetFakes()` also clears `Machine::fake()` registrations and CommunicationRecorder state.
 
+> **Note:** With the `InteractsWithMachines` trait, manual `resetMachineFakes()` calls are no longer needed. The trait resets all Machine fakes, CommunicationRecorder, and InlineBehaviorFake state automatically after each test.
+
 ## Complete Example
 
 <!-- doctest-attr: ignore -->

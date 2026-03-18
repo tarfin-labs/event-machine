@@ -39,21 +39,25 @@ OrderMachine::test()
 
 ### Pest / PHPUnit Configuration
 
-Reset all behavior fakes between tests to prevent state leaking across test cases. Without this, a fake registered in one test could silently affect subsequent tests.
+Use the `InteractsWithMachines` trait to automatically reset all fakes between tests. This prevents state leaking across test cases — no manual `resetMachineFakes()` or `resetAllFakes()` needed.
 
 <!-- doctest-attr: ignore -->
 ```php
-// tests/Pest.php or tests/TestCase.php
-use Illuminate\Foundation\Testing\RefreshDatabase;
-
-afterEach(function (): void {
-    // Reset all behavior fakes between tests (also clears inline behavior fakes)
-    IncrementAction::resetAllFakes();
-
-    // Reset all machine fakes (child machine short-circuits)
-    Machine::resetMachineFakes();
-});
+// tests/Pest.php
+uses(
+    Tests\TestCase::class,
+    Illuminate\Foundation\Testing\RefreshDatabase::class,
+    Tarfinlabs\EventMachine\Testing\InteractsWithMachines::class,
+)->in('Feature');
 ```
+
+::: tip Automatic Cleanup
+`InteractsWithMachines` automatically resets all `Machine::fake()`, `CommunicationRecorder`, and `InlineBehaviorFake` state after each test. No manual `resetMachineFakes()` needed.
+:::
+
+::: warning Prerequisite
+`InteractsWithMachines` requires your TestCase to extend Laravel's or Orchestra Testbench's TestCase. Pure PHPUnit TestCase without `InteractsWithTestCaseLifecycle` won't auto-call the teardown.
+:::
 
 ### In-Memory Database
 

@@ -107,7 +107,7 @@ Tests requiring real MySQL, Redis, and Laravel Horizon for async features. These
 | Parallel dispatch with locking | LocalQA | Needs MySQL locks |
 | Available events correct per state | Integration | `assertAvailableEvent`, `assertForwardAvailable` |
 
-## Machine::fake() for Child Delegation
+## Machine::fake() for Isolation
 
 When testing a parent machine, you do not want child machines to actually run. `Machine::fake()` short-circuits delegation, returning a configurable result.
 
@@ -119,14 +119,25 @@ PaymentMachine::fake(result: ['payment_id' => 'pay_123'], finalState: 'settled')
 OrderWorkflowMachine::test(['order_id' => 'ORD-004'])
     ->send('ORDER_SUBMITTED')
     ->assertState('shipping');   // child faked, @done fired, parent moved to next
-
-// Cleanup
-Machine::resetMachineFakes();
+// No cleanup needed — InteractsWithMachines handles it
 ```
 
 `Machine::fake()` is a static call on the child machine class — call it **before** creating the parent. The `finalState` parameter determines which `@done.{state}` route fires on the parent. See [Inter-Machine Testing](/testing/delegation-testing) for the full API.
 
 This lets you test the parent's orchestration logic (routing, error handling, context passing) without coupling to child machine internals.
+
+### Standalone Machine Isolation
+
+Use `Machine::fake()` to isolate controller or service tests from the machine pipeline:
+
+<!-- doctest-attr: ignore -->
+```php
+CarSalesMachine::fake();
+// Controller calls Machine::create() → gets stub
+// Controller calls send() → no-op
+// Controller calls persist() → no-op
+// Your test only verifies the controller's own logic
+```
 
 ## advanceTimers() for Time-Based Testing
 
