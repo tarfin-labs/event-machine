@@ -139,6 +139,22 @@ test('forwarded response includes parent machine_id and value', function (): voi
         ->and($data['value'])->toContain('forward_endpoint_parent.processing');
 });
 
+test('forwarded default response includes available_events', function (): void {
+    $machineId = createAndStartForwardMachine($this);
+
+    $response = $this->postJson("/api/forward/{$machineId}/provide-card", [
+        'payload' => ['card_number' => '4242424242424242'],
+    ]);
+
+    $response->assertStatus(200);
+
+    $data = $response->json('data');
+
+    expect($data)->toHaveKey('available_events')
+        ->and($data['available_events'])->toBeArray()
+        ->and($data['available_events'])->not->toBeEmpty();
+});
+
 test('forwarded response includes child value and child context', function (): void {
     $machineId = createAndStartForwardMachine($this);
 

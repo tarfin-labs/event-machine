@@ -213,11 +213,15 @@ class MachineController extends Controller
 
     /**
      * Resolve and run a ResultBehavior using the InvokableBehavior parameter injection pattern.
+     *
+     * When a ForwardContext is provided, it is injected into the ResultBehavior
+     * so it can access the child machine's state and context.
      */
     protected function resolveAndRunResult(
         string $resultKey,
         State $state,
         Machine $machine,
+        ?ForwardContext $forwardContext = null,
     ): mixed {
         $resultClass = class_exists($resultKey)
             ? $resultKey
@@ -233,17 +237,12 @@ class MachineController extends Controller
             actionBehavior: $resultBehavior,
             state: $state,
             eventBehavior: $state->currentEventBehavior,
+            forwardContext: $forwardContext,
         );
 
         return $resultBehavior(...$params);
     }
 
-    /**
-     * If the machine reached a final state and is a tracked child, dispatch completion to parent.
-     *
-     * This enables the webhook pattern: child machine receives endpoint event,
-     * transitions to final, and auto-dispatches ChildMachineCompletionJob.
-     */
     /**
      * Forwarded model-bound endpoint handler.
      * Route: /{model}/{uri} — resolves parent machine via Eloquent model binding.
@@ -252,10 +251,20 @@ class MachineController extends Controller
     {
         $route          = $request->route();
         $parameterNames = $route->parameterNames();
+
+        if ($parameterNames === []) {
+            abort(500, 'Forwarded model-bound endpoint requires a route model parameter.');
+        }
+
         $modelParam     = $parameterNames[0];
         $model          = $route->parameter($modelParam);
-        $modelAttribute = $route->defaults['_model_attribute'];
-        $machine        = $model->{$modelAttribute};
+        $modelAttribute = $route->defaults['_model_attribute'] ?? null;
+
+        if ($model === null || $modelAttribute === null) {
+            abort(500, 'Route model or model attribute not found for forwarded model-bound endpoint.');
+        }
+
+        $machine = $model->{$modelAttribute};
 
         return $this->executeForwardedEndpoint($machine, $request);
     }
@@ -341,11 +350,16 @@ class MachineController extends Controller
 
         // Custom result behavior — runs on PARENT with ForwardContext injected
         if ($resultKey !== null && $childState instanceof State) {
-            $result = $this->resolveAndRunForwardedResult(
-                resultKey: $resultKey,
-                parentState: $state,
-                parentMachine: $machine,
+            $forwardContext = new ForwardContext(
+                childContext: $childState->context,
                 childState: $childState,
+            );
+
+            $result = $this->resolveAndRunResult(
+                resultKey: $resultKey,
+                state: $state,
+                machine: $machine,
+                forwardContext: $forwardContext,
             );
 
             return response()->json(['data' => $result], $statusCode);
@@ -372,41 +386,13 @@ class MachineController extends Controller
             ];
         }
 
-        return response()->json(['data' => $response], $statusCode);
-    }
+        $includeAvailableEvents = $defaults['_available_events'] ?? null;
 
-    /**
-     * Resolve and run a ResultBehavior with ForwardContext injection.
-     */
-    protected function resolveAndRunForwardedResult(
-        string $resultKey,
-        State $parentState,
-        Machine $parentMachine,
-        State $childState,
-    ): mixed {
-        $resultClass = class_exists($resultKey)
-            ? $resultKey
-            : ($parentMachine->definition->behavior['results'][$resultKey] ?? null);
-
-        if ($resultClass === null) {
-            throw new \RuntimeException("Result behavior '{$resultKey}' not found.");
+        if ($includeAvailableEvents !== false) {
+            $response['available_events'] = $state->availableEvents();
         }
 
-        $resultBehavior = resolve($resultClass);
-
-        $forwardContext = new ForwardContext(
-            childContext: $childState->context,
-            childState: $childState,
-        );
-
-        $params = InvokableBehavior::injectInvokableBehaviorParameters(
-            actionBehavior: $resultBehavior,
-            state: $parentState,
-            eventBehavior: $parentState->currentEventBehavior,
-            forwardContext: $forwardContext,
-        );
-
-        return $resultBehavior(...$params);
+        return response()->json(['data' => $response], $statusCode);
     }
 
     /**
