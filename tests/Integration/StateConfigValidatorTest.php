@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Tests;
 
 use InvalidArgumentException;
+use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RecordAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\GuardedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\MultiOutcomeChildMachine;
 
 test('validates root level configuration keys', function (): void {
     expect(fn () => MachineDefinition::define([
@@ -693,3 +695,103 @@ test('it rejects @fail with default branch not last', function (): void {
 });
 
 // endregion
+
+// region @done.{state} Validation
+
+it('accepts @done.{state} keys as valid state keys (T20)', function (): void {
+    expect(fn () => StateConfigValidator::validate([
+        'id'      => 'parent',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'machine'        => MultiOutcomeChildMachine::class,
+                '@done.approved' => 'completed',
+                '@done.rejected' => 'declined',
+                '@done.expired'  => 'declined',
+            ],
+            'completed' => ['type' => 'final'],
+            'declined'  => ['type' => 'final'],
+        ],
+    ]))->not->toThrow(InvalidArgumentException::class);
+});
+
+it('validates @done.{state} values as transition configs (T21)', function (): void {
+    expect(fn () => StateConfigValidator::validate([
+        'id'      => 'parent',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'machine'        => MultiOutcomeChildMachine::class,
+                '@done.approved' => 123,
+                '@done'          => 'fallback',
+            ],
+            'completed' => ['type' => 'final'],
+            'fallback'  => ['type' => 'final'],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: "has invalid '@done.approved' configuration"
+    );
+});
+
+it('validates @done.{state} guarded branches order (T22)', function (): void {
+    // Valid: guarded first, default last
+    expect(fn () => StateConfigValidator::validate([
+        'id'      => 'parent',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'machine'        => MultiOutcomeChildMachine::class,
+                '@done.approved' => [
+                    ['target' => 'vip', 'guards' => 'isVipGuard'],
+                    ['target' => 'standard'],
+                ],
+                '@done' => 'fallback',
+            ],
+            'vip'      => ['type' => 'final'],
+            'standard' => ['type' => 'final'],
+            'fallback' => ['type' => 'final'],
+        ],
+    ]))->not->toThrow(InvalidArgumentException::class);
+
+    // Invalid: default branch not last
+    expect(fn () => StateConfigValidator::validate([
+        'id'      => 'parent',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'machine'        => MultiOutcomeChildMachine::class,
+                '@done.approved' => [
+                    ['target' => 'standard'],
+                    ['target' => 'vip', 'guards' => 'isVipGuard'],
+                ],
+                '@done' => 'fallback',
+            ],
+            'vip'      => ['type' => 'final'],
+            'standard' => ['type' => 'final'],
+            'fallback' => ['type' => 'final'],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: 'Default condition (no guards) must be the last condition'
+    );
+});
+
+it('rejects @done. with empty suffix (T29)', function (): void {
+    expect(fn () => StateConfigValidator::validate([
+        'id'      => 'parent',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'machine' => MultiOutcomeChildMachine::class,
+                '@done.'  => 'completed',
+            ],
+            'completed' => ['type' => 'final'],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: 'final state name after the dot cannot be empty'
+    );
+});
+
+// endregion @done.{state} Validation
