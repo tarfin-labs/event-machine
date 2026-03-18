@@ -63,6 +63,17 @@ class ChildMachineDoneEvent extends EventBehavior
     }
 
     /**
+     * Get the child machine's final state key name.
+     *
+     * Returns the leaf key (e.g., 'approved'), not the full ID path.
+     * Returns null for legacy events that don't carry final state info.
+     */
+    public function finalState(): ?string
+    {
+        return $this->payload['final_state'] ?? null;
+    }
+
+    /**
      * Create an instance for internal use.
      *
      * @param  array  $payload  The payload containing result, output, machine_id, machine_class.
