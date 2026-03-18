@@ -614,3 +614,103 @@ BillingMachine::test()
 ```
 
 For `ScheduleResolver` testing, `ProcessScheduledCommand` integration, and E2E patterns, see [Scheduled Testing](/testing/scheduled-testing).
+
+## Recipe: Full Async Delegation Pipeline
+
+When `Queue::fake()` isn't enough — verify the complete async cycle: parent dispatches → child runs → child completes → parent routes via `@done`.
+
+**Requirements:** Real database + Redis + queue worker (Horizon or `queue:work`).
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+
+it('completes full async delegation pipeline', function (): void {
+    $parent = ParentMachine::create();
+    $parent->send(['type' => 'START']);
+    $parent->persist();
+
+    $rootEventId = $parent->state->history->first()->root_event_id;
+
+    // Parent should be in delegating state
+    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+    expect($cs->state_id)->toContain('processing');
+
+    // Poll DB for parent state change (queue worker processes async)
+    $completed = retry(30, function () use ($rootEventId) {
+        $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+
+        return $cs && str_contains($cs->state_id, 'completed')
+            ? true
+            : throw new \Exception('waiting');
+    }, sleepMilliseconds: 1000);
+
+    expect($completed)->toBeTrue();
+});
+```
+
+::: warning Gotchas
+- `.env.testing` must have real DB + Redis config (not sqlite/sync)
+- Redis prefix must match between test process and queue worker
+- Queue worker must be started **before** the test runs
+- Clean tables between tests with truncate (not `RefreshDatabase` which rolls back)
+:::
+
+## Recipe: Timer Sweep in Real Environment
+
+Verify `machine:process-timers` reads from DB and fires correctly:
+
+<!-- doctest-attr: no_run -->
+```php
+use Illuminate\Support\Facades\Artisan;
+
+it('timer sweep fires expired timer', function (): void {
+    $machine = OrderMachine::create();
+    $machine->send(['type' => 'SUBMIT']);
+    $machine->persist();
+
+    // Fast-forward time past the timer deadline
+    $this->travel(8)->days();
+
+    // Run the sweep command (reads machine_timer_fires table)
+    Artisan::call('machine:process-timers');
+
+    // Verify machine transitioned
+    $rootEventId = $machine->state->history->first()->root_event_id;
+    $restored    = OrderMachine::create(state: $rootEventId);
+
+    expect($restored->state->currentStateDefinition->id)->toContain('cancelled');
+});
+```
+
+## Recipe: Testing Concurrent Access
+
+Verify machine locks prevent race conditions:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
+
+it('concurrent sends are serialized by lock', function (): void {
+    $machine = OrderMachine::create();
+    $machine->send(['type' => 'SUBMIT']);
+    $machine->persist();
+
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // First send succeeds
+    $m1 = OrderMachine::create(state: $rootEventId);
+    $m1->send(['type' => 'PAY']);
+
+    // Second concurrent send on same instance should be serialized
+    // In real concurrent scenario, one would throw MachineLockTimeoutException
+    $m2 = OrderMachine::create(state: $rootEventId);
+
+    expect(fn () => $m2->send(['type' => 'PAY']))
+        ->toThrow(MachineLockTimeoutException::class);
+});
+```
+
+::: tip
+For concurrent testing with real parallel processes, use Laravel's `Http::pool()` or dispatch async jobs that both target the same machine instance.
+:::
