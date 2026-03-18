@@ -147,6 +147,7 @@ class CriticalEvent extends EventBehavior
     public bool $isTransactional = true; // Default
     public static function getType(): string { return 'CRITICAL'; } // [!code hide]
 }
+```
 
 ::: tip Testing
 For the complete testing guide, see [Testing Overview](/testing/overview).
