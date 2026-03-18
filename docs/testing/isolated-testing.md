@@ -99,6 +99,40 @@ $state = State::forTesting(['count' => 10]);
 AddValueAction::runWithState($state, eventBehavior: $event);
 ```
 
+## Child Machine Event Factories
+
+When testing guards or actions that handle `@done`/`@fail` events, use the child event factories to avoid boilerplate:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
+use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
+
+// Only provide the data you care about — identity fields are defaulted
+$event = ChildMachineDoneEvent::forTesting(['result' => ['statusCode' => 3]]);
+$state = State::forTesting(['attempt_count' => 2], currentEventBehavior: $event);
+expect(IsStatusSuccessGuard::runWithState($state))->toBeTrue();
+
+// Fail event for error-handling guards
+$event = ChildMachineFailEvent::forTesting(['error_message' => 'Gateway timeout']);
+$state = State::forTesting([], currentEventBehavior: $event);
+expect(IsRetryableErrorGuard::runWithState($state))->toBeTrue();
+
+// With final state (for @done.{state} routing guards)
+$event = ChildMachineDoneEvent::forTesting([
+    'result'      => ['status' => 'ok'],
+    'final_state' => 'approved',
+]);
+
+// Zero config — all defaults (machine_id: 'test', machine_class: 'TestMachine')
+$event = ChildMachineDoneEvent::forTesting();
+$event = ChildMachineFailEvent::forTesting();
+```
+
+::: tip Use concrete event type-hints
+When a guard handles `@done` events, type-hint `ChildMachineDoneEvent $event` — not `EventBehavior $event`. The injection system (`injectInvokableBehaviorParameters`) resolves the correct subclass automatically. Concrete type-hints give you IDE autocompletion, PHPStan safety, and clear method availability (`result()`, `output()`, `finalState()`).
+:::
+
 ## When to Use Which
 
 | Test Type | Method | Best For |
