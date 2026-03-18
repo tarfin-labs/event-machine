@@ -77,7 +77,7 @@ OrderWorkflowMachine::test(['order_id' => 'ORD-003', 'order_total' => 100])
     ->send('ORDER_SUBMITTED')
     ->assertState('awaiting_payment')
     ->assertHasTimer('ORDER_EXPIRED')
-    ->advanceTimers(days: 7)
+    ->advanceTimers(Timer::days(7))
     ->assertState('cancelled');
 ```
 
@@ -105,23 +105,26 @@ Tests requiring real MySQL, Redis, and Laravel Horizon for async features. These
 | Persist and restore state | E2E | Needs database |
 | Async child completes and reports | LocalQA | Needs real queue |
 | Parallel dispatch with locking | LocalQA | Needs MySQL locks |
+| Available events correct per state | Integration | `assertAvailableEvent`, `assertForwardAvailable` |
 
 ## Machine::fake() for Child Delegation
 
 When testing a parent machine, you do not want child machines to actually run. `Machine::fake()` short-circuits delegation, returning a configurable result.
 
 ```php ignore
-// Test parent orchestration without running children
+// Arrange: fake the child machine before creating the parent
+PaymentMachine::fake(result: ['payment_id' => 'pay_123'], finalState: 'settled');
 
-Machine::fake([
-    PaymentMachine::class => Machine::fakeResult(state: 'settled'),
-]);
-
+// Act + Assert: test parent orchestration without running children
 OrderWorkflowMachine::test(['order_id' => 'ORD-004'])
     ->send('ORDER_SUBMITTED')
-    ->assertState('processing_payment')     // enters delegation state
-    ->assertState('shipping');               // @done fired, moved to next
+    ->assertState('shipping');   // child faked, @done fired, parent moved to next
+
+// Cleanup
+Machine::resetMachineFakes();
 ```
+
+`Machine::fake()` is a static call on the child machine class — call it **before** creating the parent. The `finalState` parameter determines which `@done.{state}` route fires on the parent. See [Inter-Machine Testing](/testing/delegation-testing) for the full API.
 
 This lets you test the parent's orchestration logic (routing, error handling, context passing) without coupling to child machine internals.
 
@@ -135,10 +138,10 @@ This lets you test the parent's orchestration logic (routing, error handling, co
 OrderWorkflowMachine::test(['order_id' => 'ORD-005'])
     ->send('ORDER_SUBMITTED')
     ->assertState('awaiting_payment')
-    ->advanceTimers(days: 1)
+    ->advanceTimers(Timer::days(1))
     ->assertBehaviorRan(SendPaymentReminderAction::class)
     ->assertState('awaiting_payment')       // still waiting
-    ->advanceTimers(days: 6)                // 7 days total
+    ->advanceTimers(Timer::days(6))         // 7 days total
     ->assertState('cancelled');              // expired
 ```
 
@@ -210,7 +213,7 @@ OrderWorkflowMachine::test(['order_id' => 'ORD-100', 'order_total' => 500])
 OrderWorkflowMachine::test(['order_id' => 'ORD-101', 'order_total' => 500])
     ->send('ORDER_SUBMITTED')
     ->assertState('awaiting_payment')
-    ->advanceTimers(days: 7)
+    ->advanceTimers(Timer::days(7))
     ->assertState('cancelled');
 ```
 
