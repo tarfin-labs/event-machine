@@ -182,3 +182,56 @@ Here is how it typically plays out, using the blog post example:
 The implicit state machine was fine at step 1. It became a liability somewhere around step 5 — when the validation logic was scattered across multiple files and no single place defined the complete set of allowed transitions.
 
 **That is the moment to formalize.** Whether you reach for Tier 2 (Spatie) or Tier 3 (EventMachine) depends on what else you need — see the flowchart above.
+
+## Overkill Signals
+
+If you recognize any of these patterns, a state machine is probably adding ceremony without value.
+
+### The Linear Pipeline
+
+```
+draft → published → archived
+```
+
+Three states, one direction, no branching. An enum and a method per transition is clearer than a full machine definition.
+
+### The CRUD Wrapper
+
+The "machine" just wraps `$model->update(['status' => 'x'])` with no guards, no actions, no side effects. All you have added is indirection — the machine definition is longer than the code it replaces.
+
+### The External-Only Machine
+
+Every transition is triggered by an HTTP request or a simple method call. The machine never self-progresses, never fires timers, never spawns children. A controller with a `match` statement does the same job with less ceremony.
+
+### The Two-State Toggle
+
+`active ↔ inactive`, `enabled ↔ disabled`, `published ↔ unpublished`. This is a boolean in disguise. A state machine for a two-state toggle is like using a crane to lift a coffee cup.
+
+### The Copy-Paste Machine
+
+A developer sees an EventMachine in the project and creates one for every new status column "for consistency." Consistency has merit — if you already use state machines elsewhere, the marginal cost of adding another is lower. But only when the new flow genuinely benefits from machine features. Consistency of tooling does not justify complexity where none is needed.
+
+## Graduation Signals
+
+The overkill signals above tell you when NOT to use a state machine. These graduation signals tell you when it is time to START using one. If you observe **three or more** of these in a single model, formalize the state machine.
+
+1. You have `if ($status === 'X')` checks scattered across **3+ files**
+2. You have had a **production bug** caused by an invalid state transition
+3. You have **2+ boolean flags** that interact with the status field
+4. You need to answer **"who changed the status, when, and why?"** (audit trail)
+5. Different **API responses or UI elements** depend on the current status
+6. You have written **`// only valid when status is X`** comments in multiple places
+7. A new team member asked **"can it go from X to Y directly?"**
+8. **Side effects** (email, webhook, notification) must fire exactly once on specific transitions
+9. **Multiple processes** (queue workers, cron jobs, API calls) can update status concurrently
+10. Your status field has **grown from 3 to 7+ values** over the project's lifetime
+11. You need a **timer**: "expire after 30 days", "send reminder after 24 hours"
+12. The same **flow pattern appears in multiple models** — reuse opportunity
+
+### Boolean Explosion
+
+One particularly measurable graduation trigger is **boolean explosion**. If you have `n` boolean flags alongside your status column, you have up to `2^n × status_count` implicit states.
+
+Consider a support ticket with 4 statuses (`open`, `in_progress`, `resolved`, `closed`) and 3 boolean flags (`is_urgent`, `has_attachment`, `is_escalated`). That is 2³ × 4 = **32 implicit states**. A state machine with hierarchical states might model this as 6–8 explicit states — each with a clear name, clear transitions, and clear behavior.
+
+When your implicit state count exceeds your explicit state count by 2× or more, it is time to formalize.
