@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use InvalidArgumentException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Actor\Machine;
