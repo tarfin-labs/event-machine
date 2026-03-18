@@ -17,6 +17,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Traits\Fakeable;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Routing\ForwardContext;
+use Tarfinlabs\EventMachine\Testing\CommunicationRecorder;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
 /**
@@ -54,6 +55,10 @@ abstract class InvokableBehavior
      */
     public function raise(EventBehavior|array $eventBehavior): void
     {
+        if (CommunicationRecorder::isRecording()) {
+            CommunicationRecorder::recordRaise($eventBehavior);
+        }
+
         $this->eventQueue->push($eventBehavior);
     }
 
@@ -68,6 +73,12 @@ abstract class InvokableBehavior
      */
     public function sendTo(string $machineClass, string $rootEventId, EventBehavior|array $event): void
     {
+        if (CommunicationRecorder::isRecording()) {
+            CommunicationRecorder::recordSendTo($machineClass, $rootEventId, $event);
+
+            return;
+        }
+
         /** @var Machine $targetMachine */
         $targetMachine                           = $machineClass::withDefinition($machineClass::definition());
         $targetMachine->definition->machineClass = $machineClass;

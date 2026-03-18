@@ -4,18 +4,26 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Testing;
 
+use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Support\Timer;
 use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Enums\SourceType;
+use Tarfinlabs\EventMachine\Enums\InternalEvent;
+use Tarfinlabs\EventMachine\Models\MachineChild;
+use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\TimerDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
+use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
@@ -29,6 +37,9 @@ class TestMachine
 
     /** @var array<string> Inline behavior keys registered via faking() */
     private array $fakedInlineBehaviors = [];
+
+    /** @var array<string> Child machine classes registered via fakingChild() */
+    private array $fakedChildMachines = [];
 
     private function __construct(Machine $machine)
     {
@@ -1143,14 +1154,416 @@ class TestMachine
     }
 
     // ═══════════════════════════════════════════
+    //  Child Delegation (v2)
+    // ═══════════════════════════════════════════
+
+    /**
+     * Fake a child machine within the fluent chain.
+     *
+     * Tracked for selective cleanup in resetFakes().
+     */
+    public function fakingChild(
+        string $childClass,
+        ?array $result = null,
+        bool $fail = false,
+        ?string $error = null,
+        ?string $finalState = null,
+    ): self {
+        $childClass::fake(result: $result, fail: $fail, error: $error, finalState: $finalState);
+        $this->fakedChildMachines[] = $childClass;
+
+        return $this;
+    }
+
+    /**
+     * Assert that a child machine class was invoked at least once.
+     */
+    public function assertChildInvoked(string $childClass): self
+    {
+        $invocations = Machine::getMachineInvocations($childClass);
+
+        if ($invocations === []) {
+            throw new AssertionFailedError(
+                "Expected child machine [{$childClass}] to be invoked, but it was not."
+            );
+        }
+
+        return $this;
+    }
+
+    /**
+     * Assert that a child machine class was NOT invoked.
+     */
+    public function assertChildNotInvoked(string $childClass): self
+    {
+        $invocations = Machine::getMachineInvocations($childClass);
+
+        if ($invocations !== []) {
+            throw new AssertionFailedError(
+                "Expected child machine [{$childClass}] not to be invoked, but it was invoked ".count($invocations).' time(s).'
+            );
+        }
+
+        return $this;
+    }
+
+    /**
+     * Assert exact invocation count for a child machine.
+     */
+    public function assertChildInvokedTimes(string $childClass, int $times): self
+    {
+        $invocations = Machine::getMachineInvocations($childClass);
+        $actual      = count($invocations);
+
+        if ($actual !== $times) {
+            throw new AssertionFailedError(
+                "Expected child machine [{$childClass}] to be invoked {$times} time(s), but was invoked {$actual} time(s)."
+            );
+        }
+
+        return $this;
+    }
+
+    /**
+     * Assert a child machine was invoked with context containing the expected subset.
+     */
+    public function assertChildInvokedWith(string $childClass, array $expectedContext): self
+    {
+        $invocations = Machine::getMachineInvocations($childClass);
+
+        if ($invocations === []) {
+            throw new AssertionFailedError(
+                "Expected child machine [{$childClass}] to be invoked with ".json_encode($expectedContext).', but it was never invoked.'
+            );
+        }
+
+        foreach ($invocations as $context) {
+            $matched = true;
+
+            foreach ($expectedContext as $key => $value) {
+                if (!array_key_exists($key, $context) || $context[$key] !== $value) {
+                    $matched = false;
+
+                    break;
+                }
+            }
+
+            if ($matched) {
+                return $this;
+            }
+        }
+
+        throw new AssertionFailedError(
+            "Expected child machine [{$childClass}] to be invoked with ".json_encode($expectedContext).', but no invocation matched.'
+        );
+    }
+
+    /**
+     * Assert which @done.{state} route was taken during child completion.
+     *
+     * Returns the final state key when a specific @done.{state} matched,
+     * null when the catch-all @done fired.
+     */
+    public function assertRoutedViaDoneState(string $expectedFinalState): self
+    {
+        $actual = $this->machine->state->lastChildDoneRoute;
+
+        if ($actual !== $expectedFinalState) {
+            throw new AssertionFailedError(
+                "Expected child completion to route via @done.{$expectedFinalState}, "
+                .'but '.($actual === null ? '@done catch-all was used' : "@done.{$actual} was used").'.'
+            );
+        }
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Async Simulation (v2)
+    // ═══════════════════════════════════════════
+
+    /**
+     * Simulate async child completion without real queues.
+     *
+     * The `result` parameter populates both `output()` and `result()` accessors,
+     * matching Machine::fake() behavior.
+     */
+    public function simulateChildDone(
+        string $childClass,
+        array $result = [],
+        ?string $finalState = null,
+    ): self {
+        $stateDefinition = $this->machine->state->currentStateDefinition;
+
+        if (!$stateDefinition->hasMachineInvoke()) {
+            throw new AssertionFailedError(
+                "Cannot simulate child done: current state [{$stateDefinition->id}] does not have a machine invoke definition."
+            );
+        }
+
+        $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
+
+        if ($invokeDefinition->machineClass !== $childClass) {
+            throw new AssertionFailedError(
+                "Cannot simulate child done: current state delegates to [{$invokeDefinition->machineClass}], not [{$childClass}]."
+            );
+        }
+
+        $this->machine->state->setInternalEventBehavior(
+            type: InternalEvent::CHILD_MACHINE_DONE,
+            placeholder: $childClass,
+        );
+
+        $doneEvent = ChildMachineDoneEvent::forChild([
+            'result'        => $result,
+            'output'        => $result,
+            'machine_id'    => '',
+            'machine_class' => $childClass,
+            'final_state'   => $finalState,
+        ]);
+
+        $this->machine->definition->routeChildDoneEvent(
+            $this->machine->state,
+            $stateDefinition,
+            $doneEvent,
+        );
+
+        return $this;
+    }
+
+    /**
+     * Simulate async child failure without real queues.
+     */
+    public function simulateChildFail(
+        string $childClass,
+        string $errorMessage = 'Simulated failure',
+    ): self {
+        $stateDefinition = $this->machine->state->currentStateDefinition;
+
+        if (!$stateDefinition->hasMachineInvoke()) {
+            throw new AssertionFailedError(
+                "Cannot simulate child fail: current state [{$stateDefinition->id}] does not have a machine invoke definition."
+            );
+        }
+
+        $this->machine->state->setInternalEventBehavior(
+            type: InternalEvent::CHILD_MACHINE_FAIL,
+            placeholder: $childClass,
+        );
+
+        $failEvent = ChildMachineFailEvent::forChild([
+            'error_message' => $errorMessage,
+            'machine_id'    => '',
+            'machine_class' => $childClass,
+            'output'        => [],
+        ]);
+
+        $this->machine->definition->routeChildFailEvent(
+            $this->machine->state,
+            $stateDefinition,
+            $failEvent,
+        );
+
+        return $this;
+    }
+
+    /**
+     * Simulate async child timeout without real queues.
+     */
+    public function simulateChildTimeout(string $childClass): self
+    {
+        $stateDefinition = $this->machine->state->currentStateDefinition;
+
+        if (!$stateDefinition->hasMachineInvoke()) {
+            throw new AssertionFailedError(
+                "Cannot simulate child timeout: current state [{$stateDefinition->id}] does not have a machine invoke definition."
+            );
+        }
+
+        $timeoutEvent = EventDefinition::from([
+            'type'    => 'CHILD_MACHINE_TIMEOUT',
+            'payload' => ['machine_class' => $childClass],
+            'version' => 1,
+            'source'  => SourceType::INTERNAL,
+        ]);
+
+        $this->machine->definition->routeChildTimeoutEvent(
+            $this->machine->state,
+            $stateDefinition,
+            $timeoutEvent,
+        );
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Cross-Machine Communication (v2)
+    // ═══════════════════════════════════════════
+
+    /**
+     * Enable communication recording for sendTo/raise assertions.
+     */
+    public function recordingCommunication(): self
+    {
+        CommunicationRecorder::startRecording();
+
+        return $this;
+    }
+
+    /**
+     * Assert sendTo() was called targeting the given machine class.
+     */
+    public function assertSentTo(string $machineClass, ?string $eventType = null): self
+    {
+        $records = CommunicationRecorder::getSendToRecords($machineClass);
+
+        if ($records === []) {
+            throw new AssertionFailedError(
+                "Expected sendTo [{$machineClass}] to be called, but it was not."
+            );
+        }
+
+        if ($eventType !== null) {
+            $matched = false;
+
+            foreach ($records as $record) {
+                $type = is_array($record['event']) ? ($record['event']['type'] ?? null) : $record['event']->type;
+
+                if ($type === $eventType) {
+                    $matched = true;
+
+                    break;
+                }
+            }
+
+            if (!$matched) {
+                throw new AssertionFailedError(
+                    "Expected sendTo [{$machineClass}] with event type [{$eventType}], but no matching call found."
+                );
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Assert sendTo() was NOT called targeting the given machine class.
+     */
+    public function assertNotSentTo(string $machineClass): self
+    {
+        $records = CommunicationRecorder::getSendToRecords($machineClass);
+
+        if ($records !== []) {
+            throw new AssertionFailedError(
+                "Expected sendTo [{$machineClass}] not to be called, but it was called ".count($records).' time(s).'
+            );
+        }
+
+        return $this;
+    }
+
+    /**
+     * Assert dispatchTo() was called (wraps Queue::assertPushed for SendToMachineJob).
+     */
+    public function assertDispatchedTo(string $machineClass, ?string $eventType = null): self
+    {
+        Queue::assertPushed(
+            SendToMachineJob::class,
+            function (SendToMachineJob $job) use ($machineClass, $eventType): bool {
+                if ($job->machineClass !== $machineClass) {
+                    return false;
+                }
+
+                if ($eventType !== null && ($job->event['type'] ?? null) !== $eventType) {
+                    return false;
+                }
+
+                return true;
+            }
+        );
+
+        return $this;
+    }
+
+    /**
+     * Assert a raised event was processed (appears in history).
+     *
+     * This checks that the event was raised AND processed — a stronger assertion
+     * than checking the raise call alone. To test raise behavior when the event
+     * may be guarded, test the action in isolation with State::forTesting().
+     */
+    public function assertRaisedEvent(string $eventType): self
+    {
+        $found = $this->machine->state->history
+            ->pluck('type')
+            ->contains($eventType);
+
+        if (!$found) {
+            throw new AssertionFailedError(
+                "Expected event [{$eventType}] to have been raised and processed, but it was not found in history."
+            );
+        }
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  Forward Endpoint Helpers (v2)
+    // ═══════════════════════════════════════════
+
+    /**
+     * Set up a running child for forward endpoint tests.
+     *
+     * Creates MachineChild DB record + persisted child machine instance.
+     * Child starts in its initial state. Requires persistence enabled.
+     */
+    public function withRunningChild(string $childClass): self
+    {
+        if (!$this->machine->definition->shouldPersist) {
+            throw new \RuntimeException(
+                'withRunningChild() requires persistence. Remove withoutPersistence() to use.'
+            );
+        }
+
+        $this->machine->persist();
+
+        $parentRootEventId = $this->machine->state->history->first()?->root_event_id;
+        $stateDefinition   = $this->machine->state->currentStateDefinition;
+
+        if ($parentRootEventId === null) {
+            throw new \RuntimeException('Cannot set up running child: no root_event_id.');
+        }
+
+        /** @var Machine $childMachine */
+        $childMachine = $childClass::create();
+        $childMachine->persist();
+
+        $childRootEventId = $childMachine->state->history->first()->root_event_id;
+
+        MachineChild::create([
+            'parent_root_event_id' => $parentRootEventId,
+            'parent_state_id'      => $stateDefinition->id,
+            'parent_machine_class' => $this->machine->definition->machineClass ?? $childClass,
+            'child_machine_class'  => $childClass,
+            'child_root_event_id'  => $childRootEventId,
+            'status'               => MachineChild::STATUS_RUNNING,
+            'created_at'           => now(),
+        ]);
+
+        $this->machine->state->addActiveChild($childRootEventId);
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
     //  Cleanup
     // ═══════════════════════════════════════════
 
     /**
      * Reset all fakes registered during this TestMachine's lifecycle.
      *
-     * Clears: class-based behavior fakes, inline behavior fakes, and
-     * Machine::fake() child machine registrations.
+     * Clears: class-based behavior fakes, inline behavior fakes,
+     * child machine fakes, and communication recordings.
      */
     public function resetFakes(): self
     {
@@ -1164,7 +1577,15 @@ class TestMachine
         }
         $this->fakedInlineBehaviors = [];
 
+        foreach ($this->fakedChildMachines as $childClass) {
+            Machine::resetMachineFake($childClass);
+        }
+        $this->fakedChildMachines = [];
+
+        // Also clear any Machine::fake() calls made outside fakingChild()
         Machine::resetMachineFakes();
+
+        CommunicationRecorder::reset();
 
         return $this;
     }
