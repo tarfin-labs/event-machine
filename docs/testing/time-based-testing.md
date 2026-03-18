@@ -143,12 +143,55 @@ $test->processTimers()
     ->assertState('cancelled');
 ```
 
+## Timer Testing Without Persistence
+
+`advanceTimers()` works without database persistence — use it with `TestMachine::define()`, `withContext()`, or `withoutPersistence()`. Timer state is tracked in-memory automatically.
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Support\Timer;
+use Tarfinlabs\EventMachine\Testing\TestMachine;
+
+TestMachine::define([
+    'id'      => 'pin_flow',
+    'initial' => 'waiting',
+    'states'  => [
+        'waiting' => [
+            'on' => [
+                'PIN_EXPIRED' => [
+                    'target' => 'expired',
+                    'after'  => Timer::seconds(120),
+                ],
+            ],
+        ],
+        'expired' => ['type' => 'final'],
+    ],
+])
+->assertHasTimer('PIN_EXPIRED', Timer::seconds(120))  // verify duration
+->advanceTimers(Timer::seconds(60))                     // 60s < 120s
+->assertState('waiting')                                // not triggered yet
+->advanceTimers(Timer::seconds(61))                     // cumulative 121s > 120s
+->assertState('expired')                                // triggered
+->assertTimerFired('PIN_EXPIRED');
+```
+
+In-memory mode supports:
+- `@after` timers with dedup (fire only once)
+- `@every` timers with `max` and `then`
+- Timer fire history survives state transitions (for `assertTimerFired`)
+- Guard-blocked transitions (fire recorded, state unchanged)
+- Cumulative `advanceTimers()` calls
+
+::: info Automatic detection
+`advanceTimers()`, `assertTimerFired()`, and `assertTimerNotFired()` auto-detect whether the machine has persistence. When persistence is off, they use the in-memory path. When persistence is on, they use the database path. No code changes needed.
+:::
+
 ## Timer Testing Methods Reference
 
 | Method | Description |
 |--------|-------------|
-| `advanceTimers(Timer $duration)` | Advance time by duration and run timer sweep |
-| `processTimers()` | Run timer sweep without advancing time |
-| `assertHasTimer(string $event)` | Assert current state has a timer for this event |
-| `assertTimerFired(string $event)` | Assert timer event was fired |
-| `assertTimerNotFired(string $event)` | Assert timer event was NOT fired |
+| `advanceTimers(Timer $duration)` | Advance time by duration and run timer sweep (works with and without persistence) |
+| `processTimers()` | Run timer sweep without advancing time (persistence only) |
+| `assertHasTimer(string $event, ?Timer $duration)` | Assert current state has a timer for this event, optionally verify duration |
+| `assertTimerFired(string $event)` | Assert timer event was fired (auto-detects persistence mode) |
+| `assertTimerNotFired(string $event)` | Assert timer event was NOT fired (auto-detects persistence mode) |
