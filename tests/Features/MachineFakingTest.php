@@ -5,10 +5,14 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use PHPUnit\Framework\AssertionFailedError;
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ParentOrderMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ChildPaymentMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\MultiOutcomeChildMachine;
 
 // ─── Faked Result Flows Through @done ────────────────────────────
 
@@ -246,6 +250,116 @@ it('resetMachineFakes clears all fakes', function (): void {
 
     expect(ChildPaymentMachine::isMachineFaked())->toBeFalse()
         ->and(SimpleChildMachine::isMachineFaked())->toBeFalse();
+});
+
+// ─── @done.{state} routing with Machine::fake() ─────────────────
+
+it('fake(finalState:) routes to matching @done.{state} (T11)', function (): void {
+    MultiOutcomeChildMachine::fake(finalState: 'approved');
+
+    $machine = MachineDefinition::define(config: [
+        'id'     => 'fake_route', 'initial' => 'idle', 'context' => [],
+        'states' => [
+            'idle'       => ['on' => ['GO' => 'delegating']],
+            'delegating' => [
+                'machine'        => MultiOutcomeChildMachine::class,
+                '@done.approved' => 'completed',
+                '@done.rejected' => 'declined',
+                '@done.expired'  => 'declined',
+            ],
+            'completed' => ['type' => 'final'],
+            'declined'  => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    expect($state->value)->toBe(['fake_route.completed']);
+});
+
+it('fake(finalState:) falls through to catch-all when no match (T12)', function (): void {
+    MultiOutcomeChildMachine::fake(finalState: 'unknown');
+
+    $machine = MachineDefinition::define(config: [
+        'id'     => 'fake_fallback', 'initial' => 'idle', 'context' => [],
+        'states' => [
+            'idle'       => ['on' => ['GO' => 'delegating']],
+            'delegating' => [
+                'machine'        => MultiOutcomeChildMachine::class,
+                '@done.approved' => 'completed',
+                '@done'          => 'fallback',
+            ],
+            'completed' => ['type' => 'final'],
+            'fallback'  => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    expect($state->value)->toBe(['fake_fallback.fallback']);
+});
+
+it('fake() without finalState falls through to @done catch-all (T13)', function (): void {
+    MultiOutcomeChildMachine::fake();
+
+    $machine = MachineDefinition::define(config: [
+        'id'     => 'fake_no_fs', 'initial' => 'idle', 'context' => [],
+        'states' => [
+            'idle'       => ['on' => ['GO' => 'delegating']],
+            'delegating' => [
+                'machine'        => MultiOutcomeChildMachine::class,
+                '@done.approved' => 'completed',
+                '@done'          => 'fallback',
+            ],
+            'completed' => ['type' => 'final'],
+            'fallback'  => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    expect($state->value)->toBe(['fake_no_fs.fallback']);
+});
+
+it('fake(finalState:) with result data provides both in event (T14)', function (): void {
+    MultiOutcomeChildMachine::fake(result: ['payment_id' => 'pay_123'], finalState: 'approved');
+
+    $capturedFinalState = null;
+    $capturedPaymentId  = null;
+
+    $machine = MachineDefinition::define(
+        config: [
+            'id'     => 'fake_data', 'initial' => 'idle', 'context' => ['payment_id' => null],
+            'states' => [
+                'idle'       => ['on' => ['GO' => 'delegating']],
+                'delegating' => [
+                    'machine'        => MultiOutcomeChildMachine::class,
+                    '@done.approved' => ['target' => 'completed', 'actions' => 'storeAction'],
+                    '@done'          => 'fallback',
+                ],
+                'completed' => ['type' => 'final'],
+                'fallback'  => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'storeAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedFinalState, &$capturedPaymentId): void {
+                    $capturedFinalState = $event->finalState();
+                    $capturedPaymentId  = $event->output('payment_id');
+                },
+            ],
+        ],
+    );
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    expect($state->value)->toBe(['fake_data.completed'])
+        ->and($capturedFinalState)->toBe('approved')
+        ->and($capturedPaymentId)->toBe('pay_123');
 });
 
 // ─── Cleanup in afterEach ────────────────────────────────────────
