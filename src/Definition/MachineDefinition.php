@@ -1569,6 +1569,7 @@ class MachineDefinition
             );
 
             if ($branch instanceof TransitionBranch) {
+                $state->lastChildDoneRoute = $finalState;
                 $this->executeChildTransitionBranch($state, $stateDefinition, $branch, $doneEvent);
 
                 return;
@@ -1587,6 +1588,7 @@ class MachineDefinition
             return;
         }
 
+        $state->lastChildDoneRoute = null;
         $this->executeChildTransitionBranch($state, $stateDefinition, $branch, $doneEvent);
     }
 
