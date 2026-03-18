@@ -93,11 +93,12 @@ For fast tests, use SQLite in-memory. This eliminates migration overhead and dis
 ```
 Single behavior in isolation?         → State::forTesting() + runWithState()
 Full machine flow?                    → TestMachine::create() or define()
-Child delegation?                     → Machine::fake() + send()
-Async child completion?               → Queue::fake() + ChildMachineCompletionJob
+Child delegation?                     → fakingChild() + assertChildInvoked()
+Async child completion?               → simulateChildDone() / simulateChildFail()
 Timer behavior?                       → advanceTimers() / processTimers()
-Forward endpoints?                    → MachineRouter::register() + postJson()
-Cross-machine communication?          → Queue::fake() for dispatchTo
+Forward endpoints?                    → withRunningChild() + postJson()
+Cross-machine communication?          → recordingCommunication() + assertSentTo()
+Async dispatch verification?          → Queue::fake() + assertDispatchedTo()
 Full async pipeline / real infra?     → See "When Fakes Aren't Enough" below
 ```
 
