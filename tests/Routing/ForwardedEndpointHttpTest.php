@@ -5,8 +5,11 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Routing\MachineRouter;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ForwardEndpointAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\FqcnForwardParentMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\RenameForwardParentMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ForwardChildEndpointMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ForwardParentEndpointMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\FullConfigForwardParentMachine;
 
@@ -74,6 +77,26 @@ function createAndStartFqcnMachine(object $testCase): string
     return $machineId;
 }
 
+/**
+ * Create parent, start, verify child for RenameForwardParentMachine.
+ */
+function createAndStartRenameMachine(object $testCase): string
+{
+    $createResponse = $testCase->postJson('/api/rename/create');
+    $createResponse->assertStatus(201);
+
+    $machineId = $createResponse->json('data.machine_id');
+
+    $testCase->postJson("/api/rename/{$machineId}/start");
+
+    $childRecord = MachineChild::where('parent_root_event_id', $machineId)->first();
+
+    expect($childRecord)->not->toBeNull()
+        ->and($childRecord->status)->toBe(MachineChild::STATUS_RUNNING);
+
+    return $machineId;
+}
+
 // ─── Setup ────────────────────────────────────────────────────────────
 
 beforeEach(function (): void {
@@ -93,6 +116,12 @@ beforeEach(function (): void {
 
     MachineRouter::register(FqcnForwardParentMachine::class, [
         'prefix'       => '/api/fqcn',
+        'create'       => true,
+        'machineIdFor' => ['START'],
+    ]);
+
+    MachineRouter::register(RenameForwardParentMachine::class, [
+        'prefix'       => '/api/rename',
         'create'       => true,
         'machineIdFor' => ['START'],
     ]);
@@ -459,4 +488,31 @@ test('forwarded endpoint with non-existent machineId returns error', function ()
     ]);
 
     expect($response->status())->toBeGreaterThanOrEqual(400);
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Rename Forward via HTTP (Format 2)
+// ═══════════════════════════════════════════════════════════════════════
+
+test('rename forward CANCEL_ORDER → ABORT works via HTTP endpoint', function (): void {
+    $machineId = createAndStartRenameMachine($this);
+
+    // Child starts at awaiting_card. ABORT is only valid in awaiting_confirmation.
+    // First advance child to awaiting_confirmation via PROVIDE_CARD (plain forward would
+    // be needed, but RenameForwardParentMachine only forwards CANCEL_ORDER).
+    // So we advance child directly via Machine::send.
+    $childRecord      = MachineChild::where('parent_root_event_id', $machineId)->first();
+    $childRootEventId = $childRecord->child_root_event_id;
+
+    $child = ForwardChildEndpointMachine::create(state: $childRootEventId);
+    $child->send(['type' => 'PROVIDE_CARD', 'payload' => ['card_number' => '4242424242424242']]);
+
+    // Now POST to the rename forward endpoint — CANCEL_ORDER should be forwarded as ABORT to child
+    $response = $this->postJson("/api/rename/{$machineId}/cancel-order");
+
+    $response->assertStatus(200);
+
+    // Verify child transitioned to aborted
+    $childCs = MachineCurrentState::where('root_event_id', $childRootEventId)->first();
+    expect($childCs->state_id)->toContain('aborted');
 });

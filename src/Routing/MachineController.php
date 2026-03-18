@@ -303,9 +303,18 @@ class MachineController extends Controller
 
         $action?->before();
 
-        // 3. Send to parent (triggers tryForwardEventToChild internally)
+        // 3. Send to parent using PARENT event type (tryForwardEventToChild resolves
+        //    the forward mapping by parent event type, not child event type).
+        //    The child EventBehavior was used for validation above; now we send
+        //    with parent type + validated payload so the forward mapping works
+        //    correctly for rename and child_event configurations.
+        $parentEventType = $defaults['_event_type'];
+
         try {
-            $state = $machine->send(event: $event);
+            $state = $machine->send([
+                'type'    => $parentEventType,
+                'payload' => $event->payload ?? [],
+            ]);
         } catch (MachineValidationException $e) { // @phpstan-ignore catch.neverThrown
             return response()->json([
                 'message' => $e->getMessage(),
