@@ -953,3 +953,39 @@ it('@done.{state} on state with on transitions work independently (T33)', functi
     // Child auto-completes, @done.approved fires
     expect($state->value)->toBe(['mixed_events.completed']);
 });
+
+it('@done.{state} with calculators runs calculator before guard (T31)', function (): void {
+    $calculatorRan = false;
+
+    $machine = MachineDefinition::define(
+        config: [
+            'id'     => 'calc_test', 'initial' => 'idle', 'context' => ['total' => 0],
+            'states' => [
+                'idle'       => ['on' => ['GO' => 'delegating']],
+                'delegating' => [
+                    'machine'        => ImmediateApprovedChildMachine::class,
+                    '@done.approved' => [
+                        'target'      => 'completed',
+                        'calculators' => 'computeTotalCalculator',
+                    ],
+                ],
+                'completed' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'calculators' => [
+                'computeTotalCalculator' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$calculatorRan): void {
+                    $calculatorRan = true;
+                    $ctx->set('total', 42);
+                },
+            ],
+        ],
+    );
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    expect($state->value)->toBe(['calc_test.completed'])
+        ->and($calculatorRan)->toBeTrue()
+        ->and($state->context->get('total'))->toBe(42);
+});
