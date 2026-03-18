@@ -23,6 +23,7 @@ Parent Context
     │       output:        <filtered context or full context>,
     │       machine_id:    <child's root_event_id>,
     │       machine_class: <child's FQCN>,
+    │       final_state:   <child's final state key>,
     │     }
     │
     └── @done actions write to parent context
@@ -91,6 +92,9 @@ class StorePaymentResultAction extends ActionBehavior
         // Child identity
         $childId    = $event->childMachineId();
         $childClass = $event->childMachineClass();
+
+        // Which final state the child reached (for @done.{state} routing)
+        $finalState = $event->finalState(); // 'approved', 'rejected', etc.
     }
 }
 ```
@@ -101,6 +105,7 @@ class StorePaymentResultAction extends ActionBehavior
 | `result(?$key)` | `mixed` | ResultBehavior output (if defined on final state) |
 | `childMachineId()` | `string` | Child's `root_event_id` |
 | `childMachineClass()` | `string` | Child's FQCN |
+| `finalState()` | `?string` | The child's final state key name (e.g., `'approved'`). Used for `@done.{state}` routing. |
 
 ## Child → Parent: The `@fail` Event
 
