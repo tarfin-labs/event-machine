@@ -794,4 +794,90 @@ it('rejects @done. with empty suffix (T29)', function (): void {
     );
 });
 
+// region @done.{state} Coverage Validation
+
+it('passes when all child final states are covered by @done.{state} (T23)', function (): void {
+    expect(fn () => StateConfigValidator::validate([
+        'id'      => 'parent',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'machine'        => MultiOutcomeChildMachine::class,
+                '@done.approved' => 'completed',
+                '@done.rejected' => 'declined',
+                '@done.expired'  => 'timed_out',
+            ],
+            'completed' => ['type' => 'final'],
+            'declined'  => ['type' => 'final'],
+            'timed_out' => ['type' => 'final'],
+        ],
+    ]))->not->toThrow(InvalidArgumentException::class);
+});
+
+it('throws when child final states are uncovered without catch-all (T24)', function (): void {
+    expect(fn () => StateConfigValidator::validate([
+        'id'      => 'parent',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'machine'        => MultiOutcomeChildMachine::class,
+                '@done.approved' => 'completed',
+                '@done.rejected' => 'declined',
+                // missing @done.expired and no @done catch-all
+            ],
+            'completed' => ['type' => 'final'],
+            'declined'  => ['type' => 'final'],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: 'uncovered final states: expired'
+    );
+});
+
+it('passes when catch-all @done covers remaining final states (T25)', function (): void {
+    expect(fn () => StateConfigValidator::validate([
+        'id'      => 'parent',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'machine'        => MultiOutcomeChildMachine::class,
+                '@done.approved' => 'completed',
+                '@done'          => 'fallback',
+            ],
+            'completed' => ['type' => 'final'],
+            'fallback'  => ['type' => 'final'],
+        ],
+    ]))->not->toThrow(InvalidArgumentException::class);
+});
+
+it('passes with only @done and no dot notation — backward compatible (T26)', function (): void {
+    expect(fn () => StateConfigValidator::validate([
+        'id'      => 'parent',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'machine' => MultiOutcomeChildMachine::class,
+                '@done'   => 'completed',
+            ],
+            'completed' => ['type' => 'final'],
+        ],
+    ]))->not->toThrow(InvalidArgumentException::class);
+});
+
+it('skips coverage validation when child class does not exist (T27)', function (): void {
+    expect(fn () => StateConfigValidator::validate([
+        'id'      => 'parent',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'machine'        => 'NonExistent\\Machine',
+                '@done.approved' => 'completed',
+            ],
+            'completed' => ['type' => 'final'],
+        ],
+    ]))->not->toThrow(InvalidArgumentException::class);
+});
+
+// endregion @done.{state} Coverage Validation
+
 // endregion @done.{state} Validation
