@@ -42,6 +42,14 @@ class State implements \JsonSerializable
     public array $activeChildren = [];
 
     /**
+     * The @done.{state} route key that was matched during child completion routing.
+     *
+     * Set to the final state key when a specific @done.{state} branch fires.
+     * Set to null when the catch-all @done fires. Transient — not persisted.
+     */
+    public ?string $lastChildDoneRoute = null;
+
+    /**
      * Constructs a new instance of the class.
      *
      * @param  ContextManager  $context  The context manager instance.
