@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Testing;
 
-use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use PHPUnit\Framework\Assert;
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Actor\State;
@@ -43,10 +43,10 @@ class TestMachine
     /** @var array<string> Child machine classes registered via fakingChild() */
     private array $fakedChildMachines = [];
 
-    /** @var Carbon|null When the current state was entered (in-memory timer mode) */
-    private ?Carbon $inMemoryStateEnteredAt = null;
+    /** @var CarbonInterface|null When the current state was entered (in-memory timer mode) */
+    private ?CarbonInterface $inMemoryStateEnteredAt = null;
 
-    /** @var array<string, array{last_fired_at: Carbon, fire_count: int, status: string}> In-memory timer fire records */
+    /** @var array<string, array{last_fired_at: CarbonInterface, fire_count: int, status: string}> In-memory timer fire records */
     private array $inMemoryTimerFires = [];
 
     /** @var string|null Last tracked state ID for detecting transitions (in-memory timer mode) */
@@ -1126,7 +1126,7 @@ class TestMachine
      */
     private function advanceTimersInMemory(Timer $duration): self
     {
-        if (!$this->inMemoryStateEnteredAt instanceof Carbon) {
+        if (!$this->inMemoryStateEnteredAt instanceof CarbonInterface) {
             return $this;
         }
 
