@@ -130,6 +130,11 @@ class Machine implements Castable, JsonSerializable, Stringable
         MachineDefinition|array|null $definition = null,
         State|string|null $state = null,
     ): self {
+        // Faked: return stub without DB restore or start()
+        if (static::isMachineFaked()) {
+            return static::createFaked();
+        }
+
         if (is_array($definition)) {
             $definition = MachineDefinition::define(
                 config: $definition['config'] ?? null,
@@ -141,6 +146,30 @@ class Machine implements Castable, JsonSerializable, Stringable
         $machine->definition->machineClass = static::class;
 
         $machine->start($state);
+
+        return $machine;
+    }
+
+    /**
+     * Create a faked machine stub — no DB restore, no start().
+     *
+     * send() and persist() become no-ops on the returned instance.
+     */
+    protected static function createFaked(): self
+    {
+        $fake = self::getMachineFake(static::class);
+
+        $machine                            = self::withDefinition(static::definition());
+        $machine->definition->machineClass  = static::class;
+        $machine->definition->shouldPersist = false;
+        $machine->isFakedInstance           = true;
+
+        $machine->state = new State(
+            context: new ContextManager(data: $fake['result'] ?? []),
+            currentStateDefinition: null,
+        );
+
+        self::$machineFakes[static::class]['creations'][] = [];
 
         return $machine;
     }
@@ -219,6 +248,20 @@ class Machine implements Castable, JsonSerializable, Stringable
     public function send(
         EventBehavior|array|string $event,
     ): State {
+        if ($this->isFakedInstance) {
+            $eventType = match (true) {
+                is_array($event)                => $event['type'] ?? null,
+                $event instanceof EventBehavior => $event->type,
+                default                         => $event,
+            };
+
+            self::$machineFakes[$this->definition->machineClass]['sends'][] = [
+                'type' => $eventType,
+            ];
+
+            return $this->state;
+        }
+
         $lockHandle = null;
 
         if ($this->state instanceof State && config('machine.parallel_dispatch.enabled', false)) {
@@ -351,6 +394,10 @@ class Machine implements Castable, JsonSerializable, Stringable
      */
     public function persist(): ?State
     {
+        if ($this->isFakedInstance) {
+            return $this->state;
+        }
+
         // Retrieve the previous context from the definition's config, or set it to an empty array if not set.
         $incrementalContext = $this->definition->initializeContextFromState()->toArray();
 
@@ -825,6 +872,104 @@ class Machine implements Castable, JsonSerializable, Stringable
         throw new AssertionFailedError(
             'Expected machine ['.static::class.'] to be invoked with '.json_encode($expected).', but no invocation matched. Actual invocations: '.json_encode($invocations)
         );
+    }
+
+    /**
+     * Assert create() was called on a faked machine at least once.
+     */
+    public static function assertCreated(): void
+    {
+        $creations = self::$machineFakes[static::class]['creations'] ?? [];
+
+        if ($creations === []) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class.'] to be created, but it was not.'
+            );
+        }
+    }
+
+    /**
+     * Assert create() was NOT called on a faked machine.
+     */
+    public static function assertNotCreated(): void
+    {
+        $creations = self::$machineFakes[static::class]['creations'] ?? [];
+
+        if ($creations !== []) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class.'] not to be created, but it was created '.count($creations).' time(s).'
+            );
+        }
+    }
+
+    /**
+     * Assert create() was called exactly N times.
+     */
+    public static function assertCreatedTimes(int $times): void
+    {
+        $creations = self::$machineFakes[static::class]['creations'] ?? [];
+        $actual    = count($creations);
+
+        if ($actual !== $times) {
+            throw new AssertionFailedError(
+                'Expected machine ['.static::class.'] to be created '.$times.' time(s), but was created '.$actual.' time(s).'
+            );
+        }
+    }
+
+    /**
+     * Assert send() was called with the given event type on a faked machine.
+     */
+    public static function assertSent(string $eventType): void
+    {
+        $sends = self::$machineFakes[static::class]['sends'] ?? [];
+
+        foreach ($sends as $send) {
+            if ($send['type'] === $eventType) {
+                return;
+            }
+        }
+
+        throw new AssertionFailedError(
+            'Expected event ['.$eventType.'] to be sent to ['.static::class.'], but it was not.'
+        );
+    }
+
+    /**
+     * Assert send() was NOT called with the given event type.
+     */
+    public static function assertNotSent(string $eventType): void
+    {
+        $sends = self::$machineFakes[static::class]['sends'] ?? [];
+
+        foreach ($sends as $send) {
+            if ($send['type'] === $eventType) {
+                throw new AssertionFailedError(
+                    'Expected event ['.$eventType.'] not to be sent to ['.static::class.'], but it was.'
+                );
+            }
+        }
+    }
+
+    /**
+     * Assert send() was called with the given event type exactly N times.
+     */
+    public static function assertSentTimes(string $eventType, int $times): void
+    {
+        $sends = self::$machineFakes[static::class]['sends'] ?? [];
+        $count = 0;
+
+        foreach ($sends as $send) {
+            if ($send['type'] === $eventType) {
+                $count++;
+            }
+        }
+
+        if ($count !== $times) {
+            throw new AssertionFailedError(
+                'Expected event ['.$eventType.'] to be sent to ['.static::class.'] '.$times.' time(s), but was sent '.$count.' time(s).'
+            );
+        }
     }
 
     /**
