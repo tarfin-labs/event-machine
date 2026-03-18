@@ -61,6 +61,36 @@ Machine::resetMachineFakes();
 
 `assertInvokedWith()` checks that **at least one** invocation contains the expected key-value pairs (subset matching).
 
+## TestMachine Fluent API for Delegation
+
+The `TestMachine` fluent API integrates child delegation testing directly into the chain — no separate static calls needed:
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->fakingChild(PaymentMachine::class, result: ['id' => 'pay_1'], finalState: 'approved')
+    ->send('PLACE_ORDER')
+    ->assertState('completed')
+    ->assertChildInvoked(PaymentMachine::class)
+    ->assertChildInvokedWith(PaymentMachine::class, ['order_id' => 'ORD-1'])
+    ->assertRoutedViaDoneState('approved');
+```
+
+This is the **recommended approach** for delegation testing. It handles cleanup automatically via `resetFakes()`.
+
+For async simulation (parent already waiting for child):
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->send('START_ASYNC_PAYMENT')
+    ->assertState('awaiting_payment')
+    ->simulateChildDone(PaymentMachine::class, result: ['id' => 'pay_1'], finalState: 'approved')
+    ->assertState('completed');
+```
+
+See [TestMachine — Child Delegation Assertions](/testing/test-machine#child-delegation-assertions) and [TestMachine — Async Simulation](/testing/test-machine#async-simulation) for the full API reference.
+
 ## Testing Per-Final-State Routing
 
 When a child machine has multiple final states, use `Machine::fake(finalState: ...)` to test which `@done.{state}` route fires:
