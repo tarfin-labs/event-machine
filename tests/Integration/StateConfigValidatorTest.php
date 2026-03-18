@@ -927,6 +927,23 @@ it('@done.{state} referencing non-final child state is flagged by coverage valid
     );
 });
 
+it('rejects @done.{state} keys on state without machine delegation', function (): void {
+    expect(fn () => StateConfigValidator::validate([
+        'id'      => 'parent',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                '@done.approved' => 'completed',
+                'on'             => ['GO' => 'completed'],
+            ],
+            'completed' => ['type' => 'final'],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: '@done.{state}'
+    );
+});
+
 // endregion @done.{state} Fire-and-Forget + Non-Final
 
 // endregion @done.{state} Validation

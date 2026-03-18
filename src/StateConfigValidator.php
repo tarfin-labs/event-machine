@@ -176,6 +176,14 @@ class StateConfigValidator
             }
         }
 
+        // @done.{state} requires machine delegation
+        if (self::hasDoneDotKeys($stateConfig) && !isset($stateConfig['machine'])) {
+            throw new InvalidArgumentException(
+                message: "State '{$path}' has @done.{state} keys but no 'machine' delegation. "
+                    .'Per-final-state routing is only valid on states that delegate to a child machine.'
+            );
+        }
+
         // Validate machine delegation configuration (after @done.{state} validation)
         if (isset($stateConfig['machine'])) {
             self::validateMachineConfig($stateConfig, $path);
