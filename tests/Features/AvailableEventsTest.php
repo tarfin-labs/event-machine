@@ -399,6 +399,41 @@ test('it excludes forward events when parent is not in delegating state', functi
         ->and(array_column($events, 'type'))->toBe(['START']);
 });
 
+test('it excludes forward events when child is in PENDING status', function (): void {
+    Queue::fake();
+
+    $parent = ForwardParentEndpointMachine::create();
+    $parent->send(['type' => 'START']);
+
+    // Parent should be in processing state (delegating)
+    expect($parent->state->currentStateDefinition->id)->toBe('forward_endpoint_parent.processing');
+
+    // The async dispatch created a MachineChild record with status=pending
+    $childRecord = MachineChild::first();
+    expect($childRecord)->not->toBeNull()
+        ->and($childRecord->status)->toBe(MachineChild::STATUS_PENDING);
+
+    // Create a child machine and persist to get MachineCurrentState
+    $childMachine = ForwardChildEndpointMachine::create();
+    $childRootId  = $childMachine->state->history->first()->root_event_id;
+    $childMachine->persist();
+
+    // Link child_root_event_id but keep status as PENDING (job hasn't run yet)
+    $childRecord->update([
+        'child_root_event_id' => $childRootId,
+        // status remains PENDING — child hasn't started processing
+    ]);
+
+    // availableEvents should NOT include forward events for PENDING children
+    // because tryForwardEventToChild only accepts RUNNING children
+    $events  = $parent->state->availableEvents();
+    $sources = array_column($events, 'source');
+
+    expect($sources)->not->toContain('forward')
+        ->and(array_column($events, 'type'))->toContain('CANCEL')
+        ->and(array_column($events, 'type'))->not->toContain('PROVIDE_CARD');
+});
+
 test('it returns both forward and parent on-events together', function (): void {
     Queue::fake();
 

@@ -497,7 +497,7 @@ class State implements \JsonSerializable
         }
 
         $childRecord = MachineChild::where('parent_root_event_id', $rootEventId)
-            ->whereIn('status', [MachineChild::STATUS_PENDING, MachineChild::STATUS_RUNNING])
+            ->where('status', MachineChild::STATUS_RUNNING)
             ->first();
 
         if ($childRecord === null || $childRecord->child_root_event_id === null) {
