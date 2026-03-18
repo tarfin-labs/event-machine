@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
-use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
@@ -13,7 +12,6 @@ uses(LocalQATestCase::class);
 
 beforeEach(function (): void {
     LocalQATestCase::cleanTables();
-    Machine::resetMachineFakes();
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -66,5 +64,4 @@ it('LocalQA: machine faking works with async delegation', function (): void {
     expect($completed)->toBeTrue('Faked delegation not completed');
 
     ImmediateChildMachine::assertInvoked();
-    Machine::resetMachineFakes();
 });

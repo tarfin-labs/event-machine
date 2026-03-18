@@ -25,11 +25,6 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\MultiOutcomeChi
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateApprovedChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateRejectedChildMachine;
 
-afterEach(function (): void {
-    Machine::resetMachineFakes();
-    CommunicationRecorder::reset();
-});
-
 // ═══════════════════════════════════════════════════════════════
 //  Category 1: Child Delegation (11 tests)
 // ═══════════════════════════════════════════════════════════════

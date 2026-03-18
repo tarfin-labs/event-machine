@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
-use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
 use Tarfinlabs\EventMachine\StateConfigValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,10 +18,6 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FireAndForgetAl
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FireAndForgetTargetParentMachine;
 
 uses(RefreshDatabase::class);
-
-afterEach(function (): void {
-    Machine::resetMachineFakes();
-});
 
 // ─── Fire-and-Forget Machine Config Validation ───────────────────
 

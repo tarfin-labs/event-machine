@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\DoneDotParentMachine;
@@ -14,7 +13,6 @@ uses(LocalQATestCase::class);
 
 beforeEach(function (): void {
     LocalQATestCase::cleanTables();
-    Machine::resetMachineFakes();
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -82,5 +80,4 @@ it('LocalQA: Machine::fake(finalState:) short-circuits async @done.{state} routi
     expect($completed)->toBeTrue('Faked @done.approved routing not completed');
 
     ImmediateApprovedChildMachine::assertInvoked();
-    Machine::resetMachineFakes();
 });
