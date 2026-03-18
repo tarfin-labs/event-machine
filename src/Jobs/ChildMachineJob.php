@@ -130,6 +130,7 @@ class ChildMachineJob implements ShouldQueue
                     $childMachine->state->currentStateDefinition,
                     $childMachine->state->context,
                 ),
+                childFinalState: $childMachine->state->currentStateDefinition->key,
             ));
         }
 

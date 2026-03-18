@@ -443,6 +443,7 @@ class MachineController extends Controller
                 $state->currentStateDefinition,
                 $state->context,
             ),
+            childFinalState: $state->currentStateDefinition->key,
         ));
     }
 }

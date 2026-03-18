@@ -1484,6 +1484,7 @@ class MachineDefinition
                     $childMachine->state->currentStateDefinition,
                     $childMachine->state->context,
                 ),
+                childFinalState: $childMachine->state->currentStateDefinition->key,
             ));
         }
 
@@ -1548,10 +1549,34 @@ class MachineDefinition
     /**
      * Route a @done transition using a pre-built ChildMachineDoneEvent.
      *
+     * Resolution order:
+     * 1. Try specific @done.{finalState} if the event carries a final state key
+     * 2. Fall back to @done catch-all
+     * 3. No match → no transition
+     *
      * Used by both sync (handleMachineInvoke) and async (ChildMachineCompletionJob).
      */
     public function routeChildDoneEvent(State $state, StateDefinition $stateDefinition, ChildMachineDoneEvent $doneEvent): void
     {
+        $finalState = $doneEvent->finalState();
+
+        // 1. Try specific @done.{finalState} first
+        if ($finalState !== null && isset($stateDefinition->onDoneStateTransitions[$finalState])) {
+            $branch = $this->resolveOnDoneOrFailBranch(
+                $stateDefinition->onDoneStateTransitions[$finalState],
+                $state,
+                $doneEvent,
+            );
+
+            if ($branch instanceof TransitionBranch) {
+                $this->executeChildTransitionBranch($state, $stateDefinition, $branch, $doneEvent);
+
+                return;
+            }
+            // Guard failed on specific route → fall through to catch-all
+        }
+
+        // 2. Fall back to @done catch-all
         if (!$stateDefinition->onDoneTransition instanceof TransitionDefinition) {
             return;
         }
