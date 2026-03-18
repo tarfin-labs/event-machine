@@ -180,11 +180,9 @@ EventMachine is ideal for:
 - **Audit requirements** - financial, compliance, legal
 - **Complex conditional logic** - many if/else branches
 
-EventMachine might be overkill for:
-
-- Simple CRUD operations
-- Stateless request/response
-- One-time operations without history needs
+::: tip Not sure if you need EventMachine?
+See [When Not to Use a State Machine](/getting-started/when-not-to-use) for a decision framework with a flowchart, real-world examples, and graduation signals.
+:::
 
 ::: tip Testing
 EventMachine is designed for testability. See [Testing Overview](/testing/overview) to get started.
