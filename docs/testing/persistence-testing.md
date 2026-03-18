@@ -509,3 +509,120 @@ it('handles special characters', function () { ... });
 ::: tip Detailed Guide
 For comprehensive design guidelines with Do/Don't examples, see [Testing Strategy](/best-practices/testing-strategy).
 :::
+
+## Testing machine_children Records
+
+The `machine_children` table tracks async child machine delegation lifecycle. Each record represents a parent-child relationship.
+
+### Status Lifecycle
+
+`pending` → `running` → `completed` | `failed` | `cancelled` | `timed_out`
+
+### Asserting Child Record Creation
+
+<!-- doctest-attr: no_run -->
+```php
+use Illuminate\Support\Facades\Queue;
+use Tarfinlabs\EventMachine\Models\MachineChild;
+
+it('creates MachineChild record on async delegation', function (): void {
+    Queue::fake();
+
+    $machine = ParentMachine::create();
+    $machine->send(['type' => 'START']);
+    $machine->persist();
+
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $child = MachineChild::where('parent_root_event_id', $rootEventId)->first();
+
+    expect($child)->not->toBeNull()
+        ->and($child->status)->toBe(MachineChild::STATUS_PENDING)
+        ->and($child->child_machine_class)->toBe(ChildMachine::class);
+});
+```
+
+### Querying Active Children
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Models\MachineChild;
+
+// Find running children for a parent
+$activeChildren = MachineChild::forParent($rootEventId)
+    ->withStatus(MachineChild::STATUS_RUNNING)
+    ->get();
+
+// Check if a child was cancelled
+$child = MachineChild::where('parent_root_event_id', $rootEventId)->first();
+expect($child->status)->toBe(MachineChild::STATUS_CANCELLED);
+```
+
+## Testing machine_current_states Records
+
+The `machine_current_states` table stores the normalized current state per machine instance. Updated on every state change. Used by timer/schedule commands to find machines in specific states.
+
+### Asserting Current State
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+
+it('updates current state on transition', function (): void {
+    $machine = OrderMachine::create();
+    $machine->send(['type' => 'SUBMIT']);
+    $machine->persist();
+
+    $rootEventId = $machine->state->history->first()->root_event_id;
+    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+
+    expect($cs)->not->toBeNull()
+        ->and($cs->state_id)->toContain('submitted');
+});
+```
+
+### Polling Pattern for Async Assertions
+
+When testing async operations, poll `machine_current_states` to wait for state changes:
+
+<!-- doctest-attr: no_run -->
+```php
+$completed = retry(30, function () use ($rootEventId) {
+    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+
+    return $cs && str_contains($cs->state_id, 'completed')
+        ? true
+        : throw new \Exception('waiting');
+}, sleepMilliseconds: 1000);
+
+expect($completed)->toBeTrue();
+```
+
+## Testing machine_timer_fires Records
+
+The `machine_timer_fires` table tracks timer registrations and fire history. Each `after` or `every` timer creates a record when the machine enters a state with a timer transition.
+
+### Asserting Timer Registration
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Models\MachineTimerFire;
+
+it('registers timer on state entry', function (): void {
+    $machine = OrderMachine::create();
+    $machine->send(['type' => 'SUBMIT']);
+    $machine->persist();
+
+    $rootEventId = $machine->state->history->first()->root_event_id;
+    $timer = MachineTimerFire::where('root_event_id', $rootEventId)
+        ->where('event_type', 'ORDER_EXPIRED')
+        ->first();
+
+    expect($timer)->not->toBeNull()
+        ->and($timer->fire_at)->not->toBeNull();
+});
+```
+
+### Timer Deduplication
+
+`every` (recurring) timers use deduplication — the same timer won't create duplicate records if the machine re-enters the state. The `machine_timer_fires` table uses a composite unique constraint to prevent this.
