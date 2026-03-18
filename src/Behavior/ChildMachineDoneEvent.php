@@ -87,4 +87,22 @@ class ChildMachineDoneEvent extends EventBehavior
             'source'  => SourceType::INTERNAL,
         ]);
     }
+
+    /**
+     * Create an instance with sensible defaults for unit testing guards/actions.
+     *
+     * Only the data you care about needs to be provided — machine identity
+     * fields are filled with harmless defaults.
+     *
+     * @param  array  $attributes  Payload keys to override (result, output, machine_id, machine_class, final_state).
+     */
+    public static function forTesting(array $attributes = []): static
+    {
+        return static::forChild(array_merge([
+            'result'        => [],
+            'output'        => [],
+            'machine_id'    => 'test',
+            'machine_class' => 'TestMachine',
+        ], $attributes));
+    }
 }
