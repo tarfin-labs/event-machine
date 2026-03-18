@@ -235,3 +235,102 @@ One particularly measurable graduation trigger is **boolean explosion**. If you 
 Consider a support ticket with 4 statuses (`open`, `in_progress`, `resolved`, `closed`) and 3 boolean flags (`is_urgent`, `has_attachment`, `is_escalated`). That is 2³ × 4 = **32 implicit states**. A state machine with hierarchical states might model this as 6–8 explicit states — each with a clear name, clear transitions, and clear behavior.
 
 When your implicit state count exceeds your explicit state count by 2× or more, it is time to formalize.
+
+## Real-World Examples
+
+Theory is useful, but decisions happen in context. Here are four scenarios you will likely encounter, with the verdict and reasoning for each.
+
+### Blog Post Lifecycle — Enum
+
+| Aspect | Detail |
+|--------|--------|
+| States | `draft → published → archived` |
+| Triggers | Author clicks "Publish" or "Archive" |
+| Guards | None — any draft can be published, any published post can be archived |
+| Timers | None |
+| Side effects | None beyond the status change itself |
+
+**Verdict: Tier 1 (Enum).** Linear, three states, no branching, no guards, no side effects. A `PostStatus` enum and two model methods (`publish()`, `archive()`) is the simplest correct solution.
+
+```php ignore
+enum PostStatus: string
+{
+    case Draft     = 'draft';
+    case Published = 'published';
+    case Archived  = 'archived';
+}
+```
+
+---
+
+### User Invitation — Enum
+
+| Aspect | Detail |
+|--------|--------|
+| States | `pending → accepted` or `pending → expired` |
+| Triggers | User clicks invite link (accept) or cron job (expire) |
+| Guards | Token must match, invitation must not be expired |
+| Timers | Expiry after 7 days — handled by a scheduled command, not a state timer |
+
+**Verdict: Tier 1 (Enum).** Only three states. The branching is minimal (accepted vs expired). The "guard" is a token + timestamp comparison, not a complex business rule. The cron-based expiry is simpler than a state machine timer for this scale. If you later add "resend invitation", "revoke invitation", or "multi-step approval", re-evaluate.
+
+---
+
+### E-Commerce Order — EventMachine
+
+| Aspect | Detail |
+|--------|--------|
+| States | `pending`, `paid`, `shipped`, `delivered`, `cancelled`, `refunded` |
+| Triggers | User actions, payment webhooks, shipping API callbacks, timers |
+| Guards | "Can only refund within 30 days", "Can only ship if stock available" |
+| Timers | "Auto-cancel if unpaid after 24 hours" |
+| Audit | "Show me the complete order history" — compliance, customer support |
+| Side effects | Confirmation email on payment, warehouse notification on ship, inventory update |
+
+**Verdict: Tier 3 (EventMachine).** Non-linear flow (branching to `cancelled` from multiple states), real business-rule guards, timer-driven auto-cancellation, mandatory audit trail, side effects that must fire exactly once. This is what state machines are designed for.
+
+---
+
+### Support Ticket — EventMachine
+
+| Aspect | Detail |
+|--------|--------|
+| States | `open`, `assigned`, `in_progress`, `waiting_on_customer`, `escalated`, `resolved`, `closed` |
+| Triggers | Agent actions, customer replies, SLA timers, manager escalation |
+| Guards | "Can only escalate if open > 4 hours", "Can only close if customer confirmed resolution" |
+| Timers | "Auto-escalate if no response in 4 hours", "Auto-close 7 days after resolution" |
+| Backward flow | `waiting_on_customer → in_progress` (customer replies), `resolved → open` (customer reopens) |
+
+**Verdict: Tier 3 (EventMachine).** Seven states with non-trivial branching, backward transitions (reopen, reassign), SLA-driven timers, and guards based on time elapsed and customer interaction. The timer and guard logic alone justify EventMachine.
+
+## Start Simple, Graduate When It Hurts
+
+Start with Tier 1 (enum). It is the simplest correct solution for most status columns.
+
+When the [implicit state machine](#the-implicit-state-machine) starts causing pain — scattered validation, transition bugs, audit trail needs — evaluate Tier 2 or Tier 3:
+
+- **Tier 2 (Spatie)** if you need transition enforcement and state-specific behavior but nothing more.
+- **Tier 3 (EventMachine)** if you need timers, event sourcing, delegation, parallel states, or cross-machine communication.
+
+The migration path from enum to EventMachine is natural: status values become states, allowed transitions become `on` keys, if/else validation becomes guards, side effects become actions.
+
+For a detailed comparison of EventMachine with other libraries, see [Comparison](/getting-started/comparison).
+
+The best state machine is the one you don't build until you need it — and the one you _do_ build when the alternative is a bug factory.
+
+## Further Reading
+
+- [David Khourshid — You don't need a library for state machines](https://dev.to/davidkpiano/you-don-t-need-a-library-for-state-machines-k7h) — The XState creator on when a `switch` statement is enough
+- [Scott Logic — Finite State Machines: The Developer's Bug Spray](https://blog.scottlogic.com/2020/12/08/finite-state-machines.html) — The implicit vs explicit state machine argument
+- [Kevin Burke — State Machines](https://kevin.burke.dev/kevin/state-machines/) — The case for using state machines everywhere
+- [Statecharts.dev — State Explosion](https://statecharts.dev/state-machine-state-explosion.html) — The boolean explosion problem
+- [Martin Fowler — YAGNI](https://martinfowler.com/bliki/Yagni.html) — "You Aren't Gonna Need It"
+- [Edward Radau — State Machine Design Pattern](https://edwardradau.com/blog/state-machine-design-pattern) — When state machines are overkill
+- [Lawrence Jones — Database-powered state machines](https://blog.lawrencejones.dev/state-machines/) — GoCardless's approach to persistence
+
+## Related
+
+- [What is EventMachine?](/getting-started/what-is-event-machine) — When to use EventMachine
+- [Comparison](/getting-started/comparison) — Detailed feature comparison with Spatie, XState, Temporal, and more
+- [Machine Decomposition](/best-practices/machine-decomposition) — When to split a machine, when to keep it together
+- [Naming & Style](/building/conventions) — Naming conventions for states, events, and behaviors
