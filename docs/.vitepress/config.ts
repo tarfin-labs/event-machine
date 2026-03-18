@@ -81,6 +81,7 @@ export default withMermaid(
           collapsed: false,
           items: [
             { text: 'What is EventMachine?', link: '/getting-started/what-is-event-machine' },
+            { text: 'When Not to Use', link: '/getting-started/when-not-to-use' },
             { text: 'Comparison', link: '/getting-started/comparison' },
             { text: 'Installation', link: '/getting-started/installation' },
             { text: 'Your First Machine', link: '/getting-started/your-first-machine' },
