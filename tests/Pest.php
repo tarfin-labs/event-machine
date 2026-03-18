@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tarfinlabs\EventMachine\Testing\InteractsWithMachines;
 
 uses(
     TestCase::class,
     RefreshDatabase::class,
+    InteractsWithMachines::class,
 )->in(
     'Actor', 'Architecture', 'Behavior', 'Commands', 'Definition',
     'E2E', 'Examples', 'Features', 'Integration', 'Jobs',
