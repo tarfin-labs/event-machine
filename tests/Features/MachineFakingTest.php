@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
@@ -250,6 +251,23 @@ it('resetMachineFakes clears all fakes', function (): void {
 
     expect(ChildPaymentMachine::isMachineFaked())->toBeFalse()
         ->and(SimpleChildMachine::isMachineFaked())->toBeFalse();
+});
+
+it('TestMachine::resetFakes() clears child machine fakes', function (): void {
+    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_reset_test']);
+
+    expect(ChildPaymentMachine::isMachineFaked())->toBeTrue();
+
+    $testMachine = TestMachine::define([
+        'id'      => 'reset_test',
+        'initial' => 'idle',
+        'context' => [],
+        'states'  => ['idle' => ['type' => 'final']],
+    ]);
+
+    $testMachine->resetFakes();
+
+    expect(ChildPaymentMachine::isMachineFaked())->toBeFalse();
 });
 
 // ─── @done.{state} routing with Machine::fake() ─────────────────
