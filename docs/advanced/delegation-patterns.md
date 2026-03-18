@@ -65,6 +65,40 @@ OrderWorkflowMachine (orchestrator)
     └── invokes ShippingMachine    → @done → completed
 ```
 
+### Conditional Orchestration
+
+When a child machine has multiple outcomes, use `@done.{state}` for declarative routing instead of guards:
+
+<!-- doctest-attr: ignore -->
+```php
+'credit_check' => [
+    'machine' => CreditCheckMachine::class,
+    'with'    => ['applicant_id', 'loan_amount'],
+
+    '@done.approved'       => 'disbursement',
+    '@done.manual_review'  => 'underwriting',
+    '@done.rejected'       => 'declined',
+
+    '@fail' => 'system_error',
+],
+```
+
+**Reads as:** "The credit check can result in approval, manual review, or rejection — each routes to a different next step."
+
+Compare with the guard-based approach that achieves the same result:
+
+<!-- doctest-attr: ignore -->
+```php
+// Before: imperative routing via guards
+'@done' => [
+    ['target' => 'disbursement', 'guards' => 'isApprovedGuard'],
+    ['target' => 'underwriting', 'guards' => 'needsReviewGuard'],
+    ['target' => 'declined'],
+],
+```
+
+The `@done.{state}` approach makes the routing visible in the definition — you can read the orchestration flow without looking at guard implementations.
+
 ### Why No Separate System Class
 
 The orchestrator machine already declares everything:
