@@ -92,3 +92,7 @@ For complete context documentation including:
 - Complete examples
 
 See **[Working with Context](/building/working-with-context)**.
+
+::: tip Testing
+For context assertion methods (`assertContext`, `assertContextHas`), see [Testing Overview](/testing/overview).
+:::

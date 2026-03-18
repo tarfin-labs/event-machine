@@ -492,3 +492,24 @@ Each forwarded request:
 4. The parent calls `tryForwardEventToChild()` on the running child
 5. The child transitions to its next state
 6. The response includes both parent state and child state
+
+## Testing Orchestration Patterns
+
+<!-- doctest-attr: ignore -->
+```php
+// Fake multiple children for sequential orchestration
+ValidationMachine::fake(result: ['is_valid' => true]);
+PaymentMachine::fake(result: ['payment_id' => 'pay_1'], finalState: 'approved');
+
+OrderWorkflowMachine::test()
+    ->send('START')
+    ->assertState('completed');
+
+ValidationMachine::assertInvoked();
+PaymentMachine::assertInvoked();
+Machine::resetMachineFakes();
+```
+
+::: tip Full Testing Guide
+See [Delegation Testing](/testing/delegation-testing) for more examples.
+:::

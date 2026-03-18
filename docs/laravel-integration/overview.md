@@ -138,6 +138,7 @@ Cache::lock("machine:{$rootEventId}", 60)->block(5, function () {
 
 Events can be wrapped in database transactions:
 
+<!-- doctest-attr: no_run -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 
@@ -146,4 +147,8 @@ class CriticalEvent extends EventBehavior
     public bool $isTransactional = true; // Default
     public static function getType(): string { return 'CRITICAL'; } // [!code hide]
 }
+
+::: tip Testing
+For the complete testing guide, see [Testing Overview](/testing/overview).
+:::
 ```

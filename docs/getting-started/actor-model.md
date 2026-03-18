@@ -82,3 +82,7 @@ EventMachine receives events from multiple sources:
 - **Not a distributed system** — Single Laravel application (use Horizon for queue workers)
 - **Not hot-reloadable** — PHP reloads on every request by nature
 - **No request-response pattern** — Messages are one-way; use `@done` for results
+
+::: tip Testing
+Actors are testable in isolation. See [Testing Overview](/testing/overview).
+:::

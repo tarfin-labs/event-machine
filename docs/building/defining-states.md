@@ -313,3 +313,20 @@ MachineDefinition::define(
     'description' => 'Human readable text',
 ],
 ```
+
+## Testing State Definitions
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->assertState('idle')
+    ->send('SUBMIT')
+    ->assertState('submitted')
+    ->send('PAY')
+    ->assertState('paid')
+    ->assertFinished();  // verify final state
+```
+
+::: tip Full Testing Guide
+See [Transitions and Paths](/testing/transitions-and-paths) for more examples.
+:::

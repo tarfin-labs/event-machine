@@ -84,3 +84,22 @@ echo $state->matches('running'); // true
 ```
 
 If this works, EventMachine is installed correctly.
+
+## Testing Setup
+
+<!-- doctest-attr: ignore -->
+```php
+// In your Pest/PHPUnit test:
+uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+
+// EventMachine uses SQLite in-memory by default for tests.
+// Your first test:
+it('creates a machine', function (): void {
+    $machine = TrafficLightsMachine::create();
+    expect($machine->state->value)->not->toBeEmpty();
+});
+```
+
+::: tip Full Testing Guide
+See [Testing Overview](/testing/overview) for complete testing documentation.
+:::

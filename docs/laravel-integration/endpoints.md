@@ -1153,3 +1153,29 @@ Once all routes are migrated and tests pass, delete the old controller classes a
 ::: tip Incremental Migration
 You don't have to migrate all events at once. Only events listed in the `endpoints` array get auto-generated routes. Keep your existing controllers for events you haven't migrated yet, and move them one at a time.
 :::
+
+## Testing Endpoints
+
+<!-- doctest-attr: ignore -->
+```php
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tarfinlabs\EventMachine\Routing\MachineRouter;
+
+uses(RefreshDatabase::class);
+
+it('accepts event via endpoint', function (): void {
+    MachineRouter::register(OrderMachine::class, 'orders', 'order_mre');
+    $order = Order::create(['status' => 'pending']);
+
+    $response = $this->postJson("/orders/{$order->id}/submit", [
+        'payment_method' => 'card',
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('data.value.0', 'order.submitted');
+});
+```
+
+::: tip Full Testing Guide
+For comprehensive endpoint testing patterns, see [Testing Recipes](/testing/recipes).
+:::

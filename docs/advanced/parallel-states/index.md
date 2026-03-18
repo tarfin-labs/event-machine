@@ -248,3 +248,7 @@ See the linked guide for more patterns.
 ::: tip Detailed Guide
 For comprehensive design guidelines with Do/Don't examples, see [Parallel Patterns](/best-practices/parallel-patterns).
 :::
+
+::: tip Testing
+For parallel state testing patterns, see [Parallel Testing](/testing/parallel-testing).
+:::

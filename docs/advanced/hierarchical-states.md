@@ -511,6 +511,25 @@ The `matches()` method requires the full path to the leaf state. Partial paths o
 ],
 ```
 
+## Testing Hierarchical States
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->send('SUBMIT')
+    ->assertState('processing.validating')  // full compound path
+    ->send('VALIDATE')
+    ->assertState('processing.validated');
+
+// Use matches() for partial matching
+$state = OrderMachine::create()->send(['type' => 'SUBMIT']);
+expect($state->matches('processing'))->toBeTrue();
+```
+
+::: tip Full Testing Guide
+See [Transitions and Paths](/testing/transitions-and-paths) for more examples.
+:::
+
 ::: tip Detailed Guide
 For comprehensive design guidelines with Do/Don't examples, see [State Design](/best-practices/state-design) and [Event Bubbling](/best-practices/event-bubbling).
 :::

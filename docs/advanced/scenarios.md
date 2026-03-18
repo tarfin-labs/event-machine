@@ -434,8 +434,8 @@ OrderMachine::test()
     ->assertState('processing');
 ```
 
-::: tip
-Both approaches set the same `scenarioType` context key that `getScenarioStateIfAvailable()` reads. See [Recipes: Scenario Testing](/testing/recipes#recipe-scenario-testing) for more examples.
+::: tip Full Testing Guide
+For more testing recipes and patterns, see [Recipes](/testing/recipes).
 :::
 
 ## Best Practices

@@ -417,6 +417,30 @@ MachineEvent::where('payload->orderId', 123)->get();
 php artisan machine:archive-events --days=30
 ```
 
+## Testing Persistence
+
+<!-- doctest-attr: ignore -->
+```php
+// Disable persistence for fast unit tests
+OrderMachine::test()
+    ->withoutPersistence()
+    ->send('SUBMIT')
+    ->assertState('submitted');
+
+// Test persist/restore cycle
+$machine = OrderMachine::create();
+$machine->send(['type' => 'SUBMIT']);
+$machine->persist();
+
+$rootEventId = $machine->state->history->first()->root_event_id;
+$restored = OrderMachine::create(state: $rootEventId);
+expect($restored->state->matches('submitted'))->toBeTrue();
+```
+
+::: tip Full Testing Guide
+See [Persistence Testing](/testing/persistence-testing) for more examples.
+:::
+
 ::: tip Detailed Guide
 For comprehensive design guidelines with Do/Don't examples, see [Testing Strategy](/best-practices/testing-strategy).
 :::

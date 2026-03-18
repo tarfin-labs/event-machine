@@ -437,3 +437,7 @@ return [
 | `region_timeout` | `0` | Seconds before stuck parallel state triggers `@fail` (0 = disabled) |
 
 For details, see [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch).
+
+::: tip Testing
+For testing configuration options like `should_persist`, see [Testing Overview](/testing/overview).
+:::

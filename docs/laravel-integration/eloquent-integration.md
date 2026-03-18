@@ -437,6 +437,31 @@ public function submit(Order $order)
 }
 ```
 
+## Testing Eloquent Integration
+
+<!-- doctest-attr: ignore -->
+```php
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
+
+it('persists machine state via Eloquent', function (): void {
+    $order = Order::create(['status' => 'pending']);
+
+    // Access machine via cast
+    $machine = $order->order_mre;
+    $machine->send(['type' => 'SUBMIT']);
+
+    // Refresh and verify
+    $order->refresh();
+    expect($order->order_mre->state->matches('submitted'))->toBeTrue();
+});
+```
+
+::: tip Full Testing Guide
+See [Persistence Testing](/testing/persistence-testing) for more examples.
+:::
+
 ::: tip Detailed Guide
 For comprehensive design guidelines with Do/Don't examples, see [Best Practices Overview](/best-practices/).
 :::

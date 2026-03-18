@@ -372,6 +372,23 @@ $intersection->light->state->matches('yellow'); // true
 // and linked to this model
 ```
 
+## Testing Your Machine
+
+<!-- doctest-attr: ignore -->
+```php
+// Your first test — verify the traffic light responds to events
+TrafficLightsMachine::test()
+    ->assertState('active')
+    ->send('WALK')
+    ->assertState('walk')
+    ->send('STOP')
+    ->assertState('stop');
+```
+
+::: tip Full Testing Guide
+For a comprehensive introduction to testing machines, see [Testing Overview](/testing/overview).
+:::
+
 ## What You've Learned
 
 - **States** define distinct phases (`green`, `yellow`, `red`, `flashing`)

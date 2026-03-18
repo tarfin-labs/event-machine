@@ -96,3 +96,7 @@ For complete events documentation including:
 - Event source types (INTERNAL vs EXTERNAL)
 
 See **[Handling Events](/building/handling-events)**.
+
+::: tip Testing
+For testing events in isolation with `forTesting()`, see [Testing Overview](/testing/overview).
+:::

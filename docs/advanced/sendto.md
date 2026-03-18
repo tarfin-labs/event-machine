@@ -133,3 +133,24 @@ Progress events arrive as regular events on the parent's `on` map. The parent st
 3. **Sending to the parent?** → `sendToParent()` or `dispatchToParent()`
 4. **Must be processed immediately?** → sync (`sendTo` / `sendToParent`)
 5. **Can be processed later?** → async (`dispatchTo` / `dispatchToParent`)
+
+## Testing Cross-Machine Communication
+
+<!-- doctest-attr: ignore -->
+```php
+// Synchronous: record and assert
+ChildMachine::test()
+    ->recordingCommunication()
+    ->send('COMPLETE')
+    ->assertSentTo(ParentMachine::class, 'CHILD_COMPLETED');
+
+// Asynchronous: use Queue::fake
+Queue::fake();
+OrderMachine::test()
+    ->send('NOTIFY')
+    ->assertDispatchedTo(AuditMachine::class, 'ORDER_COMPLETED');
+```
+
+::: tip Full Testing Guide
+For comprehensive cross-machine communication testing patterns, see [Cross-Machine Communication Assertions](/testing/test-machine#cross-machine-communication-assertions).
+:::

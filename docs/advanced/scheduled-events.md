@@ -211,3 +211,17 @@ Scheduled events are dispatched via queue. Each job is a separate macrostep — 
 | What definition declares | Event mapping | Event + resolver |
 | What registration declares | Prefix, middleware, model | Cron, environments, macros |
 | Instance scope | Single (by ID) | All matching (by resolver/auto-detect) |
+
+## Testing Scheduled Events
+
+<!-- doctest-attr: ignore -->
+```php
+BillingMachine::test()
+    ->assertHasSchedule('MONTHLY_BILLING')
+    ->runSchedule('MONTHLY_BILLING')
+    ->assertState('billing_processed');
+```
+
+::: tip Full Testing Guide
+For comprehensive scheduled event testing patterns, see [Scheduled Testing](/testing/scheduled-testing).
+:::

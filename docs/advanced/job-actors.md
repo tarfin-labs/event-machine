@@ -130,3 +130,25 @@ Jobs support the same queue options as machine delegation:
     '@done'      => 'processed',
 ],
 ```
+
+## Testing Job Actors
+
+<!-- doctest-attr: ignore -->
+```php
+use Illuminate\Support\Facades\Queue;
+use Tarfinlabs\EventMachine\Jobs\ChildJobJob;
+
+Queue::fake();
+
+OrderMachine::test()
+    ->send('SEND_NOTIFICATION')
+    ->assertState('notified');
+
+Queue::assertPushed(ChildJobJob::class, function (ChildJobJob $job): bool {
+    return $job->jobClass === SendEmailJob::class;
+});
+```
+
+::: tip Full Testing Guide
+See [Testing Job Actors](/testing/delegation-testing#testing-job-actors) for more examples.
+:::

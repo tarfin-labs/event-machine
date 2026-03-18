@@ -366,6 +366,10 @@ it('processes raised events in order', function () {
 });
 ```
 
+::: tip Full Testing Guide
+For transition and raised event testing, see [Transitions & Paths](/testing/transitions-and-paths).
+:::
+
 ## Best Practices
 
 ### 1. Use for Workflow Progression

@@ -371,3 +371,7 @@ stateDiagram-v2
     'states' => [...],
 ]
 ```
+
+::: tip Testing
+For testing state transitions, guard pass/fail, and multi-step paths, see [Transitions & Paths](/testing/transitions-and-paths).
+:::

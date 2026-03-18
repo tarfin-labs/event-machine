@@ -252,6 +252,23 @@ Forward events only appear when the child's **current state** has a matching tra
 
 Regular (non-forwarded) endpoints include `available_events` in the response by default. Forward endpoints do not include `available_events` in their default response shape. To get `available_events` from a forward endpoint, use a custom `ResultBehavior` with `ForwardContext` injection and call `$forwardContext->childState->availableEvents()`.
 
+## Testing Data Flow
+
+<!-- doctest-attr: ignore -->
+```php
+PaymentMachine::fake(result: ['payment_id' => 'pay_123', 'status' => 'settled']);
+
+OrderMachine::test()
+    ->send('START_PAYMENT')
+    ->assertContext('payment_id', 'pay_123');
+
+Machine::resetMachineFakes();
+```
+
+::: tip Full Testing Guide
+See [Delegation Testing](/testing/delegation-testing) for more examples.
+:::
+
 ::: tip Forward vs @done
 Unlike `@done` data flow, forward responses go directly to the HTTP caller. The parent context is **not** modified -- the child state is included in the response for the caller's benefit, but the parent machine remains in its delegating state.
 :::

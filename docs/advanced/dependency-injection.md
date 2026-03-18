@@ -353,7 +353,9 @@ public function register(): void
 
 ## Testing with DI
 
-> **Canonical reference:** [Testing with Constructor DI](/testing/constructor-di)
+::: tip Full Testing Guide
+For complete constructor DI testing patterns, see [Constructor DI Testing](/testing/constructor-di).
+:::
 
 ### Quick Example
 

@@ -53,6 +53,29 @@ Parent.send(EVENT)
 `@done.{state}` routing works identically in async mode. The `ChildMachineCompletionJob` carries the child's final state key through the pipeline and routes to the matching `@done.{state}` transition on the parent. See [Per-Final-State Routing](/advanced/machine-delegation#per-final-state-routing).
 :::
 
+## Testing Async Delegation
+
+<!-- doctest-attr: ignore -->
+```php
+// Test async dispatch
+Queue::fake();
+OrderMachine::test()
+    ->send('START_PAYMENT')
+    ->assertState('awaiting_payment');
+Queue::assertPushed(ChildMachineJob::class);
+
+// Test with faked child (sync short-circuit)
+PaymentMachine::fake(result: ['payment_id' => 'pay_123'], finalState: 'approved');
+OrderMachine::test()
+    ->send('START_PAYMENT')
+    ->assertState('completed');
+Machine::resetMachineFakes();
+```
+
+::: tip Full Testing Guide
+For comprehensive async delegation testing patterns, see [Delegation Testing](/testing/delegation-testing).
+:::
+
 ::: warning Testing Async Delegation
 `Queue::fake()` verifies dispatch but not the full pipeline (child runs → completes → parent routes). For end-to-end verification with real infrastructure, see [Recipe: Full Async Delegation Pipeline](/testing/recipes#recipe-full-async-delegation-pipeline).
 :::

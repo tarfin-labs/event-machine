@@ -164,6 +164,10 @@ $testMachine->send('PROVIDE_CARD', ['card_number' => '4242424242424242']);
 $testMachine->assertNotAvailableEvent('PROVIDE_CARD');
 ```
 
+::: tip Full Testing Guide
+For all available events assertion methods, see [TestMachine — Available Events Assertions](/testing/test-machine#available-events-assertions).
+:::
+
 ## What's Excluded
 
 The following event types are automatically excluded from `available_events` because they are internal and not user-sendable:

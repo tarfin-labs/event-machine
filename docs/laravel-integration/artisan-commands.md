@@ -320,7 +320,7 @@ protected function schedule(Schedule $schedule): void
 
 Create custom commands for your machines:
 
-```php no_run
+```php ignore
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
@@ -354,4 +354,8 @@ class OrderMachineStatsCommand extends Command
         );
     }
 }
+
+::: tip Testing
+For testing artisan commands like `machine:process-timers` and `machine:process-scheduled`, see [Recipes](/testing/recipes).
+:::
 ```

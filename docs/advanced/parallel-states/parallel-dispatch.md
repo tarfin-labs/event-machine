@@ -291,19 +291,7 @@ MachineEvent::where('root_event_id', $rootEventId)
 
 ### 5. Test Both Modes
 
-Always test your machines with dispatch both enabled and disabled:
-
-```php no_run
-it('works with parallel dispatch', function (): void {
-    config()->set('machine.parallel_dispatch.enabled', true);
-    // ... test with dispatched jobs
-});
-
-it('works without parallel dispatch', function (): void {
-    config()->set('machine.parallel_dispatch.enabled', false);
-    // ... test with sequential execution
-});
-```
+Always test your machines with dispatch both enabled and disabled. See [Testing Parallel Dispatch](#testing-parallel-dispatch) below.
 
 ::: tip Detailed Guide
 For comprehensive design guidelines with Do/Don't examples, see [Parallel Patterns](/best-practices/parallel-patterns).
@@ -459,6 +447,25 @@ The `dispatched` flag is:
 
 ::: tip Lifecycle Scope
 The `dispatched` flag is a runtime property — it is not persisted to the database. Each `Machine::create()` or restore starts with `dispatched = false`. Only the explicit `dispatchPendingParallelJobs()` call can set it to `true`.
+:::
+
+## Testing Parallel Dispatch
+
+<!-- doctest-attr: ignore -->
+```php
+it('works with parallel dispatch', function (): void {
+    config()->set('machine.parallel_dispatch.enabled', true);
+    // ... test with dispatched jobs
+});
+
+it('works without parallel dispatch', function (): void {
+    config()->set('machine.parallel_dispatch.enabled', false);
+    // ... test with sequential execution
+});
+```
+
+::: tip Full Testing Guide
+For comprehensive parallel dispatch testing patterns, see [Parallel Testing](/testing/parallel-testing).
 :::
 
 ## Limitations

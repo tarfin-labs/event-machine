@@ -345,6 +345,10 @@ Machine::resetMachineFakes();
 - `error: string` — Error message for `@fail`
 - `finalState: string` — The child's final state key — determines which `@done.{state}` route fires on the parent
 
+::: tip Full Testing Guide
+For complete delegation testing patterns including async, forward endpoints, and TestMachine v2 fluent API, see [Inter-Machine Testing](/testing/delegation-testing).
+:::
+
 ## Infinite Loop Protection
 
 Each machine — parent and child — has its own independent depth counter. A sync child with a deep `@always` chain does not consume the parent's depth budget.

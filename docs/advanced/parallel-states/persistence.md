@@ -233,3 +233,7 @@ When archiving parallel state machines, all regions are compressed together. See
 - Compression levels for parallel state data
 - Restoration of archived parallel states
 - Auto-restore behavior when new events arrive
+
+::: tip Testing
+For testing parallel state persistence, see [Persistence Testing](/testing/persistence-testing).
+:::

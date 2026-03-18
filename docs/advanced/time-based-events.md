@@ -113,6 +113,25 @@ After 3 fires, `MAX_RETRIES` is sent exactly once. The timer stops.
 ],
 ```
 
+## Testing Timers
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Support\Timer;
+
+OrderMachine::test()
+    ->send('SUBMIT')
+    ->assertState('awaiting_payment')
+    ->assertHasTimer('ORDER_EXPIRED')
+    ->advanceTimers(Timer::days(7))
+    ->assertState('cancelled')
+    ->assertTimerFired('ORDER_EXPIRED');
+```
+
+::: tip Full Testing Guide
+For comprehensive timer testing patterns, see [Time-Based Testing](/testing/time-based-testing).
+:::
+
 ::: warning Testing Timers
 `advanceTimers()` works in-memory and is sufficient for most timer tests. To verify the `machine:process-timers` sweep command reads from DB and fires correctly, see [Recipe: Timer Sweep in Real Environment](/testing/recipes#recipe-timer-sweep-in-real-environment).
 :::

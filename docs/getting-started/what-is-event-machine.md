@@ -185,3 +185,7 @@ EventMachine might be overkill for:
 - Simple CRUD operations
 - Stateless request/response
 - One-time operations without history needs
+
+::: tip Testing
+EventMachine is designed for testability. See [Testing Overview](/testing/overview) to get started.
+:::

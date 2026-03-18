@@ -439,6 +439,10 @@ it('executes entry actions on state entry', function () {
 });
 ```
 
+::: tip Full Testing Guide
+For behavior faking and spy patterns, see [Fakeable Behaviors](/testing/fakeable-behaviors).
+:::
+
 ## Best Practices
 
 ### 1. Use Entry for Setup

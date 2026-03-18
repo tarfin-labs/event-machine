@@ -466,3 +466,7 @@ EventMachine's `machine:xstate` command exports your machine definition to XStat
 
 ### JavaScript
 - [XState Documentation](https://stately.ai/docs/xstate)
+
+::: tip Testing
+See [Testing Overview](/testing/overview) for EventMachine's testing capabilities.
+:::

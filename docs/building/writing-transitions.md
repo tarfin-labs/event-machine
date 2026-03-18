@@ -476,3 +476,25 @@ When a transition fires, this is the execution sequence:
    - Stay in current state
    - No actions execute
 ```
+
+## Testing Transitions
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->assertTransition('SUBMIT', 'submitted')
+    ->assertGuarded('SUBMIT');  // already submitted, can't submit again
+
+// Multi-branch guard testing
+OrderMachine::test(['total' => 5000])
+    ->send('SUBMIT')
+    ->assertState('vip_processing');  // high-value guard passed
+
+OrderMachine::test(['total' => 50])
+    ->send('SUBMIT')
+    ->assertState('standard_processing');  // default branch
+```
+
+::: tip Full Testing Guide
+For comprehensive transition testing patterns, see [Transitions and Paths](/testing/transitions-and-paths).
+:::

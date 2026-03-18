@@ -538,3 +538,7 @@ $context->selfValidate();
 ::: tip Detailed Guide
 For comprehensive design guidelines with Do/Don't examples, see [Context Design](/best-practices/context-design).
 :::
+
+::: tip Testing
+For testing custom context classes, see [Testing Overview](/testing/overview).
+:::

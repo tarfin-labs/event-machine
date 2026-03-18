@@ -130,6 +130,7 @@ $machine->send(PaymentEvent::from([
 
 ### From Array Events
 
+<!-- doctest-attr: no_run -->
 ```php
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
@@ -486,3 +487,23 @@ $state = $cart->send(CheckoutEvent::from([
 
 echo $state->value; // 'completed' or 'failed'
 ```
+
+## Testing Event Handling
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+
+// Test event validation
+OrderMachine::test()
+    ->assertValidationFailed(['type' => 'SUBMIT', 'payload' => ['amount' => -1]], 'amount');
+
+// Test event acceptance
+OrderMachine::test()
+    ->send(['type' => 'SUBMIT', 'payload' => ['amount' => 100]])
+    ->assertState('submitted');
+```
+
+::: tip Full Testing Guide
+See [Isolated Testing](/testing/isolated-testing) for more examples.
+:::

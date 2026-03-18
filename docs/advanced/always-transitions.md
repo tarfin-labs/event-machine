@@ -553,6 +553,10 @@ it('automatically routes based on condition', function () {
 });
 ```
 
+::: tip Full Testing Guide
+For transition path testing, see [Transitions & Paths](/testing/transitions-and-paths).
+:::
+
 ## Best Practices
 
 ### 1. Always Include a Fallback

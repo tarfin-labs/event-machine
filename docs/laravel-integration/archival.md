@@ -501,3 +501,7 @@ Original events are deleted after archival, but:
 1. MySQL may not immediately reclaim space - run `OPTIMIZE TABLE machine_events`
 2. Check if transactions are holding locks
 3. Verify archival completed successfully in logs
+
+::: tip Testing
+For testing archival and event history, see [Persistence Testing](/testing/persistence-testing).
+:::

@@ -374,3 +374,19 @@ $state = $cart->send([
 
 echo $state->context->total; // 1999
 ```
+
+## Testing Context
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test(['total' => 500, 'currency' => 'TRY'])
+    ->assertContext('total', 500)
+    ->assertContextHas('currency')
+    ->send('APPLY_DISCOUNT')
+    ->assertContext('total', 450)
+    ->assertContextIncludes(['total' => 450, 'currency' => 'TRY']);
+```
+
+::: tip Full Testing Guide
+See [TestMachine Context Assertions](/testing/test-machine#context-assertions) for more examples.
+:::
