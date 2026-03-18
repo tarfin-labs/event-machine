@@ -50,8 +50,11 @@ class Machine implements Castable, JsonSerializable, Stringable
     /** Whether parallel region jobs were dispatched to the queue in this lifecycle */
     public bool $dispatched = false;
 
-    /** @var array<class-string, array{result: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>}> Machine-level fakes for testing. */
+    /** @var array<class-string, array{result: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>, creations: list<array>, sends: list<array>}> Machine-level fakes for testing. */
     private static array $machineFakes = [];
+
+    /** Whether this instance was created via createFaked() — send/persist become no-ops. */
+    protected bool $isFakedInstance = false;
 
     // endregion
 
@@ -701,6 +704,8 @@ class Machine implements Castable, JsonSerializable, Stringable
             'error'       => $error,
             'finalState'  => $finalState,
             'invocations' => [],
+            'creations'   => [],
+            'sends'       => [],
         ];
     }
 
