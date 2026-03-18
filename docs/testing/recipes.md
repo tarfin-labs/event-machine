@@ -714,3 +714,75 @@ it('concurrent sends are serialized by lock', function (): void {
 ::: tip
 For concurrent testing with real parallel processes, use Laravel's `Http::pool()` or dispatch async jobs that both target the same machine instance.
 :::
+
+## Recipe: Fluent Delegation Testing
+
+The complete TestMachine v2 delegation testing pattern:
+
+<!-- doctest-attr: ignore -->
+```php
+it('processes order through payment delegation', function (): void {
+    OrderMachine::test()
+        ->fakingChild(PaymentMachine::class, result: ['id' => 'pay_1'], finalState: 'approved')
+        ->send('PLACE_ORDER')
+        ->assertState('completed')
+        ->assertChildInvoked(PaymentMachine::class)
+        ->assertChildInvokedWith(PaymentMachine::class, ['order_id' => 'ORD-1'])
+        ->assertRoutedViaDoneState('approved')
+        ->assertContext('payment_id', 'pay_1');
+});
+```
+
+No static `Machine::fake()` calls, no manual `Machine::resetMachineFakes()` — everything is managed through the fluent chain.
+
+## Recipe: Simulating Async Child Completion
+
+When the parent is already waiting for an async child, simulate completion without queue infrastructure:
+
+<!-- doctest-attr: ignore -->
+```php
+it('routes parent when async child completes', function (): void {
+    OrderMachine::test()
+        ->send('START_ASYNC_PAYMENT')
+        ->assertState('awaiting_payment')
+        ->simulateChildDone(PaymentMachine::class, result: ['id' => 'pay_1'], finalState: 'approved')
+        ->assertState('shipping')
+        ->assertRoutedViaDoneState('approved');
+});
+
+it('routes parent when async child fails', function (): void {
+    OrderMachine::test()
+        ->send('START_ASYNC_PAYMENT')
+        ->assertState('awaiting_payment')
+        ->simulateChildFail(PaymentMachine::class, errorMessage: 'Card declined')
+        ->assertState('payment_failed');
+});
+```
+
+## Recipe: Cross-Machine Communication Testing
+
+Verify that behaviors communicate with other machines:
+
+<!-- doctest-attr: ignore -->
+```php
+it('sends progress to parent machine', function (): void {
+    ChildMachine::test()
+        ->recordingCommunication()
+        ->send('PROCESS')
+        ->assertSentTo(ParentMachine::class, 'CHILD_PROGRESS')
+        ->assertNotSentTo(AuditMachine::class);
+});
+```
+
+For async dispatch verification, combine with `Queue::fake()`:
+
+<!-- doctest-attr: ignore -->
+```php
+it('dispatches notification to audit machine', function (): void {
+    Queue::fake();
+
+    OrderMachine::test()
+        ->send('COMPLETE')
+        ->assertDispatchedTo(AuditMachine::class, 'ORDER_COMPLETED');
+});
+```
