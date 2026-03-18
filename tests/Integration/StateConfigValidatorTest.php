@@ -880,4 +880,53 @@ it('skips coverage validation when child class does not exist (T27)', function (
 
 // endregion @done.{state} Coverage Validation
 
+// region @done.{state} Fire-and-Forget + Non-Final
+
+it('@done.{state} + queue is NOT fire-and-forget — @fail allowed (T28)', function (): void {
+    expect(fn () => StateConfigValidator::validate([
+        'id'      => 'parent',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'machine'        => MultiOutcomeChildMachine::class,
+                'queue'          => true,
+                '@done.approved' => 'completed',
+                '@done.rejected' => 'declined',
+                '@done.expired'  => 'declined',
+                '@fail'          => 'error',
+            ],
+            'completed' => ['type' => 'final'],
+            'declined'  => ['type' => 'final'],
+            'error'     => ['type' => 'final'],
+        ],
+    ]))->not->toThrow(InvalidArgumentException::class);
+});
+
+it('@done.{state} referencing non-final child state is flagged by coverage validation (T30)', function (): void {
+    // MultiOutcomeChildMachine has 'processing' (non-final) + 3 final states
+    // @done.processing references a non-final state — coverage validation
+    // won't find 'processing' in the final states list, so it's treated as
+    // an extra key that doesn't cover any final state. The uncovered final
+    // states will cause the validation to throw.
+    expect(fn () => StateConfigValidator::validate([
+        'id'      => 'parent',
+        'initial' => 'delegating',
+        'states'  => [
+            'delegating' => [
+                'machine'          => MultiOutcomeChildMachine::class,
+                '@done.processing' => 'error',
+                '@done.approved'   => 'completed',
+                // missing rejected and expired → coverage fails
+            ],
+            'completed' => ['type' => 'final'],
+            'error'     => ['type' => 'final'],
+        ],
+    ]))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: 'uncovered final states'
+    );
+});
+
+// endregion @done.{state} Fire-and-Forget + Non-Final
+
 // endregion @done.{state} Validation
