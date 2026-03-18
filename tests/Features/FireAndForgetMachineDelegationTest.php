@@ -2,16 +2,19 @@
 
 declare(strict_types=1);
 
+use InvalidArgumentException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
+use Tarfinlabs\EventMachine\StateConfigValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\MultiOutcomeChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FireAndForgetParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FireAndForgetAlwaysParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FireAndForgetTargetParentMachine;
@@ -560,4 +563,65 @@ it('silently stays in state when target references nonexistent state', function 
     // Parent stays in dispatching — target didn't resolve
     expect($state->currentStateDefinition->id)->toBe('ff_bad_target.dispatching');
     Queue::assertPushed(ChildMachineJob::class);
+});
+
+// ============================================================
+// @done.{state} — Fire-and-Forget Interaction
+// ============================================================
+
+it('@done.{state} prevents fire-and-forget detection (T18)', function (): void {
+    Queue::fake();
+
+    $machine = MachineDefinition::define(
+        config: [
+            'id'      => 'ff_done_dot',
+            'initial' => 'idle',
+            'context' => [],
+            'states'  => [
+                'idle'       => ['on' => ['GO' => 'processing']],
+                'processing' => [
+                    'machine'        => MultiOutcomeChildMachine::class,
+                    'queue'          => true,
+                    '@done.approved' => 'completed',
+                    '@done.rejected' => 'declined',
+                    '@done.expired'  => 'declined',
+                ],
+                'completed' => ['type' => 'final'],
+                'declined'  => ['type' => 'final'],
+            ],
+        ],
+    );
+
+    $machine->machineClass = 'App\\Machines\\TestMachine';
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    // NOT fire-and-forget: MachineChild record should be created
+    expect(DB::table('machine_children')->count())->toBe(1);
+
+    // ChildMachineJob should NOT have fireAndForget flag
+    Queue::assertPushed(ChildMachineJob::class, function (ChildMachineJob $job): bool {
+        return $job->fireAndForget === false;
+    });
+});
+
+it('@done.{state} allows @fail when not fire-and-forget (T19)', function (): void {
+    expect(fn () => StateConfigValidator::validate([
+        'id'      => 'parent',
+        'initial' => 'processing',
+        'states'  => [
+            'processing' => [
+                'machine'        => MultiOutcomeChildMachine::class,
+                'queue'          => true,
+                '@done.approved' => 'completed',
+                '@done.rejected' => 'declined',
+                '@done.expired'  => 'declined',
+                '@fail'          => 'error',
+            ],
+            'completed' => ['type' => 'final'],
+            'declined'  => ['type' => 'final'],
+            'error'     => ['type' => 'final'],
+        ],
+    ]))->not->toThrow(InvalidArgumentException::class);
 });
