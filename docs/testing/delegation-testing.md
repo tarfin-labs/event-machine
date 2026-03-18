@@ -208,6 +208,261 @@ it('dispatches fire-and-forget ChildMachineJob', function (): void {
 });
 ```
 
+## Testing Forward Endpoints
+
+Forward endpoints let a parent machine proxy HTTP events to a running async child. In feature tests, you POST to the parent's forwarded URI and assert the child's state changed.
+
+### Basic Forward Test
+
+<!-- doctest-attr: no_run -->
+```php
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tarfinlabs\EventMachine\Routing\MachineRouter;
+
+uses(RefreshDatabase::class);
+
+it('forwards PROVIDE_CARD to child via parent endpoint', function (): void {
+    // 1. Register routes for the parent machine (includes forwarded endpoints)
+    MachineRouter::register(OrderMachine::class, 'orders', 'order_mre');
+
+    // 2. Create parent and transition to the delegating state
+    $order   = Order::create(['status' => 'pending']);
+    $machine = $order->order_mre;
+    $machine->send(['type' => 'START']);
+
+    // 3. POST to the parent's forwarded endpoint
+    $response = $this->postJson("/orders/{$order->id}/provide-card", [
+        'card_number' => '4111111111111111',
+    ]);
+
+    // 4. Assert the response includes child state
+    $response->assertOk()
+        ->assertJsonPath('data.child.value.0', 'payment_child.card_provided');
+
+    // 5. Assert parent is still in delegating state
+    $response->assertJsonPath('data.value.0', 'order.processing');
+});
+```
+
+### Testing Forward Response Formats
+
+The default response includes both parent and child state. You can customize it with `contextKeys`, `result`, and `available_events`:
+
+<!-- doctest-attr: no_run -->
+```php
+it('returns only specified child context keys', function (): void {
+    // forward config: 'PROVIDE_CARD' => ['contextKeys' => ['card_token']]
+    $response = $this->postJson("/orders/{$order->id}/provide-card", [
+        'card_number' => '4111111111111111',
+    ]);
+
+    // Only card_token is in child context, not the full context
+    $response->assertOk()
+        ->assertJsonPath('data.child.context.card_token', 'tok_abc')
+        ->assertJsonMissing(['internal_reference']);
+});
+
+it('returns custom result from ResultBehavior', function (): void {
+    // forward config: 'PROVIDE_CARD' => ['result' => 'cardResultBehavior']
+    $response = $this->postJson("/orders/{$order->id}/provide-card", [
+        'card_number' => '4111111111111111',
+    ]);
+
+    // Custom result replaces the default parent+child structure
+    $response->assertOk()
+        ->assertJsonPath('data.confirmation_code', 'CONF-12345');
+});
+```
+
+### Testing Error Cases
+
+When the parent is not in a delegating state, the forwarded event cannot be processed:
+
+<!-- doctest-attr: no_run -->
+```php
+it('rejects forward when parent is not in delegating state', function (): void {
+    MachineRouter::register(OrderMachine::class, 'orders', 'order_mre');
+
+    $order = Order::create(['status' => 'pending']);
+    // Parent is in 'idle' — not delegating, no child is running
+
+    $response = $this->postJson("/orders/{$order->id}/provide-card", [
+        'card_number' => '4111111111111111',
+    ]);
+
+    // The machine rejects the event because it has no valid transition in 'idle'
+    $response->assertStatus(422);
+});
+```
+
+### Testing Endpoint Customization
+
+Forward entries support the same customization as regular endpoints — custom URI, method, middleware, and action:
+
+<!-- doctest-attr: ignore -->
+```php
+'forward' => [
+    'PROVIDE_CARD' => [
+        'uri'        => '/card',
+        'method'     => 'PUT',
+        'middleware'  => ['auth:sanctum', 'verified'],
+        'action'     => LogForwardAction::class,
+        'result'     => 'cardResultBehavior',
+        'contextKeys' => ['card_token', 'last_four'],
+        'status'     => 201,
+        'available_events' => false,
+    ],
+],
+```
+
+<!-- doctest-attr: no_run -->
+```php
+it('uses custom URI and method for forwarded endpoint', function (): void {
+    MachineRouter::register(OrderMachine::class, 'orders', 'order_mre');
+
+    $order   = Order::create(['status' => 'pending']);
+    $machine = $order->order_mre;
+    $machine->send(['type' => 'START']);
+
+    // Custom URI '/card' and PUT method
+    $response = $this->putJson("/orders/{$order->id}/card", [
+        'card_number' => '4111111111111111',
+    ]);
+
+    $response->assertStatus(201)
+        ->assertJsonPath('data.child.context.card_token', 'tok_abc');
+});
+```
+
+### Testing ForwardContext in ResultBehavior
+
+When a forward endpoint has a `result` key, the parent's `ResultBehavior` receives a `ForwardContext` object via dependency injection. This gives the result behavior access to the child's context and state:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Routing\ForwardContext;
+use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
+
+class CardForwardResult extends ResultBehavior
+{
+    public function __invoke(
+        ContextManager $context,
+        State $state,
+        ForwardContext $forwardContext,
+    ): array {
+        return [
+            'parent_state'  => $state->value,
+            'child_state'   => $forwardContext->childState->value,
+            'card_token'    => $forwardContext->childContext->get('card_token'),
+            'order_id'      => $context->get('order_id'),
+        ];
+    }
+}
+```
+
+<!-- doctest-attr: no_run -->
+```php
+it('injects ForwardContext into result behavior', function (): void {
+    MachineRouter::register(OrderMachine::class, 'orders', 'order_mre');
+
+    $order   = Order::create(['status' => 'pending']);
+    $machine = $order->order_mre;
+    $machine->send(['type' => 'START']);
+
+    // forward config: 'PROVIDE_CARD' => ['result' => CardForwardResult::class]
+    $response = $this->postJson("/orders/{$order->id}/provide-card", [
+        'card_number' => '4111111111111111',
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('data.parent_state.0', 'order.processing')
+        ->assertJsonPath('data.child_state.0', 'payment_child.card_provided')
+        ->assertJsonPath('data.card_token', 'tok_abc');
+});
+```
+
+### Testing available_events in Forward Responses
+
+Forward endpoint responses include `available_events` by default, showing which events the parent can currently accept (including other forwarded events). Use `TestMachine` assertions to verify:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Testing\TestMachine;
+
+it('includes forward events in available_events', function (): void {
+    $testMachine = TestMachine::create(OrderMachine::class)
+        ->send(['type' => 'START']);
+
+    // Assert a forwarded event appears with source: forward
+    $testMachine->assertForwardAvailable('PROVIDE_CARD');
+
+    // Assert a regular parent event is also available
+    $testMachine->assertAvailableEvent('CANCEL');
+
+    // Assert exact set of available events
+    $testMachine->assertAvailableEvents(['PROVIDE_CARD', 'CANCEL']);
+});
+
+it('reports no available events in final state', function (): void {
+    $testMachine = TestMachine::create(OrderMachine::class)
+        ->send(['type' => 'START'])
+        ->send(['type' => 'COMPLETE']);
+
+    $testMachine->assertNoAvailableEvents();
+});
+```
+
+To opt out of `available_events` in a specific forward endpoint response, set `available_events: false` in the forward config:
+
+<!-- doctest-attr: ignore -->
+```php
+'forward' => [
+    'PROVIDE_CARD' => [
+        'available_events' => false,
+    ],
+],
+```
+
+### Testing FQCN Forward Keys
+
+Forward entries can use EventBehavior class FQCNs instead of string event types. The FQCN is resolved to its `SCREAMING_SNAKE_CASE` type during definition parsing:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+
+class ProvideCardEvent extends EventBehavior
+{
+    public static function getType(): string
+    {
+        return 'PROVIDE_CARD';
+    }
+}
+```
+
+<!-- doctest-attr: no_run -->
+```php
+it('resolves FQCN forward key to event type', function (): void {
+    // forward config uses FQCN: [ProvideCardEvent::class]
+    // or: [ProvideCardEvent::class => ['uri' => '/card']]
+    // or: ['PARENT_CARD' => ['child_event' => ProvideCardEvent::class]]
+
+    $definition = OrderMachine::definition();
+    $endpoints  = $definition->forwardedEndpoints;
+
+    // FQCN is resolved to SCREAMING_SNAKE_CASE
+    expect($endpoints)->toHaveKey('PROVIDE_CARD')
+        ->and($endpoints['PROVIDE_CARD']->childEventClass)
+        ->toBe(ProvideCardEvent::class);
+});
+```
+
+::: tip Unit vs E2E
+Use `Machine::fake()` to skip child dispatch in unit tests. For E2E forward testing, use LocalQA with real Horizon — see [LocalQA setup](/testing/recipes#localqa-setup) for instructions.
+:::
+
 ::: tip Related
 See [Cross-Machine Messaging](/advanced/sendto) for the API reference,
 [Job Actors](/advanced/job-actors) for configuration,

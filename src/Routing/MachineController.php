@@ -103,6 +103,7 @@ class MachineController extends Controller
             resultKey: $defaults['_result_behavior'] ?? null,
             statusCode: $defaults['_status_code'] ?? 200,
             contextKeys: $defaults['_context_keys'] ?? null,
+            includeAvailableEvents: $defaults['_available_events'] ?? true,
         );
     }
 
@@ -130,6 +131,7 @@ class MachineController extends Controller
         ?string $resultKey,
         int $statusCode,
         ?array $contextKeys = null,
+        ?bool $includeAvailableEvents = true,
     ): JsonResponse {
         $action = $actionClass !== null
             ? resolve($actionClass)->withMachineContext($machine, $machine->state)
@@ -168,7 +170,7 @@ class MachineController extends Controller
         // Auto-dispatch completion if child reached final state and has a parent
         $this->dispatchChildCompletionIfFinal($machine, $state);
 
-        return $this->buildResponse($state, $machine, $resultKey, $statusCode, $contextKeys);
+        return $this->buildResponse($state, $machine, $resultKey, $statusCode, $contextKeys, $includeAvailableEvents);
     }
 
     /**
@@ -180,6 +182,7 @@ class MachineController extends Controller
         ?string $resultKey,
         int $statusCode,
         ?array $contextKeys = null,
+        ?bool $includeAvailableEvents = true,
     ): JsonResponse {
         if ($resultKey !== null) {
             $result = $this->resolveAndRunResult($resultKey, $state, $machine);
@@ -195,22 +198,30 @@ class MachineController extends Controller
             $contextData = array_intersect_key($contextData, array_flip($contextKeys));
         }
 
-        return response()->json([
-            'data' => [
-                'machine_id' => $rootEventId,
-                'value'      => $state->value,
-                'context'    => $contextData,
-            ],
-        ], $statusCode);
+        $response = [
+            'machine_id' => $rootEventId,
+            'value'      => $state->value,
+            'context'    => $contextData,
+        ];
+
+        if ($includeAvailableEvents !== false) {
+            $response['available_events'] = $state->availableEvents();
+        }
+
+        return response()->json(['data' => $response], $statusCode);
     }
 
     /**
      * Resolve and run a ResultBehavior using the InvokableBehavior parameter injection pattern.
+     *
+     * When a ForwardContext is provided, it is injected into the ResultBehavior
+     * so it can access the child machine's state and context.
      */
     protected function resolveAndRunResult(
         string $resultKey,
         State $state,
         Machine $machine,
+        ?ForwardContext $forwardContext = null,
     ): mixed {
         $resultClass = class_exists($resultKey)
             ? $resultKey
@@ -226,16 +237,175 @@ class MachineController extends Controller
             actionBehavior: $resultBehavior,
             state: $state,
             eventBehavior: $state->currentEventBehavior,
+            forwardContext: $forwardContext,
         );
 
         return $resultBehavior(...$params);
     }
 
     /**
+     * Forwarded model-bound endpoint handler.
+     * Route: /{model}/{uri} — resolves parent machine via Eloquent model binding.
+     */
+    public function handleForwardedModelBound(Request $request): JsonResponse
+    {
+        $route          = $request->route();
+        $parameterNames = $route->parameterNames();
+
+        if ($parameterNames === []) {
+            abort(500, 'Forwarded model-bound endpoint requires a route model parameter.');
+        }
+
+        $modelParam     = $parameterNames[0];
+        $model          = $route->parameter($modelParam);
+        $modelAttribute = $route->defaults['_model_attribute'] ?? null;
+
+        if ($model === null || $modelAttribute === null) {
+            abort(500, 'Route model or model attribute not found for forwarded model-bound endpoint.');
+        }
+
+        $machine = $model->{$modelAttribute};
+
+        return $this->executeForwardedEndpoint($machine, $request);
+    }
+
+    /**
+     * Forwarded machineId-bound endpoint handler.
+     * Route: /{machineId}/{uri} — resolves parent machine via root_event_id.
+     */
+    public function handleForwardedMachineIdBound(Request $request): JsonResponse
+    {
+        $route        = $request->route();
+        $machineClass = $route->defaults['_machine_class'];
+        $machine      = $machineClass::create(state: $route->parameter('machineId'));
+
+        return $this->executeForwardedEndpoint($machine, $request);
+    }
+
+    /**
+     * Shared forwarded endpoint logic: validate with child's EventBehavior,
+     * run parent action lifecycle, send to parent (triggers tryForwardEventToChild),
+     * build response with child state.
+     */
+    protected function executeForwardedEndpoint(Machine $machine, Request $request): JsonResponse
+    {
+        $defaults = $request->route()->defaults;
+
+        // 1. Resolve event using CHILD's EventBehavior class
+        $childEventClass = $defaults['_child_event_class'];
+        $event           = $childEventClass::validateAndCreate($request->all());
+
+        // 2. Run parent-level action.before() if configured
+        $actionClass = $defaults['_action_class'] ?? null;
+        $action      = $actionClass !== null
+            ? resolve($actionClass)->withMachineContext($machine, $machine->state)
+            : null;
+
+        $action?->before();
+
+        // 3. Send to parent using PARENT event type (tryForwardEventToChild resolves
+        //    the forward mapping by parent event type, not child event type).
+        //    The child EventBehavior was used for validation above; now we send
+        //    with parent type + validated payload so the forward mapping works
+        //    correctly for rename and child_event configurations.
+        $parentEventType = $defaults['_event_type'];
+
+        try {
+            $state = $machine->send([
+                'type'    => $parentEventType,
+                'payload' => $event->payload ?? [],
+            ]);
+        } catch (MachineValidationException $e) { // @phpstan-ignore catch.neverThrown
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors'  => method_exists($e, 'errors') ? $e->errors() : [],
+            ], 422);
+        } catch (ValidationException $e) { // @phpstan-ignore catch.neverThrown
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors'  => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            $response = $action?->onException($e);
+
+            if ($response !== null) {
+                return $response;
+            }
+
+            throw $e;
+        }
+
+        // 4. Run parent-level action.after()
+        if ($action !== null) {
+            $action->withMachineContext($machine, $state);
+        }
+
+        $action?->after();
+
+        // 5. Build response with child state info
+        return $this->buildForwardedResponse($machine, $state, $defaults);
+    }
+
+    /**
+     * Build response for forwarded endpoints — includes parent + child state.
+     */
+    protected function buildForwardedResponse(Machine $machine, State $state, array $defaults): JsonResponse
+    {
+        $resultKey   = $defaults['_result_behavior'] ?? null;
+        $contextKeys = $defaults['_context_keys'] ?? null;
+        $statusCode  = $defaults['_status_code'] ?? 200;
+
+        $childState = $state->getForwardedChildState();
+
+        // Custom result behavior — runs on PARENT with ForwardContext injected
+        if ($resultKey !== null && $childState instanceof State) {
+            $forwardContext = new ForwardContext(
+                childContext: $childState->context,
+                childState: $childState,
+            );
+
+            $result = $this->resolveAndRunResult(
+                resultKey: $resultKey,
+                state: $state,
+                machine: $machine,
+                forwardContext: $forwardContext,
+            );
+
+            return response()->json(['data' => $result], $statusCode);
+        }
+
+        // Default response: parent state + child state
+        $rootEventId = $state->history->first()?->root_event_id;
+
+        $response = [
+            'machine_id' => $rootEventId,
+            'value'      => $state->value,
+        ];
+
+        if ($childState instanceof State) {
+            $childContext = $childState->context->toArray();
+
+            if ($contextKeys !== null) {
+                $childContext = array_intersect_key($childContext, array_flip($contextKeys));
+            }
+
+            $response['child'] = [
+                'value'   => $childState->value,
+                'context' => $childContext,
+            ];
+        }
+
+        $includeAvailableEvents = $defaults['_available_events'] ?? null;
+
+        if ($includeAvailableEvents !== false) {
+            $response['available_events'] = $state->availableEvents();
+        }
+
+        return response()->json(['data' => $response], $statusCode);
+    }
+
+    /**
      * If the machine reached a final state and is a tracked child, dispatch completion to parent.
-     *
-     * This enables the webhook pattern: child machine receives endpoint event,
-     * transitions to final, and auto-dispatches ChildMachineCompletionJob.
      */
     protected function dispatchChildCompletionIfFinal(Machine $machine, State $state): void
     {

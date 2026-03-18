@@ -16,6 +16,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Traits\Fakeable;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
+use Tarfinlabs\EventMachine\Routing\ForwardContext;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
 /**
@@ -238,6 +239,7 @@ abstract class InvokableBehavior
         State $state,
         ?EventBehavior $eventBehavior = null,
         ?array $actionArguments = null,
+        ?ForwardContext $forwardContext = null,
     ): array {
         $invocableBehaviorParameters = [];
 
@@ -256,7 +258,8 @@ abstract class InvokableBehavior
 
             $value = match (true) {
                 $typeName === null                                                                                                           => null,
-                is_a($typeName, class: ContextManager::class, allow_string: true) || is_subclass_of($typeName, class: ContextManager::class) => $state->context,    // ContextManager
+                is_a($typeName, class: ForwardContext::class, allow_string: true)                                                            => $forwardContext,    // ForwardContext (child)
+                is_a($typeName, class: ContextManager::class, allow_string: true) || is_subclass_of($typeName, class: ContextManager::class) => $state->context,    // ContextManager (parent)
                 is_a($typeName, class: EventBehavior::class, allow_string: true) || is_subclass_of($typeName, class: EventBehavior::class)   => $eventBehavior,     // EventBehavior
                 $state instanceof $typeName                                                                                                  => $state,             // State
                 is_a($state->history, $typeName)                                                                                             => $state->history,    // EventCollection

@@ -162,3 +162,91 @@ $context->parentMachineClass();  // parent's FQCN
 ```
 
 These are stored as separate properties on `ContextManager`, **not** in the `data` array. They don't appear in context diffs or persist beyond the current lifecycle.
+
+## Forward Response Data Flow
+
+Unlike the `@done` data flow (which modifies parent context), forward responses go **directly to the HTTP response**. The parent context is NOT modified by a forward event.
+
+```
+Forward Event (HTTP request)
+    ├── Validated by child's EventBehavior
+    ├── Routed: parent.send() → tryForwardEventToChild() → child.send()
+    ├── Child transitions
+    ├── Child State returned to parent
+    └── Response built from parent + child State
+          ├── Default: { machine_id, value, child: { value, context } }
+          ├── contextKeys: filtered child.context
+          └── result: parent's ResultBehavior (ForwardContext injection)
+```
+
+The default forward response shape:
+
+```json
+{
+  "data": {
+    "machine_id": "evt_abc123",
+    "value": ["processing_payment"],
+    "child": {
+      "value": ["awaiting_confirmation"],
+      "context": {
+        "card_last4": "1111",
+        "status": "card_provided"
+      }
+    }
+  }
+}
+```
+
+When `contextKeys` is configured on the forward entry, only the specified keys from the child's context appear in the response. Without `contextKeys`, the full child context is returned.
+
+### Parent ResultBehavior with ForwardContext
+
+When a forward entry specifies a `result` key, the parent's `ResultBehavior` runs instead of the default response. The `ForwardContext` value object is injected, providing type-safe access to the child's `ContextManager` and `State`:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Routing\ForwardContext;
+use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
+
+class PaymentStepResult extends ResultBehavior
+{
+    public function __invoke(ContextManager $context, ForwardContext $forwardContext): array
+    {
+        return [
+            'order_id'   => $context->get('order_id'),                         // Parent context
+            'card_last4' => $forwardContext->childContext->get('card_last4'),   // Child context
+            'child_step' => $forwardContext->childState->value[0] ?? null,     // Child state
+        ];
+    }
+}
+```
+
+`ForwardContext` is only available in forward endpoint context -- it is not injected in regular endpoints or `@done` actions.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `childContext` | `ContextManager` | The child machine's context after processing the forwarded event |
+| `childState` | `State` | The child machine's full state (value, context, history) |
+
+### `available_events` in Response
+
+The `State::availableEvents()` method reflects both the parent's own `on` events and the forward events that the child's current state accepts:
+
+```json
+{
+  "available_events": [
+    { "type": "CANCEL", "source": "parent" },
+    { "type": "PROVIDE_CARD", "source": "forward" },
+    { "type": "CONFIRM_PAYMENT", "source": "forward" }
+  ]
+}
+```
+
+Forward events only appear when the child's **current state** has a matching transition. After the child transitions (e.g., from `awaiting_card` to `awaiting_confirmation`), the available forward events update accordingly -- `PROVIDE_CARD` would disappear and only `CONFIRM_PAYMENT` would remain.
+
+Regular (non-forwarded) endpoints include `available_events` in the response by default. Forward endpoints do not include `available_events` in their default response shape. To get `available_events` from a forward endpoint, use a custom `ResultBehavior` with `ForwardContext` injection and call `$forwardContext->childState->availableEvents()`.
+
+::: tip Forward vs @done
+Unlike `@done` data flow, forward responses go directly to the HTTP caller. The parent context is **not** modified -- the child state is included in the response for the caller's benefit, but the parent machine remains in its delegating state.
+:::

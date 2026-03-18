@@ -28,6 +28,7 @@ use Tarfinlabs\EventMachine\Routing\MachineEndpointAction;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Routing\ForwardedEndpointDefinition;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidEndpointDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidScheduleDefinitionException;
@@ -97,6 +98,9 @@ class MachineDefinition
     /** @var array<string, EndpointDefinition>|null Parsed endpoint definitions. */
     public ?array $parsedEndpoints = null;
 
+    /** @var array<string, ForwardedEndpointDefinition>|null Parsed forwarded endpoint definitions keyed by parent event type. */
+    public ?array $forwardedEndpoints = null;
+
     /** @var array<string, ScheduleDefinition>|null Parsed schedule definitions keyed by resolved event type. */
     public ?array $parsedSchedules = null;
 
@@ -163,6 +167,8 @@ class MachineDefinition
             $this->parseEndpoints();
         }
 
+        $this->parseForwardedEndpoints();
+
         if ($this->schedules !== null) {
             $this->parseSchedules();
         }
@@ -214,6 +220,72 @@ class MachineDefinition
             }
 
             $this->parsedEndpoints[$endpoint->eventType] = $endpoint;
+        }
+    }
+
+    /**
+     * Parse forwarded endpoints from states with `forward` config.
+     *
+     * Iterates all states with machineInvokeDefinition.forward, loads the child
+     * definition, resolves forward entries into ForwardedEndpointDefinition objects.
+     * Validates: child has the event types, no overlap with parent endpoints/behavior.
+     */
+    private function parseForwardedEndpoints(): void
+    {
+        $this->forwardedEndpoints = [];
+
+        foreach ($this->idMap as $stateDefinition) {
+            if (!$stateDefinition->hasMachineInvoke()) {
+                continue;
+            }
+
+            $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
+            if (!$invokeDefinition->hasForward()) {
+                continue;
+            }
+            if ($invokeDefinition->machineClass === '') {
+                continue;
+            }
+
+            /** @var MachineDefinition $childDefinition */
+            $childDefinition = $invokeDefinition->machineClass::definition();
+
+            $resolved = $invokeDefinition->resolveForwardEndpoints($childDefinition);
+
+            foreach ($resolved as $parentEventType => $fwdEndpoint) {
+                // If child doesn't declare EventBehavior class for this event,
+                // forward still works via Machine::send() internally but cannot
+                // be auto-registered as an HTTP endpoint.
+                if ($fwdEndpoint->childEventClass === '') {
+                    continue;
+                }
+
+                // Validate: no overlap with parent's explicit endpoints
+                if ($this->parsedEndpoints !== null && isset($this->parsedEndpoints[$parentEventType])) {
+                    throw new \InvalidArgumentException(
+                        "State '{$stateDefinition->id}' forwards '{$parentEventType}' which is also declared in parent's "
+                        ."endpoints. Remove '{$parentEventType}' from endpoints — forward is the single source of truth for child events."
+                    );
+                }
+
+                // Validate: no overlap with parent's behavior events
+                if (isset($this->behavior['events'][$parentEventType])) {
+                    throw new \InvalidArgumentException(
+                        "State '{$stateDefinition->id}' forwards '{$parentEventType}' which is also declared in parent's "
+                        ."behavior.events. Remove '{$parentEventType}' from behavior.events — forward auto-discovers child events."
+                    );
+                }
+
+                // Validate: no collision with another state's forward
+                if (isset($this->forwardedEndpoints[$parentEventType])) {
+                    throw new \InvalidArgumentException(
+                        "Forward event '{$parentEventType}' is declared in multiple delegating states. "
+                        .'Use rename syntax to disambiguate (e.g., \'CANCEL_PAYMENT\' => \'CANCEL\').'
+                    );
+                }
+
+                $this->forwardedEndpoints[$parentEventType] = $fwdEndpoint;
+            }
         }
     }
 
@@ -1357,22 +1429,22 @@ class MachineDefinition
      *
      * @return bool True if the event was forwarded, false otherwise.
      */
-    protected function tryForwardEventToChild(State $state, StateDefinition $stateDefinition, EventBehavior $eventBehavior): bool
+    protected function tryForwardEventToChild(State $state, StateDefinition $stateDefinition, EventBehavior $eventBehavior): ?State
     {
         if (!$stateDefinition->hasMachineInvoke()) {
-            return false;
+            return null;
         }
 
         $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
 
         if (!$invokeDefinition->hasForward()) {
-            return false;
+            return null;
         }
 
         $childEventType = $invokeDefinition->resolveForwardEvent($eventBehavior->type);
 
         if ($childEventType === null) {
-            return false;
+            return null;
         }
 
         // Find the running child machine from active children
@@ -1381,7 +1453,7 @@ class MachineDefinition
             ->first();
 
         if ($childRecord === null || $childRecord->child_root_event_id === null) {
-            return false;
+            return null;
         }
 
         // Restore and send the forwarded event to the child
@@ -1412,7 +1484,7 @@ class MachineDefinition
             ));
         }
 
-        return true;
+        return $childMachine->state;
     }
 
     /**
@@ -2305,7 +2377,11 @@ class MachineDefinition
             $transitionDefinition = $this->findTransitionDefinition($currentStateDefinition, $eventBehavior);
         } catch (NoTransitionDefinitionFoundException $e) {
             // Check if event should be forwarded to a running child machine
-            if ($this->tryForwardEventToChild($state, $currentStateDefinition, $eventBehavior)) {
+            $childState = $this->tryForwardEventToChild($state, $currentStateDefinition, $eventBehavior);
+
+            if ($childState instanceof State) {
+                $state->setForwardedChildState($childState);
+
                 return $state;
             }
 

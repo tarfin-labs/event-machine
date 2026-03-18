@@ -32,10 +32,11 @@ class MachineRouter
      */
     public static function register(string $machineClass, array $options): void
     {
-        $definition = $machineClass::definition();
-        $endpoints  = $definition->parsedEndpoints ?? [];
+        $definition         = $machineClass::definition();
+        $endpoints          = $definition->parsedEndpoints ?? [];
+        $forwardedEndpoints = $definition->forwardedEndpoints ?? [];
 
-        if ($endpoints === []) {
+        if ($endpoints === [] && $forwardedEndpoints === []) {
             return;
         }
 
@@ -67,7 +68,7 @@ class MachineRouter
         Route::prefix($prefix)
             ->middleware($middleware)
             ->group(function () use (
-                $endpoints, $machineClass, $model, $attribute,
+                $endpoints, $forwardedEndpoints, $machineClass, $model, $attribute,
                 $create, $machineIdFor, $modelFor, $namePrefix,
             ): void {
                 if ($create) {
@@ -100,12 +101,13 @@ class MachineRouter
                     $routeName = "{$namePrefix}.".strtolower($eventType);
 
                     $defaults = [
-                        '_machine_class'   => $machineClass,
-                        '_event_type'      => $eventType,
-                        '_action_class'    => $endpoint->actionClass,
-                        '_result_behavior' => $endpoint->resultBehavior,
-                        '_status_code'     => $endpoint->statusCode ?? 200,
-                        '_context_keys'    => $endpoint->contextKeys,
+                        '_machine_class'    => $machineClass,
+                        '_event_type'       => $eventType,
+                        '_action_class'     => $endpoint->actionClass,
+                        '_result_behavior'  => $endpoint->resultBehavior,
+                        '_status_code'      => $endpoint->statusCode ?? 200,
+                        '_context_keys'     => $endpoint->contextKeys,
+                        '_available_events' => $endpoint->availableEvents,
                     ];
 
                     if ($handler === 'handleModelBound') {
@@ -120,6 +122,49 @@ class MachineRouter
                         ->name($routeName)
                         ->middleware($endpoint->middleware)
                         ->setDefaults($defaults);
+                }
+
+                // Register forwarded endpoints (auto-discovered from forward config)
+                $hasModelBinding = $model !== null && $attribute !== null;
+
+                if ($hasModelBinding && $modelParam !== null && $forwardedEndpoints !== []) {
+                    Route::model($modelParam, $model);
+                }
+
+                foreach ($forwardedEndpoints as $eventType => $fwdEndpoint) {
+                    if ($hasModelBinding && $modelParam !== null) {
+                        $fwdRouteUri = "/{{$modelParam}}{$fwdEndpoint->uri}";
+                        $fwdHandler  = 'handleForwardedModelBound';
+                    } else {
+                        $fwdRouteUri = "/{machineId}{$fwdEndpoint->uri}";
+                        $fwdHandler  = 'handleForwardedMachineIdBound';
+                    }
+
+                    $fwdDefaults = [
+                        '_machine_class'       => $machineClass,
+                        '_event_type'          => $eventType,
+                        '_child_event_type'    => $fwdEndpoint->childEventType,
+                        '_child_machine_class' => $fwdEndpoint->childMachineClass,
+                        '_child_event_class'   => $fwdEndpoint->childEventClass,
+                        '_action_class'        => $fwdEndpoint->actionClass,
+                        '_result_behavior'     => $fwdEndpoint->resultBehavior,
+                        '_context_keys'        => $fwdEndpoint->contextKeys,
+                        '_status_code'         => $fwdEndpoint->statusCode ?? 200,
+                        '_available_events'    => $fwdEndpoint->availableEvents,
+                    ];
+
+                    if ($hasModelBinding) {
+                        $fwdDefaults['_model_attribute'] = $attribute;
+                    }
+
+                    Route::match(
+                        [$fwdEndpoint->method],
+                        $fwdRouteUri,
+                        [MachineController::class, $fwdHandler]
+                    )
+                        ->name("{$namePrefix}.".strtolower($eventType))
+                        ->middleware($fwdEndpoint->middleware)
+                        ->setDefaults($fwdDefaults);
                 }
             });
     }

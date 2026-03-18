@@ -25,6 +25,7 @@ class EndpointDefinition
         public readonly array $middleware,
         public readonly ?int $statusCode,
         public readonly ?array $contextKeys = null,
+        public readonly ?bool $availableEvents = null,
     ) {}
 
     /**
@@ -77,6 +78,7 @@ class EndpointDefinition
             middleware: $config['middleware'] ?? [],
             statusCode: $config['status'] ?? null,
             contextKeys: $config['contextKeys'] ?? null,
+            availableEvents: $config['available_events'] ?? null,
         );
     }
 

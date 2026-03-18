@@ -486,6 +486,30 @@ class StateConfigValidator
             );
         }
 
+        // Validate Format 3 forward array entries
+        if (!empty($stateConfig['forward'])) {
+            $allowedForwardKeys = ['child_event', 'uri', 'method', 'middleware', 'action', 'result', 'contextKeys', 'status', 'available_events'];
+
+            foreach ($stateConfig['forward'] as $key => $value) {
+                if (is_string($key) && is_array($value)) {
+                    $unknownKeys = array_diff(array_keys($value), $allowedForwardKeys);
+
+                    if ($unknownKeys !== []) {
+                        throw new InvalidArgumentException(
+                            message: "State '{$path}' forward entry '{$key}' has unknown keys: ".implode(', ', $unknownKeys)
+                                .'. Allowed: '.implode(', ', $allowedForwardKeys)
+                        );
+                    }
+
+                    if (isset($value['uri']) && !str_starts_with((string) $value['uri'], '/')) {
+                        throw new InvalidArgumentException(
+                            message: "State '{$path}' forward entry '{$key}' uri must start with '/'."
+                        );
+                    }
+                }
+            }
+        }
+
         // Fire-and-forget detection: async (queue) + no @done
         $isFireAndForget = isset($stateConfig['queue']) && !isset($stateConfig['@done']);
 

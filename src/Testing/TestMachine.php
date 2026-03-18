@@ -1019,6 +1019,111 @@ class TestMachine
     }
 
     // ═══════════════════════════════════════════
+    //  Available Events
+    // ═══════════════════════════════════════════
+
+    /**
+     * Assert that the given event type is currently available (sendable).
+     */
+    public function assertAvailableEvent(string $eventType): self
+    {
+        $available = $this->machine->state->availableEvents();
+        $types     = array_column($available, 'type');
+
+        if (!in_array($eventType, $types, true)) {
+            throw new AssertionFailedError(
+                "Expected event '{$eventType}' to be available, but it is not. "
+                .'Available: '.($types === [] ? 'none' : implode(', ', $types)).'.'
+            );
+        }
+
+        return $this;
+    }
+
+    /**
+     * Assert that the given event type is NOT currently available.
+     */
+    public function assertNotAvailableEvent(string $eventType): self
+    {
+        $available = $this->machine->state->availableEvents();
+        $types     = array_column($available, 'type');
+
+        if (in_array($eventType, $types, true)) {
+            throw new AssertionFailedError(
+                "Expected event '{$eventType}' to NOT be available, but it is."
+            );
+        }
+
+        return $this;
+    }
+
+    /**
+     * Assert the exact set of available event types (order-independent).
+     */
+    public function assertAvailableEvents(array $expectedTypes): self
+    {
+        $available   = $this->machine->state->availableEvents();
+        $actualTypes = array_column($available, 'type');
+
+        sort($expectedTypes);
+        sort($actualTypes);
+
+        if ($expectedTypes !== $actualTypes) {
+            throw new AssertionFailedError(
+                'Available events mismatch. '
+                .'Expected: ['.implode(', ', $expectedTypes).']. '
+                .'Actual: ['.implode(', ', $actualTypes).'].'
+            );
+        }
+
+        return $this;
+    }
+
+    /**
+     * Assert that a forward event is in available events with source: forward.
+     */
+    public function assertForwardAvailable(string $eventType): self
+    {
+        $available = $this->machine->state->availableEvents();
+
+        $found = false;
+
+        foreach ($available as $event) {
+            if ($event['type'] === $eventType && $event['source'] === 'forward') {
+                $found = true;
+
+                break;
+            }
+        }
+
+        if (!$found) {
+            throw new AssertionFailedError(
+                "Expected forward event '{$eventType}' to be available, but it is not."
+            );
+        }
+
+        return $this;
+    }
+
+    /**
+     * Assert no events are available (final state, etc.).
+     */
+    public function assertNoAvailableEvents(): self
+    {
+        $available = $this->machine->state->availableEvents();
+
+        if ($available !== []) {
+            $types = array_column($available, 'type');
+
+            throw new AssertionFailedError(
+                'Expected no available events, but found: '.implode(', ', $types).'.'
+            );
+        }
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
     //  Accessors
     // ═══════════════════════════════════════════
 

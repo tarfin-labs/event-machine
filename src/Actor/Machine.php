@@ -878,6 +878,18 @@ class Machine implements Castable, JsonSerializable, Stringable
     // endregion
 
     /**
+     * Get the events that can currently be sent to this machine.
+     *
+     * Convenience proxy to $this->state->availableEvents().
+     *
+     * @return array<int, array{type: string, source: string, region?: string}>
+     */
+    public function availableEvents(): array
+    {
+        return $this->state->availableEvents();
+    }
+
+    /**
      * Retrieves the result of the state machine.
      *
      * This method returns the result of the state machine execution.

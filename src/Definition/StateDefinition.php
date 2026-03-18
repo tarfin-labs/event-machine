@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
 use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
@@ -434,9 +435,38 @@ class StateDefinition
             return;
         }
 
-        $with          = $this->config['with'] ?? null;
-        $forward       = $this->config['forward'] ?? [];
-        $rawQueue      = $this->config['queue'] ?? null;
+        $with       = $this->config['with'] ?? null;
+        $rawForward = $this->config['forward'] ?? [];
+        $rawQueue   = $this->config['queue'] ?? null;
+
+        // Normalize forward entries: resolve FQCN class references to SCREAMING_SNAKE event types.
+        // Consistent with endpoints, schedules, machineIdFor, and modelFor which all use resolveEventType().
+        $forward = [];
+
+        foreach ($rawForward as $key => $value) {
+            if (is_int($key) && is_string($value)) {
+                // Format 1: plain — 'PROVIDE_CARD' or ProvideCardEvent::class
+                $forward[] = EndpointDefinition::resolveEventType($value);
+            } elseif (is_string($key) && is_string($value)) {
+                // Format 2: rename — 'CANCEL_ORDER' => 'ABORT' or FQCN => FQCN
+                $resolvedKey   = EndpointDefinition::resolveEventType($key);
+                $resolvedValue = EndpointDefinition::resolveEventType($value);
+
+                $forward[$resolvedKey] = $resolvedValue;
+            } elseif (is_string($key) && is_array($value)) {
+                // Format 3: full config — resolve key and child_event inside
+                $resolvedKey = EndpointDefinition::resolveEventType($key);
+
+                if (isset($value['child_event'])) {
+                    $value['child_event'] = EndpointDefinition::resolveEventType($value['child_event']);
+                }
+
+                $forward[$resolvedKey] = $value;
+            } else {
+                // Pass through unknown formats (validator will catch them)
+                $forward[$key] = $value;
+            }
+        }
         $rawConnection = $this->config['connection'] ?? null;
         $timeout       = isset($this->config['@timeout']) ? ($this->config['@timeout']['timeout'] ?? null) : null;
         $rawRetry      = $this->config['retry'] ?? null;
