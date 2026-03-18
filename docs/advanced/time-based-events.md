@@ -113,6 +113,10 @@ After 3 fires, `MAX_RETRIES` is sent exactly once. The timer stops.
 ],
 ```
 
+::: warning Testing Timers
+`advanceTimers()` works in-memory and is sufficient for most timer tests. To verify the `machine:process-timers` sweep command reads from DB and fires correctly, see [Recipe: Timer Sweep in Real Environment](/testing/recipes#recipe-timer-sweep-in-real-environment).
+:::
+
 ## Architecture: Sweep, Not Delayed Jobs
 
 Timer events are processed by a sweep command (`machine:process-timers`) that runs on a schedule via Laravel Scheduler.
