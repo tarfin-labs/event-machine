@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
-use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
@@ -17,7 +16,6 @@ uses(LocalQATestCase::class);
 
 beforeEach(function (): void {
     LocalQATestCase::cleanTables();
-    Machine::resetMachineFakes();
     ExpiredApplicationsResolver::$ids = null;
 });
 
@@ -115,7 +113,6 @@ it('LocalQA: machine faking intercepts async delegation on Horizon', function ()
     expect($completed)->toBeTrue('Faked async delegation not completed');
 
     ImmediateChildMachine::assertInvoked();
-    Machine::resetMachineFakes();
 });
 
 // ═══════════════════════════════════════════════════════════════
