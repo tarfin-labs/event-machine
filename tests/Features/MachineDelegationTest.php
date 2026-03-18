@@ -737,3 +737,219 @@ it('uses ParentOrderMachine stub for full lifecycle', function (): void {
         ->and($state->context->get('payment_id'))->not->toBeNull()
         ->and($state->context->get('receipt_url'))->not->toBeNull();
 });
+
+// ============================================================
+// @done.{finalState} — Guards, Accessors, Coexistence
+// ============================================================
+
+it('guard on specific @done.{state} receives ChildMachineDoneEvent (T4)', function (): void {
+    $machine = MachineDefinition::define(
+        config: [
+            'id'     => 'guarded_dot', 'initial' => 'idle', 'context' => [],
+            'states' => [
+                'idle'       => ['on' => ['GO' => 'delegating']],
+                'delegating' => [
+                    'machine'        => ImmediateApprovedChildMachine::class,
+                    '@done.approved' => [
+                        ['target' => 'vip', 'guards' => 'hasDecisionGuard'],
+                        ['target' => 'standard'],
+                    ],
+                ],
+                'vip'      => ['type' => 'final'],
+                'standard' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'guards' => [
+                'hasDecisionGuard' => function (ContextManager $ctx, ChildMachineDoneEvent $event): bool {
+                    return $event->output('decision') === 'yes';
+                },
+            ],
+        ],
+    );
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    expect($state->value)->toBe(['guarded_dot.vip']);
+});
+
+it('guard fallthrough from @done.{state} falls to @done catch-all (T5)', function (): void {
+    $machine = MachineDefinition::define(
+        config: [
+            'id'     => 'fallthrough', 'initial' => 'idle', 'context' => [],
+            'states' => [
+                'idle'       => ['on' => ['GO' => 'delegating']],
+                'delegating' => [
+                    'machine'        => ImmediateApprovedChildMachine::class,
+                    '@done.approved' => [
+                        ['target' => 'vip', 'guards' => 'alwaysFailGuard'],
+                    ],
+                    '@done' => 'standard',
+                ],
+                'vip'      => ['type' => 'final'],
+                'standard' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'guards' => [
+                'alwaysFailGuard' => fn (): bool => false,
+            ],
+        ],
+    );
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    expect($state->value)->toBe(['fallthrough.standard']);
+});
+
+it('ChildMachineDoneEvent.finalState() returns key not full ID (T7)', function (): void {
+    $capturedFinalState = null;
+
+    $machine = MachineDefinition::define(
+        config: [
+            'id'     => 'accessor_test', 'initial' => 'idle', 'context' => [],
+            'states' => [
+                'idle'       => ['on' => ['GO' => 'delegating']],
+                'delegating' => [
+                    'machine'        => ImmediateApprovedChildMachine::class,
+                    '@done.approved' => ['target' => 'completed', 'actions' => 'captureAction'],
+                ],
+                'completed' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'captureAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedFinalState): void {
+                    $capturedFinalState = $event->finalState();
+                },
+            ],
+        ],
+    );
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    // Must be 'approved' (key), not 'immediate_approved.approved' (full ID)
+    expect($capturedFinalState)->toBe('approved');
+});
+
+it('ChildMachineDoneEvent.finalState() returns null for legacy events (T8)', function (): void {
+    $event = ChildMachineDoneEvent::forChild([
+        'result'        => null,
+        'output'        => [],
+        'machine_id'    => 'test-123',
+        'machine_class' => ImmediateChildMachine::class,
+        // No 'final_state' key — legacy event
+    ]);
+
+    expect($event->finalState())->toBeNull();
+});
+
+it('@done.{state} coexists with @fail independently (T9)', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'id'     => 'coexist', 'initial' => 'idle', 'context' => [],
+        'states' => [
+            'idle'       => ['on' => ['GO' => 'delegating']],
+            'delegating' => [
+                'machine'        => FailingChildMachine::class,
+                '@done.approved' => 'completed',
+                '@done.rejected' => 'declined',
+                '@fail'          => 'error',
+            ],
+            'completed' => ['type' => 'final'],
+            'declined'  => ['type' => 'final'],
+            'error'     => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    // FailingChildMachine throws → @fail routes to error
+    expect($state->value)->toBe(['coexist.error']);
+});
+
+it('@done.{state} action receives output, result, and finalState together (T10)', function (): void {
+    $capturedOutput     = null;
+    $capturedResult     = null;
+    $capturedFinalState = null;
+
+    $machine = MachineDefinition::define(
+        config: [
+            'id'     => 'all_accessors', 'initial' => 'idle', 'context' => [],
+            'states' => [
+                'idle'       => ['on' => ['GO' => 'delegating']],
+                'delegating' => [
+                    'machine'    => ResultChildMachine::class,
+                    '@done.done' => ['target' => 'completed', 'actions' => 'captureAllAction'],
+                ],
+                'completed' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'captureAllAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedOutput, &$capturedResult, &$capturedFinalState): void {
+                    $capturedOutput     = $event->output('status');
+                    $capturedResult     = $event->result('status');
+                    $capturedFinalState = $event->finalState();
+                },
+            ],
+        ],
+    );
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    expect($state->value)->toBe(['all_accessors.completed'])
+        ->and($capturedOutput)->toBe('approved')
+        ->and($capturedResult)->toBe('approved')
+        ->and($capturedFinalState)->toBe('done');
+});
+
+// ============================================================
+// @done.{finalState} — Edge Cases
+// ============================================================
+
+it('multiple @done.{state} keys with same target cause no conflict (T32)', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'id'     => 'same_target', 'initial' => 'idle', 'context' => [],
+        'states' => [
+            'idle'       => ['on' => ['GO' => 'delegating']],
+            'delegating' => [
+                'machine'        => ImmediateRejectedChildMachine::class,
+                '@done.approved' => 'error',
+                '@done.rejected' => 'error',
+            ],
+            'error' => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    expect($state->value)->toBe(['same_target.error']);
+});
+
+it('@done.{state} on state with on transitions work independently (T33)', function (): void {
+    $machine = MachineDefinition::define(config: [
+        'id'     => 'mixed_events', 'initial' => 'idle', 'context' => [],
+        'states' => [
+            'idle'       => ['on' => ['GO' => 'delegating']],
+            'delegating' => [
+                'machine'        => ImmediateApprovedChildMachine::class,
+                '@done.approved' => 'completed',
+                'on'             => ['CANCEL' => 'cancelled'],
+            ],
+            'completed' => ['type' => 'final'],
+            'cancelled' => ['type' => 'final'],
+        ],
+    ]);
+
+    $state = $machine->getInitialState();
+    $state = $machine->transition(event: ['type' => 'GO'], state: $state);
+
+    // Child auto-completes, @done.approved fires
+    expect($state->value)->toBe(['mixed_events.completed']);
+});
