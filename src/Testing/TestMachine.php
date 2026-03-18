@@ -1147,11 +1147,10 @@ class TestMachine
     // ═══════════════════════════════════════════
 
     /**
-     * Reset only the behaviors registered via faking().
+     * Reset all fakes registered during this TestMachine's lifecycle.
      *
-     * Behaviors faked directly (e.g. SomeBehavior::fake()) outside of faking()
-     * are NOT cleaned up by this method. Use SomeBehavior::resetFakes() or
-     * InvokableBehavior::resetAllFakes() for those.
+     * Clears: class-based behavior fakes, inline behavior fakes, and
+     * Machine::fake() child machine registrations.
      */
     public function resetFakes(): self
     {
@@ -1164,6 +1163,8 @@ class TestMachine
             InlineBehaviorFake::reset($key);
         }
         $this->fakedInlineBehaviors = [];
+
+        Machine::resetMachineFakes();
 
         return $this;
     }
