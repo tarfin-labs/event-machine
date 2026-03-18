@@ -75,6 +75,20 @@ OrderMachine::test()
 
 This is the **recommended approach** for delegation testing. It handles cleanup automatically via `resetFakes()`.
 
+## Choosing the Right Test Level
+
+Child delegation can be tested at three levels. Pick the one that matches what you're verifying:
+
+| Level | Tool | What It Tests | DB Needed |
+|-------|------|---------------|-----------|
+| Unit | `forTesting()` + `runWithState()` | Single guard/action logic in isolation | No |
+| Integration | `simulateChildDone/Fail` | Transition routing, guard chain, state flow | No |
+| E2E | `Machine::fake()` + `create()` | Full delegation pipeline with persistence | Yes |
+
+::: info simulateChild* is DB-free
+`simulateChildDone()`, `simulateChildFail()`, and `simulateChildTimeout()` do **not** touch the database. They route events entirely through definition-level logic (`routeChildDoneEvent`/`routeChildFailEvent`), so they work with `TestMachine::define()` and `withContext()` just as well as with `create()`.
+:::
+
 For async simulation (parent already waiting for child):
 
 <!-- doctest-attr: ignore -->
