@@ -830,6 +830,14 @@ class Machine implements Castable, JsonSerializable, Stringable
         self::$machineFakes = [];
     }
 
+    /**
+     * Reset the fake for a single machine class.
+     */
+    public static function resetMachineFake(string $class): void
+    {
+        unset(self::$machineFakes[$class]);
+    }
+
     // endregion
 
     // region Interface Implementations
