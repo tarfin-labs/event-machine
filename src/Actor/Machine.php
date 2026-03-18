@@ -878,17 +878,6 @@ class Machine implements Castable, JsonSerializable, Stringable
     // endregion
 
     /**
-     * Retrieves the result of the state machine.
-     *
-     * This method returns the result of the state machine execution.
-     *
-     * If the current state is a final state and a result behavior is
-     * defined for that state, it applies the result behavior and
-     * returns the result. Otherwise, it returns null.
-     *
-     * @return mixed The result of the state machine.
-     */
-    /**
      * Get the events that can currently be sent to this machine.
      *
      * Convenience proxy to $this->state->availableEvents().
@@ -900,6 +889,17 @@ class Machine implements Castable, JsonSerializable, Stringable
         return $this->state->availableEvents();
     }
 
+    /**
+     * Retrieves the result of the state machine.
+     *
+     * This method returns the result of the state machine execution.
+     *
+     * If the current state is a final state and a result behavior is
+     * defined for that state, it applies the result behavior and
+     * returns the result. Otherwise, it returns null.
+     *
+     * @return mixed The result of the state machine.
+     */
     public function result(): mixed
     {
         $currentStateDefinition = $this->state->currentStateDefinition;
