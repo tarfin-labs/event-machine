@@ -81,6 +81,9 @@ class StateDefinition
     /** The transition definition for @timeout, resolved at init time. */
     public ?TransitionDefinition $onTimeoutTransition = null;
 
+    /** @var array<string, TransitionDefinition> Per-final-state @done.{state} transitions, keyed by child final state name. */
+    public array $onDoneStateTransitions = [];
+
     /** Machine invoke definition when this state delegates to a child machine. */
     public ?MachineInvokeDefinition $machineInvokeDefinition = null;
 
@@ -570,6 +573,19 @@ class StateDefinition
                 source: $this,
                 event: '@timeout',
             );
+        }
+
+        // Parse @done.{finalState} keys for per-final-state routing
+        foreach ($this->config ?? [] as $key => $value) {
+            if (str_starts_with((string) $key, '@done.')) {
+                $finalStateName = substr((string) $key, 6); // after '@done.'
+
+                $this->onDoneStateTransitions[$finalStateName] = new TransitionDefinition(
+                    transitionConfig: $value,
+                    source: $this,
+                    event: '@done.'.$finalStateName,
+                );
+            }
         }
 
         if ($this->stateDefinitions !== null) {
