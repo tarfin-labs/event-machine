@@ -205,8 +205,25 @@ class ExportXStateCommand extends Command
                     ),
                 ]);
             } else {
-                // Managed: @done → invoke.onDone
-                if ($stateDefinition->onDoneTransition instanceof TransitionDefinition) {
+                // Managed: @done.{state} + @done → invoke.onDone
+                if ($stateDefinition->onDoneStateTransitions !== []) {
+                    $onDoneArray = [];
+
+                    // Specific @done.{state} entries with synthetic guards
+                    foreach ($stateDefinition->onDoneStateTransitions as $finalStateName => $transition) {
+                        $transitionConfig          = $this->buildTransitionConfig($transition, $stateDefinition);
+                        $transitionConfig          = is_array($transitionConfig) ? $transitionConfig : ['target' => $transitionConfig];
+                        $transitionConfig['guard'] = '__finalState_'.$finalStateName;
+                        $onDoneArray[]             = $transitionConfig;
+                    }
+
+                    // Catch-all @done as default branch (no guard)
+                    if ($stateDefinition->onDoneTransition instanceof TransitionDefinition) {
+                        $onDoneArray[] = $this->buildTransitionConfig($stateDefinition->onDoneTransition, $stateDefinition);
+                    }
+
+                    $invoke['onDone'] = $onDoneArray;
+                } elseif ($stateDefinition->onDoneTransition instanceof TransitionDefinition) {
                     $invoke['onDone'] = $this->buildTransitionConfig($stateDefinition->onDoneTransition, $stateDefinition);
                 }
 
