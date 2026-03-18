@@ -53,6 +53,10 @@ Parent.send(EVENT)
 `@done.{state}` routing works identically in async mode. The `ChildMachineCompletionJob` carries the child's final state key through the pipeline and routes to the matching `@done.{state}` transition on the parent. See [Per-Final-State Routing](/advanced/machine-delegation#per-final-state-routing).
 :::
 
+::: warning Testing Async Delegation
+`Queue::fake()` verifies dispatch but not the full pipeline (child runs → completes → parent routes). For end-to-end verification with real infrastructure, see [Recipe: Full Async Delegation Pipeline](/testing/recipes#recipe-full-async-delegation-pipeline).
+:::
+
 ## Queue Configuration
 
 <!-- doctest-attr: ignore -->
