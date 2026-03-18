@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Testing;
 
+use Carbon\Carbon;
 use PHPUnit\Framework\Assert;
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Actor\State;
@@ -41,6 +42,15 @@ class TestMachine
 
     /** @var array<string> Child machine classes registered via fakingChild() */
     private array $fakedChildMachines = [];
+
+    /** @var Carbon|null When the current state was entered (in-memory timer mode) */
+    private ?Carbon $inMemoryStateEnteredAt = null;
+
+    /** @var array<string, array{last_fired_at: Carbon, fire_count: int, status: string}> In-memory timer fire records */
+    private array $inMemoryTimerFires = [];
+
+    /** @var string|null Last tracked state ID for detecting transitions (in-memory timer mode) */
+    private ?string $lastTrackedStateId = null;
 
     private function __construct(Machine $machine)
     {
@@ -91,7 +101,10 @@ class TestMachine
         $machine        = Machine::withDefinition($definition);
         $machine->state = $definition->getInitialState();
 
-        return new self($machine);
+        $instance = new self($machine);
+        $instance->trackStateEntry();
+
+        return $instance;
     }
 
     /**
@@ -104,7 +117,10 @@ class TestMachine
         $machine                   = Machine::withDefinition($definition);
         $machine->state            = $definition->getInitialState();
 
-        return new self($machine);
+        $instance = new self($machine);
+        $instance->trackStateEntry();
+
+        return $instance;
     }
 
     /**
@@ -112,7 +128,13 @@ class TestMachine
      */
     public static function for(Machine $machine): self
     {
-        return new self($machine);
+        $instance = new self($machine);
+
+        if ($machine->definition->shouldPersist === false) {
+            $instance->trackStateEntry();
+        }
+
+        return $instance;
     }
 
     // ═══════════════════════════════════════════
@@ -206,6 +228,9 @@ class TestMachine
     {
         $this->machine->definition->shouldPersist = false;
 
+        // Initialize in-memory timer state tracking
+        $this->trackStateEntry();
+
         return $this;
     }
 
@@ -233,6 +258,10 @@ class TestMachine
         }
 
         $this->machine->send($event);
+
+        if ($this->machine->definition->shouldPersist === false) {
+            $this->trackStateEntry();
+        }
 
         return $this;
     }
@@ -757,13 +786,11 @@ class TestMachine
      *
      * Persists the machine, backdates state_entered_at by the given duration,
      * runs the sweep logic inline, and refreshes the machine state.
-     *
-     * @throws \RuntimeException If machine has no persistence (withoutPersistence mode).
      */
     public function advanceTimers(Timer $duration): self
     {
         if ($this->machine->definition->shouldPersist === false) {
-            throw new \RuntimeException('advanceTimers() requires persistence. Remove withoutPersistence() to use timer testing.');
+            return $this->advanceTimersInMemory($duration);
         }
 
         // Persist to sync machine_current_states
@@ -940,9 +967,38 @@ class TestMachine
     }
 
     /**
-     * Assert that the current state has a timer-configured transition for the given event.
+     * Track state entry for in-memory timer mode.
+     *
+     * Called after any operation that may change state (send, simulateChild*, etc.)
+     * when persistence is off. Records the entry timestamp and cleans up old-state
+     * timer fires — active recurring fires are removed, but historical records
+     * (fired/exhausted) are preserved for assertions.
      */
-    public function assertHasTimer(string $eventName): self
+    private function trackStateEntry(): void
+    {
+        $currentId = $this->machine->state->currentStateDefinition->id;
+
+        if ($currentId !== $this->lastTrackedStateId) {
+            $this->inMemoryStateEnteredAt = now();
+            $this->lastTrackedStateId     = $currentId;
+
+            // Keep: all fires for current state (any status)
+            // Keep: historical fires for old states (fired/exhausted) — for assertions
+            // Remove: active recurring fires for old states — stop @every timers
+            $this->inMemoryTimerFires = array_filter(
+                $this->inMemoryTimerFires,
+                fn (array $fire, string $key): bool => str_starts_with($key, $currentId.':')
+                    || $fire['status'] !== 'active',
+                ARRAY_FILTER_USE_BOTH,
+            );
+        }
+    }
+
+    /**
+     * Assert that the current state has a timer-configured transition for the given event.
+     * Optionally verify the timer's duration matches.
+     */
+    public function assertHasTimer(string $eventName, ?Timer $expectedDuration = null): self
     {
         $currentState = $this->machine->state->currentStateDefinition;
         $transitions  = $currentState->transitionDefinitions ?? [];
@@ -968,14 +1024,26 @@ class TestMachine
             );
         }
 
+        if ($expectedDuration instanceof Timer) {
+            Assert::assertSame(
+                $expectedDuration->inSeconds(),
+                $timerDef->delaySeconds,
+                "Timer '{$eventName}' has {$timerDef->delaySeconds}s delay, expected {$expectedDuration->inSeconds()}s."
+            );
+        }
+
         return $this;
     }
 
     /**
-     * Assert that a timer event has been fired (recorded in machine_timer_fires).
+     * Assert that a timer event has been fired (recorded in machine_timer_fires or in-memory).
      */
     public function assertTimerFired(string $eventName): self
     {
+        if ($this->machine->definition->shouldPersist === false) {
+            return $this->assertTimerFiredInMemory($eventName);
+        }
+
         $rootEventId = $this->machine->state->history->first()?->root_event_id;
 
         $fired = MachineTimerFire::where('root_event_id', $rootEventId)
@@ -1001,6 +1069,10 @@ class TestMachine
      */
     public function assertTimerNotFired(string $eventName): self
     {
+        if ($this->machine->definition->shouldPersist === false) {
+            return $this->assertTimerNotFiredInMemory($eventName);
+        }
+
         $rootEventId = $this->machine->state->history->first()?->root_event_id;
 
         $fired = MachineTimerFire::where('root_event_id', $rootEventId)
@@ -1014,6 +1086,176 @@ class TestMachine
         }
 
         return $this;
+    }
+
+    private function assertTimerFiredInMemory(string $eventName): self
+    {
+        foreach (array_keys($this->inMemoryTimerFires) as $key) {
+            if (str_contains($key, ":{$eventName}:")) {
+                return $this;
+            }
+        }
+
+        throw new AssertionFailedError(
+            "Expected timer event '{$eventName}' to have been fired (in-memory), but no record found."
+        );
+    }
+
+    private function assertTimerNotFiredInMemory(string $eventName): self
+    {
+        foreach (array_keys($this->inMemoryTimerFires) as $key) {
+            if (str_contains($key, ":{$eventName}:")) {
+                throw new AssertionFailedError(
+                    "Expected timer event '{$eventName}' to NOT have been fired (in-memory), but a record was found."
+                );
+            }
+        }
+
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════
+    //  In-Memory Timer Processing
+    // ═══════════════════════════════════════════
+
+    /**
+     * Advance timers without database persistence.
+     *
+     * Backdates the in-memory state entry time and active timer fires,
+     * then runs the timer sweep in-memory.
+     */
+    private function advanceTimersInMemory(Timer $duration): self
+    {
+        if (!$this->inMemoryStateEnteredAt instanceof Carbon) {
+            return $this;
+        }
+
+        // Simulate time passing (copy() avoids Carbon mutability issues)
+        $this->inMemoryStateEnteredAt = $this->inMemoryStateEnteredAt
+            ->copy()->subSeconds($duration->inSeconds());
+
+        // Also backdate in-memory timer fires for @every
+        foreach ($this->inMemoryTimerFires as &$fire) {
+            if ($fire['status'] === 'active') {
+                $fire['last_fired_at'] = $fire['last_fired_at']
+                    ->copy()->subSeconds($duration->inSeconds());
+            }
+        }
+        unset($fire);
+
+        // Run sweep in-memory
+        $this->processTimersInMemory();
+
+        return $this;
+    }
+
+    /**
+     * Run the timer sweep in-memory for the current state.
+     *
+     * Snapshots the current state's transitions before iterating so that
+     * mid-loop state changes (from timer fires) don't affect the sweep.
+     */
+    private function processTimersInMemory(): self
+    {
+        $currentState = $this->machine->state->currentStateDefinition;
+
+        foreach ($currentState->transitionDefinitions ?? [] as $transitionDef) {
+            if ($transitionDef->timerDefinition === null) {
+                continue;
+            }
+
+            $timer = $transitionDef->timerDefinition;
+
+            if ($timer->isAfter()) {
+                $this->processAfterTimerInMemory($timer);
+            } elseif ($timer->isEvery()) {
+                $this->processEveryTimerInMemory($timer);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Process an @after timer in-memory (one-shot, with dedup).
+     */
+    private function processAfterTimerInMemory(TimerDefinition $timer): void
+    {
+        $deadline = now()->subSeconds($timer->delaySeconds);
+
+        if ($this->inMemoryStateEnteredAt->greaterThan($deadline)) {
+            return; // Not past deadline
+        }
+
+        $key = $timer->key();
+
+        // Check dedup — already fired?
+        if (isset($this->inMemoryTimerFires[$key])
+            && $this->inMemoryTimerFires[$key]['status'] === 'fired') {
+            return;
+        }
+
+        // Send event
+        $this->machine->send(['type' => $timer->eventName]);
+
+        // Record fire (persists across state transitions for assertions)
+        $this->inMemoryTimerFires[$key] = [
+            'last_fired_at' => now(),
+            'fire_count'    => 1,
+            'status'        => 'fired',
+        ];
+
+        // Track state entry if transition happened
+        $this->trackStateEntry();
+    }
+
+    /**
+     * Process an @every timer in-memory (recurring, with max/then support).
+     */
+    private function processEveryTimerInMemory(TimerDefinition $timer): void
+    {
+        $key      = $timer->key();
+        $fireData = $this->inMemoryTimerFires[$key] ?? null;
+
+        // Check exhausted
+        if ($fireData !== null && $fireData['status'] === 'exhausted') {
+            return;
+        }
+
+        $lastFiredAt  = $fireData['last_fired_at'] ?? $this->inMemoryStateEnteredAt;
+        $currentCount = $fireData['fire_count'] ?? 0;
+
+        if (now()->diffInSeconds($lastFiredAt, absolute: true) < $timer->delaySeconds) {
+            return;
+        }
+
+        // Check max/then
+        if ($timer->max !== null && $currentCount >= $timer->max) {
+            if ($timer->then !== null) {
+                $this->machine->send(['type' => $timer->then]);
+                $this->trackStateEntry();
+            }
+
+            $this->inMemoryTimerFires[$key] = [
+                'last_fired_at' => now(),
+                'fire_count'    => $currentCount,
+                'status'        => 'exhausted',
+            ];
+
+            return;
+        }
+
+        // Send event
+        $this->machine->send(['type' => $timer->eventName]);
+
+        // Track fire
+        $this->inMemoryTimerFires[$key] = [
+            'last_fired_at' => now(),
+            'fire_count'    => $currentCount + 1,
+            'status'        => 'active',
+        ];
+
+        $this->trackStateEntry();
     }
 
     // ═══════════════════════════════════════════
@@ -1356,6 +1598,10 @@ class TestMachine
             $doneEvent,
         );
 
+        if ($this->machine->definition->shouldPersist === false) {
+            $this->trackStateEntry();
+        }
+
         return $this;
     }
 
@@ -1392,6 +1638,10 @@ class TestMachine
             $failEvent,
         );
 
+        if ($this->machine->definition->shouldPersist === false) {
+            $this->trackStateEntry();
+        }
+
         return $this;
     }
 
@@ -1420,6 +1670,10 @@ class TestMachine
             $stateDefinition,
             $timeoutEvent,
         );
+
+        if ($this->machine->definition->shouldPersist === false) {
+            $this->trackStateEntry();
+        }
 
         return $this;
     }
