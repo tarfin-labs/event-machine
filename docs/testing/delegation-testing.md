@@ -61,6 +61,41 @@ Machine::resetMachineFakes();
 
 `assertInvokedWith()` checks that **at least one** invocation contains the expected key-value pairs (subset matching).
 
+## Testing Per-Final-State Routing
+
+When a child machine has multiple final states, use `Machine::fake(finalState: ...)` to test which `@done.{state}` route fires:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Actor\Machine;
+
+// Child finished in 'approved' → parent follows @done.approved route
+PaymentMachine::fake(finalState: 'approved');
+$machine = OrderWorkflowMachine::create();
+$machine->send(['type' => 'START']);
+expect($machine->state->currentStateDefinition->id)->toContain('completed');
+
+// Child finished in 'declined' → parent follows @done.declined route
+Machine::resetMachineFakes();
+PaymentMachine::fake(finalState: 'declined');
+$machine = OrderWorkflowMachine::create();
+$machine->send(['type' => 'START']);
+expect($machine->state->currentStateDefinition->id)->toContain('payment_failed');
+
+// No finalState → falls through to @done catch-all
+Machine::resetMachineFakes();
+PaymentMachine::fake();
+$machine = OrderWorkflowMachine::create();
+$machine->send(['type' => 'START']);
+expect($machine->state->currentStateDefinition->id)->toContain('fallback');
+
+Machine::resetMachineFakes();
+```
+
+::: tip finalState is routing-relevant
+The `finalState` parameter on `Machine::fake()` determines which `@done.{state}` route fires on the parent. When omitted (or `null`), the event has no final state info and falls through to the `@done` catch-all.
+:::
+
 ## Full Test Example
 
 <!-- doctest-attr: no_run -->
