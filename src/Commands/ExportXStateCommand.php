@@ -188,6 +188,7 @@ class ExportXStateCommand extends Command
             $invoke           = $this->buildInvokeNode($stateDefinition);
 
             $isFireAndForget = !$stateDefinition->onDoneTransition instanceof TransitionDefinition
+                && $stateDefinition->onDoneStateTransitions === []
                 && !$invokeDefinition->isJob();
 
             if ($isFireAndForget) {
