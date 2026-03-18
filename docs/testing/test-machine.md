@@ -302,6 +302,18 @@ $machine->test()
 
 See [Scheduled Testing](/testing/scheduled-testing) for full details.
 
+## When to Use TestMachine
+
+| Scenario | Use | Why |
+|----------|-----|-----|
+| Full machine flow with assertions | `Machine::test()` or `TestMachine::create()` | Fluent chain, automatic cleanup |
+| Quick inline definition for one test | `TestMachine::define()` | No Machine class needed |
+| Wrapping an existing machine instance | `TestMachine::for($machine)` | Access fluent API on pre-built machine |
+| Testing with pre-configured context | `Machine::withContext()` | Entry actions see injected values |
+| Quick transition/guard unit test | `MachineDefinition::define()` + `transition()` | Lightweight, no TestMachine overhead |
+
+**Rule of thumb:** Use `TestMachine` when you want fluent assertions. Use `MachineDefinition::define()` when you only need `getInitialState()` + `transition()` and don't need assertion chaining.
+
 ::: tip Related
 See [Isolated Testing](/testing/isolated-testing) for unit-level `runWithState()`,
 [Fakeable Behaviors](/testing/fakeable-behaviors) for the faking API,
