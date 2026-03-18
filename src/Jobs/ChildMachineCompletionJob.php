@@ -55,6 +55,7 @@ class ChildMachineCompletionJob implements ShouldQueue
         public readonly array $childContextData = [],
         public readonly ?string $errorMessage = null,
         public readonly ?array $outputData = null,
+        public readonly ?string $childFinalState = null,
     ) {}
 
     public function handle(): void
@@ -109,6 +110,7 @@ class ChildMachineCompletionJob implements ShouldQueue
                     'output'        => $this->outputData,
                     'machine_id'    => $this->childRootEventId ?? '',
                     'machine_class' => $this->childMachineClass,
+                    'final_state'   => $this->childFinalState,
                 ]);
 
                 $freshParent->definition->routeChildDoneEvent(
