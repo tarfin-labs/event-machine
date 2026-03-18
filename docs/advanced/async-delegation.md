@@ -167,6 +167,177 @@ class InitiateChargeAction extends ActionBehavior
 }
 ```
 
+## Forward Pattern (Interactive Child)
+
+The most common forward use case is a child machine that needs **user interaction** before completing. Unlike webhooks (where an external system calls the child), forward endpoints let users interact with the child **through the parent's routes**.
+
+### Webhook vs Forward
+
+| Aspect | Webhook | Forward |
+|--------|---------|---------|
+| Who calls child? | External system (e.g., Stripe) | User via parent endpoint |
+| Child needs own routes? | Yes (`endpoints` on child) | No (auto-exposed via parent's `forward` config) |
+| Trigger | 3rd-party callback | User HTTP request |
+| Use case | Payment gateways, SMS providers | Multi-step forms, approvals, interactive workflows |
+| Response contains | Child state only | Parent + child state combined |
+| Validation | Child's own endpoint handler | Child's `EventBehavior` (auto-resolved) |
+
+### Full Example: Order with Interactive Payment
+
+A parent machine delegates to a payment child that requires the user to provide a card number and then confirm the payment:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
+class OrderMachine extends Machine
+{
+    public static function definition(): MachineDefinition
+    {
+        return MachineDefinition::define(
+            config: [
+                'id'      => 'order',
+                'initial' => 'idle',
+                'context' => ['order_id' => null],
+                'states'  => [
+                    'idle' => [
+                        'on' => ['START' => 'processing_payment'],
+                    ],
+                    'processing_payment' => [
+                        'machine' => PaymentFlowMachine::class,
+                        'queue'   => 'default',
+                        'with'    => ['order_id'],
+                        'forward' => [
+                            'PROVIDE_CARD',                      // Format 1: forward as-is
+                            'CONFIRM_PAYMENT' => [               // Format 3: with endpoint customization
+                                'contextKeys' => ['card_last4', 'status'],
+                                'status'      => 200,
+                            ],
+                        ],
+                        'on'    => ['CANCEL' => 'cancelled'],
+                        '@done' => 'completed',
+                        '@fail' => 'failed',
+                    ],
+                    'completed' => ['type' => 'final'],
+                    'failed'    => ['type' => 'final'],
+                    'cancelled' => ['type' => 'final'],
+                ],
+            ],
+            behavior: [
+                'events' => [
+                    'START'  => StartOrderEvent::class,
+                    'CANCEL' => CancelOrderEvent::class,
+                ],
+            ],
+            endpoints: [
+                'START',
+                'CANCEL',
+            ],
+        );
+    }
+}
+```
+
+The child machine defines the events and transitions but does **not** define its own `endpoints`:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
+class PaymentFlowMachine extends Machine
+{
+    public static function definition(): MachineDefinition
+    {
+        return MachineDefinition::define(
+            config: [
+                'id'      => 'payment_flow',
+                'initial' => 'awaiting_card',
+                'context' => [
+                    'order_id'   => null,
+                    'card_last4' => null,
+                    'status'     => 'pending',
+                ],
+                'states' => [
+                    'awaiting_card' => [
+                        'on' => [
+                            'PROVIDE_CARD' => [
+                                'target'  => 'awaiting_confirmation',
+                                'actions' => 'storeCardAction',
+                            ],
+                        ],
+                    ],
+                    'awaiting_confirmation' => [
+                        'on' => [
+                            'CONFIRM_PAYMENT' => 'charged',
+                        ],
+                    ],
+                    'charged' => ['type' => 'final'],
+                ],
+            ],
+            behavior: [
+                'events' => [
+                    'PROVIDE_CARD'    => ProvideCardEvent::class,
+                    'CONFIRM_PAYMENT' => ConfirmPaymentEvent::class,
+                ],
+                'actions' => [
+                    'storeCardAction' => function (ContextManager $ctx, EventBehavior $event): void {
+                        $cardNumber = $event->payload['card_number'] ?? '';
+                        $ctx->set('card_last4', substr($cardNumber, -4));
+                        $ctx->set('status', 'card_provided');
+                    },
+                ],
+            ],
+        );
+    }
+}
+```
+
+The flow works like this:
+
+```
+User: POST /orders/{order}/start
+  → Parent enters 'processing_payment'
+  → Child spawns on queue → persists in 'awaiting_card'
+
+User: POST /orders/{order}/provide-card  { card_number: "4111111111111111" }
+  → Parent.send(PROVIDE_CARD)
+  → tryForwardEventToChild() routes to child
+  → Child transitions: awaiting_card → awaiting_confirmation
+  → Response: { parent.value, child.value, child.context }
+
+User: POST /orders/{order}/confirm-payment  { confirmation_code: "ABC" }
+  → Parent.send(CONFIRM_PAYMENT)
+  → tryForwardEventToChild() routes to child
+  → Child transitions: awaiting_confirmation → charged (final)
+  → ChildMachineCompletionJob dispatched → parent @done fires
+  → Response: { parent.value, child.value, child.context }
+```
+
+### Endpoint Customization (Format 3)
+
+Forward entries support the same endpoint customization keys as regular endpoints. Use the array format (Format 3) when you need control over the auto-generated route:
+
+<!-- doctest-attr: ignore -->
+```php
+'forward' => [
+    'PROVIDE_CARD' => [
+        'child_event'      => 'PROVIDE_CARD',     // Rename for child (optional)
+        'uri'              => '/enter-payment',    // Custom URI (default: /provide-card)
+        'method'           => 'PATCH',             // HTTP method (default: POST)
+        'middleware'       => ['throttle:10'],      // Route middleware
+        'action'           => CustomAction::class,  // Parent-level action lifecycle
+        'result'           => CustomResult::class,  // ResultBehavior (receives ForwardContext)
+        'contextKeys'      => ['card_last4'],       // Filter child context in response
+        'status'           => 202,                  // HTTP status code
+        'available_events' => false,                // Suppress available_events in response
+    ],
+],
+```
+
 ## Comparison Table
 
 | Aspect | Sync | Async (Queue) | Fire-and-Forget (Queue, no `@done`) |
@@ -176,7 +347,7 @@ class InitiateChargeAction extends ActionBehavior
 | Persistence | Optional | Required (parent + child) | Required (child only) |
 | External I/O | Not recommended | Designed for it | Designed for it |
 | Webhook support | No | Yes | No (parent doesn't track child) |
+| Forward endpoint | Not applicable | Supported | Not applicable |
 | `@timeout` | Not applicable | Supported | Not applicable |
-| `forward` | Not applicable | Supported | Not applicable |
 | `MachineChild` record | No | Yes | No |
 | Complexity | Simple | More moving parts | Simple (no lifecycle tracking) |
