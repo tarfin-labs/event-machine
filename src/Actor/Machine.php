@@ -687,7 +687,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * @param  array|null  $result  The fake result to return via @done.
      * @param  bool  $fail  Whether to trigger @fail instead of @done.
      * @param  string|null  $error  The error message for @fail.
-     * @param  string|null  $finalState  The specific final state name (unused by routing, available for inspection).
+     * @param  string|null  $finalState  The child's final state key — determines which `@done.{state}` route fires on the parent.
      */
     public static function fake(
         ?array $result = null,

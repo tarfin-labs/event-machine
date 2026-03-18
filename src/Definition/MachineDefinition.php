@@ -1267,7 +1267,8 @@ class MachineDefinition
     {
         $childMachineClass = $invokeDefinition->machineClass;
         $childContext      = $invokeDefinition->resolveChildContext($state->context);
-        $isFireAndForget   = !$stateDefinition->onDoneTransition instanceof TransitionDefinition;
+        $isFireAndForget   = !$stateDefinition->onDoneTransition instanceof TransitionDefinition
+            && $stateDefinition->onDoneStateTransitions === [];
 
         // Record child machine start event
         $state->setInternalEventBehavior(
@@ -1371,7 +1372,8 @@ class MachineDefinition
         );
 
         // Fire-and-forget faked: optionally transition to target, no @done/@fail routing
-        if (!$stateDefinition->onDoneTransition instanceof TransitionDefinition) {
+        if (!$stateDefinition->onDoneTransition instanceof TransitionDefinition
+            && $stateDefinition->onDoneStateTransitions === []) {
             if ($invokeDefinition->target !== null) {
                 $targetState = $this->idMap[$this->id.'.'.$invokeDefinition->target]
                     ?? $this->idMap[$invokeDefinition->target]
@@ -1414,6 +1416,7 @@ class MachineDefinition
                 'output'        => $fake['result'] ?? [],
                 'machine_id'    => '',
                 'machine_class' => $childMachineClass,
+                'final_state'   => $fake['finalState'],
             ]);
 
             $this->routeChildDoneEvent($state, $stateDefinition, $doneEvent);
@@ -1495,7 +1498,8 @@ class MachineDefinition
      */
     protected function routeChildDone(State $state, StateDefinition $stateDefinition, Machine $childMachine, string $childMachineClass): void
     {
-        if (!$stateDefinition->onDoneTransition instanceof TransitionDefinition) {
+        if (!$stateDefinition->onDoneTransition instanceof TransitionDefinition
+            && $stateDefinition->onDoneStateTransitions === []) {
             return;
         }
 
@@ -1507,6 +1511,7 @@ class MachineDefinition
             'output'        => self::resolveChildOutput($childMachine->state->currentStateDefinition, $childMachine->state->context) ?? $childContext,
             'machine_id'    => $childRootEventId,
             'machine_class' => $childMachineClass,
+            'final_state'   => $childMachine->state->currentStateDefinition->key,
         ]);
 
         $this->routeChildDoneEvent($state, $stateDefinition, $doneEvent);
