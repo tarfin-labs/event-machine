@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Testing;
 
+use PHPUnit\Framework\Assert;
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
@@ -259,7 +260,8 @@ class TestMachine
             ? "[\n  ".implode(",\n  ", $values)."\n]"
             : '['.implode(', ', $values).']';
 
-        expect($this->machine->state->matches($expected))->toBeTrue(
+        Assert::assertTrue(
+            $this->machine->state->matches($expected),
             "Expected state [{$expected}] but got {$actual}"
         );
 
@@ -269,7 +271,8 @@ class TestMachine
     public function assertNotState(string $state): self
     {
         $actual = '['.implode(', ', $this->machine->state->value).']';
-        expect($this->machine->state->matches($state))->toBeFalse(
+        Assert::assertFalse(
+            $this->machine->state->matches($state),
             "Expected NOT to be in state [{$state}], but machine is in {$actual}"
         );
 
@@ -278,15 +281,20 @@ class TestMachine
 
     public function assertFinished(): self
     {
-        expect($this->machine->state->currentStateDefinition?->type)
-            ->toBe(StateDefinitionType::FINAL, 'Expected a final state');
+        Assert::assertSame(
+            StateDefinitionType::FINAL,
+            $this->machine->state->currentStateDefinition?->type,
+            'Expected a final state'
+        );
 
         return $this;
     }
 
     public function assertResult(mixed $expected): self
     {
-        expect($this->machine->result())->toBe($expected,
+        Assert::assertSame(
+            $expected,
+            $this->machine->result(),
             'Machine result did not match expected value'
         );
 
@@ -299,7 +307,9 @@ class TestMachine
 
     public function assertContext(string $key, mixed $expected): self
     {
-        expect($this->machine->state->context->get($key))->toBe($expected,
+        Assert::assertSame(
+            $expected,
+            $this->machine->state->context->get($key),
             "context[{$key}]: expected ".json_encode($expected)
         );
 
@@ -309,7 +319,8 @@ class TestMachine
     public function assertContextMatches(string $key, callable $callback): self
     {
         $value = $this->machine->state->context->get($key);
-        expect($callback($value))->toBeTrue(
+        Assert::assertTrue(
+            $callback($value),
             "context[{$key}]: value ".json_encode($value).' did not match callback'
         );
 
@@ -318,7 +329,8 @@ class TestMachine
 
     public function assertContextHas(string $key): self
     {
-        expect($this->machine->state->context->has($key))->toBeTrue(
+        Assert::assertTrue(
+            $this->machine->state->context->has($key),
             "Expected context to have [{$key}]"
         );
 
@@ -327,7 +339,8 @@ class TestMachine
 
     public function assertContextMissing(string $key): self
     {
-        expect($this->machine->state->context->has($key))->toBeFalse(
+        Assert::assertFalse(
+            $this->machine->state->context->has($key),
             "Expected context NOT to have [{$key}]"
         );
 
@@ -373,7 +386,9 @@ class TestMachine
             return $this;
         }
 
-        expect($this->machine->state->value)->toBe($before,
+        Assert::assertSame(
+            $before,
+            $this->machine->state->value,
             'Expected event to be guarded, but a transition occurred'
         );
 
@@ -394,19 +409,17 @@ class TestMachine
         try {
             $this->send($event);
         } catch (NoTransitionDefinitionFoundException) {
-            expect(false)->toBeTrue(
-                "Event not recognized — cannot verify guard [{$guardName}]"
-            );
-
-            return $this; // Unreachable — expect() throws, but explicit for clarity
+            Assert::fail("Event not recognized — cannot verify guard [{$guardName}]");
         }
 
-        expect($this->machine->state->value)->toBe($before,
+        Assert::assertSame(
+            $before,
+            $this->machine->state->value,
             "Expected event to be guarded by [{$guardName}], but a transition occurred"
         );
 
         $stateDefinition = $this->machine->state->currentStateDefinition;
-        expect($stateDefinition)->not->toBeNull('Cannot assertGuardedBy: no current state definition');
+        Assert::assertNotNull($stateDefinition, 'Cannot assertGuardedBy: no current state definition');
 
         $machineId = $stateDefinition->machine->id;
 
@@ -418,7 +431,8 @@ class TestMachine
         $guardFailEvent = "{$machineId}.guard.{$placeholder}.fail";
         $guardFailed    = $this->machine->state->history->pluck('type')->contains($guardFailEvent);
 
-        expect($guardFailed)->toBeTrue(
+        Assert::assertTrue(
+            $guardFailed,
             "Expected guard [{$guardName}] to block the event, but no fail event [{$guardFailEvent}] found in history"
         );
 
@@ -432,13 +446,15 @@ class TestMachine
     {
         try {
             $this->send($event);
-            expect(false)->toBeTrue('Expected MachineValidationException but no exception was thrown');
+            Assert::fail('Expected MachineValidationException but no exception was thrown');
         } catch (MachineValidationException $e) {
             if ($errorKey !== null) {
-                expect($e->errors())->toHaveKey($errorKey);
+                Assert::assertArrayHasKey($errorKey, $e->errors());
             }
+        } catch (AssertionFailedError $e) {
+            throw $e;
         } catch (\Throwable $e) {
-            expect(false)->toBeTrue(
+            Assert::fail(
                 'Expected MachineValidationException, got '.$e::class.': '.$e->getMessage()
             );
         }
@@ -454,7 +470,8 @@ class TestMachine
     {
         $history = $this->machine->state->history->pluck('type')->toArray();
         foreach ($eventTypes as $type) {
-            expect(in_array($type, $history, true))->toBeTrue(
+            Assert::assertTrue(
+                in_array($type, $history, true),
                 "Expected history to contain [{$type}], got [".implode(', ', $history).']'
             );
         }
@@ -477,7 +494,8 @@ class TestMachine
                     break;
                 }
             }
-            expect($found)->toBeTrue(
+            Assert::assertTrue(
+                $found,
                 "Expected event [{$type}] after position {$position} in history [".implode(', ', $history).']'
             );
         }
@@ -526,7 +544,8 @@ class TestMachine
                     break;
                 }
             }
-            expect($found)->toBeTrue(
+            Assert::assertTrue(
+                $found,
                 "Expected state [{$expectedState}] after position {$position} in visited states: [".implode(', ', $visitedStates).']'
             );
         }
@@ -545,11 +564,14 @@ class TestMachine
     {
         foreach ($steps as $i => $step) {
             $this->send($step['event']);
-            expect($this->machine->state->matches($step['state']))->toBeTrue(
+            Assert::assertTrue(
+                $this->machine->state->matches($step['state']),
                 "Step {$i}: expected [{$step['state']}], got [".implode(', ', $this->machine->state->value).']'
             );
             foreach ($step['context'] ?? [] as $key => $value) {
-                expect($this->machine->state->context->get($key))->toBe($value,
+                Assert::assertSame(
+                    $value,
+                    $this->machine->state->context->get($key),
                     "Step {$i}: context[{$key}]"
                 );
             }
@@ -570,11 +592,15 @@ class TestMachine
 
                 return in_array($regionId, $segments, true);
             });
-        expect($match)->not->toBeNull("No active state in region [{$regionId}]");
+        Assert::assertNotNull($match, "No active state in region [{$regionId}]");
 
         $segments  = explode('.', (string) $match);
         $lastState = end($segments);
-        expect($lastState)->toBe($expectedState, "Expected state [{$expectedState}] in region [{$regionId}], got [{$lastState}]");
+        Assert::assertSame(
+            $expectedState,
+            $lastState,
+            "Expected state [{$expectedState}] in region [{$regionId}], got [{$lastState}]"
+        );
 
         return $this;
     }
@@ -593,7 +619,8 @@ class TestMachine
 
         if ($parallelStateRoute !== null) {
             $expectedEvent = "{$machineId}.parallel.{$parallelStateRoute}.done";
-            expect($history->contains($expectedEvent))->toBeTrue(
+            Assert::assertTrue(
+                $history->contains($expectedEvent),
                 "Expected all regions of [{$parallelStateRoute}] to complete, but PARALLEL_DONE event [{$expectedEvent}] not found in history"
             );
         } else {
@@ -603,7 +630,8 @@ class TestMachine
                 fn (mixed $type): bool => str_starts_with((string) $type, $prefix) && str_ends_with((string) $type, $suffix)
             );
 
-            expect($found)->toBeTrue(
+            Assert::assertTrue(
+                $found,
                 'Expected all regions to complete, but no PARALLEL_DONE event found in history'
             );
         }

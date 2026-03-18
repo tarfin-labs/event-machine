@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
+use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
 use PHPUnit\Framework\ExpectationFailedException;
@@ -307,7 +308,7 @@ it('assertValidationFailed checks specific error key', function (): void {
 it('assertValidationFailed fails when no exception is thrown', function (): void {
     // count=0 is even, so IsEvenGuard passes — no MachineValidationException
     expect(fn () => TrafficLightsMachine::test()->assertValidationFailed('MULTIPLY'))
-        ->toThrow(ExpectationFailedException::class);
+        ->toThrow(AssertionFailedError::class);
 });
 
 // ─── withoutPersistence() ────────────────────────────────────
