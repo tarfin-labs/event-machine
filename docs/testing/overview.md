@@ -87,3 +87,38 @@ For fast tests, use SQLite in-memory. This eliminates migration overhead and dis
 | Persistence | DB, restoration, archival | [Persistence Testing](/testing/persistence-testing) |
 | Recipes | Common real-world patterns | [Recipes](/testing/recipes) |
 | Migration | Upgrading from legacy test patterns | [Migration Patterns](/getting-started/upgrading#testing-migration-patterns) |
+
+## Which Tool to Use?
+
+```
+Single behavior in isolation?         → State::forTesting() + runWithState()
+Full machine flow?                    → TestMachine::create() or define()
+Child delegation?                     → Machine::fake() + send()
+Async child completion?               → Queue::fake() + ChildMachineCompletionJob
+Timer behavior?                       → advanceTimers() / processTimers()
+Forward endpoints?                    → MachineRouter::register() + postJson()
+Cross-machine communication?          → Queue::fake() for dispatchTo
+Full async pipeline / real infra?     → See "When Fakes Aren't Enough" below
+```
+
+## When Fakes Aren't Enough
+
+Most EventMachine testing works fine with fakes. But some scenarios can only be verified with real infrastructure:
+
+| What fakes verify | What fakes DON'T verify |
+|-------------------|------------------------|
+| Job dispatch (`Queue::assertPushed`) | Job execution → child runs → completion routes back |
+| Timer registration (`assertHasTimer`) | `machine:process-timers` command fires correctly |
+| Schedule definition (`assertHasSchedule`) | `machine:process-scheduled` runs via scheduler |
+| Child invocation (`assertChildInvoked`) | Real child starts, persists, reaches final state |
+| Lock exception thrown | Concurrent requests actually block each other |
+
+**Rule of thumb:** If you check "was the right thing dispatched/registered?" → fakes are sufficient. If you need "does the full pipeline complete end-to-end?" → real infrastructure.
+
+**When to invest:**
+- Async delegation (`queue`) where parent behavior after `@done` is business-critical
+- Timers (`after`/`every`) that must be verified against the sweep command
+- Concurrent access with real database locks
+- Forward endpoints with full HTTP → child → response chain
+
+See [Recipes](/testing/recipes) for real infrastructure testing patterns.
