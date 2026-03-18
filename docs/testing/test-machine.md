@@ -4,13 +4,17 @@ Fluent test wrapper inspired by `Livewire::test()`. Provides a chainable API for
 
 ## Construction
 
-TestMachine can be created four ways depending on your testing needs. Use `Machine::test()` for existing machine classes, `withContext()` when initial entry actions depend on context, `define()` for inline throwaway definitions, and `for()` when you already have a Machine instance.
+TestMachine can be created five ways depending on your testing needs. Use `Machine::test()` for existing machine classes, `TestMachine::create()` for direct construction, `withContext()` when initial entry actions depend on context, `define()` for inline throwaway definitions, and `for()` when you already have a Machine instance.
 
 <!-- doctest-attr: ignore -->
 ```php
-// From a Machine subclass
+// From a Machine subclass (delegates to TestMachine::create())
 TrafficLightsMachine::test()
 TrafficLightsMachine::test(['count' => 42])
+
+// Direct construction (same as test(), for explicit TestMachine reference)
+TestMachine::create(TrafficLightsMachine::class)
+TestMachine::create(TrafficLightsMachine::class, ['count' => 42])
 
 // Pre-start context — entry actions see injected values
 TrafficLightsMachine::withContext(['count' => 42])
@@ -124,6 +128,40 @@ Chain configuration methods before sending events to customize machine behavior 
 ->assertBehaviorRanWith(SendEmailAction::class, fn($ctx) => $ctx->get('email') !== null)
 ->assertBehaviorRanWith('myAction', fn(array $params) => $params[0]->get('done'))  // inline: array param
 ```
+
+## Available Events Assertions
+
+Assert which events the machine's current state can accept. Useful for verifying the machine exposes the correct API at each step — especially with forward endpoints.
+
+<!-- doctest-attr: ignore -->
+```php
+// Assert a specific event is available
+->assertAvailableEvent('SUBMIT_ORDER')
+
+// Assert an event is NOT available (e.g., after transitioning away)
+->assertNotAvailableEvent('SUBMIT_ORDER')
+
+// Assert exact set of available event types
+->assertAvailableEvents(['SUBMIT_ORDER', 'CANCEL'])
+
+// Assert a forwarded event is available (source: 'forward')
+->assertForwardAvailable('PROVIDE_CARD')
+
+// Assert no events available (final state)
+->assertNoAvailableEvents()
+```
+
+| Method | Description |
+|--------|-------------|
+| `assertAvailableEvent(string $eventType)` | Event type is available in current state |
+| `assertNotAvailableEvent(string $eventType)` | Event type is NOT available |
+| `assertAvailableEvents(array $expectedTypes)` | Exact set of available events matches |
+| `assertForwardAvailable(string $eventType)` | Forwarded event is available (`source: 'forward'`) |
+| `assertNoAvailableEvents()` | No events available — current state is final or has no transitions |
+
+::: tip Parent vs Forward Events
+`assertAvailableEvent()` matches events from any source. `assertForwardAvailable()` specifically matches events with `source: 'forward'` — those auto-generated from the `forward` config on delegation states. See [Available Events](/laravel-integration/available-events) for details.
+:::
 
 ## Timer Testing
 
