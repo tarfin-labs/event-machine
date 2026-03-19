@@ -337,20 +337,17 @@ test('normalizes string behaviors to arrays', function (): void {
     ]))->not->toThrow(exception: InvalidArgumentException::class);
 });
 
-test('validates empty guarded transitions array', function (): void {
+test('empty array is treated as targetless transition, not empty guarded transition', function (): void {
     expect(fn () => MachineDefinition::define([
         'id'     => 'machine',
         'states' => [
             'state_a' => [
                 'on' => [
-                    'EVENT' => [], // Empty conditions array
+                    'EVENT' => [], // Targetless transition (stay in current state)
                 ],
             ],
         ],
-    ]))->toThrow(
-        exception: InvalidArgumentException::class,
-        exceptionMessage: "State 'state_a' has empty conditions array for event 'EVENT'. Guarded transitions must have at least one condition."
-    );
+    ]))->not->toThrow(exception: InvalidArgumentException::class);
 });
 
 test('validates default condition must be last in guarded transitions', function (): void {
