@@ -64,19 +64,31 @@ $state = $machine->state;  // Or $machine->send(...)
 ```
 
 What happens:
-1. `machine.start` internal event fires
-2. Initial state's entry actions run
-3. First event is persisted (if persistence enabled)
+1. `{machine}.start` internal event fires
+2. Root-level entry actions run (if defined) — `{machine}.entry.start` / `{machine}.entry.finish`
+3. Initial state's entry actions run — `{machine}.state.{state}.entry.start` / `.finish`
+4. First event is persisted (if persistence enabled)
 
 <!-- doctest-attr: ignore -->
 ```php
 'initial' => 'pending',
+'entry' => 'initializeTrackingAction',  // Root entry — runs once on start
 'states' => [
     'pending' => [
         'entry' => ['logOrderCreated', 'notifyCustomer'],
-        // These run when machine starts
+        // These run after root entry
     ],
 ]
+```
+
+When the machine reaches a final state, root exit actions run before `{machine}.finish`:
+
+```
+State exit actions
+  → {machine}.exit.start
+    → Root exit actions
+  → {machine}.exit.finish
+    → {machine}.finish
 ```
 
 ## 3. Sending Events
@@ -307,8 +319,12 @@ Implemented via cache locks:
 
 | Event | When |
 |-------|------|
-| `machine.start` | Machine initialized |
-| `machine.finish` | Reached final state |
+| `{machine}.start` | Machine initialized |
+| `{machine}.entry.start` | Root entry actions starting (if defined) |
+| `{machine}.entry.finish` | Root entry actions completed |
+| `{machine}.exit.start` | Root exit actions starting (if defined, on final state) |
+| `{machine}.exit.finish` | Root exit actions completed |
+| `{machine}.finish` | Reached final state |
 
 ## State History Access
 
