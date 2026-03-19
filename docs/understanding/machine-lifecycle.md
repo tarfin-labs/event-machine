@@ -116,16 +116,25 @@ When an event is sent, here's exactly what happens:
 │     └─► Check conditions (first matching branch wins)       │
 │     └─► If all guards fail, transition is blocked           │
 │                                                              │
-│  3. EXIT ACTIONS                                             │
+│  3. LISTEN EXIT                                              │
+│     └─► Run listen.exit on source (if non-transient)        │
+│                                                              │
+│  4. EXIT ACTIONS                                             │
 │     └─► Run current state's exit actions                    │
 │                                                              │
-│  4. TRANSITION ACTIONS                                       │
+│  5. TRANSITION ACTIONS                                       │
 │     └─► Run actions defined on the transition               │
 │                                                              │
-│  5. ENTRY ACTIONS                                            │
+│  6. ENTRY ACTIONS                                            │
 │     └─► Run new state's entry actions                       │
 │                                                              │
-│  6. ALWAYS TRANSITIONS                                       │
+│  7. LISTEN ENTRY                                             │
+│     └─► Run listen.entry on target (if non-transient)       │
+│                                                              │
+│  8. LISTEN TRANSITION                                        │
+│     └─► Run listen.transition (always, unless transient)    │
+│                                                              │
+│  9. ALWAYS TRANSITIONS                                       │
 │     └─► Check for @always transitions                       │
 │     └─► If found, repeat from step 1                        │
 │                                                              │
@@ -324,6 +333,12 @@ Implemented via cache locks:
 | `{machine}.entry.finish` | Root entry actions completed |
 | `{machine}.exit.start` | Root exit actions starting (if defined, on final state) |
 | `{machine}.exit.finish` | Root exit actions completed |
+| `{machine}.listen.entry.start/finish` | Listener entry actions |
+| `{machine}.listen.exit.start/finish` | Listener exit actions |
+| `{machine}.listen.transition.start/finish` | Listener transition actions |
+| `{machine}.listen.queue.{action}.dispatched` | Queued listener dispatched |
+| `{machine}.listen.queue.{action}.started` | Worker picked up queued listener |
+| `{machine}.listen.queue.{action}.completed` | Worker finished queued listener |
 | `{machine}.finish` | Reached final state |
 
 ## State History Access
