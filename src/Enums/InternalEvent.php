@@ -13,8 +13,12 @@ use Illuminate\Support\Str;
  */
 enum InternalEvent: string
 {
-    case MACHINE_START  = '{machine}.start';
-    case MACHINE_FINISH = '{machine}.finish';
+    case MACHINE_START        = '{machine}.start';
+    case MACHINE_FINISH       = '{machine}.finish';
+    case MACHINE_ENTRY_START  = '{machine}.entry.start';
+    case MACHINE_ENTRY_FINISH = '{machine}.entry.finish';
+    case MACHINE_EXIT_START   = '{machine}.exit.start';
+    case MACHINE_EXIT_FINISH  = '{machine}.exit.finish';
 
     case STATE_ENTER        = '{machine}.state.{placeholder}.enter';
     case STATE_ENTRY_START  = '{machine}.state.{placeholder}.entry.start';
