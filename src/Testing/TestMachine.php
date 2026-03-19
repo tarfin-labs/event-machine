@@ -1611,6 +1611,8 @@ class TestMachine
     public function simulateChildFail(
         string $childClass,
         string $errorMessage = 'Simulated failure',
+        int|string|null $errorCode = null,
+        array $output = [],
     ): self {
         $stateDefinition = $this->machine->state->currentStateDefinition;
 
@@ -1627,9 +1629,10 @@ class TestMachine
 
         $failEvent = ChildMachineFailEvent::forChild([
             'error_message' => $errorMessage,
+            'error_code'    => $errorCode,
             'machine_id'    => '',
             'machine_class' => $childClass,
-            'output'        => [],
+            'output'        => $output,
         ]);
 
         $this->machine->definition->routeChildFailEvent(
