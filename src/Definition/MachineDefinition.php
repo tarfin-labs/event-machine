@@ -440,6 +440,17 @@ class MachineDefinition
         $rootEventId = $initialState->history->first()->root_event_id;
         $initialState->context->setMachineIdentity($rootEventId);
 
+        // Run root-level entry actions (machine lifecycle — runs once on init)
+        if ($this->root->entry !== []) {
+            $this->runRootLifecycleActions(
+                actions: $this->root->entry,
+                state: $initialState,
+                eventBehavior: $initialState->currentEventBehavior,
+                startEvent: InternalEvent::MACHINE_ENTRY_START,
+                finishEvent: InternalEvent::MACHINE_ENTRY_FINISH,
+            );
+        }
+
         // Handle parallel state initialization - enter all regions
         if ($this->initialStateDefinition->type === StateDefinitionType::PARALLEL) {
             $this->enterParallelState($initialState, $this->initialStateDefinition, $initialState->currentEventBehavior);
@@ -482,6 +493,16 @@ class MachineDefinition
 
         // Record the machine finish event if the initial state is a final state.
         if ($initialState->currentStateDefinition->type === StateDefinitionType::FINAL) {
+            // Run root-level exit actions (machine lifecycle — runs once on completion)
+            if ($this->root->exit !== []) {
+                $this->runRootLifecycleActions(
+                    actions: $this->root->exit,
+                    state: $initialState,
+                    startEvent: InternalEvent::MACHINE_EXIT_START,
+                    finishEvent: InternalEvent::MACHINE_EXIT_FINISH,
+                );
+            }
+
             $initialState->setInternalEventBehavior(
                 type: InternalEvent::MACHINE_FINISH,
                 placeholder: $initialState->currentStateDefinition->route
@@ -1719,6 +1740,34 @@ class MachineDefinition
     }
 
     /**
+     * Run root-level lifecycle actions with dedicated internal events.
+     *
+     * Unlike state-level runEntryActions/runExitActions which record
+     * STATE_ENTRY_START/STATE_EXIT_START, this records MACHINE_ENTRY_START
+     * or MACHINE_EXIT_START — clearly distinguishing machine lifecycle
+     * from state lifecycle in the event history.
+     */
+    protected function runRootLifecycleActions(
+        array $actions,
+        State $state,
+        ?EventBehavior $eventBehavior = null,
+        InternalEvent $startEvent = InternalEvent::MACHINE_ENTRY_START,
+        InternalEvent $finishEvent = InternalEvent::MACHINE_ENTRY_FINISH,
+    ): void {
+        $state->setInternalEventBehavior(type: $startEvent);
+
+        foreach ($actions as $action) {
+            $this->runAction(
+                actionDefinition: $action,
+                state: $state,
+                eventBehavior: $eventBehavior,
+            );
+        }
+
+        $state->setInternalEventBehavior(type: $finishEvent);
+    }
+
+    /**
      * Cancel and clean up active children when exiting a state with machine delegation.
      *
      * Records CHILD_MACHINE_CANCELLED for each active child and clears the list.
@@ -2557,8 +2606,18 @@ class MachineDefinition
             return $this->transition($eventBehavior, $newState, recursionDepth: $recursionDepth + 1);
         }
 
-        // Record the machine finish event if the initial state is a final state.
+        // Record the machine finish event if the current state is a final state.
         if ($state->currentStateDefinition->type === StateDefinitionType::FINAL) {
+            // Run root-level exit actions (machine lifecycle — runs once on completion)
+            if ($this->root->exit !== []) {
+                $this->runRootLifecycleActions(
+                    actions: $this->root->exit,
+                    state: $state,
+                    startEvent: InternalEvent::MACHINE_EXIT_START,
+                    finishEvent: InternalEvent::MACHINE_EXIT_FINISH,
+                );
+            }
+
             $state->setInternalEventBehavior(
                 type: InternalEvent::MACHINE_FINISH,
                 placeholder: $state->currentStateDefinition->route,
