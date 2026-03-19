@@ -64,6 +64,10 @@ enum InternalEvent: string
     case LISTEN_TRANSITION_START  = '{machine}.listen.transition.start';
     case LISTEN_TRANSITION_FINISH = '{machine}.listen.transition.finish';
 
+    case LISTEN_QUEUE_DISPATCHED = '{machine}.listen.queue.{placeholder}.dispatched';
+    case LISTEN_QUEUE_STARTED    = '{machine}.listen.queue.{placeholder}.started';
+    case LISTEN_QUEUE_COMPLETED  = '{machine}.listen.queue.{placeholder}.completed';
+
     /**
      * Generate an internal event name based on the machine ID and an optional placeholder.
      *
