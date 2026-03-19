@@ -54,6 +54,17 @@ class MachineDefinition
     public StateDefinition $root;
 
     /**
+     * Parsed listener definitions from the 'listen' config key.
+     *
+     * @var array{entry: list<array{action: string, queue: bool}>, exit: list<array{action: string, queue: bool}>, transition: list<array{action: string, queue: bool}>}
+     */
+    public array $listen = [
+        'entry'      => [],
+        'exit'       => [],
+        'transition' => [],
+    ];
+
+    /**
      * The map of state definitions to their ids.
      *
      * @var array<StateDefinition>
@@ -144,6 +155,8 @@ class MachineDefinition
         }
 
         $this->root = $this->createRootStateDefinition($config);
+
+        $this->parseListenConfig($config);
 
         // Checks if the scenario is enabled, and if true, creates scenario state definitions.
         if ($this->scenariosEnabled) {
@@ -1765,6 +1778,37 @@ class MachineDefinition
         }
 
         $state->setInternalEventBehavior(type: $finishEvent);
+    }
+
+    /**
+     * Parse the 'listen' config key into normalized listener definitions.
+     *
+     * Each listener entry is normalized to {action: string, queue: bool}.
+     * Supports: string, FQCN, array of strings, and ClassName => ['queue' => true] modifier.
+     */
+    protected function parseListenConfig(?array $config): void
+    {
+        if (!isset($config['listen'])) {
+            return;
+        }
+
+        foreach (['entry', 'exit', 'transition'] as $key) {
+            if (!isset($config['listen'][$key])) {
+                continue;
+            }
+
+            $raw = is_array($config['listen'][$key])
+                ? $config['listen'][$key]
+                : [$config['listen'][$key]];
+
+            foreach ($raw as $k => $v) {
+                if (is_int($k)) {
+                    $this->listen[$key][] = ['action' => $v, 'queue' => false];
+                } else {
+                    $this->listen[$key][] = ['action' => $k, 'queue' => $v['queue'] ?? false];
+                }
+            }
+        }
     }
 
     /**
