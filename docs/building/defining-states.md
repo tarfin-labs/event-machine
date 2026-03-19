@@ -166,8 +166,111 @@ Current state exit actions
 - **Root `exit`**: Runs **once** when the machine reaches a final state — after the last state's exit
 - **State `entry`/`exit`**: Runs **every time** that specific state is entered or left
 
-Root entry does NOT run on every state change. For that, see the upcoming _state change hooks_ feature.
+Root entry does NOT run on every state change. For that, use [Listeners](#listeners).
 :::
+
+## Listeners
+
+Listeners are cross-cutting actions that run on every state change without per-state boilerplate. Instead of adding `broadcastAction` to 13 states individually, define it once:
+
+```php ignore
+'listen' => [
+    'entry' => BroadcastStateAction::class,  // every non-transient state entry
+],
+```
+
+| Feature | `entry` / `exit` (state) | `entry` / `exit` (root) | `listen` |
+|---------|--------------------------|-------------------------|----------|
+| Scope | One state | Machine lifecycle | Every state |
+| Runs | Each time state is entered/left | Once on start/completion | Each non-transient entry/exit/transition |
+| Purpose | State-specific logic | Machine init/cleanup | Cross-cutting concerns |
+
+### Listener Types
+
+Three listener keys are available:
+
+| Key | Fires When | Use Cases |
+|-----|-----------|-----------|
+| `entry` | After entering a non-transient state (after state entry actions) | Broadcasting, dashboard, metrics |
+| `exit` | Before leaving a non-transient state (before state exit actions) | Audit logging, time tracking |
+| `transition` | After every successful transition (including targetless) | Full audit trail, analytics |
+
+`entry` answers: "which state did the machine enter?"
+`transition` answers: "which event was processed?"
+
+| Scenario | `entry` | `exit` | `transition` |
+|----------|:---:|:---:|:---:|
+| Normal (A→B) | Target B | Source A | Yes |
+| Targetless (context update) | No | No | **Yes** |
+| Self-transition (A→A) | A (re-enter) | A (leave) | Yes |
+| Guard-blocked | No | No | No |
+| Transient (@always) | No | No | No |
+| Init (no @always) | Initial state | No | No |
+
+### Sync and Queued Actions
+
+Listener actions support a `['queue' => true]` modifier — consistent with how EventMachine handles `queue` on states in machine delegation:
+
+```php ignore
+'listen' => [
+    'entry' => [
+        BroadcastAction::class,                            // sync (default)
+        HeavyAuditAction::class => ['queue' => true],     // queued
+    ],
+],
+```
+
+| Use Case | Sync or Queued | Why |
+|----------|---------------|-----|
+| `broadcast()` | Sync | Laravel already queues broadcast internally |
+| Quick context log | Sync | Fast, no external I/O |
+| External audit API | Queued | Slow, shouldn't block transition |
+| Heavy analytics | Queued | CPU-intensive, offload to worker |
+
+::: info How Queued Listeners Work
+Queued listeners restore the machine from `rootEventId` on the worker — same as child delegation and sendTo. The worker sees the machine's latest persisted state. This is EventMachine's standard behavior for all queued operations.
+:::
+
+::: tip Point-in-Time Data
+If you need data from the exact moment of the transition, use a sync listener that dispatches its own job with the captured data.
+:::
+
+### Execution Order
+
+```
+1. Calculators
+2. Guards (if fail → no transition, no listeners)
+3. listen.exit (source, if non-transient)
+4. Source state exit actions
+5. Transition actions
+6. Target state entry actions
+7. listen.entry (target, if non-transient)
+8. listen.transition (always — targetless included)
+9. @always check → repeat from 1 (listeners skip transient states)
+```
+
+### Transient State Skipping
+
+States with `@always` transitions are transient — all listeners skip them automatically:
+
+```
+START → @always routing → @always eligibility → awaiting_consent
+                                                  ↑
+                                      Listeners fire here (once)
+```
+
+For business-level filtering, add conditions in the action itself.
+
+### Internal Events
+
+| Event | When |
+|-------|------|
+| `{machine}.listen.entry.start/finish` | Sync entry listeners |
+| `{machine}.listen.exit.start/finish` | Sync exit listeners |
+| `{machine}.listen.transition.start/finish` | Sync transition listeners |
+| `{machine}.listen.queue.{action}.dispatched` | Queued listener dispatched |
+| `{machine}.listen.queue.{action}.started` | Worker picked up job |
+| `{machine}.listen.queue.{action}.completed` | Worker finished |
 
 ## State Metadata
 
