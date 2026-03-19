@@ -159,6 +159,7 @@ class ChildMachineJob implements ShouldQueue
             childRootEventId: null,
             success: false,
             errorMessage: $exception->getMessage(),
+            errorCode: $exception->getCode(),
         ));
     }
 }
