@@ -10,6 +10,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
+use Tarfinlabs\EventMachine\Contracts\ProvidesFailureContext;
 
 /**
  * Queue job that runs a Laravel job as an actor.
@@ -92,6 +93,16 @@ class ChildJobJob implements ShouldQueue
             return;
         }
 
+        // Extract structured failure context if the job supports it
+        $output = null;
+        if (is_a($this->jobClass, ProvidesFailureContext::class, true)) {
+            try {
+                $output = $this->jobClass::failureContext($exception);
+            } catch (\Throwable) {
+                // failureContext() itself failed — proceed with null output
+            }
+        }
+
         dispatch(new ChildMachineCompletionJob(
             parentRootEventId: $this->parentRootEventId,
             parentMachineClass: $this->parentMachineClass,
@@ -100,6 +111,8 @@ class ChildJobJob implements ShouldQueue
             childRootEventId: null,
             success: false,
             errorMessage: $exception->getMessage(),
+            errorCode: $exception->getCode(),
+            outputData: $output,
         ));
     }
 }
