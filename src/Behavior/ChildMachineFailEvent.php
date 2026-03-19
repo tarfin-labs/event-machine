@@ -28,6 +28,18 @@ class ChildMachineFailEvent extends EventBehavior
     }
 
     /**
+     * Get the error code from the child failure.
+     *
+     * Populated automatically from $exception->getCode(). For structured
+     * error codes (e.g., 'E311'), implement ProvidesFailureContext on your
+     * job and return the code in the output array instead.
+     */
+    public function errorCode(): int|string|null
+    {
+        return $this->payload['error_code'] ?? null;
+    }
+
+    /**
      * Get the child machine's root_event_id.
      */
     public function childMachineId(): string
@@ -82,6 +94,7 @@ class ChildMachineFailEvent extends EventBehavior
     {
         return static::forChild(array_merge([
             'error_message' => null,
+            'error_code'    => null,
             'output'        => [],
             'machine_id'    => 'test',
             'machine_class' => 'TestMachine',
