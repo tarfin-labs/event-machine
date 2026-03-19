@@ -14,8 +14,10 @@ class StateConfigValidator
     private const ALLOWED_ROOT_KEYS = [
         'id', 'version', 'initial', 'status_events', 'context', 'states', 'on', 'type',
         'meta', 'entry', 'exit', 'description', 'scenarios_enabled',
-        'should_persist', 'delimiter',
+        'should_persist', 'delimiter', 'listen',
     ];
+
+    private const ALLOWED_LISTEN_KEYS = ['entry', 'exit', 'transition'];
 
     private const ALLOWED_STATE_KEYS = [
         'id', 'on', 'states', 'initial', 'type', 'meta', 'entry', 'exit', 'description', 'result', '@done', '@fail',
@@ -88,6 +90,28 @@ class StateConfigValidator
             throw new InvalidArgumentException(
                 message: 'Invalid root level configuration keys: '.implode(separator: ', ', array: $invalidRootKeys).
                 '. Allowed keys are: '.implode(separator: ', ', array: self::ALLOWED_ROOT_KEYS)
+            );
+        }
+
+        if (isset($config['listen'])) {
+            self::validateListenConfig($config['listen']);
+        }
+    }
+
+    private static function validateListenConfig(mixed $listen): void
+    {
+        if (!is_array($listen)) {
+            throw new InvalidArgumentException(
+                message: "The 'listen' configuration must be an array."
+            );
+        }
+
+        $invalidKeys = array_diff(array_keys($listen), self::ALLOWED_LISTEN_KEYS);
+
+        if ($invalidKeys !== []) {
+            throw new InvalidArgumentException(
+                message: "Invalid 'listen' keys: ".implode(', ', $invalidKeys).
+                '. Allowed keys are: '.implode(', ', self::ALLOWED_LISTEN_KEYS)
             );
         }
     }
