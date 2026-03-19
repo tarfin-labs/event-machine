@@ -340,7 +340,8 @@ class StateConfigValidator
         string $path,
         string $eventName
     ): void {
-        if ($transition === null) {
+        // Normalize empty values to null (targetless transition)
+        if (in_array($transition, [null, '', []], true)) {
             return;
         }
 
