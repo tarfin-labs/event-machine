@@ -221,6 +221,34 @@ Stay in the same state without triggering entry/exit actions:
 ],
 ```
 
+### Shorthand Syntax
+
+All of these are equivalent targetless transitions:
+
+```php ignore
+'on' => [
+    // Array form — omit target key (recommended for adding actions/guards)
+    'HEARTBEAT' => [
+        'actions' => 'updateTimestampAction',
+    ],
+
+    // Null — explicit targetless
+    'PING' => null,
+
+    // Empty string — shorthand for null
+    'PING' => '',
+
+    // Empty array — shorthand for null
+    'PING' => [],
+
+    // Explicit null target key
+    'PING' => [
+        'target' => null,
+        'actions' => 'logAction',
+    ],
+],
+```
+
 ::: info Internal vs Self Transitions
 - **Internal**: No target, entry/exit actions skipped
 - **Self**: Target equals current state, entry/exit actions run
