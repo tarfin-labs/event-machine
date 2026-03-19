@@ -12,6 +12,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Jobs\ChildJobJob;
+use Tarfinlabs\EventMachine\Jobs\ListenerJob;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Models\MachineChild;
@@ -1778,6 +1779,130 @@ class MachineDefinition
         }
 
         $state->setInternalEventBehavior(type: $finishEvent);
+    }
+
+    /**
+     * Run entry listeners for the current state.
+     *
+     * Fires after state-level entry actions. Skips transient states.
+     * Sync actions run inline, queued actions dispatch ListenerJob.
+     */
+    public function runEntryListeners(State $state, ?EventBehavior $eventBehavior = null): void
+    {
+        if ($this->listen['entry'] === []) {
+            return;
+        }
+
+        if ($this->isTransientState($state->currentStateDefinition)) {
+            return;
+        }
+
+        $state->setInternalEventBehavior(type: InternalEvent::LISTEN_ENTRY_START);
+
+        foreach ($this->listen['entry'] as $listener) {
+            if ($listener['queue']) {
+                $this->dispatchListenerJob($listener['action'], $state);
+            } else {
+                $this->runAction(
+                    actionDefinition: $listener['action'],
+                    state: $state,
+                    eventBehavior: $eventBehavior,
+                );
+            }
+        }
+
+        $state->setInternalEventBehavior(type: InternalEvent::LISTEN_ENTRY_FINISH);
+    }
+
+    /**
+     * Run exit listeners for the current state.
+     *
+     * Fires before state-level exit actions. Skips transient states.
+     */
+    public function runExitListeners(State $state): void
+    {
+        if ($this->listen['exit'] === []) {
+            return;
+        }
+
+        if ($this->isTransientState($state->currentStateDefinition)) {
+            return;
+        }
+
+        $state->setInternalEventBehavior(type: InternalEvent::LISTEN_EXIT_START);
+
+        foreach ($this->listen['exit'] as $listener) {
+            if ($listener['queue']) {
+                $this->dispatchListenerJob($listener['action'], $state);
+            } else {
+                $this->runAction(
+                    actionDefinition: $listener['action'],
+                    state: $state,
+                    eventBehavior: $state->currentEventBehavior,
+                );
+            }
+        }
+
+        $state->setInternalEventBehavior(type: InternalEvent::LISTEN_EXIT_FINISH);
+    }
+
+    /**
+     * Run transition listeners after a transition completes.
+     *
+     * Fires after entry listeners (or after transition actions for targetless).
+     * Skips transient states. This is the most general listener — fires even on targetless transitions.
+     */
+    public function runTransitionListeners(State $state, ?EventBehavior $eventBehavior = null): void
+    {
+        if ($this->listen['transition'] === []) {
+            return;
+        }
+
+        if ($this->isTransientState($state->currentStateDefinition)) {
+            return;
+        }
+
+        $state->setInternalEventBehavior(type: InternalEvent::LISTEN_TRANSITION_START);
+
+        foreach ($this->listen['transition'] as $listener) {
+            if ($listener['queue']) {
+                $this->dispatchListenerJob($listener['action'], $state);
+            } else {
+                $this->runAction(
+                    actionDefinition: $listener['action'],
+                    state: $state,
+                    eventBehavior: $eventBehavior,
+                );
+            }
+        }
+
+        $state->setInternalEventBehavior(type: InternalEvent::LISTEN_TRANSITION_FINISH);
+    }
+
+    /**
+     * Dispatch a listener action as a queue job.
+     *
+     * Records LISTEN_QUEUE_DISPATCHED internal event and dispatches ListenerJob.
+     * Returns early if no rootEventId (persistence off).
+     */
+    protected function dispatchListenerJob(string $action, State $state): void
+    {
+        $rootEventId = $state->history->first()?->root_event_id;
+
+        if ($rootEventId === null) {
+            return;
+        }
+
+        $state->setInternalEventBehavior(
+            type: InternalEvent::LISTEN_QUEUE_DISPATCHED,
+            placeholder: $action,
+        );
+
+        dispatch(new ListenerJob(
+            machineClass: $this->machineClass,
+            rootEventId: $rootEventId,
+            actionClass: $action,
+        ));
     }
 
     /**
