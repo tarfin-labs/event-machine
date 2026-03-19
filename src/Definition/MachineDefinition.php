@@ -2728,8 +2728,10 @@ class MachineDefinition
             placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
         );
 
-        // Run exit listeners before state exit actions
-        $this->runExitListeners($state);
+        // Run exit listeners before state exit actions (only for targeted transitions)
+        if ($targetStateDefinition instanceof StateDefinition) {
+            $this->runExitListeners($state);
+        }
 
         // Execute exit actions for the current state definition
         $transitionBranch->transitionDefinition->source->runExitActions($state);
