@@ -1768,6 +1768,21 @@ class MachineDefinition
     }
 
     /**
+     * Check if a state is transient (has @always transitions).
+     *
+     * Transient states are immediately left via @always — listeners skip them
+     * to avoid firing on intermediate states the machine passes through instantly.
+     */
+    protected function isTransientState(StateDefinition $state): bool
+    {
+        if ($state->transitionDefinitions === null) {
+            return false;
+        }
+
+        return isset($state->transitionDefinitions[TransitionProperty::Always->value]);
+    }
+
+    /**
      * Cancel and clean up active children when exiting a state with machine delegation.
      *
      * Records CHILD_MACHINE_CANCELLED for each active child and clears the list.
