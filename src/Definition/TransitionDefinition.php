@@ -61,6 +61,11 @@ class TransitionDefinition
             $this->isAlways = true;
         }
 
+        // Normalize empty values to null (targetless transition)
+        if ($this->transitionConfig === '' || $this->transitionConfig === []) {
+            $this->transitionConfig = null;
+        }
+
         $this->description = $this->transitionConfig['description'] ?? null;
 
         // Extract timer config (after/every/max/then) before processing branches
