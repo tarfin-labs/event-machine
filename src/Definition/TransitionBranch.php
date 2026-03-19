@@ -49,8 +49,11 @@ class TransitionBranch
         public null|string|array $transitionBranchConfig,
         public TransitionDefinition $transitionDefinition,
     ) {
-        if ($this->transitionBranchConfig === null) {
+        // Normalize empty values to null (targetless transition)
+        if (in_array($this->transitionBranchConfig, [null, '', []], true)) {
             $this->target = null;
+
+            return;
         }
 
         if (is_string($this->transitionBranchConfig)) {
@@ -77,35 +80,35 @@ class TransitionBranch
             return;
         }
 
-        if (is_array($this->transitionBranchConfig)) {
-            $this->target = null;
+        // At this point, transitionBranchConfig is guaranteed to be array
+        // (null, '', and [] returned early; string returned above)
+        $this->target = null;
 
-            if (isset($this->transitionBranchConfig['target'])) {
-                $targetStateDefinition = $this->transitionDefinition
-                    ->source
-                    ->machine
-                    ->getNearestStateDefinitionByString(
-                        $this->transitionBranchConfig['target'],
-                        $this->transitionDefinition->source
-                    );
+        if (isset($this->transitionBranchConfig['target']) && $this->transitionBranchConfig['target'] !== '') {
+            $targetStateDefinition = $this->transitionDefinition
+                ->source
+                ->machine
+                ->getNearestStateDefinitionByString(
+                    $this->transitionBranchConfig['target'],
+                    $this->transitionDefinition->source
+                );
 
-                if (!$targetStateDefinition instanceof StateDefinition) {
-                    throw NoStateDefinitionFoundException::build(
-                        from: $this->transitionDefinition->source->id,
-                        to: $this->transitionBranchConfig['target'],
-                        eventType: $this->transitionDefinition->event,
-                    );
-                }
-
-                $this->target = $targetStateDefinition;
+            if (!$targetStateDefinition instanceof StateDefinition) {
+                throw NoStateDefinitionFoundException::build(
+                    from: $this->transitionDefinition->source->id,
+                    to: $this->transitionBranchConfig['target'],
+                    eventType: $this->transitionDefinition->event,
+                );
             }
 
-            $this->description = $this->transitionBranchConfig['description'] ?? null;
-
-            $this->initializeCalculators();
-            $this->initializeGuards();
-            $this->initializeActions();
+            $this->target = $targetStateDefinition;
         }
+
+        $this->description = $this->transitionBranchConfig['description'] ?? null;
+
+        $this->initializeCalculators();
+        $this->initializeGuards();
+        $this->initializeActions();
     }
 
     /**
