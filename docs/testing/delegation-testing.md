@@ -100,6 +100,22 @@ OrderMachine::test()
     ->assertState('completed');
 ```
 
+For failure simulation with structured error data:
+
+<!-- doctest-attr: ignore -->
+```php
+FindeksMachine::test()
+    ->send('CONFIRM_PIN')
+    ->assertState('confirming_pin')
+    ->simulateChildFail(
+        ConfirmPinJob::class,
+        errorMessage: 'Wrong PIN',
+        errorCode: 311,
+        output: ['errorCode' => 'E311', 'retryable' => true],
+    )
+    ->assertState('awaiting_pin'); // guard routed to retry branch
+```
+
 See [TestMachine — Child Delegation Assertions](/testing/test-machine#child-delegation-assertions) and [TestMachine — Async Simulation](/testing/test-machine#async-simulation) for the full API reference.
 
 ## Faking Standalone Machines
