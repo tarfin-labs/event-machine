@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 // region Sync Listeners — Entry/Exit
 
@@ -517,6 +518,200 @@ it('does not fire transition listener on init', function (): void {
         ],
     ])
         ->assertContext('transition_count', 0);
+});
+
+// endregion
+
+// region Edge Cases — Parallel States
+
+it('fires entry listeners on parallel state and each region', function (): void {
+    $definition = MachineDefinition::define(
+        config: [
+            'id'      => 'listen_parallel',
+            'initial' => 'processing',
+            'context' => ['entry_count' => 0],
+            'listen'  => [
+                'entry' => 'countAction',
+            ],
+            'states' => [
+                'processing' => [
+                    'type'   => 'parallel',
+                    'states' => [
+                        'region_a' => [
+                            'initial' => 'a_idle',
+                            'states'  => [
+                                'a_idle' => [],
+                            ],
+                        ],
+                        'region_b' => [
+                            'initial' => 'b_idle',
+                            'states'  => [
+                                'b_idle' => [],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'countAction' => function (ContextManager $context): void {
+                    $context->set('entry_count', $context->get('entry_count') + 1);
+                },
+            ],
+        ],
+    );
+
+    $state = $definition->getInitialState();
+
+    // parallel state entry + 2 regions = 3
+    expect($state->context->get('entry_count'))->toBe(3);
+});
+
+// endregion
+
+// region Edge Cases — Queued Listeners
+
+it('records dispatched internal event for queued entry listener', function (): void {
+    $machine = TestMachine::define([
+        'id'      => 'listen_queued',
+        'initial' => 'idle',
+        'context' => [],
+        'listen'  => [
+            'entry' => [
+                'queuedAction' => ['queue' => true],
+            ],
+        ],
+        'states' => [
+            'idle' => ['on' => ['GO' => 'done']],
+            'done' => ['type' => 'final'],
+        ],
+    ], behavior: [
+        'actions' => [
+            'queuedAction' => function (): void {},
+        ],
+    ]);
+
+    $types = $machine->machine()->state->history->pluck('type')->toArray();
+
+    expect($types)->toContain('listen_queued.listen.queue.queuedAction.dispatched');
+});
+
+it('records dispatched internal event for queued transition listener', function (): void {
+    $machine = TestMachine::define([
+        'id'      => 'listen_queued_trans',
+        'initial' => 'idle',
+        'context' => [],
+        'listen'  => [
+            'transition' => [
+                'queuedAction' => ['queue' => true],
+            ],
+        ],
+        'states' => [
+            'idle' => ['on' => ['GO' => 'done']],
+            'done' => ['type' => 'final'],
+        ],
+    ], behavior: [
+        'actions' => [
+            'queuedAction' => function (): void {},
+        ],
+    ])->send('GO');
+
+    $types = $machine->machine()->state->history->pluck('type')->toArray();
+
+    expect($types)->toContain('listen_queued_trans.listen.queue.queuedAction.dispatched');
+});
+
+it('runs sync listener inline and records queued dispatch event', function (): void {
+    $machine = TestMachine::define([
+        'id'      => 'listen_mixed',
+        'initial' => 'idle',
+        'context' => ['sync_ran' => false],
+        'listen'  => [
+            'entry' => [
+                'syncAction',
+                'queuedAction' => ['queue' => true],
+            ],
+        ],
+        'states' => [
+            'idle' => ['on' => ['GO' => 'done']],
+            'done' => ['type' => 'final'],
+        ],
+    ], behavior: [
+        'actions' => [
+            'syncAction' => function (ContextManager $context): void {
+                $context->set('sync_ran', true);
+            },
+            'queuedAction' => function (): void {},
+        ],
+    ]);
+
+    $machine->assertContext('sync_ran', true);
+
+    $types = $machine->machine()->state->history->pluck('type')->toArray();
+
+    expect($types)->toContain('listen_mixed.listen.queue.queuedAction.dispatched');
+});
+
+it('does not record queued dispatch for transient states', function (): void {
+    $machine = TestMachine::define([
+        'id'      => 'listen_queued_transient',
+        'initial' => 'routing',
+        'context' => [],
+        'listen'  => [
+            'entry' => [
+                'queuedAction' => ['queue' => true],
+            ],
+        ],
+        'states' => [
+            'routing' => ['on' => ['@always' => 'active']],
+            'active'  => [],
+        ],
+    ], behavior: [
+        'actions' => [
+            'queuedAction' => function (): void {},
+        ],
+    ]);
+
+    $types = $machine->machine()->state->history->pluck('type')->toArray();
+
+    // Only 1 dispatched (active), routing is transient — skipped
+    $dispatchedCount = count(array_filter($types, fn ($t) => str_contains($t, 'dispatched')));
+
+    expect($dispatchedCount)->toBe(1);
+});
+
+it('queued and sync dispatched events appear in correct listener block', function (): void {
+    $machine = TestMachine::define([
+        'id'      => 'listen_block_order',
+        'initial' => 'idle',
+        'context' => [],
+        'listen'  => [
+            'entry' => [
+                'syncAction',
+                'queuedAction' => ['queue' => true],
+            ],
+        ],
+        'states' => [
+            'idle' => ['on' => ['GO' => 'done']],
+            'done' => ['type' => 'final'],
+        ],
+    ], behavior: [
+        'actions' => [
+            'syncAction'   => function (): void {},
+            'queuedAction' => function (): void {},
+        ],
+    ]);
+
+    $types = $machine->machine()->state->history->pluck('type')->toArray();
+
+    // dispatched should be between listen.entry.start and listen.entry.finish
+    $startIdx      = array_search('listen_block_order.listen.entry.start', $types);
+    $dispatchedIdx = array_search('listen_block_order.listen.queue.queuedAction.dispatched', $types);
+    $finishIdx     = array_search('listen_block_order.listen.entry.finish', $types);
+
+    expect($startIdx)->toBeLessThan($dispatchedIdx)
+        ->and($dispatchedIdx)->toBeLessThan($finishIdx);
 });
 
 // endregion

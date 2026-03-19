@@ -1912,6 +1912,12 @@ class MachineDefinition
             placeholder: $action,
         );
 
+        // Queued listeners require a Machine class to restore state on the worker.
+        // TestMachine::define() has no machineClass — skip actual dispatch but keep the internal event.
+        if ($this->machineClass === null) {
+            return;
+        }
+
         dispatch(new ListenerJob(
             machineClass: $this->machineClass,
             rootEventId: $rootEventId,
