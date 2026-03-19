@@ -123,6 +123,52 @@ Transition Actions
 Target State Entry Actions
 ```
 
+## Machine-Level Entry and Exit
+
+Define `entry`/`exit` at the root config level for actions that run once during the machine lifecycle:
+
+```php ignore
+MachineDefinition::define(
+    config: [
+        'id'      => 'order',
+        'initial' => 'pending',
+        'entry'   => 'initializeTrackingAction',  // Runs once — when machine starts
+        'exit'    => 'finalCleanupAction',         // Runs once — when machine reaches a final state
+        'states'  => [
+            'pending' => [
+                'entry' => 'sendNotificationAction',  // Runs each time 'pending' is entered
+                'on'    => ['SUBMIT' => 'completed'],
+            ],
+            'completed' => ['type' => 'final'],
+        ],
+    ],
+);
+```
+
+Execution order on initialization:
+
+```
+MACHINE_START
+  → Root entry actions (once)
+    → Initial state entry actions
+```
+
+Execution order when reaching a final state:
+
+```
+Current state exit actions
+  → Root exit actions (once)
+    → MACHINE_FINISH
+```
+
+::: info Root vs State entry/exit
+- **Root `entry`**: Runs **once** when the machine starts — before any state entry
+- **Root `exit`**: Runs **once** when the machine reaches a final state — after the last state's exit
+- **State `entry`/`exit`**: Runs **every time** that specific state is entered or left
+
+Root entry does NOT run on every state change. For that, see the upcoming _state change hooks_ feature.
+:::
+
 ## State Metadata
 
 Attach custom data to states:
