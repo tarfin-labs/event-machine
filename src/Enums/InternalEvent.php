@@ -57,6 +57,13 @@ enum InternalEvent: string
     case CHILD_MACHINE_TIMEOUT   = '{machine}.child.{placeholder}.timeout';
     case CHILD_MACHINE_CANCELLED = '{machine}.child.{placeholder}.cancelled';
 
+    case LISTEN_ENTRY_START       = '{machine}.listen.entry.start';
+    case LISTEN_ENTRY_FINISH      = '{machine}.listen.entry.finish';
+    case LISTEN_EXIT_START        = '{machine}.listen.exit.start';
+    case LISTEN_EXIT_FINISH       = '{machine}.listen.exit.finish';
+    case LISTEN_TRANSITION_START  = '{machine}.listen.transition.start';
+    case LISTEN_TRANSITION_FINISH = '{machine}.listen.transition.finish';
+
     /**
      * Generate an internal event name based on the machine ID and an optional placeholder.
      *
