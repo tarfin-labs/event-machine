@@ -82,6 +82,71 @@ class StoreEmailResultAction extends ActionBehavior
 
 Jobs that do **not** implement `ReturnsResult` return an empty output (`[]`).
 
+## Returning Failure Context
+
+By default, when a job throws an exception, only `$exception->getMessage()` and `$exception->getCode()` are available to `@fail` guards. For structured error data (error codes, retry hints, categories), implement `ProvidesFailureContext`:
+
+<!-- doctest-attr: no_run -->
+```php
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Tarfinlabs\EventMachine\Contracts\ProvidesFailureContext;
+
+class ConfirmPinJob implements ShouldQueue, ProvidesFailureContext
+{
+    public function __construct(
+        public readonly string $pin,
+    ) {}
+
+    public function handle(): void
+    {
+        // ... may throw FindeksException with error code E311
+    }
+
+    public static function failureContext(\Throwable $exception): array
+    {
+        if ($exception instanceof FindeksException) {
+            return [
+                'errorCode' => $exception->getFindeksErrorCode(),
+                'retryable' => $exception->isRetryable(),
+            ];
+        }
+
+        return ['errorCode' => 'UNKNOWN'];
+    }
+}
+```
+
+The returned array becomes available via `$event->output()` in `@fail` guards and actions:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
+use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
+
+class IsPinRetryableGuard extends GuardBehavior
+{
+    public function __invoke(ContextManager $context, ChildMachineFailEvent $event): bool
+    {
+        return in_array($event->output('errorCode'), ['E311', 'E116', 'E117'], true);
+    }
+}
+```
+
+### ChildMachineFailEvent API
+
+| Accessor | Source | Always Available |
+|----------|--------|-----------------|
+| `errorMessage()` | `$exception->getMessage()` | Yes |
+| `errorCode()` | `$exception->getCode()` | Yes |
+| `output(?string $key)` | `ProvidesFailureContext::failureContext()` | Only with contract |
+| `childMachineId()` | Job tracking ID | Yes |
+| `childMachineClass()` | Job FQCN | Yes |
+
+::: tip ReturnsResult vs ProvidesFailureContext
+`ReturnsResult` populates `$event->output()` on `@done`. `ProvidesFailureContext` populates `$event->output()` on `@fail`. They complement each other — a job can implement both.
+:::
+
 ## Machine vs Job
 
 | Aspect | `machine` | `job` |
