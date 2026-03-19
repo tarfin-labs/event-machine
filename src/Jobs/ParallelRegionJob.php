@@ -78,6 +78,9 @@ class ParallelRegionJob implements ShouldQueue
         // 6. RUN ENTRY ACTIONS (expensive part — NO LOCK held)
         $regionInitial->runEntryActions($machine->state);
 
+        // 6b. RUN ENTRY LISTENERS (runs before lock — context effects captured in diff)
+        $machine->definition->runEntryListeners($machine->state);
+
         // 7. Capture side effects
         $contextAfter = $machine->state->context->data;
         $contextDiff  = $this->computeContextDiff($contextBefore, $contextAfter);

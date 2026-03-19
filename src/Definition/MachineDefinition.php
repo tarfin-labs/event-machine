@@ -480,6 +480,9 @@ class MachineDefinition
                 state: $initialState,
                 eventBehavior: $initialState->currentEventBehavior,
             );
+
+            // Run entry listeners (listen.entry — NOT listen.transition on init)
+            $this->runEntryListeners($initialState, $initialState->currentEventBehavior);
         }
 
         if ($this->initialStateDefinition?->transitionDefinitions !== null) {
@@ -571,6 +574,9 @@ class MachineDefinition
         // Run entry actions on the parallel state itself
         $parallelState->runEntryActions($state, $eventBehavior);
 
+        // Run entry listeners on the parallel state itself
+        $this->runEntryListeners($state, $eventBehavior);
+
         // Collect all initial states from all regions
         $initialStates = $parallelState->findAllInitialStateDefinitions();
         $state->setValues(array_map(fn (StateDefinition $s): string => $s->id, $initialStates));
@@ -625,6 +631,7 @@ class MachineDefinition
                         placeholder: $regionInitial->route,
                     );
                     $regionInitial->runEntryActions($state, $eventBehavior);
+                    $this->runEntryListeners($state, $eventBehavior);
                 }
             }
         }
@@ -1718,6 +1725,9 @@ class MachineDefinition
 
         $target = $branch->target;
 
+        // Run exit listeners before exit actions
+        $this->runExitListeners($state);
+
         // Exit the invoking state
         $sourceState->runExitActions($state);
 
@@ -1741,6 +1751,10 @@ class MachineDefinition
         if ($initialTarget !== $target) {
             $initialTarget->runEntryActions($state, $eventBehavior);
         }
+
+        // Run entry and transition listeners
+        $this->runEntryListeners($state, $eventBehavior);
+        $this->runTransitionListeners($state, $eventBehavior);
 
         // Handle machine invoke on the new target (nested delegation)
         if ($initialTarget->hasMachineInvoke()) {
@@ -2025,6 +2039,9 @@ class MachineDefinition
 
         $target = $branch->target;
 
+        // Run exit listeners before exit actions
+        $this->runExitListeners($state);
+
         // Exit the final state and the compound parent
         $finalState->runExitActions($state);
         $compoundParent->runExitActions($state);
@@ -2048,6 +2065,10 @@ class MachineDefinition
         if ($initialTarget !== $target) {
             $initialTarget->runEntryActions($state, $eventBehavior);
         }
+
+        // Run entry and transition listeners
+        $this->runEntryListeners($state, $eventBehavior);
+        $this->runTransitionListeners($state, $eventBehavior);
 
         // Recursively check if the new state is also final within a compound parent
         if ($initialTarget->type === StateDefinitionType::FINAL) {
@@ -2283,8 +2304,11 @@ class MachineDefinition
                 }
             }
             if ($isNested) {
-                // Run exit action on the leaf state being removed
+                // Run exit listeners then exit actions on the leaf state being removed
                 $leafState = $this->idMap[$v] ?? null;
+                if ($leafState !== null) {
+                    $this->runExitListeners($state);
+                }
                 $leafState?->runExitActions($state);
             } else {
                 $newValues[] = $v;
@@ -2307,6 +2331,10 @@ class MachineDefinition
         if ($resolvedTarget !== $target) {
             $resolvedTarget->runEntryActions($state, $eventBehavior);
         }
+
+        // Run entry and transition listeners
+        $this->runEntryListeners($state, $eventBehavior);
+        $this->runTransitionListeners($state, $eventBehavior);
 
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_ENTRY_FINISH,
@@ -2351,9 +2379,12 @@ class MachineDefinition
             $branch->runActions($state, $eventBehavior);
         }
 
-        // Run exit actions on all active states and record region exits
+        // Run exit listeners then exit actions on all active states and record region exits
         foreach ($state->value as $activeStateId) {
             $activeState = $this->idMap[$activeStateId] ?? null;
+            if ($activeState !== null) {
+                $this->runExitListeners($state);
+            }
             $activeState?->runExitActions($state);
 
             // Find and record region exit
@@ -2392,6 +2423,10 @@ class MachineDefinition
         if ($initialState !== $targetState) {
             $initialState->runEntryActions($state, $eventBehavior);
         }
+
+        // Run entry and transition listeners
+        $this->runEntryListeners($state, $eventBehavior);
+        $this->runTransitionListeners($state, $eventBehavior);
 
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_ENTRY_FINISH,
@@ -2481,7 +2516,8 @@ class MachineDefinition
             // Execute transition actions
             $transitionBranch->runActions($state, $eventBehavior);
 
-            // Execute exit actions for the source state
+            // Run exit listeners then exit actions for the source state
+            $this->runExitListeners($state);
             $sourceState->runExitActions($state);
 
             // Update the state value for this region immediately
@@ -2529,10 +2565,12 @@ class MachineDefinition
 
                     // Execute entry actions for the target state
                     $targetState->runEntryActions($state, $eventBehavior);
+                    $this->runEntryListeners($state, $eventBehavior);
                 }
             } else {
                 // Execute entry actions for the target state (no state value update needed)
                 $targetState->runEntryActions($state, $eventBehavior);
+                $this->runEntryListeners($state, $eventBehavior);
             }
 
             // Process compound state onDone: when a transition lands on a final state
@@ -2543,6 +2581,9 @@ class MachineDefinition
                 $this->processNestedParallelCompletion($state, $targetState, $eventBehavior);
             }
         }
+
+        // Run transition listeners after all regions processed
+        $this->runTransitionListeners($state, $eventBehavior);
 
         // Record transition finish with updated state values
         $state->setInternalEventBehavior(
@@ -2687,6 +2728,9 @@ class MachineDefinition
             placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
         );
 
+        // Run exit listeners before state exit actions
+        $this->runExitListeners($state);
+
         // Execute exit actions for the current state definition
         $transitionBranch->transitionDefinition->source->runExitActions($state);
 
@@ -2751,6 +2795,12 @@ class MachineDefinition
 
         // Execute entry actions for the new state definition
         $targetStateDefinition?->runEntryActions($newState, $eventBehavior);
+
+        // Run entry and transition listeners
+        if ($targetStateDefinition !== null) {
+            $this->runEntryListeners($newState, $eventBehavior);
+        }
+        $this->runTransitionListeners($newState, $eventBehavior);
 
         // Handle machine delegation (sync mode): launch child inline after entry actions
         if ($targetStateDefinition !== null) {
