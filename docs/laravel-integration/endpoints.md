@@ -185,8 +185,10 @@ MachineRouter::register(OrderMachine::class, [
 | `modelFor` | `array` | No | `[]` | Event types routed by Eloquent model binding |
 | `middleware` | `array` | No | `[]` | Middleware applied to all endpoints |
 | `name` | `string` | No | Machine ID | Route name prefix |
+| `only` | `array` | No | `null` | Register only these event endpoints (whitelist) |
+| `except` | `array` | No | `null` | Register all except these event endpoints (blacklist) |
 
-Both `machineIdFor` and `modelFor` accept event type strings (`'SUBMIT'`) or event class references (`SubmitEvent::class`). Events not listed in either array are routed as stateless.
+Both `machineIdFor` and `modelFor` accept event type strings (`'SUBMIT'`) or event class references (`SubmitEvent::class`). Events not listed in either array are routed as stateless. `only` and `except` are mutually exclusive and accept the same formats. See [Endpoint Filtering](#endpoint-filtering) for details.
 
 ### Generated Routes
 
@@ -452,7 +454,7 @@ Use the returned `machine_id` in subsequent requests to send events to this mach
 
 ## Route Registration Patterns
 
-`MachineRouter::register()` supports four routing patterns. Each endpoint is routed to a specific handler based on the `machineIdFor` and `modelFor` options:
+`MachineRouter::register()` supports four routing patterns. Each endpoint is routed to a specific handler based on the `machineIdFor` and `modelFor` options. Any pattern can be combined with [`only`/`except`](#endpoint-filtering) to register a subset of endpoints:
 
 | Condition | Handler | URI Pattern |
 |-----------|---------|-------------|
@@ -1097,6 +1099,8 @@ Forwarded routes are registered automatically by `MachineRouter::register()`. Th
 
 Forwarded routes appear alongside explicit endpoints in the route table. No extra registration is needed.
 
+Forwarded endpoints are included in [`only`/`except`](#endpoint-filtering) filtering by their parent-facing event type. They **cannot** appear in `machineIdFor`/`modelFor` — their binding mode is always inherited from the parent's global model config.
+
 ### How It Works
 
 ```
@@ -1258,6 +1262,18 @@ it('accepts event via endpoint', function (): void {
     $response->assertOk()
         ->assertJsonPath('data.value.0', 'order.submitted');
 });
+```
+
+When testing a subset of endpoints, use `only` to register only the routes your test needs:
+
+<!-- doctest-attr: ignore -->
+```php
+MachineRouter::register(OrderMachine::class, [
+    'prefix'       => 'orders',
+    'only'         => ['SUBMIT'],
+    'machineIdFor' => ['SUBMIT'],
+    'name'         => 'test.orders',
+]);
 ```
 
 ::: tip Full Testing Guide
