@@ -112,6 +112,34 @@ You are affected **only if** your behaviors on `@always` transitions check `$eve
 
 For full details on event preservation, see [@always Transitions — Event Preservation](/advanced/always-transitions#event-preservation).
 
+### New Feature: Raise Actor Auto-Propagation
+
+v8.0 also introduces **automatic actor propagation** for raised events. When an action calls `raise()`, the actor from the triggering event is automatically inherited if not explicitly set.
+
+**Before (v7):**
+
+<!-- doctest-attr: ignore -->
+```php
+$this->raise(new ApprovedEvent(
+    payload: $data,
+    actor: $event->actor($context),  // had to pass manually
+));
+```
+
+**After (v8):**
+
+<!-- doctest-attr: ignore -->
+```php
+$this->raise(new ApprovedEvent(
+    payload: $data,
+    // actor auto-inherited from triggering event
+));
+```
+
+This is **not a breaking change** — existing code that explicitly passes `actor:` continues to work. The explicit value always takes precedence.
+
+For details, see [Raised Events — Actor Propagation](/advanced/raised-events#actor-propagation).
+
 ---
 
 ## Upgrading to v7.0

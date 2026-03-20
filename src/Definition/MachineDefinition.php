@@ -810,20 +810,27 @@ class MachineDefinition
         State $state
     ): EventBehavior {
         if ($event instanceof EventBehavior) {
-            return $this->resolveEventBehaviorThroughRegistry($event, $state);
-        }
-
-        if (isset($state->currentStateDefinition->machine->behavior[BehaviorType::Event->value][$event['type']])) {
+            $eventBehavior = $this->resolveEventBehaviorThroughRegistry($event, $state);
+        } elseif (isset($state->currentStateDefinition->machine->behavior[BehaviorType::Event->value][$event['type']])) {
             /** @var EventBehavior $eventDefinitionClass */
             $eventDefinitionClass = $state
                 ->currentStateDefinition
                 ->machine
                 ->behavior[BehaviorType::Event->value][$event['type']];
 
-            return $eventDefinitionClass::validateAndCreate($event);
+            $eventBehavior = $eventDefinitionClass::validateAndCreate($event);
+        } else {
+            $eventBehavior = EventDefinition::from($event);
         }
 
-        return EventDefinition::from($event);
+        // Auto-propagate actor from triggering event if not explicitly set
+        $triggeringActor = $state->triggeringEvent?->actor($state->context);
+
+        if ($eventBehavior->actor($state->context) === null && $triggeringActor !== null) {
+            $eventBehavior->setActor($triggeringActor);
+        }
+
+        return $eventBehavior;
     }
 
     /**
@@ -2661,6 +2668,13 @@ class MachineDefinition
         }
 
         if ($state instanceof State) {
+            // Reset triggeringEvent for new macrostep (not for @always — they inherit by design).
+            // Must happen before getScenarioStateIfAvailable() which also calls initializeEvent().
+            $eventType = is_array($event) ? ($event['type'] ?? null) : $event->type;
+            if ($eventType !== TransitionProperty::Always->value) {
+                $state->triggeringEvent = null;
+            }
+
             $state = $this->getScenarioStateIfAvailable(state: $state, eventBehavior: $event);
         } else {
             // Use the initial state if no state is provided

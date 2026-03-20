@@ -106,6 +106,14 @@ abstract class EventBehavior extends Data
     }
 
     /**
+     * @internal Framework use only — called by initializeEvent() for actor propagation.
+     */
+    public function setActor(mixed $actor): void
+    {
+        $this->actor = $actor;
+    }
+
+    /**
      * Retrieves the scenario value from the payload.
      *
      * @return string|null The scenario value if available, otherwise null.
