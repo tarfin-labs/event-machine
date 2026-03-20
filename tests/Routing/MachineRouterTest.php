@@ -471,6 +471,111 @@ test('overlapping machineIdFor and modelFor throws InvalidArgumentException', fu
     ]))->toThrow(InvalidArgumentException::class, "events cannot be in both 'machineIdFor' and 'modelFor'");
 });
 
+// ─── Endpoint Filtering ──────────────────────────────────────────────
+
+test('only registers specified endpoints', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix' => '/api/only',
+        'only'   => ['START'],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    expect($routes->getByName('test_endpoint.start'))->not->toBeNull()
+        ->and($routes->getByName('test_endpoint.complete'))->toBeNull()
+        ->and($routes->getByName('test_endpoint.cancel'))->toBeNull();
+});
+
+test('except excludes specified endpoints', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix' => '/api/except',
+        'except' => ['CANCEL'],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    expect($routes->getByName('test_endpoint.start'))->not->toBeNull()
+        ->and($routes->getByName('test_endpoint.complete'))->not->toBeNull()
+        ->and($routes->getByName('test_endpoint.cancel'))->toBeNull();
+});
+
+test('only accepts event class FQCNs', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix' => '/api/only-fqcn',
+        'only'   => [TestStartEvent::class],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    expect($routes->getByName('test_endpoint.start'))->not->toBeNull()
+        ->and($routes->getByName('test_endpoint.complete'))->toBeNull();
+});
+
+test('except accepts event class FQCNs', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix' => '/api/except-fqcn',
+        'except' => [TestCancelEvent::class],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    expect($routes->getByName('test_endpoint.cancel'))->toBeNull()
+        ->and($routes->getByName('test_endpoint.start'))->not->toBeNull();
+});
+
+test('only with empty array registers no event endpoints', function (): void {
+    $routeCountBefore = count(Route::getRoutes()->getRoutes());
+
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix' => '/api/only-empty',
+        'only'   => [],
+    ]);
+
+    refreshRoutes();
+
+    $routeCountAfter = count(Route::getRoutes()->getRoutes());
+
+    expect($routeCountAfter)->toBe($routeCountBefore);
+});
+
+test('except with empty array registers all endpoints', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix' => '/api/except-empty',
+        'except' => [],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    expect($routes->getByName('test_endpoint.start'))->not->toBeNull()
+        ->and($routes->getByName('test_endpoint.complete'))->not->toBeNull()
+        ->and($routes->getByName('test_endpoint.cancel'))->not->toBeNull();
+});
+
+test('only matching all endpoints equals no filter', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix' => '/api/only-all',
+        'only'   => ['START', 'COMPLETE', 'CANCEL'],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    expect($routes->getByName('test_endpoint.start'))->not->toBeNull()
+        ->and($routes->getByName('test_endpoint.complete'))->not->toBeNull()
+        ->and($routes->getByName('test_endpoint.cancel'))->not->toBeNull();
+});
+
 // ─── Endpoint Filtering Validation ───────────────────────────────────
 
 test('only and except together throws InvalidArgumentException', function (): void {
