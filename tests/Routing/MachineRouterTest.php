@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestEndpointAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestEndpointMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestNoEndpointMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestMiddlewareEndpointMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ForwardParentEndpointMachine;
 
 /*
 |--------------------------------------------------------------------------
@@ -598,6 +599,22 @@ test('unknown event type in except throws with available types', function (): vo
         'prefix' => '/api/invalid',
         'except' => ['NONEXISTENT'],
     ]))->toThrow(InvalidArgumentException::class, "unknown event types in 'except': NONEXISTENT. Available:");
+});
+
+test('machineIdFor referencing forwarded event throws with specific message', function (): void {
+    expect(fn () => MachineRouter::register(ForwardParentEndpointMachine::class, [
+        'prefix'       => '/api/invalid',
+        'machineIdFor' => ['PROVIDE_CARD'],
+    ]))->toThrow(InvalidArgumentException::class, "'machineIdFor' cannot reference forwarded endpoints (they inherit binding mode from parent model config): PROVIDE_CARD");
+});
+
+test('modelFor referencing forwarded event throws with specific message', function (): void {
+    expect(fn () => MachineRouter::register(ForwardParentEndpointMachine::class, [
+        'prefix'    => '/api/invalid',
+        'model'     => 'App\\Models\\Order',
+        'attribute' => 'machine',
+        'modelFor'  => ['PROVIDE_CARD'],
+    ]))->toThrow(InvalidArgumentException::class, "'modelFor' cannot reference forwarded endpoints (they inherit binding mode from parent model config): PROVIDE_CARD");
 });
 
 // ─── Empty Endpoints ──────────────────────────────────────────────────
