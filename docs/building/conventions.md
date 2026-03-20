@@ -871,6 +871,8 @@ When registering routes via `MachineRouter::register()`, options use `camelCase`
 | `modelFor` | `string[]` | Event types routed by Eloquent model binding |
 | `middleware` | `string[]` | Middleware applied to all routes in the group |
 | `name` | `string` | Route name prefix (defaults to machine ID) |
+| `only` | `string[]` | Register only these event endpoints (mutually exclusive with `except`) |
+| `except` | `string[]` | Register all except these event endpoints (mutually exclusive with `only`) |
 
 ### Route Names
 
