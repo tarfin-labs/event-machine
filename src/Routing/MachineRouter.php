@@ -28,6 +28,8 @@ class MachineRouter
      *     modelFor?: string[],
      *     middleware?: string[],
      *     name?: string,
+     *     only?: string[],
+     *     except?: string[],
      * }  $options  Router configuration.
      */
     public static function register(string $machineClass, array $options): void
@@ -47,6 +49,45 @@ class MachineRouter
 
         $machineIdFor = array_map(EndpointDefinition::resolveEventType(...), $options['machineIdFor'] ?? []);
         $modelFor     = array_map(EndpointDefinition::resolveEventType(...), $options['modelFor'] ?? []);
+
+        // ── Endpoint filtering ──────────────────────────────────────────
+        $only   = $options['only'] ?? null;
+        $except = $options['except'] ?? null;
+
+        if ($only !== null && $except !== null) {
+            throw new \InvalidArgumentException(
+                "MachineRouter: 'only' and 'except' cannot be used together."
+            );
+        }
+
+        $onlyTypes = $only !== null
+            ? array_map(EndpointDefinition::resolveEventType(...), $only)
+            : null;
+        $exceptTypes = $except !== null
+            ? array_map(EndpointDefinition::resolveEventType(...), $except)
+            : null;
+
+        if ($onlyTypes !== null || $exceptTypes !== null) {
+            $allKnownTypes = array_merge(
+                array_keys($endpoints),
+                array_keys($forwardedEndpoints),
+            );
+
+            $filterTypes = $onlyTypes ?? $exceptTypes;
+            $filterKey   = $onlyTypes !== null ? 'only' : 'except';
+            $unknown     = array_diff($filterTypes, $allKnownTypes);
+
+            if ($unknown !== []) {
+                throw new \InvalidArgumentException(
+                    sprintf(
+                        "MachineRouter: unknown event types in '%s': %s. Available: %s",
+                        $filterKey,
+                        implode(', ', $unknown),
+                        implode(', ', $allKnownTypes),
+                    )
+                );
+            }
+        }
 
         if ($modelFor !== [] && ($model === null || $attribute === null)) {
             throw new \InvalidArgumentException(
