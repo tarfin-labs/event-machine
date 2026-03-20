@@ -471,6 +471,30 @@ test('overlapping machineIdFor and modelFor throws InvalidArgumentException', fu
     ]))->toThrow(InvalidArgumentException::class, "events cannot be in both 'machineIdFor' and 'modelFor'");
 });
 
+// ─── Endpoint Filtering Validation ───────────────────────────────────
+
+test('only and except together throws InvalidArgumentException', function (): void {
+    expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
+        'prefix' => '/api/invalid',
+        'only'   => ['START'],
+        'except' => ['CANCEL'],
+    ]))->toThrow(InvalidArgumentException::class, "'only' and 'except' cannot be used together");
+});
+
+test('unknown event type in only throws with available types', function (): void {
+    expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
+        'prefix' => '/api/invalid',
+        'only'   => ['NONEXISTENT'],
+    ]))->toThrow(InvalidArgumentException::class, "unknown event types in 'only': NONEXISTENT. Available:");
+});
+
+test('unknown event type in except throws with available types', function (): void {
+    expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
+        'prefix' => '/api/invalid',
+        'except' => ['NONEXISTENT'],
+    ]))->toThrow(InvalidArgumentException::class, "unknown event types in 'except': NONEXISTENT. Available:");
+});
+
 // ─── Empty Endpoints ──────────────────────────────────────────────────
 
 test('register does nothing when machine has no endpoints', function (): void {
