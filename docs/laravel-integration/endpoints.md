@@ -611,6 +611,90 @@ The typical flow:
 2. `POST /{machineId}/start` — sends START event, which creates the model as a side effect
 3. `POST /{application}/farmer-saved` — model now exists, uses model binding
 
+## Endpoint Filtering
+
+When the same machine serves multiple consumer groups with different authentication requirements, use `only` or `except` to control which endpoints are registered per route group.
+
+### Splitting Endpoints Between Consumer Groups
+
+```php no_run
+use Tarfinlabs\EventMachine\Routing\MachineRouter;
+
+// Public endpoints (no auth) — customer-facing
+MachineRouter::register(CarSalesMachine::class, [
+    'prefix'       => 'car-sales',
+    'only'         => [
+        ConsentGrantedEvent::class,
+        PersonalInfoSubmittedEvent::class,
+    ],
+    'machineIdFor' => [
+        ConsentGrantedEvent::class,
+        PersonalInfoSubmittedEvent::class,
+    ],
+    'name' => 'car-sales.public',
+]);
+
+// Protected endpoints (auth:retailer) — dealer panel
+MachineRouter::register(CarSalesMachine::class, [
+    'prefix'       => 'machines/car-sales',
+    'middleware'    => ['auth:retailer'],
+    'except'       => [
+        ConsentGrantedEvent::class,
+        PersonalInfoSubmittedEvent::class,
+    ],
+    'create'       => true,
+    'machineIdFor' => [
+        VehicleSubmittedEvent::class,
+        AllocationApprovedEvent::class,
+    ],
+    'name' => 'machines.car-sales',
+]);
+```
+
+`only` registers **only** the listed event endpoints (whitelist). `except` registers all endpoints **except** the listed ones (blacklist). They are mutually exclusive — using both throws an `InvalidArgumentException`.
+
+Both accept event type strings (`'SUBMIT'`) or event class references (`SubmitEvent::class`), same as `machineIdFor` and `modelFor`.
+
+### `create` is Independent
+
+The `create` endpoint is controlled by the `create: bool` option, not by `only`/`except`. This allows create-only registrations:
+
+```php no_run
+use Tarfinlabs\EventMachine\Routing\MachineRouter;
+
+// Create-only registration: no event endpoints
+MachineRouter::register(OrderMachine::class, [
+    'prefix' => 'admin/orders',
+    'create' => true,
+    'only'   => [],     // no event endpoints, only POST /create
+]);
+```
+
+### Forwarded Endpoints
+
+Forwarded endpoints are filtered by their **parent-facing event type** — the same identifier used in route names and URIs:
+
+```php no_run
+use Tarfinlabs\EventMachine\Routing\MachineRouter;
+
+// Only forward PROVIDE_CARD, exclude CONFIRM_PAYMENT
+MachineRouter::register(OrderMachine::class, [
+    'prefix' => 'orders',
+    'only'   => ['START', 'PROVIDE_CARD'],
+    'machineIdFor' => ['START'],
+]);
+```
+
+Forwarded endpoints **cannot** appear in `machineIdFor` or `modelFor` — they inherit binding mode from the parent's global model config.
+
+### Validation
+
+`MachineRouter::register()` validates all options at route registration time:
+
+- **Unknown event types** in `only`/`except` throw with the list of available types
+- **`machineIdFor`/`modelFor`** must reference endpoints in the filtered set — referencing a filtered-out or nonexistent event throws with a specific error message
+- **Forwarded event types** in `machineIdFor`/`modelFor` throw explaining that forwarded endpoints inherit binding from parent config
+
 ## Per-Event Middleware
 
 Endpoint-level middleware is **additive** — it stacks on top of the router-level middleware:
