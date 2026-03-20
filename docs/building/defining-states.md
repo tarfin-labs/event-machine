@@ -261,6 +261,24 @@ START → @always routing → @always eligibility → awaiting_consent
 
 For business-level filtering, add conditions in the action itself.
 
+### Listeners and Child Machines
+
+Each machine has its own `listen` config — listeners are **not inherited** by child machines and **do not fire** on child machine state changes.
+
+```
+Parent: idle → delegating → completed
+                    │
+                    ├── Child: step_1 → step_2 → done
+                    │   (parent listen does NOT fire here)
+                    │
+                    └── @done → completed
+                        (parent listen.entry fires here)
+```
+
+- **Parent `listen.entry`** fires when the parent enters `delegating` and when it enters `completed` (after `@done` routing) — but NOT when the child transitions between `step_1`, `step_2`, and `done`.
+- **Child machines** can define their own `listen` config independently. Child listeners fire during child execution and do not affect parent context.
+- This applies to both **sync** and **async** (queued) child delegation.
+
 ### Internal Events
 
 | Event | When |
