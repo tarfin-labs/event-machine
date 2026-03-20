@@ -89,6 +89,35 @@ class MachineRouter
             }
         }
 
+        // ── Apply filtering ────────────────────────────────────────────
+        if ($onlyTypes !== null) {
+            $endpoints = array_filter(
+                $endpoints,
+                fn (string $eventType): bool => in_array($eventType, $onlyTypes, true),
+                ARRAY_FILTER_USE_KEY,
+            );
+            $forwardedEndpoints = array_filter(
+                $forwardedEndpoints,
+                fn (string $eventType): bool => in_array($eventType, $onlyTypes, true),
+                ARRAY_FILTER_USE_KEY,
+            );
+        } elseif ($exceptTypes !== null) {
+            $endpoints = array_filter(
+                $endpoints,
+                fn (string $eventType): bool => !in_array($eventType, $exceptTypes, true),
+                ARRAY_FILTER_USE_KEY,
+            );
+            $forwardedEndpoints = array_filter(
+                $forwardedEndpoints,
+                fn (string $eventType): bool => !in_array($eventType, $exceptTypes, true),
+                ARRAY_FILTER_USE_KEY,
+            );
+        }
+
+        if ($endpoints === [] && $forwardedEndpoints === [] && !$create) {
+            return;
+        }
+
         if ($modelFor !== [] && ($model === null || $attribute === null)) {
             throw new \InvalidArgumentException(
                 "MachineRouter: 'model' and 'attribute' are required when 'modelFor' is set."
