@@ -99,6 +99,196 @@ $state = State::forTesting(['count' => 10]);
 AddValueAction::runWithState($state, eventBehavior: $event);
 ```
 
+## EventBuilder
+
+When events have complex payloads — many fields, faker-generated values, database-seeded relationships — `forTesting()` becomes verbose. `EventBuilder` provides composable, reusable test data builders with the same fluent API as Laravel's model factories.
+
+### When to Use Which
+
+| Scenario | Tool | Example |
+|----------|------|---------|
+| Simple event, payload doesn't matter | `forTesting()` | `MyEvent::forTesting()` |
+| Simple event, a few field overrides | `forTesting()` | `MyEvent::forTesting(['payload' => ['key' => 'val']])` |
+| Complex payload, faker, DB seeding | `EventBuilder` | `MyEvent::builder()->withX()->make()` |
+| Validation testing with raw array | `EventBuilder` | `MyEvent::builder()->raw()` → `validateAndCreate()` |
+
+### Naming
+
+Builder class names derive from the event class: `{EventClassName}Builder`.
+
+| Event Class | Builder Class |
+|-------------|---------------|
+| `OrderSubmittedEvent` | `OrderSubmittedEventBuilder` |
+| `ApplicationStartedEvent` | `ApplicationStartedEventBuilder` |
+
+Builder methods that add state follow `with{Description}` and return `static`:
+
+| Method | Description |
+|--------|-------------|
+| `withOrderItems(int $count)` | Add order items to payload |
+| `withFarmerPaymentDate(?CarbonImmutable $date)` | Set farmer payment date |
+| `withInvalidAttribute()` | Set deliberately invalid data for validation testing |
+
+### Creating a Builder
+
+Extend `EventBuilder` and implement `eventClass()`. Override `definition()` only when you need faker-generated defaults — omit it for the base defaults (type from `getType()`, empty payload, version 1).
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Testing\EventBuilder;
+
+class OrderSubmittedEventBuilder extends EventBuilder
+{
+    protected function eventClass(): string
+    {
+        return OrderSubmittedEvent::class;
+    }
+
+    protected function definition(): array
+    {
+        return [
+            'type'    => OrderSubmittedEvent::getType(),
+            'payload' => [
+                'customer_id' => $this->faker->uuid(),
+                'amount'      => $this->faker->numberBetween(100, 10000),
+                'currency'    => 'TRY',
+            ],
+            'version' => 1,
+        ];
+    }
+
+    public function withAmount(int $amount): static
+    {
+        return $this->state(['payload' => ['amount' => $amount]]);
+    }
+
+    public function withItems(int $count): static
+    {
+        return $this->state(function (array $attrs) use ($count) {
+            $items = [];
+            foreach (range(1, $count) as $i) {
+                $items[] = [
+                    'product_id' => Product::factory()->create()->id,
+                    'quantity'   => random_int(1, 10),
+                ];
+            }
+            $attrs['payload']['items'] = $items;
+            return $attrs;
+        });
+    }
+}
+```
+
+### Connecting Event to Builder — HasBuilder
+
+Add the `HasBuilder` trait to your event class so you can call `Event::builder()` directly. This follows the same pattern as Laravel's `HasFactory`.
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Testing\HasBuilder;
+
+/**
+ * @use HasBuilder<OrderSubmittedEventBuilder>
+ */
+class OrderSubmittedEvent extends EventBehavior
+{
+    use HasBuilder;
+
+    public static function getType(): string
+    {
+        return 'ORDER_SUBMITTED';
+    }
+}
+```
+
+The `@use HasBuilder<OrderSubmittedEventBuilder>` annotation gives your IDE full autocomplete on the builder methods.
+
+**Convention:** `HasBuilder` looks for `{EventClass}Builder` in the same namespace. If your builder lives elsewhere, override `resolveBuilderClass()`:
+
+<!-- doctest-attr: ignore -->
+```php
+class OrderSubmittedEvent extends EventBehavior
+{
+    use HasBuilder;
+
+    protected static function resolveBuilderClass(): string
+    {
+        return \Database\Factories\OrderSubmittedEventBuilder::class;
+    }
+}
+```
+
+### Usage
+
+<!-- doctest-attr: ignore -->
+```php
+// Via event class (recommended — IDE autocomplete)
+$event = OrderSubmittedEvent::builder()
+    ->withAmount(5000)
+    ->withItems(3)
+    ->make();
+
+// Via builder directly (also works)
+$event = OrderSubmittedEventBuilder::new()
+    ->withAmount(5000)
+    ->withItems(3)
+    ->make();
+
+// Raw array for validation testing
+$raw = OrderSubmittedEvent::builder()->withAmount(-1)->raw();
+expect(fn () => OrderSubmittedEvent::validateAndCreate($raw))
+    ->toThrow(ValidationException::class);
+
+// Immutable — reuse a base builder
+$base   = OrderSubmittedEvent::builder()->withItems(3);
+$eventA = $base->withAmount(1000)->make();
+$eventB = $base->withAmount(5000)->make();
+```
+
+::: tip Minimal Builder
+If your event has a simple payload and you only need builder methods (not faker defaults), skip `definition()` entirely:
+
+<!-- doctest-attr: ignore -->
+```php
+class MyEventBuilder extends EventBuilder
+{
+    protected function eventClass(): string { return MyEvent::class; }
+
+    public function withAmount(int $amount): static
+    {
+        return $this->state(['payload' => ['amount' => $amount]]);
+    }
+}
+```
+:::
+
+### API Reference
+
+**EventBuilder:**
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `::new()` | `static` | Static constructor — creates fresh builder instance |
+| `state(Closure\|array)` | `static` | Add state mutation (returns immutable clone) |
+| `make(array $overrides)` | `EventBehavior` | Build event instance — overrides take final precedence |
+| `raw(array $overrides)` | `array` | Raw attribute array — for `validateAndCreate()` testing |
+
+**HasBuilder (trait on EventBehavior):**
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `::builder()` | `EventBuilder` (concrete via `@template`) | Resolve and return builder instance |
+| `::resolveBuilderClass()` | `string` | Override for custom builder location |
+
+::: warning make() skips validation
+`make()` calls `EventBehavior::from()` directly — same as `forTesting()`. If you need to test validation rules, use `raw()` → `validateAndCreate()`.
+:::
+
+::: warning Closure vs array state behavior
+Array states are **additive** — `array_replace_recursive` preserves sibling keys. Closure states **replace** the entire array — you must return all keys you want to keep. Use array states for simple overrides and closures only when you need computed values or cross-key logic.
+:::
+
 ## Child Machine Event Factories
 
 When testing guards or actions that handle `@done`/`@fail` events, use the child event factories to avoid boilerplate:
