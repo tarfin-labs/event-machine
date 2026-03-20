@@ -48,6 +48,10 @@ When `UPDATE_AMOUNT` fires: only `recalculateAmountAction` runs. The machine sta
 
 `@always` transitions fire immediately after entering a state. They are powerful for routing but dangerous if misused.
 
+::: tip No Need to Copy Event Data (v8+)
+Since v8, behaviors on `@always` transitions receive the original triggering event. You no longer need to copy event payload into context before an `@always` chain. See [@always Transitions — Event Preservation](/advanced/always-transitions#event-preservation).
+:::
+
 ### The Termination Rule
 
 Every `@always` chain must eventually reach a state without `@always`, or use guards that will eventually fail. If it does not, the machine hits the depth limit (100) and throws `MaxTransitionDepthExceededException`.
