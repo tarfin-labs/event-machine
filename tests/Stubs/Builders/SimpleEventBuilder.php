@@ -28,19 +28,11 @@ class SimpleEventBuilder extends EventBuilder
 
     public function withValue(int $value): static
     {
-        return $this->state(function (array $attributes) use ($value) {
-            $attributes['payload']['value'] = $value;
-
-            return $attributes;
-        });
+        return $this->state(['payload' => ['value' => $value]]);
     }
 
     public function withName(string $name): static
     {
-        return $this->state(function (array $attributes) use ($name) {
-            $attributes['payload']['name'] = $name;
-
-            return $attributes;
-        });
+        return $this->state(['payload' => ['name' => $name]]);
     }
 }
