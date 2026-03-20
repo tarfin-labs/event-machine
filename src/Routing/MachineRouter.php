@@ -147,6 +147,49 @@ class MachineRouter
             }
         }
 
+        // ── machineIdFor / modelFor must reference registered endpoints ──
+        $registeredEventTypes = array_keys($endpoints);
+
+        $machineIdOrphans = array_diff($machineIdFor, $registeredEventTypes);
+
+        if ($machineIdOrphans !== []) {
+            if ($onlyTypes !== null) {
+                $context = " (filtered by 'only'). Remove from 'machineIdFor' or add to 'only'";
+            } elseif ($exceptTypes !== null) {
+                $context = " (filtered by 'except'). Remove from 'machineIdFor' or adjust 'except'";
+            } else {
+                $context = sprintf('. Available: %s', implode(', ', $registeredEventTypes));
+            }
+
+            throw new \InvalidArgumentException(
+                sprintf(
+                    "MachineRouter: 'machineIdFor' references event types not in the registered endpoint set: %s%s",
+                    implode(', ', $machineIdOrphans),
+                    $context,
+                )
+            );
+        }
+
+        $modelOrphans = array_diff($modelFor, $registeredEventTypes);
+
+        if ($modelOrphans !== []) {
+            if ($onlyTypes !== null) {
+                $context = " (filtered by 'only'). Remove from 'modelFor' or add to 'only'";
+            } elseif ($exceptTypes !== null) {
+                $context = " (filtered by 'except'). Remove from 'modelFor' or adjust 'except'";
+            } else {
+                $context = sprintf('. Available: %s', implode(', ', $registeredEventTypes));
+            }
+
+            throw new \InvalidArgumentException(
+                sprintf(
+                    "MachineRouter: 'modelFor' references event types not in the registered endpoint set: %s%s",
+                    implode(', ', $modelOrphans),
+                    $context,
+                )
+            );
+        }
+
         if ($modelFor !== [] && ($model === null || $attribute === null)) {
             throw new \InvalidArgumentException(
                 "MachineRouter: 'model' and 'attribute' are required when 'modelFor' is set."
