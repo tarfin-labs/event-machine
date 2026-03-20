@@ -670,6 +670,86 @@ test('orphan error fires before modelFor-requires-model error', function (): voi
     ]))->toThrow(InvalidArgumentException::class, "'modelFor' references event types not in the registered endpoint set");
 });
 
+// ─── Endpoint Filtering Interaction ──────────────────────────────────
+
+test('create unaffected by only', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix' => '/api/create-only',
+        'create' => true,
+        'only'   => [],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    expect($routes->getByName('test_endpoint.create'))->not->toBeNull()
+        ->and($routes->getByName('test_endpoint.start'))->toBeNull()
+        ->and($routes->getByName('test_endpoint.complete'))->toBeNull()
+        ->and($routes->getByName('test_endpoint.cancel'))->toBeNull();
+});
+
+test('create unaffected by except', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix' => '/api/create-except',
+        'create' => true,
+        'except' => ['START'],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    expect($routes->getByName('test_endpoint.create'))->not->toBeNull()
+        ->and($routes->getByName('test_endpoint.start'))->toBeNull()
+        ->and($routes->getByName('test_endpoint.complete'))->not->toBeNull();
+});
+
+test('machineIdFor with only applies binding to filtered endpoint', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'       => '/api/binding-only',
+        'only'         => ['START'],
+        'machineIdFor' => ['START'],
+    ]);
+
+    refreshRoutes();
+
+    $route = Route::getRoutes()->getByName('test_endpoint.start');
+
+    expect($route)->not->toBeNull()
+        ->and($route->getActionMethod())->toBe('handleMachineIdBound')
+        ->and($route->uri())->toBe('api/binding-only/{machineId}/start');
+});
+
+test('modelFor with only applies binding to filtered endpoint', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'    => '/api/model-only',
+        'model'     => 'App\\Models\\Order',
+        'attribute' => 'machine',
+        'only'      => ['START'],
+        'modelFor'  => ['START'],
+    ]);
+
+    refreshRoutes();
+
+    $route = Route::getRoutes()->getByName('test_endpoint.start');
+
+    expect($route)->not->toBeNull()
+        ->and($route->getActionMethod())->toBe('handleModelBound')
+        ->and($route->uri())->toBe('api/model-only/{order}/start');
+});
+
+test('overlap validation works after filtering', function (): void {
+    expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'       => '/api/invalid',
+        'model'        => 'App\\Models\\Order',
+        'attribute'    => 'machine',
+        'only'         => ['START', 'COMPLETE'],
+        'machineIdFor' => ['START'],
+        'modelFor'     => ['START'],
+    ]))->toThrow(InvalidArgumentException::class, "events cannot be in both 'machineIdFor' and 'modelFor'");
+});
+
 // ─── Empty Endpoints ──────────────────────────────────────────────────
 
 test('register does nothing when machine has no endpoints', function (): void {
