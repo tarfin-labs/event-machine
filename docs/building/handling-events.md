@@ -292,6 +292,10 @@ class ApprovalEvent extends EventBehavior
 }
 ```
 
+::: tip Auto-Propagation in Raised Events
+When actions call `raise()`, the actor is automatically inherited from the triggering event. You don't need to pass `actor:` manually in raise chains. See [Raised Events — Actor Propagation](/advanced/raised-events#actor-propagation).
+:::
+
 ## Event Source Types
 
 Events have a `source` property indicating where they originated:

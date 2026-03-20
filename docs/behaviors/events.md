@@ -254,6 +254,10 @@ class SubmitEvent extends EventBehavior
 }
 ```
 
+::: info Auto-Propagation
+When events are raised via `$this->raise()`, the actor is automatically inherited from the triggering event if not explicitly set. See [Raised Events — Actor Propagation](/advanced/raised-events#actor-propagation).
+:::
+
 ### `source`
 
 Event origin (set automatically):
