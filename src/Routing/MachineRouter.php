@@ -118,6 +118,35 @@ class MachineRouter
             return;
         }
 
+        // ── Forwarded endpoints cannot be in machineIdFor / modelFor ────
+        $forwardedEventTypes = array_keys($forwardedEndpoints);
+
+        if ($forwardedEventTypes !== []) {
+            $forwardedInMachineId = array_intersect($machineIdFor, $forwardedEventTypes);
+
+            if ($forwardedInMachineId !== []) {
+                throw new \InvalidArgumentException(
+                    sprintf(
+                        "MachineRouter: 'machineIdFor' cannot reference forwarded endpoints "
+                        .'(they inherit binding mode from parent model config): %s',
+                        implode(', ', $forwardedInMachineId),
+                    )
+                );
+            }
+
+            $forwardedInModel = array_intersect($modelFor, $forwardedEventTypes);
+
+            if ($forwardedInModel !== []) {
+                throw new \InvalidArgumentException(
+                    sprintf(
+                        "MachineRouter: 'modelFor' cannot reference forwarded endpoints "
+                        .'(they inherit binding mode from parent model config): %s',
+                        implode(', ', $forwardedInModel),
+                    )
+                );
+            }
+        }
+
         if ($modelFor !== [] && ($model === null || $attribute === null)) {
             throw new \InvalidArgumentException(
                 "MachineRouter: 'model' and 'attribute' are required when 'modelFor' is set."
