@@ -6,8 +6,8 @@ Only the **latest major version** receives bug fixes, new features, and security
 
 | Version | Status |
 |---------|--------|
-| **7.x** | **Active** — bug fixes, features, security |
-| 6.x and below | End of life — upgrade to latest |
+| **8.x** | **Active** — bug fixes, features, security |
+| 7.x and below | End of life — upgrade to latest |
 
 **Why only latest?**
 
@@ -21,7 +21,8 @@ Each section below has step-by-step migration instructions with before/after exa
 
 | EventMachine | PHP | Laravel | Status |
 |--------------|-----|---------|--------|
-| **7.x** | 8.3+ | 11.x, 12.x | **Active** |
+| **8.x** | 8.3+ | 11.x, 12.x | **Active** |
+| 7.x | 8.3+ | 11.x, 12.x | End of life |
 | 6.x | 8.3+ | 11.x, 12.x | End of life |
 | 5.x | 8.3+ | 11.x, 12.x | End of life |
 | 4.x | 8.3+ | 11.x, 12.x | End of life |
@@ -36,6 +37,80 @@ If you encounter issues during upgrade:
 1. Check the [GitHub Issues](https://github.com/tarfinlabs/event-machine/issues)
 2. Review the [Changelog](https://github.com/tarfinlabs/event-machine/blob/main/CHANGELOG.md)
 3. Open a new issue with your upgrade scenario
+
+---
+
+## Upgrading to v8.0
+
+v8.0 has **one breaking change**: behaviors on `@always` transitions now receive the **original triggering event** instead of the synthetic `@always` event.
+
+### Breaking Change: Event Preservation Through @always
+
+In v7 and earlier, actions, guards, and calculators on `@always` transitions received a synthetic event with `type: '@always'` and `payload: null`. In v8, they receive the original event that triggered the macrostep.
+
+**Before (v7):**
+
+<!-- doctest-attr: ignore -->
+```php
+// Action on @always transition
+class MyAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context, EventBehavior $event): void
+    {
+        $event->type;    // '@always'
+        $event->payload; // null — payload lost!
+    }
+}
+```
+
+**After (v8):**
+
+<!-- doctest-attr: ignore -->
+```php
+// Same action, same @always transition — now receives the real event
+class MyAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context, EventBehavior $event): void
+    {
+        $event->type;    // 'ORDER_SUBMITTED' (the original event)
+        $event->payload; // ['tckn' => '123...'] (preserved!)
+    }
+}
+```
+
+### Who Is Affected?
+
+You are affected **only if** your behaviors on `@always` transitions check `$event->type === '@always'` or rely on `$event->payload` being `null`. This is uncommon — most `@always` behaviors use only `ContextManager` and ignore the event.
+
+**Quick check:** Search your codebase for behaviors referenced by `@always` transitions that type-hint `EventBehavior`. If none do, the upgrade is seamless.
+
+### Migration Steps
+
+1. Update `composer.json`:
+
+<!-- doctest-attr: ignore -->
+```php
+"tarfin-labs/event-machine": "^8.0"
+```
+
+2. Search for behaviors on `@always` transitions that use `EventBehavior`:
+   - If they check `$event->type === '@always'` → remove the check (they now receive the real event type)
+   - If they rely on `$event->payload` being `null` → update to handle the real payload
+
+3. Run your tests. If all pass, you're done.
+
+### What Did NOT Change
+
+| Aspect | v8 Behavior |
+|--------|-------------|
+| `@always` routing mechanism | Unchanged — `findTransitionDefinition()` still uses `@always` key |
+| Internal event history | Unchanged — `@always` still recorded in history |
+| `$state->currentEventBehavior` | Unchanged — still tracks internal event markers |
+| Listeners on transient states | Unchanged — still skipped |
+| Infinite loop protection | Unchanged — depth limit still applies |
+| Database schema | Unchanged — no migration needed |
+
+For full details on event preservation, see [@always Transitions — Event Preservation](/advanced/always-transitions#event-preservation).
 
 ---
 

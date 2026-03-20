@@ -2673,7 +2673,18 @@ class MachineDefinition
         $eventBehavior = $this->initializeEvent($event, $state);
         $eventBehavior->selfValidate();
 
-        $state->setCurrentEventBehavior($eventBehavior);
+        // Track the triggering event for @always chains.
+        // For real events: store as triggeringEvent and set as currentEventBehavior.
+        // For @always: preserve triggeringEvent and expose it as currentEventBehavior
+        // so both access paths (parameter injection and $state->currentEventBehavior) are consistent.
+        if ($eventBehavior->type !== TransitionProperty::Always->value) {
+            $state->triggeringEvent = $eventBehavior;
+            $state->setCurrentEventBehavior($eventBehavior);
+        } elseif ($state->triggeringEvent !== null) {
+            $state->setCurrentEventBehavior($state->triggeringEvent);
+        } else {
+            $state->setCurrentEventBehavior($eventBehavior);
+        }
 
         // For parallel states, find transitions across all active atomic states
         if ($state->isInParallelState()) {

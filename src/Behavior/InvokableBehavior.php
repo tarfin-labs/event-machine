@@ -17,6 +17,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Traits\Fakeable;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Routing\ForwardContext;
+use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Testing\CommunicationRecorder;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
@@ -267,11 +268,19 @@ abstract class InvokableBehavior
                 default                                       => null,
             };
 
+            // For @always transitions, inject the original triggering event instead of the synthetic '@always' event
+            $effectiveEvent = $eventBehavior;
+            if ($eventBehavior instanceof EventBehavior
+                && $eventBehavior->type === TransitionProperty::Always->value
+                && $state->triggeringEvent instanceof EventBehavior) {
+                $effectiveEvent = $state->triggeringEvent;
+            }
+
             $value = match (true) {
                 $typeName === null                                                                                                           => null,
                 is_a($typeName, class: ForwardContext::class, allow_string: true)                                                            => $forwardContext,    // ForwardContext (child)
                 is_a($typeName, class: ContextManager::class, allow_string: true) || is_subclass_of($typeName, class: ContextManager::class) => $state->context,    // ContextManager (parent)
-                is_a($typeName, class: EventBehavior::class, allow_string: true) || is_subclass_of($typeName, class: EventBehavior::class)   => $eventBehavior,     // EventBehavior
+                is_a($typeName, class: EventBehavior::class, allow_string: true) || is_subclass_of($typeName, class: EventBehavior::class)   => $effectiveEvent,    // EventBehavior (original event for @always)
                 $state instanceof $typeName                                                                                                  => $state,             // State
                 is_a($state->history, $typeName)                                                                                             => $state->history,    // EventCollection
                 $typeName === 'array'                                                                                                        => $actionArguments,   // Behavior Arguments

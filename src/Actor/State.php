@@ -50,6 +50,15 @@ class State implements \JsonSerializable
     public ?string $lastChildDoneRoute = null;
 
     /**
+     * The original event that triggered the current macrostep.
+     *
+     * Preserved through @always chains so that behaviors (actions, guards,
+     * calculators) receive the real triggering event instead of the synthetic
+     * '@always' event. Transient — not persisted to DB or queue payloads.
+     */
+    public ?EventBehavior $triggeringEvent = null;
+
+    /**
      * Constructs a new instance of the class.
      *
      * @param  ContextManager  $context  The context manager instance.
