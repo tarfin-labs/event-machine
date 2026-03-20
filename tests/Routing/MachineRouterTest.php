@@ -617,6 +617,59 @@ test('modelFor referencing forwarded event throws with specific message', functi
     ]))->toThrow(InvalidArgumentException::class, "'modelFor' cannot reference forwarded endpoints (they inherit binding mode from parent model config): PROVIDE_CARD");
 });
 
+test('machineIdFor referencing only-excluded event throws', function (): void {
+    expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'       => '/api/invalid',
+        'only'         => ['START'],
+        'machineIdFor' => ['START', 'CANCEL'],
+    ]))->toThrow(InvalidArgumentException::class, "'machineIdFor' references event types not in the registered endpoint set: CANCEL (filtered by 'only')");
+});
+
+test('modelFor referencing except-excluded event throws', function (): void {
+    expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'    => '/api/invalid',
+        'model'     => 'App\\Models\\Order',
+        'attribute' => 'machine',
+        'except'    => ['COMPLETE'],
+        'modelFor'  => ['COMPLETE'],
+    ]))->toThrow(InvalidArgumentException::class, "'modelFor' references event types not in the registered endpoint set: COMPLETE (filtered by 'except')");
+});
+
+test('machineIdFor referencing nonexistent event throws without filtering', function (): void {
+    expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'       => '/api/invalid',
+        'machineIdFor' => ['TYPO'],
+    ]))->toThrow(InvalidArgumentException::class, "'machineIdFor' references event types not in the registered endpoint set: TYPO. Available:");
+});
+
+test('modelFor referencing nonexistent event throws without filtering', function (): void {
+    expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'    => '/api/invalid',
+        'model'     => 'App\\Models\\Order',
+        'attribute' => 'machine',
+        'modelFor'  => ['TYPO'],
+    ]))->toThrow(InvalidArgumentException::class, "'modelFor' references event types not in the registered endpoint set: TYPO. Available:");
+});
+
+test('orphan error fires before overlap error', function (): void {
+    expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'       => '/api/invalid',
+        'model'        => 'App\\Models\\Order',
+        'attribute'    => 'machine',
+        'except'       => ['START'],
+        'machineIdFor' => ['START'],
+        'modelFor'     => ['START'],
+    ]))->toThrow(InvalidArgumentException::class, "'machineIdFor' references event types not in the registered endpoint set");
+});
+
+test('orphan error fires before modelFor-requires-model error', function (): void {
+    expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'   => '/api/invalid',
+        'except'   => ['START'],
+        'modelFor' => ['START'],
+    ]))->toThrow(InvalidArgumentException::class, "'modelFor' references event types not in the registered endpoint set");
+});
+
 // ─── Empty Endpoints ──────────────────────────────────────────────────
 
 test('register does nothing when machine has no endpoints', function (): void {
