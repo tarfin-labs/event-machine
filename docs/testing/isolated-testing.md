@@ -282,7 +282,7 @@ class MyEventBuilder extends EventBuilder
 | `::resolveBuilderClass()` | `string` | Override for custom builder location |
 
 ::: warning make() skips validation
-`make()` calls `EventBehavior::from()` directly — same as `forTesting()`. If you need to test validation rules, use `raw()` → `validateAndCreate()`.
+`make()` calls `EventBehavior::from()` directly — same as `forTesting()`. If you need to test validation rules, use `raw()` → `validateAndCreate()`. Note that `validateAndCreate()` throws `Illuminate\Validation\ValidationException`, not `MachineEventValidationException`.
 :::
 
 ::: warning Closure vs array state behavior
