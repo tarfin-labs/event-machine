@@ -750,6 +750,125 @@ test('overlap validation works after filtering', function (): void {
     ]))->toThrow(InvalidArgumentException::class, "events cannot be in both 'machineIdFor' and 'modelFor'");
 });
 
+// ─── Forwarded Endpoint Filtering ───────────────────────────────────
+
+test('only filters forwarded endpoints', function (): void {
+    MachineRouter::register(ForwardParentEndpointMachine::class, [
+        'prefix'       => '/api/fwd-only',
+        'machineIdFor' => ['START'],
+        'only'         => ['START', 'PROVIDE_CARD'],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    expect($routes->getByName('forward_endpoint_parent.start'))->not->toBeNull()
+        ->and($routes->getByName('forward_endpoint_parent.provide_card'))->not->toBeNull()
+        ->and($routes->getByName('forward_endpoint_parent.cancel'))->toBeNull()
+        ->and($routes->getByName('forward_endpoint_parent.confirm_payment'))->toBeNull();
+});
+
+test('except filters forwarded endpoints', function (): void {
+    MachineRouter::register(ForwardParentEndpointMachine::class, [
+        'prefix'       => '/api/fwd-except',
+        'machineIdFor' => ['START', 'CANCEL'],
+        'except'       => ['CONFIRM_PAYMENT'],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    expect($routes->getByName('forward_endpoint_parent.start'))->not->toBeNull()
+        ->and($routes->getByName('forward_endpoint_parent.cancel'))->not->toBeNull()
+        ->and($routes->getByName('forward_endpoint_parent.provide_card'))->not->toBeNull()
+        ->and($routes->getByName('forward_endpoint_parent.confirm_payment'))->toBeNull();
+});
+
+test('only with mix of regular and forwarded endpoints', function (): void {
+    MachineRouter::register(ForwardParentEndpointMachine::class, [
+        'prefix'       => '/api/fwd-mix',
+        'machineIdFor' => ['START'],
+        'only'         => ['START'],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    // Only regular START, no forwarded endpoints
+    expect($routes->getByName('forward_endpoint_parent.start'))->not->toBeNull()
+        ->and($routes->getByName('forward_endpoint_parent.cancel'))->toBeNull()
+        ->and($routes->getByName('forward_endpoint_parent.provide_card'))->toBeNull()
+        ->and($routes->getByName('forward_endpoint_parent.confirm_payment'))->toBeNull();
+});
+
+test('only with only forwarded event types', function (): void {
+    MachineRouter::register(ForwardParentEndpointMachine::class, [
+        'prefix' => '/api/fwd-only-fwd',
+        'only'   => ['PROVIDE_CARD'],
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    // Only forwarded PROVIDE_CARD, no regular endpoints
+    expect($routes->getByName('forward_endpoint_parent.provide_card'))->not->toBeNull()
+        ->and($routes->getByName('forward_endpoint_parent.start'))->toBeNull()
+        ->and($routes->getByName('forward_endpoint_parent.cancel'))->toBeNull()
+        ->and($routes->getByName('forward_endpoint_parent.confirm_payment'))->toBeNull();
+});
+
+test('forwarded endpoint binding mode unaffected by filtering', function (): void {
+    MachineRouter::register(ForwardParentEndpointMachine::class, [
+        'prefix'    => '/api/fwd-binding',
+        'model'     => 'App\\Models\\Order',
+        'attribute' => 'machine',
+        'only'      => ['PROVIDE_CARD'],
+    ]);
+
+    refreshRoutes();
+
+    $route = Route::getRoutes()->getByName('forward_endpoint_parent.provide_card');
+
+    // Model-bound parent → forwarded endpoint inherits handleForwardedModelBound
+    expect($route)->not->toBeNull()
+        ->and($route->getActionMethod())->toBe('handleForwardedModelBound')
+        ->and($route->uri())->toBe('api/fwd-binding/{order}/provide-card');
+});
+
+// ─── Multi-Registration ─────────────────────────────────────────────
+
+test('same machine with different only/name creates separate routes', function (): void {
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix' => '/api/public',
+        'only'   => ['START'],
+        'name'   => 'public',
+    ]);
+
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix'       => '/api/admin',
+        'only'         => ['COMPLETE', 'CANCEL'],
+        'machineIdFor' => ['COMPLETE', 'CANCEL'],
+        'name'         => 'admin',
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    // Public group: only START
+    expect($routes->getByName('public.start'))->not->toBeNull()
+        ->and($routes->getByName('public.complete'))->toBeNull()
+        ->and($routes->getByName('public.cancel'))->toBeNull()
+        // Admin group: only COMPLETE and CANCEL
+        ->and($routes->getByName('admin.complete'))->not->toBeNull()
+        ->and($routes->getByName('admin.cancel'))->not->toBeNull()
+        ->and($routes->getByName('admin.start'))->toBeNull();
+});
+
 // ─── Empty Endpoints ──────────────────────────────────────────────────
 
 test('register does nothing when machine has no endpoints', function (): void {
