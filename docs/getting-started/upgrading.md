@@ -140,6 +140,34 @@ This is **not a breaking change** — existing code that explicitly passes `acto
 
 For details, see [Raised Events — Actor Propagation](/advanced/raised-events#actor-propagation).
 
+### New Feature: Endpoint Filtering (`only` / `except`)
+
+`MachineRouter::register()` now accepts `only` and `except` options to control which event endpoints are registered per route group. This enables splitting the same machine's endpoints across different middleware groups (e.g., public vs authenticated):
+
+<!-- doctest-attr: ignore -->
+```php
+// Public — customer-facing, no auth
+MachineRouter::register(CarSalesMachine::class, [
+    'prefix' => 'car-sales',
+    'only'   => [ConsentGrantedEvent::class, PersonalInfoSubmittedEvent::class],
+    'name'   => 'car-sales.public',
+]);
+
+// Protected — retailer panel, auth required
+MachineRouter::register(CarSalesMachine::class, [
+    'prefix'     => 'machines/car-sales',
+    'middleware'  => ['auth:retailer'],
+    'except'     => [ConsentGrantedEvent::class, PersonalInfoSubmittedEvent::class],
+    'name'       => 'machines.car-sales',
+]);
+```
+
+For details, see [Endpoint Filtering](https://eventmachine.dev/laravel-integration/endpoints#endpoint-filtering).
+
+### Stricter Validation: `machineIdFor` / `modelFor`
+
+`MachineRouter::register()` now validates that event types in `machineIdFor` and `modelFor` exist in the registered endpoint set. Previously, referencing a nonexistent or forwarded event type was silently ignored — now it throws an `InvalidArgumentException` with a specific error message. This surfaces pre-existing misconfigurations.
+
 ---
 
 ## Upgrading to v7.0
