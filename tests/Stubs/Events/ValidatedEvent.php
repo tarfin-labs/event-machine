@@ -4,11 +4,18 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Events;
 
+use Tarfinlabs\EventMachine\Testing\HasBuilder;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Spatie\LaravelData\Support\Validation\ValidationContext;
+use Tarfinlabs\EventMachine\Tests\Stubs\Builders\ValidatedEventBuilder;
 
+/**
+ * @use HasBuilder<ValidatedEventBuilder>
+ */
 class ValidatedEvent extends EventBehavior
 {
+    use HasBuilder;
+
     public static function rules(ValidationContext $context): array
     {
         return [
@@ -28,5 +35,10 @@ class ValidatedEvent extends EventBehavior
     public static function getType(): string
     {
         return 'VALIDATED_EVENT';
+    }
+
+    protected static function resolveBuilderClass(): string
+    {
+        return ValidatedEventBuilder::class;
     }
 }
