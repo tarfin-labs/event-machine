@@ -110,6 +110,19 @@ OrderMachine::test()
     ->assertState('processing');
 ```
 
+### Testing Event Preservation (v8+)
+
+Verify that `@always` actions receive the original event payload:
+
+<!-- doctest-attr: ignore -->
+```php
+// Action on @always transition captures the original event
+OrderMachine::test()
+    ->send(['type' => 'SUBMIT', 'payload' => ['tckn' => '12345678901']])
+    ->assertState('verification')
+    ->assertContext('captured_payload', ['tckn' => '12345678901']);
+```
+
 ## Raised Events
 
 An action can push additional events onto the machine's internal queue using `raise()`. Those raised events are processed immediately after the current transition completes, exactly as if they had been sent from outside — enabling a single external event to trigger a chain of further transitions. `assertHistoryContains()` lets you verify that a raised event was processed during that chain.
