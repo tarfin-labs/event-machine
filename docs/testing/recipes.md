@@ -811,3 +811,41 @@ it('dispatches notification to audit machine', function (): void {
         ->assertDispatchedTo(AuditMachine::class, 'ORDER_COMPLETED');
 });
 ```
+
+## Recipe: Complex Event Payloads
+
+When guards or actions depend on rich event payloads (nested items, calculated dates, DB-seeded relationships), use [EventBuilder](/testing/isolated-testing#eventbuilder) to encapsulate the complexity. The builder handles data generation, the test focuses on behavior.
+
+<!-- doctest-attr: ignore -->
+```php
+// Test stays clean — builder handles data generation
+it('calculates stock for each order item', function () {
+    $event = ApplicationStartedEvent::builder()
+        ->withOrderItems(3)
+        ->make();
+
+    $state = State::forTesting($context, currentEventBehavior: $event);
+    CalculateStockDetailsGuard::runWithState($state);
+
+    expect($state->context->get('stock_details'))->toHaveCount(3);
+});
+
+// Validation testing with raw()
+it('rejects event without required order items', function () {
+    $raw = ApplicationStartedEvent::builder()->raw();
+
+    expect(fn () => ApplicationStartedEvent::validateAndCreate($raw))
+        ->toThrow(ValidationException::class);
+});
+
+// Immutable branching — same base, different scenarios
+it('handles different order sizes', function () {
+    $base = ApplicationStartedEvent::builder();
+
+    $small = $base->withOrderItems(1)->make();
+    $large = $base->withOrderItems(10)->make();
+
+    expect($small->payload['order_items'])->toHaveCount(1);
+    expect($large->payload['order_items'])->toHaveCount(10);
+});
+```
