@@ -23,6 +23,7 @@ use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
 use Tarfinlabs\EventMachine\Traits\ResolvesBehaviors;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
@@ -1073,21 +1074,25 @@ class Machine implements Castable, JsonSerializable, Stringable
         }
 
         $resultBehavior = $behaviorDefinition[$id];
+        $arguments      = null;
+
         if (!is_callable($resultBehavior)) {
-            // If the result behavior contains a colon, it means that it has a parameter.
             if (str_contains((string) $resultBehavior, ':')) {
                 [$resultBehavior, $arguments] = explode(':', (string) $resultBehavior);
+                $arguments                    = explode(',', $arguments);
             }
 
-            $resultBehavior = new $resultBehavior();
+            $resultBehavior = resolve($resultBehavior);
         }
 
-        /* @var callable $resultBehavior */
-        return $resultBehavior(
-            $this->state->context,
-            $this->state->currentEventBehavior,
-            $arguments ?? null,
+        $params = InvokableBehavior::injectInvokableBehaviorParameters(
+            actionBehavior: $resultBehavior,
+            state: $this->state,
+            eventBehavior: $this->state->currentEventBehavior,
+            actionArguments: $arguments,
         );
+
+        return $resultBehavior(...$params);
     }
 
     // region Private Methods
