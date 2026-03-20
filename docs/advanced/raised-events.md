@@ -428,6 +428,55 @@ See the linked guide for more patterns.
 For comprehensive design guidelines with Do/Don't examples, see [Action Design](/best-practices/action-design).
 :::
 
+## Actor Propagation
+
+When an action raises an event, the actor from the triggering event is **automatically inherited** if not explicitly set. This eliminates the need to manually pass `actor:` in every `raise()` call.
+
+### Before (v7)
+
+```php no_run
+class ApproveAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context, EventBehavior $event): void
+    {
+        // Had to manually pass actor on every raise
+        $this->raise(new NotifyEvent(
+            payload: ['message' => 'Approved'],
+            actor: $event->actor($context),  // manual boilerplate
+        ));
+    }
+}
+```
+
+### After (v8)
+
+```php no_run
+class ApproveAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        // Actor is auto-inherited from the triggering event
+        $this->raise(new NotifyEvent(
+            payload: ['message' => 'Approved'],
+        ));
+    }
+}
+```
+
+### Rules
+
+| Scenario | Result |
+|----------|--------|
+| `raise()` without actor | Inherited from triggering event |
+| `raise()` with explicit actor | Explicit wins |
+| Chained raises (A → B → C) | Each inherits from previous |
+| Event class with `actor()` override | Override wins |
+| Timer / lifecycle events → raise | No propagation (no actor on trigger) |
+
+::: tip Explicit Always Wins
+If you set `actor:` explicitly on a raised event, it takes precedence over the auto-propagated value. This lets you override the actor for specific events in a chain.
+:::
+
 ## Raised Events with Parallel Dispatch
 
 When [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch) is enabled, raised events from region entry actions are captured and processed **under lock** in the same job scope:
