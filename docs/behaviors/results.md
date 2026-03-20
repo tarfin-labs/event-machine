@@ -159,7 +159,17 @@ If you just need the context data as-is, access `$state->context` directly inste
 
 ## Result Parameters
 
-Results receive injected parameters:
+Results use **type-hint based parameter injection** — the same system as actions, guards, and calculators. Parameter order doesn't matter; types are matched automatically.
+
+Available parameter types:
+
+| Type | What's Injected |
+|------|----------------|
+| `ContextManager` (or subclass) | Machine context |
+| `EventBehavior` (or subclass) | Current event |
+| `State` | Current state object |
+| `EventCollection` | Full event history |
+| `array` | Behavior arguments (colon syntax) |
 
 ```php
 use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
