@@ -75,6 +75,7 @@ For fast tests, use SQLite in-memory. This eliminates migration overhead and dis
 
 | Layer | What to Test | Guide |
 |-------|-------------|-------|
+| Event Building | Complex test event payloads with faker, DB seeding | [Isolated Testing — EventBuilder](/testing/isolated-testing#eventbuilder) |
 | Behavior (Unit) | Individual guards, actions, calculators | [Isolated Testing](/testing/isolated-testing) |
 | Faking | Mock behaviors during execution | [Fakeable Behaviors](/testing/fakeable-behaviors) |
 | Inline Faking | Fake inline closures (actions, guards, calculators) | [Fakeable Behaviors — Inline](/testing/fakeable-behaviors#inline-behavior-faking) |
@@ -96,6 +97,7 @@ For fast tests, use SQLite in-memory. This eliminates migration overhead and dis
 
 ```
 Single behavior in isolation?         → State::forTesting() + runWithState()
+Complex event payload for tests?      → Event::builder()->withX()->make()
 Full machine flow?                    → TestMachine::create() or define()
 Child delegation?                     → fakingChild() + assertChildInvoked()
 Async child completion?               → simulateChildDone() / simulateChildFail()
