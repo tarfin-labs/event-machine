@@ -516,6 +516,76 @@ Always ensure at least one branch leads to a state without `@always`, or use gua
 This protection is inspired by IBM Rhapsody's `DEFAULT_MAX_NULL_STEPS` (default: 100 for C++/C), the industry-standard approach from David Harel's own statechart implementation. The W3C SCXML specification leaves loop prevention to implementations, and the UML spec relies on the designer to ensure termination.
 :::
 
+## Event Preservation
+
+Since v8.0, behaviors on `@always` transitions receive the **original triggering event** — not the synthetic `@always` event. This means actions, guards, and calculators can access the event's type, payload, and actor without requiring the data to be copied into context beforehand.
+
+### How It Works
+
+When a state is entered via a normal event (e.g., `ORDER_SUBMITTED`) and that state has an `@always` transition, the original event is preserved through the entire `@always` chain:
+
+```
+idle ──[ORDER_SUBMITTED {tckn, phone}]──► routing ──[@always]──► eligibility ──[@always]──► verification
+                                              ↑                        ↑
+                                    $event->type === 'ORDER_SUBMITTED'
+                                    $event->payload === {tckn, phone}
+```
+
+Guards, actions, and calculators on the `@always` transitions — as well as entry actions on `@always` target states — all receive the original `ORDER_SUBMITTED` event via parameter injection.
+
+### Before and After
+
+**Before (v7):** Event data had to be copied into context before the `@always` chain:
+
+<!-- doctest-attr: ignore -->
+```php
+'submitted' => [
+    'entry' => 'copyPayloadToContextAction',  // Required to preserve data
+    'on' => [
+        '@always' => [
+            'target' => 'routing',
+            'guards' => 'myGuard',  // Could not access original payload
+        ],
+    ],
+],
+```
+
+**After (v8):** Guards and actions access the event directly:
+
+<!-- doctest-attr: ignore -->
+```php
+'submitted' => [
+    'on' => [
+        '@always' => [
+            'target'  => 'routing',
+            'guards'  => 'myGuard',   // Receives original event
+            'actions' => 'myAction',  // Receives original event
+        ],
+    ],
+],
+```
+
+### Edge Cases
+
+| Scenario | Event received |
+|----------|---------------|
+| Normal event → `@always` chain | Original event (preserved) |
+| `raise()` → `@always` chain | The raised event |
+| Timer `@after`/`@every` → `@always` | Timer event |
+| Initial state has `@always` (no prior event) | Synthetic `@always` event (no triggering event exists) |
+| Async parallel dispatch + `@always` | Synthetic `@always` event (`triggeringEvent` is transient — lost after DB reconstruction) |
+
+### Technical Details
+
+Event preservation uses a transient `$state->triggeringEvent` property:
+- Set in `transition()` when the event is not `@always`
+- Injected into behaviors via `InvokableBehavior::injectInvokableBehaviorParameters()`
+- Not persisted to database or queue payloads — survives only within a single synchronous macrostep
+
+::: tip Migration Guide
+For upgrade instructions, see [Upgrading to v8.0](/getting-started/upgrading#upgrading-to-v8-0).
+:::
+
 ## Testing @always Transitions
 
 <!-- doctest-attr: ignore -->

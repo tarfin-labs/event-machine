@@ -137,6 +137,7 @@ When an event is sent, here's exactly what happens:
 │  9. ALWAYS TRANSITIONS                                       │
 │     └─► Check for @always transitions                       │
 │     └─► If found, repeat from step 1                        │
+│     └─► Original event preserved for behaviors (v8+)        │
 │                                                              │
 │  7. RAISED EVENTS                                            │
 │     └─► Process any events raised during actions            │
@@ -191,7 +192,7 @@ When `PAY` event is sent:
 3. **Exit**: `logLeavingPending` runs
 4. **Transition**: `processPayment`, `generateReceipt` run
 5. **Entry**: `sendConfirmation`, `notifyWarehouse` run
-6. **Always**: `autoProcessEnabled` guard checks
+6. **Always**: `autoProcessEnabled` guard checks — receives original `PAY` event (v8+)
 7. **If always matched**: Jump to `processing`, run `startProcessing`
 8. **Persist**: Event saved to database
 

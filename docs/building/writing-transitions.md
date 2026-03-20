@@ -351,6 +351,10 @@ Transitions that evaluate immediately after entering a state:
 
 The `@always` key is a reserved event that fires automatically.
 
+::: tip Event Preservation (v8+)
+Actions, guards, and calculators on `@always` transitions receive the **original triggering event** — not the synthetic `@always` event. This means you can access `$event->payload` without copying data into context first. See [@always Transitions — Event Preservation](/advanced/always-transitions#event-preservation) for details.
+:::
+
 ## Hierarchical Transitions
 
 Transitions in compound states:

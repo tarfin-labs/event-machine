@@ -259,6 +259,10 @@ START → @always routing → @always eligibility → awaiting_consent
                                       Listeners fire here (once)
 ```
 
+::: tip Event Preservation (v8+)
+Although listeners skip transient states, entry actions and `@always` behaviors in those states still receive the original triggering event. See [@always Transitions — Event Preservation](/advanced/always-transitions#event-preservation).
+:::
+
 For business-level filtering, add conditions in the action itself.
 
 ### Listeners and Child Machines
