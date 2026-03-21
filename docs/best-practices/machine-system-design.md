@@ -217,3 +217,98 @@ The child owns its business timeout with `after`. It handles retries internally 
 ::: tip When Parent @timeout IS Appropriate
 Use `@timeout` for **infrastructure protection** -- when the queue infrastructure itself might fail (worker crash, Redis down, job lost). This guards against the child _never completing at all_, not against slow business logic. If you need a parent timer for business logic, the child's design is incomplete.
 :::
+
+## Keep the Hierarchy Clean
+
+Each machine should communicate only with its direct parent and children. "Wild links" -- messages that skip hierarchy levels -- make the system unpredictable.
+
+### Anti-Pattern: Grandparent Bypasses Parent
+
+```php no_run
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use Tarfinlabs\EventMachine\ContextManager;
+
+// Anti-pattern: OrderWorkflowMachine action sends directly to FraudCheckMachine
+// (should go through PaymentMachine)
+class HandlePaymentReceivedAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        // Order machine reaching past PaymentMachine to FraudCheckMachine
+        $this->sendTo(
+            machineClass: 'App\\Machines\\FraudCheckMachine',
+            rootEventId: $context->get('fraud_check_id'),
+            event: ['type' => 'FRAUD_DATA_SUBMITTED', 'payload' => ['amount' => $context->get('amount')]],
+        );
+    }
+}
+```
+
+PaymentMachine does not know FraudCheckMachine received a command. It cannot account for this in its transitions. System behavior becomes unpredictable.
+
+### Fix: Route Through the Hierarchy
+
+PaymentMachine owns the fraud check as its child. The parent (OrderWorkflow) delegates to PaymentMachine, which delegates to FraudCheckMachine. Each machine talks only to its direct neighbors:
+
+```php ignore
+// PaymentMachine owns the fraud check as its child
+'processing' => [
+    'machine'                    => FraudCheckMachine::class,
+    'with'                       => ['transaction_id', 'amount'],
+    '@done.clean'                => 'capturing',
+    '@done.flagged'              => 'awaiting_manual_review',
+    '@fail'                      => 'failed',
+],
+```
+
+**When `sendTo()` / `dispatchTo()` IS appropriate:**
+
+- **Sibling coordination:** Two machines at the same level need to synchronize (e.g., InventoryMachine notifies ShippingMachine that stock is reserved)
+- **Notifications:** Fire-and-forget messages to logging, analytics, or notification machines
+- **Cross-domain events:** Explicitly modeled communication between separate domain boundaries (e.g., order domain → accounting domain)
+
+**Takeaway:** Prefer hierarchical delegation (`machine` key) over direct messaging (`sendTo`). Use `sendTo` for sibling coordination and fire-and-forget notifications, not for bypassing the hierarchy.
+
+## Composition Patterns
+
+Three patterns for organizing multi-machine systems, from most to least common:
+
+### Pattern A: Hierarchical (Parent → Children)
+
+The parent orchestrates a sequential or branching workflow. Children specialize in domain-specific logic.
+
+```ignore
+OrderWorkflow
+  ├── ValidationMachine     (@done → awaiting_payment)
+  ├── PaymentMachine        (@done.captured → shipping, @done.declined → payment_failed)
+  │     └── FraudCheckMachine  (@done.clean → capturing)
+  ├── ShippingMachine       (@done → completed)
+  └── RefundMachine         (@done → refunded)
+```
+
+**When:** The parent decides _what_ to do next based on child outcomes. Most EventMachine systems use this pattern.
+
+### Pattern B: Parallel Regions
+
+Independent sub-flows running simultaneously within one machine. Regions cannot communicate with each other.
+
+```ignore
+OrderFulfillment (parallel state)
+  ├── region: payment   (processing → captured)
+  └── region: inventory (reserving → reserved)
+  @done → shipping (when both regions complete)
+```
+
+**When:** Independent sub-flows that must all complete before proceeding. See [Parallel Patterns](./parallel-patterns).
+
+### Pattern C: Coordinator + Peer Machines
+
+Independent machines notify a coordinator via `dispatchTo`. No parent-child relationship -- machines are peers across domain boundaries.
+
+```ignore
+OrderMachine ──dispatchTo──→ AccountingMachine
+ShippingMachine ──dispatchTo──→ AccountingMachine
+RefundMachine ──dispatchTo──→ AccountingMachine
+```
+
+**When:** Cross-domain communication where machines belong to different bounded contexts. Use `dispatchTo` (async) to avoid coupling the sender to the coordinator's response time.
