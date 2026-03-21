@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ParallelDelegationParentMachine;
 
@@ -71,25 +72,17 @@ it('LocalQA: async child delegation in parallel region completes via Horizon', f
 
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    // Wait for Horizon to process ChildMachineJob → child completes → ChildMachineCompletionJob → @done on region_a
+    // Wait for Horizon to process ChildMachineJob → child completes →
+    // ChildMachineCompletionJob → @done on region_a → all regions final → parallel @done → 'done'
     $completed = LocalQATestCase::waitFor(function () use ($rootEventId): bool {
-        // Check if the parent has transitioned out of the parallel state
-        $lastEvent = MachineEvent::where('root_event_id', $rootEventId)
-            ->where('machine_id', 'parallel_delegation_parent')
-            ->orderByDesc('sequence_number')
-            ->first();
+        $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
-        if ($lastEvent === null) {
-            return false;
-        }
-
-        $value = $lastEvent->machine_value;
-
-        // Check if region_a has completed (async child finished)
-        $regionA = collect($value)->first(fn (string $v): bool => str_contains($v, 'region_a'));
-
-        return $regionA !== null && str_contains($regionA, 'completed');
+        return $cs !== null && str_contains($cs->state_id, '.done');
     }, timeoutSeconds: 45);
 
     expect($completed)->toBeTrue('Async child delegation in parallel region did not complete via Horizon');
+
+    // Verify final state
+    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+    expect($cs->state_id)->toBe('parallel_delegation_parent.done');
 });
