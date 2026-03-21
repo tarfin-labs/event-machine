@@ -16,14 +16,16 @@ Information flows one way in a well-designed machine system: **commands down, st
 
 When a parent passes its own status flags to a child via `with`, the child becomes coupled to the parent's lifecycle:
 
-```php ignore
+```php
+$config = [ // [!code hide]
 // Anti-pattern: parent passes its own state to child
 'awaiting_payment' => [
-    'machine' => PaymentMachine::class,
+    'machine' => 'PaymentMachine',
     'with'    => ['order_id', 'order_total', 'order_status'],  // ← parent state leaked
     '@done'   => 'shipping',
     '@fail'   => 'failed',
 ],
+]; // [!code hide]
 ```
 
 ```php no_run
@@ -51,15 +53,17 @@ The child should not care whether the order is cancelled. That is the parent's c
 
 Pass only payment-relevant data via `with`. Handle cancellation in the parent with an `on` transition:
 
-```php ignore
+```php
+$config = [ // [!code hide]
 // Parent handles cancellation — child only knows about payment
 'awaiting_payment' => [
-    'machine' => PaymentMachine::class,
+    'machine' => 'PaymentMachine',
     'with'    => ['order_id', 'order_total'],  // only payment-relevant data
     'on'      => ['ORDER_CANCELLED' => 'cancelled'],
     '@done'   => 'shipped',
     '@fail'   => 'failed',
 ],
+]; // [!code hide]
 ```
 
 If the parent receives `ORDER_CANCELLED` while the child is running, the parent transitions to `cancelled` directly. The child is cleaned up automatically. No coupling needed.
@@ -74,7 +78,8 @@ A child machine's final states should tell the parent everything it needs to kno
 
 When a child has only one final state, the parent cannot distinguish between different outcomes:
 
-```php ignore
+<!-- doctest-attr: ignore -->
+```php
 // Child: CreditCheckMachine — parent can't distinguish outcomes
 'states' => [
     'checking'  => [...],
@@ -82,7 +87,8 @@ When a child has only one final state, the parent cannot distinguish between dif
 ],
 ```
 
-```php ignore
+<!-- doctest-attr: ignore -->
+```php
 // Parent: no way to route differently
 'processing_credit' => [
     'machine' => CreditCheckMachine::class,
@@ -97,7 +103,9 @@ The parent receives `@done` for every outcome and must inspect the child's conte
 
 Give each distinct outcome its own final state. Use `output` to expose only the relevant context keys. The parent uses `@done.{finalState}` to route directly:
 
-```php ignore
+```php
+use Tarfinlabs\EventMachine\Support\Timer; // [!code hide]
+$config = [ // [!code hide]
 // Child: CreditCheckMachine — each outcome is a distinct final state
 'states' => [
     'querying_bureau' => [
@@ -105,9 +113,7 @@ Give each distinct outcome its own final state. Use `output` to expose only the 
         'on'    => [
             'SCORE_RECEIVED'      => 'evaluating',
             'BUREAU_QUERY_FAILED' => 'bureau_unavailable',
-        ],
-        'after' => [
-            Timer::seconds(30) => 'bureau_unavailable',
+            'BUREAU_TIMEOUT'      => ['target' => 'bureau_unavailable', 'after' => Timer::seconds(30)],
         ],
     ],
     'evaluating' => [
@@ -131,9 +137,11 @@ Give each distinct outcome its own final state. Use `output` to expose only the 
         'output' => ['error_code'],
     ],
 ],
+]; // [!code hide]
 ```
 
-```php ignore
+<!-- doctest-attr: ignore -->
+```php
 // Parent: routes differently based on child's final state
 'processing_credit' => [
     'machine'                   => CreditCheckMachine::class,
@@ -155,7 +163,8 @@ Business timeout timers belong on the machines that talk to the outside world (l
 
 ### Anti-Pattern: Timer on Parent to Guard Against Child
 
-```php ignore
+<!-- doctest-attr: ignore -->
+```php
 // Anti-pattern: parent uses @timeout because child might hang
 'verifying_documents' => [
     'machine' => DocumentVerificationMachine::class,
@@ -173,7 +182,9 @@ Why would the child hang? If it calls an external API, the _child_ should own th
 
 The child owns its business timeout with `after`. It handles retries internally and always reaches a final state:
 
-```php ignore
+```php
+use Tarfinlabs\EventMachine\Support\Timer; // [!code hide]
+$config = [ // [!code hide]
 // Child: DocumentVerificationMachine — owns its business timeout
 'states' => [
     'calling_api' => [
@@ -181,9 +192,7 @@ The child owns its business timeout with `after`. It handles retries internally 
         'on'    => [
             'VERIFICATION_COMPLETED' => 'verified',
             'VERIFICATION_REJECTED'  => 'rejected',
-        ],
-        'after' => [
-            Timer::minutes(2) => 'api_timed_out',
+            'API_TIMEOUT'            => ['target' => 'api_timed_out', 'after' => Timer::minutes(2)],
         ],
     ],
     'api_timed_out' => [
@@ -199,9 +208,11 @@ The child owns its business timeout with `after`. It handles retries internally 
     'rejected' => ['type' => 'final', 'output' => ['rejection_reason']],
     'failed'   => ['type' => 'final', 'output' => ['failure_reason']],
 ],
+]; // [!code hide]
 ```
 
-```php ignore
+<!-- doctest-attr: ignore -->
+```php
 // Parent: no timer needed — child guarantees completion
 'verifying_documents' => [
     'machine'            => DocumentVerificationMachine::class,
@@ -250,7 +261,8 @@ PaymentMachine does not know FraudCheckMachine received a command. It cannot acc
 
 PaymentMachine owns the fraud check as its child. The parent (OrderWorkflow) delegates to PaymentMachine, which delegates to FraudCheckMachine. Each machine talks only to its direct neighbors:
 
-```php ignore
+<!-- doctest-attr: ignore -->
+```php
 // PaymentMachine owns the fraud check as its child
 'processing' => [
     'machine'                    => FraudCheckMachine::class,
@@ -277,7 +289,7 @@ Three patterns for organizing multi-machine systems, from most to least common:
 
 The parent orchestrates a sequential or branching workflow. Children specialize in domain-specific logic.
 
-```ignore
+```txt
 OrderWorkflow
   ├── ValidationMachine     (@done → awaiting_payment)
   ├── PaymentMachine        (@done.captured → shipping, @done.declined → payment_failed)
@@ -292,7 +304,7 @@ OrderWorkflow
 
 Independent sub-flows running simultaneously within one machine. Regions cannot communicate with each other.
 
-```ignore
+```txt
 OrderFulfillment (parallel state)
   ├── region: payment   (processing → captured)
   └── region: inventory (reserving → reserved)
@@ -305,7 +317,7 @@ OrderFulfillment (parallel state)
 
 Independent machines notify a coordinator via `dispatchTo`. No parent-child relationship -- machines are peers across domain boundaries.
 
-```ignore
+```txt
 OrderMachine ──dispatchTo──→ AccountingMachine
 ShippingMachine ──dispatchTo──→ AccountingMachine
 RefundMachine ──dispatchTo──→ AccountingMachine
