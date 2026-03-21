@@ -77,7 +77,9 @@ class ChildMachineCompletionJob implements ShouldQueue
         }
 
         // 2. Pre-lock idempotency check: is parent still in the invoking state?
-        if ($parentMachine->state->currentStateDefinition->id !== $this->parentStateId) {
+        // For parallel states, currentStateDefinition is the parallel ancestor,
+        // not the region's atomic state. Check the value array instead.
+        if (!in_array($this->parentStateId, $parentMachine->state->value, true)) {
             return;
         }
 
@@ -94,11 +96,23 @@ class ChildMachineCompletionJob implements ShouldQueue
             /** @var Machine $freshParent */
             $freshParent = $this->parentMachineClass::create(state: $this->parentRootEventId);
 
-            if ($freshParent->state->currentStateDefinition->id !== $this->parentStateId) {
+            // Re-check under lock: parent state must still contain the invoking state
+            if (!in_array($this->parentStateId, $freshParent->state->value, true)) {
                 return;
             }
 
-            $stateDefinition = $freshParent->state->currentStateDefinition;
+            // Resolve the invoking state definition from idMap (not currentStateDefinition,
+            // which for parallel states points to the parallel ancestor, not the region's atomic state)
+            $stateDefinition = $freshParent->definition->idMap[$this->parentStateId] ?? null;
+
+            if ($stateDefinition === null) {
+                return;
+            }
+
+            // Track whether this is a parallel context for value preservation
+            $isParallelContext = count($freshParent->state->value) > 1;
+            $parallelValues    = $isParallelContext ? $freshParent->state->value : null;
+            $parallelCSD       = $isParallelContext ? $freshParent->state->currentStateDefinition : null;
 
             // 5. Route @done or @fail on the parent
             if ($this->success) {
@@ -139,6 +153,43 @@ class ChildMachineCompletionJob implements ShouldQueue
                     $stateDefinition,
                     $failEvent,
                 );
+            }
+
+            // 5b. Parallel value preservation: routeChildDoneEvent calls
+            // executeChildTransitionBranch → setCurrentStateDefinition, which wipes
+            // the parallel value array. Restore it with the region's new state.
+            if ($isParallelContext && $parallelValues !== null) {
+                $oldRegionState = $this->parentStateId;
+                $historyCount   = count($freshParent->state->history);
+
+                if ($freshParent->state->value !== $parallelValues) {
+                    $newRegionState = $freshParent->state->value[0] ?? $oldRegionState;
+                    $restoredValues = array_map(
+                        fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
+                        $parallelValues,
+                    );
+                    $freshParent->state->setValues($restoredValues);
+
+                    // Fix machine_value snapshots in events recorded during routing
+                    for ($i = count($parallelValues); $i < $historyCount; $i++) {
+                        if (isset($freshParent->state->history[$i])) {
+                            $freshParent->state->history[$i]->machine_value = $restoredValues;
+                        }
+                    }
+                }
+
+                // Restore currentStateDefinition to the parallel state
+                if ($parallelCSD !== null) {
+                    $freshParent->state->currentStateDefinition = $parallelCSD;
+                }
+
+                // Check if all regions are now final → process parallel @done
+                if ($freshParent->definition->areAllRegionsFinal($parallelCSD, $freshParent->state)) {
+                    $freshParent->state = $freshParent->definition->processParallelOnDone(
+                        $parallelCSD,
+                        $freshParent->state,
+                    );
+                }
             }
 
             // 6. Persist parent state
