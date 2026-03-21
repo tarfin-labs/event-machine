@@ -187,6 +187,61 @@ class OrderWorkflowMachine extends Machine
 
 The parent does not know how payment processing works. It only knows that it starts, succeeds, or fails.
 
+::: tip Design for Integration
+When building a child machine for delegation, ensure its final states provide enough information for any future parent. A machine that works standalone may need additional states when integrated into a system. See [Machine System Design: Design Your Child States for the Parent](/best-practices/machine-system-design#design-your-child-states-for-the-parent) for detailed guidance.
+:::
+
+## The Completeness Rule
+
+If you model a domain with a machine, **all** control for that domain must flow through the machine. The machine definition should be the single source of truth for behavior.
+
+### Anti-Pattern: Split Control
+
+<!-- doctest-attr: ignore -->
+```php
+// Machine handles some transitions...
+'submitted' => ['on' => ['PAYMENT_RECEIVED' => 'paid']],
+```
+
+```php no_run
+use Illuminate\Database\Eloquent\Model;
+
+// ...but an Eloquent observer handles others — DANGEROUS
+class Order extends Model
+{
+    protected static function booted(): void
+    {
+        static::updated(function (Order $order): void {
+            if ($order->status === 'expired') {
+                // Side effect OUTSIDE the machine — invisible to machine definition
+                $order->notifyCustomer();
+            }
+        });
+    }
+}
+```
+
+The machine controls some transitions, an observer controls others. Neither has a complete picture. Changes in one can silently break the other.
+
+### Fix: All Control Through the Machine
+
+<!-- doctest-attr: ignore -->
+```php
+// Expiration handled IN the machine — single source of truth
+'awaiting_payment' => [
+    'on' => [
+        'ORDER_EXPIRED'    => ['target' => 'expired', 'after' => Timer::days(7)],
+        'PAYMENT_RECEIVED' => 'paid',
+    ],
+],
+'expired' => [
+    'type'  => 'final',
+    'entry' => 'notifyCustomerAction',
+],
+```
+
+The machine owns the expiration timer, the notification action, and the state transition. No observer needed.
+
 ## Guidelines
 
 1. **Own lifecycle = own machine.** If the sub-flow has independent start, success, and failure paths, extract it.
