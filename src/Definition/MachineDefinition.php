@@ -469,28 +469,7 @@ class MachineDefinition
         if ($this->initialStateDefinition->type === StateDefinitionType::PARALLEL) {
             $this->enterParallelState($initialState, $this->initialStateDefinition, $initialState->currentEventBehavior);
         } else {
-            // Record the internal initial state init event.
-            $initialState->setInternalEventBehavior(
-                type: InternalEvent::STATE_ENTER,
-                placeholder: $initialState->currentStateDefinition->route,
-            );
-
-            // Run entry actions on the initial state definition
-            $this->initialStateDefinition->runEntryActions(
-                state: $initialState,
-                eventBehavior: $initialState->currentEventBehavior,
-            );
-
-            // Run entry listeners (listen.entry — NOT listen.transition on init)
-            $this->runEntryListeners($initialState, $initialState->currentEventBehavior);
-
-            // Handle machine delegation on the initial state
-            $this->handleMachineInvoke($initialState, $this->initialStateDefinition, $initialState->currentEventBehavior);
-
-            // Process compound onDone if the initial state is final within a compound parent
-            if ($this->initialStateDefinition->type === StateDefinitionType::FINAL) {
-                $this->processCompoundOnDone($initialState, $this->initialStateDefinition, $initialState->currentEventBehavior);
-            }
+            $this->enterState($initialState, $this->initialStateDefinition, $initialState->currentEventBehavior);
         }
 
         if ($this->initialStateDefinition?->transitionDefinitions !== null) {
@@ -609,27 +588,9 @@ class MachineDefinition
                                 type: InternalEvent::PARALLEL_REGION_ENTER,
                                 placeholder: $region->route,
                             );
-                            $state->setInternalEventBehavior(
-                                type: InternalEvent::STATE_ENTER,
-                                placeholder: $regionInitial->route,
-                            );
-                            $regionInitial->runEntryActions($state, $eventBehavior);
 
-                            // Handle machine delegation on region initial state
-                            if ($regionInitial->hasMachineInvoke()) {
-                                $parallelValues = $state->value;
-                                $oldRegionState = $regionInitial->id;
-
-                                $this->handleMachineInvoke($state, $regionInitial, $eventBehavior);
-
-                                if ($state->value !== $parallelValues) {
-                                    $newRegionState = $state->value[0] ?? $oldRegionState;
-                                    $state->setValues(array_map(
-                                        fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
-                                        $parallelValues,
-                                    ));
-                                }
-                            }
+                            // Centralized parallel region entry (no entry listeners in dispatch mode)
+                            $this->enterStateInParallelRegion($state, $regionInitial, $eventBehavior, fireEntryListeners: false);
                         }
                     }
                 }
@@ -647,34 +608,10 @@ class MachineDefinition
                     placeholder: $region->route,
                 );
 
-                // Find and run entry actions for the initial state of this region
+                // Centralized parallel region entry
                 $regionInitial = $region->findInitialStateDefinition();
                 if ($regionInitial !== null) {
-                    $state->setInternalEventBehavior(
-                        type: InternalEvent::STATE_ENTER,
-                        placeholder: $regionInitial->route,
-                    );
-                    $regionInitial->runEntryActions($state, $eventBehavior);
-                    $this->runEntryListeners($state, $eventBehavior);
-
-                    // Handle machine delegation on region initial state.
-                    // handleMachineInvoke may trigger @done/@fail which calls
-                    // setCurrentStateDefinition, wiping the parallel value array.
-                    // Save and restore the parallel values, merging the region's new state.
-                    if ($regionInitial->hasMachineInvoke()) {
-                        $parallelValues = $state->value;
-                        $oldRegionState = $regionInitial->id;
-
-                        $this->handleMachineInvoke($state, $regionInitial, $eventBehavior);
-
-                        if ($state->value !== $parallelValues) {
-                            $newRegionState = $state->value[0] ?? $oldRegionState;
-                            $state->setValues(array_map(
-                                fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
-                                $parallelValues,
-                            ));
-                        }
-                    }
+                    $this->enterStateInParallelRegion($state, $regionInitial, $eventBehavior);
                 }
             }
         }
@@ -1188,6 +1125,118 @@ class MachineDefinition
         }
 
         return $transition->getFirstValidTransitionBranch($eventBehavior, $state);
+    }
+
+    /**
+     * Centralized state entry protocol for non-parallel contexts.
+     *
+     * Encapsulates the canonical entry sequence: resolve compound initial,
+     * record STATE_ENTER, run entry actions (two-tier for compound), run listeners,
+     * handle machine delegation, and process compound @done if final.
+     *
+     * Callers are responsible for value/currentStateDefinition updates before calling this method.
+     *
+     * @param  State  $state  The current machine state.
+     * @param  StateDefinition  $target  The state being entered (may be compound).
+     * @param  EventBehavior|null  $eventBehavior  The triggering event.
+     * @param  bool  $fireTransitionListeners  Whether to fire transition listeners (true for event-driven transitions).
+     */
+    protected function enterState(
+        State $state,
+        StateDefinition $target,
+        ?EventBehavior $eventBehavior,
+        bool $fireTransitionListeners = false,
+    ): void {
+        // Resolve to initial state if the target is a compound state
+        $resolvedTarget = $target->findInitialStateDefinition() ?? $target;
+
+        // Record state enter event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_ENTER,
+            placeholder: $resolvedTarget->route,
+        );
+
+        // Run entry actions on target (and initial child if compound)
+        $target->runEntryActions($state, $eventBehavior);
+        if ($resolvedTarget !== $target) {
+            $resolvedTarget->runEntryActions($state, $eventBehavior);
+        }
+
+        // Run entry listeners
+        $this->runEntryListeners($state, $eventBehavior);
+
+        // Run transition listeners (only for event-driven transitions, not initial entry)
+        if ($fireTransitionListeners) {
+            $this->runTransitionListeners($state, $eventBehavior);
+        }
+
+        // Handle machine delegation (sync child machines)
+        $this->handleMachineInvoke($state, $resolvedTarget, $eventBehavior);
+
+        // Process compound onDone if the resolved target is final
+        if ($resolvedTarget->type === StateDefinitionType::FINAL) {
+            $this->processCompoundOnDone($state, $resolvedTarget, $eventBehavior);
+        }
+    }
+
+    /**
+     * Centralized state entry protocol for parallel region contexts.
+     *
+     * Handles the same entry sequence as enterState() but with parallel value
+     * array preservation: saves values before handleMachineInvoke, then maps
+     * the region's new state back into the parallel value array.
+     *
+     * Region initial states are always atomic (no compound resolution needed).
+     *
+     * @param  State  $state  The current machine state.
+     * @param  StateDefinition  $regionInitial  The region initial state being entered.
+     * @param  EventBehavior|null  $eventBehavior  The triggering event.
+     * @param  StateDefinition|null  $parallelState  The parent parallel state (to restore currentStateDefinition).
+     * @param  bool  $fireEntryListeners  Whether to fire entry listeners (false in dispatch mode).
+     */
+    protected function enterStateInParallelRegion(
+        State $state,
+        StateDefinition $regionInitial,
+        ?EventBehavior $eventBehavior,
+        ?StateDefinition $parallelState = null,
+        bool $fireEntryListeners = true,
+    ): void {
+        // Record state enter event
+        $state->setInternalEventBehavior(
+            type: InternalEvent::STATE_ENTER,
+            placeholder: $regionInitial->route,
+        );
+
+        // Run entry actions
+        $regionInitial->runEntryActions($state, $eventBehavior);
+
+        // Run entry listeners
+        if ($fireEntryListeners) {
+            $this->runEntryListeners($state, $eventBehavior);
+        }
+
+        // Handle machine delegation with parallel value preservation
+        if ($regionInitial->hasMachineInvoke()) {
+            $parallelValues = $state->value;
+            $oldRegionState = $regionInitial->id;
+
+            $this->handleMachineInvoke($state, $regionInitial, $eventBehavior);
+
+            // Restore parallel value array: handleMachineInvoke may trigger @done
+            // which calls setCurrentStateDefinition, wiping the multi-value array.
+            if ($state->value !== $parallelValues) {
+                $newRegionState = $state->value[0] ?? $oldRegionState;
+                $state->setValues(array_map(
+                    fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
+                    $parallelValues,
+                ));
+            }
+
+            // Restore currentStateDefinition to the parallel state
+            if ($parallelState instanceof StateDefinition) {
+                $state->currentStateDefinition = $parallelState;
+            }
+        }
     }
 
     /**
@@ -1783,37 +1832,12 @@ class MachineDefinition
         // Run branch actions
         $branch->runActions($state, $eventBehavior);
 
-        // Resolve to initial state if the target is compound
+        // Update currentStateDefinition and value array (resolved to initial for compound)
         $initialTarget = $target->findInitialStateDefinition() ?? $target;
-
-        // Update both currentStateDefinition and value array
         $state->setCurrentStateDefinition($initialTarget);
 
-        // Record state enter
-        $state->setInternalEventBehavior(
-            type: InternalEvent::STATE_ENTER,
-            placeholder: $initialTarget->route,
-        );
-
-        // Run entry actions on target
-        $target->runEntryActions($state, $eventBehavior);
-        if ($initialTarget !== $target) {
-            $initialTarget->runEntryActions($state, $eventBehavior);
-        }
-
-        // Run entry and transition listeners
-        $this->runEntryListeners($state, $eventBehavior);
-        $this->runTransitionListeners($state, $eventBehavior);
-
-        // Handle machine invoke on the new target (nested delegation)
-        if ($initialTarget->hasMachineInvoke()) {
-            $this->handleMachineInvoke($state, $initialTarget, $eventBehavior);
-        }
-
-        // Recursively check if target is final within compound parent
-        if ($initialTarget->type === StateDefinitionType::FINAL) {
-            $this->processCompoundOnDone($state, $initialTarget, $eventBehavior);
-        }
+        // Centralized entry protocol
+        $this->enterState($state, $target, $eventBehavior, fireTransitionListeners: true);
     }
 
     /**
@@ -2115,23 +2139,8 @@ class MachineDefinition
             $state->setValues($values);
         }
 
-        // Run entry actions on the target state
-        $target->runEntryActions($state, $eventBehavior);
-        if ($initialTarget !== $target) {
-            $initialTarget->runEntryActions($state, $eventBehavior);
-        }
-
-        // Run entry and transition listeners
-        $this->runEntryListeners($state, $eventBehavior);
-        $this->runTransitionListeners($state, $eventBehavior);
-
-        // Handle machine delegation on the onDone target
-        $this->handleMachineInvoke($state, $initialTarget, $eventBehavior);
-
-        // Recursively check if the new state is also final within a compound parent
-        if ($initialTarget->type === StateDefinitionType::FINAL) {
-            $this->processCompoundOnDone($state, $initialTarget, $eventBehavior);
-        }
+        // Centralized entry protocol
+        $this->enterState($state, $target, $eventBehavior, fireTransitionListeners: true);
     }
 
     /**
@@ -2380,31 +2389,11 @@ class MachineDefinition
         $newValues[]    = $resolvedTarget->id;
         $state->setValues($newValues);
 
-        $state->setInternalEventBehavior(
-            type: InternalEvent::STATE_ENTER,
-            placeholder: $resolvedTarget->route,
-        );
+        // Centralized entry protocol
+        $this->enterState($state, $target, $eventBehavior, fireTransitionListeners: true);
 
-        $target->runEntryActions($state, $eventBehavior);
-        if ($resolvedTarget !== $target) {
-            $resolvedTarget->runEntryActions($state, $eventBehavior);
-        }
-
-        // Run entry and transition listeners
-        $this->runEntryListeners($state, $eventBehavior);
-        $this->runTransitionListeners($state, $eventBehavior);
-
-        $state->setInternalEventBehavior(
-            type: InternalEvent::STATE_ENTRY_FINISH,
-            placeholder: $resolvedTarget->route,
-        );
-
-        // Handle machine delegation on the onDone target
-        $this->handleMachineInvoke($state, $resolvedTarget, $eventBehavior);
-
-        // Recurse: the onDone target might itself be final
+        // Recurse: the onDone target might also be final within a nested parallel
         if ($resolvedTarget->type === StateDefinitionType::FINAL) {
-            $this->processCompoundOnDone($state, $resolvedTarget, $eventBehavior);
             $this->processNestedParallelCompletion($state, $resolvedTarget, $eventBehavior);
         }
     }
@@ -2474,32 +2463,21 @@ class MachineDefinition
         $state->currentStateDefinition = $initialState;
         $state->value                  = [$state->currentStateDefinition->id];
 
-        // Run entry actions on target state (and initial if different)
-        $state->setInternalEventBehavior(
-            type: InternalEvent::STATE_ENTER,
-            placeholder: $initialState->route,
-        );
-
-        $targetState->runEntryActions($state, $eventBehavior);
-        if ($initialState !== $targetState) {
-            $initialState->runEntryActions($state, $eventBehavior);
-        }
-
-        // Run entry and transition listeners
-        $this->runEntryListeners($state, $eventBehavior);
-        $this->runTransitionListeners($state, $eventBehavior);
-
-        $state->setInternalEventBehavior(
-            type: InternalEvent::STATE_ENTRY_FINISH,
-            placeholder: $state->currentStateDefinition->route,
-        );
-
-        // Handle machine delegation on the target state
-        $this->handleMachineInvoke($state, $initialState, $eventBehavior);
-
-        // Process compound onDone if the target is final within a compound parent
-        if ($initialState->type === StateDefinitionType::FINAL && $eventBehavior instanceof EventBehavior) {
-            $this->processCompoundOnDone($state, $initialState, $eventBehavior);
+        // Centralized entry protocol
+        if ($eventBehavior instanceof EventBehavior) {
+            $this->enterState($state, $targetState, $eventBehavior, fireTransitionListeners: true);
+        } else {
+            // Null eventBehavior (from ParallelRegionJob): run entry actions only
+            $state->setInternalEventBehavior(
+                type: InternalEvent::STATE_ENTER,
+                placeholder: $initialState->route,
+            );
+            $targetState->runEntryActions($state, $eventBehavior);
+            if ($initialState !== $targetState) {
+                $initialState->runEntryActions($state, $eventBehavior);
+            }
+            $this->runEntryListeners($state, $eventBehavior);
+            $this->runTransitionListeners($state, $eventBehavior);
         }
 
         return $state;
@@ -2618,102 +2596,26 @@ class MachineDefinition
                                         'initial_state_id' => $regionInitial->id,
                                     ];
                                 } else {
-                                    $regionInitial->runEntryActions($state, $eventBehavior);
-
-                                    // Handle machine delegation on region initial state
-                                    if ($regionInitial->hasMachineInvoke()) {
-                                        $parallelValues = $state->value;
-                                        $oldRegionState = $regionInitial->id;
-
-                                        $this->handleMachineInvoke($state, $regionInitial, $eventBehavior);
-
-                                        if ($state->value !== $parallelValues) {
-                                            $newRegionState = $state->value[0] ?? $oldRegionState;
-                                            $state->setValues(array_map(
-                                                fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
-                                                $parallelValues,
-                                            ));
-                                        }
-
-                                        $state->currentStateDefinition = $parallelState;
-                                    }
+                                    $this->enterStateInParallelRegion($state, $regionInitial, $eventBehavior, $parallelState, fireEntryListeners: false);
                                 }
                             }
                         }
                     } else {
                         // Sequential: run entry actions for each initial state
                         foreach ($initialStates as $initialState) {
-                            $initialState->runEntryActions($state, $eventBehavior);
-
-                            // Handle machine delegation on region initial state
-                            if ($initialState->hasMachineInvoke()) {
-                                $parallelValues = $state->value;
-                                $oldRegionState = $initialState->id;
-
-                                $this->handleMachineInvoke($state, $initialState, $eventBehavior);
-
-                                if ($state->value !== $parallelValues) {
-                                    $newRegionState = $state->value[0] ?? $oldRegionState;
-                                    $state->setValues(array_map(
-                                        fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
-                                        $parallelValues,
-                                    ));
-                                }
-
-                                $state->currentStateDefinition = $parallelState;
-                            }
+                            $this->enterStateInParallelRegion($state, $initialState, $eventBehavior, $parallelState, fireEntryListeners: false);
                         }
                     }
                 } else {
                     $currentValues[$regionIndex] = $targetState->id;
                     $state->setValues($currentValues);
 
-                    // Execute entry actions for the target state
-                    $targetState->runEntryActions($state, $eventBehavior);
-                    $this->runEntryListeners($state, $eventBehavior);
-
-                    // Handle machine delegation on the target state
-                    if ($targetState->hasMachineInvoke()) {
-                        $parallelValues = $state->value;
-                        $oldRegionState = $targetState->id;
-
-                        $this->handleMachineInvoke($state, $targetState, $eventBehavior);
-
-                        if ($state->value !== $parallelValues) {
-                            $newRegionState = $state->value[0] ?? $oldRegionState;
-                            $state->setValues(array_map(
-                                fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
-                                $parallelValues,
-                            ));
-                        }
-
-                        // Restore currentStateDefinition to the parallel state
-                        $state->currentStateDefinition = $parallelState;
-                    }
+                    // Centralized parallel region entry
+                    $this->enterStateInParallelRegion($state, $targetState, $eventBehavior, $parallelState);
                 }
             } else {
-                // Execute entry actions for the target state (no state value update needed)
-                $targetState->runEntryActions($state, $eventBehavior);
-                $this->runEntryListeners($state, $eventBehavior);
-
-                // Handle machine delegation on the target state
-                if ($targetState->hasMachineInvoke()) {
-                    $parallelValues = $state->value;
-                    $oldRegionState = $targetState->id;
-
-                    $this->handleMachineInvoke($state, $targetState, $eventBehavior);
-
-                    if ($state->value !== $parallelValues) {
-                        $newRegionState = $state->value[0] ?? $oldRegionState;
-                        $state->setValues(array_map(
-                            fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
-                            $parallelValues,
-                        ));
-                    }
-
-                    // Restore currentStateDefinition to the parallel state
-                    $state->currentStateDefinition = $parallelState;
-                }
+                // Centralized parallel region entry (no state value update needed)
+                $this->enterStateInParallelRegion($state, $targetState, $eventBehavior, $parallelState);
             }
 
             // Process compound state onDone: when a transition lands on a final state
@@ -2943,30 +2845,15 @@ class MachineDefinition
             return $newState;
         }
 
-        // Record state enter event
-        $state->setInternalEventBehavior(
-            type: InternalEvent::STATE_ENTER,
-            placeholder: $state->currentStateDefinition->route,
-        );
-
-        // Execute entry actions for the new state definition
-        $targetStateDefinition?->runEntryActions($newState, $eventBehavior);
-
-        // Run entry and transition listeners
+        // Centralized entry protocol (or just state enter event + transition listeners for targetless)
         if ($targetStateDefinition !== null) {
-            $this->runEntryListeners($newState, $eventBehavior);
-        }
-        $this->runTransitionListeners($newState, $eventBehavior);
-
-        // Handle machine delegation (sync mode): launch child inline after entry actions
-        if ($targetStateDefinition !== null) {
-            $this->handleMachineInvoke($newState, $targetStateDefinition, $eventBehavior);
-        }
-
-        // Process compound state onDone: when a non-parallel transition lands on a final
-        // state that is a child of a compound parent, fire the compound state's @done.
-        if ($targetStateDefinition?->type === StateDefinitionType::FINAL) {
-            $this->processCompoundOnDone($newState, $targetStateDefinition, $eventBehavior);
+            $this->enterState($newState, $targetStateDefinition, $eventBehavior, fireTransitionListeners: true);
+        } else {
+            $newState->setInternalEventBehavior(
+                type: InternalEvent::STATE_ENTER,
+                placeholder: $newState->currentStateDefinition->route,
+            );
+            $this->runTransitionListeners($newState, $eventBehavior);
         }
 
         // Check if the new state has any transitions that are always taken
