@@ -297,3 +297,52 @@ it('invokes child machine when transitioning within a parallel region', function
     // should invoke the child machine.
     expect($state->value)->toBe(['parallel_region_transition.completed']);
 });
+
+// ============================================================
+// Machine Delegation via parallel escape transition
+// ============================================================
+
+it('invokes child machine when escaping a parallel state to a delegating target', function (): void {
+    $definition = MachineDefinition::define(
+        config: [
+            'id'      => 'parallel_escape_delegation',
+            'initial' => 'active',
+            'context' => [],
+            'states'  => [
+                'active' => [
+                    'type'   => 'parallel',
+                    'on'     => ['ESCAPE' => 'delegating'],
+                    'states' => [
+                        'region_a' => [
+                            'initial' => 'waiting_a',
+                            'states'  => [
+                                'waiting_a' => [],
+                            ],
+                        ],
+                        'region_b' => [
+                            'initial' => 'waiting_b',
+                            'states'  => [
+                                'waiting_b' => [],
+                            ],
+                        ],
+                    ],
+                ],
+                'delegating' => [
+                    'machine' => ImmediateChildMachine::class,
+                    '@done'   => 'completed',
+                ],
+                'completed' => [
+                    'type' => 'final',
+                ],
+            ],
+        ],
+    );
+
+    $state = $definition->getInitialState();
+    expect($state->value)->toContain('parallel_escape_delegation.active.region_a.waiting_a');
+
+    $state = $definition->transition(event: ['type' => 'ESCAPE'], state: $state);
+
+    // Escaping the parallel state to a delegating target should invoke the child machine.
+    expect($state->value)->toBe(['parallel_escape_delegation.completed']);
+});
