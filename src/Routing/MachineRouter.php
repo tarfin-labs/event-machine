@@ -221,7 +221,7 @@ class MachineRouter
 
                 $modelParam = $model !== null ? Str::camel(class_basename($model)) : null;
 
-                if ($modelParam !== null && $modelFor !== []) {
+                if ($modelParam !== null && ($modelFor !== [] || $forwardedEndpoints !== [])) {
                     Route::model($modelParam, $model);
                 }
 
@@ -268,10 +268,6 @@ class MachineRouter
 
                 // Register forwarded endpoints (auto-discovered from forward config)
                 $hasModelBinding = $model !== null && $attribute !== null;
-
-                if ($hasModelBinding && $modelParam !== null && $forwardedEndpoints !== []) {
-                    Route::model($modelParam, $model);
-                }
 
                 foreach ($forwardedEndpoints as $eventType => $fwdEndpoint) {
                     if ($hasModelBinding && $modelParam !== null) {
