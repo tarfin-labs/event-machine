@@ -312,3 +312,28 @@ RefundMachine ──dispatchTo──→ AccountingMachine
 ```
 
 **When:** Cross-domain communication where machines belong to different bounded contexts. Use `dispatchTo` (async) to avoid coupling the sender to the coordinator's response time.
+
+## Guidelines
+
+1. **Commands down, states up.** Parent delegates via `machine` key, reads `@done.{state}`. Child never reads parent state -- only values passed via `with`.
+
+2. **Design child final states for the parent.** Use `@done.{finalState}` for routing and `output` on final states to filter context. Each distinct business outcome the parent cares about should be a separate final state.
+
+3. **`@fail` is for crashes, not business logic.** `@fail` fires on exceptions and job failures. Business failures (rejected, declined, unavailable) are final states routed via `@done.{state}`.
+
+4. **Timers at the edges.** Business timeouts on leaf machines (the ones calling external APIs, waiting for webhooks). Parent `@timeout` only for infrastructure protection.
+
+5. **One hop only.** Each machine talks to its direct parent and children. No skipping levels. `sendTo` for siblings and notifications, not hierarchy bypass.
+
+6. **Start bottom-up.** Design leaf machines first (they are closest to the domain reality), then compose parent machines around them.
+
+7. **Aim for 3-level max.** Most systems need at most: orchestrator → domain machines → integration machines. Deeper hierarchies add complexity without value.
+
+## Related
+
+- [Machine Decomposition](./machine-decomposition) -- when to split a machine
+- [Machine Delegation](/advanced/machine-delegation) -- `machine`/`job` key mechanics, `@done.{state}` routing
+- [Async Delegation](/advanced/async-delegation) -- queue-based child machines, `@timeout`
+- [Delegation Data Flow](/advanced/delegation-data-flow) -- `with`, `output`, and `@done` payload
+- [Cross-Machine Communication](/advanced/cross-machine-communication) -- `sendTo`/`dispatchTo`
+- [Time-Based Patterns](./time-based-patterns) -- `after`/`every` timer patterns
