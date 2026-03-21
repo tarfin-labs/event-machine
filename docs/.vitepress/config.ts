@@ -199,6 +199,7 @@ export default withMermaid(
             { text: 'Context Design', link: '/best-practices/context-design' },
             { text: 'Transition Design', link: '/best-practices/transition-design' },
             { text: 'Machine Decomposition', link: '/best-practices/machine-decomposition' },
+            { text: 'Machine System Design', link: '/best-practices/machine-system-design' },
             { text: 'Event Design', link: '/best-practices/event-design' },
             { text: 'Time-Based Patterns', link: '/best-practices/time-based-patterns' },
             { text: 'Parallel Patterns', link: '/best-practices/parallel-patterns' },
