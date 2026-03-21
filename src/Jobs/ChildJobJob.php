@@ -61,9 +61,9 @@ class ChildJobJob implements ShouldQueue
             throw new \InvalidArgumentException("Job class '{$this->jobClass}' must have a handle() method.");
         }
 
-        // 2. Create and run the job
+        // 2. Create and run the job (use app()->call() for dependency injection)
         $job = app()->make($this->jobClass, $this->jobData);
-        $job->handle();
+        app()->call([$job, 'handle']);
 
         // 2. Fire-and-forget: no completion needed
         if ($this->fireAndForget) {
