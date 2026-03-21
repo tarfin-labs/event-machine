@@ -135,6 +135,54 @@ When an event has multiple possible targets, guards determine which branch wins.
 ],
 ```
 
+## Guard Priority: Errors First
+
+In multi-branch transitions, guard evaluation order matters -- the first passing guard wins. Put error and failure guards **before** the happy-path fallback. This ensures failures are caught before the default path takes over.
+
+::: warning This Rule Applies to Multi-Branch Only
+Different event keys in the same `on` array (`PAYMENT_CAPTURED`, `PAYMENT_FAILED`) do **not** compete. Each event targets a specific key. Guard priority only matters for multi-branch transitions where the same trigger has multiple possible targets.
+:::
+
+### Anti-Pattern: Happy Path First
+
+```php ignore
+// Anti-pattern: unguarded fallback first — guards are never evaluated
+'evaluating' => [
+    'on' => [
+        '@always' => [
+            ['target' => 'processing'],                                  // matches immediately
+            ['target' => 'retrying', 'guards' => 'canRetryGuard'],       // unreachable
+            ['target' => 'failed', 'guards' => 'hasErrorGuard'],         // unreachable
+        ],
+    ],
+],
+```
+
+The unguarded branch matches first every time. The error and retry guards are never evaluated.
+
+**Fix:** Error guards first, happy-path fallback last:
+
+```php ignore
+'evaluating' => [
+    'on' => [
+        '@always' => [
+            ['target' => 'failed', 'guards' => 'hasErrorGuard'],       // error first
+            ['target' => 'retrying', 'guards' => 'canRetryGuard'],     // retry second
+            ['target' => 'processing'],                                  // fallback last
+        ],
+    ],
+],
+```
+
+Same principle for guarded transitions on a specific event:
+
+```php ignore
+'PAYMENT_RESULT' => [
+    ['target' => 'failed', 'guards' => 'isPaymentDeclinedGuard'],    // error first
+    ['target' => 'captured'],                                          // fallback last
+],
+```
+
 ## Anti-Pattern: @always Without Terminal Path
 
 ```php ignore
