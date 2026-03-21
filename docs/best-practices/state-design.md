@@ -161,6 +161,37 @@ Every cancellable state duplicates `ORDER_CANCELLED`. Refactor into a hierarchic
 
 The `ORDER_CANCELLED` handler is defined once on the `active` parent. Event bubbling handles the rest.
 
+## Error States vs Alarm Actions
+
+Don't create a separate state for each possible failure cause. Use a single error state per concern area and differentiate failure reasons through entry actions and context.
+
+### Anti-Pattern: State Proliferation for Errors
+
+```php ignore
+// Anti-pattern: one state per error cause
+'payment_gateway_timeout'    => ['type' => 'final'],
+'payment_insufficient_funds' => ['type' => 'final'],
+'payment_card_declined'      => ['type' => 'final'],
+'payment_fraud_detected'     => ['type' => 'final'],
+```
+
+Four final states for the same concern (payment failure). Each adds transitions, test cases, and cognitive load without adding control value -- the parent machine rarely routes differently for each cause.
+
+### Fix: Single Error State, Reason in Context
+
+```php ignore
+'payment_failed' => [
+    'type'  => 'final',
+    'entry' => 'recordPaymentFailureAction',  // stores reason in context
+],
+```
+
+The entry action records the specific cause (`gateway_timeout`, `insufficient_funds`, etc.) in context for logging and debugging. The state itself carries the control signal: "payment failed."
+
+::: tip When Separate Error States ARE Appropriate
+If the machine is a **child** and the parent needs to route differently based on failure type, use separate final states with [`@done.{state}` routing](/best-practices/machine-system-design#design-your-child-states-for-the-parent). Separate states are for **control** (the parent needs to branch). Context and actions are for **information** (logging, notification, debugging).
+:::
+
 ## Guidelines
 
 1. **Apply the "is" test.** Every state name must complete "The order is ___". Use adjectives (`idle`, `active`), past participles (`submitted`, `paid`), or present participles (`processing`, `validating`).
