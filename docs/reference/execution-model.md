@@ -1,0 +1,125 @@
+# Execution Model
+
+This page documents the precise order in which EventMachine processes events, executes actions, and chains transitions. All details are verified against the source code.
+
+## Event Processing Sequence
+
+When `Machine::send()` is called:
+
+```txt
+1. Event arrives (via send() or HTTP endpoint)
+2. Acquire distributed lock (if parallel_dispatch enabled)
+3. Call transition():
+   a. Look up event type in current state's transitions
+   b. For multi-branch: run calculators, then evaluate guards in array order
+   c. First branch with all guards passing wins
+   d. If no match: try event bubbling to parent state
+   e. If no match and no child forwarding: throw NoTransitionDefinitionFoundException
+4. Execute selected transition (see Action Execution Order below)
+5. If new state has @always transitions: repeat from step 3 (loop protection active)
+6. If new state has machine delegation: create/dispatch child machine
+7. Persist state to database (if should_persist is true)
+8. Release lock
+```
+
+## Action Execution Order
+
+The order of execution during a transition is **not** the intuitive exit → transition → entry. The actual order, verified against `MachineDefinition.php`:
+
+| # | Phase | What Runs |
+|---|-------|-----------|
+| 1 | **Transition actions** | Actions defined on the transition branch |
+| 2 | **Exit listeners** | State change listeners (skipped for transient states) |
+| 3 | **Exit actions** | Actions defined via `exit` on the source state |
+| 4 | **State change** | Current state is updated to the target |
+| 5 | **Entry actions** | Actions defined via `entry` on the target state |
+| 6 | **Entry listeners** | State change listeners (skipped for transient states) |
+| 7 | **Transition listeners** | Transition listeners (skipped for transient states) |
+| 8 | **Machine invocation** | Child machine launch (if `machine` key present) |
+
+::: warning Transition Actions Run First
+Transition actions execute **before** exit actions, not between exit and entry. If your transition action depends on cleanup done by an exit action, move the logic to an entry action on the target state instead.
+:::
+
+## Guard and Calculator Order
+
+When evaluating a multi-branch transition:
+
+1. **Calculators** run first -- they update context values that guards may read
+2. **Guards** evaluate in array order -- first branch with all guards passing wins
+3. If no branch passes, no transition fires
+
+```txt
+'PAYMENT_RESULT' => [
+    ['target' => 'failed',   'guards' => 'isDeclinedGuard'],    // checked first
+    ['target' => 'captured', 'guards' => 'isCapturedGuard'],    // checked second
+    ['target' => 'pending'],                                      // fallback (no guard)
+],
+```
+
+See [Guard Priority: Errors First](/best-practices/transition-design#guard-priority-errors-first) for ordering best practices.
+
+## Database Transactions
+
+Transitions are **not** wrapped in a database transaction by default. Transaction wrapping is opt-in per-event:
+
+<!-- doctest-attr: ignore -->
+```php
+class PaymentCapturedEvent extends EventBehavior
+{
+    public bool $isTransactional = true;  // wraps transition() in DB::transaction()
+}
+```
+
+When `isTransactional` is true, phases 1-5 (transition actions through entry actions) are wrapped in a single transaction. Persist (step 7) happens **outside** the transaction.
+
+When `isTransactional` is false (default), no transaction wrapping occurs.
+
+## @always Chaining
+
+When a state has `@always` transitions, EventMachine automatically re-evaluates transitions after entering the state:
+
+- **Entry and exit actions fire** for all intermediate (transient) states
+- **Listeners are skipped** for transient states -- they only fire on the final resting state
+- The **original triggering event** is preserved across the chain (actions in intermediate states receive the original event, not the synthetic `@always` event)
+- **Loop protection** limits chain depth (configurable via `max_transition_depth`, default: 50)
+
+A state is considered "transient" if it has an `@always` transition defined.
+
+## Unmatched Events
+
+When an event has no matching transition in the current state:
+
+1. **Event bubbling:** EventMachine checks parent states (leaf → root) for a handler
+2. **Child forwarding:** If a child machine is running, the event is forwarded to it via `tryForwardEventToChild()`
+3. **Exception:** If neither handles the event, `NoTransitionDefinitionFoundException` is thrown
+
+Exception for `@always`: if no `@always` branch passes its guards, the machine stays in the current state silently (no exception).
+
+## Hierarchical States
+
+Exit and entry actions execute on **atomic (leaf) states only**:
+
+- When transitioning, exit actions run on the source leaf state
+- Entry actions run on the target leaf state
+- Parent states are **not** exited or entered during transitions between their children
+- Parent states participate in **guard lookup** (event bubbling) but not in action execution
+
+## Delegation Lifecycle
+
+| Signal | Fires When | Use For |
+|--------|-----------|---------|
+| `@done` | Child reaches ANY final state | Business outcomes (catch-all) |
+| `@done.{state}` | Child reaches SPECIFIC final state | Routing based on outcome |
+| `@fail` | Exception thrown / job crashed | Infrastructure failures only |
+| `@timeout` | Timeout seconds elapsed, child still running | Infrastructure protection |
+
+**Resolution order:** `@done.{state}` (specific) → `@done` (catch-all) → no transition.
+
+For detailed usage, see [Machine System Design: Guidelines](/best-practices/machine-system-design#guidelines).
+
+## Related
+
+- [Transition Design](/best-practices/transition-design) -- guard priority, @always chains
+- [Machine System Design](/best-practices/machine-system-design) -- delegation, hierarchy, timer placement
+- [Time-Based Patterns](/best-practices/time-based-patterns) -- `after`/`every` timer mechanics

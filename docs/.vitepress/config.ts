@@ -206,6 +206,13 @@ export default withMermaid(
             { text: 'Testing Strategy', link: '/best-practices/testing-strategy' },
           ]
         },
+        {
+          text: 'Reference',
+          collapsed: true,
+          items: [
+            { text: 'Execution Model', link: '/reference/execution-model' },
+          ]
+        },
       ],
 
       socialLinks: [
