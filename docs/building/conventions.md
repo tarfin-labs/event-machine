@@ -68,7 +68,7 @@ MachineDefinition::define(
                 'on' => [
                     'ORDER_SUBMITTED' => [                 // SCREAMING_SNAKE_CASE
                         'target'  => 'submitted',
-                        'cond'    => 'isPaymentValidGuard', // camelCase + Guard suffix
+                        'guards'  => 'isPaymentValidGuard', // camelCase + Guard suffix
                         'actions' => ['sendEmailAction'],   // camelCase + Action suffix
                     ],
                 ],
@@ -87,10 +87,10 @@ MachineDefinition::define(
 ```
 
 ::: tip Why Keep the Suffix in Inline Keys?
-When you see `'sendEmail'` in a config, it's unclear whether it's an action, a guard, or an event handler. But `'sendEmailAction'` immediately tells you its role. The suffix adds clarity, especially in `entry`, `exit`, and `cond` fields where different behavior types can appear:
+When you see `'sendEmail'` in a config, it's unclear whether it's an action, a guard, or an event handler. But `'sendEmailAction'` immediately tells you its role. The suffix adds clarity, especially in `entry`, `exit`, and `guards` fields where different behavior types can appear:
 ```php ignore
-'entry'   => 'initializeOrderAction',   // clearly an action
-'cond'    => 'hasItemsGuard',           // clearly a guard
+'entry'  => 'initializeOrderAction',   // clearly an action
+'guards' => 'hasItemsGuard',           // clearly a guard
 ```
 :::
 
