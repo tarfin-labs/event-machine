@@ -325,6 +325,20 @@ RefundMachine ──dispatchTo──→ AccountingMachine
 
 **When:** Cross-domain communication where machines belong to different bounded contexts. Use `dispatchTo` (async) to avoid coupling the sender to the coordinator's response time.
 
+## Design Recipe: Sunny Day First
+
+Designing a machine system is iterative. Start simple, add complexity only where needed.
+
+1. **Happy path.** Model the ideal flow end-to-end. Ignore errors, timeouts, and edge cases. This gives you the state skeleton.
+
+2. **Error states.** For each state, ask: _"What can go wrong here?"_ Add error transitions. Use single error states per concern -- differentiate causes through context, not state names (see [Error States vs Alarm Actions](/best-practices/state-design#error-states-vs-alarm-actions)).
+
+3. **Timer guards.** For each state that waits for external input, ask: _"If this never arrives, what happens?"_ Add `after` timeout transitions (see [Timer as Reliability Guard](/best-practices/time-based-patterns#timer-as-reliability-guard)).
+
+4. **Isolation test.** Verify the machine works correctly standalone before integrating with a parent.
+
+5. **Integration check.** If this machine will be a child, ensure its final states provide enough information for the parent. A machine that works alone may need additional final states when delegated to (see [Design Your Child States for the Parent](#design-your-child-states-for-the-parent)).
+
 ## Guidelines
 
 1. **Commands down, states up.** Parent delegates via `machine` key, reads `@done.{state}`. Child never reads parent state -- only values passed via `with`.
