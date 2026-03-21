@@ -483,6 +483,14 @@ class MachineDefinition
 
             // Run entry listeners (listen.entry — NOT listen.transition on init)
             $this->runEntryListeners($initialState, $initialState->currentEventBehavior);
+
+            // Handle machine delegation on the initial state
+            $this->handleMachineInvoke($initialState, $this->initialStateDefinition, $initialState->currentEventBehavior);
+
+            // Process compound onDone if the initial state is final within a compound parent
+            if ($this->initialStateDefinition->type === StateDefinitionType::FINAL) {
+                $this->processCompoundOnDone($initialState, $this->initialStateDefinition, $initialState->currentEventBehavior);
+            }
         }
 
         if ($this->initialStateDefinition?->transitionDefinitions !== null) {
@@ -2117,6 +2125,9 @@ class MachineDefinition
         $this->runEntryListeners($state, $eventBehavior);
         $this->runTransitionListeners($state, $eventBehavior);
 
+        // Handle machine delegation on the onDone target
+        $this->handleMachineInvoke($state, $initialTarget, $eventBehavior);
+
         // Recursively check if the new state is also final within a compound parent
         if ($initialTarget->type === StateDefinitionType::FINAL) {
             $this->processCompoundOnDone($state, $initialTarget, $eventBehavior);
@@ -2388,6 +2399,9 @@ class MachineDefinition
             placeholder: $resolvedTarget->route,
         );
 
+        // Handle machine delegation on the onDone target
+        $this->handleMachineInvoke($state, $resolvedTarget, $eventBehavior);
+
         // Recurse: the onDone target might itself be final
         if ($resolvedTarget->type === StateDefinitionType::FINAL) {
             $this->processCompoundOnDone($state, $resolvedTarget, $eventBehavior);
@@ -2597,6 +2611,24 @@ class MachineDefinition
                                     ];
                                 } else {
                                     $regionInitial->runEntryActions($state, $eventBehavior);
+
+                                    // Handle machine delegation on region initial state
+                                    if ($regionInitial->hasMachineInvoke()) {
+                                        $parallelValues = $state->value;
+                                        $oldRegionState = $regionInitial->id;
+
+                                        $this->handleMachineInvoke($state, $regionInitial, $eventBehavior);
+
+                                        if ($state->value !== $parallelValues) {
+                                            $newRegionState = $state->value[0] ?? $oldRegionState;
+                                            $state->setValues(array_map(
+                                                fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
+                                                $parallelValues,
+                                            ));
+                                        }
+
+                                        $state->currentStateDefinition = $parallelState;
+                                    }
                                 }
                             }
                         }
@@ -2604,6 +2636,24 @@ class MachineDefinition
                         // Sequential: run entry actions for each initial state
                         foreach ($initialStates as $initialState) {
                             $initialState->runEntryActions($state, $eventBehavior);
+
+                            // Handle machine delegation on region initial state
+                            if ($initialState->hasMachineInvoke()) {
+                                $parallelValues = $state->value;
+                                $oldRegionState = $initialState->id;
+
+                                $this->handleMachineInvoke($state, $initialState, $eventBehavior);
+
+                                if ($state->value !== $parallelValues) {
+                                    $newRegionState = $state->value[0] ?? $oldRegionState;
+                                    $state->setValues(array_map(
+                                        fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
+                                        $parallelValues,
+                                    ));
+                                }
+
+                                $state->currentStateDefinition = $parallelState;
+                            }
                         }
                     }
                 } else {
@@ -2613,11 +2663,49 @@ class MachineDefinition
                     // Execute entry actions for the target state
                     $targetState->runEntryActions($state, $eventBehavior);
                     $this->runEntryListeners($state, $eventBehavior);
+
+                    // Handle machine delegation on the target state
+                    if ($targetState->hasMachineInvoke()) {
+                        $parallelValues = $state->value;
+                        $oldRegionState = $targetState->id;
+
+                        $this->handleMachineInvoke($state, $targetState, $eventBehavior);
+
+                        if ($state->value !== $parallelValues) {
+                            $newRegionState = $state->value[0] ?? $oldRegionState;
+                            $state->setValues(array_map(
+                                fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
+                                $parallelValues,
+                            ));
+                        }
+
+                        // Restore currentStateDefinition to the parallel state
+                        $state->currentStateDefinition = $parallelState;
+                    }
                 }
             } else {
                 // Execute entry actions for the target state (no state value update needed)
                 $targetState->runEntryActions($state, $eventBehavior);
                 $this->runEntryListeners($state, $eventBehavior);
+
+                // Handle machine delegation on the target state
+                if ($targetState->hasMachineInvoke()) {
+                    $parallelValues = $state->value;
+                    $oldRegionState = $targetState->id;
+
+                    $this->handleMachineInvoke($state, $targetState, $eventBehavior);
+
+                    if ($state->value !== $parallelValues) {
+                        $newRegionState = $state->value[0] ?? $oldRegionState;
+                        $state->setValues(array_map(
+                            fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
+                            $parallelValues,
+                        ));
+                    }
+
+                    // Restore currentStateDefinition to the parallel state
+                    $state->currentStateDefinition = $parallelState;
+                }
             }
 
             // Process compound state onDone: when a transition lands on a final state
