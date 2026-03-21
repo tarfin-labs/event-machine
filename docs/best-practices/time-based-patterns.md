@@ -217,6 +217,41 @@ A complete pattern combining `after`, `every`, `max`, and `then`:
 
 The flow: wait for payment (remind after 1 day, expire after 7 days) -> if payment fails, retry 3 times over 18 hours -> escalate to human review (with a 30-day final deadline).
 
+## Timer as Reliability Guard
+
+Every state that waits for an external response -- a webhook, an API callback, a user action -- **must** have an `after` timeout. This is not a convenience feature. It is a reliability requirement. Without a timer, the machine can hang indefinitely in a state that no event will ever resolve.
+
+### Anti-Pattern: Waiting Without Timeout
+
+```php ignore
+'awaiting_webhook' => [
+    'on' => [
+        'WEBHOOK_RECEIVED' => 'processing',
+    ],
+    // If the webhook never arrives, this machine hangs forever
+],
+```
+
+If the external service goes down, changes its API, or simply drops the callback, the machine stays in `awaiting_webhook` permanently. No alert fires. No retry happens. The instance is silently stuck.
+
+### Fix: Add a Timer Guard
+
+```php ignore
+'awaiting_webhook' => [
+    'on' => [
+        'WEBHOOK_TIMEOUT'  => ['target' => 'timed_out', 'after' => Timer::hours(1)],
+        'WEBHOOK_RECEIVED' => 'processing',
+    ],
+],
+'timed_out' => [
+    'entry' => 'handleWebhookTimeoutAction',  // alert, retry, or fail gracefully
+],
+```
+
+::: tip The Reliability Question
+For every state, ask: **"If the expected event never arrives, what happens?"** If the answer is "the machine hangs forever," you need an `after` transition.
+:::
+
 ## Guidelines
 
 1. **`after` for deadlines.** "If nothing happens in X time, do Y."
