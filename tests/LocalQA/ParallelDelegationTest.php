@@ -64,7 +64,6 @@ it('LocalQA: sync child delegation in parallel region completes and preserves va
     expect($child)->not->toBeNull('Async child machine should have been dispatched');
 });
 
-// TODO: ChildMachineCompletionJob does not route @done in parallel context — separate bug to investigate
 it('LocalQA: async child delegation in parallel region completes via Horizon', function (): void {
     $machine = ParallelDelegationParentMachine::create();
     $machine->send(['type' => 'START']);
