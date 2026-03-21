@@ -606,6 +606,22 @@ class MachineDefinition
                                 placeholder: $regionInitial->route,
                             );
                             $regionInitial->runEntryActions($state, $eventBehavior);
+
+                            // Handle machine delegation on region initial state
+                            if ($regionInitial->hasMachineInvoke()) {
+                                $parallelValues = $state->value;
+                                $oldRegionState = $regionInitial->id;
+
+                                $this->handleMachineInvoke($state, $regionInitial, $eventBehavior);
+
+                                if ($state->value !== $parallelValues) {
+                                    $newRegionState = $state->value[0] ?? $oldRegionState;
+                                    $state->setValues(array_map(
+                                        fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
+                                        $parallelValues,
+                                    ));
+                                }
+                            }
                         }
                     }
                 }
@@ -632,8 +648,33 @@ class MachineDefinition
                     );
                     $regionInitial->runEntryActions($state, $eventBehavior);
                     $this->runEntryListeners($state, $eventBehavior);
+
+                    // Handle machine delegation on region initial state.
+                    // handleMachineInvoke may trigger @done/@fail which calls
+                    // setCurrentStateDefinition, wiping the parallel value array.
+                    // Save and restore the parallel values, merging the region's new state.
+                    if ($regionInitial->hasMachineInvoke()) {
+                        $parallelValues = $state->value;
+                        $oldRegionState = $regionInitial->id;
+
+                        $this->handleMachineInvoke($state, $regionInitial, $eventBehavior);
+
+                        if ($state->value !== $parallelValues) {
+                            $newRegionState = $state->value[0] ?? $oldRegionState;
+                            $state->setValues(array_map(
+                                fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
+                                $parallelValues,
+                            ));
+                        }
+                    }
                 }
             }
+        }
+
+        // After all regions entered: check if machine delegation completed
+        // all regions to final states, and process parallel @done if so.
+        if ($this->areAllRegionsFinal($parallelState, $state)) {
+            $this->processParallelOnDone($parallelState, $state, $eventBehavior);
         }
     }
 
