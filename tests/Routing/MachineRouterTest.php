@@ -340,7 +340,9 @@ test('router-level middleware applied to all routes', function (): void {
     expect($startRoute->gatherMiddleware())->toContain('auth:api')
         ->and($startRoute->gatherMiddleware())->toContain('throttle:60,1')
         ->and($completeRoute->gatherMiddleware())->toContain('auth:api')
-        ->and($cancelRoute->gatherMiddleware())->toContain('auth:api');
+        ->and($completeRoute->gatherMiddleware())->toContain('throttle:60,1')
+        ->and($cancelRoute->gatherMiddleware())->toContain('auth:api')
+        ->and($cancelRoute->gatherMiddleware())->toContain('throttle:60,1');
 });
 
 test('per-event middleware is additive to router middleware', function (): void {
