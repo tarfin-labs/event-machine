@@ -2494,6 +2494,14 @@ class MachineDefinition
             placeholder: $state->currentStateDefinition->route,
         );
 
+        // Handle machine delegation on the target state
+        $this->handleMachineInvoke($state, $initialState, $eventBehavior);
+
+        // Process compound onDone if the target is final within a compound parent
+        if ($initialState->type === StateDefinitionType::FINAL && $eventBehavior instanceof EventBehavior) {
+            $this->processCompoundOnDone($state, $initialState, $eventBehavior);
+        }
+
         return $state;
     }
 
