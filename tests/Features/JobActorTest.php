@@ -9,6 +9,9 @@ use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\FakeExternalService;
+use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\ExternalServiceContract;
+use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\DependencyInjectedTestJob;
 
 // ─── Job Actor Config Validation ──────────────────────────────────
 
@@ -226,6 +229,32 @@ it('ChildJobJob fire-and-forget does not dispatch completion', function (): void
     $job->handle();
 
     Queue::assertNotPushed(ChildMachineCompletionJob::class);
+});
+
+// ─── Dependency Injection ────────────────────────────────────────
+
+it('ChildJobJob resolves handle() dependencies via service container', function (): void {
+    Queue::fake();
+
+    // Bind the contract to its implementation in the container
+    app()->bind(
+        ExternalServiceContract::class,
+        FakeExternalService::class,
+    );
+
+    $job = new ChildJobJob(
+        parentRootEventId: 'parent-root-id',
+        parentMachineClass: 'App\\Machines\\ParentMachine',
+        parentStateId: 'parent.processing',
+        jobClass: DependencyInjectedTestJob::class,
+    );
+
+    $job->handle();
+
+    Queue::assertPushed(ChildMachineCompletionJob::class, function (ChildMachineCompletionJob $completionJob): bool {
+        return $completionJob->success === true
+            && $completionJob->outputData === ['service_result' => 'fake-result'];
+    });
 });
 
 // ─── Class validation ────────────────────────────────────────────
