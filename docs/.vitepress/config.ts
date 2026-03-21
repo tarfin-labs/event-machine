@@ -124,6 +124,7 @@ export default withMermaid(
           text: 'State Features',
           collapsed: true,
           items: [
+            { text: 'Execution Model', link: '/reference/execution-model' },
             { text: 'Hierarchical States', link: '/advanced/hierarchical-states' },
             { text: 'Entry/Exit Actions', link: '/advanced/entry-exit-actions' },
             { text: '@always Transitions', link: '/advanced/always-transitions' },
@@ -204,13 +205,6 @@ export default withMermaid(
             { text: 'Time-Based Patterns', link: '/best-practices/time-based-patterns' },
             { text: 'Parallel Patterns', link: '/best-practices/parallel-patterns' },
             { text: 'Testing Strategy', link: '/best-practices/testing-strategy' },
-          ]
-        },
-        {
-          text: 'Reference',
-          collapsed: true,
-          items: [
-            { text: 'Execution Model', link: '/reference/execution-model' },
           ]
         },
       ],
