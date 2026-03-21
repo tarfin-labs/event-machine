@@ -1217,8 +1217,9 @@ class MachineDefinition
 
         // Handle machine delegation with parallel value preservation
         if ($regionInitial->hasMachineInvoke()) {
-            $parallelValues = $state->value;
-            $oldRegionState = $regionInitial->id;
+            $parallelValues     = $state->value;
+            $oldRegionState     = $regionInitial->id;
+            $historyCountBefore = count($state->history);
 
             $this->handleMachineInvoke($state, $regionInitial, $eventBehavior);
 
@@ -1226,10 +1227,20 @@ class MachineDefinition
             // which calls setCurrentStateDefinition, wiping the multi-value array.
             if ($state->value !== $parallelValues) {
                 $newRegionState = $state->value[0] ?? $oldRegionState;
-                $state->setValues(array_map(
+                $restoredValues = array_map(
                     fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
                     $parallelValues,
-                ));
+                );
+                $state->setValues($restoredValues);
+
+                // Fix machine_value snapshots in events recorded during handleMachineInvoke.
+                // Internal events capture $state->value at recording time, but at that point
+                // the value array was wiped to a single element by setCurrentStateDefinition.
+                // We must retroactively update these snapshots to reflect the restored values.
+                $historyCountAfter = count($state->history);
+                for ($i = $historyCountBefore; $i < $historyCountAfter; $i++) {
+                    $state->history[$i]->machine_value = $restoredValues;
+                }
             }
 
             // Restore currentStateDefinition to the parallel state
@@ -2508,6 +2519,23 @@ class MachineDefinition
         if ($transitions === []) {
             if ($eventBehavior->type === TransitionProperty::Always->value) {
                 return $state;
+            }
+
+            // Try forwarding the event to a running child machine in any active region.
+            // In parallel state, currentStateDefinition points to the parallel state itself
+            // (no machineInvoke). The real delegation is on the region's active atomic states.
+            foreach ($state->value as $activeStateId) {
+                $activeStateDef = $this->idMap[$activeStateId] ?? null;
+
+                if ($activeStateDef !== null) {
+                    $childState = $this->tryForwardEventToChild($state, $activeStateDef, $eventBehavior);
+
+                    if ($childState instanceof State) {
+                        $state->setForwardedChildState($childState);
+
+                        return $state;
+                    }
+                }
             }
 
             throw NoTransitionDefinitionFoundException::build(
