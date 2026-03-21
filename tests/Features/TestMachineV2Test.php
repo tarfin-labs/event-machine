@@ -745,12 +745,10 @@ it('V29: State::lastChildDoneRoute set by routeChildDoneEvent (direct routing te
         ],
     ]);
 
-    // Get initial state (machine starts in 'delegating' state)
-    // Disable invoke so getInitialState() stays in delegating
-    $definition->shouldPersist = false;
-
-    $state           = $definition->getInitialState();
-    $stateDefinition = $state->currentStateDefinition;
+    // Build state manually to test routeChildDoneEvent in isolation
+    // (bypassing getInitialState which now correctly invokes child machines)
+    $stateDefinition = $definition->idMap['v29_machine.delegating'];
+    $state           = State::forTesting(context: [], currentStateDefinition: $stateDefinition);
 
     // Route a @done.approved event directly
     $doneEvent = ChildMachineDoneEvent::forChild([
@@ -783,10 +781,9 @@ it('V30: State::lastChildDoneRoute is null for catch-all @done', function (): vo
         ],
     ]);
 
-    $definition->shouldPersist = false;
-
-    $state           = $definition->getInitialState();
-    $stateDefinition = $state->currentStateDefinition;
+    // Build state manually to test routeChildDoneEvent in isolation
+    $stateDefinition = $definition->idMap['v30_machine.delegating'];
+    $state           = State::forTesting(context: [], currentStateDefinition: $stateDefinition);
 
     // Route with an unknown finalState that doesn't match any @done.{state}
     $doneEvent = ChildMachineDoneEvent::forChild([
