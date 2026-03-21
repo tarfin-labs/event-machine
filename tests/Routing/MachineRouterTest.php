@@ -77,7 +77,7 @@ test('custom name prefix overrides default machine id', function (): void {
 
 // ─── Handler Selection: Model-Bound ───────────────────────────────────
 
-test('modelFor events use handleModelBound handler', function (): void {
+test('modelFor events use handleModelBound with correct URI and binding', function (): void {
     MachineRouter::register(TestEndpointMachine::class, [
         'prefix'    => '/api/model-bound',
         'model'     => 'App\\Models\\Order',
@@ -87,41 +87,13 @@ test('modelFor events use handleModelBound handler', function (): void {
 
     refreshRoutes();
 
-    $routes = Route::getRoutes();
-    $route  = $routes->getByName('test_endpoint.start');
+    $route = Route::getRoutes()->getByName('test_endpoint.start');
 
+    // Handler, URI pattern, and model binding all configured correctly
     expect($route)->not->toBeNull()
-        ->and($route->getActionMethod())->toBe('handleModelBound');
-});
+        ->and($route->getActionMethod())->toBe('handleModelBound')
+        ->and($route->uri())->toBe('api/model-bound/{order}/start');
 
-test('modelFor route URI includes model parameter', function (): void {
-    MachineRouter::register(TestEndpointMachine::class, [
-        'prefix'    => '/api/model-uri',
-        'model'     => 'App\\Models\\Order',
-        'attribute' => 'machine',
-        'modelFor'  => ['START'],
-    ]);
-
-    refreshRoutes();
-
-    $routes = Route::getRoutes();
-    $route  = $routes->getByName('test_endpoint.start');
-
-    // Model param is camelCase of class basename: 'Order' -> 'order'
-    expect($route->uri())->toBe('api/model-uri/{order}/start');
-});
-
-test('modelFor routes register explicit Route::model binding', function (): void {
-    MachineRouter::register(TestEndpointMachine::class, [
-        'prefix'    => '/api/model-binding',
-        'model'     => 'App\\Models\\Order',
-        'attribute' => 'machine',
-        'modelFor'  => ['START'],
-    ]);
-
-    refreshRoutes();
-
-    // Route::model() registers a binding callback for the parameter name
     $binder = app('router')->getBindingCallback('order');
 
     expect($binder)->not->toBeNull();
