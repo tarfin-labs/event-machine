@@ -892,3 +892,40 @@ it('routes to failed state when job throws', function (): void {
         ->assertState('payment_failed');
 });
 ```
+
+## Recipe: Testing a Deep State Without Path Replay
+
+Use `startingAt()` to skip directly to a deep state without replaying the entire path:
+
+<!-- doctest-attr: no_run -->
+```php
+it('handles PIN retry from confirming_pin state', function (): void {
+    Queue::fake();
+
+    TestMachine::startingAt(FindeksMachine::class,
+        stateId: 'confirming_pin',
+        context: ['tckn' => '11111111110', 'requestId' => 'REQ-1'],
+        guards: [IsPinRetryableGuard::class => true],
+    )
+    ->fakingAllActions(except: [StorePinAction::class])
+    ->simulateChildFail(ConfirmFindeksPinJob::class, errorMessage: 'Wrong PIN')
+    ->assertState('awaiting_pin');
+});
+```
+
+## Recipe: Focused Action Testing with fakingAllActions(except:)
+
+Test a single action's behavior by faking everything else:
+
+<!-- doctest-attr: no_run -->
+```php
+it('CalculatePricesAction sets installment options', function (): void {
+    TestMachine::withContext(OrderMachine::class,
+        context: ['vehicle_price' => 100000, 'down_payment' => 20000],
+    )
+    ->fakingAllActions(except: [CalculatePricesAction::class])
+    ->send('SUBMIT_VEHICLE')
+    ->assertState('awaiting_payment_options')
+    ->assertContextMatches('installment_options', fn ($options) => count($options) > 0);
+});
+```
