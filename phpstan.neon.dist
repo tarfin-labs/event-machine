@@ -48,4 +48,6 @@ parameters:
         - identifier: attribute.target
         # Covariant return types - Laravel framework patterns
         - identifier: method.childReturnType
+        # Abstract factory pattern: new static() in abstract classes
+        - identifier: new.static
 
