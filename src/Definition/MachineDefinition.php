@@ -1188,7 +1188,7 @@ class MachineDefinition
      * - processNestedParallelCompletion()
      * - exitParallelStateAndTransitionToTarget()
      */
-    protected function processPostEntryTransitions(State $state, EventBehavior $eventBehavior): void
+    protected function processPostEntryTransitions(State $state, ?EventBehavior $eventBehavior = null): void
     {
         // Process @always transitions on the new state
         if (isset($this->idMap[$state->currentStateDefinition->id])
@@ -1198,7 +1198,7 @@ class MachineDefinition
                     $this->transition(
                         event: [
                             'type'  => TransitionProperty::Always->value,
-                            'actor' => $eventBehavior->actor($state->context),
+                            'actor' => $eventBehavior?->actor($state->context),
                         ],
                         state: $state,
                     );
@@ -2563,11 +2563,8 @@ class MachineDefinition
         // Centralized entry protocol
         if ($eventBehavior instanceof EventBehavior) {
             $this->enterState($state, $targetState, $eventBehavior, fireTransitionListeners: true);
-
-            // Process @always and raised events after entry
-            $this->processPostEntryTransitions($state, $eventBehavior);
         } else {
-            // Null eventBehavior (from ParallelRegionJob): run entry actions only
+            // Null eventBehavior (from ParallelRegionJob): run entry actions without enterState
             $state->setInternalEventBehavior(
                 type: InternalEvent::STATE_ENTER,
                 placeholder: $initialState->route,
@@ -2579,6 +2576,9 @@ class MachineDefinition
             $this->runEntryListeners($state, $eventBehavior);
             $this->runTransitionListeners($state, $eventBehavior);
         }
+
+        // Process @always and raised events after entry (works with null eventBehavior)
+        $this->processPostEntryTransitions($state, $eventBehavior);
 
         return $state;
     }
