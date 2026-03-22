@@ -82,6 +82,80 @@ class MachineQueryBuilder
 
     // endregion
 
+    // region Negative Filters
+
+    /**
+     * Exclude instances that have ANY state matching the given name.
+     *
+     * Uses NOT IN subquery so parallel instances are fully excluded
+     * if any region matches.
+     */
+    public function notInState(string $state): self
+    {
+        $resolved = $this->resolveStateIds($state);
+
+        $this->query->whereNotIn('root_event_id', function (Builder|\Illuminate\Database\Query\Builder $sub) use ($resolved): void {
+            $sub->select('root_event_id')
+                ->from('machine_current_states')
+                ->where('machine_class', $this->machineClass);
+
+            $this->applyStateConditionToQuery($sub, $resolved);
+        });
+
+        return $this;
+    }
+
+    /**
+     * Exclude instances in any FINAL state.
+     *
+     * Collects all FINAL state IDs from the machine definition's idMap
+     * and applies NOT IN subquery exclusion.
+     */
+    public function notInFinalState(): self
+    {
+        $finalStateIds = $this->collectFinalStateIds();
+
+        if ($finalStateIds === []) {
+            return $this;
+        }
+
+        $this->query->whereNotIn('root_event_id', function ($sub) use ($finalStateIds): void {
+            $sub->select('root_event_id')
+                ->from('machine_current_states')
+                ->where('machine_class', $this->machineClass)
+                ->whereIn('state_id', $finalStateIds);
+        });
+
+        return $this;
+    }
+
+    /**
+     * Alias for notInFinalState().
+     */
+    public function active(): self
+    {
+        return $this->notInFinalState();
+    }
+
+    /**
+     * Only instances where a state_id is a FINAL type.
+     */
+    public function inFinalState(): self
+    {
+        $finalStateIds = $this->collectFinalStateIds();
+
+        if ($finalStateIds === []) {
+            // No final states defined — nothing can match
+            $this->query->whereRaw('1 = 0');
+
+            return $this;
+        }
+
+        return $this->inAnyState($finalStateIds);
+    }
+
+    // endregion
+
     // region Time Filters & Ordering
 
     /**
@@ -210,6 +284,24 @@ class MachineQueryBuilder
                 $hasCondition = true;
             }
         }
+    }
+
+    /**
+     * Collect all FINAL state IDs from the machine definition.
+     *
+     * @return list<string>
+     */
+    private function collectFinalStateIds(): array
+    {
+        $ids = [];
+
+        foreach ($this->definition->idMap as $id => $stateDefinition) {
+            if ($stateDefinition->type === StateDefinitionType::FINAL) {
+                $ids[] = $id;
+            }
+        }
+
+        return $ids;
     }
 
     // endregion
