@@ -250,6 +250,22 @@ OrderWorkflowMachine::create(['order_id' => 'ORD-102', 'order_total' => 500])
 
 6. **Fake children in parent tests.** `Machine::fake()` isolates parent orchestration from child implementation.
 
+## Avoiding the Testing Nothing Trap
+
+`fakingAllActions()`, `fakingAllGuards()`, and `startingAt()` are powerful convenience methods — but combining them aggressively can produce tests that verify almost nothing:
+
+| Pattern | What It Actually Tests | Risk |
+|---------|----------------------|------|
+| `fakingAllActions()` + `fakingAllGuards()` + `startingAt()` | Only transition config (`@done → state_x`) | Very high |
+| `fakingAllActions(except: [X])` + `startingAt()` | Action X with real logic + routing | Low |
+| `fakingAllActions()` + real guards | Guard logic + routing | Medium |
+| `startingAt()` + no faking | All behaviors from that state forward | Good |
+| Full path (no shortcuts) | Everything | Best coverage |
+
+::: tip Rule of Thumb
+If your test has `fakingAllActions()` without `except:`, ask yourself: **"What behavior am I actually testing?"** If the answer is "just the transition config," consider whether that's worth a test — or whether your effort is better spent on a test that exercises real logic.
+:::
+
 ## Related
 
 - [Testing Overview](/testing/overview) -- testing layers reference
