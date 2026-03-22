@@ -17,6 +17,56 @@ EventMachine evolved rapidly from v1 to v7 with a small team. Maintaining multip
 Each section below has step-by-step migration instructions with before/after examples. For multi-version jumps (e.g., v3 → v7), follow each guide in sequence. No data migration is required between any versions — the `machine_events` table format has not changed since v1.
 :::
 
+## From 8.5.2 to 8.5.3
+
+### processPostEntryTransitions Centralized into enterState()
+
+`processPostEntryTransitions()` is now called internally by `enterState()` — individual callers no longer need to call it separately.
+
+**If you subclass `MachineDefinition`** and call `processPostEntryTransitions()` directly, remove those calls. `enterState()` handles it automatically via the `processPostEntry` parameter (default `true`).
+
+**If you don't subclass `MachineDefinition`**, no action needed.
+
+### Dispatch Mode Parallel @done Fix
+
+Entry actions that called `$this->raise()` on states entered via parallel `@done` in async/dispatch mode were silently lost. The event was queued but never processed. This is now fixed — raised events are processed in all code paths.
+
+## From 8.5.3 to 8.5.4
+
+### ResultBehavior Now Receives the Original Event
+
+`Machine::result()` and `MachineController::resolveAndRunResult()` previously passed the last internal event (with NULL payload) to `ResultBehavior`. They now pass `$state->triggeringEvent` — the original external event with full payload.
+
+**Before (broken):**
+
+<!-- doctest-attr: ignore -->
+```php
+class CustomerDetailResult extends ResultBehavior
+{
+    public function __invoke(ContextManager $context, EventBehavior $event): array
+    {
+        // $event->payload was NULL — it was an internal event
+        return ['tckn' => $event->payload['tckn']]; // ❌ crash
+    }
+}
+```
+
+**After (fixed):**
+
+<!-- doctest-attr: ignore -->
+```php
+class CustomerDetailResult extends ResultBehavior
+{
+    public function __invoke(ContextManager $context, EventBehavior $event): array
+    {
+        // $event is now the original triggering event with full payload
+        return ['tckn' => $event->payload['tckn']]; // ✅ works
+    }
+}
+```
+
+**If you were working around NULL payloads** (e.g., reading from context instead of event), you can now read directly from the event.
+
 ## From 8.4.x to 8.5.0
 
 ### Testing Entry Point Simplification
