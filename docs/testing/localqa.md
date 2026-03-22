@@ -23,6 +23,22 @@
 LocalQA tests must use **real MySQL** (not SQLite) and **real Redis queue** (not sync driver). SQLite lacks JSON column support used by machine tables. Sync driver processes jobs inline, hiding real async behavior.
 :::
 
+## Laravel Project Setup
+
+LocalQA tests run inside a real Laravel application (not the package's testbench). A few things need to be configured:
+
+1. **Require the package** as a path repository so tests use your local copy
+2. **Install Horizon** — `composer require laravel/horizon && php artisan horizon:install`
+3. **Configure `.env`** — MySQL connection, `QUEUE_CONNECTION=redis`, `REDIS_PREFIX=laravel_database_`
+4. **Publish migrations** — `php artisan vendor:publish --provider="Tarfinlabs\EventMachine\MachineServiceProvider"`
+5. **Run migrations** — `php artisan migrate`
+6. **Configure Horizon queues** — add `child-queue` to `config/horizon.php` queue array, set `maxProcesses` ≥ 3
+7. **Autoload test stubs** — add the package's `tests/` namespace to `composer.json` `autoload-dev` so Horizon can resolve test machine classes
+
+::: tip
+If you already have a Laravel project that uses EventMachine, you can skip steps 1-5 and run LocalQA tests directly against your existing database. Just ensure `QUEUE_CONNECTION=redis` and Horizon is configured.
+:::
+
 ## Test Structure
 
 Extend `LocalQATestCase` — the base class configures MySQL + Redis connections:
