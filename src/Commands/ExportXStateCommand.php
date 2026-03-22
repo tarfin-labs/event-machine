@@ -6,7 +6,6 @@ namespace Tarfinlabs\EventMachine\Commands;
 
 use ReflectionClass;
 use Illuminate\Console\Command;
-use Spatie\LaravelData\Optional;
 use Illuminate\Support\Facades\File;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
@@ -15,7 +14,6 @@ use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionBranch;
-use Spatie\LaravelData\Support\Validation\ValidationPath;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineInvokeDefinition;
@@ -535,10 +533,10 @@ class ExportXStateCommand extends Command
             return null;
         }
 
-        // For union types (e.g., int|Optional), find the first non-Optional named type
+        // For union types, find the first named type
         if ($type instanceof \ReflectionUnionType) {
             foreach ($type->getTypes() as $unionType) {
-                if ($unionType instanceof \ReflectionNamedType && $unionType->getName() !== Optional::class) {
+                if ($unionType instanceof \ReflectionNamedType) {
                     return $this->getDefaultForType($unionType);
                 }
             }
@@ -627,23 +625,7 @@ class ExportXStateCommand extends Command
             }
 
             $rulesMethod = $reflection->getMethod('rules');
-
-            // rules() may require a ValidationContext parameter
-            $params = $rulesMethod->getParameters();
-            if ($params !== [] && !$params[0]->isDefaultValueAvailable()) {
-                // Try calling with a mock ValidationContext
-                $contextClass = $params[0]->getType() instanceof \ReflectionNamedType
-                    ? $params[0]->getType()->getName()
-                    : null;
-
-                if ($contextClass !== null && class_exists($contextClass)) {
-                    $rules = $rulesMethod->invoke(null, new $contextClass([], [], ValidationPath::create()));
-                } else {
-                    return $schema;
-                }
-            } else {
-                $rules = $rulesMethod->invoke(null);
-            }
+            $rules       = $rulesMethod->invoke(null);
         } catch (\Throwable) {
             return $schema;
         }

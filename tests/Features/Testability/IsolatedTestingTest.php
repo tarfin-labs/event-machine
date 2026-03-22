@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Spatie\LaravelData\Optional;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
+use Tarfinlabs\EventMachine\Context;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
@@ -33,7 +33,7 @@ it('creates state from array context', function (): void {
 });
 
 it('creates state from ContextManager instance', function (): void {
-    $context = new ContextManager(['count' => 10]);
+    $context = Context::from(['count' => 10]);
     $state   = State::forTesting($context);
 
     expect($state->context)->toBe($context);
@@ -128,7 +128,7 @@ it('uses mocked constructor DI service with runWithState', function (): void {
 // ─── runWithState() — with event behavior ────────────────────
 
 it('passes event behavior to action via runWithState', function (): void {
-    $state = State::forTesting(new TrafficLightsContext(count: 0, modelA: new Optional()));
+    $state = State::forTesting(new TrafficLightsContext(count: 0));
     $event = new EventDefinition(type: 'ADD_VALUE', payload: ['value' => 42]);
 
     AddValueAction::runWithState($state, eventBehavior: $event);
@@ -141,7 +141,7 @@ it('passes event behavior to action via runWithState', function (): void {
 it('respects faked behavior via runWithState', function (): void {
     IncrementAction::shouldRun()->withAnyArgs()->once();
 
-    $state = State::forTesting(new TrafficLightsContext(count: 0, modelA: new Optional()));
+    $state = State::forTesting(new TrafficLightsContext(count: 0));
 
     IncrementAction::runWithState($state);
 
@@ -153,7 +153,7 @@ it('respects faked behavior via runWithState', function (): void {
 it('uses spy to verify faked behavior was called with runWithState', function (): void {
     IncrementAction::allowToRun();
 
-    $state = State::forTesting(new TrafficLightsContext(count: 5, modelA: new Optional()));
+    $state = State::forTesting(new TrafficLightsContext(count: 5));
 
     IncrementAction::runWithState($state);
 

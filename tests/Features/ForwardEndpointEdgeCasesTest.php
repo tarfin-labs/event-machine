@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Context;
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -183,7 +184,7 @@ test('overlap rejection error message contains removal instructions', function (
 // ═══════════════════════════════════════════════════════════════
 
 test('ForwardContext.childContext is the child ContextManager', function (): void {
-    $childCtx   = new ContextManager(['card_last4' => '4242', 'status' => 'ok']);
+    $childCtx   = Context::from(['card_last4' => '4242', 'status' => 'ok']);
     $childDef   = ForwardChildEndpointMachine::definition();
     $childState = State::forTesting(
         context: $childCtx,
@@ -197,7 +198,7 @@ test('ForwardContext.childContext is the child ContextManager', function (): voi
 });
 
 test('ForwardContext.childState exposes child state value', function (): void {
-    $childCtx   = new ContextManager(['order_id' => 1, 'card_last4' => null, 'status' => 'pending']);
+    $childCtx   = Context::from(['order_id' => 1, 'card_last4' => null, 'status' => 'pending']);
     $childDef   = ForwardChildEndpointMachine::definition();
     $childState = State::forTesting(
         context: $childCtx,
@@ -211,7 +212,7 @@ test('ForwardContext.childState exposes child state value', function (): void {
 });
 
 test('ForwardContext can carry a child state in final state', function (): void {
-    $childCtx   = new ContextManager(['order_id' => 99, 'card_last4' => '1111', 'status' => 'charged']);
+    $childCtx   = Context::from(['order_id' => 99, 'card_last4' => '1111', 'status' => 'charged']);
     $childDef   = ForwardChildEndpointMachine::definition();
     $childState = State::forTesting(
         context: $childCtx,

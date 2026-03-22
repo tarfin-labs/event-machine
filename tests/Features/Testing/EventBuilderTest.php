@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Spatie\LaravelData\Optional;
 use Tarfinlabs\EventMachine\Actor\State;
 use Illuminate\Validation\ValidationException;
 use Tarfinlabs\EventMachine\Testing\HasBuilder;
@@ -272,7 +271,7 @@ it('builder-created event is usable as currentEventBehavior', function (): void 
     $event = SimpleEventBuilder::new()->withValue(5)->make();
 
     $state = State::forTesting(
-        new TrafficLightsContext(count: 10, modelA: new Optional()),
+        new TrafficLightsContext(count: 10),
         currentEventBehavior: $event,
     );
 

@@ -167,7 +167,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         $machine->isFakedInstance           = true;
 
         $machine->state = new State(
-            context: new ContextManager(data: $fake['result'] ?? []),
+            context: Context::from($fake['result'] ?? []),
             currentStateDefinition: null,
         );
 

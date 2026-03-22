@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Context;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
@@ -25,7 +26,7 @@ test('hasMissingContext returns null for empty required context', function (): v
         public function __invoke(): void {}
     };
 
-    $contextManager = new ContextManager([]);
+    $contextManager = Context::from([]);
 
     // Test that when requiredContext is empty, method returns null
     expect($behavior::hasMissingContext($contextManager))->toBeNull();
@@ -41,7 +42,7 @@ test('hasMissingContext returns null for empty required context', function (): v
     expect($behaviorWithRequirements::hasMissingContext($contextManager))->toBe('user_id');
 
     // Should return null when context has required data
-    $contextWithData = new ContextManager(['user_id' => '123']);
+    $contextWithData = Context::from(['user_id' => '123']);
     expect($behaviorWithRequirements::hasMissingContext($contextWithData))->toBeNull();
 });
 

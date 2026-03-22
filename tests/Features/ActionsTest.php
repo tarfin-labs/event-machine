@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Context;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -308,7 +309,7 @@ it('should transition through multiple if-else targets based on guards', functio
     $newState = $machine->transition(
         event: ['type' => 'TIMER'],
         state: new State(
-            context: new ContextManager(['value' => 2]),
+            context: Context::from(['value' => 2]),
             currentStateDefinition: $machine->stateDefinitions['green'],
         )
     );
@@ -320,7 +321,7 @@ it('should transition through multiple if-else targets based on guards', functio
     $newState = $machine->transition(
         event: ['type' => 'TIMER'],
         state: new State(
-            context: new ContextManager(['value' => 3]),
+            context: Context::from(['value' => 3]),
             currentStateDefinition: $machine->stateDefinitions['green'],
         )
     );

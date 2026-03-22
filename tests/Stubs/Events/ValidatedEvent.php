@@ -6,7 +6,6 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Events;
 
 use Tarfinlabs\EventMachine\Testing\HasBuilder;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Spatie\LaravelData\Support\Validation\ValidationContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Builders\ValidatedEventBuilder;
 
 /**
@@ -16,7 +15,7 @@ class ValidatedEvent extends EventBehavior
 {
     use HasBuilder;
 
-    public static function rules(ValidationContext $context): array
+    public static function rules(): array
     {
         return [
             'payload.attribute' => ['required', 'integer', 'min:1', 'max:10'],
@@ -24,7 +23,7 @@ class ValidatedEvent extends EventBehavior
         ];
     }
 
-    public static function messages(...$args): array
+    public static function messages(): array
     {
         return [
             'payload.attribute' => 'Custom validation message for the attribute.',

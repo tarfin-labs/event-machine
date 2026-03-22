@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Definition;
 
 use Mockery\MockInterface;
-use Spatie\LaravelData\Optional;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Context;
@@ -847,10 +846,10 @@ class MachineDefinition
         // Different class — re-instantiate with machine's registered class, preserving metadata
         return new $registeredClass(
             type: $typeString,
-            payload: $event->payload instanceof Optional ? null : $event->payload,
+            payload: $event->payload,
             isTransactional: $event->isTransactional,
             actor: $event->actor($state->context),
-            version: $event->version instanceof Optional ? 1 : $event->version,
+            version: $event->version,
             source: $event->source,
         );
     }
