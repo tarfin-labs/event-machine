@@ -236,7 +236,7 @@ class MachineController extends Controller
         $params = InvokableBehavior::injectInvokableBehaviorParameters(
             actionBehavior: $resultBehavior,
             state: $state,
-            eventBehavior: $state->currentEventBehavior,
+            eventBehavior: $state->triggeringEvent ?? $state->currentEventBehavior,
             forwardContext: $forwardContext,
         );
 
