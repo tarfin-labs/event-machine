@@ -180,6 +180,9 @@ class TestMachine
         $instance                 = new self($machine);
         $instance->fakedBehaviors = array_merge($instance->fakedBehaviors, $preInitFakes);
 
+        // Initialize timer tracking so advanceTimers() works on the target state
+        $instance->trackStateEntry();
+
         return $instance;
     }
 
