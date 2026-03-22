@@ -70,15 +70,25 @@ class TestMachine
      * on the initial state run with the machine's default context — not these
      * overrides.
      */
-    public static function create(string $machineClass, array $context = []): self
+    public static function create(string $machineClass, array $context = [], array $guards = []): self
     {
+        // Set guard fakes BEFORE machine creation (solves @always timing)
+        $guardClasses = [];
+        foreach ($guards as $guardClass => $returnValue) {
+            $guardClass::shouldReturn($returnValue);
+            $guardClasses[] = $guardClass;
+        }
+
         $machine = $machineClass::create();
 
         foreach ($context as $key => $value) {
             $machine->state->context->set($key, $value);
         }
 
-        return new self($machine);
+        $instance                 = new self($machine);
+        $instance->fakedBehaviors = array_merge($instance->fakedBehaviors, $guardClasses);
+
+        return $instance;
     }
 
     /**
@@ -86,9 +96,18 @@ class TestMachine
      *
      * Unlike create(), context values are merged BEFORE initialization,
      * so entry actions on the initial state see the injected context.
+     * The `guards` parameter sets guard fakes BEFORE getInitialState() runs,
+     * solving the @always timing problem.
      */
-    public static function withContext(string $machineClass, array $context): self
+    public static function withContext(string $machineClass, array $context, array $guards = []): self
     {
+        // Set guard fakes BEFORE machine creation (solves @always timing)
+        $guardClasses = [];
+        foreach ($guards as $guardClass => $returnValue) {
+            $guardClass::shouldReturn($returnValue);
+            $guardClasses[] = $guardClass;
+        }
+
         /** @var MachineDefinition $definition */
         $definition                = clone $machineClass::definition();
         $definition->shouldPersist = false;
@@ -103,8 +122,69 @@ class TestMachine
         $machine        = Machine::withDefinition($definition);
         $machine->state = $definition->getInitialState();
 
-        $instance = new self($machine);
+        $instance                 = new self($machine);
+        $instance->fakedBehaviors = array_merge($instance->fakedBehaviors, $guardClasses);
         $instance->trackStateEntry();
+
+        return $instance;
+    }
+
+    /**
+     * Create a TestMachine at a specific state without running any lifecycle.
+     *
+     * No entry actions, no @always transitions, no job dispatch, no history.
+     * Uses the real machine definition — all transitions, guards, and actions
+     * are available for subsequent operations.
+     */
+    public static function startingAt(
+        string $machineClass,
+        string $stateId,
+        array $context = [],
+        array $guards = [],
+    ): self {
+        // Set guard fakes for subsequent transitions
+        $guardClasses = [];
+        foreach ($guards as $guardClass => $returnValue) {
+            $guardClass::shouldReturn($returnValue);
+            $guardClasses[] = $guardClass;
+        }
+
+        /** @var MachineDefinition $definition */
+        $definition                = clone $machineClass::definition();
+        $definition->shouldPersist = false;
+        $definition->machineClass  = $machineClass;
+
+        // Merge context into definition
+        $definition->config['context'] = array_merge(
+            $definition->config['context'] ?? [],
+            $context,
+        );
+
+        // Create machine WITHOUT starting
+        $machine = Machine::withDefinition($definition);
+
+        // Initialize context from definition
+        $contextManager = $definition->initializeContextFromState();
+
+        // Resolve state definition
+        $fullId = str_contains($stateId, $definition->delimiter)
+            ? $stateId
+            : $definition->id.$definition->delimiter.$stateId;
+        $stateDef = $definition->idMap[$fullId]
+            ?? throw new \InvalidArgumentException("State '{$stateId}' not found in machine definition. Available: ".implode(', ', array_keys($definition->idMap)));
+
+        // Resolve compound state to initial child
+        $resolvedState = $stateDef->findInitialStateDefinition() ?? $stateDef;
+
+        // Build state at target — no history, no events, no lifecycle
+        $machine->state = new State(
+            context: $contextManager,
+            currentStateDefinition: $resolvedState,
+        );
+        $machine->state->setValues([$resolvedState->id]);
+
+        $instance                 = new self($machine);
+        $instance->fakedBehaviors = $guardClasses;
 
         return $instance;
     }
@@ -180,6 +260,70 @@ class TestMachine
                 }
 
                 $this->fakedInlineBehaviors[] = $key;
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Fake all class-based actions in the machine definition.
+     *
+     * Introspects `$definition->behavior['actions']` and calls `::spy()` on each
+     * InvokableBehavior subclass. Inline closures are skipped.
+     *
+     * @param  array  $except  Class FQCNs or behavior keys to skip (these run their real logic).
+     */
+    public function fakingAllActions(array $except = []): self
+    {
+        return $this->fakingAllOfType('actions', $except);
+    }
+
+    /**
+     * Fake all class-based guards in the machine definition.
+     *
+     * Note: Mockery spy default return is `null` — in guard evaluation `null` is
+     * falsy, so spied guards **fail by default**. Use `guards:` parameter on
+     * `withContext()`/`create()` to set explicit return values for guards that must pass.
+     *
+     * @param  array  $except  Class FQCNs or behavior keys to skip.
+     */
+    public function fakingAllGuards(array $except = []): self
+    {
+        return $this->fakingAllOfType('guards', $except);
+    }
+
+    /**
+     * Fake all class-based behaviors (actions + guards + calculators).
+     *
+     * @param  array  $except  Class FQCNs or behavior keys to skip.
+     */
+    public function fakingAllBehaviors(array $except = []): self
+    {
+        $this->fakingAllOfType('actions', $except);
+        $this->fakingAllOfType('guards', $except);
+        $this->fakingAllOfType('calculators', $except);
+
+        return $this;
+    }
+
+    /**
+     * Internal: fake all class-based behaviors of a specific type.
+     */
+    private function fakingAllOfType(string $type, array $except): self
+    {
+        $behaviors = $this->machine->definition->behavior[$type] ?? [];
+
+        foreach ($behaviors as $key => $value) {
+            if (in_array($value, $except, true)) {
+                continue;
+            }
+            if (in_array($key, $except, true)) {
+                continue;
+            }
+            if (is_string($value) && is_subclass_of($value, InvokableBehavior::class)) {
+                $value::spy();
+                $this->fakedBehaviors[] = $value;
             }
         }
 
