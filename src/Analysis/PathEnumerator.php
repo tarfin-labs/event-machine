@@ -242,8 +242,25 @@ class PathEnumerator
             return;
         }
 
-        // Step 3: @always priority (implemented in implement-always-priority task)
-        // Step 4: Enumerate transitions (implemented in implement-transition-enumeration task)
+        // Step 3: @always priority
+        $alwaysTransition = null;
+
+        foreach ($transitions as $event => $transition) {
+            if ($transition->isAlways) {
+                $alwaysTransition = $transition;
+                unset($transitions[$event]);
+
+                break;
+            }
+        }
+
+        if ($alwaysTransition !== null) {
+            $this->handleAlwaysPriority($state, $steps, $visitedIds, $alwaysTransition, $transitions);
+
+            return;
+        }
+
+        // Step 4: Enumerate remaining transitions
         $this->enumerateTransitions($state, $steps, $visitedIds, $transitions);
     }
 
@@ -285,6 +302,63 @@ class PathEnumerator
     }
 
     /**
+     * Handle @always transition priority.
+     *
+     * - Unguarded @always: follow exclusively — skip all other transitions (unreachable).
+     * - Guarded @always: fork into guard-pass paths + guard-fail continuation.
+     *   Guard-fail enumerates remaining non-@always transitions. If none exist → GUARD_BLOCK.
+     *
+     * @param  list<PathStep>  $steps
+     * @param  array<string, true>  $visitedIds
+     * @param  array<string, TransitionDefinition>  $remainingTransitions  Non-@always transitions.
+     */
+    private function handleAlwaysPriority(
+        StateDefinition $state,
+        array $steps,
+        array $visitedIds,
+        TransitionDefinition $alwaysTransition,
+        array $remainingTransitions,
+    ): void {
+        $isUnguarded = !$this->isAllBranchesGuarded($alwaysTransition)
+            && count($alwaysTransition->branches ?? []) === 1
+            && ($alwaysTransition->branches[0]->guards === null || $alwaysTransition->branches[0]->guards === []);
+
+        // Enumerate @always guard-pass forks
+        foreach ($alwaysTransition->branches ?? [] as $index => $branch) {
+            if (!$branch->target instanceof StateDefinition) {
+                continue;
+            }
+
+            $step = new PathStep(
+                stateId: $branch->target->id,
+                stateKey: $branch->target->key ?? '',
+                event: '@always',
+                branchIndex: count($alwaysTransition->branches ?? []) > 1 ? $index : null,
+                guards: $branch->guards ?? [],
+                actions: $branch->actions ?? [],
+            );
+
+            $branchSteps   = $steps;
+            $branchSteps[] = $step;
+
+            $this->dfs($branch->target, $branchSteps, $visitedIds);
+        }
+
+        // If unguarded @always: exclusive — don't enumerate remaining transitions
+        if ($isUnguarded) {
+            return;
+        }
+
+        // Guarded @always: guard-fail continuation — enumerate remaining transitions
+        if ($remainingTransitions !== [] || $state->hasMachineInvoke()) {
+            $this->enumerateTransitions($state, $steps, $visitedIds, $remainingTransitions);
+        } else {
+            // No remaining transitions and guard failed → GUARD_BLOCK
+            $this->recordPath($steps, PathType::GUARD_BLOCK);
+        }
+    }
+
+    /**
      * Enumerate all collected transitions from an atomic state.
      *
      * @param  list<PathStep>  $steps
@@ -300,7 +374,7 @@ class PathEnumerator
         $enumerated = false;
 
         foreach ($transitions as $event => $transition) {
-            // Skip @always for now — handled by implement-always-priority task
+            // @always is handled before enumerateTransitions is called
             if ($transition->isAlways) {
                 continue;
             }

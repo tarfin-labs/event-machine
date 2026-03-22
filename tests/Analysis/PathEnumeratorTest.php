@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Analysis\PathType;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AlwaysGuardMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ConditionalOnDoneMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Compound\ConditionalCompoundOnDoneMachine;
 
@@ -139,3 +140,16 @@ test('ConditionalOnDoneMachine enumerates parallel @done with guards', function 
 
     expect($result->happyPaths())->toHaveCount(2);
 })->skip('Requires handleAtomic transition enumeration — enabled after implement-transition-enumeration');
+
+test('AlwaysGuardMachine enumerates 3 paths: 2 HAPPY + 1 GUARD_BLOCK', function (): void {
+    $definition = AlwaysGuardMachine::definition();
+    $enumerator = new PathEnumerator($definition);
+    $result     = $enumerator->enumerate();
+
+    // @always guard-pass → done (HAPPY)
+    // @always guard-fail → GO guard-pass → done (HAPPY)
+    // @always guard-fail → GO guard-fail → GUARD_BLOCK
+    expect($result->paths)->toHaveCount(3)
+        ->and($result->happyPaths())->toHaveCount(2)
+        ->and($result->guardBlockPaths())->toHaveCount(1);
+});
