@@ -414,6 +414,10 @@ The `except:` parameter accepts both class FQCNs and behavior key strings. Exclu
 ```
 :::
 
+::: tip fakingAllActions() vs fakingAllBehaviors()
+`fakingAllActions()` only fakes actions. Calculators are NOT affected. If your test passes through `@always` transitions with calculators, use `fakingAllBehaviors()` which includes actions + guards + calculators.
+:::
+
 ### Pre-Init Behavior Faking
 
 The `guards:` and `faking:` parameters on `Machine::test()` and `Machine::startingAt()` set behavior fakes **before** `getInitialState()` runs — solving the `@always` timing problem where guards and actions run before the fluent chain reaches `fakingAllActions()`:
@@ -484,7 +488,7 @@ OrderMachine::test()
 | `assertRaisedEvent(string)` | Assert an internal `raise()` was called and the event was processed |
 
 ::: info
-`assertRaisedEvent()` asserts the event was raised AND processed (appears in history). This is a stronger assertion than checking the raise call alone. To test raise behavior when the event may be guarded, test the action in isolation with `State::forTesting()`.
+`assertRaisedEvent()` asserts the event was raised AND processed (appears in history). This is a stronger assertion than checking the raise call alone. For unit-level raise testing (without a full machine), use `assertRaised()` after `runWithState()` — see [Isolated Testing — Raised Events](/testing/isolated-testing#actions-asserting-raised-events).
 :::
 
 > **Note:** `assertDispatchedTo` requires `Queue::fake()` to intercept queued jobs.
