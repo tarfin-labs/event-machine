@@ -6,11 +6,12 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\LogAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsAllowedGuard;
 
 /**
- * Machine with @always transition guarded by IsAllowedGuard.
- * Used to test guards: parameter timing — guard must be faked BEFORE init.
+ * Machine with @always transition guarded by IsAllowedGuard + LogAction.
+ * Used to test guards:/faking: parameter timing — must be faked BEFORE init.
  */
 class AlwaysGuardMachine extends Machine
 {
@@ -20,13 +21,14 @@ class AlwaysGuardMachine extends Machine
             config: [
                 'id'      => 'always_guard',
                 'initial' => 'idle',
-                'context' => [],
+                'context' => ['logged' => false],
                 'states'  => [
                     'idle' => [
                         'on' => [
                             '@always' => [
-                                'target' => 'done',
-                                'guards' => 'isAllowedGuard',
+                                'target'  => 'done',
+                                'guards'  => 'isAllowedGuard',
+                                'actions' => 'logAction',
                             ],
                             'GO' => [
                                 'target' => 'done',
@@ -40,6 +42,9 @@ class AlwaysGuardMachine extends Machine
             behavior: [
                 'guards' => [
                     'isAllowedGuard' => IsAllowedGuard::class,
+                ],
+                'actions' => [
+                    'logAction' => LogAction::class,
                 ],
             ],
         );

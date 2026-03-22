@@ -70,14 +70,10 @@ class TestMachine
      * on the initial state run with the machine's default context — not these
      * overrides.
      */
-    public static function create(string $machineClass, array $context = [], array $guards = []): self
+    public static function create(string $machineClass, array $context = [], array $guards = [], array $faking = []): self
     {
-        // Set guard fakes BEFORE machine creation (solves @always timing)
-        $guardClasses = [];
-        foreach ($guards as $guardClass => $returnValue) {
-            $guardClass::shouldReturn($returnValue);
-            $guardClasses[] = $guardClass;
-        }
+        // Set behavior fakes BEFORE machine creation (solves @always timing)
+        $preInitFakes = self::applyPreInitFakes($guards, $faking);
 
         $machine = $machineClass::create();
 
@@ -86,7 +82,7 @@ class TestMachine
         }
 
         $instance                 = new self($machine);
-        $instance->fakedBehaviors = array_merge($instance->fakedBehaviors, $guardClasses);
+        $instance->fakedBehaviors = array_merge($instance->fakedBehaviors, $preInitFakes);
 
         return $instance;
     }
@@ -96,17 +92,13 @@ class TestMachine
      *
      * Unlike create(), context values are merged BEFORE initialization,
      * so entry actions on the initial state see the injected context.
-     * The `guards` parameter sets guard fakes BEFORE getInitialState() runs,
-     * solving the @always timing problem.
+     * The `guards` and `faking` parameters set behavior fakes BEFORE getInitialState() runs,
+     * solving the @always timing problem for both guards and actions.
      */
-    public static function withContext(string $machineClass, array $context, array $guards = []): self
+    public static function withContext(string $machineClass, array $context, array $guards = [], array $faking = []): self
     {
-        // Set guard fakes BEFORE machine creation (solves @always timing)
-        $guardClasses = [];
-        foreach ($guards as $guardClass => $returnValue) {
-            $guardClass::shouldReturn($returnValue);
-            $guardClasses[] = $guardClass;
-        }
+        // Set behavior fakes BEFORE machine creation (solves @always timing)
+        $preInitFakes = self::applyPreInitFakes($guards, $faking);
 
         /** @var MachineDefinition $definition */
         $definition                = clone $machineClass::definition();
@@ -123,7 +115,7 @@ class TestMachine
         $machine->state = $definition->getInitialState();
 
         $instance                 = new self($machine);
-        $instance->fakedBehaviors = array_merge($instance->fakedBehaviors, $guardClasses);
+        $instance->fakedBehaviors = array_merge($instance->fakedBehaviors, $preInitFakes);
         $instance->trackStateEntry();
 
         return $instance;
@@ -141,13 +133,10 @@ class TestMachine
         string $stateId,
         array $context = [],
         array $guards = [],
+        array $faking = [],
     ): self {
-        // Set guard fakes for subsequent transitions
-        $guardClasses = [];
-        foreach ($guards as $guardClass => $returnValue) {
-            $guardClass::shouldReturn($returnValue);
-            $guardClasses[] = $guardClass;
-        }
+        // Set behavior fakes for subsequent transitions
+        $preInitFakes = self::applyPreInitFakes($guards, $faking);
 
         /** @var MachineDefinition $definition */
         $definition                = clone $machineClass::definition();
@@ -189,9 +178,38 @@ class TestMachine
         );
 
         $instance                 = new self($machine);
-        $instance->fakedBehaviors = $guardClasses;
+        $instance->fakedBehaviors = array_merge($instance->fakedBehaviors, $preInitFakes);
 
         return $instance;
+    }
+
+    /**
+     * Apply pre-init fakes: guard return values and behavior spies.
+     *
+     * Called before machine creation to solve @always timing issues.
+     *
+     * @param  array<class-string, mixed>  $guards  Guard class => return value pairs.
+     * @param  array<class-string>  $faking  Behavior classes to spy before init.
+     *
+     * @return array<class-string> All faked class names (for cleanup tracking).
+     */
+    private static function applyPreInitFakes(array $guards, array $faking): array
+    {
+        $fakedClasses = [];
+
+        foreach ($guards as $guardClass => $returnValue) {
+            $guardClass::shouldReturn($returnValue);
+            $fakedClasses[] = $guardClass;
+        }
+
+        foreach ($faking as $behaviorClass) {
+            if (is_subclass_of($behaviorClass, InvokableBehavior::class)) {
+                $behaviorClass::spy();
+                $fakedClasses[] = $behaviorClass;
+            }
+        }
+
+        return $fakedClasses;
     }
 
     /**
