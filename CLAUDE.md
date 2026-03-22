@@ -92,6 +92,7 @@ All machine behaviors extend `InvokableBehavior` and include:
 - **Scheduled Events**: `schedules` key + `MachineScheduler::register()` for cron-based batch operations
 - **Machine Faking**: `Machine::fake()` short-circuits child delegation in tests
 - **Machine Identity**: `$context->machineId()`, `$context->parentMachineId()`
+- **Machine Query Builder**: `Machine::query()` fluent API for finding instances by state (inState, inAnyState, active, paginate)
 
 ## Workflow Rules
 
@@ -169,6 +170,7 @@ All code, tests, and documentation **must** follow the naming conventions define
 - `src/Jobs/` - Queue jobs (ChildMachineJob, SendToMachineJob, ChildJobJob, etc.)
 - `src/Locks/` - Machine lock manager for concurrent access
 - `src/Models/` - Eloquent models (MachineEvent, MachineChild, MachineCurrentState, MachineTimerFire)
+- `src/Query/` - Machine query builder (MachineQueryBuilder, MachineQueryResult)
 - `src/Routing/` - HTTP endpoint routing (MachineRouter, MachineController, EndpointDefinition)
 - `src/Scheduling/` - Schedule registration (MachineScheduler)
 - `src/Support/` - Value objects (Timer)
