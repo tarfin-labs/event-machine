@@ -676,3 +676,189 @@ it('verification parallel state completes when both children finish', function (
 ```
 
 Both child machines are faked — they complete immediately when the parent enters the parallel `verification` state. The parent's `@done` guard fires and transitions to `checking_protocol`.
+
+## Recipe: @always Guard Chain Routing
+
+Test a machine with multiple `@always` branches — each guarded, first match wins:
+
+<!-- doctest-attr: no_run -->
+```php
+it('routes to correct target based on guard results', function (): void {
+    // Machine has: idle → @always [
+    //   { target: 'premium',  guards: IsPremiumGuard },
+    //   { target: 'standard', guards: IsEligibleGuard },
+    //   { target: 'rejected' },  // fallback
+    // ]
+
+    // Premium path
+    VerificationMachine::test(
+        guards: [IsPremiumGuard::class => true],
+    )->assertState('premium');
+
+    // Standard path (not premium, but eligible)
+    VerificationMachine::test(
+        guards: [IsPremiumGuard::class => false, IsEligibleGuard::class => true],
+    )->assertState('standard');
+
+    // Rejected path (no guards pass → fallback)
+    VerificationMachine::test(
+        guards: [IsPremiumGuard::class => false, IsEligibleGuard::class => false],
+    )->assertState('rejected');
+});
+```
+
+## Recipe: Compound @done with Delegation
+
+Test a compound state reaching final → `@done` transitions to a state with child delegation:
+
+<!-- doctest-attr: no_run -->
+```php
+it('compound @done triggers child delegation', function (): void {
+    Queue::fake();
+
+    // Machine: review (compound, initial: checking) → checking is final
+    //          → @done → processing (machine: PaymentMachine)
+    //          → @done → completed
+    ApprovalMachine::test(context: ['order_id' => 'ORD-1'])
+        ->withoutPersistence()
+        ->fakingAllActions()
+        ->assertState('processing')  // compound @done already fired
+        ->simulateChildDone(PaymentMachine::class, result: ['payment_id' => 'pay_1'])
+        ->assertState('completed');
+});
+```
+
+## Recipe: Parallel Region Failure
+
+Test that when one parallel region fails, the parent's `@fail` fires:
+
+<!-- doctest-attr: no_run -->
+```php
+it('parallel @fail fires when one region fails', function (): void {
+    Queue::fake();
+
+    // ShippingMachine has parallel: warehouse + delivery regions
+    // Both delegate to child machines
+    ShippingMachine::test(context: ['order_id' => 'ORD-1'])
+        ->withoutPersistence()
+        ->fakingAllActions()
+        ->fakingChild(WarehouseMachine::class, result: ['packed' => true])
+        ->fakingChild(DeliveryMachine::class, fail: true, error: 'Address not found')
+        ->assertState('shipping_failed');
+});
+```
+
+## Recipe: Mixed Sync/Async Children in Parallel
+
+Test a parallel state with one sync child (completes immediately) and one async child (via queue):
+
+<!-- doctest-attr: no_run -->
+```php
+it('sync child completes immediately, async child via Horizon', function (): void {
+    Queue::fake();
+
+    // OrderMachine has parallel: validation (sync) + payment (async queue)
+    $test = OrderMachine::test(context: ['order_id' => 'ORD-1'])
+        ->withoutPersistence()
+        ->fakingAllActions();
+
+    // Validation (sync) completed immediately
+    // Payment (async) dispatched to queue — still at 'processing'
+    $test->assertRegionState('validation', 'completed');
+
+    // Simulate async payment completion
+    $test->simulateChildDone(PaymentMachine::class, result: ['payment_id' => 'pay_1'])
+        ->assertAllRegionsCompleted()
+        ->assertState('fulfilled');
+});
+```
+
+## Recipe: Forward Endpoint with Event Validation
+
+Test that forwarded events validate payload before reaching the child:
+
+<!-- doctest-attr: no_run -->
+```php
+it('forward endpoint validates event payload', function (): void {
+    MachineRouter::register(OrderMachine::class, 'orders', 'order_mre');
+
+    $order   = Order::create(['status' => 'pending']);
+    $machine = $order->order_mre;
+    $machine->send(['type' => 'START']);
+
+    // Forward with invalid payload — validation fails
+    $response = $this->postJson("/orders/{$order->id}/provide-card", [
+        'card_number' => '',  // required field empty
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['card_number']);
+
+    // Forward with valid payload — reaches child
+    $response = $this->postJson("/orders/{$order->id}/provide-card", [
+        'card_number' => '4111111111111111',
+    ]);
+
+    $response->assertOk();
+});
+```
+
+## Recipe: Context Isolation Between Parent and Child
+
+Test that `with:` passes only specified context keys and child modifications don't affect parent:
+
+<!-- doctest-attr: no_run -->
+```php
+it('child receives only with: keys, parent context unchanged', function (): void {
+    Queue::fake();
+
+    // OrderMachine delegates to PaymentMachine with: ['order_id', 'amount']
+    // Parent has order_id, amount, customer_name — child only gets first two
+    OrderMachine::test(
+        context: [
+            'order_id'      => 'ORD-1',
+            'amount'        => 5000,
+            'customer_name' => 'John',
+        ],
+    )
+    ->withoutPersistence()
+    ->fakingAllActions()
+    ->fakingChild(PaymentMachine::class, result: ['payment_id' => 'pay_1'])
+    ->assertState('completed')
+    ->assertContext('customer_name', 'John')  // parent context preserved
+    ->assertChildInvokedWith(PaymentMachine::class, [
+        'order_id' => 'ORD-1',
+        'amount'   => 5000,
+        // customer_name NOT passed — not in with: config
+    ]);
+});
+```
+
+## Recipe: Full Pipeline with Real Infrastructure
+
+End-to-end test with real MySQL + Redis + Horizon. See [Real Infrastructure Testing](/testing/localqa) for setup.
+
+<!-- doctest-attr: no_run -->
+```php
+it('full async pipeline: parent → child → completion → @done', function (): void {
+    // No Queue::fake() — real queue processing via Horizon
+    $parent = OrderMachine::create();
+    $parent->send(['type' => 'START_PAYMENT']);
+    $parent->persist();
+
+    $rootEventId = $parent->state->history->first()->root_event_id;
+
+    // Wait for Horizon to: dispatch child → child completes → route @done
+    $completed = LocalQATestCase::waitFor(function () use ($rootEventId) {
+        $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+
+        return $cs !== null && str_contains($cs->state_id, '.completed');
+    }, timeoutSeconds: 45);
+
+    expect($completed)->toBeTrue('Async pipeline did not complete');
+
+    // Verify final state
+    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+    expect($cs->state_id)->toBe('order.completed');
+});
+```
