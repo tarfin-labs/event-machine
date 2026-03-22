@@ -17,6 +17,36 @@ EventMachine evolved rapidly from v1 to v7 with a small team. Maintaining multip
 Each section below has step-by-step migration instructions with before/after examples. For multi-version jumps (e.g., v3 → v7), follow each guide in sequence. No data migration is required between any versions — the `machine_events` table format has not changed since v1.
 :::
 
+## From 8.4.x to 8.5.0
+
+### Testing Entry Point Simplification
+
+`Machine::test()` and `Machine::startingAt()` are now the **only** entry points for class-based machine testing. `TestMachine` class-accepting static factories are marked `@internal`.
+
+| Before | After |
+|--------|-------|
+| `TestMachine::create(MyMachine::class)` | `MyMachine::test()` |
+| `TestMachine::create(MyMachine::class, ['key' => 'val'])` | `MyMachine::test(context: ['key' => 'val'])` |
+| `TestMachine::withContext(MyMachine::class, [...])` | `MyMachine::test(context: [...])` |
+| `TestMachine::withContext(MyMachine::class, [...], guards: [...])` | `MyMachine::test(context: [...], guards: [...])` |
+| `TestMachine::startingAt(MyMachine::class, 'state', [...])` | `MyMachine::startingAt('state', context: [...])` |
+| `MyMachine::withContext([...])` | `MyMachine::test(context: [...])` |
+
+**Behavior change:** `Machine::test(context: [...])` now merges context **before** initialization (entry actions see it). Previously `Machine::test()` applied context post-init.
+
+**`TestMachine::define()` is unchanged** — use it for inline throwaway machines without a Machine class.
+
+**Find-replace migration:**
+
+<!-- doctest-attr: ignore -->
+```
+// In your test files:
+// TestMachine::create(XMachine::class, ...)   → XMachine::test(...)
+// TestMachine::withContext(XMachine::class, ...) → XMachine::test(context: ...)
+// TestMachine::startingAt(XMachine::class, ...) → XMachine::startingAt(...)
+// XMachine::withContext([...])                → XMachine::test(context: [...])
+```
+
 ## Version Compatibility
 
 | EventMachine | PHP | Laravel | Status |
