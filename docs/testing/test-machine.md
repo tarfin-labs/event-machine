@@ -37,7 +37,6 @@ Chain configuration methods before sending events to customize machine behavior 
 ->faking(['calcTax' => fn(ContextManager $ctx) => $ctx->set('tax', 0)])  // inline: custom replacement
 ->withoutPersistence()                                            // skip DB writes
 ->withoutParallelDispatch()                                       // run regions sequentially
-->withScenario('rush_order')                                      // set scenario type
 ```
 
 ## Sending Events

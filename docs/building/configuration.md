@@ -16,7 +16,6 @@ MachineDefinition::define(
         'context' => [...],
         'states' => [...],
         'should_persist' => true,
-        'scenarios_enabled' => false,
     ],
 );
 ```
@@ -33,7 +32,6 @@ MachineDefinition::define(
 | `states` | array | Required | State definitions |
 | `on` | array | `null` | Root-level transitions |
 | `should_persist` | bool | `true` | Enable database persistence |
-| `scenarios_enabled` | bool | `false` | Enable scenario branching |
 
 ### Machine ID
 
@@ -205,56 +203,6 @@ With `should_persist => true` (default):
 - State can be restored from any point
 - Full history is maintained
 
-## Scenarios Configuration
-
-Enable dynamic state branching:
-
-```php no_run
-MachineDefinition::define(
-    config: [
-        'id' => 'payment',
-        'initial' => 'pending',
-        'scenarios_enabled' => true,
-        'states' => [
-            'pending' => [
-                'on' => ['PAY' => 'processing'],
-            ],
-            'processing' => [],
-            'completed' => ['type' => 'final'],
-        ],
-    ],
-    scenarios: [
-        'card' => [
-            'processing' => [
-                'on' => [
-                    'AUTHORIZE' => 'completed',
-                    'DECLINE' => 'failed',
-                ],
-            ],
-        ],
-        'bank_transfer' => [
-            'processing' => [
-                'on' => [
-                    'CONFIRM' => 'completed',
-                    'TIMEOUT' => 'failed',
-                ],
-            ],
-        ],
-    ],
-);
-```
-
-Select scenario via event payload:
-
-```php no_run
-$machine->send([
-    'type' => 'PAY',
-    'payload' => [
-        'scenarioType' => 'card',
-    ],
-]);
-```
-
 ## Configuration Validation
 
 EventMachine validates your configuration at definition time:
@@ -306,7 +254,6 @@ MachineDefinition::define(
         'delimiter' => '.',
         'context' => OrderContext::class,
         'should_persist' => true,
-        'scenarios_enabled' => false,
         'states' => [
             'cart' => [
                 'description' => 'Shopping cart',
