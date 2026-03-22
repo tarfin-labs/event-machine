@@ -13,7 +13,7 @@ uses(
 )->in(
     'Actor', 'Architecture', 'Behavior', 'Commands', 'Definition',
     'E2E', 'Examples', 'Features', 'Integration', 'Jobs',
-    'Models', 'Routing', 'Services', 'Support',
+    'Models', 'Query', 'Routing', 'Services', 'Support',
 );
 
 /*
