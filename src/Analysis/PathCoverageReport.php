@@ -62,10 +62,10 @@ class PathCoverageReport
      */
     public function testedBy(MachinePath $path): array
     {
-        $signature = $path->signature();
+        $signature = $path->stateSignature();
 
         foreach ($this->covered as $entry) {
-            if ($entry['path']->signature() === $signature) {
+            if ($entry['path']->stateSignature() === $signature) {
                 return $entry['tests'];
             }
         }
@@ -86,7 +86,7 @@ class PathCoverageReport
         }
 
         foreach ($this->enumeration->paths as $path) {
-            $signature = $path->signature();
+            $signature = $path->stateSignature();
 
             if (isset($observedIndex[$signature])) {
                 $this->covered[] = [

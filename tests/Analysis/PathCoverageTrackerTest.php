@@ -17,7 +17,7 @@ test('tracker records transitions and builds signature on completePath', functio
 
     $paths = PathCoverageTracker::observedPaths('App\\Machine');
     expect($paths)->toHaveCount(1)
-        ->and($paths[0]['signature'])->toBe('idle→[@always]→done');
+        ->and($paths[0]['signature'])->toBe('idle→done');
 });
 
 test('tracker does not record when disabled', function (): void {
@@ -43,8 +43,8 @@ test('completePath resets active path for new recording', function (): void {
 
     $paths = PathCoverageTracker::observedPaths('App\\Machine');
     expect($paths)->toHaveCount(2)
-        ->and($paths[0]['signature'])->toBe('idle→[GO]→done')
-        ->and($paths[1]['signature'])->toBe('idle→[@fail]→failed');
+        ->and($paths[0]['signature'])->toBe('idle→done')
+        ->and($paths[1]['signature'])->toBe('idle→failed');
 });
 
 test('reset clears all state', function (): void {
@@ -74,7 +74,7 @@ test('export and import roundtrip preserves data', function (): void {
 
     $paths = PathCoverageTracker::observedPaths('App\\Machine');
     expect($paths)->toHaveCount(1)
-        ->and($paths[0]['signature'])->toBe('idle→[@always]→done');
+        ->and($paths[0]['signature'])->toBe('idle→done');
 
     unlink($tmpFile);
 });

@@ -53,6 +53,27 @@ readonly class MachinePath
     }
 
     /**
+     * State-only signature for coverage matching (ignores events).
+     *
+     * Format: "idle→processing→completed"
+     * Used for matching against tracker observations where event types
+     * may differ from static analysis (internal events, triggeringEvent).
+     */
+    public function stateSignature(): string
+    {
+        $keys = array_map(
+            static fn (PathStep $step): string => $step->stateKey,
+            $this->steps,
+        );
+
+        if ($this->type === PathType::GUARD_BLOCK) {
+            $keys[] = 'stays';
+        }
+
+        return implode('→', $keys);
+    }
+
+    /**
      * @return list<string> State IDs in path order.
      */
     public function stateIds(): array

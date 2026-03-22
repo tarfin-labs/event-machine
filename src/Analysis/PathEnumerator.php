@@ -60,8 +60,25 @@ class PathEnumerator
      * @param  list<PathStep>  $steps  Steps accumulated so far.
      * @param  array<string, true>  $visitedIds  State IDs visited in the current fork.
      */
-    private function dfs(StateDefinition $state, array $steps, array $visitedIds): void
-    {
+    /**
+     * @param  ?string  $event  Event that caused transition to this state (null for initial).
+     * @param  ?int  $branchIndex  Branch index for guarded transitions.
+     * @param  array<string>  $guards  Guard names on this transition.
+     * @param  array<string>  $actions  Action names on this transition.
+     * @param  ?string  $timerType  Timer type if timer-triggered.
+     * @param  ?string  $invokeType  Invoke type if machine invoke transition.
+     */
+    private function dfs(
+        StateDefinition $state,
+        array $steps,
+        array $visitedIds,
+        ?string $event = null,
+        ?int $branchIndex = null,
+        array $guards = [],
+        array $actions = [],
+        ?string $timerType = null,
+        ?string $invokeType = null,
+    ): void {
         // 1. Cycle detection — very first check
         if (isset($visitedIds[$state->id])) {
             $this->recordPath($steps, PathType::LOOP);
@@ -69,9 +86,21 @@ class PathEnumerator
             return;
         }
 
+        // 2. Add current state as a step (with transition metadata)
+        $steps[] = new PathStep(
+            stateId: $state->id,
+            stateKey: $state->key ?? '',
+            event: $event,
+            branchIndex: $branchIndex,
+            guards: $guards,
+            actions: $actions,
+            timerType: $timerType,
+            invokeType: $invokeType,
+        );
+
         $visitedIds[$state->id] = true;
 
-        // 2. Dispatch by state type
+        // 3. Dispatch by state type
         match ($state->type) {
             StateDefinitionType::FINAL    => $this->handleFinal($state, $steps, $visitedIds),
             StateDefinitionType::PARALLEL => $this->handleParallel($state, $steps, $visitedIds),
@@ -88,8 +117,6 @@ class PathEnumerator
      */
     private function handleFinal(StateDefinition $state, array $steps, array $visitedIds): void
     {
-        $steps[] = new PathStep(stateId: $state->id, stateKey: $state->key ?? '');
-
         // Check compound @done continuation
         $parent = $state->parent;
 
@@ -101,21 +128,16 @@ class PathEnumerator
             // Follow compound @done branches
             foreach ($parent->onDoneTransition->branches ?? [] as $index => $branch) {
                 if ($branch->target instanceof StateDefinition) {
-                    $branchStep = new PathStep(
-                        stateId: $state->id,
-                        stateKey: $state->key ?? '',
+                    $this->dfs(
+                        state: $branch->target,
+                        steps: $steps,
+                        visitedIds: $visitedIds,
                         event: '@done',
-                        branchIndex: $index,
+                        branchIndex: count($parent->onDoneTransition->branches) > 1 ? $index : null,
                         guards: $branch->guards ?? [],
                         actions: $branch->actions ?? [],
                         invokeType: '@done',
                     );
-
-                    // Replace last step (the FINAL state) with the @done step
-                    $branchSteps   = $steps;
-                    $branchSteps[] = $branchStep;
-
-                    $this->dfs($branch->target, $branchSteps, $visitedIds);
                 }
             }
 
@@ -155,27 +177,20 @@ class PathEnumerator
             regionPaths: $regionPaths,
         );
 
-        // Add parallel state as a step in the outer path
-        $steps[] = new PathStep(stateId: $state->id, stateKey: $state->key ?? '');
-
         // Follow @done transition
         if ($state->onDoneTransition instanceof TransitionDefinition) {
             foreach ($state->onDoneTransition->branches ?? [] as $index => $branch) {
                 if ($branch->target instanceof StateDefinition) {
-                    $doneStep = new PathStep(
-                        stateId: $state->id,
-                        stateKey: $state->key ?? '',
+                    $this->dfs(
+                        state: $branch->target,
+                        steps: $steps,
+                        visitedIds: $visitedIds,
                         event: '@done',
-                        branchIndex: $index,
+                        branchIndex: count($state->onDoneTransition->branches) > 1 ? $index : null,
                         guards: $branch->guards ?? [],
                         actions: $branch->actions ?? [],
                         invokeType: '@done',
                     );
-
-                    $branchSteps   = $steps;
-                    $branchSteps[] = $doneStep;
-
-                    $this->dfs($branch->target, $branchSteps, $visitedIds);
                 }
             }
         }
@@ -184,20 +199,16 @@ class PathEnumerator
         if ($state->onFailTransition instanceof TransitionDefinition) {
             foreach ($state->onFailTransition->branches ?? [] as $index => $branch) {
                 if ($branch->target instanceof StateDefinition) {
-                    $failStep = new PathStep(
-                        stateId: $state->id,
-                        stateKey: $state->key ?? '',
+                    $this->dfs(
+                        state: $branch->target,
+                        steps: $steps,
+                        visitedIds: $visitedIds,
                         event: '@fail',
-                        branchIndex: $index,
+                        branchIndex: count($state->onFailTransition->branches) > 1 ? $index : null,
                         guards: $branch->guards ?? [],
                         actions: $branch->actions ?? [],
                         invokeType: '@fail',
                     );
-
-                    $branchSteps   = $steps;
-                    $branchSteps[] = $failStep;
-
-                    $this->dfs($branch->target, $branchSteps, $visitedIds);
                 }
             }
         }
@@ -231,8 +242,6 @@ class PathEnumerator
      */
     private function handleAtomic(StateDefinition $state, array $steps, array $visitedIds): void
     {
-        $steps[] = new PathStep(stateId: $state->id, stateKey: $state->key ?? '');
-
         // Step 1: Collect all transitions (own + inherited via parent chain)
         $transitions      = $this->collectAllTransitions($state);
         $hasMachineInvoke = $state->hasMachineInvoke();
@@ -331,19 +340,15 @@ class PathEnumerator
                 continue;
             }
 
-            $step = new PathStep(
-                stateId: $branch->target->id,
-                stateKey: $branch->target->key ?? '',
+            $this->dfs(
+                state: $branch->target,
+                steps: $steps,
+                visitedIds: $visitedIds,
                 event: '@always',
                 branchIndex: count($alwaysTransition->branches ?? []) > 1 ? $index : null,
                 guards: $branch->guards ?? [],
                 actions: $branch->actions ?? [],
             );
-
-            $branchSteps   = $steps;
-            $branchSteps[] = $step;
-
-            $this->dfs($branch->target, $branchSteps, $visitedIds);
         }
 
         // If unguarded @always: exclusive — don't enumerate remaining transitions
@@ -389,36 +394,22 @@ class PathEnumerator
                     continue;
                 }
 
-                $step = new PathStep(
-                    stateId: $branch->target->id,
-                    stateKey: $branch->target->key ?? '',
+                $this->dfs(
+                    state: $branch->target,
+                    steps: $steps,
+                    visitedIds: $visitedIds,
                     event: $event,
                     branchIndex: count($transition->branches ?? []) > 1 ? $index : null,
                     guards: $branch->guards ?? [],
                     actions: $branch->actions ?? [],
                     timerType: $timerType,
                 );
-
-                $branchSteps   = $steps;
-                $branchSteps[] = $step;
-
-                $this->dfs($branch->target, $branchSteps, $visitedIds);
                 $enumerated = true;
             }
 
             // GUARD_BLOCK: all branches are guarded, no unguarded fallback
             if ($this->isAllBranchesGuarded($transition)) {
-                $guardBlockStep = new PathStep(
-                    stateId: $state->id,
-                    stateKey: $state->key ?? '',
-                    event: $event,
-                    guards: $this->extractAllGuards($transition),
-                );
-
-                $blockSteps   = $steps;
-                $blockSteps[] = $guardBlockStep;
-
-                $this->recordPath($blockSteps, PathType::GUARD_BLOCK);
+                $this->recordPath($steps, PathType::GUARD_BLOCK);
                 $enumerated = true;
             }
         }
@@ -454,28 +445,6 @@ class PathEnumerator
     }
 
     /**
-     * Extract all guard names from all branches of a transition.
-     *
-     * @return array<string>
-     */
-    private function extractAllGuards(TransitionDefinition $transition): array
-    {
-        $guards = [];
-
-        foreach ($transition->branches ?? [] as $branch) {
-            foreach ($branch->guards ?? [] as $guard) {
-                $guards[] = $guard;
-            }
-        }
-
-        return array_values(array_unique($guards));
-    }
-
-    /**
-     * Enumerate machine invoke transitions (@done, @fail, @timeout, @done.{state}).
-     * Placeholder — implemented in implement-machine-invoke-enumeration task.
-     */
-    /**
      * Enumerate machine invoke transitions (@done, @fail, @timeout, @done.{state}, fire-and-forget).
      *
      * @param  list<PathStep>  $steps
@@ -490,17 +459,13 @@ class PathEnumerator
             $targetState = $this->definition->getNearestStateDefinitionByString($invokeDefinition->target, $state);
 
             if ($targetState instanceof StateDefinition) {
-                $step = new PathStep(
-                    stateId: $targetState->id,
-                    stateKey: $targetState->key ?? '',
+                $this->dfs(
+                    state: $targetState,
+                    steps: $steps,
+                    visitedIds: $visitedIds,
                     event: 'fire-and-forget',
                     invokeType: 'fire-and-forget',
                 );
-
-                $branchSteps   = $steps;
-                $branchSteps[] = $step;
-
-                $this->dfs($targetState, $branchSteps, $visitedIds);
             }
 
             return;
@@ -508,98 +473,52 @@ class PathEnumerator
 
         // @done.{state} transitions — per-final-state routing
         foreach ($state->onDoneStateTransitions as $finalStateName => $transition) {
-            foreach ($transition->branches ?? [] as $index => $branch) {
-                if (!$branch->target instanceof StateDefinition) {
-                    continue;
-                }
-
-                $step = new PathStep(
-                    stateId: $branch->target->id,
-                    stateKey: $branch->target->key ?? '',
-                    event: "@done.{$finalStateName}",
-                    branchIndex: count($transition->branches ?? []) > 1 ? $index : null,
-                    guards: $branch->guards ?? [],
-                    actions: $branch->actions ?? [],
-                    invokeType: "@done.{$finalStateName}",
-                );
-
-                $branchSteps   = $steps;
-                $branchSteps[] = $step;
-
-                $this->dfs($branch->target, $branchSteps, $visitedIds);
-            }
+            $this->followInvokeTransition($transition, $steps, $visitedIds, "@done.{$finalStateName}");
         }
 
         // @done catch-all transition
         if ($state->onDoneTransition instanceof TransitionDefinition) {
-            foreach ($state->onDoneTransition->branches ?? [] as $index => $branch) {
-                if (!$branch->target instanceof StateDefinition) {
-                    continue;
-                }
-
-                $step = new PathStep(
-                    stateId: $branch->target->id,
-                    stateKey: $branch->target->key ?? '',
-                    event: '@done',
-                    branchIndex: count($state->onDoneTransition->branches ?? []) > 1 ? $index : null,
-                    guards: $branch->guards ?? [],
-                    actions: $branch->actions ?? [],
-                    invokeType: '@done',
-                );
-
-                $branchSteps   = $steps;
-                $branchSteps[] = $step;
-
-                $this->dfs($branch->target, $branchSteps, $visitedIds);
-            }
+            $this->followInvokeTransition($state->onDoneTransition, $steps, $visitedIds, '@done');
         }
 
         // @fail transition
         if ($state->onFailTransition instanceof TransitionDefinition) {
-            foreach ($state->onFailTransition->branches ?? [] as $index => $branch) {
-                if (!$branch->target instanceof StateDefinition) {
-                    continue;
-                }
-
-                $step = new PathStep(
-                    stateId: $branch->target->id,
-                    stateKey: $branch->target->key ?? '',
-                    event: '@fail',
-                    branchIndex: count($state->onFailTransition->branches ?? []) > 1 ? $index : null,
-                    guards: $branch->guards ?? [],
-                    actions: $branch->actions ?? [],
-                    invokeType: '@fail',
-                );
-
-                $branchSteps   = $steps;
-                $branchSteps[] = $step;
-
-                $this->dfs($branch->target, $branchSteps, $visitedIds);
-            }
+            $this->followInvokeTransition($state->onFailTransition, $steps, $visitedIds, '@fail');
         }
 
         // @timeout transition
         if ($state->onTimeoutTransition instanceof TransitionDefinition) {
-            foreach ($state->onTimeoutTransition->branches ?? [] as $index => $branch) {
-                if (!$branch->target instanceof StateDefinition) {
-                    continue;
-                }
+            $this->followInvokeTransition($state->onTimeoutTransition, $steps, $visitedIds, '@timeout');
+        }
+    }
 
-                $step = new PathStep(
-                    stateId: $branch->target->id,
-                    stateKey: $branch->target->key ?? '',
-                    event: '@timeout',
-                    branchIndex: count($state->onTimeoutTransition->branches ?? []) > 1 ? $index : null,
-                    guards: $branch->guards ?? [],
-                    actions: $branch->actions ?? [],
-                    invokeType: '@timeout',
-                );
-
-                $branchSteps   = $steps;
-                $branchSteps[] = $step;
-
-                $this->dfs($branch->target, $branchSteps, $visitedIds);
+    /**
+     * Follow an invoke transition (@done/@fail/@timeout) with all its branches.
+     *
+     * @param  list<PathStep>  $steps
+     * @param  array<string, true>  $visitedIds
+     */
+    private function followInvokeTransition(
+        TransitionDefinition $transition,
+        array $steps,
+        array $visitedIds,
+        string $invokeEvent,
+    ): void {
+        foreach ($transition->branches ?? [] as $index => $branch) {
+            if (!$branch->target instanceof StateDefinition) {
+                continue;
             }
+
+            $this->dfs(
+                state: $branch->target,
+                steps: $steps,
+                visitedIds: $visitedIds,
+                event: $invokeEvent,
+                branchIndex: count($transition->branches) > 1 ? $index : null,
+                guards: $branch->guards ?? [],
+                actions: $branch->actions ?? [],
+                invokeType: $invokeEvent,
+            );
         }
     }
 

@@ -28,8 +28,8 @@ test('coverage report correctly partitions covered and uncovered paths', functio
     $result = new PathEnumerationResult(paths: [$path1, $path2, $path3]);
 
     $observed = [
-        ['signature' => $path1->signature(), 'test' => 'test_happy_path'],
-        ['signature' => $path2->signature(), 'test' => 'test_fail_path'],
+        ['signature' => $path1->stateSignature(), 'test' => 'test_happy_path'],
+        ['signature' => $path2->stateSignature(), 'test' => 'test_fail_path'],
     ];
 
     $report = new PathCoverageReport($result, $observed);
@@ -45,8 +45,8 @@ test('testedBy returns test names for a covered path', function (): void {
     $result = new PathEnumerationResult(paths: [$path]);
 
     $observed = [
-        ['signature' => $path->signature(), 'test' => 'test_a'],
-        ['signature' => $path->signature(), 'test' => 'test_b'],
+        ['signature' => $path->stateSignature(), 'test' => 'test_a'],
+        ['signature' => $path->stateSignature(), 'test' => 'test_b'],
     ];
 
     $report = new PathCoverageReport($result, $observed);
@@ -58,7 +58,7 @@ test('100% coverage when all paths are observed', function (): void {
     $path = makeTestPath('done');
 
     $result   = new PathEnumerationResult(paths: [$path]);
-    $observed = [['signature' => $path->signature(), 'test' => 'test_x']];
+    $observed = [['signature' => $path->stateSignature(), 'test' => 'test_x']];
 
     $report = new PathCoverageReport($result, $observed);
 

@@ -80,12 +80,16 @@ class TestMachine
 
         $machine = $machineClass::create();
 
+        // Disable persistence for in-memory testing (matches withContext/startingAt behavior)
+        $machine->definition->shouldPersist = false;
+
         foreach ($context as $key => $value) {
             $machine->state->context->set($key, $value);
         }
 
         $instance                 = new self($machine);
         $instance->fakedBehaviors = array_merge($instance->fakedBehaviors, $preInitFakes);
+        $instance->trackStateEntry();
 
         return $instance;
     }
@@ -438,9 +442,7 @@ class TestMachine
 
         $this->machine->send($event);
 
-        if ($this->machine->definition->shouldPersist === false) {
-            $this->trackStateEntry();
-        }
+        $this->trackStateEntry();
 
         return $this;
     }
@@ -1180,10 +1182,20 @@ class TestMachine
 
             // Path coverage tracking
             if (PathCoverageTracker::isEnabled()) {
+                // Use triggeringEvent (preserves original event through @always chains
+                // and internal event processing) or currentEventBehavior as fallback.
+                $trackingEvent = $this->machine->state->triggeringEvent?->type
+                    ?? $this->machine->state->currentEventBehavior?->type;
+
+                // Filter out internal events (they start with the machine ID prefix)
+                if ($trackingEvent !== null && str_contains($trackingEvent, '.state.')) {
+                    $trackingEvent = null;
+                }
+
                 PathCoverageTracker::recordTransition(
                     machineClass: $this->machine->definition->machineClass ?? $this->machine::class,
                     stateId: $currentId,
-                    eventType: $this->machine->state->currentEventBehavior?->type,
+                    eventType: $trackingEvent,
                 );
             }
 

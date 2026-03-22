@@ -146,15 +146,20 @@ class PathCoverageTracker
      *
      * @param  list<array{state: string, event: ?string}>  $steps
      */
+    /**
+     * Build a state-only signature for coverage matching.
+     *
+     * Uses only state keys (not events) to match against MachinePath::stateSignature().
+     * Event types from the runtime tracker are unreliable (internal events,
+     * triggeringEvent preservation), so matching ignores them.
+     *
+     * @param  list<array{state: string, event: ?string}>  $steps
+     */
     private static function buildSignature(array $steps): string
     {
         $parts = [];
 
         foreach ($steps as $step) {
-            if ($step['event'] !== null) {
-                $parts[] = "[{$step['event']}]";
-            }
-
             // Extract the state key from the full ID (last segment after delimiter)
             $stateKey = str_contains($step['state'], '.')
                 ? substr($step['state'], strrpos($step['state'], '.') + 1)
