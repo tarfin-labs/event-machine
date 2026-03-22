@@ -3,27 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Carbon;
-use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Query\MachineQueryResult;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\QueryBuilderTestMachine;
-
-/**
- * Helper: create and persist a QueryBuilderTestMachine in the given state.
- */
-function createPersistedQBMachine(string $targetState = 'idle'): Machine
-{
-    $machine = QueryBuilderTestMachine::create();
-    $machine->persist();
-
-    if ($targetState === 'active') {
-        $machine->send(['type' => 'START']);
-    } elseif ($targetState === 'completed') {
-        $machine->send(['type' => 'START']);
-        $machine->send(['type' => 'FINISH']);
-    }
-
-    return $machine;
-}
 
 describe('Basic Querying', function (): void {
     test('query returns results for machines in a given state', function (): void {
