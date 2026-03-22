@@ -469,11 +469,14 @@ class MachineDefinition
         if ($this->initialStateDefinition->type === StateDefinitionType::PARALLEL) {
             $this->enterParallelState($initialState, $this->initialStateDefinition, $initialState->currentEventBehavior);
         } else {
-            $this->enterState($initialState, $this->initialStateDefinition, $initialState->currentEventBehavior);
+            // processPostEntry: false — getInitialState() has its own @always/event queue handling below
+            $this->enterState($initialState, $this->initialStateDefinition, $initialState->currentEventBehavior, processPostEntry: false);
         }
 
-        if ($this->initialStateDefinition?->transitionDefinitions !== null) {
-            foreach ($this->initialStateDefinition->transitionDefinitions as $transition) {
+        // Check @always and event queue (handles both parallel and non-parallel initial states)
+        $currentDef = $initialState->currentStateDefinition;
+        if ($currentDef?->transitionDefinitions !== null) {
+            foreach ($currentDef->transitionDefinitions as $transition) {
                 if ($transition->isAlways === true) {
                     return $this->transition(
                         event: [
@@ -1140,12 +1143,15 @@ class MachineDefinition
      * @param  StateDefinition  $target  The state being entered (may be compound).
      * @param  EventBehavior|null  $eventBehavior  The triggering event.
      * @param  bool  $fireTransitionListeners  Whether to fire transition listeners (true for event-driven transitions).
+     * @param  bool  $processPostEntry  Whether to process @always and raised events after entry.
+     *                                  Set to false when the caller handles this itself (transition(), getInitialState()).
      */
     protected function enterState(
         State $state,
         StateDefinition $target,
         ?EventBehavior $eventBehavior,
         bool $fireTransitionListeners = false,
+        bool $processPostEntry = true,
     ): void {
         // Resolve to initial state if the target is a compound state
         $resolvedTarget = $target->findInitialStateDefinition() ?? $target;
@@ -1177,16 +1183,26 @@ class MachineDefinition
         if ($resolvedTarget->type === StateDefinitionType::FINAL) {
             $this->processCompoundOnDone($state, $resolvedTarget, $eventBehavior);
         }
+
+        // Process @always transitions and raised events (only in non-parallel context).
+        // Centralized here so callers cannot forget it — the recurring bug class
+        // where processPostEntryTransitions was missing from individual call sites.
+        // Callers that have their own @always/event queue handling (transition(), getInitialState())
+        // pass processPostEntry: false to avoid double processing.
+        if ($processPostEntry && count($state->value) <= 1) {
+            $this->processPostEntryTransitions($state, $eventBehavior);
+        }
     }
 
     /**
-     * Process @always transitions and raised events after a state entry.
+     * Process "always" transitions and raised events after a state entry.
      *
-     * Called after enterState() in code paths that are NOT the main transition()
-     * method (which has its own @always/event queue handling). This includes:
-     * - processCompoundOnDone()
-     * - processNestedParallelCompletion()
-     * - exitParallelStateAndTransitionToTarget()
+     * Called internally by enterState() — NOT by individual callers.
+     * This centralization eliminates the recurring bug class where callers
+     * forgot to call this method after entering a state.
+     *
+     * The main transition() and getInitialState() methods pass processPostEntry: false
+     * since they have their own always/event queue checks (which become defensive no-ops).
      */
     protected function processPostEntryTransitions(State $state, ?EventBehavior $eventBehavior = null): void
     {
@@ -1283,7 +1299,6 @@ class MachineDefinition
         $state->setCurrentStateDefinition($resolvedTarget);
 
         $this->enterState($state, $targetState, $state->currentEventBehavior);
-        $this->processPostEntryTransitions($state, $state->currentEventBehavior);
     }
 
     /**
@@ -1919,11 +1934,8 @@ class MachineDefinition
         $initialTarget = $target->findInitialStateDefinition() ?? $target;
         $state->setCurrentStateDefinition($initialTarget);
 
-        // Centralized entry protocol
+        // Centralized entry protocol (processPostEntryTransitions handled internally)
         $this->enterState($state, $target, $eventBehavior, fireTransitionListeners: true);
-
-        // Process @always and raised events after entry
-        $this->processPostEntryTransitions($state, $eventBehavior);
     }
 
     /**
@@ -2171,9 +2183,9 @@ class MachineDefinition
      *
      * @param  State  $state  The current state.
      * @param  StateDefinition  $finalState  The final state that was just entered.
-     * @param  EventBehavior  $eventBehavior  The triggering event.
+     * @param  EventBehavior|null  $eventBehavior  The triggering event.
      */
-    protected function processCompoundOnDone(State $state, StateDefinition $finalState, EventBehavior $eventBehavior): void
+    protected function processCompoundOnDone(State $state, StateDefinition $finalState, ?EventBehavior $eventBehavior): void
     {
         $compoundParent = $finalState->parent;
 
@@ -2228,13 +2240,8 @@ class MachineDefinition
             $state->currentStateDefinition = $initialTarget;
         }
 
-        // Centralized entry protocol
+        // Centralized entry protocol (processPostEntryTransitions handled internally)
         $this->enterState($state, $target, $eventBehavior, fireTransitionListeners: true);
-
-        // Process @always and raised events after entry (only in non-parallel context)
-        if (count($state->value) <= 1) {
-            $this->processPostEntryTransitions($state, $eventBehavior);
-        }
     }
 
     /**
@@ -2483,11 +2490,8 @@ class MachineDefinition
         $newValues[]    = $resolvedTarget->id;
         $state->setValues($newValues);
 
-        // Centralized entry protocol
+        // Centralized entry protocol (processPostEntryTransitions handled internally)
         $this->enterState($state, $target, $eventBehavior, fireTransitionListeners: true);
-
-        // Process @always and raised events after entry
-        $this->processPostEntryTransitions($state, $eventBehavior);
 
         // Recurse: the onDone target might also be final within a nested parallel
         if ($resolvedTarget->type === StateDefinitionType::FINAL) {
@@ -2560,25 +2564,8 @@ class MachineDefinition
         $state->currentStateDefinition = $initialState;
         $state->value                  = [$state->currentStateDefinition->id];
 
-        // Centralized entry protocol
-        if ($eventBehavior instanceof EventBehavior) {
-            $this->enterState($state, $targetState, $eventBehavior, fireTransitionListeners: true);
-        } else {
-            // Null eventBehavior (from ParallelRegionJob): run entry actions without enterState
-            $state->setInternalEventBehavior(
-                type: InternalEvent::STATE_ENTER,
-                placeholder: $initialState->route,
-            );
-            $targetState->runEntryActions($state, $eventBehavior);
-            if ($initialState !== $targetState) {
-                $initialState->runEntryActions($state, $eventBehavior);
-            }
-            $this->runEntryListeners($state, $eventBehavior);
-            $this->runTransitionListeners($state, $eventBehavior);
-        }
-
-        // Process @always and raised events after entry (works with null eventBehavior)
-        $this->processPostEntryTransitions($state, $eventBehavior);
+        // Centralized entry protocol (processPostEntryTransitions handled internally)
+        $this->enterState($state, $targetState, $eventBehavior, fireTransitionListeners: true);
 
         return $state;
     }
@@ -2964,7 +2951,8 @@ class MachineDefinition
 
         // Centralized entry protocol (or just state enter event + transition listeners for targetless)
         if ($targetStateDefinition !== null) {
-            $this->enterState($newState, $targetStateDefinition, $eventBehavior, fireTransitionListeners: true);
+            // processPostEntry: false — transition() has its own @always/event queue handling below
+            $this->enterState($newState, $targetStateDefinition, $eventBehavior, fireTransitionListeners: true, processPostEntry: false);
         } else {
             $newState->setInternalEventBehavior(
                 type: InternalEvent::STATE_ENTER,
