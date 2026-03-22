@@ -121,4 +121,20 @@ return [
     |
     */
     'max_transition_depth' => env('MACHINE_MAX_TRANSITION_DEPTH', 100),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scenarios
+    |--------------------------------------------------------------------------
+    |
+    | Scenarios are pre-scripted event replay sequences that bring a machine
+    | to a desired state. They are intended for staging/test environments
+    | only. When disabled, scenario classes are not loaded and endpoints
+    | are not registered.
+    |
+    */
+    'scenarios' => [
+        'enabled' => env('MACHINE_SCENARIOS_ENABLED', false),
+        'path'    => app_path('Machines/Scenarios'),
+    ],
 ];
