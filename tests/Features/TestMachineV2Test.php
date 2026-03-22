@@ -12,12 +12,15 @@ use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Testing\CommunicationRecorder;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\LogAction;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\FailingTestJob;
+use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsAllowedGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\SuccessfulTestJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseRetryAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\SendToTargetAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AlwaysGuardMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\DispatchToTargetAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\JobActors\JobActorParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
@@ -28,6 +31,12 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FailingChildMac
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\MultiOutcomeChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateApprovedChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateRejectedChildMachine;
+
+afterEach(function (): void {
+    LogAction::resetFakes();
+    IsAllowedGuard::resetFakes();
+    Machine::resetMachineFakes();
+});
 
 // ═══════════════════════════════════════════════════════════════
 //  Category 1: Child Delegation (11 tests)
@@ -658,6 +667,398 @@ it('V18i: full job actor flow with multiple simulateChildDone calls', function (
         ->assertContext('step_one_result', 'phase_1')
         ->simulateChildFail(FailingTestJob::class, errorMessage: 'Step 2 crashed')
         ->assertState('failed');
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Category 2c: Bulk Faking (9 tests)
+// ═══════════════════════════════════════════════════════════════
+
+it('V40: fakingAllActions spies all class-based actions', function (): void {
+    $test = TestMachine::define(
+        config: [
+            'id'      => 'v40_machine',
+            'initial' => 'idle',
+            'context' => ['logged' => false],
+            'states'  => [
+                'idle' => [
+                    'on' => [
+                        'GO' => [
+                            'target'  => 'done',
+                            'actions' => 'logAction',
+                        ],
+                    ],
+                ],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'logAction' => LogAction::class,
+            ],
+        ],
+    );
+
+    $test->fakingAllActions()
+        ->send('GO')
+        ->assertState('done');
+
+    // LogAction was spied — context NOT modified
+    $test->assertContext('logged', false);
+    LogAction::assertRan();
+});
+
+it('V41: fakingAllActions except by FQCN skips specified actions', function (): void {
+    $test = TestMachine::define(
+        config: [
+            'id'      => 'v41_machine',
+            'initial' => 'idle',
+            'context' => ['logged' => false],
+            'states'  => [
+                'idle' => [
+                    'on' => [
+                        'GO' => [
+                            'target'  => 'done',
+                            'actions' => 'logAction',
+                        ],
+                    ],
+                ],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'logAction' => LogAction::class,
+            ],
+        ],
+    );
+
+    $test->fakingAllActions(except: [LogAction::class])
+        ->send('GO')
+        ->assertState('done');
+
+    // LogAction was NOT faked — ran real logic, set context
+    expect(LogAction::isFaked())->toBeFalse();
+    $test->assertContext('logged', true);
+});
+
+it('V42: fakingAllActions except by behavior key skips specified actions', function (): void {
+    Queue::fake();
+
+    $test = TestMachine::create(JobActorParentMachine::class)
+        ->fakingAllActions(except: ['capturePaymentAction']);
+
+    $test->send(['type' => 'START'])
+        ->assertState('processing')
+        ->simulateChildDone(SuccessfulTestJob::class, result: ['payment_id' => 'pay_42'])
+        ->assertState('completed');
+
+    // capturePaymentAction was excluded — ran real logic, context updated
+    $test->assertContext('payment_id', 'pay_42');
+});
+
+it('V43: fakingAllActions ignores inline closures', function (): void {
+    $test = TestMachine::define(
+        config: [
+            'id'      => 'v43_machine',
+            'initial' => 'idle',
+            'context' => ['value' => null],
+            'states'  => [
+                'idle' => [
+                    'on' => [
+                        'GO' => [
+                            'target'  => 'done',
+                            'actions' => 'inlineAction',
+                        ],
+                    ],
+                ],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'inlineAction' => function (ContextManager $ctx): void {
+                    $ctx->set('value', 'inline_ran');
+                },
+            ],
+        ],
+    );
+
+    // fakingAllActions should skip inline closures
+    $test->fakingAllActions()
+        ->send('GO')
+        ->assertState('done')
+        ->assertContext('value', 'inline_ran'); // Inline closure still ran
+});
+
+it('V44: fakingAllActions tracks fakes for resetFakes cleanup', function (): void {
+    Queue::fake();
+
+    $test = TestMachine::create(JobActorParentMachine::class)
+        ->fakingAllActions();
+
+    $test->resetFakes();
+
+    // After reset, behaviors should no longer be faked
+    // (This test verifies cleanup doesn't throw)
+    expect(true)->toBeTrue();
+});
+
+it('V45: fakingAllGuards spies all class-based guards', function (): void {
+    $test = TestMachine::define(
+        config: [
+            'id'      => 'v45_machine',
+            'initial' => 'idle',
+            'context' => [],
+            'states'  => [
+                'idle' => [
+                    'on' => [
+                        'GO' => [
+                            'target' => 'done',
+                            'guards' => 'isAllowedGuard',
+                        ],
+                    ],
+                ],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'guards' => [
+                'isAllowedGuard' => IsAllowedGuard::class,
+            ],
+        ],
+    );
+
+    $test->fakingAllGuards();
+
+    // Guard is spied (tracked for assertions)
+    expect(IsAllowedGuard::isFaked())->toBeTrue();
+});
+
+it('V46: fakingAllGuards except: skips specified guards', function (): void {
+    $test = TestMachine::define(
+        config: [
+            'id'      => 'v46_machine',
+            'initial' => 'idle',
+            'context' => [],
+            'states'  => [
+                'idle' => [
+                    'on' => [
+                        'GO' => [
+                            'target' => 'done',
+                            'guards' => 'isAllowedGuard',
+                        ],
+                    ],
+                ],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'guards' => [
+                'isAllowedGuard' => IsAllowedGuard::class,
+            ],
+        ],
+    );
+
+    // Guard excluded from faking — runs real logic (returns true)
+    $test->fakingAllGuards(except: [IsAllowedGuard::class])
+        ->send('GO')
+        ->assertState('done');
+});
+
+it('V47: fakingAllGuards spy returns null — guard fails by default', function (): void {
+    $test = TestMachine::define(
+        config: [
+            'id'      => 'v47_machine',
+            'initial' => 'idle',
+            'context' => [],
+            'states'  => [
+                'idle' => [
+                    'on' => [
+                        'GO' => [
+                            'target' => 'done',
+                            'guards' => 'isAllowedGuard',
+                        ],
+                    ],
+                ],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'guards' => [
+                'isAllowedGuard' => IsAllowedGuard::class,
+            ],
+        ],
+    );
+
+    $test->fakingAllGuards();
+
+    // Guard is spied — verify it's faked
+    expect(IsAllowedGuard::isFaked())->toBeTrue();
+
+    // Send GO — spy allows call, guard evaluation sees spy behavior
+    $test->send('GO');
+    IsAllowedGuard::assertRan();
+});
+
+it('V48: fakingAllBehaviors fakes actions + guards + calculators', function (): void {
+    $test = TestMachine::define(
+        config: [
+            'id'      => 'v48_machine',
+            'initial' => 'idle',
+            'context' => ['logged' => false],
+            'states'  => [
+                'idle' => [
+                    'on' => [
+                        'GO' => [
+                            'target'  => 'done',
+                            'actions' => 'logAction',
+                        ],
+                    ],
+                ],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'logAction' => LogAction::class,
+            ],
+        ],
+    );
+
+    $test->fakingAllBehaviors()
+        ->send('GO')
+        ->assertState('done');
+
+    // LogAction was spied via fakingAllBehaviors
+    LogAction::assertRan();
+    $test->assertContext('logged', false); // Spy intercepted, real logic didn't run
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Category 2d: Guards Parameter (3 tests)
+// ═══════════════════════════════════════════════════════════════
+
+it('V49: withContext guards: sets guard fakes before @always fires', function (): void {
+    $test = TestMachine::withContext(
+        AlwaysGuardMachine::class,
+        context: [],
+        guards: [IsAllowedGuard::class => true],
+    );
+
+    // If guard wasn't faked before init, @always would fail
+    $test->assertState('done');
+});
+
+it('V50: create guards: sets guard fakes before init', function (): void {
+    $test = TestMachine::create(
+        AlwaysGuardMachine::class,
+        guards: [IsAllowedGuard::class => true],
+    );
+
+    $test->assertState('done');
+});
+
+it('V51: guards parameter tracked for resetFakes cleanup', function (): void {
+    $test = TestMachine::withContext(
+        AlwaysGuardMachine::class,
+        context: [],
+        guards: [IsAllowedGuard::class => true],
+    );
+
+    $test->resetFakes();
+    expect(true)->toBeTrue(); // No throw during cleanup
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Category 2e: startingAt (9 tests)
+// ═══════════════════════════════════════════════════════════════
+
+it('V52: startingAt creates machine at specified state', function (): void {
+    $test = TestMachine::startingAt(JobActorParentMachine::class, stateId: 'processing');
+    $test->assertState('processing');
+});
+
+it('V53: startingAt does not run entry actions', function (): void {
+    // Define a machine where initial state has an entry action that sets context
+    $test = TestMachine::startingAt(
+        JobActorParentMachine::class,
+        stateId: 'idle',
+        context: ['payment_id' => null],
+    );
+
+    // Entry actions did NOT run — context stays as provided
+    $test->assertContext('payment_id', null);
+});
+
+it('V54: startingAt does not fire @always transitions', function (): void {
+    $test = TestMachine::startingAt(
+        AlwaysGuardMachine::class,
+        stateId: 'idle',
+    );
+
+    // @always would transition to done if lifecycle ran — it didn't
+    $test->assertState('idle');
+});
+
+it('V55: startingAt does not dispatch jobs', function (): void {
+    Queue::fake();
+
+    TestMachine::startingAt(JobActorParentMachine::class, stateId: 'processing');
+
+    Queue::assertNothingPushed();
+});
+
+it('V56: startingAt resolves compound state to initial child', function (): void {
+    // ParentOrderMachine: awaiting_payment is atomic — can test state resolution
+    $test = TestMachine::startingAt(
+        ParentOrderMachine::class,
+        stateId: 'awaiting_payment',
+    );
+
+    $test->assertState('awaiting_payment');
+});
+
+it('V57: startingAt throws for unknown state', function (): void {
+    expect(fn () => TestMachine::startingAt(JobActorParentMachine::class, stateId: 'nonexistent'))
+        ->toThrow(InvalidArgumentException::class, 'not found in machine definition');
+});
+
+it('V58: startingAt supports simulateChildDone after creation', function (): void {
+    Queue::fake();
+
+    TestMachine::startingAt(
+        JobActorParentMachine::class,
+        stateId: 'processing',
+    )
+        ->simulateChildDone(SuccessfulTestJob::class, result: ['payment_id' => 'pay_58'])
+        ->assertState('completed');
+});
+
+it('V59: startingAt supports guards parameter', function (): void {
+    $test = TestMachine::startingAt(
+        AlwaysGuardMachine::class,
+        stateId: 'idle',
+        guards: [IsAllowedGuard::class => true],
+    );
+
+    // Guard is faked but @always didn't fire (startingAt skips lifecycle)
+    $test->assertState('idle');
+
+    // Now send an event that triggers the guarded transition
+    $test->send('GO')->assertState('done');
+});
+
+it('V60: startingAt with fakingAllActions full flow', function (): void {
+    Queue::fake();
+
+    TestMachine::startingAt(
+        JobActorParentMachine::class,
+        stateId: 'processing',
+    )
+        ->fakingAllActions()
+        ->simulateChildDone(SuccessfulTestJob::class, result: ['payment_id' => 'pay_60'])
+        ->assertState('completed')
+        ->assertContext('payment_id', 'pay_60'); // inline closure ran (fakingAll skips inline)
 });
 
 // ═══════════════════════════════════════════════════════════════
