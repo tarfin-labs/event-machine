@@ -80,33 +80,23 @@ class ScenarioPlayer
 
                 if ($step instanceof ScenarioStep) {
                     if ($machine === null) {
-                        // First send — create the machine
                         /** @var class-string<Machine> $machineClass */
                         $machineClass = $scenario->getMachine();
 
                         if ($parentResult instanceof ScenarioResult) {
                             // Continue from parent's machine
-                            $machine = Machine::restoreFromRootEventId(
-                                machineDefinitionClass: $machineClass,
-                                rootEventId: $parentResult->rootEventId,
-                            );
+                            $machine = $machineClass::create(state: $parentResult->rootEventId);
+                        } else {
+                            // Create a new machine instance
+                            $machine = $machineClass::create();
                         }
                     }
 
                     try {
-                        if ($machine === null) {
-                            /** @var class-string<Machine> $machineClass */
-                            $machineClass = $scenario->getMachine();
-                            $machine      = $machineClass::create([
-                                'type'    => $step->eventType,
-                                'payload' => $step->payload,
-                            ]);
-                        } else {
-                            $machine->send([
-                                'type'    => $step->eventType,
-                                'payload' => $step->payload,
-                            ]);
-                        }
+                        $machine->send([
+                            'type'    => $step->eventType,
+                            'payload' => $step->payload,
+                        ]);
 
                         $stepsExecuted++;
                     } catch (\Throwable $e) {
@@ -232,10 +222,9 @@ class ScenarioPlayer
         $this->createModels($childScenario);
 
         // Replay child steps against the child machine
-        $childMachine = Machine::restoreFromRootEventId(
-            machineDefinitionClass: $childScenario->getMachine(),
-            rootEventId: $childRecord->child_root_event_id,
-        );
+        /** @var class-string<Machine> $childMachineClass */
+        $childMachineClass = $childScenario->getMachine();
+        $childMachine      = $childMachineClass::create(state: $childRecord->child_root_event_id);
 
         $childStepsExecuted = 0;
         foreach ($childScenario->getSteps() as $childStep) {
