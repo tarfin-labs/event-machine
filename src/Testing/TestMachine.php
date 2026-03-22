@@ -24,6 +24,7 @@ use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\TimerDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
@@ -472,6 +473,17 @@ class TestMachine
             "Expected state [{$expected}] but got {$actual}"
         );
 
+        // Complete path coverage tracking if the matched state is FINAL
+        if (PathCoverageTracker::isEnabled()) {
+            $currentType = $this->machine->state->currentStateDefinition?->type;
+
+            if ($currentType === StateDefinitionType::FINAL) {
+                PathCoverageTracker::completePath(
+                    $this->machine->definition->machineClass ?? $this->machine::class,
+                );
+            }
+        }
+
         return $this;
     }
 
@@ -493,6 +505,12 @@ class TestMachine
             $this->machine->state->currentStateDefinition?->type,
             'Expected a final state'
         );
+
+        if (PathCoverageTracker::isEnabled()) {
+            PathCoverageTracker::completePath(
+                $this->machine->definition->machineClass ?? $this->machine::class,
+            );
+        }
 
         return $this;
     }
@@ -1159,6 +1177,15 @@ class TestMachine
         if ($currentId !== $this->lastTrackedStateId) {
             $this->inMemoryStateEnteredAt = now();
             $this->lastTrackedStateId     = $currentId;
+
+            // Path coverage tracking
+            if (PathCoverageTracker::isEnabled()) {
+                PathCoverageTracker::recordTransition(
+                    machineClass: $this->machine->definition->machineClass ?? $this->machine::class,
+                    stateId: $currentId,
+                    eventType: $this->machine->state->currentEventBehavior?->type,
+                );
+            }
 
             // Keep: all fires for current state (any status)
             // Keep: historical fires for old states (fired/exhausted) — for assertions
