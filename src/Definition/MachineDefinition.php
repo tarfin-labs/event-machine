@@ -1849,6 +1849,31 @@ class MachineDefinition
 
         // Centralized entry protocol
         $this->enterState($state, $target, $eventBehavior, fireTransitionListeners: true);
+
+        // Process @always transitions on the new state (mirrors transition() @always check)
+        if ($this->idMap[$state->currentStateDefinition->id]->transitionDefinitions !== null) {
+            foreach ($this->idMap[$state->currentStateDefinition->id]->transitionDefinitions as $transition) {
+                if ($transition->isAlways === true) {
+                    $this->transition(
+                        event: [
+                            'type'  => TransitionProperty::Always->value,
+                            'actor' => $eventBehavior->actor($state->context),
+                        ],
+                        state: $state,
+                    );
+
+                    return;
+                }
+            }
+        }
+
+        // Process raised events from entry actions (mirrors transition() eventQueue check)
+        if ($this->eventQueue->isNotEmpty()) {
+            $firstEvent    = $this->eventQueue->shift();
+            $eventBehavior = $this->initializeEvent($firstEvent, $state);
+
+            $this->transition($eventBehavior, $state);
+        }
     }
 
     /**
