@@ -1218,6 +1218,75 @@ class MachineDefinition
     }
 
     /**
+     * Restore parallel value array after a mutation that wiped it to a single element.
+     *
+     * When handleMachineInvoke triggers @done → executeChildTransitionBranch →
+     * setCurrentStateDefinition, the parallel value array is wiped. This method
+     * maps the changed region state back into the original parallel array and
+     * fixes machine_value snapshots in history events recorded during the mutation.
+     */
+    public function restoreParallelValues(
+        State $state,
+        array $originalValues,
+        string $oldRegionStateId,
+        int $historyCountAtMutationStart,
+    ): void {
+        if ($state->value === $originalValues) {
+            return;
+        }
+
+        $newRegionState = $state->value[0] ?? $oldRegionStateId;
+        $restoredValues = array_map(
+            fn (string $v): string => $v === $oldRegionStateId ? $newRegionState : $v,
+            $originalValues,
+        );
+        $state->setValues($restoredValues);
+
+        // Fix machine_value snapshots in events recorded during mutation
+        $historyCount = count($state->history);
+        for ($i = $historyCountAtMutationStart; $i < $historyCount; $i++) {
+            if (isset($state->history[$i])) {
+                $state->history[$i]->machine_value = $restoredValues;
+            }
+        }
+    }
+
+    /**
+     * Resolve a state definition by ID, trying machine-scoped first then global.
+     */
+    protected function resolveStateById(?string $stateId): ?StateDefinition
+    {
+        if ($stateId === null) {
+            return null;
+        }
+
+        return $this->idMap[$this->id.'.'.$stateId]
+            ?? $this->idMap[$stateId]
+            ?? null;
+    }
+
+    /**
+     * Transition to a fire-and-forget target state with full entry protocol.
+     *
+     * Used by handleJobInvoke, handleAsyncMachineInvoke, and handleFakedMachineInvoke
+     * when a fire-and-forget delegation has a `target` configured.
+     */
+    protected function transitionToFireAndForgetTarget(State $state, ?string $targetId): void
+    {
+        $targetState = $this->resolveStateById($targetId);
+
+        if (!$targetState instanceof StateDefinition) {
+            return;
+        }
+
+        $resolvedTarget = $targetState->findInitialStateDefinition() ?? $targetState;
+        $state->setCurrentStateDefinition($resolvedTarget);
+
+        $this->enterState($state, $targetState, $state->currentEventBehavior);
+        $this->processPostEntryTransitions($state, $state->currentEventBehavior);
+    }
+
+    /**
      * Centralized state entry protocol for parallel region contexts.
      *
      * Handles the same entry sequence as enterState() but with parallel value
@@ -1256,30 +1325,11 @@ class MachineDefinition
         // Handle machine delegation with parallel value preservation
         if ($regionInitial->hasMachineInvoke()) {
             $parallelValues     = $state->value;
-            $oldRegionState     = $regionInitial->id;
             $historyCountBefore = count($state->history);
 
             $this->handleMachineInvoke($state, $regionInitial, $eventBehavior);
 
-            // Restore parallel value array: handleMachineInvoke may trigger @done
-            // which calls setCurrentStateDefinition, wiping the multi-value array.
-            if ($state->value !== $parallelValues) {
-                $newRegionState = $state->value[0] ?? $oldRegionState;
-                $restoredValues = array_map(
-                    fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
-                    $parallelValues,
-                );
-                $state->setValues($restoredValues);
-
-                // Fix machine_value snapshots in events recorded during handleMachineInvoke.
-                // Internal events capture $state->value at recording time, but at that point
-                // the value array was wiped to a single element by setCurrentStateDefinition.
-                // We must retroactively update these snapshots to reflect the restored values.
-                $historyCountAfter = count($state->history);
-                for ($i = $historyCountBefore; $i < $historyCountAfter; $i++) {
-                    $state->history[$i]->machine_value = $restoredValues;
-                }
-            }
+            $this->restoreParallelValues($state, $parallelValues, $regionInitial->id, $historyCountBefore);
 
             // Restore currentStateDefinition to the parallel state
             if ($parallelState instanceof StateDefinition) {
@@ -1435,17 +1485,7 @@ class MachineDefinition
 
         // Fire-and-forget: transition to target immediately
         if ($isFireAndForget) {
-            $targetState = $this->idMap[$this->id.'.'.$invokeDefinition->target]
-                ?? $this->idMap[$invokeDefinition->target]
-                ?? null;
-
-            if ($targetState instanceof StateDefinition) {
-                $resolvedTarget = $targetState->findInitialStateDefinition() ?? $targetState;
-                $state->setCurrentStateDefinition($resolvedTarget);
-
-                $this->enterState($state, $targetState, $state->currentEventBehavior);
-                $this->processPostEntryTransitions($state, $state->currentEventBehavior);
-            }
+            $this->transitionToFireAndForgetTarget($state, $invokeDefinition->target);
         }
     }
 
@@ -1509,19 +1549,7 @@ class MachineDefinition
 
         // Fire-and-forget: optionally transition to target, then return
         if ($isFireAndForget) {
-            if ($invokeDefinition->target !== null) {
-                $targetState = $this->idMap[$this->id.'.'.$invokeDefinition->target]
-                    ?? $this->idMap[$invokeDefinition->target]
-                    ?? null;
-
-                if ($targetState instanceof StateDefinition) {
-                    $resolvedTarget = $targetState->findInitialStateDefinition() ?? $targetState;
-                    $state->setCurrentStateDefinition($resolvedTarget);
-
-                    $this->enterState($state, $targetState, $state->currentEventBehavior);
-                    $this->processPostEntryTransitions($state, $state->currentEventBehavior);
-                }
-            }
+            $this->transitionToFireAndForgetTarget($state, $invokeDefinition->target);
 
             return;
         }
@@ -1569,19 +1597,7 @@ class MachineDefinition
         // Fire-and-forget faked: optionally transition to target, no @done/@fail routing
         if (!$stateDefinition->onDoneTransition instanceof TransitionDefinition
             && $stateDefinition->onDoneStateTransitions === []) {
-            if ($invokeDefinition->target !== null) {
-                $targetState = $this->idMap[$this->id.'.'.$invokeDefinition->target]
-                    ?? $this->idMap[$invokeDefinition->target]
-                    ?? null;
-
-                if ($targetState instanceof StateDefinition) {
-                    $resolvedTarget = $targetState->findInitialStateDefinition() ?? $targetState;
-                    $state->setCurrentStateDefinition($resolvedTarget);
-
-                    $this->enterState($state, $targetState, $state->currentEventBehavior);
-                    $this->processPostEntryTransitions($state, $state->currentEventBehavior);
-                }
-            }
+            $this->transitionToFireAndForgetTarget($state, $invokeDefinition->target);
 
             return;
         }
