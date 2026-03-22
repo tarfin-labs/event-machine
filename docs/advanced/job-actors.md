@@ -214,6 +214,35 @@ Queue::assertPushed(ChildJobJob::class, function (ChildJobJob $job): bool {
 });
 ```
 
+### Testing Job Completion Routing
+
+To test `@done`/`@fail` routing without running jobs, use `simulateChildDone()` — the same method used for machine delegation:
+
+<!-- doctest-attr: no_run -->
+```php
+Queue::fake();
+
+MyMachine::test()
+    ->withoutPersistence()
+    ->send('START')
+    ->assertState('processing')
+    ->simulateChildDone(MyJob::class, result: ['status' => 'ok'])
+    ->assertState('completed');
+```
+
+This works because job actors and machine children share the same completion routing infrastructure.
+
+### Queue::fake() vs simulateChildDone()
+
+| Goal | Tool |
+|------|------|
+| Verify job was dispatched | `Queue::fake()` + `Queue::assertPushed(ChildJobJob::class)` |
+| Verify dispatch data | `Queue::assertPushed(ChildJobJob::class, fn($job) => ...)` |
+| Test `@done` routing | `simulateChildDone(MyJob::class, result: [...])` |
+| Test `@fail` routing | `simulateChildFail(MyJob::class, errorMessage: '...')` |
+| Test `@timeout` handling | `simulateChildTimeout(MyJob::class)` |
+| Full pipeline with Horizon | LocalQA tests |
+
 ::: tip Full Testing Guide
 See [Testing Job Actors](/testing/delegation-testing#testing-job-actors) for more examples.
 :::
