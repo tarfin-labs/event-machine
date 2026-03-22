@@ -1440,7 +1440,11 @@ class MachineDefinition
                 ?? null;
 
             if ($targetState instanceof StateDefinition) {
-                $state->setCurrentStateDefinition($targetState);
+                $resolvedTarget = $targetState->findInitialStateDefinition() ?? $targetState;
+                $state->setCurrentStateDefinition($resolvedTarget);
+
+                $this->enterState($state, $targetState, $state->currentEventBehavior);
+                $this->processPostEntryTransitions($state, $state->currentEventBehavior);
             }
         }
     }
@@ -1511,12 +1515,14 @@ class MachineDefinition
                     ?? null;
 
                 if ($targetState instanceof StateDefinition) {
-                    $state->setCurrentStateDefinition($targetState);
+                    $resolvedTarget = $targetState->findInitialStateDefinition() ?? $targetState;
+                    $state->setCurrentStateDefinition($resolvedTarget);
+
+                    $this->enterState($state, $targetState, $state->currentEventBehavior);
+                    $this->processPostEntryTransitions($state, $state->currentEventBehavior);
                 }
             }
 
-            // If no target: method returns, then @always transitions are checked
-            // by the caller (transition method) after handleMachineInvoke completes.
             return;
         }
 
@@ -1569,7 +1575,11 @@ class MachineDefinition
                     ?? null;
 
                 if ($targetState instanceof StateDefinition) {
-                    $state->setCurrentStateDefinition($targetState);
+                    $resolvedTarget = $targetState->findInitialStateDefinition() ?? $targetState;
+                    $state->setCurrentStateDefinition($resolvedTarget);
+
+                    $this->enterState($state, $targetState, $state->currentEventBehavior);
+                    $this->processPostEntryTransitions($state, $state->currentEventBehavior);
                 }
             }
 
