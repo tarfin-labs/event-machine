@@ -6,6 +6,8 @@ namespace Tarfinlabs\EventMachine\Query;
 
 use InvalidArgumentException;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Builder;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
@@ -21,6 +23,9 @@ class MachineQueryBuilder
 {
     /** @var Builder<MachineCurrentState> */
     private readonly Builder $query;
+
+    /** Sort direction for hydrated results: 'desc', 'asc', or null. */
+    private ?string $sortDirection = null;
 
     public function __construct(
         private readonly string $machineClass,
@@ -163,6 +168,8 @@ class MachineQueryBuilder
      */
     public function latest(): self
     {
+        $this->sortDirection = 'desc';
+
         return $this;
     }
 
@@ -171,6 +178,8 @@ class MachineQueryBuilder
      */
     public function oldest(): self
     {
+        $this->sortDirection = 'asc';
+
         return $this;
     }
 
@@ -192,6 +201,48 @@ class MachineQueryBuilder
         $this->query->where('state_entered_at', '>', $date);
 
         return $this;
+    }
+
+    // endregion
+
+    // region Terminal Methods
+
+    /**
+     * Execute the query and return deduplicated, hydrated results.
+     *
+     * @return Collection<int, MachineQueryResult>
+     */
+    public function get(): Collection
+    {
+        $rootEventIds = $this->buildIdsQuery()->pluck('root_event_id');
+
+        return $this->hydrate($rootEventIds);
+    }
+
+    /**
+     * Get the first result, or null if no matches.
+     */
+    public function first(): ?MachineQueryResult
+    {
+        return $this->get()->first();
+    }
+
+    /**
+     * Count distinct machine instances matching the query.
+     */
+    public function count(): int
+    {
+        return (int) $this->query->count(DB::raw('DISTINCT root_event_id'));
+    }
+
+    /**
+     * Get just the root_event_ids of matching instances.
+     *
+     * @return Collection<int, string>
+     */
+    public function pluckMachineIds(): Collection
+    {
+        return $this->buildIdsQuery()->pluck('root_event_id');
     }
 
     // endregion
@@ -284,6 +335,59 @@ class MachineQueryBuilder
                 $hasCondition = true;
             }
         }
+    }
+
+    /**
+     * Build a query that returns distinct root_event_ids matching the filters.
+     *
+     * @return Builder<MachineCurrentState>
+     */
+    private function buildIdsQuery(): Builder
+    {
+        return (clone $this->query)
+            ->select('root_event_id')
+            ->distinct();
+    }
+
+    /**
+     * Fetch all rows for matched instance IDs, group by instance, build results.
+     *
+     * @param  Collection<int, string>  $rootEventIds
+     *
+     * @return Collection<int, MachineQueryResult>
+     */
+    private function hydrate(Collection $rootEventIds): Collection
+    {
+        if ($rootEventIds->isEmpty()) {
+            return collect();
+        }
+
+        $allRows = MachineCurrentState::query()
+            ->whereIn('root_event_id', $rootEventIds)
+            ->where('machine_class', $this->machineClass)
+            ->get();
+
+        $results = $allRows->groupBy('root_event_id')
+            ->map(function (Collection $rows, string $rootEventId): MachineQueryResult {
+                $stateIds       = $rows->pluck('state_id')->all();
+                $representative = $rows->sortByDesc('state_entered_at')->first();
+
+                return new MachineQueryResult(
+                    machineId: $rootEventId,
+                    stateId: $representative->state_id,
+                    stateEnteredAt: $representative->state_entered_at,
+                    stateIds: $stateIds,
+                    machineClass: $this->machineClass,
+                );
+            });
+
+        if ($this->sortDirection !== null) {
+            $results = $this->sortDirection === 'desc'
+                ? $results->sortByDesc('stateEnteredAt')
+                : $results->sortBy('stateEnteredAt');
+        }
+
+        return $results->values();
     }
 
     /**
