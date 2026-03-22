@@ -131,7 +131,7 @@ it('resolves with context and passes it to faked child invocation', function ():
     ChildPaymentMachine::fake(result: ['payment_id' => 'pay_ctx']);
 
     // Act: set parent context so `with` resolves actual values
-    $machine = ParentOrderMachine::withContext(['order_id' => 'ORD-42', 'total_amount' => 1500]);
+    $machine = ParentOrderMachine::test(context: ['order_id' => 'ORD-42', 'total_amount' => 1500]);
     $machine->send(['type' => 'START_PAYMENT']);
 
     // Assert: invocation recorded the resolved context from `with`
@@ -199,7 +199,7 @@ it('assertInvokedWith validates context subset match', function (): void {
     ChildPaymentMachine::fake(result: ['payment_id' => 'pay_with']);
 
     // `with` reads from parent context, so set context values via withContext
-    $machine = ParentOrderMachine::withContext(['order_id' => 'ORD-77', 'total_amount' => 2000]);
+    $machine = ParentOrderMachine::test(context: ['order_id' => 'ORD-77', 'total_amount' => 2000]);
     $machine->send(['type' => 'START_PAYMENT']);
 
     // `with` config maps: 'order_id' → order_id, 'amount' => 'total_amount' → 2000

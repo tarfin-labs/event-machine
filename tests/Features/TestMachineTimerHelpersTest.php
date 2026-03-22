@@ -118,7 +118,7 @@ it('assertTimerNotFired passes when no sweep has run', function (): void {
 it('assertTimerFired throws when timer has not fired', function (): void {
     AfterTimerMachine::test()
         ->assertTimerFired('ORDER_EXPIRED');
-})->throws(AssertionFailedError::class, 'no matching record found');
+})->throws(AssertionFailedError::class, 'no record found');
 
 it('assertTimerNotFired passes before deadline', function (): void {
     AfterTimerMachine::test()

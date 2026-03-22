@@ -132,7 +132,7 @@ it('V3: fakingChild with multiple children cleans all', function (): void {
 it('V4: assertChildInvoked passes when child invoked', function (): void {
     ChildPaymentMachine::fake(result: ['payment_id' => 'pay_v4']);
 
-    $testMachine = TestMachine::create(ParentOrderMachine::class);
+    $testMachine = ParentOrderMachine::test();
     $testMachine->send('START_PAYMENT');
     $testMachine->assertChildInvoked(ChildPaymentMachine::class);
 
@@ -142,7 +142,7 @@ it('V4: assertChildInvoked passes when child invoked', function (): void {
 it('V5: assertChildInvoked fails when child not invoked', function (): void {
     ChildPaymentMachine::fake(result: ['payment_id' => 'pay_v5']);
 
-    $testMachine = TestMachine::create(ParentOrderMachine::class);
+    $testMachine = ParentOrderMachine::test();
     // Never send START_PAYMENT - child is never invoked
     $testMachine->assertChildInvoked(ChildPaymentMachine::class);
 })->throws(AssertionFailedError::class);
@@ -150,7 +150,7 @@ it('V5: assertChildInvoked fails when child not invoked', function (): void {
 it('V6: assertChildNotInvoked passes when child not invoked', function (): void {
     ChildPaymentMachine::fake(result: ['payment_id' => 'pay_v6']);
 
-    $testMachine = TestMachine::create(ParentOrderMachine::class);
+    $testMachine = ParentOrderMachine::test();
     // Never send START_PAYMENT
     $testMachine->assertChildNotInvoked(ChildPaymentMachine::class);
 
@@ -160,7 +160,7 @@ it('V6: assertChildNotInvoked passes when child not invoked', function (): void 
 it('V7: assertChildInvokedTimes validates exact count', function (): void {
     ChildPaymentMachine::fake(result: ['payment_id' => 'pay_v7']);
 
-    $testMachine = TestMachine::create(ParentOrderMachine::class);
+    $testMachine = ParentOrderMachine::test();
     $testMachine->send('START_PAYMENT');
     $testMachine->assertChildInvokedTimes(ChildPaymentMachine::class, 1);
 
@@ -170,7 +170,7 @@ it('V7: assertChildInvokedTimes validates exact count', function (): void {
 it('V8: assertChildInvokedWith validates context subset', function (): void {
     ChildPaymentMachine::fake(result: ['payment_id' => 'pay_v8']);
 
-    $testMachine = TestMachine::withContext(ParentOrderMachine::class, [
+    $testMachine = ParentOrderMachine::test([
         'order_id'     => 'ORD-V8',
         'total_amount' => 3000,
     ]);
@@ -185,7 +185,7 @@ it('V8: assertChildInvokedWith validates context subset', function (): void {
 it('V9: assertChildInvokedWith fails on mismatch', function (): void {
     ChildPaymentMachine::fake(result: ['payment_id' => 'pay_v9']);
 
-    $testMachine = TestMachine::create(ParentOrderMachine::class);
+    $testMachine = ParentOrderMachine::test();
     $testMachine->send('START_PAYMENT');
 
     $testMachine->assertChildInvokedWith(ChildPaymentMachine::class, ['order_id' => 'NONEXISTENT']);
@@ -262,7 +262,7 @@ it('V12: simulateChildDone transitions parent via @done', function (): void {
     // Use a real Machine subclass with async delegation.
     // Queue::fake() swallows the ChildMachineJob dispatch,
     // keeping the parent in the 'processing' (delegating) state.
-    $testMachine = TestMachine::create(AsyncParentMachine::class);
+    $testMachine = AsyncParentMachine::test();
 
     $testMachine
         ->send(['type' => 'START', 'payload' => ['order_id' => 'ORD-12']])
@@ -490,7 +490,7 @@ it('V18: simulateChildDone result data accessible via output and result', functi
 it('V18a: simulateChildDone routes @done for job actors', function (): void {
     Queue::fake();
 
-    TestMachine::create(JobActorParentMachine::class)
+    JobActorParentMachine::test()
         ->send(['type' => 'START'])
         ->assertState('processing')
         ->simulateChildDone(SuccessfulTestJob::class, result: ['payment_id' => 'pay_job_1'])
@@ -501,7 +501,7 @@ it('V18a: simulateChildDone routes @done for job actors', function (): void {
 it('V18b: simulateChildFail routes @fail for job actors', function (): void {
     Queue::fake();
 
-    TestMachine::create(JobActorParentMachine::class)
+    JobActorParentMachine::test()
         ->send(['type' => 'START'])
         ->assertState('processing')
         ->simulateChildFail(SuccessfulTestJob::class, errorMessage: 'Payment gateway error')
@@ -537,7 +537,7 @@ it('V18c: simulateChildTimeout routes @timeout for job actors', function (): voi
 it('V18d: simulateChildDone throws for wrong job class', function (): void {
     Queue::fake();
 
-    $testMachine = TestMachine::create(JobActorParentMachine::class)
+    $testMachine = JobActorParentMachine::test()
         ->send(['type' => 'START'])
         ->assertState('processing');
 
@@ -551,7 +551,7 @@ it('V18d: simulateChildDone throws for wrong job class', function (): void {
 it('V18e: simulateChildDone throws for wrong machine class (regression)', function (): void {
     Queue::fake();
 
-    $testMachine = TestMachine::create(AsyncParentMachine::class)
+    $testMachine = AsyncParentMachine::test()
         ->send(['type' => 'START', 'payload' => ['order_id' => 'ORD-REG']])
         ->assertState('processing');
 
@@ -565,7 +565,7 @@ it('V18e: simulateChildDone throws for wrong machine class (regression)', functi
 it('V18f: simulateChildFail throws for wrong class', function (): void {
     Queue::fake();
 
-    $testMachine = TestMachine::create(JobActorParentMachine::class)
+    $testMachine = JobActorParentMachine::test()
         ->send(['type' => 'START'])
         ->assertState('processing');
 
@@ -608,7 +608,7 @@ it('V18g: simulateChildDone throws on fire-and-forget job target state', functio
 it('V18h: simulateChildDone with result data accessible in @done action for job actors', function (): void {
     Queue::fake();
 
-    TestMachine::create(JobActorParentMachine::class)
+    JobActorParentMachine::test()
         ->send(['type' => 'START'])
         ->assertState('processing')
         ->simulateChildDone(SuccessfulTestJob::class, result: ['payment_id' => 'pay_result_check'])
@@ -745,7 +745,7 @@ it('V41: fakingAllActions except by FQCN skips specified actions', function (): 
 it('V42: fakingAllActions except by behavior key skips specified actions', function (): void {
     Queue::fake();
 
-    $test = TestMachine::create(JobActorParentMachine::class)
+    $test = JobActorParentMachine::test()
         ->fakingAllActions(except: ['capturePaymentAction']);
 
     $test->send(['type' => 'START'])
@@ -794,7 +794,7 @@ it('V43: fakingAllActions ignores inline closures', function (): void {
 it('V44: fakingAllActions tracks fakes for resetFakes cleanup', function (): void {
     Queue::fake();
 
-    $test = TestMachine::create(JobActorParentMachine::class)
+    $test = JobActorParentMachine::test()
         ->fakingAllActions();
 
     $test->resetFakes();
@@ -940,8 +940,7 @@ it('V48: fakingAllBehaviors fakes actions + guards + calculators', function (): 
 // ═══════════════════════════════════════════════════════════════
 
 it('V49: withContext guards: sets guard fakes before @always fires', function (): void {
-    $test = TestMachine::withContext(
-        AlwaysGuardMachine::class,
+    $test = AlwaysGuardMachine::test(
         context: [],
         guards: [IsAllowedGuard::class => true],
     );
@@ -951,8 +950,7 @@ it('V49: withContext guards: sets guard fakes before @always fires', function ()
 });
 
 it('V50: create guards: sets guard fakes before init', function (): void {
-    $test = TestMachine::create(
-        AlwaysGuardMachine::class,
+    $test = AlwaysGuardMachine::test(
         guards: [IsAllowedGuard::class => true],
     );
 
@@ -960,8 +958,7 @@ it('V50: create guards: sets guard fakes before init', function (): void {
 });
 
 it('V51: guards parameter tracked for resetFakes cleanup', function (): void {
-    $test = TestMachine::withContext(
-        AlwaysGuardMachine::class,
+    $test = AlwaysGuardMachine::test(
         context: [],
         guards: [IsAllowedGuard::class => true],
     );
@@ -971,8 +968,7 @@ it('V51: guards parameter tracked for resetFakes cleanup', function (): void {
 });
 
 it('V51a: withContext faking: spies actions before @always fires', function (): void {
-    $test = TestMachine::withContext(
-        AlwaysGuardMachine::class,
+    $test = AlwaysGuardMachine::test(
         context: [],
         guards: [IsAllowedGuard::class => true],
         faking: [LogAction::class],
@@ -985,8 +981,7 @@ it('V51a: withContext faking: spies actions before @always fires', function (): 
 });
 
 it('V51b: withContext without faking: runs real action during @always', function (): void {
-    $test = TestMachine::withContext(
-        AlwaysGuardMachine::class,
+    $test = AlwaysGuardMachine::test(
         context: [],
         guards: [IsAllowedGuard::class => true],
         // NO faking: parameter → LogAction runs real logic
@@ -998,8 +993,7 @@ it('V51b: withContext without faking: runs real action during @always', function
 });
 
 it('V51c: faking: parameter tracked for resetFakes cleanup', function (): void {
-    $test = TestMachine::withContext(
-        AlwaysGuardMachine::class,
+    $test = AlwaysGuardMachine::test(
         context: [],
         guards: [IsAllowedGuard::class => true],
         faking: [LogAction::class],
@@ -1015,14 +1009,13 @@ it('V51c: faking: parameter tracked for resetFakes cleanup', function (): void {
 // ═══════════════════════════════════════════════════════════════
 
 it('V52: startingAt creates machine at specified state', function (): void {
-    $test = TestMachine::startingAt(JobActorParentMachine::class, stateId: 'processing');
+    $test = JobActorParentMachine::startingAt(stateId: 'processing');
     $test->assertState('processing');
 });
 
 it('V53: startingAt does not run entry actions', function (): void {
     // Define a machine where initial state has an entry action that sets context
-    $test = TestMachine::startingAt(
-        JobActorParentMachine::class,
+    $test = JobActorParentMachine::startingAt(
         stateId: 'idle',
         context: ['payment_id' => null],
     );
@@ -1032,8 +1025,7 @@ it('V53: startingAt does not run entry actions', function (): void {
 });
 
 it('V54: startingAt does not fire @always transitions', function (): void {
-    $test = TestMachine::startingAt(
-        AlwaysGuardMachine::class,
+    $test = AlwaysGuardMachine::startingAt(
         stateId: 'idle',
     );
 
@@ -1044,15 +1036,14 @@ it('V54: startingAt does not fire @always transitions', function (): void {
 it('V55: startingAt does not dispatch jobs', function (): void {
     Queue::fake();
 
-    TestMachine::startingAt(JobActorParentMachine::class, stateId: 'processing');
+    JobActorParentMachine::startingAt(stateId: 'processing');
 
     Queue::assertNothingPushed();
 });
 
 it('V56: startingAt resolves compound state to initial child', function (): void {
     // ParentOrderMachine: awaiting_payment is atomic — can test state resolution
-    $test = TestMachine::startingAt(
-        ParentOrderMachine::class,
+    $test = ParentOrderMachine::startingAt(
         stateId: 'awaiting_payment',
     );
 
@@ -1060,15 +1051,14 @@ it('V56: startingAt resolves compound state to initial child', function (): void
 });
 
 it('V57: startingAt throws for unknown state', function (): void {
-    expect(fn () => TestMachine::startingAt(JobActorParentMachine::class, stateId: 'nonexistent'))
+    expect(fn () => JobActorParentMachine::startingAt(stateId: 'nonexistent'))
         ->toThrow(InvalidArgumentException::class, 'not found in machine definition');
 });
 
 it('V58: startingAt supports simulateChildDone after creation', function (): void {
     Queue::fake();
 
-    TestMachine::startingAt(
-        JobActorParentMachine::class,
+    JobActorParentMachine::startingAt(
         stateId: 'processing',
     )
         ->simulateChildDone(SuccessfulTestJob::class, result: ['payment_id' => 'pay_58'])
@@ -1076,8 +1066,7 @@ it('V58: startingAt supports simulateChildDone after creation', function (): voi
 });
 
 it('V59: startingAt supports guards parameter', function (): void {
-    $test = TestMachine::startingAt(
-        AlwaysGuardMachine::class,
+    $test = AlwaysGuardMachine::startingAt(
         stateId: 'idle',
         guards: [IsAllowedGuard::class => true],
     );
@@ -1092,8 +1081,7 @@ it('V59: startingAt supports guards parameter', function (): void {
 it('V60: startingAt with fakingAllActions full flow', function (): void {
     Queue::fake();
 
-    TestMachine::startingAt(
-        JobActorParentMachine::class,
+    JobActorParentMachine::startingAt(
         stateId: 'processing',
     )
         ->fakingAllActions()

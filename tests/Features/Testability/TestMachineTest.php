@@ -340,22 +340,22 @@ it('creates TestMachine with pre-start context via withContext()', function (): 
     expect($test->context()->get('count'))->toBe(99);
 });
 
-it('withContext() is available as Machine::withContext() shortcut', function (): void {
-    $test = TestabilityMachine::withContext(['count' => 55]);
+it('test(context:) merges context before initialization', function (): void {
+    $test = TestabilityMachine::test(context: ['count' => 55]);
 
     expect($test)->toBeInstanceOf(TestMachine::class);
     expect($test->context()->get('count'))->toBe(55);
 });
 
 it('withContext() disables persistence', function (): void {
-    $test = TestabilityMachine::withContext(['count' => 1]);
+    $test = TestabilityMachine::test(context: ['count' => 1]);
 
     expect($test->machine()->definition->shouldPersist)->toBeFalse();
 });
 
 it('withContext() does not leak between calls', function (): void {
-    $test1 = TestabilityMachine::withContext(['count' => 100]);
-    $test2 = TestabilityMachine::withContext(['count' => 200]);
+    $test1 = TestabilityMachine::test(context: ['count' => 100]);
+    $test2 = TestabilityMachine::test(context: ['count' => 200]);
 
     expect($test1->context()->get('count'))->toBe(100);
     expect($test2->context()->get('count'))->toBe(200);

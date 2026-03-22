@@ -456,19 +456,12 @@ it('F26: create(definition: [...]) on faked subclass returns stub — inline def
     ImmediateChildMachine::assertCreated();
 });
 
-it('F27: Machine::test() on faked class returns faked stub', function (): void {
-    ImmediateChildMachine::fake(result: ['test_val' => 42]);
-
-    // Machine::test() calls TestMachine::create() which calls $machineClass::create()
-    // When faked, create() returns a stub
+it('F27: Machine::test() creates TestMachine with pre-init context', function (): void {
+    // Machine::test() delegates to TestMachine::withContext() (pre-init context)
     $testMachine = ImmediateChildMachine::test();
 
-    // The underlying machine should be a faked instance
-    $machine    = $testMachine->machine();
-    $reflection = new ReflectionProperty($machine, 'isFakedInstance');
-    expect($reflection->getValue($machine))->toBeTrue();
-
-    ImmediateChildMachine::assertCreated();
+    // Machine should be at its initial state (done — ImmediateChildMachine starts at final)
+    expect($testMachine->state()->value)->toBe(['immediate_child.done']);
 });
 
 it('F28: multiple faked classes do not interfere', function (): void {
