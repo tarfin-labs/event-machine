@@ -100,6 +100,7 @@ For fast tests, use SQLite in-memory. This eliminates migration overhead and dis
 | Goal | Tool | Guide |
 |------|------|-------|
 | Single guard/action in isolation | `State::forTesting()` + `runWithState()` | [Isolated Testing](/testing/isolated-testing) |
+| Raised event from action? | `assertRaised()` after `runWithState()` | [Isolated Testing — Raised Events](/testing/isolated-testing#actions-asserting-raised-events) |
 | Complex event payload | `Event::builder()->withX()->make()` | [Isolated Testing — EventBuilder](/testing/isolated-testing#eventbuilder) |
 | Full machine flow | `Machine::test()` | [TestMachine](/testing/test-machine) |
 | Deep state without path replay | `Machine::startingAt()` | [TestMachine — Starting At](/testing/test-machine#starting-at-a-specific-state) |
