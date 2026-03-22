@@ -4,20 +4,17 @@ Fluent test wrapper inspired by `Livewire::test()`. Provides a chainable API for
 
 ## Construction
 
-TestMachine can be created five ways depending on your testing needs. Use `Machine::test()` for existing machine classes, `TestMachine::create()` for direct construction, `withContext()` when initial entry actions depend on context, `define()` for inline throwaway definitions, and `for()` when you already have a Machine instance.
+For class-based machines, use `Machine::test()` and `Machine::startingAt()`. For inline throwaway definitions, use `TestMachine::define()`.
 
 <!-- doctest-attr: ignore -->
 ```php
-// From a Machine subclass (delegates to TestMachine::create())
+// From a Machine subclass — THE entry point for class-based testing
 TrafficLightsMachine::test()
-TrafficLightsMachine::test(['count' => 42])
+TrafficLightsMachine::test(context: ['count' => 42])
+TrafficLightsMachine::test(context: [...], guards: [...], faking: [...])
 
-// Direct construction (same as test(), for explicit TestMachine reference)
-TestMachine::create(TrafficLightsMachine::class)
-TestMachine::create(TrafficLightsMachine::class, ['count' => 42])
-
-// Pre-start context — entry actions see injected values
-TrafficLightsMachine::withContext(['count' => 42])
+// Start at a specific state — skip path replay
+TrafficLightsMachine::startingAt('active', context: ['count' => 42])
 
 // Inline definition (no Machine class, no persistence)
 TestMachine::define(
@@ -26,10 +23,6 @@ TestMachine::define(
         'done'   => [],
     ]],
 )
-
-// Wrap existing instance
-$machine = TrafficLightsMachine::create();
-TestMachine::for($machine)
 ```
 
 ## Configuration
@@ -503,7 +496,7 @@ When testing delegation states that expose a `forward` endpoint, use `withRunnin
 
 <!-- doctest-attr: ignore -->
 ```php
-TestMachine::create(OrderMachine::class)
+OrderMachine::test()
     ->withRunningChild(PaymentMachine::class)
     ->send('PROVIDE_CARD', ['number' => '4111...'])
     ->assertForwardAvailable('PROVIDE_CARD')
@@ -517,19 +510,34 @@ TestMachine::create(OrderMachine::class)
 The child starts in its initial state. If you need the child in a specific state for forward testing, create it separately with `TestMachine::for()` and send events to reach the desired state.
 :::
 
-> **Note:** `withRunningChild()` requires persistence to be enabled. Use with `TestMachine::create()`, not `TestMachine::define()`.
+::: warning withRunningChild() requires persistence
+`withRunningChild()` creates a child record in the database. It does NOT work with `withoutPersistence()` or `TestMachine::define()`. Use `Machine::test()` (persistence enabled by default).
+:::
 
-## When to Use TestMachine
+## When to Use What
 
 | Scenario | Use | Why |
 |----------|-----|-----|
-| Full machine flow with assertions | `Machine::test()` or `TestMachine::create()` | Fluent chain, automatic cleanup |
-| Quick inline definition for one test | `TestMachine::define()` | No Machine class needed |
-| Wrapping an existing machine instance | `TestMachine::for($machine)` | Access fluent API on pre-built machine |
-| Testing with pre-configured context | `Machine::withContext()` | Entry actions see injected values |
-| Quick transition/guard unit test | `MachineDefinition::define()` + `transition()` | Lightweight, no TestMachine overhead |
+| Full machine flow with assertions | `Machine::test()` | Fluent chain, automatic cleanup, pre-init context |
+| Skip to deep state | `Machine::startingAt()` | No path replay, focused testing |
+| Quick inline definition | `TestMachine::define()` | No Machine class needed |
+| Wrapping existing instance | `TestMachine::for($machine)` | Access fluent API on pre-built machine |
+| Quick transition unit test | `MachineDefinition::define()` + `transition()` | Lightweight, no TestMachine overhead |
 
-**Rule of thumb:** Use `TestMachine` when you want fluent assertions. Use `MachineDefinition::define()` when you only need `getInitialState()` + `transition()` and don't need assertion chaining.
+**Rule of thumb:** Use `Machine::test()` for class-based machines, `TestMachine::define()` for inline throwaway machines, `MachineDefinition::define()` when you only need `getInitialState()` + `transition()`.
+
+## Method Compatibility
+
+| Method | withoutPersistence() | startingAt() | fakingAllActions() |
+|--------|---------------------|-------------|-------------------|
+| assertRegionState() | ✅ | ✅ | ✅ |
+| assertAllRegionsCompleted() | ✅ | ✅ | ✅ |
+| simulateChildDone/Fail() | ✅ | ✅ | ✅ |
+| fakingChild() | ✅ | ✅ | ✅ |
+| recordingCommunication() | ✅ | ✅ | ✅ |
+| assertSentTo/DispatchedTo() | ✅ | ✅ | ✅ |
+| withRunningChild() | ❌ Requires DB | ❌ Requires DB | ✅ |
+| advanceTimers() | ✅ | ✅ | ✅ |
 
 ::: tip Related
 See [Isolated Testing](/testing/isolated-testing) for unit-level `runWithState()`,
