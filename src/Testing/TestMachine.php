@@ -64,6 +64,8 @@ class TestMachine
     // ═══════════════════════════════════════════
 
     /**
+     * @internal Use Machine::test() instead.
+     *
      * From a Machine subclass.
      *
      * Context values are applied after machine initialization, so entry actions
@@ -88,6 +90,8 @@ class TestMachine
     }
 
     /**
+     * @internal Use Machine::test(context: [...]) instead.
+     *
      * From a Machine subclass with pre-start context injection.
      *
      * Unlike create(), context values are merged BEFORE initialization,
@@ -122,6 +126,8 @@ class TestMachine
     }
 
     /**
+     * @internal Use Machine::startingAt() instead.
+     *
      * Create a TestMachine at a specific state without running any lifecycle.
      *
      * No entry actions, no @always transitions, no job dispatch, no history.
