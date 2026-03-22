@@ -438,7 +438,7 @@ class MachineController extends Controller
             childRootEventId: $rootEventId,
             success: true,
             result: $machine->result(),
-            childContextData: $state->context->data,
+            childContextData: $state->context->toArray(),
             outputData: MachineDefinition::resolveChildOutput(
                 $state->currentStateDefinition,
                 $state->context,

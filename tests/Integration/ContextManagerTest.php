@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Context;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Exceptions\MachineContextValidationException;
@@ -10,13 +10,13 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsCont
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 it('can initialize an empty context manager', function (): void {
-    $context = new ContextManager();
+    $context = new Context();
 
-    expect($context)->toBeInstanceOf(ContextManager::class);
+    expect($context)->toBeInstanceOf(Context::class);
 });
 
 it('can set and get context manager data', function (): void {
-    $context = new ContextManager();
+    $context = new Context();
 
     $key1   = 'key1';
     $value1 = 'value1';
@@ -49,13 +49,13 @@ it('can set and get context manager data for context class', function (): void {
 });
 
 it('returns null for non-existent keys', function (): void {
-    $context = new ContextManager();
+    $context = new Context();
 
     expect($context->get(key: 'non_existent_key'))->toBeNull();
 });
 
 it('can check if a key exists', function (): void {
-    $context = new ContextManager();
+    $context = new Context();
     $context->set(key: 'key1', value: 'value1');
 
     expect($context->has(key: 'key1'))->toBeTrue();
@@ -72,7 +72,7 @@ it('can check if a key exists for context class', function (): void {
 });
 
 it('can remove a key from context data', function (): void {
-    $context = new ContextManager();
+    $context = new Context();
 
     $context->set(key: 'key1', value: 'value1');
     $context->set(key: 'key2', value: 'value2');
@@ -84,7 +84,7 @@ it('can remove a key from context data', function (): void {
 
 it('can initialize context data with an array', function (): void {
     $initialData = ['key1' => 'value1', 'key2' => 'value2'];
-    $context     = new ContextManager($initialData);
+    $context     = Context::from($initialData);
 
     expect($context->get(key: 'key1'))->toBe('value1');
     expect($context->get(key: 'key2'))->toBe('value2');
@@ -92,18 +92,18 @@ it('can initialize context data with an array', function (): void {
 
 it('can convert context data to an array', function (): void {
     $initialData = ['key1' => 'value1', 'key2' => 'value2'];
-    $context     = new ContextManager($initialData);
+    $context     = Context::from($initialData);
 
     $contextArray = $context->toArray();
 
     expect($contextArray)->toBeArray();
-    expect($contextArray['data'])->toHaveCount(2);
-    expect($contextArray['data']['key1'])->toBe('value1');
-    expect($contextArray['data']['key2'])->toBe('value2');
+    expect($contextArray)->toHaveCount(2);
+    expect($contextArray['key1'])->toBe('value1');
+    expect($contextArray['key2'])->toBe('value2');
 });
 
 it('can handle edge cases with empty keys and values', function (): void {
-    $context = new ContextManager();
+    $context = new Context();
 
     $context->set(key: '', value: 'empty_key_value');
     $context->set(key: 'empty_value_key', value: '');
@@ -120,7 +120,7 @@ it('can handle edge cases with empty keys and values', function (): void {
 
     $contextArray = $context->toArray();
     expect($contextArray)->toHaveCount(1);
-    expect($contextArray['data']['empty_value_key'])->toBe('');
+    expect($contextArray['empty_value_key'])->toBe('');
 });
 
 test('TrafficLightsMachine transitions between states using EventMachine', function (): void {

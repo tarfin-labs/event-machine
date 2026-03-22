@@ -8,6 +8,7 @@ use Mockery\MockInterface;
 use Spatie\LaravelData\Optional;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
+use Tarfinlabs\EventMachine\Context;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -725,7 +726,7 @@ class MachineDefinition
         // Otherwise, use the context defined in the machine config
         $contextConfig = $this->config['context'] ?? [];
 
-        return ContextManager::validateAndCreate(['data' => $contextConfig]);
+        return Context::from($contextConfig);
     }
 
     /**
@@ -1717,7 +1718,7 @@ class MachineDefinition
                 childRootEventId: $childRecord->child_root_event_id,
                 success: true,
                 result: $childMachine->result(),
-                childContextData: $childMachine->state->context->data,
+                childContextData: $childMachine->state->context->toArray(),
                 outputData: self::resolveChildOutput(
                     $childMachine->state->currentStateDefinition,
                     $childMachine->state->context,
@@ -1743,7 +1744,7 @@ class MachineDefinition
         }
 
         $childRootEventId = $childMachine->state->history->first()->root_event_id;
-        $childContext     = $childMachine->state->context->data;
+        $childContext     = $childMachine->state->context->toArray();
 
         $doneEvent = ChildMachineDoneEvent::forChild([
             'result'        => $childMachine->result(),

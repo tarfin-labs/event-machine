@@ -46,7 +46,7 @@ test('an event payload can be validated', function (): void {
         ],
     ]);
 
-    expect($newState->context->data['value'])->toBe($randomMachineValue + $randomEventValue);
+    expect($newState->context->toArray()['value'])->toBe($randomMachineValue + $randomEventValue);
 });
 
 test('an event validator can stopping on the first validation failure', function (): void {

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Context;
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -32,7 +33,7 @@ it('child reports progress to parent via dispatchToParent and parent updates con
     };
 
     // Set up context as if this is a child machine with a parent
-    $ctx = ContextManager::validateAndCreate(['data' => []]);
+    $ctx = Context::from([]);
     $ctx->setMachineIdentity(
         machineId: 'child-machine-id',
         parentRootEventId: 'parent-root-event-id',
@@ -128,7 +129,7 @@ it('sendToParent with sync mode sends event directly to parent', function (): vo
     };
 
     // Create child context with parent identity
-    $ctx = ContextManager::validateAndCreate(['data' => []]);
+    $ctx = Context::from([]);
     $ctx->setMachineIdentity(
         machineId: 'child-id',
         parentRootEventId: $parentRootEventId,

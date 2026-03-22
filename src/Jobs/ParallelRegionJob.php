@@ -73,7 +73,7 @@ class ParallelRegionJob implements ShouldQueue
         }
 
         // 5. Snapshot context BEFORE entry actions (inner data, not wrapped toArray)
-        $contextBefore = $machine->state->context->data;
+        $contextBefore = $machine->state->context->toArray();
 
         // 6. RUN ENTRY ACTIONS (expensive part — NO LOCK held)
         $regionInitial->runEntryActions($machine->state);
@@ -82,7 +82,7 @@ class ParallelRegionJob implements ShouldQueue
         $machine->definition->runEntryListeners($machine->state);
 
         // 7. Capture side effects
-        $contextAfter = $machine->state->context->data;
+        $contextAfter = $machine->state->context->toArray();
         $contextDiff  = $this->computeContextDiff($contextBefore, $contextAfter);
 
         $raisedEvents = [];
@@ -127,7 +127,7 @@ class ParallelRegionJob implements ShouldQueue
                 $conflictedKeys = [];
 
                 foreach ($contextDiff as $key => $value) {
-                    $existingValue = $freshMachine->state->context->data[$key] ?? null;
+                    $existingValue = $freshMachine->state->context->get($key);
 
                     // Detect LWW conflict: compare against baseline (context at dispatch time).
                     // If the DB value differs from what it was when the parallel state was entered,

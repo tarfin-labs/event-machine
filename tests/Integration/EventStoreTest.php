@@ -217,9 +217,9 @@ it('stores incremental context', function (): void {
             'traffic_light.action.changeValueAction.finish',
             'traffic_light.state.red.entry.finish',
         ])->each(fn ($event) => $event->context->toEqual([]))
-        ->first()->context->toEqual(['data' => ['count' => 1, 'value' => 'test']])
-        ->where('type', 'traffic_light.action.changeCountAction.finish')->first()->context->toEqual(['data' => ['count' => 2]])
-        ->where('type', 'traffic_light.action.changeValueAction.finish')->first()->context->toEqual(['data' => ['value' => 'retry']])
-        ->last()->context->toEqual(['data' => ['count' => 2, 'value' => 'retry']]);
+        ->first()->context->toEqual(['count' => 1, 'value' => 'test', 'modelA' => null])
+        ->where('type', 'traffic_light.action.changeCountAction.finish')->first()->context->toEqual(['count' => 2])
+        ->where('type', 'traffic_light.action.changeValueAction.finish')->first()->context->toEqual(['value' => 'retry'])
+        ->last()->context->toEqual(['count' => 2, 'value' => 'retry']);
 
 });

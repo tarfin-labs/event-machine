@@ -46,7 +46,7 @@ it('should run entry actions when transitioning to a new state', function (): vo
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
-        ->and($newState->context->data)->toBe(['count' => 1]);
+        ->and($newState->context->toArray())->toBe(['count' => 1]);
 });
 
 it('should run entry actions when transitioning to a substate', function (): void {
@@ -88,7 +88,7 @@ it('should run entry actions when transitioning to a substate', function (): voi
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active.idle'])
-        ->and($newState->context->data)->toBe(['count' => 1]);
+        ->and($newState->context->toArray())->toBe(['count' => 1]);
 
     $this->assertDatabaseHas(MachineEvent::class, [
         'machine_value' => json_encode([$newState->currentStateDefinition->id], JSON_THROW_ON_ERROR),
@@ -128,7 +128,7 @@ it('should run exit actions when transitioning from a state', function (): void 
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
-        ->and($newState->context->data)->toBe(['count' => 1]);
+        ->and($newState->context->toArray())->toBe(['count' => 1]);
 });
 
 // === Guarded Actions Tests ===
@@ -178,10 +178,10 @@ it('should run the guarded action when the guards are passed', function (): void
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
-        ->and($newState->context->data)->toBe(['count' => 1]);
+        ->and($newState->context->toArray())->toBe(['count' => 1]);
 
     $newState = $machine->transition(event: ['type' => 'INCREASE'], state: $newState);
-    expect($newState->context->data)->toBe(['count' => 2]);
+    expect($newState->context->toArray())->toBe(['count' => 2]);
 
     $newState = $machine->transition(event: [
         'type' => 'MULTIPLY',
@@ -190,7 +190,7 @@ it('should run the guarded action when the guards are passed', function (): void
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
-        ->and($newState->context->data)->toBe(['count' => 4]);
+        ->and($newState->context->toArray())->toBe(['count' => 4]);
 });
 
 it('should not run the guarded action when the guards are not passed', function (): void {
@@ -238,13 +238,13 @@ it('should not run the guarded action when the guards are not passed', function 
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
-        ->and($newState->context->data)->toBe(['count' => 1]);
+        ->and($newState->context->toArray())->toBe(['count' => 1]);
 
     $newState = $machine->transition(event: ['type' => 'INCREASE'], state: $newState);
-    expect($newState->context->data)->toBe(['count' => 2]);
+    expect($newState->context->toArray())->toBe(['count' => 2]);
 
     $newState = $machine->transition(event: ['type' => 'DECREASE'], state: $newState);
-    expect($newState->context->data)->toBe(['count' => 1]);
+    expect($newState->context->toArray())->toBe(['count' => 1]);
 
     $newState = $machine->transition(event: [
         'type' => 'MULTIPLY',
@@ -254,7 +254,7 @@ it('should not run the guarded action when the guards are not passed', function 
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active']);
     // Guards is not passed, the action will not be executed
-    expect($newState->context->data)->toBe(['count' => 1]);
+    expect($newState->context->toArray())->toBe(['count' => 1]);
 });
 
 it('should transition through multiple if-else targets based on guards', function (): void {

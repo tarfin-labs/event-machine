@@ -48,4 +48,8 @@ parameters:
         - identifier: attribute.target
         # Covariant return types - Laravel framework patterns
         - identifier: method.childReturnType
+        # ContextManager/Context factory pattern — new static() is intentional for from()
+        - identifier: new.static
+        # ContextCast implementations are instantiated dynamically
+        - identifier: new.noConstructor
 

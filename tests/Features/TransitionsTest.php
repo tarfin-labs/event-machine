@@ -86,7 +86,7 @@ it('should apply the given state\'s context data to the machine\'s context when 
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active']);
-    expect($newState->context->data)->toBe(['count' => 6, 'someValue' => 'abc']);
+    expect($newState->context->toArray())->toBe(['count' => 6, 'someValue' => 'abc']);
 });
 
 // === Transactional Tests ===

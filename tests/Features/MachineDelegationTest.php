@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Context;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -191,7 +192,7 @@ it('re-throws exception when no @fail is defined', function (): void {
 // ============================================================
 
 it('returns null from machineId() when identity has not been set', function (): void {
-    $context = ContextManager::from(['data' => ['key' => 'value']]);
+    $context = Context::from(['key' => 'value']);
 
     expect($context->machineId())->toBeNull();
 });

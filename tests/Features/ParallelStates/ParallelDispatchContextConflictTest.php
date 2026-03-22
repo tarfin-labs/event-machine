@@ -45,7 +45,7 @@ it('does not record context conflict when regions write to different keys', func
     $machine = ParallelDispatchMachine::create();
     $machine->persist();
     $rootEventId       = $machine->state->history->first()->root_event_id;
-    $contextAtDispatch = $machine->state->context->data;
+    $contextAtDispatch = $machine->state->context->toArray();
 
     // Region A writes region_a_result, Region B writes region_b_result — no overlap
     (new ParallelRegionJob(
@@ -86,7 +86,7 @@ it('records context conflict when second region overwrites scalar key set by fir
     $machine = E2EContextConflictMachine::create();
     $machine->persist();
     $rootEventId       = $machine->state->history->first()->root_event_id;
-    $contextAtDispatch = $machine->state->context->data;
+    $contextAtDispatch = $machine->state->context->toArray();
 
     // Region A writes shared_scalar='value_from_a'
     (new ParallelRegionJob(
@@ -126,7 +126,7 @@ it('conflict event payload lists all conflicted keys', function (): void {
     $machine = E2EContextConflictMachine::create();
     $machine->persist();
     $rootEventId       = $machine->state->history->first()->root_event_id;
-    $contextAtDispatch = $machine->state->context->data;
+    $contextAtDispatch = $machine->state->context->toArray();
 
     // Both regions write to shared_scalar AND shared_array
     (new ParallelRegionJob(
@@ -166,7 +166,7 @@ it('first completing region does not report conflict (no prior sibling writes)',
     $machine = E2EContextConflictMachine::create();
     $machine->persist();
     $rootEventId       = $machine->state->history->first()->root_event_id;
-    $contextAtDispatch = $machine->state->context->data;
+    $contextAtDispatch = $machine->state->context->toArray();
 
     // Only Region A runs — no sibling has written yet
     (new ParallelRegionJob(
@@ -193,7 +193,7 @@ it('LWW still applies — second region value wins despite conflict recording', 
     $machine = E2EContextConflictMachine::create();
     $machine->persist();
     $rootEventId       = $machine->state->history->first()->root_event_id;
-    $contextAtDispatch = $machine->state->context->data;
+    $contextAtDispatch = $machine->state->context->toArray();
 
     // Region A writes shared_scalar='value_from_a'
     (new ParallelRegionJob(
