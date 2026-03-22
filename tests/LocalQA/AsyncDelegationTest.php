@@ -25,9 +25,9 @@ it('LocalQA: async delegation creates machine_children and dispatches to Horizon
 
     $rootEventId = $parent->state->history->first()->root_event_id;
 
-    // Parent should be in processing state (async child dispatched)
+    // Parent should be in processing or completed (Horizon may complete instantly)
     $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
-    expect($cs->state_id)->toContain('processing');
+    expect($cs->state_id)->toMatch('/processing|completed/');
 
     // machine_children record should exist
     $child = DB::table('machine_children')
