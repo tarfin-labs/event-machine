@@ -643,9 +643,9 @@ test('sync child delegation does not share parent depth counter', function (): v
     expect($parentState->currentStateDefinition->id)->toBe('deepParent.end');
 });
 
-test('compound @done bypass: @always not evaluated after @done transition', function (): void {
-    // Known limitation: executeChildTransitionBranch bypasses transition().
-    // Update this test if bypass gap is fixed.
+test('compound @done with @always loop throws MaxTransitionDepthExceededException', function (): void {
+    // Fixed: processCompoundOnDone now processes @always after entry.
+    // An @always loop after compound @done correctly triggers depth protection.
     $definition = MachineDefinition::define(
         config: [
             'id'      => 'compoundBypass',
@@ -672,21 +672,12 @@ test('compound @done bypass: @always not evaluated after @done transition', func
     );
 
     $state = $definition->getInitialState();
-    $state = $definition->transition(['type' => 'FINISH'], $state);
+    $definition->transition(['type' => 'FINISH'], $state);
+})->throws(MaxTransitionDepthExceededException::class);
 
-    // processCompoundOnDone fires @done and lands in loop_target.
-    // The @always on loop_target is NOT evaluated (executeChildTransitionBranch bypass).
-    // Known limitation — update this test if bypass gap is fixed.
-    $finalId = $state->currentStateDefinition->id;
-    expect($finalId)->toBeIn([
-        'compoundBypass.loop_target',      // If @done fires but @always not evaluated
-        'compoundBypass.wrapper.inner_done', // If @done doesn't fire at all
-    ]);
-});
-
-test('parallel @done bypass: @always not evaluated after parallel completion', function (): void {
-    // Known limitation: exitParallelStateAndTransitionToTarget bypasses transition().
-    // Update this test if bypass gap is fixed.
+test('parallel @done with @always loop throws MaxTransitionDepthExceededException', function (): void {
+    // Fixed: exitParallelStateAndTransitionToTarget now processes @always after entry.
+    // An @always loop after parallel @done correctly triggers depth protection.
     $definition = MachineDefinition::define(
         config: [
             'id'      => 'parallelBypass',
@@ -724,11 +715,8 @@ test('parallel @done bypass: @always not evaluated after parallel completion', f
 
     $state = $definition->getInitialState();
     $state = $definition->transition(['type' => 'DONE_A'], $state);
-    $state = $definition->transition(['type' => 'DONE_B'], $state);
-
-    // @done lands in loop_target, but @always is NOT evaluated (bypass path).
-    expect($state->currentStateDefinition->id)->toBe('parallelBypass.loop_target');
-});
+    $definition->transition(['type' => 'DONE_B'], $state);
+})->throws(MaxTransitionDepthExceededException::class);
 
 test('raise chain of 99 events does not throw', function (): void {
     config(['machine.max_transition_depth' => 100]);

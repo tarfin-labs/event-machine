@@ -175,21 +175,19 @@ it('preserves timer @every event through @always chain', function (): void {
         ->toBe(['cycle' => 1, 'amount' => 99]);
 });
 
-it('does not fire @always after compound @done — known limitation', function (): void {
+it('fires @always after compound @done — fixed', function (): void {
     $machine = CompoundDoneAlwaysMachine::create();
 
     // Send event that causes child to reach final → @done routes to 'routing'
+    // → @always on routing fires → transitions to 'completed'
     $machine->send([
         'type'    => 'CHECK_COMPLETED',
         'payload' => ['result' => 'passed'],
     ]);
 
-    // Known limitation: processCompoundOnDone updates $state->value but does NOT
-    // update $state->currentStateDefinition. The @always check in transition()
-    // uses currentStateDefinition->id, so it checks the OLD state — @always is
-    // not triggered. Machine stays in 'routing' instead of transitioning to 'completed'.
-    expect($machine->state->value)->toBe(['compound_done_always.routing']);
+    // @always after compound @done now works — machine reaches 'completed'
+    expect($machine->state->value)->toBe(['compound_done_always.completed']);
 
-    // @always action was never called
-    expect($machine->state->context->get('done_event_type'))->toBeNull();
+    // @always action received the original event
+    expect($machine->state->context->get('done_event_type'))->not->toBeNull();
 });
