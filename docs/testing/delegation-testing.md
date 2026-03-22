@@ -82,7 +82,7 @@ Child delegation can be tested at three levels. Pick the one that matches what y
 | Level | Tool | What It Tests | DB Needed |
 |-------|------|---------------|-----------|
 | Unit | `forTesting()` + `runWithState()` | Single guard/action logic in isolation | No |
-| Integration | `simulateChildDone/Fail` | Transition routing, guard chain, state flow | No |
+| Integration | `simulateChildDone/Fail` | Machine & job delegation routing, guard chains, state flow | No |
 | E2E | `Machine::fake()` + `create()` | Full delegation pipeline with persistence | Yes |
 
 ::: info simulateChild* is DB-free
@@ -277,6 +277,26 @@ it('fire-and-forget job transitions parent immediately', function (): void {
     Queue::assertPushed(ChildJobJob::class);
 });
 ```
+
+### Simulating Managed Job Completion
+
+Managed jobs (with `@done`/`@fail`) support the same `simulateChild*` methods as machine children — the routing infrastructure is identical. Use `Queue::fake()` to capture the dispatch, then simulate completion:
+
+<!-- doctest-attr: no_run -->
+```php
+Queue::fake();
+
+FindeksMachine::test()
+    ->withoutPersistence()
+    ->faking([StorePhonesAction::class, AutoMatchPhoneAction::class])
+    ->assertState('querying_phones')
+    ->simulateChildDone(QueryPhonesJob::class, result: [
+        'phones' => [['phone' => '05321234567', 'query_id' => 1]],
+    ])
+    ->assertState('awaiting_report_request');
+```
+
+This tests the `@done` routing logic without running the actual job. For dispatch verification, use `Queue::assertPushed(ChildJobJob::class)`.
 
 ## Testing Fire-and-Forget Machine Delegation
 
