@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Analysis\PathType;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\GuardedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AlwaysGuardMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ConditionalOnDoneMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Compound\ConditionalCompoundOnDoneMachine;
@@ -19,6 +20,17 @@ test('AbcMachine enumerates 1 DEAD_END path', function (): void {
     expect($result->paths)->toHaveCount(1)
         ->and($result->deadEndPaths())->toHaveCount(1)
         ->and($result->paths[0]->type)->toBe(PathType::DEAD_END);
+});
+
+test('GuardedMachine enumerates 1 DEAD_END path', function (): void {
+    $definition = GuardedMachine::definition();
+    $enumerator = new PathEnumerator($definition);
+    $result     = $enumerator->enumerate();
+
+    // CHECK: branch 0 (targetless with guard) skipped, branch 1 (fallback) → processed (DEAD_END)
+    // INCREASE: targetless self-transition, skipped
+    expect($result->paths)->toHaveCount(1)
+        ->and($result->deadEndPaths())->toHaveCount(1);
 });
 
 test('compound @done continuation follows parent onDoneTransition from FINAL child', function (): void {
@@ -47,15 +59,14 @@ test('compound @done continuation follows parent onDoneTransition from FINAL chi
         ->and($result->paths[0]->terminalStateId)->toContain('completed');
 });
 
-// Full ConditionalCompoundOnDoneMachine test — requires transition enumeration (handleAtomic).
-// Added after implement-transition-enumeration task.
 test('ConditionalCompoundOnDoneMachine enumerates 2 HAPPY paths via compound @done', function (): void {
     $definition = ConditionalCompoundOnDoneMachine::definition();
     $enumerator = new PathEnumerator($definition);
     $result     = $enumerator->enumerate();
 
+    // checking → CHECK_COMPLETED → done (final child) → compound @done → approved / manual_review
     expect($result->happyPaths())->toHaveCount(2);
-})->skip('Requires handleAtomic transition enumeration — enabled after implement-transition-enumeration');
+});
 
 test('parallel state enumerates per-region paths and follows @done', function (): void {
     // Minimal parallel: 2 regions each with a FINAL initial, @done → completed
@@ -132,14 +143,16 @@ test('parallel state with @done and @fail enumerates both continuation paths', f
         ->and($result->failPaths())->toHaveCount(1);
 });
 
-// Full ConditionalOnDoneMachine test — requires handleAtomic transition enumeration.
-test('ConditionalOnDoneMachine enumerates parallel @done with guards', function (): void {
+test('ConditionalOnDoneMachine enumerates 2 HAPPY paths via parallel @done with guards', function (): void {
     $definition = ConditionalOnDoneMachine::definition();
     $enumerator = new PathEnumerator($definition);
     $result     = $enumerator->enumerate();
 
-    expect($result->happyPaths())->toHaveCount(2);
-})->skip('Requires handleAtomic transition enumeration — enabled after implement-transition-enumeration');
+    // 2 regions (inventory, payment) each with 1 event → done.
+    // Parallel @done: branch 0 (guard) → approved, branch 1 (fallback) → manual_review
+    expect($result->happyPaths())->toHaveCount(2)
+        ->and($result->parallelGroups)->toHaveCount(1);
+});
 
 test('AlwaysGuardMachine enumerates 3 paths: 2 HAPPY + 1 GUARD_BLOCK', function (): void {
     $definition = AlwaysGuardMachine::definition();
