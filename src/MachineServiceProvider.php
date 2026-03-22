@@ -7,15 +7,18 @@ namespace Tarfinlabs\EventMachine;
 use Spatie\LaravelPackageTools\Package;
 use Illuminate\Console\Scheduling\Schedule;
 use Tarfinlabs\EventMachine\Enums\TimerResolution;
+use Tarfinlabs\EventMachine\Commands\ScenarioCommand;
 use Tarfinlabs\EventMachine\Support\MachineDiscovery;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tarfinlabs\EventMachine\Commands\TimerStatusCommand;
 use Tarfinlabs\EventMachine\Commands\ExportXStateCommand;
 use Tarfinlabs\EventMachine\Commands\MachineCacheCommand;
 use Tarfinlabs\EventMachine\Commands\MachineClearCommand;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioController;
 use Tarfinlabs\EventMachine\Commands\ArchiveEventsCommand;
 use Tarfinlabs\EventMachine\Commands\ArchiveStatusCommand;
 use Tarfinlabs\EventMachine\Commands\ProcessTimersCommand;
+use Tarfinlabs\EventMachine\Commands\ScenarioCacheCommand;
 use Tarfinlabs\EventMachine\Commands\ProcessScheduledCommand;
 use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
 
@@ -58,12 +61,19 @@ class MachineServiceProvider extends PackageServiceProvider
             ->hasCommand(TimerStatusCommand::class)
             ->hasCommand(MachineCacheCommand::class)
             ->hasCommand(MachineClearCommand::class)
-            ->hasCommand(ProcessScheduledCommand::class);
+            ->hasCommand(ProcessScheduledCommand::class)
+            ->hasCommand(ScenarioCommand::class)
+            ->hasCommand(ScenarioCacheCommand::class);
     }
 
     public function boot(): void
     {
         parent::boot();
+
+        // Register scenario HTTP routes when enabled
+        if (config('machine.scenarios.enabled', false)) {
+            $this->registerScenarioRoutes();
+        }
 
         // Auto-register timer sweep commands with Laravel Scheduler
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
@@ -98,5 +108,17 @@ class MachineServiceProvider extends PackageServiceProvider
                 ->withoutOverlapping()
                 ->runInBackground();
         }
+    }
+
+    /**
+     * Register HTTP routes for scenario endpoints.
+     */
+    protected function registerScenarioRoutes(): void
+    {
+        $this->app['router']->group(['prefix' => 'machine/scenarios'], function ($router): void {
+            $router->get('/', [ScenarioController::class, 'list']);
+            $router->post('/{scenario}', [ScenarioController::class, 'play']);
+            $router->get('/{scenario}/describe', [ScenarioController::class, 'describe']);
+        });
     }
 }
