@@ -8,8 +8,11 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\GuardedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AlwaysGuardMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\JobActors\JobActorParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ConditionalOnDoneMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\DoneDotParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Compound\ConditionalCompoundOnDoneMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FireAndForgetTargetParentMachine;
 
 test('AbcMachine enumerates 1 DEAD_END path', function (): void {
     $definition = AbcMachine::definition();
@@ -152,6 +155,40 @@ test('ConditionalOnDoneMachine enumerates 2 HAPPY paths via parallel @done with 
     // Parallel @done: branch 0 (guard) → approved, branch 1 (fallback) → manual_review
     expect($result->happyPaths())->toHaveCount(2)
         ->and($result->parallelGroups)->toHaveCount(1);
+});
+
+test('JobActorParentMachine enumerates 2 paths: HAPPY + FAIL', function (): void {
+    $definition = JobActorParentMachine::definition();
+    $enumerator = new PathEnumerator($definition);
+    $result     = $enumerator->enumerate();
+
+    // idle → START → processing [job] → @done → completed (HAPPY)
+    // idle → START → processing [job] → @fail → failed (FAIL)
+    expect($result->paths)->toHaveCount(2)
+        ->and($result->happyPaths())->toHaveCount(1)
+        ->and($result->failPaths())->toHaveCount(1);
+});
+
+test('DoneDotParentMachine enumerates 3 paths via @done.{state}', function (): void {
+    $definition = DoneDotParentMachine::definition();
+    $enumerator = new PathEnumerator($definition);
+    $result     = $enumerator->enumerate();
+
+    // idle → START → processing → @done.approved → completed
+    // idle → START → processing → @done.rejected → declined
+    // idle → START → processing → @fail → error
+    expect($result->paths)->toHaveCount(3)
+        ->and($result->happyPaths())->toHaveCount(2)
+        ->and($result->failPaths())->toHaveCount(1);
+});
+
+test('FireAndForgetTargetParentMachine enumerates fire-and-forget path', function (): void {
+    $definition = FireAndForgetTargetParentMachine::definition();
+    $enumerator = new PathEnumerator($definition);
+    $result     = $enumerator->enumerate();
+
+    // idle → REJECT → dispatching_verification (ff→prevented) → RETRY → idle (LOOP)
+    expect($result->loopPaths())->toHaveCount(1);
 });
 
 test('AlwaysGuardMachine enumerates 3 paths: 2 HAPPY + 1 GUARD_BLOCK', function (): void {

@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
+use Tarfinlabs\EventMachine\Definition\MachineInvokeDefinition;
 
 /**
  * Enumerates all paths through a state machine definition using DFS with backtracking.
@@ -421,9 +422,9 @@ class PathEnumerator
             }
         }
 
-        // Machine invoke transitions — will be implemented in implement-machine-invoke-enumeration task
+        // Machine invoke transitions (@done, @fail, @timeout, @done.{state}, fire-and-forget)
         if ($state->hasMachineInvoke()) {
-            $this->enumerateMachineInvoke();
+            $this->enumerateMachineInvoke($state, $steps, $visitedIds);
             $enumerated = true;
         }
 
@@ -473,9 +474,132 @@ class PathEnumerator
      * Enumerate machine invoke transitions (@done, @fail, @timeout, @done.{state}).
      * Placeholder — implemented in implement-machine-invoke-enumeration task.
      */
-    private function enumerateMachineInvoke(): void
+    /**
+     * Enumerate machine invoke transitions (@done, @fail, @timeout, @done.{state}, fire-and-forget).
+     *
+     * @param  list<PathStep>  $steps
+     * @param  array<string, true>  $visitedIds
+     */
+    private function enumerateMachineInvoke(StateDefinition $state, array $steps, array $visitedIds): void
     {
-        // Will be implemented in implement-machine-invoke-enumeration task
+        $invokeDefinition = $state->getMachineInvokeDefinition();
+
+        // Fire-and-forget: target property set, no @done
+        if ($invokeDefinition instanceof MachineInvokeDefinition && $invokeDefinition->target !== null) {
+            $targetState = $this->definition->getNearestStateDefinitionByString($invokeDefinition->target, $state);
+
+            if ($targetState instanceof StateDefinition) {
+                $step = new PathStep(
+                    stateId: $targetState->id,
+                    stateKey: $targetState->key ?? '',
+                    event: 'fire-and-forget',
+                    invokeType: 'fire-and-forget',
+                );
+
+                $branchSteps   = $steps;
+                $branchSteps[] = $step;
+
+                $this->dfs($targetState, $branchSteps, $visitedIds);
+            }
+
+            return;
+        }
+
+        // @done.{state} transitions — per-final-state routing
+        foreach ($state->onDoneStateTransitions as $finalStateName => $transition) {
+            foreach ($transition->branches ?? [] as $index => $branch) {
+                if (!$branch->target instanceof StateDefinition) {
+                    continue;
+                }
+
+                $step = new PathStep(
+                    stateId: $branch->target->id,
+                    stateKey: $branch->target->key ?? '',
+                    event: "@done.{$finalStateName}",
+                    branchIndex: count($transition->branches ?? []) > 1 ? $index : null,
+                    guards: $branch->guards ?? [],
+                    actions: $branch->actions ?? [],
+                    invokeType: "@done.{$finalStateName}",
+                );
+
+                $branchSteps   = $steps;
+                $branchSteps[] = $step;
+
+                $this->dfs($branch->target, $branchSteps, $visitedIds);
+            }
+        }
+
+        // @done catch-all transition
+        if ($state->onDoneTransition instanceof TransitionDefinition) {
+            foreach ($state->onDoneTransition->branches ?? [] as $index => $branch) {
+                if (!$branch->target instanceof StateDefinition) {
+                    continue;
+                }
+
+                $step = new PathStep(
+                    stateId: $branch->target->id,
+                    stateKey: $branch->target->key ?? '',
+                    event: '@done',
+                    branchIndex: count($state->onDoneTransition->branches ?? []) > 1 ? $index : null,
+                    guards: $branch->guards ?? [],
+                    actions: $branch->actions ?? [],
+                    invokeType: '@done',
+                );
+
+                $branchSteps   = $steps;
+                $branchSteps[] = $step;
+
+                $this->dfs($branch->target, $branchSteps, $visitedIds);
+            }
+        }
+
+        // @fail transition
+        if ($state->onFailTransition instanceof TransitionDefinition) {
+            foreach ($state->onFailTransition->branches ?? [] as $index => $branch) {
+                if (!$branch->target instanceof StateDefinition) {
+                    continue;
+                }
+
+                $step = new PathStep(
+                    stateId: $branch->target->id,
+                    stateKey: $branch->target->key ?? '',
+                    event: '@fail',
+                    branchIndex: count($state->onFailTransition->branches ?? []) > 1 ? $index : null,
+                    guards: $branch->guards ?? [],
+                    actions: $branch->actions ?? [],
+                    invokeType: '@fail',
+                );
+
+                $branchSteps   = $steps;
+                $branchSteps[] = $step;
+
+                $this->dfs($branch->target, $branchSteps, $visitedIds);
+            }
+        }
+
+        // @timeout transition
+        if ($state->onTimeoutTransition instanceof TransitionDefinition) {
+            foreach ($state->onTimeoutTransition->branches ?? [] as $index => $branch) {
+                if (!$branch->target instanceof StateDefinition) {
+                    continue;
+                }
+
+                $step = new PathStep(
+                    stateId: $branch->target->id,
+                    stateKey: $branch->target->key ?? '',
+                    event: '@timeout',
+                    branchIndex: count($state->onTimeoutTransition->branches ?? []) > 1 ? $index : null,
+                    guards: $branch->guards ?? [],
+                    actions: $branch->actions ?? [],
+                    invokeType: '@timeout',
+                );
+
+                $branchSteps   = $steps;
+                $branchSteps[] = $step;
+
+                $this->dfs($branch->target, $branchSteps, $visitedIds);
+            }
+        }
     }
 
     /**
