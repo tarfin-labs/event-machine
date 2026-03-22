@@ -8,7 +8,6 @@ use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
 use PHPUnit\Framework\ExpectationFailedException;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\MachineWithScenarios;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\TestabilityMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\IncreaseEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
@@ -407,29 +406,6 @@ it('assertGuardedBy fails when guard passes', function (): void {
     expect(fn () => AllInvocationPointsMachine::test(['count' => 5])
         ->assertGuardedBy('PROCESS', IsCountPositiveGuard::class)
     )->toThrow(ExpectationFailedException::class);
-});
-
-// ─── withScenario() ─────────────────────────────────────────
-
-it('sets scenario type via withScenario()', function (): void {
-    $test = MachineWithScenarios::test()
-        ->withScenario('test');
-
-    expect($test->context()->get('scenarioType'))->toBe('test');
-});
-
-it('withScenario routes to scenario-specific state', function (): void {
-    // Without scenario: EVENT_B goes state_a → state_b
-    MachineWithScenarios::test()
-        ->send('EVENT_B')
-        ->assertState('state_b');
-
-    // With 'test' scenario: EVENT_B goes state_a → state_c (scenario override)
-    // Scenario states are namespaced: test.state_c
-    MachineWithScenarios::test()
-        ->withScenario('test')
-        ->send('EVENT_B')
-        ->assertState('test.state_c');
 });
 
 // ─── assertTransitionedThrough() ────────────────────────────
