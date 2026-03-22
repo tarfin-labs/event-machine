@@ -1180,6 +1180,44 @@ class MachineDefinition
     }
 
     /**
+     * Process @always transitions and raised events after a state entry.
+     *
+     * Called after enterState() in code paths that are NOT the main transition()
+     * method (which has its own @always/event queue handling). This includes:
+     * - processCompoundOnDone()
+     * - processNestedParallelCompletion()
+     * - exitParallelStateAndTransitionToTarget()
+     */
+    protected function processPostEntryTransitions(State $state, EventBehavior $eventBehavior): void
+    {
+        // Process @always transitions on the new state
+        if (isset($this->idMap[$state->currentStateDefinition->id])
+            && $this->idMap[$state->currentStateDefinition->id]->transitionDefinitions !== null) {
+            foreach ($this->idMap[$state->currentStateDefinition->id]->transitionDefinitions as $transition) {
+                if ($transition->isAlways === true) {
+                    $this->transition(
+                        event: [
+                            'type'  => TransitionProperty::Always->value,
+                            'actor' => $eventBehavior->actor($state->context),
+                        ],
+                        state: $state,
+                    );
+
+                    return;
+                }
+            }
+        }
+
+        // Process raised events from entry actions
+        if ($this->eventQueue->isNotEmpty()) {
+            $firstEvent    = $this->eventQueue->shift();
+            $eventBehavior = $this->initializeEvent($firstEvent, $state);
+
+            $this->transition($eventBehavior, $state);
+        }
+    }
+
+    /**
      * Centralized state entry protocol for parallel region contexts.
      *
      * Handles the same entry sequence as enterState() but with parallel value
@@ -1850,30 +1888,8 @@ class MachineDefinition
         // Centralized entry protocol
         $this->enterState($state, $target, $eventBehavior, fireTransitionListeners: true);
 
-        // Process @always transitions on the new state (mirrors transition() @always check)
-        if ($this->idMap[$state->currentStateDefinition->id]->transitionDefinitions !== null) {
-            foreach ($this->idMap[$state->currentStateDefinition->id]->transitionDefinitions as $transition) {
-                if ($transition->isAlways === true) {
-                    $this->transition(
-                        event: [
-                            'type'  => TransitionProperty::Always->value,
-                            'actor' => $eventBehavior->actor($state->context),
-                        ],
-                        state: $state,
-                    );
-
-                    return;
-                }
-            }
-        }
-
-        // Process raised events from entry actions (mirrors transition() eventQueue check)
-        if ($this->eventQueue->isNotEmpty()) {
-            $firstEvent    = $this->eventQueue->shift();
-            $eventBehavior = $this->initializeEvent($firstEvent, $state);
-
-            $this->transition($eventBehavior, $state);
-        }
+        // Process @always and raised events after entry
+        $this->processPostEntryTransitions($state, $eventBehavior);
     }
 
     /**
@@ -2166,17 +2182,25 @@ class MachineDefinition
 
         // Resolve to initial state if the target is a compound state
         $initialTarget = $target->findInitialStateDefinition() ?? $target;
-
-        // Update state value: replace the final state's id with the onDone target
-        $values = $state->value;
-        $idx    = array_search($finalState->id, $values, true);
+        $values        = $state->value;
+        $idx           = array_search($finalState->id, $values, true);
         if ($idx !== false) {
             $values[$idx] = $initialTarget->id;
             $state->setValues($values);
         }
+        // Update currentStateDefinition only in non-parallel context
+        // (parallel contexts manage CSD separately)
+        if (count($state->value) <= 1) {
+            $state->currentStateDefinition = $initialTarget;
+        }
 
         // Centralized entry protocol
         $this->enterState($state, $target, $eventBehavior, fireTransitionListeners: true);
+
+        // Process @always and raised events after entry (only in non-parallel context)
+        if (count($state->value) <= 1) {
+            $this->processPostEntryTransitions($state, $eventBehavior);
+        }
     }
 
     /**
@@ -2428,6 +2452,9 @@ class MachineDefinition
         // Centralized entry protocol
         $this->enterState($state, $target, $eventBehavior, fireTransitionListeners: true);
 
+        // Process @always and raised events after entry
+        $this->processPostEntryTransitions($state, $eventBehavior);
+
         // Recurse: the onDone target might also be final within a nested parallel
         if ($resolvedTarget->type === StateDefinitionType::FINAL) {
             $this->processNestedParallelCompletion($state, $resolvedTarget, $eventBehavior);
@@ -2502,6 +2529,9 @@ class MachineDefinition
         // Centralized entry protocol
         if ($eventBehavior instanceof EventBehavior) {
             $this->enterState($state, $targetState, $eventBehavior, fireTransitionListeners: true);
+
+            // Process @always and raised events after entry
+            $this->processPostEntryTransitions($state, $eventBehavior);
         } else {
             // Null eventBehavior (from ParallelRegionJob): run entry actions only
             $state->setInternalEventBehavior(
