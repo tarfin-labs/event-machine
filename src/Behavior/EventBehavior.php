@@ -127,16 +127,6 @@ abstract class EventBehavior extends Data
     }
 
     /**
-     * Retrieves the scenario value from the payload.
-     *
-     * @return string|null The scenario value if available, otherwise null.
-     */
-    public function getScenario(): ?string
-    {
-        return $this->payload['scenarioType'] ?? null;
-    }
-
-    /**
      * Indicates if the validator should stop on the first rule failure.
      *
      * @return bool Returns true by default.
