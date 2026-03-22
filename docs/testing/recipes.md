@@ -391,7 +391,7 @@ Isolate controller tests from machine pipeline -- verify DB operations without r
 <!-- doctest-attr: ignore -->
 ```php
 it('approves consent link without running machine', function (): void {
-    CarSalesMachine::fake();
+    OrderMachine::fake();
 
     $consentLink = ConsentLink::factory()->create([
         'machine_root_event_id' => 'evt_123',
@@ -406,8 +406,8 @@ it('approves consent link without running machine', function (): void {
     expect($consentLink->fresh()->status)->toBe(ConsentLinkStatus::APPROVED);
 
     // Machine assertions — verify it was touched
-    CarSalesMachine::assertCreated();
-    CarSalesMachine::assertSent(ConsentGrantedEvent::getType());
+    OrderMachine::assertCreated();
+    OrderMachine::assertSent(PaymentReceivedEvent::getType());
     // No cleanup needed — InteractsWithMachines handles it
 });
 ```
@@ -619,16 +619,16 @@ Use `startingAt()` to skip directly to a deep state without replaying the entire
 
 <!-- doctest-attr: no_run -->
 ```php
-it('handles PIN retry from confirming_pin state', function (): void {
+it('handles PIN retry from processing_payment state', function (): void {
     Queue::fake();
 
-    FindeksMachine::startingAt(
-        stateId: 'confirming_pin',
-        context: ['tckn' => '11111111110', 'requestId' => 'REQ-1'],
-        guards: [IsPinRetryableGuard::class => true],
+    VerificationMachine::startingAt(
+        stateId: 'processing_payment',
+        context: ['order_id' => 'ORD-1', 'amount' => 5000],
+        guards: [IsRetryableGuard::class => true],
     )
-    ->fakingAllActions(except: [StorePinAction::class])
-    ->simulateChildFail(ConfirmFindeksPinJob::class, errorMessage: 'Wrong PIN')
+    ->fakingAllActions(except: [StorePaymentAction::class])
+    ->simulateChildFail(ProcessPaymentJob::class, errorMessage: 'Wrong PIN')
     ->assertState('awaiting_pin');
 });
 ```
@@ -659,18 +659,18 @@ Test a parent machine whose parallel regions delegate to child machines:
 it('verification parallel state completes when both children finish', function (): void {
     Queue::fake();
 
-    CarSalesMachine::test(
+    OrderMachine::test(
         context: [...],
         guards: [
-            HasConsentGuard::class         => true,
-            IsFarmerNotEligibleGuard::class => false,
+            IsEligibleGuard::class         => true,
+            HasSufficientFundsGuard::class => false,
         ],
-        faking: [StoreApplicationAction::class],
+        faking: [InitializeOrderAction::class],
     )
     ->withoutPersistence()
     ->fakingAllActions()
-    ->fakingChild(FindeksMachine::class, result: [...], finalState: 'report_saved')
-    ->fakingChild(TurmobMachine::class, result: [...])
+    ->fakingChild(VerificationMachine::class, result: [...], finalState: 'completed')
+    ->fakingChild(NotificationMachine::class, result: [...])
     ->assertState('checking_protocol');
 });
 ```
