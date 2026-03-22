@@ -1583,7 +1583,15 @@ class MachineDefinition
     protected function handleFakedMachineInvoke(State $state, StateDefinition $stateDefinition, MachineInvokeDefinition $invokeDefinition): void
     {
         $childMachineClass = $invokeDefinition->machineClass;
-        $childContext      = $invokeDefinition->resolveChildContext($state->context);
+
+        // Resolve child context best-effort — with() closure may crash if
+        // calculators were spied (leaving model properties null). Gracefully
+        // fall back to empty array so faked machines don't require full context.
+        try {
+            $childContext = $invokeDefinition->resolveChildContext($state->context);
+        } catch (\Throwable) {
+            $childContext = [];
+        }
 
         // Record the invocation for assertion tracking
         Machine::recordMachineInvocation($childMachineClass, $childContext);
