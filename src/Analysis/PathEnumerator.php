@@ -49,6 +49,7 @@ class PathEnumerator
         return new PathEnumerationResult(
             paths: $this->paths,
             parallelGroups: $this->parallelGroups,
+            definition: $this->definition,
         );
     }
 
