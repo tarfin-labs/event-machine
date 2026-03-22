@@ -671,6 +671,109 @@ it('V18i: full job actor flow with multiple simulateChildDone calls', function (
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  Category 2b2: Machine Entry Points (7 tests)
+// ═══════════════════════════════════════════════════════════════
+
+it('V70: Machine::test() creates TestMachine with pre-init context', function (): void {
+    Queue::fake();
+
+    // Machine::test() delegates to TestMachine::withContext() (pre-init)
+    $test = JobActorParentMachine::test(context: ['order_id' => 'ORD-70']);
+
+    $test->assertContext('order_id', 'ORD-70')
+        ->assertState('idle');
+});
+
+it('V71: Machine::test() accepts guards and faking', function (): void {
+    $test = AlwaysGuardMachine::test(
+        guards: [IsAllowedGuard::class => true],
+        faking: [LogAction::class],
+    );
+
+    $test->assertState('done');
+    $test->assertContext('logged', false); // LogAction was spied, not real
+});
+
+it('V72: Machine::test() without params works', function (): void {
+    Queue::fake();
+
+    $test = JobActorParentMachine::test();
+    $test->assertState('idle');
+});
+
+it('V73: Machine::startingAt() creates machine at specified state', function (): void {
+    Queue::fake();
+
+    $test = JobActorParentMachine::startingAt('processing');
+    $test->assertState('processing');
+});
+
+it('V74: Machine::startingAt() supports context, guards, and faking', function (): void {
+    $test = AlwaysGuardMachine::startingAt(
+        stateId: 'idle',
+        guards: [IsAllowedGuard::class => true],
+    );
+
+    $test->assertState('idle') // @always didn't fire (startingAt skips lifecycle)
+        ->send('GO')
+        ->assertState('done');
+});
+
+it('V75: assertNotDispatchedTo passes when no dispatch sent', function (): void {
+    Queue::fake();
+
+    $test = TestMachine::define(
+        config: [
+            'id'      => 'v75_machine',
+            'initial' => 'idle',
+            'context' => [],
+            'states'  => [
+                'idle' => ['on' => ['GO' => 'done']],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+    );
+
+    $test->send('GO')
+        ->assertNotDispatchedTo(JobActorParentMachine::class);
+});
+
+it('V76: assertNotDispatchedTo fails when dispatch was sent', function (): void {
+    Queue::fake();
+
+    $test = TestMachine::define(
+        config: [
+            'id'      => 'v76_machine',
+            'initial' => 'idle',
+            'context' => [],
+            'states'  => [
+                'idle' => [
+                    'on' => [
+                        'GO' => [
+                            'target'  => 'done',
+                            'actions' => 'dispatchAction',
+                        ],
+                    ],
+                ],
+                'done' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'dispatchAction' => DispatchToTargetAction::class,
+            ],
+        ],
+    );
+
+    $test->send('GO');
+
+    // DispatchToTargetAction dispatches to AsyncParentMachine by default
+    // assertNotDispatchedTo should fail for that target
+    expect(fn () => $test->assertNotDispatchedTo(AsyncParentMachine::class))
+        ->toThrow(AssertionFailedError::class);
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  Category 2c: Bulk Faking (9 tests)
 // ═══════════════════════════════════════════════════════════════
 
