@@ -145,7 +145,7 @@ $test->processTimers()
 
 ## Timer Testing Without Persistence
 
-`advanceTimers()` works without database persistence — use it with `TestMachine::define()`, `withContext()`, or `withoutPersistence()`. Timer state is tracked in-memory automatically.
+`advanceTimers()` works without database persistence — use it with `Machine::test()`, `Machine::startingAt()`, `TestMachine::define()`, or `withoutPersistence()`. Timer state is tracked in-memory automatically.
 
 <!-- doctest-attr: no_run -->
 ```php

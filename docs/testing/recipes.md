@@ -292,17 +292,14 @@ it('runs both entry and exit actions on transition', function () {
 });
 ```
 
-## Recipe: Entry Action Testing with withContext()
+## Recipe: Entry Action Testing with Pre-Init Context
 
-When initial state has entry actions that depend on context, use `withContext()` to inject values before the machine starts:
+`Machine::test(context: [...])` merges context **before** initialization — entry actions on the initial state see the injected values:
 
 <!-- doctest-attr: ignore -->
 ```php
-// test() applies context AFTER start — entry actions see default context
-OrderMachine::test(['order_id' => 1])  // entry action already ran with null order_id
-
-// withContext() applies context BEFORE start — entry actions see injected values
-OrderMachine::test(context: ['order_id' => 1])  // entry action sees order_id = 1
+// Context injected before start — entry action sees order_id = 1
+OrderMachine::test(context: ['order_id' => 1])
     ->assertState('processing')
     ->assertContextHas('order_loaded');
 ```
@@ -934,7 +931,7 @@ it('CalculatePricesAction sets installment options', function (): void {
 
 Test a parent machine whose parallel regions delegate to child machines:
 
-<!-- doctest-attr: no_run -->
+<!-- doctest-attr: ignore -->
 ```php
 it('verification parallel state completes when both children finish', function (): void {
     Queue::fake();

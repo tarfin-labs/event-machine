@@ -87,7 +87,7 @@ Child delegation can be tested at three levels. Pick the one that matches what y
 | E2E | `Machine::fake()` + `create()` | Full delegation pipeline with persistence | Yes |
 
 ::: info simulateChild* is DB-free
-`simulateChildDone()`, `simulateChildFail()`, and `simulateChildTimeout()` do **not** touch the database. They route events entirely through definition-level logic (`routeChildDoneEvent`/`routeChildFailEvent`), so they work with `TestMachine::define()` and `withContext()` just as well as with `create()`.
+`simulateChildDone()`, `simulateChildFail()`, and `simulateChildTimeout()` do **not** touch the database. They route events entirely through definition-level logic (`routeChildDoneEvent`/`routeChildFailEvent`), so they work with `TestMachine::define()`, `Machine::test()`, and `Machine::startingAt()` equally well.
 :::
 
 For async simulation (parent already waiting for child):
@@ -527,7 +527,7 @@ Forward endpoint responses include `available_events` by default, showing which 
 use Tarfinlabs\EventMachine\Testing\TestMachine;
 
 it('includes forward events in available_events', function (): void {
-    $testMachine = TestMachine::create(OrderMachine::class)
+    $testMachine = OrderMachine::test()
         ->send(['type' => 'START']);
 
     // Assert a forwarded event appears with source: forward
@@ -541,7 +541,7 @@ it('includes forward events in available_events', function (): void {
 });
 
 it('reports no available events in final state', function (): void {
-    $testMachine = TestMachine::create(OrderMachine::class)
+    $testMachine = OrderMachine::test()
         ->send(['type' => 'START'])
         ->send(['type' => 'COMPLETE']);
 

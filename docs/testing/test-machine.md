@@ -416,11 +416,11 @@ The `except:` parameter accepts both class FQCNs and behavior key strings. Exclu
 
 ### Pre-Init Behavior Faking
 
-The `guards:` and `faking:` parameters on `withContext()`, `create()`, and `startingAt()` set behavior fakes **before** `getInitialState()` runs — solving the `@always` timing problem where guards and actions run before the fluent chain reaches `fakingAllActions()`:
+The `guards:` and `faking:` parameters on `Machine::test()` and `Machine::startingAt()` set behavior fakes **before** `getInitialState()` runs — solving the `@always` timing problem where guards and actions run before the fluent chain reaches `fakingAllActions()`:
 
 <!-- doctest-attr: no_run -->
 ```php
-TestMachine::withContext(FindeksMachine::class,
+FindeksMachine::test(
     context: ['tckn' => '11111111110'],
     guards: [
         HasExistingReportGuard::class  => false,
@@ -441,7 +441,7 @@ Skip path replay and start the machine at any state:
 
 <!-- doctest-attr: no_run -->
 ```php
-TestMachine::startingAt(FindeksMachine::class,
+FindeksMachine::startingAt(
     stateId: 'awaiting_pin',
     context: ['requestId' => 'REQ-1', 'phone' => '05321234567'],
     guards: [IsPinRetryableGuard::class => true],
