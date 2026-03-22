@@ -1,6 +1,19 @@
 # Testing Recipes
 
-Common real-world testing patterns combining isolated, faked, and machine-level techniques.
+Advanced real-world testing patterns combining multiple EventMachine techniques. For basic API reference, see the dedicated guide pages.
+
+**Categories:**
+- [Behavior Patterns](#behavior-patterns) — actions, guards, calculators, events
+- [State Flow](#state-flow) — @always chains, compound @done, scenarios
+- [Job Actors](#job-actors) — managed jobs, failure routing
+- [Parallel States](#parallel-states) — regions, failure, mixed sync/async
+- [Inter-Machine](#inter-machine) — delegation, forward endpoints, context isolation
+- [Advanced DX](#advanced-dx) — startingAt, fakingAllActions, selective faking
+- [End-to-End](#end-to-end) — real infrastructure, full pipelines
+
+---
+
+## Behavior Patterns {#behavior-patterns}
 
 ## Recipe: External API Action
 
@@ -570,6 +583,8 @@ it('handles different order sizes', function () {
 });
 ```
 
+## Job Actors {#job-actors}
+
 ## Recipe: Testing Managed Job Completion
 
 Test `@done` routing for a managed job actor without running the job. Use `Queue::fake()` to capture the dispatch, then `simulateChildDone()` to simulate the result:
@@ -612,6 +627,8 @@ it('routes to failed state when job throws', function (): void {
         ->assertState('payment_failed');
 });
 ```
+
+## Advanced DX {#advanced-dx}
 
 ## Recipe: Testing a Deep State Without Path Replay
 
@@ -677,6 +694,8 @@ it('verification parallel state completes when both children finish', function (
 
 Both child machines are faked — they complete immediately when the parent enters the parallel `verification` state. The parent's `@done` guard fires and transitions to `checking_protocol`.
 
+## State Flow {#state-flow}
+
 ## Recipe: @always Guard Chain Routing
 
 Test a machine with multiple `@always` branches — each guarded, first match wins:
@@ -728,6 +747,8 @@ it('compound @done triggers child delegation', function (): void {
 });
 ```
 
+## Parallel States {#parallel-states}
+
 ## Recipe: Parallel Region Failure
 
 Test that when one parallel region fails, the parent's `@fail` fires:
@@ -772,6 +793,8 @@ it('sync child completes immediately, async child via Horizon', function (): voi
         ->assertState('fulfilled');
 });
 ```
+
+## Inter-Machine {#inter-machine}
 
 ## Recipe: Forward Endpoint with Event Validation
 
@@ -833,6 +856,8 @@ it('child receives only with: keys, parent context unchanged', function (): void
     ]);
 });
 ```
+
+## End-to-End {#end-to-end}
 
 ## Recipe: Full Pipeline with Real Infrastructure
 
