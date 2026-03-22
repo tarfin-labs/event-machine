@@ -361,5 +361,5 @@ Designing a machine system is iterative. Start simple, add complexity only where
 - [Machine Delegation](/advanced/machine-delegation) -- `machine`/`job` key mechanics, `@done.{state}` routing
 - [Async Delegation](/advanced/async-delegation) -- queue-based child machines, `@timeout`
 - [Delegation Data Flow](/advanced/delegation-data-flow) -- `with`, `output`, and `@done` payload
-- [Cross-Machine Communication](/advanced/cross-machine-communication) -- `sendTo`/`dispatchTo`
+- [Cross-Machine Messaging](/advanced/sendto) -- `sendTo`/`dispatchTo`
 - [Time-Based Patterns](./time-based-patterns) -- `after`/`every` timer patterns
