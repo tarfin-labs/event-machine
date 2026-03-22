@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Testing;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 
 /**
  * Auto-resets all EventMachine test state after each test.
@@ -21,5 +22,6 @@ trait InteractsWithMachines
         Machine::resetMachineFakes();
         CommunicationRecorder::reset();
         InlineBehaviorFake::resetAll();
+        InvokableBehavior::resetAllFakes();
     }
 }
