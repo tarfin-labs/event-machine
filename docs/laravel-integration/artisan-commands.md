@@ -359,3 +359,47 @@ class OrderMachineStatsCommand extends Command
 For testing artisan commands like `machine:process-timers` and `machine:process-scheduled`, see [Recipes](/testing/recipes).
 :::
 ```
+
+## machine:scenario
+
+Play or list machine scenarios. Scenarios are pre-scripted event replay sequences that bring a machine to a desired state in staging environments.
+
+::: warning
+Requires `MACHINE_SCENARIOS_ENABLED=true` in your environment. See [Scenarios](/advanced/scenarios) for details.
+:::
+
+### Usage
+
+```bash
+# List all available scenarios
+php artisan machine:scenario --list
+
+# List scenarios for a specific machine
+php artisan machine:scenario --list --machine=OrderMachine
+
+# Play a scenario
+php artisan machine:scenario OrderReadyForPayment
+
+# Play with parameter overrides
+php artisan machine:scenario OrderReadyForPayment --param="amount:5000" --param="customer_name:Test"
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--list` | List all available scenarios |
+| `--machine=` | Filter by machine class name (used with `--list`) |
+| `--param=*` | Parameter overrides in `key:value` format |
+
+## machine:scenario-cache
+
+Cache scenario class discovery for production-like staging environments.
+
+### Usage
+
+```bash
+php artisan machine:scenario-cache
+```
+
+Scans the configured scenarios path and stores a class map, similar to `machine:cache` for machine discovery.
