@@ -184,7 +184,9 @@ export default withMermaid(
             { text: 'Inter-Machine Testing', link: '/testing/delegation-testing' },
             { text: 'Time-Based Testing', link: '/testing/time-based-testing' },
             { text: 'Scheduled Testing', link: '/testing/scheduled-testing' },
-            { text: 'Recipes', link: '/testing/recipes' }
+            { text: 'Real Infrastructure', link: '/testing/localqa' },
+            { text: 'Recipes', link: '/testing/recipes' },
+            { text: 'Troubleshooting', link: '/testing/troubleshooting' }
           ]
         },
         {
