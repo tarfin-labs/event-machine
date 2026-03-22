@@ -12,7 +12,8 @@ namespace Tarfinlabs\EventMachine\Contracts;
  * Jobs that do not implement this interface return an empty output.
  *
  * IMPORTANT: Job actors are simple service objects — NOT full queue jobs.
- * ChildJobJob calls $job->handle() directly, bypassing Laravel's queue
+ * ChildJobJob invokes handle() via app()->call(), which resolves type-hinted
+ * dependencies from the service container but bypasses Laravel's queue
  * infrastructure (middleware, rate limiters, retry/backoff, ShouldBeUnique).
  * The job class must have a handle() method and optionally implement this
  * interface. Constructor parameters are resolved via app()->make($class, $data),
