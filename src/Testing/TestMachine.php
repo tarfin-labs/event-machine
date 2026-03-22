@@ -176,12 +176,17 @@ class TestMachine
         // Resolve compound state to initial child
         $resolvedState = $stateDef->findInitialStateDefinition() ?? $stateDef;
 
-        // Build state at target — no history, no events, no lifecycle
+        // Build state at target — minimal history for Machine::send() compatibility
         $machine->state = new State(
             context: $contextManager,
             currentStateDefinition: $resolvedState,
         );
         $machine->state->setValues([$resolvedState->id]);
+
+        // Add a minimal init event so Machine::send() can read history->last()
+        $machine->state->setInternalEventBehavior(
+            type: InternalEvent::MACHINE_START,
+        );
 
         $instance                 = new self($machine);
         $instance->fakedBehaviors = $guardClasses;
