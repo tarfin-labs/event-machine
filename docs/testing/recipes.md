@@ -29,28 +29,6 @@ it('continues flow after payment', function () {
 });
 ```
 
-## Recipe: Guard Chain (Multiple Guards)
-
-When a transition has multiple guards, ALL must return true for the transition to proceed. Guards are evaluated in declaration order — the first guard that returns false blocks the transition, and remaining guards are not evaluated.
-
-<!-- doctest-attr: ignore -->
-```php
-it('requires all guards to pass', function () {
-    HasItemsGuard::shouldReturn(true);
-    IsValidAmountGuard::shouldReturn(true);
-    HasPermissionGuard::shouldReturn(false);  // third guard fails
-
-    OrderMachine::test()->assertGuarded('SUBMIT');
-});
-
-it('first failing guard blocks', function () {
-    HasItemsGuard::shouldReturn(false);  // first guard fails
-    // remaining guards never evaluated
-
-    OrderMachine::test()->assertGuarded('SUBMIT');
-});
-```
-
 ## Recipe: Calculator Ordering
 
 Calculators run in declaration order before guards. When calculators depend on each other's output (e.g., subtotal → discount → tax), test them in sequence to verify the pipeline produces correct values.
@@ -381,47 +359,6 @@ it('blocks transition when guard faked to false', function () {
 });
 ```
 
-## Recipe: Child Machine Faking
-
-Short-circuit child machines with `Machine::fake()` — no child actually runs. Test the parent's flow in isolation:
-
-<!-- doctest-attr: ignore -->
-```php
-use Tarfinlabs\EventMachine\Actor\Machine;
-
-it('routes @done when child succeeds', function () {
-    PaymentMachine::fake(result: ['payment_id' => 'pay_123']);
-
-    $machine = OrderWorkflowMachine::create();
-    $machine->send(['type' => 'START']);
-
-    expect($machine->state->matches('shipping'))->toBeTrue()
-        ->and($machine->state->context->get('payment_id'))->toBe('pay_123');
-
-    PaymentMachine::assertInvoked();
-    PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
-});
-
-it('routes @fail when child fails', function () {
-    PaymentMachine::fake(fail: true, error: 'Insufficient funds');
-
-    $machine = OrderWorkflowMachine::create();
-    $machine->send(['type' => 'START']);
-
-    expect($machine->state->matches('payment_failed'))->toBeTrue()
-        ->and($machine->state->context->get('error'))->toBe('Insufficient funds');
-});
-
-it('child not invoked when transition is guarded', function () {
-    PaymentMachine::fake(result: []);
-
-    $machine = OrderWorkflowMachine::create();
-    // Don't send START — child should NOT be invoked
-
-    PaymentMachine::assertNotInvoked();
-});
-```
-
 ## Recipe: Async dispatchTo Testing
 
 Test `dispatchTo()` and `dispatchToParent()` dispatches with `Queue::fake()`:
@@ -446,58 +383,6 @@ it('dispatches async event to target machine', function () {
 ::: tip
 For the full `Machine::fake()` API (`result`, `fail`, `error`, `finalState`) and assertion methods, see [Inter-Machine Testing](/testing/delegation-testing).
 :::
-
-## Recipe: Testing Order Cancellation After Timeout
-
-<!-- doctest-attr: no_run -->
-```php
-use Tarfinlabs\EventMachine\Support\Timer;
-
-it('cancels order after 7 days without payment', function (): void {
-    OrderMachine::test(['order_id' => 'ORD-123'])
-        ->assertState('awaiting_payment')
-        ->assertHasTimer('ORDER_EXPIRED')
-        ->advanceTimers(Timer::days(8))
-        ->assertState('cancelled')
-        ->assertTimerFired('ORDER_EXPIRED')
-        ->assertFinished();
-});
-```
-
-## Recipe: Testing Recurring Billing
-
-<!-- doctest-attr: no_run -->
-```php
-it('bills subscription every 30 days', function (): void {
-    SubscriptionMachine::test()
-        ->assertState('active')
-        ->advanceTimers(Timer::days(31))
-        ->assertContext('billing_count', 1)
-        ->advanceTimers(Timer::days(31))
-        ->assertContext('billing_count', 2)
-        ->assertState('active');
-});
-```
-
-## Recipe: Testing Retry with Max Attempts
-
-<!-- doctest-attr: no_run -->
-```php
-it('retries payment 3 times then fails', function (): void {
-    $test = RetryMachine::test()->assertState('retrying');
-
-    // 3 retries
-    for ($i = 1; $i <= 3; $i++) {
-        $test->advanceTimers(Timer::hours(7))
-            ->assertContext('retry_count', $i);
-    }
-
-    // After max → fails
-    $test->advanceTimers(Timer::hours(7))
-        ->assertState('failed')
-        ->assertFinished();
-});
-```
 
 ## Recipe: Controller Testing with Machine::fake()
 
@@ -606,37 +491,6 @@ OrderMachine::test()
 
 For the full pattern including catch-all fallback and result data, see [Inter-Machine Testing — Testing Per-Final-State Routing](/testing/delegation-testing#testing-per-final-state-routing).
 
-## Recipe: Fire-and-Forget Machine Delegation
-
-Verify fire-and-forget dispatch without tracking the child result:
-
-<!-- doctest-attr: ignore -->
-```php
-AuditMachine::fake(result: []);
-
-AccountMachine::test()
-    ->send('SUSPEND')
-    ->assertState('suspended');
-
-AuditMachine::assertInvoked();
-```
-
-For `Queue::fake()` patterns and `target` transitions, see [Inter-Machine Testing — Testing Fire-and-Forget](/testing/delegation-testing#testing-fire-and-forget-machine-delegation).
-
-## Recipe: Scheduled Event Testing
-
-Verify scheduled events fire and process correctly:
-
-<!-- doctest-attr: ignore -->
-```php
-BillingMachine::test()
-    ->assertHasSchedule('MONTHLY_BILLING')
-    ->runSchedule('MONTHLY_BILLING')
-    ->assertState('billing_processed');
-```
-
-For `ScheduleResolver` testing, `ProcessScheduledCommand` integration, and E2E patterns, see [Scheduled Testing](/testing/scheduled-testing).
-
 ## Recipe: Full Async Delegation Pipeline
 
 When `Queue::fake()` isn't enough — verify the complete async cycle: parent dispatches → child runs → child completes → parent routes via `@done`.
@@ -677,137 +531,6 @@ it('completes full async delegation pipeline', function (): void {
 - Queue worker must be started **before** the test runs
 - Clean tables between tests with truncate (not `RefreshDatabase` which rolls back)
 :::
-
-## Recipe: Timer Sweep in Real Environment
-
-Verify `machine:process-timers` reads from DB and fires correctly:
-
-<!-- doctest-attr: no_run -->
-```php
-use Illuminate\Support\Facades\Artisan;
-
-it('timer sweep fires expired timer', function (): void {
-    $machine = OrderMachine::create();
-    $machine->send(['type' => 'SUBMIT']);
-    $machine->persist();
-
-    // Fast-forward time past the timer deadline
-    $this->travel(8)->days();
-
-    // Run the sweep command (reads machine_timer_fires table)
-    Artisan::call('machine:process-timers');
-
-    // Verify machine transitioned
-    $rootEventId = $machine->state->history->first()->root_event_id;
-    $restored    = OrderMachine::create(state: $rootEventId);
-
-    expect($restored->state->currentStateDefinition->id)->toContain('cancelled');
-});
-```
-
-## Recipe: Testing Concurrent Access
-
-Verify machine locks prevent race conditions:
-
-<!-- doctest-attr: no_run -->
-```php
-use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
-
-it('concurrent sends are serialized by lock', function (): void {
-    $machine = OrderMachine::create();
-    $machine->send(['type' => 'SUBMIT']);
-    $machine->persist();
-
-    $rootEventId = $machine->state->history->first()->root_event_id;
-
-    // First send succeeds
-    $m1 = OrderMachine::create(state: $rootEventId);
-    $m1->send(['type' => 'PAY']);
-
-    // Second concurrent send on same instance should be serialized
-    // In real concurrent scenario, one would throw MachineLockTimeoutException
-    $m2 = OrderMachine::create(state: $rootEventId);
-
-    expect(fn () => $m2->send(['type' => 'PAY']))
-        ->toThrow(MachineLockTimeoutException::class);
-});
-```
-
-::: tip
-For concurrent testing with real parallel processes, use Laravel's `Http::pool()` or dispatch async jobs that both target the same machine instance.
-:::
-
-## Recipe: Fluent Delegation Testing
-
-The complete TestMachine v2 delegation testing pattern:
-
-<!-- doctest-attr: ignore -->
-```php
-it('processes order through payment delegation', function (): void {
-    OrderMachine::test()
-        ->fakingChild(PaymentMachine::class, result: ['id' => 'pay_1'], finalState: 'approved')
-        ->send('PLACE_ORDER')
-        ->assertState('completed')
-        ->assertChildInvoked(PaymentMachine::class)
-        ->assertChildInvokedWith(PaymentMachine::class, ['order_id' => 'ORD-1'])
-        ->assertRoutedViaDoneState('approved')
-        ->assertContext('payment_id', 'pay_1');
-});
-```
-
-No static `Machine::fake()` calls, no manual `Machine::resetMachineFakes()` — everything is managed through the fluent chain.
-
-## Recipe: Simulating Async Child Completion
-
-When the parent is already waiting for an async child, simulate completion without queue infrastructure:
-
-<!-- doctest-attr: ignore -->
-```php
-it('routes parent when async child completes', function (): void {
-    OrderMachine::test()
-        ->send('START_ASYNC_PAYMENT')
-        ->assertState('awaiting_payment')
-        ->simulateChildDone(PaymentMachine::class, result: ['id' => 'pay_1'], finalState: 'approved')
-        ->assertState('shipping')
-        ->assertRoutedViaDoneState('approved');
-});
-
-it('routes parent when async child fails', function (): void {
-    OrderMachine::test()
-        ->send('START_ASYNC_PAYMENT')
-        ->assertState('awaiting_payment')
-        ->simulateChildFail(PaymentMachine::class, errorMessage: 'Card declined')
-        ->assertState('payment_failed');
-});
-```
-
-## Recipe: Cross-Machine Communication Testing
-
-Verify that behaviors communicate with other machines:
-
-<!-- doctest-attr: ignore -->
-```php
-it('sends progress to parent machine', function (): void {
-    ChildMachine::test()
-        ->recordingCommunication()
-        ->send('PROCESS')
-        ->assertSentTo(ParentMachine::class, 'CHILD_PROGRESS')
-        ->assertNotSentTo(AuditMachine::class);
-});
-```
-
-For async dispatch verification, combine with `Queue::fake()`:
-
-<!-- doctest-attr: ignore -->
-```php
-it('dispatches notification to audit machine', function (): void {
-    Queue::fake();
-
-    OrderMachine::test()
-        ->send('COMPLETE')
-        ->assertDispatchedTo(AuditMachine::class, 'ORDER_COMPLETED');
-});
-```
 
 ## Recipe: Complex Event Payloads
 
