@@ -8,7 +8,9 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\GuardedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AlwaysGuardMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\LoopMachines\AlwaysLoopMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\JobActors\JobActorParentMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ConditionalOnDoneMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\DoneDotParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Compound\ConditionalCompoundOnDoneMachine;
@@ -202,4 +204,37 @@ test('AlwaysGuardMachine enumerates 3 paths: 2 HAPPY + 1 GUARD_BLOCK', function 
     expect($result->paths)->toHaveCount(3)
         ->and($result->happyPaths())->toHaveCount(2)
         ->and($result->guardBlockPaths())->toHaveCount(1);
+});
+
+test('AfterTimerMachine enumerates 2 paths: HAPPY + TIMEOUT', function (): void {
+    $definition = AfterTimerMachine::definition();
+    $enumerator = new PathEnumerator($definition);
+    $result     = $enumerator->enumerate();
+
+    // awaiting_payment → PAY → processing → COMPLETE → completed (HAPPY)
+    // awaiting_payment → ORDER_EXPIRED (after 7d) → cancelled (TIMEOUT)
+    expect($result->paths)->toHaveCount(2)
+        ->and($result->happyPaths())->toHaveCount(1)
+        ->and($result->timeoutPaths())->toHaveCount(1);
+
+    // Verify timer metadata on the timeout path
+    $timeoutPath = $result->timeoutPaths()[0];
+    $timerSteps  = array_filter($timeoutPath->steps, fn ($s) => $s->timerType !== null);
+    expect($timerSteps)->not->toBeEmpty();
+});
+
+test('AlwaysLoopMachine enumerates 1 LOOP path', function (): void {
+    $definition = AlwaysLoopMachine::definition();
+    $enumerator = new PathEnumerator($definition);
+    $result     = $enumerator->enumerate();
+
+    // idle → TRIGGER → loop_a → @always → loop_b → @always → loop_a (LOOP)
+    expect($result->paths)->toHaveCount(1)
+        ->and($result->loopPaths())->toHaveCount(1);
+});
+
+test('MachineDefinition::enumeratePaths convenience wrapper works', function (): void {
+    $result = JobActorParentMachine::definition()->enumeratePaths();
+
+    expect($result->paths)->toHaveCount(2);
 });
