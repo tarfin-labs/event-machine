@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Support\Timer;
 use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineChild;
@@ -1099,6 +1100,60 @@ it('V60: startingAt with fakingAllActions full flow', function (): void {
         ->simulateChildDone(SuccessfulTestJob::class, result: ['payment_id' => 'pay_60'])
         ->assertState('completed')
         ->assertContext('payment_id', 'pay_60'); // inline closure ran (fakingAll skips inline)
+});
+
+it('V61: startingAt registers timers for advanceTimers', function (): void {
+    $test = TestMachine::define(
+        config: [
+            'id'      => 'v61_machine',
+            'initial' => 'waiting',
+            'context' => [],
+            'states'  => [
+                'waiting' => [
+                    'on' => [
+                        'TIMEOUT' => [
+                            'target' => 'expired',
+                            'after'  => Timer::seconds(60),
+                        ],
+                    ],
+                ],
+                'expired' => ['type' => 'final'],
+            ],
+        ],
+    );
+
+    $test->advanceTimers(Timer::seconds(61))
+        ->assertState('expired');
+});
+
+it('V62: startingAt with advanceTimers fires after timer', function (): void {
+    // Create a machine class that has a timer on a non-initial state
+    $test = TestMachine::define(
+        config: [
+            'id'      => 'v62_machine',
+            'initial' => 'idle',
+            'context' => [],
+            'states'  => [
+                'idle' => [
+                    'on' => ['GO' => 'waiting'],
+                ],
+                'waiting' => [
+                    'on' => [
+                        'TIMEOUT' => [
+                            'target' => 'expired',
+                            'after'  => Timer::hours(24),
+                        ],
+                    ],
+                ],
+                'expired' => ['type' => 'final'],
+            ],
+        ],
+    );
+
+    $test->send('GO')
+        ->assertState('waiting')
+        ->advanceTimers(Timer::hours(25))
+        ->assertState('expired');
 });
 
 // ═══════════════════════════════════════════════════════════════
