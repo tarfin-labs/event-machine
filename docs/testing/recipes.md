@@ -849,3 +849,46 @@ it('handles different order sizes', function () {
     expect($large->payload['order_items'])->toHaveCount(10);
 });
 ```
+
+## Recipe: Testing Managed Job Completion
+
+Test `@done` routing for a managed job actor without running the job. Use `Queue::fake()` to capture the dispatch, then `simulateChildDone()` to simulate the result:
+
+<!-- doctest-attr: no_run -->
+```php
+it('routes to completed after job finishes', function (): void {
+    Queue::fake();
+
+    PaymentMachine::test()
+        ->withoutPersistence()
+        ->send('START_PAYMENT')
+        ->assertState('charging')
+        ->simulateChildDone(ChargeCardJob::class, result: [
+            'transaction_id' => 'txn_123',
+            'amount'         => 5000,
+        ])
+        ->assertState('completed')
+        ->assertContext('transaction_id', 'txn_123');
+});
+```
+
+## Recipe: Testing Job Failure Routing
+
+Test `@fail` routing when a managed job fails:
+
+<!-- doctest-attr: no_run -->
+```php
+it('routes to failed state when job throws', function (): void {
+    Queue::fake();
+
+    PaymentMachine::test()
+        ->withoutPersistence()
+        ->send('START_PAYMENT')
+        ->assertState('charging')
+        ->simulateChildFail(ChargeCardJob::class,
+            errorMessage: 'Card declined',
+            errorCode: 402,
+        )
+        ->assertState('payment_failed');
+});
+```
