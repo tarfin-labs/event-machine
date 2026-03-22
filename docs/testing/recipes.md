@@ -302,7 +302,7 @@ When initial state has entry actions that depend on context, use `withContext()`
 OrderMachine::test(['order_id' => 1])  // entry action already ran with null order_id
 
 // withContext() applies context BEFORE start — entry actions see injected values
-OrderMachine::withContext(['order_id' => 1])  // entry action sees order_id = 1
+OrderMachine::test(context: ['order_id' => 1])  // entry action sees order_id = 1
     ->assertState('processing')
     ->assertContextHas('order_loaded');
 ```
@@ -902,7 +902,7 @@ Use `startingAt()` to skip directly to a deep state without replaying the entire
 it('handles PIN retry from confirming_pin state', function (): void {
     Queue::fake();
 
-    TestMachine::startingAt(FindeksMachine::class,
+    FindeksMachine::startingAt(
         stateId: 'confirming_pin',
         context: ['tckn' => '11111111110', 'requestId' => 'REQ-1'],
         guards: [IsPinRetryableGuard::class => true],
@@ -920,7 +920,7 @@ Test a single action's behavior by faking everything else:
 <!-- doctest-attr: no_run -->
 ```php
 it('CalculatePricesAction sets installment options', function (): void {
-    TestMachine::withContext(OrderMachine::class,
+    OrderMachine::test(
         context: ['vehicle_price' => 100000, 'down_payment' => 20000],
     )
     ->fakingAllActions(except: [CalculatePricesAction::class])
@@ -929,3 +929,30 @@ it('CalculatePricesAction sets installment options', function (): void {
     ->assertContextMatches('installment_options', fn ($options) => count($options) > 0);
 });
 ```
+
+## Recipe: Testing Parallel Regions with Child Delegation
+
+Test a parent machine whose parallel regions delegate to child machines:
+
+<!-- doctest-attr: no_run -->
+```php
+it('verification parallel state completes when both children finish', function (): void {
+    Queue::fake();
+
+    CarSalesMachine::test(
+        context: [...],
+        guards: [
+            HasConsentGuard::class         => true,
+            IsFarmerNotEligibleGuard::class => false,
+        ],
+        faking: [StoreApplicationAction::class],
+    )
+    ->withoutPersistence()
+    ->fakingAllActions()
+    ->fakingChild(FindeksMachine::class, result: [...], finalState: 'report_saved')
+    ->fakingChild(TurmobMachine::class, result: [...])
+    ->assertState('checking_protocol');
+});
+```
+
+Both child machines are faked — they complete immediately when the parent enters the parallel `verification` state. The parent's `@done` guard fires and transitions to `checking_protocol`.
