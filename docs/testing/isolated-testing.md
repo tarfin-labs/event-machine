@@ -53,6 +53,45 @@ IncrementAction::runWithState($state);
 expect($state->context->count)->toBe(1);
 ```
 
+### Actions — asserting raised events
+
+Actions that call `$this->raise()` push events onto an internal queue. After `runWithState()`, use static assertions to verify which events were raised:
+
+<!-- doctest-attr: no_run -->
+```php
+CheckProtocolAction::runWithState($state);
+
+CheckProtocolAction::assertRaised(ProtocolUndecidedEvent::class);
+CheckProtocolAction::assertNotRaised(ProtocolRejectedEvent::class);
+CheckProtocolAction::assertRaisedCount(1);
+```
+
+Supports both FQCN and event type strings:
+
+<!-- doctest-attr: ignore -->
+```php
+CheckProtocolAction::assertRaised('PROTOCOL_UNDECIDED');
+CheckProtocolAction::assertRaised(ProtocolUndecidedEvent::class);
+```
+
+For actions that should NOT raise any events:
+
+<!-- doctest-attr: no_run -->
+```php
+StoreDataAction::runWithState($state);
+StoreDataAction::assertNothingRaised();
+```
+
+Multiple raised events — assert each individually:
+
+<!-- doctest-attr: no_run -->
+```php
+MultiStepAction::runWithState($state);
+MultiStepAction::assertRaised('STEP_ONE_DONE');
+MultiStepAction::assertRaised('STEP_TWO_DONE');
+MultiStepAction::assertRaisedCount(2);
+```
+
 ### Calculators — with arguments
 
 Calculators run before guards to compute derived values. Unlike actions, they only modify context — no side effects. The third parameter passes colon-separated arguments from the machine definition (e.g., `'myCalculator:7'` passes `['7']`).
@@ -328,6 +367,7 @@ When a guard handles `@done` events, type-hint `ChildMachineDoneEvent $event` �
 | Test Type | Method | Best For |
 |-----------|--------|----------|
 | Unit | `runWithState()` | Single behavior logic, fast, no DB |
+| Raised events | `assertRaised()` / `assertNothingRaised()` | Unit-level raise testing, no machine needed |
 | Integration | `Machine::test()` | Transition flow, guard interaction |
 | E2E | `Machine::create()` + `send()` | Full persistence, real DB |
 
