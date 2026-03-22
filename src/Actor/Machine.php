@@ -1094,7 +1094,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         $params = InvokableBehavior::injectInvokableBehaviorParameters(
             actionBehavior: $resultBehavior,
             state: $this->state,
-            eventBehavior: $this->state->currentEventBehavior,
+            eventBehavior: $this->state->triggeringEvent ?? $this->state->currentEventBehavior,
             actionArguments: $arguments,
         );
 
