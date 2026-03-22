@@ -105,12 +105,12 @@ For failure simulation with structured error data:
 
 <!-- doctest-attr: ignore -->
 ```php
-FindeksMachine::test()
-    ->send('CONFIRM_PIN')
-    ->assertState('confirming_pin')
+VerificationMachine::test()
+    ->send('PROCESS_PAYMENT')
+    ->assertState('processing_payment')
     ->simulateChildFail(
-        ConfirmPinJob::class,
-        errorMessage: 'Wrong PIN',
+        ProcessPaymentJob::class,
+        errorMessage: 'Payment declined',
         errorCode: 311,
         output: ['errorCode' => 'E311', 'retryable' => true],
     )
@@ -128,13 +128,13 @@ When testing controllers or services that use `Machine::create()`, you can fake 
 // Without fake: controller triggers full machine restore + transition + persist
 // With fake: Machine::create() returns a stub — send/persist are no-ops
 
-CarSalesMachine::fake();
+OrderMachine::fake();
 
 $response = $this->postJson("/consent/{$hash}/approve");
 
 $response->assertOk();
-CarSalesMachine::assertCreated();
-CarSalesMachine::assertSent('CONSENT_GRANTED');
+OrderMachine::assertCreated();
+OrderMachine::assertSent('ORDER_SUBMITTED');
 // No resetMachineFakes() needed — InteractsWithMachines handles it
 ```
 
@@ -287,14 +287,14 @@ Managed jobs (with `@done`/`@fail`) support the same `simulateChild*` methods as
 ```php
 Queue::fake();
 
-FindeksMachine::test()
+VerificationMachine::test()
     ->withoutPersistence()
-    ->faking([StorePhonesAction::class, AutoMatchPhoneAction::class])
-    ->assertState('querying_phones')
-    ->simulateChildDone(QueryPhonesJob::class, result: [
-        'phones' => [['phone' => '05321234567', 'query_id' => 1]],
+    ->faking([StoreItemsAction::class, ValidateOrderAction::class])
+    ->assertState('processing_items')
+    ->simulateChildDone(ProcessItemsJob::class, result: [
+        'phones' => [['item_id' => 'ITEM-1', 'quantity' => 2]],
     ])
-    ->assertState('awaiting_report_request');
+    ->assertState('awaiting_confirmation');
 ```
 
 This tests the `@done` routing logic without running the actual job. For dispatch verification, use `Queue::assertPushed(ChildJobJob::class)`.

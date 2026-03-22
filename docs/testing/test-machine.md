@@ -389,7 +389,7 @@ Fake all class-based behaviors in one call instead of listing each one:
 <!-- doctest-attr: ignore -->
 ```php
 ->fakingAllActions()                                   // all actions → spy
-->fakingAllActions(except: [StorePinAction::class])    // all except this one
+->fakingAllActions(except: [StorePaymentAction::class])    // all except this one
 ->fakingAllActions(except: ['storePinAction'])          // by behavior key
 
 ->fakingAllGuards()                                    // all guards → spy
@@ -405,8 +405,8 @@ The `except:` parameter accepts both class FQCNs and behavior key strings. Exclu
 
 <!-- doctest-attr: ignore -->
 ```php
-// ✅ Good — tests StorePinAction logic:
-->fakingAllActions(except: [StorePinAction::class])
+// ✅ Good — tests StorePaymentAction logic:
+->fakingAllActions(except: [StorePaymentAction::class])
 
 // ⚠️ Questionable — tests nothing but config:
 ->fakingAllActions()
@@ -420,16 +420,16 @@ The `guards:` and `faking:` parameters on `Machine::test()` and `Machine::starti
 
 <!-- doctest-attr: no_run -->
 ```php
-FindeksMachine::test(
-    context: ['tckn' => '11111111110'],
+VerificationMachine::test(
+    context: ['order_id' => 'ORD-1'],
     guards: [
-        HasExistingReportGuard::class  => false,
-        IsPhoneMatchGuard::class       => true,
+        HasExistingOrderGuard::class  => false,
+        IsPaymentValidGuard::class       => true,
     ],
-    faking: [StoreExistingReportAction::class],
+    faking: [InitializeOrderAction::class],
 )
 ->fakingAllActions()
-->assertState('querying_phones');
+->assertState('processing');
 ```
 
 - `guards:` — sets guard return values (`$class::shouldReturn($value)`)
@@ -441,14 +441,14 @@ Skip path replay and start the machine at any state:
 
 <!-- doctest-attr: no_run -->
 ```php
-FindeksMachine::startingAt(
-    stateId: 'awaiting_pin',
-    context: ['requestId' => 'REQ-1', 'phone' => '05321234567'],
-    guards: [IsPinRetryableGuard::class => true],
+VerificationMachine::startingAt(
+    stateId: 'processing_payment',
+    context: ['order_id' => 'ORD-1', 'amount' => 5000],
+    guards: [IsRetryableGuard::class => true],
 )
-->fakingAllActions(except: [StorePinAction::class])
-->send(PinConfirmedEvent::make(['pin' => '123456']))
-->assertState('confirming_pin');
+->fakingAllActions(except: [StorePaymentAction::class])
+->send(PaymentConfirmedEvent::make(['confirmation_code' => 'ABC123']))
+->assertState('verifying');
 ```
 
 `startingAt()` creates the machine at the given state without running any lifecycle (no entry actions, no `@always`, no job dispatch). The machine uses the real definition — all transitions, guards, and actions are available.
