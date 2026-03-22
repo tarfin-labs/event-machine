@@ -74,7 +74,7 @@ class PathEnumerator
             StateDefinitionType::FINAL    => $this->handleFinal($state, $steps, $visitedIds),
             StateDefinitionType::PARALLEL => $this->handleParallel($state, $steps, $visitedIds),
             StateDefinitionType::COMPOUND => $this->handleCompound($state, $steps, $visitedIds),
-            StateDefinitionType::ATOMIC   => $this->handleAtomic($state, $steps),
+            StateDefinitionType::ATOMIC   => $this->handleAtomic($state, $steps, $visitedIds),
         };
     }
 
@@ -222,28 +222,186 @@ class PathEnumerator
     }
 
     /**
-     * ATOMIC state: collect transitions, enumerate paths.
-     * Placeholder — will be implemented in subsequent tasks.
+     * ATOMIC state: collect transitions and enumerate paths.
      *
      * @param  list<PathStep>  $steps
+     * @param  array<string, true>  $visitedIds
      */
-    private function handleAtomic(StateDefinition $state, array $steps): void
+    private function handleAtomic(StateDefinition $state, array $steps, array $visitedIds): void
     {
         $steps[] = new PathStep(stateId: $state->id, stateKey: $state->key ?? '');
 
-        // Dead-end: no transitions, not FINAL
-        $hasTransitions   = $state->transitionDefinitions !== null && $state->transitionDefinitions !== [];
+        // Step 1: Collect all transitions (own + inherited via parent chain)
+        $transitions      = $this->collectAllTransitions($state);
         $hasMachineInvoke = $state->hasMachineInvoke();
 
-        if (!$hasTransitions && !$hasMachineInvoke) {
+        // Step 2: Dead-end detection
+        if ($transitions === [] && !$hasMachineInvoke) {
             $this->recordPath($steps, PathType::DEAD_END);
 
             return;
         }
 
-        // Transition enumeration will be implemented in subsequent tasks.
-        // For now, record as dead-end if we have no handler for the transitions.
-        $this->recordPath($steps, PathType::DEAD_END);
+        // Step 3: @always priority (implemented in implement-always-priority task)
+        // Step 4: Enumerate transitions (implemented in implement-transition-enumeration task)
+        $this->enumerateTransitions($state, $steps, $visitedIds, $transitions);
+    }
+
+    /**
+     * Collect all transitions for an atomic state, including inherited ones.
+     *
+     * Walks up the parent chain (mirroring findTransitionDefinition() bubbling)
+     * and adds transitions for events not already seen at a lower level.
+     *
+     * @return array<string, TransitionDefinition> Keyed by event type.
+     */
+    private function collectAllTransitions(StateDefinition $state): array
+    {
+        $transitions = [];
+
+        // Start with the state's own transitions
+        if ($state->transitionDefinitions !== null) {
+            foreach ($state->transitionDefinitions as $event => $transition) {
+                $transitions[$event] = $transition;
+            }
+        }
+
+        // Walk up parent chain — add transitions for events NOT already seen
+        $current = $state->parent;
+
+        while ($current instanceof StateDefinition && $current->order !== 0) {
+            if ($current->transitionDefinitions !== null) {
+                foreach ($current->transitionDefinitions as $event => $transition) {
+                    if (!isset($transitions[$event])) {
+                        $transitions[$event] = $transition;
+                    }
+                }
+            }
+
+            $current = $current->parent;
+        }
+
+        return $transitions;
+    }
+
+    /**
+     * Enumerate all collected transitions from an atomic state.
+     *
+     * @param  list<PathStep>  $steps
+     * @param  array<string, true>  $visitedIds
+     * @param  array<string, TransitionDefinition>  $transitions
+     */
+    private function enumerateTransitions(
+        StateDefinition $state,
+        array $steps,
+        array $visitedIds,
+        array $transitions,
+    ): void {
+        $enumerated = false;
+
+        foreach ($transitions as $event => $transition) {
+            // Skip @always for now — handled by implement-always-priority task
+            if ($transition->isAlways) {
+                continue;
+            }
+
+            $timerType = $transition->timerDefinition?->type;
+
+            foreach ($transition->branches ?? [] as $index => $branch) {
+                // Skip self-transitions (target === null)
+                if (!$branch->target instanceof StateDefinition) {
+                    continue;
+                }
+
+                $step = new PathStep(
+                    stateId: $branch->target->id,
+                    stateKey: $branch->target->key ?? '',
+                    event: $event,
+                    branchIndex: count($transition->branches ?? []) > 1 ? $index : null,
+                    guards: $branch->guards ?? [],
+                    actions: $branch->actions ?? [],
+                    timerType: $timerType,
+                );
+
+                $branchSteps   = $steps;
+                $branchSteps[] = $step;
+
+                $this->dfs($branch->target, $branchSteps, $visitedIds);
+                $enumerated = true;
+            }
+
+            // GUARD_BLOCK: all branches are guarded, no unguarded fallback
+            if ($this->isAllBranchesGuarded($transition)) {
+                $guardBlockStep = new PathStep(
+                    stateId: $state->id,
+                    stateKey: $state->key ?? '',
+                    event: $event,
+                    guards: $this->extractAllGuards($transition),
+                );
+
+                $blockSteps   = $steps;
+                $blockSteps[] = $guardBlockStep;
+
+                $this->recordPath($blockSteps, PathType::GUARD_BLOCK);
+                $enumerated = true;
+            }
+        }
+
+        // Machine invoke transitions — will be implemented in implement-machine-invoke-enumeration task
+        if ($state->hasMachineInvoke()) {
+            $this->enumerateMachineInvoke();
+            $enumerated = true;
+        }
+
+        // If nothing was enumerated (e.g., only @always transitions exist but we skip them)
+        if (!$enumerated) {
+            $this->recordPath($steps, PathType::DEAD_END);
+        }
+    }
+
+    /**
+     * Check if all branches of a transition have guards (no unguarded fallback).
+     */
+    private function isAllBranchesGuarded(TransitionDefinition $transition): bool
+    {
+        if ($transition->branches === null || $transition->branches === []) {
+            return false;
+        }
+
+        foreach ($transition->branches as $branch) {
+            if ($branch->guards === null || $branch->guards === []) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Extract all guard names from all branches of a transition.
+     *
+     * @return array<string>
+     */
+    private function extractAllGuards(TransitionDefinition $transition): array
+    {
+        $guards = [];
+
+        foreach ($transition->branches ?? [] as $branch) {
+            foreach ($branch->guards ?? [] as $guard) {
+                $guards[] = $guard;
+            }
+        }
+
+        return array_values(array_unique($guards));
+    }
+
+    /**
+     * Enumerate machine invoke transitions (@done, @fail, @timeout, @done.{state}).
+     * Placeholder — implemented in implement-machine-invoke-enumeration task.
+     */
+    private function enumerateMachineInvoke(): void
+    {
+        // Will be implemented in implement-machine-invoke-enumeration task
     }
 
     /**
