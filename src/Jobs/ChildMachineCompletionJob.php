@@ -109,10 +109,11 @@ class ChildMachineCompletionJob implements ShouldQueue
                 return;
             }
 
-            // Track whether this is a parallel context for value preservation
-            $isParallelContext = count($freshParent->state->value) > 1;
-            $parallelValues    = $isParallelContext ? $freshParent->state->value : null;
-            $parallelCSD       = $isParallelContext ? $freshParent->state->currentStateDefinition : null;
+            // Track parallel context for value preservation after routing
+            $isParallelContext  = count($freshParent->state->value) > 1;
+            $parallelValues     = $isParallelContext ? $freshParent->state->value : null;
+            $parallelCSD        = $isParallelContext ? $freshParent->state->currentStateDefinition : null;
+            $historyCountBefore = count($freshParent->state->history);
 
             // 5. Route @done or @fail on the parent
             if ($this->success) {
@@ -155,28 +156,14 @@ class ChildMachineCompletionJob implements ShouldQueue
                 );
             }
 
-            // 5b. Parallel value preservation: routeChildDoneEvent calls
-            // executeChildTransitionBranch → setCurrentStateDefinition, which wipes
-            // the parallel value array. Restore it with the region's new state.
+            // 5b. Parallel value preservation
             if ($isParallelContext && $parallelValues !== null) {
-                $oldRegionState = $this->parentStateId;
-                $historyCount   = count($freshParent->state->history);
-
-                if ($freshParent->state->value !== $parallelValues) {
-                    $newRegionState = $freshParent->state->value[0] ?? $oldRegionState;
-                    $restoredValues = array_map(
-                        fn (string $v): string => $v === $oldRegionState ? $newRegionState : $v,
-                        $parallelValues,
-                    );
-                    $freshParent->state->setValues($restoredValues);
-
-                    // Fix machine_value snapshots in events recorded during routing
-                    for ($i = count($parallelValues); $i < $historyCount; $i++) {
-                        if (isset($freshParent->state->history[$i])) {
-                            $freshParent->state->history[$i]->machine_value = $restoredValues;
-                        }
-                    }
-                }
+                $freshParent->definition->restoreParallelValues(
+                    $freshParent->state,
+                    $parallelValues,
+                    $this->parentStateId,
+                    $historyCountBefore,
+                );
 
                 // Restore currentStateDefinition to the parallel state
                 if ($parallelCSD !== null) {
