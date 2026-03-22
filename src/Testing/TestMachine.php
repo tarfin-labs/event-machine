@@ -387,19 +387,6 @@ class TestMachine
     }
 
     /**
-     * Set the scenario type for scenario-aware machines.
-     *
-     * Sets the 'scenarioType' context key which MachineDefinition::getScenarioStateIfAvailable()
-     * reads to route to scenario-specific states.
-     */
-    public function withScenario(string $scenarioName): self
-    {
-        $this->machine->state->context->set('scenarioType', $scenarioName);
-
-        return $this;
-    }
-
-    /**
      * Disable persistence for this test.
      */
     public function withoutPersistence(): self
