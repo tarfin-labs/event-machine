@@ -82,6 +82,7 @@ Child delegation can be tested at three levels. Pick the one that matches what y
 | Level | Tool | What It Tests | DB Needed |
 |-------|------|---------------|-----------|
 | Unit | `forTesting()` + `runWithState()` | Single guard/action logic in isolation | No |
+| Focused | `startingAt()` + `fakingAllActions(except:)` | Specific state behavior without path replay | No |
 | Integration | `simulateChildDone/Fail` | Machine & job delegation routing, guard chains, state flow | No |
 | E2E | `Machine::fake()` + `create()` | Full delegation pipeline with persistence | Yes |
 
