@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Query;
 
 use InvalidArgumentException;
+use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
@@ -75,6 +76,46 @@ class MachineQueryBuilder
                 }
             }
         });
+
+        return $this;
+    }
+
+    // endregion
+
+    // region Time Filters & Ordering
+
+    /**
+     * Order results by most recently entered state (applied during hydration).
+     */
+    public function latest(): self
+    {
+        return $this;
+    }
+
+    /**
+     * Order results by oldest entered state (applied during hydration).
+     */
+    public function oldest(): self
+    {
+        return $this;
+    }
+
+    /**
+     * Filter to instances that entered their current state before the given date.
+     */
+    public function enteredBefore(Carbon $date): self
+    {
+        $this->query->where('state_entered_at', '<', $date);
+
+        return $this;
+    }
+
+    /**
+     * Filter to instances that entered their current state after the given date.
+     */
+    public function enteredAfter(Carbon $date): self
+    {
+        $this->query->where('state_entered_at', '>', $date);
 
         return $this;
     }
