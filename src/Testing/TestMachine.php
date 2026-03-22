@@ -1966,6 +1966,19 @@ class TestMachine
     }
 
     /**
+     * Assert dispatchTo() was NOT called targeting the given machine class.
+     */
+    public function assertNotDispatchedTo(string $machineClass): self
+    {
+        Queue::assertNotPushed(
+            SendToMachineJob::class,
+            fn (SendToMachineJob $job): bool => $job->machineClass === $machineClass,
+        );
+
+        return $this;
+    }
+
+    /**
      * Assert a raised event was processed (appears in history).
      *
      * This checks that the event was raised AND processed — a stronger assertion
