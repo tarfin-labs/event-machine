@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Query;
 use InvalidArgumentException;
 use Illuminate\Database\Eloquent\Builder;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 /**
@@ -17,7 +18,68 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
  */
 class MachineQueryBuilder
 {
-    public function __construct(private readonly MachineDefinition $definition) {}
+    /** @var Builder<MachineCurrentState> */
+    private readonly Builder $query;
+
+    public function __construct(
+        private readonly string $machineClass,
+        private readonly MachineDefinition $definition,
+    ) {
+        $this->query = MachineCurrentState::query()
+            ->where('machine_class', $this->machineClass);
+    }
+
+    // region Positive Filters
+
+    /**
+     * AND filter — instance must have a state matching the given name.
+     *
+     * Multiple calls = AND (instance must match all). Uses subquery
+     * so parallel machines with different matching regions work correctly.
+     */
+    public function inState(string $state): self
+    {
+        $resolved = $this->resolveStateIds($state);
+
+        $this->query->whereIn('root_event_id', function (Builder|\Illuminate\Database\Query\Builder $sub) use ($resolved): void {
+            $sub->select('root_event_id')
+                ->from('machine_current_states')
+                ->where('machine_class', $this->machineClass);
+
+            $this->applyStateConditionToQuery($sub, $resolved);
+        });
+
+        return $this;
+    }
+
+    /**
+     * OR filter — instance must be in any of the given states.
+     *
+     * Conditions are wrapped in a closure to prevent OR from
+     * leaking into other query conditions.
+     *
+     * @param  list<string>  $states
+     */
+    public function inAnyState(array $states): self
+    {
+        $allResolved = array_map($this->resolveStateIds(...), $states);
+
+        $this->query->where(function (Builder $q) use ($allResolved): void {
+            foreach ($allResolved as $i => $resolved) {
+                if ($i === 0) {
+                    $this->applyStateConditionToQuery($q, $resolved);
+                } else {
+                    $q->orWhere(function (Builder $inner) use ($resolved): void {
+                        $this->applyStateConditionToQuery($inner, $resolved);
+                    });
+                }
+            }
+        });
+
+        return $this;
+    }
+
+    // endregion
 
     // region State Resolution
 
@@ -78,6 +140,35 @@ class MachineQueryBuilder
         throw new InvalidArgumentException(
             "State '{$stateName}' not found in machine definition '{$this->definition->id}'."
         );
+    }
+
+    // endregion
+
+    // region Helpers
+
+    /**
+     * Apply resolved state IDs as WHERE conditions to a query or subquery.
+     *
+     * @param  Builder<MachineCurrentState>|\Illuminate\Database\Query\Builder  $query
+     * @param  array{exact: list<string>, patterns: list<string>}  $resolved
+     */
+    private function applyStateConditionToQuery(Builder|\Illuminate\Database\Query\Builder $query, array $resolved): void
+    {
+        $hasCondition = false;
+
+        if ($resolved['exact'] !== []) {
+            $query->whereIn('state_id', $resolved['exact']);
+            $hasCondition = true;
+        }
+
+        foreach ($resolved['patterns'] as $pattern) {
+            if ($hasCondition) {
+                $query->orWhere('state_id', 'LIKE', $pattern);
+            } else {
+                $query->where('state_id', 'LIKE', $pattern);
+                $hasCondition = true;
+            }
+        }
     }
 
     // endregion
