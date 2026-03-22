@@ -93,22 +93,29 @@ For fast tests, use SQLite in-memory. This eliminates migration overhead and dis
 | Recipes | Common real-world patterns | [Recipes](/testing/recipes) |
 | Migration | Upgrading from legacy test patterns | [Migration Patterns](/getting-started/upgrading#testing-migration-patterns) |
 
-## Which Tool to Use?
+## How to Choose Your Testing Approach
 
-```
-Single behavior in isolation?         → State::forTesting() + runWithState()
-Complex event payload for tests?      → Event::builder()->withX()->make()
-Full machine flow?                    → Machine::test() or TestMachine::define()
-Child delegation?                     → fakingChild() + assertChildInvoked()
-Async child/job completion?            → simulateChildDone() / simulateChildFail()
-Bulk fake all behaviors?              → fakingAllActions(except:) / fakingAllBehaviors()
-Skip to deep state?                   → Machine::startingAt()
-Timer behavior?                       → advanceTimers() / processTimers()
-Forward endpoints?                    → withRunningChild() + postJson()
-Cross-machine communication?          → recordingCommunication() + assertSentTo()
-Async dispatch verification?          → Queue::fake() + assertDispatchedTo()
-Full async pipeline / real infra?     → See "When Fakes Aren't Enough" below
-```
+**What are you testing?**
+
+| Goal | Tool | Guide |
+|------|------|-------|
+| Single guard/action in isolation | `State::forTesting()` + `runWithState()` | [Isolated Testing](/testing/isolated-testing) |
+| Complex event payload | `Event::builder()->withX()->make()` | [Isolated Testing — EventBuilder](/testing/isolated-testing#eventbuilder) |
+| Full machine flow | `Machine::test()` | [TestMachine](/testing/test-machine) |
+| Deep state without path replay | `Machine::startingAt()` | [TestMachine — Starting At](/testing/test-machine#starting-at-a-specific-state) |
+| Child machine delegation | `fakingChild()` / `simulateChildDone()` | [Delegation Testing](/testing/delegation-testing) |
+| Job actor completion | `simulateChildDone(MyJob::class)` | [Delegation Testing — Job Actors](/testing/delegation-testing#testing-job-actors) |
+| Bulk fake all behaviors | `fakingAllActions(except: [...])` | [TestMachine — Bulk Faking](/testing/test-machine#bulk-faking) |
+| Timer behavior | `advanceTimers()` | [Time-Based Testing](/testing/time-based-testing) |
+| Parallel states | `assertRegionState()` | [Parallel Testing](/testing/parallel-testing) |
+| Forward endpoints | `withRunningChild()` | [Delegation Testing — Forward](/testing/delegation-testing#testing-forward-endpoints) |
+| Cross-machine messaging | `recordingCommunication()` | [Delegation Testing — sendTo](/testing/delegation-testing#testing-sendto--sendtoparent) |
+| Real async pipeline | LocalQA with Horizon | [Real Infrastructure](/testing/localqa) |
+| Something not working? | — | [Troubleshooting](/testing/troubleshooting) |
+
+::: tip Testing Strategy
+For guidance on choosing the right test level and avoiding common traps, see [Testing Strategy](/best-practices/testing-strategy).
+:::
 
 ## When Fakes Aren't Enough
 
