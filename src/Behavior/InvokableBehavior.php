@@ -9,6 +9,8 @@ use ReflectionFunction;
 use ReflectionNamedType;
 use ReflectionUnionType;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Assert;
+use Mockery\ExpectationDirector;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Actor\State;
@@ -18,6 +20,7 @@ use Tarfinlabs\EventMachine\Traits\Fakeable;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Routing\ForwardContext;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
+use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Testing\CommunicationRecorder;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 
@@ -336,7 +339,136 @@ abstract class InvokableBehavior
 
         $result = $instance(...$params);
 
+        // Save raised events for assertRaised() assertions (per-class indexed)
+        self::$raisedEventsPerClass[static::class] = $eventQueue;
+
         // For void actions (null return), return the eventQueue so raised events are accessible.
         return $result ?? $eventQueue;
+    }
+
+    // ─── Raised Event Assertions ─────────────────────────────
+
+    /** @var array<class-string, Collection> Per-class raised events from last runWithState() call. */
+    private static array $raisedEventsPerClass = [];
+
+    /**
+     * Assert that an event was raised during the last runWithState() call.
+     *
+     * Matches by event type string ('ORDER_SUBMITTED'), FQCN (OrderSubmittedEvent::class),
+     * or instanceof check.
+     */
+    public static function assertRaised(string $eventTypeOrClass): void
+    {
+        $events = self::$raisedEventsPerClass[static::class] ?? null;
+
+        Assert::assertNotNull(
+            $events,
+            'Cannot assert raised events: runWithState() has not been called on '.static::class.'.'
+        );
+
+        $found = $events->contains(fn ($event): bool => self::matchesRaisedEvent($event, $eventTypeOrClass));
+
+        Assert::assertTrue($found, "Expected event '{$eventTypeOrClass}' to be raised by ".static::class.' but it was not.');
+    }
+
+    /**
+     * Assert that an event was NOT raised during the last runWithState() call.
+     */
+    public static function assertNotRaised(string $eventTypeOrClass): void
+    {
+        $events = self::$raisedEventsPerClass[static::class] ?? null;
+
+        Assert::assertNotNull(
+            $events,
+            'Cannot assert raised events: runWithState() has not been called on '.static::class.'.'
+        );
+
+        $found = $events->contains(fn ($event): bool => self::matchesRaisedEvent($event, $eventTypeOrClass));
+
+        Assert::assertFalse($found, "Expected event '{$eventTypeOrClass}' NOT to be raised by ".static::class.' but it was.');
+    }
+
+    /**
+     * Assert the exact number of events raised during the last runWithState() call.
+     */
+    public static function assertRaisedCount(int $expected): void
+    {
+        $events = self::$raisedEventsPerClass[static::class] ?? null;
+
+        Assert::assertNotNull(
+            $events,
+            'Cannot assert raised events: runWithState() has not been called on '.static::class.'.'
+        );
+
+        Assert::assertCount($expected, $events, static::class.' raised '.$events->count()." event(s), expected {$expected}.");
+    }
+
+    /**
+     * Assert that no events were raised during the last runWithState() call.
+     */
+    public static function assertNothingRaised(): void
+    {
+        $events = self::$raisedEventsPerClass[static::class] ?? null;
+
+        Assert::assertNotNull(
+            $events,
+            'Cannot assert raised events: runWithState() has not been called on '.static::class.'.'
+        );
+
+        Assert::assertEmpty(
+            $events,
+            'Expected no events to be raised by '.static::class.' but '.$events->count().' were.'
+        );
+    }
+
+    /**
+     * Override Fakeable::resetAllFakes() to also clear raised events.
+     */
+    public static function resetAllFakes(): void
+    {
+        // Call the trait's resetAllFakes logic manually
+        foreach (self::$fakes as $class => $mock) {
+            app()->offsetUnset($class);
+
+            foreach (array_keys($mock->mockery_getExpectations()) as $method) {
+                $mock->mockery_setExpectationsFor(
+                    $method,
+                    new ExpectationDirector($method, $mock),
+                );
+            }
+            $mock->mockery_teardown();
+        }
+
+        self::$fakes = [];
+        self::$spies = [];
+
+        InlineBehaviorFake::resetAll();
+
+        // Clear raised events
+        self::$raisedEventsPerClass = [];
+    }
+
+    /**
+     * Check if a raised event matches the given type or class.
+     */
+    private static function matchesRaisedEvent(mixed $event, string $eventTypeOrClass): bool
+    {
+        // Match by instanceof
+        if ($event instanceof $eventTypeOrClass) {
+            return true;
+        }
+
+        // Match by event type string
+        $type = is_object($event) ? ($event->type ?? null) : ($event['type'] ?? null);
+        if ($type === $eventTypeOrClass) {
+            return true;
+        }
+
+        // Match by FQCN → resolve to type via getType()
+        if (class_exists($eventTypeOrClass) && method_exists($eventTypeOrClass, 'getType')) {
+            return $type === $eventTypeOrClass::getType();
+        }
+
+        return false;
     }
 }
