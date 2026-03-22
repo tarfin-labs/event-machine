@@ -351,7 +351,7 @@ OrderMachine::test()
 
 ## Async Simulation
 
-Use `simulateChild*` methods to trigger completion on a parent that is already waiting for a child — as opposed to `fakingChild()` which short-circuits at the delegation entry point.
+Use `simulateChild*` methods to trigger completion on a parent that is already waiting for a child — as opposed to `fakingChild()` which short-circuits at the delegation entry point. Works for both **machine delegation** (`machine:` key) and **job actors** (`job:` key) — the routing infrastructure is identical.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -374,6 +374,20 @@ The `result` parameter populates both `output()` and `result()` accessors on the
 
 - `fakingChild()` — short-circuits at delegation entry. The child is never dispatched. Use this for most unit tests where you control the happy/failure path.
 - `simulateChild*()` — the parent has already entered the waiting state (child was dispatched). Use this when testing a parent that was constructed around an in-progress child, or when you need to test the parent's response to a completion event independently.
+
+**Job actor example** (use `Queue::fake()` to capture the dispatch):
+
+<!-- doctest-attr: no_run -->
+```php
+Queue::fake();
+
+MyMachine::test()
+    ->withoutPersistence()
+    ->send('START')
+    ->assertState('processing')
+    ->simulateChildDone(ProcessDataJob::class, result: ['output' => 'done'])
+    ->assertState('completed');
+```
 
 ## Cross-Machine Communication Assertions
 
