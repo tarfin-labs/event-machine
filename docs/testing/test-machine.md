@@ -421,9 +421,9 @@ The `except:` parameter accepts both class FQCNs and behavior key strings. Exclu
 ```
 :::
 
-### Pre-Init Guard Faking
+### Pre-Init Behavior Faking
 
-The `guards:` parameter on `withContext()` and `create()` sets guard fakes **before** `getInitialState()` runs — solving the `@always` timing problem:
+The `guards:` and `faking:` parameters on `withContext()`, `create()`, and `startingAt()` set behavior fakes **before** `getInitialState()` runs — solving the `@always` timing problem where guards and actions run before the fluent chain reaches `fakingAllActions()`:
 
 <!-- doctest-attr: no_run -->
 ```php
@@ -433,10 +433,14 @@ TestMachine::withContext(FindeksMachine::class,
         HasExistingReportGuard::class  => false,
         IsPhoneMatchGuard::class       => true,
     ],
+    faking: [StoreExistingReportAction::class],
 )
 ->fakingAllActions()
 ->assertState('querying_phones');
 ```
+
+- `guards:` — sets guard return values (`$class::shouldReturn($value)`)
+- `faking:` — spies behavior classes (`$class::spy()`) — prevents real side effects during init
 
 ## Starting at a Specific State
 
