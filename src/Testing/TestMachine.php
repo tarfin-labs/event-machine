@@ -21,12 +21,14 @@ use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
+use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\TimerDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
+use Tarfinlabs\EventMachine\Definition\MachineInvokeDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
@@ -1549,6 +1551,30 @@ class TestMachine
     }
 
     /**
+     * Resolve the delegate class (machine or job) for the current state's invoke definition.
+     *
+     * @param  StateDefinition  $stateDefinition  The current state definition.
+     * @param  string  $action  The action name for error messages ('done', 'fail', 'timeout').
+     *
+     * @return array{0: MachineInvokeDefinition, 1: string}
+     */
+    private function resolveDelegateClass(StateDefinition $stateDefinition, string $action): array
+    {
+        if (!$stateDefinition->hasMachineInvoke()) {
+            throw new AssertionFailedError(
+                "Cannot simulate child {$action}: current state [{$stateDefinition->id}] does not have a child delegation."
+            );
+        }
+
+        $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
+        $delegateClass    = $invokeDefinition->isJob()
+            ? $invokeDefinition->jobClass
+            : $invokeDefinition->machineClass;
+
+        return [$invokeDefinition, $delegateClass];
+    }
+
+    /**
      * Simulate async child completion without real queues.
      *
      * Works for both machine delegation (`machine:` key) and job actors (`job:` key).
@@ -1562,17 +1588,11 @@ class TestMachine
     ): self {
         $stateDefinition = $this->machine->state->currentStateDefinition;
 
-        if (!$stateDefinition->hasMachineInvoke()) {
-            throw new AssertionFailedError(
-                "Cannot simulate child done: current state [{$stateDefinition->id}] does not have a machine invoke definition."
-            );
-        }
+        [$invokeDefinition, $delegateClass] = $this->resolveDelegateClass($stateDefinition, 'done');
 
-        $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
-
-        if ($invokeDefinition->machineClass !== $childClass) {
+        if ($delegateClass !== $childClass) {
             throw new AssertionFailedError(
-                "Cannot simulate child done: current state delegates to [{$invokeDefinition->machineClass}], not [{$childClass}]."
+                "Cannot simulate child done: current state delegates to [{$delegateClass}], not [{$childClass}]."
             );
         }
 
@@ -1604,6 +1624,8 @@ class TestMachine
 
     /**
      * Simulate async child failure without real queues.
+     *
+     * Works for both machine delegation (`machine:` key) and job actors (`job:` key).
      */
     public function simulateChildFail(
         string $childClass,
@@ -1613,9 +1635,11 @@ class TestMachine
     ): self {
         $stateDefinition = $this->machine->state->currentStateDefinition;
 
-        if (!$stateDefinition->hasMachineInvoke()) {
+        [$invokeDefinition, $delegateClass] = $this->resolveDelegateClass($stateDefinition, 'fail');
+
+        if ($delegateClass !== $childClass) {
             throw new AssertionFailedError(
-                "Cannot simulate child fail: current state [{$stateDefinition->id}] does not have a machine invoke definition."
+                "Cannot simulate child fail: current state delegates to [{$delegateClass}], not [{$childClass}]."
             );
         }
 
@@ -1647,14 +1671,18 @@ class TestMachine
 
     /**
      * Simulate async child timeout without real queues.
+     *
+     * Works for both machine delegation (`machine:` key) and job actors (`job:` key).
      */
     public function simulateChildTimeout(string $childClass): self
     {
         $stateDefinition = $this->machine->state->currentStateDefinition;
 
-        if (!$stateDefinition->hasMachineInvoke()) {
+        [$invokeDefinition, $delegateClass] = $this->resolveDelegateClass($stateDefinition, 'timeout');
+
+        if ($delegateClass !== $childClass) {
             throw new AssertionFailedError(
-                "Cannot simulate child timeout: current state [{$stateDefinition->id}] does not have a machine invoke definition."
+                "Cannot simulate child timeout: current state delegates to [{$delegateClass}], not [{$childClass}]."
             );
         }
 
