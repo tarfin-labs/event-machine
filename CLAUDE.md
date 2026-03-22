@@ -57,6 +57,7 @@ EventMachine is a Laravel package for creating event-driven state machines, heav
 - Cross-machine communication (`sendTo`, `dispatchTo`, `sendToParent`, `dispatchToParent`, `raise`)
 - Machine faking for tests (`Machine::fake()`)
 - Machine identity (`$context->machineId()`, `$context->parentMachineId()`)
+- Machine querying (`Machine::query()` — fluent API for finding instances by state)
 
 **State** (`src/Actor/State.php`): Represents current machine state:
 - Current state definition and value array (supports parallel regions)
@@ -246,6 +247,7 @@ All code, tests, and documentation **must** follow the naming conventions define
 - `src/Jobs/` - Queue jobs (ChildMachineJob, SendToMachineJob, ChildJobJob, ParallelRegionJob, ListenerJob, ArchiveSingleMachineJob, etc.)
 - `src/Locks/` - Machine lock manager for concurrent access
 - `src/Models/` - Eloquent models (MachineEvent, MachineChild, MachineCurrentState, MachineTimerFire, MachineEventArchive)
+- `src/Query/` - Machine query builder (MachineQueryBuilder, MachineQueryResult)
 - `src/Routing/` - HTTP endpoint routing (MachineRouter, MachineController, EndpointDefinition, ForwardedEndpointDefinition)
 - `src/Scheduling/` - Schedule registration (MachineScheduler)
 - `src/Services/` - Business logic services (ArchiveService)
