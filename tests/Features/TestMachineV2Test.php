@@ -969,6 +969,46 @@ it('V51: guards parameter tracked for resetFakes cleanup', function (): void {
     expect(true)->toBeTrue(); // No throw during cleanup
 });
 
+it('V51a: withContext faking: spies actions before @always fires', function (): void {
+    $test = TestMachine::withContext(
+        AlwaysGuardMachine::class,
+        context: [],
+        guards: [IsAllowedGuard::class => true],
+        faking: [LogAction::class],
+    );
+
+    // @always fired → LogAction was spied (not real) → context NOT modified
+    $test->assertState('done');
+    $test->assertContext('logged', false);
+    LogAction::assertRan();
+});
+
+it('V51b: withContext without faking: runs real action during @always', function (): void {
+    $test = TestMachine::withContext(
+        AlwaysGuardMachine::class,
+        context: [],
+        guards: [IsAllowedGuard::class => true],
+        // NO faking: parameter → LogAction runs real logic
+    );
+
+    // @always fired → LogAction ran real logic → context modified
+    $test->assertState('done');
+    $test->assertContext('logged', true);
+});
+
+it('V51c: faking: parameter tracked for resetFakes cleanup', function (): void {
+    $test = TestMachine::withContext(
+        AlwaysGuardMachine::class,
+        context: [],
+        guards: [IsAllowedGuard::class => true],
+        faking: [LogAction::class],
+    );
+
+    expect(LogAction::isFaked())->toBeTrue();
+    $test->resetFakes();
+    expect(LogAction::isFaked())->toBeFalse();
+});
+
 // ═══════════════════════════════════════════════════════════════
 //  Category 2e: startingAt (9 tests)
 // ═══════════════════════════════════════════════════════════════
