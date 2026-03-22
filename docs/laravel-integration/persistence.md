@@ -119,6 +119,100 @@ $restored->state->matches('approved'); // true
 $restored->state->context->orderId; // Original value
 ```
 
+## Querying Machines
+
+Use `Machine::query()` to find machine instances by state without querying internal tables directly:
+
+<!-- doctest-attr: ignore -->
+```php
+// Find all instances in a specific state (leaf match):
+$results = OrderMachine::query()
+    ->inState('awaiting_payment')
+    ->get();
+
+// Multiple states (OR):
+$results = OrderMachine::query()
+    ->inAnyState(['awaiting_payment', 'processing'])
+    ->get();
+
+// Non-final (resumable) instances:
+$results = OrderMachine::query()
+    ->active()
+    ->latest()
+    ->paginate(20);
+
+// Exclude specific states:
+$results = OrderMachine::query()
+    ->notInState('idle')
+    ->notInFinalState()
+    ->get();
+```
+
+### Query Results
+
+`get()` returns a collection of lightweight `MachineQueryResult` objects — full Machine restoration is lazy:
+
+<!-- doctest-attr: ignore -->
+```php
+$result = OrderMachine::query()->inState('pending')->first();
+
+$result->machineId;       // root_event_id
+$result->stateId;         // current state ID
+$result->stateEnteredAt;  // Carbon timestamp
+$result->stateIds;        // all active state IDs (parallel machines have multiple)
+
+$result->machine();       // lazy: restore full Machine instance (cached)
+$result->context();       // lazy: restore and return ContextManager
+```
+
+### State Matching
+
+The `inState()` method supports multiple matching strategies:
+
+| Input | Strategy | Example |
+|-------|----------|---------|
+| `'awaiting_payment'` | Leaf match (default) | Matches `order.checkout.awaiting_payment` |
+| `'order.checkout.awaiting_payment'` | Exact match | Full dot-notation ID |
+| `'checkout'` | Parent match | Matches any descendant of a compound/parallel state |
+| `'checkout.*'` | Wildcard | Pattern with `*` → SQL `LIKE` |
+
+### Parallel State Deduplication
+
+Parallel machines have multiple rows in `machine_current_states` (one per active region). The query builder automatically deduplicates — each instance appears once in results. Use `stateIds` to see all active states:
+
+<!-- doctest-attr: ignore -->
+```php
+$result = ParallelMachine::query()->inState('processing')->first();
+
+$result->stateIds;  // ['machine.processing.region_a.working', 'machine.processing.region_b.idle']
+$result->stateId;   // most recently entered state
+```
+
+### Terminal Methods
+
+| Method | Returns |
+|--------|---------|
+| `get()` | `Collection<MachineQueryResult>` |
+| `first()` | `?MachineQueryResult` |
+| `count()` | `int` (deduplicated) |
+| `paginate($perPage)` | `LengthAwarePaginator` |
+| `pluckMachineIds()` | `Collection<string>` (root_event_ids) |
+
+::: tip Resume Endpoint
+The query builder is ideal for "resume application" features:
+```php
+public function resumable(): JsonResponse
+{
+    return response()->json(
+        OrderMachine::query()
+            ->active()
+            ->latest()
+            ->paginate(20)
+    );
+}
+```
+:::
+
 ## Incremental Context Storage
 
 Context is stored incrementally to minimize database size:
