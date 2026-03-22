@@ -9,13 +9,17 @@ use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Testing\CommunicationRecorder;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\FailingTestJob;
+use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\SuccessfulTestJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseRetryAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\SendToTargetAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\DispatchToTargetAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\JobActors\JobActorParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ParentOrderMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
@@ -467,6 +471,193 @@ it('V18: simulateChildDone result data accessible via output and result', functi
 
     expect($capturedOutput)->toBe('pay_v18');
     expect($capturedResult)->toBe('pay_v18');
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Category 2b: Job Actor Simulation (9 tests)
+// ═══════════════════════════════════════════════════════════════
+
+it('V18a: simulateChildDone routes @done for job actors', function (): void {
+    Queue::fake();
+
+    TestMachine::create(JobActorParentMachine::class)
+        ->send(['type' => 'START'])
+        ->assertState('processing')
+        ->simulateChildDone(SuccessfulTestJob::class, result: ['payment_id' => 'pay_job_1'])
+        ->assertState('completed')
+        ->assertContext('payment_id', 'pay_job_1');
+});
+
+it('V18b: simulateChildFail routes @fail for job actors', function (): void {
+    Queue::fake();
+
+    TestMachine::create(JobActorParentMachine::class)
+        ->send(['type' => 'START'])
+        ->assertState('processing')
+        ->simulateChildFail(SuccessfulTestJob::class, errorMessage: 'Payment gateway error')
+        ->assertState('failed');
+});
+
+it('V18c: simulateChildTimeout routes @timeout for job actors', function (): void {
+    Queue::fake();
+
+    $testMachine = TestMachine::define(
+        config: [
+            'id'      => 'v18c_machine',
+            'initial' => 'processing',
+            'context' => [],
+            'states'  => [
+                'processing' => [
+                    'job'      => SuccessfulTestJob::class,
+                    'queue'    => 'default',
+                    '@done'    => 'completed',
+                    '@timeout' => 'timed_out',
+                ],
+                'completed' => ['type' => 'final'],
+                'timed_out' => ['type' => 'final'],
+            ],
+        ],
+    );
+
+    $testMachine
+        ->simulateChildTimeout(SuccessfulTestJob::class)
+        ->assertState('timed_out');
+});
+
+it('V18d: simulateChildDone throws for wrong job class', function (): void {
+    Queue::fake();
+
+    $testMachine = TestMachine::create(JobActorParentMachine::class)
+        ->send(['type' => 'START'])
+        ->assertState('processing');
+
+    expect(fn () => $testMachine->simulateChildDone(FailingTestJob::class))
+        ->toThrow(
+            AssertionFailedError::class,
+            'delegates to ['.SuccessfulTestJob::class.']'
+        );
+});
+
+it('V18e: simulateChildDone throws for wrong machine class (regression)', function (): void {
+    Queue::fake();
+
+    $testMachine = TestMachine::create(AsyncParentMachine::class)
+        ->send(['type' => 'START', 'payload' => ['order_id' => 'ORD-REG']])
+        ->assertState('processing');
+
+    expect(fn () => $testMachine->simulateChildDone(FailingTestJob::class))
+        ->toThrow(
+            AssertionFailedError::class,
+            'delegates to ['.SimpleChildMachine::class.']'
+        );
+});
+
+it('V18f: simulateChildFail throws for wrong class', function (): void {
+    Queue::fake();
+
+    $testMachine = TestMachine::create(JobActorParentMachine::class)
+        ->send(['type' => 'START'])
+        ->assertState('processing');
+
+    expect(fn () => $testMachine->simulateChildFail(FailingTestJob::class))
+        ->toThrow(
+            AssertionFailedError::class,
+            'delegates to ['.SuccessfulTestJob::class.']'
+        );
+});
+
+it('V18g: simulateChildDone throws on fire-and-forget job target state', function (): void {
+    Queue::fake();
+
+    $testMachine = TestMachine::define(
+        config: [
+            'id'      => 'v18g_machine',
+            'initial' => 'dispatching',
+            'context' => [],
+            'states'  => [
+                'dispatching' => [
+                    'job'    => SuccessfulTestJob::class,
+                    'target' => 'waiting',
+                ],
+                'waiting'   => [],
+                'completed' => ['type' => 'final'],
+            ],
+        ],
+    );
+
+    // Fire-and-forget transitions immediately to 'waiting'
+    $testMachine->assertState('waiting');
+
+    expect(fn () => $testMachine->simulateChildDone(SuccessfulTestJob::class))
+        ->toThrow(
+            AssertionFailedError::class,
+            'does not have a child delegation'
+        );
+});
+
+it('V18h: simulateChildDone with result data accessible in @done action for job actors', function (): void {
+    Queue::fake();
+
+    TestMachine::create(JobActorParentMachine::class)
+        ->send(['type' => 'START'])
+        ->assertState('processing')
+        ->simulateChildDone(SuccessfulTestJob::class, result: ['payment_id' => 'pay_result_check'])
+        ->assertState('completed')
+        ->assertContext('payment_id', 'pay_result_check');
+});
+
+it('V18i: full job actor flow with multiple simulateChildDone calls', function (): void {
+    Queue::fake();
+
+    $testMachine = TestMachine::define(
+        config: [
+            'id'      => 'v18i_machine',
+            'initial' => 'step_one',
+            'context' => [
+                'step_one_result' => null,
+                'step_two_result' => null,
+            ],
+            'states' => [
+                'step_one' => [
+                    'job'   => SuccessfulTestJob::class,
+                    'queue' => 'default',
+                    '@done' => [
+                        'target'  => 'step_two',
+                        'actions' => 'captureStepOneAction',
+                    ],
+                ],
+                'step_two' => [
+                    'job'   => FailingTestJob::class,
+                    'queue' => 'default',
+                    '@done' => [
+                        'target'  => 'completed',
+                        'actions' => 'captureStepTwoAction',
+                    ],
+                    '@fail' => 'failed',
+                ],
+                'completed' => ['type' => 'final'],
+                'failed'    => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'captureStepOneAction' => function (ContextManager $ctx, EventBehavior $event): void {
+                    $ctx->set('step_one_result', $event->payload['output']['data'] ?? 'done');
+                },
+                'captureStepTwoAction' => function (ContextManager $ctx, EventBehavior $event): void {
+                    $ctx->set('step_two_result', $event->payload['output']['data'] ?? 'done');
+                },
+            ],
+        ],
+    );
+
+    $testMachine
+        ->assertState('step_one')
+        ->simulateChildDone(SuccessfulTestJob::class, result: ['data' => 'phase_1'])
+        ->assertState('step_two')
+        ->assertContext('step_one_result', 'phase_1')
+        ->simulateChildFail(FailingTestJob::class, errorMessage: 'Step 2 crashed')
+        ->assertState('failed');
 });
 
 // ═══════════════════════════════════════════════════════════════
