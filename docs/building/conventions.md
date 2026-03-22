@@ -827,47 +827,6 @@ Data flowing between parent and child machines uses `camelCase`:
 'order_id'      // → 'orderId'
 ```
 
-## Scenarios
-
-Scenario names use `snake_case` with descriptive, domain-specific identifiers:
-
-```php no_run
-MachineDefinition::define(
-    config: [
-        'scenarios_enabled' => true,
-        'states' => [
-            'idle' => [
-                'on' => [
-                    'ORDER_SUBMITTED' => [
-                        [
-                            'target'       => 'express_processing',
-                            'scenarioType' => 'express_checkout',
-                        ],
-                        [
-                            'target'       => 'standard_processing',
-                            'scenarioType' => 'standard_checkout',
-                        ],
-                    ],
-                ],
-            ],
-        ],
-    ],
-);
-```
-
-Good scenario names describe the **business variant**, not technical details:
-
-```php ignore
-// Descriptive business variants
-'express_checkout'      // fast-track order flow
-'enterprise_onboarding' // multi-step enterprise setup
-'ab_test_v2'            // A/B test variant
-
-// Avoid generic names
-'scenario_1'            // → describe what makes it different
-'test'                  // → describe the business case
-```
-
 ## Configuration Keys
 
 All configuration keys should use `snake_case`:
@@ -880,13 +839,12 @@ MachineDefinition::define(
         'context'           => [...],
         'states'            => [...],
         'should_persist'    => true,
-        'scenarios_enabled' => false,
     ],
 );
 ```
 
 ::: info Internal Keys — `@` Prefix Convention
-Internal framework keys use the `@` prefix: `@always`, `@done`, `@fail`. These are distinct from user-defined event types (`SCREAMING_SNAKE_CASE`) and state names (`snake_case`). The only remaining XState-inherited camelCase key is `scenarioType`.
+Internal framework keys use the `@` prefix: `@always`, `@done`, `@fail`. These are distinct from user-defined event types (`SCREAMING_SNAKE_CASE`) and state names (`snake_case`).
 :::
 
 ## Endpoints
