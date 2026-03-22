@@ -6,8 +6,8 @@ Only the **latest major version** receives bug fixes, new features, and security
 
 | Version | Status |
 |---------|--------|
-| **8.x** | **Active** — bug fixes, features, security |
-| 7.x and below | End of life — upgrade to latest |
+| **9.x** | **Active** — bug fixes, features, security |
+| 8.x and below | End of life — upgrade to latest |
 
 **Why only latest?**
 
@@ -16,6 +16,191 @@ EventMachine evolved rapidly from v1 to v7 with a small team. Maintaining multip
 ::: tip Upgrading from any version
 Each section below has step-by-step migration instructions with before/after examples. For multi-version jumps (e.g., v3 → v7), follow each guide in sequence. No data migration is required between any versions — the `machine_events` table format has not changed since v1.
 :::
+
+## From 8.x to 9.0
+
+EventMachine v9.0 removes the `spatie/laravel-data` dependency. Context and event classes now use Laravel-native validation (`rules()`) and a built-in cast system instead of Spatie attributes.
+
+### Breaking Change 1: ContextManager Split
+
+`ContextManager` no longer has a `$data` property or wraps bag-mode data in `['data' => [...]]`. Bag mode is now handled by the internal `Context` class.
+
+**Before (v8):**
+```php
+// Bag mode created a ContextManager with $data property
+$context = new ContextManager(['key' => 'value']);
+$context->data; // ['key' => 'value']
+$context->toArray(); // ['data' => ['key' => 'value']]
+```
+
+**After (v9):**
+```php
+// Bag mode uses Context class (internal)
+$context = Context::from(['key' => 'value']);
+$context->toArray(); // ['key' => 'value'] — flat, no wrapper
+```
+
+**Who Is Affected?**
+- If you use `'context' => [...]` (array config): No code change needed — engine internally uses `Context` now
+- If you use typed context classes: No change — property access works the same
+- If you call `$context->get()` or `$context->set()` explicitly on a typed context: These still work (engine uses them internally)
+
+### Breaking Change 2: Spatie Optional Removed
+
+**Before (v8):**
+```php
+use Spatie\LaravelData\Optional;
+
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        public int|Optional $quantity,
+        public ?string|Optional $email,
+    ) {
+        parent::__construct();
+        if ($this->quantity instanceof Optional) { $this->quantity = 0; }
+    }
+}
+```
+
+**After (v9):**
+```php
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        public int     $quantity = 0,
+        public ?string $email    = null,
+    ) {}
+}
+```
+
+### Breaking Change 3: Validation Attributes → rules()
+
+**Before (v8):**
+```php
+use Spatie\LaravelData\Attributes\Validation\Min;
+use Spatie\LaravelData\Attributes\Validation\IntegerType;
+
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        #[IntegerType] #[Min(0)]
+        public int $quantity = 0,
+    ) { parent::__construct(); }
+}
+```
+
+**After (v9):**
+```php
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        public int $quantity = 0,
+    ) {}
+
+    public static function rules(): array
+    {
+        return [
+            'quantity' => ['integer', 'min:0'],
+        ];
+    }
+}
+```
+
+### Breaking Change 4: Cast/Transform System
+
+**Before (v8):**
+```php
+use Spatie\LaravelData\Attributes\WithCast;
+use Spatie\LaravelData\Attributes\WithTransformer;
+
+class ApplicationContext extends ContextManager
+{
+    public function __construct(
+        #[WithCast(EnumCast::class, type: SalesChannelType::class)]
+        #[WithTransformer(EnumTransformer::class)]
+        public Optional|SalesChannelType $salesChannelType,
+        #[WithCast(ModelCast::class, type: Retailer::class)]
+        #[WithTransformer(ModelTransformer::class)]
+        public Optional|Retailer $retailer,
+    ) { parent::__construct(); }
+}
+```
+
+**After (v9):**
+```php
+// AppServiceProvider — register custom VOs once:
+ContextManager::registerCast(Money::class, MoneyCast::class);
+
+class ApplicationContext extends ContextManager
+{
+    public function __construct(
+        public ?SalesChannelType $salesChannelType = null,  // Auto: BackedEnum
+        public ?Retailer $retailer = null,                   // Auto: Model
+        public ?Money $totalCashPrice = null,                 // Auto: Global registry
+        public ?Collection $orderItems = null,
+    ) {}
+
+    public static function casts(): array
+    {
+        return ['orderItems' => [OrderItemData::class]];  // Only for Collection<DTO>
+    }
+}
+```
+
+Auto-detected types (zero config): `Model`, `BackedEnum`, `DateTimeInterface`, `Arrayable`.
+
+### Breaking Change 5: Event rules() Signature
+
+**Before (v8):**
+```php
+use Spatie\LaravelData\Support\Validation\ValidationContext;
+
+public static function rules(ValidationContext $context): array
+{
+    return ['payload.amount' => ['required', 'integer']];
+}
+```
+
+**After (v9):**
+```php
+public static function rules(): array
+{
+    return ['payload.amount' => ['required', 'integer']];
+}
+```
+
+### Breaking Change 6: ModelTransformer Removed
+
+`src/Transformers/ModelTransformer.php` has been deleted. Model serialization is now handled automatically by the cast system's auto-detect layer.
+
+### Migration Steps
+
+1. `composer require tarfin-labs/event-machine:^9.0`
+2. Remove `spatie/laravel-data` from your `composer.json` (unless you use it elsewhere)
+3. Remove `LaravelDataServiceProvider` from test setup
+4. **Context classes:** Remove Spatie imports/attributes, add `rules()` if needed, replace `Optional` with nullable defaults
+5. **Event classes:** Remove `ValidationContext` parameter from `rules()` methods
+6. **Custom casts:** Implement `ContextCast` interface instead of separate Spatie Cast + Transformer
+7. **Global casts:** Register custom VOs in service provider: `ContextManager::registerCast(Money::class, MoneyCast::class)`
+8. **`instanceof Optional` checks:** Replace with `=== null`
+9. Run tests: `composer test`
+
+### What Did NOT Change
+
+| Feature | Status |
+|---------|--------|
+| `$context->property` (read/write) | Same |
+| `$context->machineId()` | Same |
+| `Machine::create()` / `::send()` | Same |
+| Machine config format | Same |
+| Action/Guard/Calculator signatures | Same |
+| Event `getType()`, `payload`, `type` | Same |
+| `selfValidate()` / `validateAndCreate()` | Same API, new internal |
+| `from()` / `toArray()` | Same API, new internal |
+| State persistence (machine_events) | Same format |
+| Child delegation | Same |
+| Timers, schedules, endpoints | Same |
 
 ## From 8.5.2 to 8.5.3
 
@@ -1432,13 +1617,18 @@ use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class OrderContext extends ContextManager
 {
     public function __construct(
-        #[Required]
-        public string $orderId,
-
-        #[Min(0)]
+        public string $orderId = '',
         public int $total = 0,
     ) {
         parent::__construct();
+    }
+
+    public static function rules(): array
+    {
+        return [
+            'orderId' => ['required', 'string'],
+            'total'   => ['integer', 'min:0'],
+        ];
     }
 }
 ```

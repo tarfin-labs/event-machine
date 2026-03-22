@@ -83,7 +83,7 @@ $machine->send(new AddItemEvent(
     customPrice: 29.99,
 ));
 
-// Usage - from() static method (via Spatie Laravel Data)
+// Usage - from() static method
 $machine->send(AddItemEvent::from([
     'productId' => 123,
     'quantity' => 2,
@@ -91,7 +91,7 @@ $machine->send(AddItemEvent::from([
 ```
 
 ::: info The `from()` Method
-The `from()` static method is provided by Spatie's Laravel Data package, which `EventBehavior` extends. It creates an instance from an array, handling type casting and validation automatically. You can use either the constructor or `from()` based on your preference.
+The `from()` static method creates an instance from an array, handling type casting automatically. You can use either the constructor or `from()` based on your preference.
 :::
 
 ## Event Validation
@@ -144,24 +144,14 @@ try {
 }
 ```
 
-### Using Spatie Data Attributes
+### Using Typed Properties with rules()
 
 ```php no_run
-use Spatie\LaravelData\Attributes\Validation\Min;
-use Spatie\LaravelData\Attributes\Validation\Required;
-use Spatie\LaravelData\Attributes\Validation\IntegerType;
-
 class TransferEvent extends EventBehavior
 {
     public function __construct(
-        #[Required]
-        #[IntegerType]
-        #[Min(1)]
-        public int $amount,
-
-        #[Required]
-        public string $recipientId,
-
+        public int $amount = 0,
+        public string $recipientId = '',
         public ?string $note = null,
     ) {
         parent::__construct();
@@ -170,6 +160,14 @@ class TransferEvent extends EventBehavior
     public static function getType(): string
     {
         return 'TRANSFER';
+    }
+
+    public static function rules(): array
+    {
+        return [
+            'payload.amount'      => ['required', 'integer', 'min:1'],
+            'payload.recipientId' => ['required', 'string'],
+        ];
     }
 }
 ```

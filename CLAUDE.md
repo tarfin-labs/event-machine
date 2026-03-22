@@ -65,14 +65,15 @@ EventMachine is a Laravel package for creating event-driven state machines, heav
 All machine behaviors extend `InvokableBehavior` and include:
 - **Actions** (`src/Behavior/ActionBehavior.php`): Execute side effects during transitions
 - **Guards** (`src/Behavior/GuardBehavior.php`): Control transition execution with conditions
-- **Events** (`src/Behavior/EventBehavior.php`): Define event structure and validation
+- **Events** (`src/Behavior/EventBehavior.php`): Define event structure and validation (native Laravel Validator, rules() method)
 - **Results** (`src/Behavior/ResultBehavior.php`): Compute final state machine outputs
 
 ### State Management
 
 - **StateDefinition** (`src/Definition/StateDefinition.php`): Defines state behavior, transitions, and hierarchy
 - **TransitionDefinition** (`src/Definition/TransitionDefinition.php`): Defines state transitions with conditions
-- **ContextManager** (`src/ContextManager.php`): Manages machine context data with validation
+- **ContextManager** (`src/ContextManager.php`): Base class for typed context — reflection-based from()/toArray(), 3-layer cast resolution, native Laravel validation via rules()
+- **Context** (`src/Context.php`): Bag mode context (array-based) — internal, used when config has `'context' => [...]`
 
 ### Database Integration
 
@@ -162,7 +163,7 @@ All code, tests, and documentation **must** follow the naming conventions define
 - `src/Actor/` - Runtime machine and state classes
 - `src/Behavior/` - Base behavior classes and implementations
 - `src/Commands/` - Artisan commands (timers, schedules, cache, xstate)
-- `src/Contracts/` - Interfaces (ScheduleResolver, ReturnsResult)
+- `src/Contracts/` - Interfaces (ScheduleResolver, ReturnsResult, ContextCast)
 - `src/Definition/` - Machine definition, state, transition, timer, schedule definitions
 - `src/Enums/` - Type definitions and constants
 - `src/Exceptions/` - Custom exception classes
