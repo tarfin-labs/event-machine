@@ -389,6 +389,78 @@ MyMachine::test()
     ->assertState('completed');
 ```
 
+## Bulk Faking
+
+Fake all class-based behaviors in one call instead of listing each one:
+
+<!-- doctest-attr: ignore -->
+```php
+->fakingAllActions()                                   // all actions → spy
+->fakingAllActions(except: [StorePinAction::class])    // all except this one
+->fakingAllActions(except: ['storePinAction'])          // by behavior key
+
+->fakingAllGuards()                                    // all guards → spy
+->fakingAllBehaviors()                                 // actions + guards + calculators
+```
+
+The `except:` parameter accepts both class FQCNs and behavior key strings. Excluded behaviors run their real logic.
+
+::: warning Testing Nothing Trap
+`fakingAllActions()` without `except:` means NO action logic runs. Combined with `fakingAllGuards()`, your test only verifies transition wiring (`@done → state_x`) — which is already visible in the machine config.
+
+**Ask yourself: "What behavior am I actually testing?"**
+
+<!-- doctest-attr: ignore -->
+```php
+// ✅ Good — tests StorePinAction logic:
+->fakingAllActions(except: [StorePinAction::class])
+
+// ⚠️ Questionable — tests nothing but config:
+->fakingAllActions()
+->fakingAllGuards()
+```
+:::
+
+### Pre-Init Guard Faking
+
+The `guards:` parameter on `withContext()` and `create()` sets guard fakes **before** `getInitialState()` runs — solving the `@always` timing problem:
+
+<!-- doctest-attr: no_run -->
+```php
+TestMachine::withContext(FindeksMachine::class,
+    context: ['tckn' => '11111111110'],
+    guards: [
+        HasExistingReportGuard::class  => false,
+        IsPhoneMatchGuard::class       => true,
+    ],
+)
+->fakingAllActions()
+->assertState('querying_phones');
+```
+
+## Starting at a Specific State
+
+Skip path replay and start the machine at any state:
+
+<!-- doctest-attr: no_run -->
+```php
+TestMachine::startingAt(FindeksMachine::class,
+    stateId: 'awaiting_pin',
+    context: ['requestId' => 'REQ-1', 'phone' => '05321234567'],
+    guards: [IsPinRetryableGuard::class => true],
+)
+->fakingAllActions(except: [StorePinAction::class])
+->send(PinConfirmedEvent::make(['pin' => '123456']))
+->assertState('confirming_pin');
+```
+
+`startingAt()` creates the machine at the given state without running any lifecycle (no entry actions, no `@always`, no job dispatch). The machine uses the real definition — all transitions, guards, and actions are available.
+
+::: tip When to use startingAt() vs withContext()
+- **`withContext()`** — tests the full path from initial state. Entry actions and `@always` run. Use for integration tests that validate the complete flow.
+- **`startingAt()`** — tests behavior FROM a specific state. No path validation. Use for focused unit tests of a single transition or state behavior.
+:::
+
 ## Cross-Machine Communication Assertions
 
 Assert that the machine sent events to other machines, dispatched async messages, or raised internal events.
