@@ -9,6 +9,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -243,6 +244,25 @@ class MachineQueryBuilder
     public function pluckMachineIds(): Collection
     {
         return $this->buildIdsQuery()->pluck('root_event_id');
+    }
+
+    /**
+     * Paginate deduplicated results.
+     *
+     * Loads all matching IDs, hydrates and sorts in PHP, then slices
+     * for the requested page. Suitable for hundreds to low-thousands
+     * of active instances per machine class.
+     */
+    public function paginate(int $perPage = 15): LengthAwarePaginator
+    {
+        $total   = $this->count();
+        $allIds  = $this->buildIdsQuery()->pluck('root_event_id');
+        $results = $this->hydrate($allIds);
+
+        $page   = LengthAwarePaginator::resolveCurrentPage();
+        $sliced = $results->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return new LengthAwarePaginator($sliced, $total, $perPage, $page);
     }
 
     // endregion
