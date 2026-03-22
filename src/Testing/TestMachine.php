@@ -1548,13 +1548,10 @@ class TestMachine
         return $this;
     }
 
-    // ═══════════════════════════════════════════
-    //  Async Simulation (v2)
-    // ═══════════════════════════════════════════
-
     /**
      * Simulate async child completion without real queues.
      *
+     * Works for both machine delegation (`machine:` key) and job actors (`job:` key).
      * The `result` parameter populates both `output()` and `result()` accessors,
      * matching Machine::fake() behavior.
      */
