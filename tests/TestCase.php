@@ -7,7 +7,6 @@ namespace Tarfinlabs\EventMachine\Tests;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Orchestra\Testbench\TestCase as Orchestra;
-use Spatie\LaravelData\LaravelDataServiceProvider;
 use Tarfinlabs\EventMachine\MachineServiceProvider;
 
 class TestCase extends Orchestra
@@ -23,7 +22,6 @@ class TestCase extends Orchestra
     {
         return [
             MachineServiceProvider::class,
-            LaravelDataServiceProvider::class,
         ];
     }
 

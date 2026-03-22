@@ -24,7 +24,6 @@
         "ext-zlib": "*",
         "illuminate/contracts": "^11.0.8|^12.0",
         "nikic/php-parser": "^5.4",
-        "spatie/laravel-data": "^4.13.0",
         "spatie/laravel-package-tools": "^1.14.0"
     },
     "require-dev": {
