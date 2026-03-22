@@ -176,29 +176,35 @@ class Machine implements Castable, JsonSerializable, Stringable
     }
 
     /**
-     * Create a TestMachine wrapper for fluent testing.
+     * Create a TestMachine for fluent testing.
      *
-     * Context values are applied after machine start — entry actions on the
-     * initial state run with the machine's default context, not these overrides.
+     * Context is merged BEFORE initialization — entry actions see it.
+     * Guards and faking are applied before getInitialState() runs,
+     * solving @always timing issues.
      *
-     * @param  array  $context  Optional context overrides applied post-initialization.
+     * @param  array  $context  Context values to inject before machine start.
+     * @param  array<class-string, mixed>  $guards  Guard class => return value pairs (pre-init).
+     * @param  array<class-string>  $faking  Behavior classes to spy before init.
      */
-    public static function test(array $context = []): TestMachine
+    public static function test(array $context = [], array $guards = [], array $faking = []): TestMachine
     {
-        return TestMachine::create(static::class, $context);
+        return TestMachine::withContext(static::class, $context, $guards, $faking);
     }
 
     /**
-     * Create a TestMachine with pre-start context injection.
+     * Create a TestMachine at a specific state without running lifecycle.
      *
-     * Context is merged BEFORE initialization, so entry actions on the
-     * initial state see the injected context values.
+     * No entry actions, no @always, no job dispatch.
+     * Uses the real definition — all transitions, guards, and actions available.
      *
-     * @param  array  $context  Context values to inject before machine start.
+     * @param  string  $stateId  The state to start at (resolved from idMap).
+     * @param  array  $context  Context values to inject.
+     * @param  array<class-string, mixed>  $guards  Guard class => return value pairs.
+     * @param  array<class-string>  $faking  Behavior classes to spy.
      */
-    public static function withContext(array $context): TestMachine
+    public static function startingAt(string $stateId, array $context = [], array $guards = [], array $faking = []): TestMachine
     {
-        return TestMachine::withContext(static::class, $context);
+        return TestMachine::startingAt(static::class, $stateId, $context, $guards, $faking);
     }
 
     /**
