@@ -103,6 +103,8 @@ $context->count = 5;
 | `set(string $key, mixed $value)` | Set a value |
 | `has(string $key, ?string $type = null)` | Check if key exists (optionally with type) |
 | `remove(string $key)` | Remove a key |
+| `computedContext()` | Override in subclasses to define computed key-value pairs for API responses |
+| `toResponseArray()` | Returns `toArray()` merged with `computedContext()` — used by endpoints and `State::toArray()` |
 
 ### Checking Existence
 
