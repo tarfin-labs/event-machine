@@ -383,24 +383,23 @@ it('handles multiple machines on model', function () {
 });
 ```
 
-### Conditional Initialization
+### Optional Machine Attributes
 
-Test `shouldInitializeMachine()` overrides that control when a machine starts:
+Use `hasMachine()` to check if a machine attribute has been initialized without triggering restore:
 
 <!-- doctest-attr: ignore -->
 ```php
-it('does not initialize machine when condition is false', function () {
-    // Model overrides shouldInitializeMachine() → returns false for drafts
-    $order = Order::create(['name' => 'Draft', 'is_draft' => true]);
-
-    expect($order->status)->toBeNull();
+it('detects uninitialized machine attribute', function () {
+    // Polymorphic machines are NOT auto-initialized
+    $order = Order::create(['name' => 'Draft']);
+    // status_mre was not explicitly set → null
+    expect($order->hasMachine('status_mre'))->toBeFalse();
 });
 
-it('initializes machine when condition is true', function () {
-    $order = Order::create(['name' => 'Real Order', 'is_draft' => false]);
-
-    expect($order->status)->not->toBeNull();
-    expect($order->status->state->matches('pending'))->toBeTrue();
+it('detects initialized machine attribute', function () {
+    $order = Order::create(['name' => 'Real Order']);
+    // Auto-initialized by bootHasMachines
+    expect($order->hasMachine('status_mre'))->toBeTrue();
 });
 ```
 
