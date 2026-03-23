@@ -6,8 +6,8 @@ Only the **latest major version** receives bug fixes, new features, and security
 
 | Version | Status |
 |---------|--------|
-| **8.x** | **Active** — bug fixes, features, security |
-| 7.x and below | End of life — upgrade to latest |
+| **9.x** | **Active** — bug fixes, features, security |
+| 8.x and below | End of life — upgrade to latest |
 
 **Why only latest?**
 
@@ -16,6 +16,117 @@ EventMachine evolved rapidly from v1 to v7 with a small team. Maintaining multip
 ::: tip Upgrading from any version
 Each section below has step-by-step migration instructions with before/after examples. For multi-version jumps (e.g., v3 → v7), follow each guide in sequence. No data migration is required between any versions — the `machine_events` table format has not changed since v1.
 :::
+
+## From 8.x to 9.0
+
+### PHP 8.4+ Required
+
+v9 requires PHP `^8.4|^8.5` (drops PHP 8.3 support). This is needed for `ReflectionClass::newLazyProxy()` which powers the new lazy casting system.
+
+### Machine Casting: Lazy Proxies
+
+Machine attributes now return **PHP 8.4 lazy proxies** — the machine is NOT restored from the database until you access a property or call a method on it. This means:
+
+- `Model::find(1)` → zero machine queries
+- `$model->toArray()` → returns raw root_event_id string, zero machine queries
+- `$model->status` → returns lazy proxy (zero queries)
+- `$model->status->state` → NOW triggers DB restore (one query)
+- Second `$model->status->state` → cached, zero queries
+
+### Machine Definitions: `casts()` Only
+
+The `$machines` property, `machines()` method, and direct `MachineCast::class` usage are removed. Define machines exclusively in `casts()`:
+
+<!-- doctest-attr: ignore -->
+```php
+// Before — via $machines property (REMOVED)
+protected array $machines = [
+    'status_mre' => OrderMachine::class . ':order',
+];
+
+// Before — via machines() method (REMOVED)
+protected function machines(): array
+{
+    return [
+        'status_mre' => OrderMachine::class . ':order',
+    ];
+}
+
+// After — casts() only
+protected function casts(): array
+{
+    return [
+        'status_mre' => OrderMachine::class . ':order',
+    ];
+}
+```
+
+### `shouldInitializeMachine()` Removed
+
+The lazy proxy eliminates the need for this method. Use `hasMachine()` instead:
+
+<!-- doctest-attr: ignore -->
+```php
+// Before (v8)
+public function shouldInitializeMachine(): bool
+{
+    return $this->getRawOriginal('mre') !== null;
+}
+
+// After (v9) — check at usage site
+if ($model->hasMachine('mre')) {
+    $model->mre->send($event);
+}
+```
+
+### New: `PolymorphicMachineCast`
+
+For models that resolve different machine classes at runtime:
+
+<!-- doctest-attr: ignore -->
+```php
+// Before (v8) — computed attribute workaround
+protected function machine(): Attribute { /* ... */ }
+public function machines(): array
+{
+    return ['mre' => $this->getAttributeValue('machine') . ':ctx'];
+}
+
+// After (v9)
+protected function casts(): array
+{
+    return [
+        'mre' => PolymorphicMachineCast::class . ':machineResolver,ctx',
+    ];
+}
+
+public function machineResolver(): string
+{
+    return match ($this->getRawOriginal('type')) {
+        'a' => MachineA::class,
+        'b' => MachineB::class,
+    };
+}
+```
+
+### New: Machine Helpers
+
+<!-- doctest-attr: ignore -->
+```php
+$model->hasMachine('status');          // bool — no restore triggered
+$model->getMachineId('status');        // raw root_event_id string — no restore
+$model->refreshMachine('status');      // clear cache, next access = fresh restore
+$model->status->refresh();             // re-restore state in place from DB
+```
+
+### Migration Checklist
+
+- [ ] Upgrade PHP to 8.4+
+- [ ] Move machine definitions from `$machines`/`machines()` to `casts()`
+- [ ] Remove `shouldInitializeMachine()` overrides — use `hasMachine()` at call sites
+- [ ] Replace computed attribute machine resolvers with `PolymorphicMachineCast`
+- [ ] Remove direct `MachineCast::class . ':'` usage from `$casts`
+- [ ] Run `composer test` to verify
 
 ## From 8.5.2 to 8.5.3
 
