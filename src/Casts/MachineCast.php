@@ -6,9 +6,6 @@ namespace Tarfinlabs\EventMachine\Casts;
 
 use Illuminate\Database\Eloquent\Model;
 use Tarfinlabs\EventMachine\Actor\Machine;
-use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
-use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
-
 /**
  * Eloquent cast for static (single-class) machine attributes.
  *
@@ -32,9 +29,6 @@ class MachineCast extends MachineBaseCast
      * Laravel's $classCastCache prevents repeated get() calls.
      *
      * @param  array<mixed>  $attributes
-     *
-     * @throws BehaviorNotFoundException
-     * @throws RestoringStateException
      */
     public function get(Model $model, string $key, mixed $value, array $attributes): ?Machine
     {
