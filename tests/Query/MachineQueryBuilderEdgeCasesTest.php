@@ -47,6 +47,20 @@ describe('Edge Cases', function (): void {
             ->inState('does_not_exist');
     })->throws(InvalidArgumentException::class);
 
+    test('notInState excludes matching instances', function (): void {
+        createPersistedQBMachine('idle');
+        createPersistedQBMachine('active');
+        createPersistedQBMachine('completed');
+
+        $results = QueryBuilderTestMachine::query()
+            ->notInState('idle')
+            ->get();
+
+        expect($results)->toHaveCount(2);
+        $stateIds = $results->pluck('stateId')->all();
+        expect($stateIds)->each->not->toContain('idle');
+    });
+
     test('multiple machines can be queried and counted', function (): void {
         createPersistedQBMachine('idle');
         createPersistedQBMachine('idle');
