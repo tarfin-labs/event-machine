@@ -127,7 +127,7 @@ class ScenarioPlayer
             machineId: $machine?->state?->history?->first()?->root_event_id ?? '',
             rootEventId: $machine?->state?->history?->first()?->root_event_id ?? '',
             currentState: $machine?->state?->currentStateDefinition?->key ?? '',
-            models: $parentModels,
+            models: array_merge($parentModels, $scenario->getCreatedModels()),
             stepsExecuted: $stepsExecuted,
             duration: $duration,
             childResults: $childResults,
