@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\File;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 
 class ScenarioCommand extends Command
 {
@@ -41,7 +41,7 @@ class ScenarioCommand extends Command
 
     private function listScenarios(): int
     {
-        $scenarios     = $this->discoverScenarios();
+        $scenarios     = ScenarioDiscovery::discover();
         $machineFilter = $this->option('machine');
 
         $grouped = [];
@@ -143,7 +143,13 @@ class ScenarioCommand extends Command
         $params = [];
 
         foreach ($this->option('param') as $param) {
-            [$key, $value] = explode(':', (string) $param, 2);
+            $parts = explode(':', (string) $param, 2);
+            if (count($parts) !== 2) {
+                $this->warn("Skipping malformed parameter: {$param} (expected key:value format)");
+
+                continue;
+            }
+            [$key, $value] = $parts;
             $params[$key]  = $value;
         }
 
@@ -158,54 +164,10 @@ class ScenarioCommand extends Command
         }
 
         // Search in discovered scenarios
-        foreach ($this->discoverScenarios() as $class) {
+        foreach (ScenarioDiscovery::discover() as $class) {
             if (class_basename($class) === $name) {
                 return $class;
             }
-        }
-
-        return null;
-    }
-
-    /**
-     * @return array<int, class-string<MachineScenario>>
-     */
-    private function discoverScenarios(): array
-    {
-        $path = config('machine.scenarios.path');
-
-        if (!is_dir($path)) {
-            return [];
-        }
-
-        $scenarios = [];
-
-        foreach (File::allFiles($path) as $file) {
-            $class = $this->getClassFromFile($file->getPathname());
-            if ($class !== null && is_subclass_of($class, MachineScenario::class)) {
-                $scenarios[] = $class;
-            }
-        }
-
-        return $scenarios;
-    }
-
-    private function getClassFromFile(string $filepath): ?string
-    {
-        $contents  = file_get_contents($filepath);
-        $namespace = null;
-        $class     = null;
-
-        if (preg_match('/namespace\s+([^;]+);/', $contents, $matches)) {
-            $namespace = $matches[1];
-        }
-
-        if (preg_match('/class\s+(\w+)/', $contents, $matches)) {
-            $class = $matches[1];
-        }
-
-        if ($namespace !== null && $class !== null) {
-            return $namespace.'\\'.$class;
         }
 
         return null;
