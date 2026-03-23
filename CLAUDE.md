@@ -251,3 +251,5 @@ All code, tests, and documentation **must** follow the naming conventions define
 - `spec/` - Implementation specs and plans (version-prefixed, e.g., `8.5.3-centralize-post-entry-transitions.md`)
 
 The package integrates with Laravel through the `MachineServiceProvider` and provides Eloquent model casting via `MachineCast`.
+
+For detailed architecture, module guides, and navigation instructions, see [CODEBASE_MAP.md](CODEBASE_MAP.md).
