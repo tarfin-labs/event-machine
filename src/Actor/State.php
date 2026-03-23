@@ -555,7 +555,7 @@ class State implements \JsonSerializable
     {
         return [
             'value'            => $this->value,
-            'context'          => $this->context->toArray(),
+            'context'          => $this->context->toResponseArray(),
             'available_events' => $this->availableEvents(),
         ];
     }
