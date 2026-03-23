@@ -196,6 +196,64 @@ class CartContext extends ContextManager
 ],
 ```
 
+### Exposing Computed Values in API Responses
+
+By default, computed methods are only available in PHP — in guards, actions, calculators, and ResultBehavior. They do **not** appear in endpoint JSON responses, because `toArray()` only serializes properties.
+
+Override `computedContext()` to declare which computed values should be included in API responses:
+
+<!-- doctest-attr: ignore -->
+```php
+class CartContext extends ContextManager
+{
+    public function __construct(
+        public array $items = [],
+        public float $discountPercent = 0,
+        public string $shippingMethod = 'standard',
+    ) {
+        parent::__construct();
+    }
+
+    public function subtotal(): float { /* ... */ }
+    public function total(): float { /* ... */ }
+    public function isEmpty(): bool { return empty($this->items); }
+
+    protected function computedContext(): array
+    {
+        return [
+            'subtotal'  => $this->subtotal(),
+            'total'     => $this->total(),
+            'is_empty'  => $this->isEmpty(),
+            'item_count' => count($this->items),
+        ];
+    }
+}
+```
+
+Now the endpoint response includes computed values alongside regular properties:
+
+```json
+{
+  "context": {
+    "items": [...],
+    "discountPercent": 10,
+    "shippingMethod": "express",
+    "subtotal": 99.99,
+    "total": 104.98,
+    "is_empty": false,
+    "item_count": 3
+  }
+}
+```
+
+::: info Not Persisted
+Computed values are **not** stored in the database — they are recomputed fresh on every API response. This keeps the `machine_events` table clean and avoids stale derived data.
+:::
+
+::: tip contextKeys Filtering
+Computed keys respect `contextKeys` filtering on endpoints. If an endpoint specifies `contextKeys: ['total', 'item_count']`, only those keys appear — both regular and computed.
+:::
+
 ## Model Transformers
 
 Handle Eloquent models in context:
