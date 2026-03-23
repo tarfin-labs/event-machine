@@ -106,13 +106,18 @@ For automatic persistence with Eloquent models:
 
 <!-- doctest-attr: ignore -->
 ```php
-use Tarfinlabs\EventMachine\Casts\MachineCast;
+use Tarfinlabs\EventMachine\Traits\HasMachines;
 
 class Order extends Model
 {
-    protected $casts = [
-        'fulfillment_state' => MachineCast::class . ':' . OrderFulfillmentMachine::class,
-    ];
+    use HasMachines;
+
+    protected function casts(): array
+    {
+        return [
+            'fulfillment_state' => OrderFulfillmentMachine::class . ':order',
+        ];
+    }
 }
 
 // The cast handles root_event_id storage automatically
