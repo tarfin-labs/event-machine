@@ -191,7 +191,7 @@ class MachineController extends Controller
         }
 
         $rootEventId = $state->history->first()?->root_event_id;
-        $contextData = $state->context->toArray();
+        $contextData = $state->context->toResponseArray();
 
         // Filter context keys if specified in endpoint config
         if ($contextKeys !== null) {
@@ -383,7 +383,7 @@ class MachineController extends Controller
         ];
 
         if ($childState instanceof State) {
-            $childContext = $childState->context->toArray();
+            $childContext = $childState->context->toResponseArray();
 
             if ($contextKeys !== null) {
                 $childContext = array_intersect_key($childContext, array_flip($contextKeys));
