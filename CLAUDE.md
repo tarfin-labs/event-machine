@@ -100,14 +100,15 @@ All machine behaviors extend `InvokableBehavior` and include:
 - **Tag names: NO `v` prefix.** Use `7.0.0`, not `v7.0.0`. All existing tags follow this convention (`6.4.0`, `5.0.0`, etc.).
 
 ### Quality Gate
-- **Always use `composer test`** — never run `vendor/bin/pest` directly. `composer test` runs tests in parallel AND includes doctest and other tools. Running pest alone is slower (no parallelism) and incomplete.
+- **Always run `composer quality`** after completing work — this runs pint, rector, phpstan, tests (parallel), and type coverage in one command.
+- **Never run `vendor/bin/pest` directly.** `composer test` (included in `quality`) runs tests in parallel AND includes doctest and other tools. Running pest alone is slower (no parallelism) and incomplete.
 - DocTest should pass with 0 failures. If a new code block causes failure, add appropriate doctest attribute (`ignore`, `no_run`, or `bootstrap`).
 
 ### Documentation URLs
 - **Documentation site domain is `eventmachine.dev`** — always use `https://eventmachine.dev/...` when linking to docs (in release notes, README, PR descriptions, etc.). Never use `tarfin-labs.github.io/event-machine`.
 
 ### Pre-Commit Checks
-- **Always run `composer pint && composer rector`** before committing.
+- **Always run `composer quality`** before committing. This replaces the old `composer pint && composer rector && composer test` workflow.
 - After Rector runs, **review what it changed** — Rector may apply refactorings (e.g., `instanceof` checks, type narrowing) that need verification. Check the diff before committing Rector's changes.
 
 ## Key Development Patterns

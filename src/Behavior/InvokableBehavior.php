@@ -366,7 +366,7 @@ abstract class InvokableBehavior
             'Cannot assert raised events: runWithState() has not been called on '.static::class.'.'
         );
 
-        $found = $events->contains(fn ($event): bool => self::matchesRaisedEvent($event, $eventTypeOrClass));
+        $found = $events->contains(fn (array $event): bool => self::matchesRaisedEvent($event, $eventTypeOrClass));
 
         Assert::assertTrue($found, "Expected event '{$eventTypeOrClass}' to be raised by ".static::class.' but it was not.');
     }
@@ -383,7 +383,7 @@ abstract class InvokableBehavior
             'Cannot assert raised events: runWithState() has not been called on '.static::class.'.'
         );
 
-        $found = $events->contains(fn ($event): bool => self::matchesRaisedEvent($event, $eventTypeOrClass));
+        $found = $events->contains(fn (array $event): bool => self::matchesRaisedEvent($event, $eventTypeOrClass));
 
         Assert::assertFalse($found, "Expected event '{$eventTypeOrClass}' NOT to be raised by ".static::class.' but it was.');
     }
