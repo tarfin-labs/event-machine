@@ -74,11 +74,7 @@
         "quality": [
             "@pint",
             "@rector",
-            "@test:rector",
-            "@test:pint",
-            "@test:phpstan",
-            "@test:unit",
-            "@test:types"
+            "@test"
         ]
     },
     "config": {
