@@ -103,8 +103,16 @@ class DiagramCommand extends Command
 
         // Inject machine data
         $machinesJson = json_encode($machines, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $template     = str_replace('/* __MACHINE_DATA__ */', "const MACHINES = {$machinesJson};", $template);
 
-        return str_replace('/* __MACHINE_DATA__ */', "const MACHINES = {$machinesJson};", $template);
+        // Inline ELK.js for offline support
+        $elkPath = dirname(__DIR__, 2).'/resources/vendor/elk.bundled.js';
+        if (File::exists($elkPath)) {
+            $elkJs   = File::get($elkPath);
+            $template = str_replace('/* __ELK_JS__ */', $elkJs, $template);
+        }
+
+        return $template;
     }
 
     private function resolveOutputPath(array $machines): string
