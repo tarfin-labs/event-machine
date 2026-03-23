@@ -1040,6 +1040,27 @@ class Machine implements Castable, JsonSerializable, Stringable
         return (string) ($this->state->history->first()->root_event_id ?? '');
     }
 
+    /**
+     * Re-restore the machine state from the database.
+     *
+     * Fetches a fresh copy of all events from machine_events and
+     * rebuilds the State object. Useful after external changes to
+     * the machine (e.g., another process sent an event).
+     *
+     * @return self Returns $this for method chaining.
+     *
+     * @throws RestoringStateException If the machine state cannot be found.
+     */
+    public function refresh(): self
+    {
+        $rootEventId = $this->definition->rootEventId
+            ?? $this->state->history->first()->root_event_id;
+
+        $this->state = $this->restoreStateFromRootEventId($rootEventId);
+
+        return $this;
+    }
+
     // endregion
 
     /**
