@@ -20,7 +20,7 @@ class ScenarioActionStub extends ActionBehavior
 
     public function __invoke(State $state): void
     {
-        $original = new $this->originalClass();
+        $original = resolve($this->originalClass);
 
         if ($original instanceof ScenarioStubContract) {
             $original->applyStub($state, $this->stubData);
