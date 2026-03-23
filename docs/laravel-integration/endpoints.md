@@ -239,6 +239,8 @@ When no `result` is specified, the endpoint returns the machine state as JSON:
 }
 ```
 
+If your context class overrides `computedContext()`, computed values are automatically included in the `context` object alongside regular properties. See [Exposing Computed Values](/advanced/custom-context#exposing-computed-values-in-api-responses) for details.
+
 The `available_events` array uses HATEOAS-style discoverability — the response tells the consumer which events the machine can accept in its current state. Each entry includes a `type` (the event name to send) and a `source` (`parent` for direct events, `forward` for forwarded child events). See the [Available Events](./available-events) page for full details.
 
 By default `available_events` is included in every response. To opt out for a specific endpoint, set `available_events` to `false` in its array config.

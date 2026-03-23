@@ -453,4 +453,70 @@ class ContextManager implements \JsonSerializable, Arrayable
     }
 
     // endregion
+
+    // region Computed Context
+
+    /**
+     * Define computed key-value pairs derived from context data.
+     *
+     * Override in subclasses to expose calculated values in API responses.
+     * These are NOT persisted to the database — they are recomputed on every response.
+     *
+     * @return array<string, mixed>
+     */
+    protected function computedContext(): array
+    {
+        return [];
+    }
+
+    /**
+     * Serialize context for API responses, including computed values.
+     *
+     * @return array<string, mixed>
+     */
+    public function toResponseArray(): array
+    {
+        return array_merge($this->toArray(), $this->computedContext());
+    }
+
+    // endregion
+
+    // region Magic Setup
+
+    /**
+     * Set a value in the context by its name.
+     *
+     * @param  string  $name  The name of the value to set.
+     * @param  mixed  $value  The value to set.
+     */
+    public function __set(string $name, mixed $value): void
+    {
+        $this->set($name, $value);
+    }
+
+    /**
+     * Magic method to dynamically retrieve a value from the context by its key.
+     *
+     * @param  string  $name  The key of the value to retrieve.
+     *
+     * @return mixed The value associated with the given key, or null if the key does not exist.
+     */
+    public function __get(string $name): mixed
+    {
+        return $this->get($name);
+    }
+
+    /**
+     * Checks if a property is set on the object.
+     *
+     * @param  string  $name  The name of the property to check.
+     *
+     * @return bool True if the property exists and is set, false otherwise.
+     */
+    public function __isset(string $name): bool
+    {
+        return $this->has($name);
+    }
+
+    // endregion
 }
