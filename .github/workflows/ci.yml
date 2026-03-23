@@ -102,7 +102,7 @@ jobs:
           coverage: pcov
 
       - name: Install composer dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@v4
 
       - name: Execute tests with coverage
         run: vendor/bin/pest --coverage --min=80 --colors=always --order-by=random --testsuite='Tarfinlabs Test Suite'
