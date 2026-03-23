@@ -212,7 +212,8 @@ class CustomerDetailResult extends ResultBehavior
 
 | EventMachine | PHP | Laravel | Status |
 |--------------|-----|---------|--------|
-| **8.x** | 8.3+ | 11.x, 12.x | **Active** |
+| **9.x** | 8.4+ | 11.x, 12.x | **Active** |
+| 8.x | 8.3+ | 11.x, 12.x | End of life |
 | 7.x | 8.3+ | 11.x, 12.x | End of life |
 | 6.x | 8.3+ | 11.x, 12.x | End of life |
 | 5.x | 8.3+ | 11.x, 12.x | End of life |
