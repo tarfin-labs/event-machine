@@ -200,6 +200,7 @@ $result->stateId;   // most recently entered state
 
 ::: tip Resume Endpoint
 The query builder is ideal for "resume application" features:
+<!-- doctest-attr: ignore -->
 ```php
 public function resumable(): JsonResponse
 {
