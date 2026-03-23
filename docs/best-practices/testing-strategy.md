@@ -2,12 +2,13 @@
 
 EventMachine is testable at every level. A well-designed test suite uses the right level for each concern -- fast isolated tests for logic, integration tests for flow, and end-to-end tests for the full pipeline.
 
-## Four Layers
+## Five Layers
 
 | Layer | What to Test | Speed | Dependencies |
 |-------|-------------|-------|-------------|
 | **Unit** | Individual behaviors (guards, actions, calculators) | Milliseconds | None (in-memory) |
 | **Integration** | State flow, transition paths, guard gating | Fast | SQLite in-memory |
+| **Path Coverage** | All enumerated paths exercised by tests | Fast | None (static analysis + tracker) |
 | **E2E** | Full pipeline: timers, scheduled events, persistence | Moderate | SQLite + artisan |
 | **LocalQA** | Async delegation, parallel dispatch, locking | Slow | MySQL + Redis + Horizon |
 

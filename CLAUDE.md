@@ -24,6 +24,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `php artisan machine:process-timers` - Sweep command for after/every timers (auto-registered)
 - `php artisan machine:process-scheduled` - Process scheduled events (called by MachineScheduler)
 - `php artisan machine:timer-status` - Display timer status for machine instances
+- `php artisan machine:paths` - Enumerate all paths through a machine definition (static analysis)
+- `php artisan machine:coverage` - Report path coverage for a machine (reads test coverage JSON)
 - `php artisan machine:cache` - Cache machine class discovery for production
 - `php artisan machine:clear` - Clear machine discovery cache
 
