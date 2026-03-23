@@ -1,10 +1,10 @@
 # Diagram Tool Build Progress
 
 ## Current Status
-- **Current Iteration:** 8
-- **Last Completed:** Iteration 7 (Multi-Machine Compound Nodes)
-- **Last Updated:** 2026-03-25 00:45
-- **HTML Status:** Working — multi-machine system view with compound nodes, delegation edges, merged sidebar
+- **Current Iteration:** 9
+- **Last Completed:** Iteration 8 (Collapse/Expand)
+- **Last Updated:** 2026-03-25 01:00
+- **HTML Status:** Working — collapse/expand machine containers, re-layout on toggle, Collapse All / Expand All buttons
 
 ## Completed Iterations
 
@@ -21,47 +21,42 @@
 - Keyboard shortcuts, behavior highlighting, pan/click fix
 
 ### Iteration 6 — 2026-03-25 00:25
-- Invoke delegation: fire-and-forget, @timeout, with mapping, queue/timeout info
+- Invoke delegation: fire-and-forget, @timeout, with mapping
 
 ### Iteration 7 — 2026-03-25 00:45
-- **Multi-machine system view:**
-  - `xstateToElkMulti()` wraps each machine as ELK compound node
-  - Root layout: LEFT→RIGHT (machines side by side)
-  - Internal layout: DOWN (states top-to-bottom within each machine)
-  - Machine container rendering with header bar, name, background, separator
-- **Inter-machine delegation edges:**
-  - Auto-detects `invoke.src` references matching other machines' class basenames
-  - Draws purple dashed arrow from invoke state to child machine compound node
-  - Shows `with` mapping on edge label (e.g., `with: order_id, amount←total_amount`)
-  - Purple arrowhead marker added
-- **Merged sidebar for multi-machine:**
-  - Context panel shows contexts grouped by machine name
-  - Behavior catalog merges all behaviors from all machines
-- **Single-machine view preserved:** No regression — `isMulti` flag routes to existing code
+- Multi-machine compound nodes, delegation edges, merged sidebar
+
+### Iteration 8 — 2026-03-25 01:00
+- **Collapse/expand machine containers:**
+  - `collapsedMachines` Set tracks which machines are collapsed
+  - Click machine header (▶/▼ indicator) to toggle
+  - Collapsed nodes show: event port summary (IN/OUT events), state count
+  - Expanded nodes show full internal state machine
+  - `reLayoutMulti()` rebuilds ELK graph and re-renders on every toggle
+  - Edge counter reset on re-layout to avoid stale IDs
+- **Collapse All / Expand All buttons** in header bar (only shown in multi-machine mode)
+- **Collapsed styling:** Semi-transparent background, port lines in gray
+- **No single-machine regression** — collapse buttons hidden in single mode
 - **Tested:**
-  - Single machine (TrafficLightsMachine): OK, no regression
-  - 2-machine system (ParentOrderMachine + ChildPaymentMachine): delegation edge visible
-  - 3-machine system (ParentOrder + ChildPayment + SimpleChild): all connected
+  - Multi-machine (ParentOrder + ChildPayment): collapse/expand toggle works
+  - Single machine (TrafficLights): no regression
 
 ## Next Up
-- Iteration 8: Collapse/Expand
-  - Click machine header to toggle collapse/expand
-  - Collapsed: fixed-size node with name + ports
-  - Expanded: full internal state machine
-  - ELK re-layout on toggle
-  - Default: multi-machine starts collapsed
-  - **Checkpoint:** Collapse/expand works
+- Iteration 9: Timer + Event Payload Panels
+  - Timer machines test (after/every)
+  - Event payload popup on click
+  - Then Iteration 10: Polish + dark/light theme
+- **Checkpoint:** Timer machines + event details working
 
 ## Known Issues
 - [ ] Self-transitions shown as text inside state — no loop-back arrows
 - [ ] Testbench needs `CACHE_STORE=array` workaround
 - [ ] Label background width estimated
-- [ ] Delegation edge target is machine compound node, not specific state (ELK routes to compound node boundary)
-- [ ] Inter-machine edges may cross machine boundaries visually if ELK routing is imperfect
+- [ ] Delegation edge targeting compound node boundary (not initial state)
 
 ## Files Modified This Session
 - `src/Commands/DiagramCommand.php` (created, updated)
-- `resources/diagram-template.html` (created, updated x6)
+- `resources/diagram-template.html` (created, updated x7)
 - `resources/vendor/elk.bundled.js` (vendored)
 - `resources/vendor/d3-zoom.min.js` (vendored)
 - `resources/vendor/d3-selection.min.js` (vendored)

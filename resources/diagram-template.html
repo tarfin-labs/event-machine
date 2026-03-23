@@ -203,6 +203,10 @@ body {
 .transition-timeout path { stroke: #ff9800; stroke-dasharray: 3 3; }
 .transition-delegation path { stroke: #9c27b0; stroke-width: 2.5; stroke-dasharray: 8 4; }
 
+/* Machine container */
+.machine-collapsed rect:first-child { opacity: 0.7; }
+.machine-collapsed:hover rect:first-child { opacity: 1; }
+
 /* Detail panel */
 #detail-panel {
     position: absolute;
@@ -277,6 +281,8 @@ body {
 <div id="header">
     <h1 id="title">EventMachine Diagram</h1>
     <div class="controls">
+        <button id="btn-collapse-all" onclick="collapseAll()" style="display:none">Collapse All</button>
+        <button id="btn-expand-all" onclick="expandAll()" style="display:none">Expand All</button>
         <button onclick="fitToScreen()">Fit</button>
         <button onclick="zoomIn()">Zoom +</button>
         <button onclick="zoomOut()">Zoom -</button>
@@ -1364,6 +1370,49 @@ function populateBehaviorList(elementId, behaviors, type) {
 // Global controls
 // ============================================================
 let panZoom = null;
+const collapsedMachines = new Set();
+
+async function toggleMachineCollapse(machineId) {
+    if (collapsedMachines.has(machineId)) {
+        collapsedMachines.delete(machineId);
+    } else {
+        collapsedMachines.add(machineId);
+    }
+    await reLayoutMulti();
+}
+
+async function collapseAll() {
+    MACHINES.forEach(m => collapsedMachines.add(m.json.id));
+    await reLayoutMulti();
+}
+
+async function expandAll() {
+    collapsedMachines.clear();
+    await reLayoutMulti();
+}
+
+async function reLayoutMulti() {
+    edgeCounter = 0; // Reset edge counter for fresh IDs
+    const elkGraph = xstateToElkMulti(MACHINES);
+    const elk = new ELK();
+    try {
+        const layoutResult = await elk.layout(elkGraph);
+        const svgGroup = document.getElementById('diagram-root');
+        svgGroup.innerHTML = '';
+
+        const bgRect = createSvgElement('rect', {
+            class: 'background-rect',
+            x: -10000, y: -10000, width: 20000, height: 20000,
+            fill: 'transparent',
+        });
+        svgGroup.appendChild(bgRect);
+
+        renderMachineContainers(layoutResult, svgGroup);
+        setTimeout(fitToScreen, 50);
+    } catch (err) {
+        console.error('Re-layout error:', err);
+    }
+}
 
 function fitToScreen() {
     const root = document.getElementById('diagram-root');
@@ -1401,49 +1450,84 @@ function xstateToElkMulti(machines) {
         classToId[className] = m.json.id;
     });
 
-    // Each machine becomes a compound node
+    // Each machine becomes a compound node (or collapsed fixed-size node)
     machines.forEach(machine => {
         const mJson = machine.json;
         const machineId = mJson.id;
+        const isCollapsed = collapsedMachines.has(machineId);
         const states = mJson.states || {};
         const stateNames = Object.keys(states);
 
-        const machineNode = {
-            id: machineId,
-            labels: [{ text: machineId }],
-            layoutOptions: {
-                'elk.algorithm': 'layered',
-                'elk.direction': 'DOWN',
-                'elk.spacing.nodeNode': '30',
-                'elk.layered.spacing.nodeNodeBetweenLayers': '50',
-                'elk.edgeRouting': 'SPLINES',
-                'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-                'elk.padding': '[top=45,left=20,bottom=20,right=20]',
-            },
-            children: [],
-            edges: [],
-            properties: {
-                type: 'machine-container',
-                machineJson: mJson,
-                machineClass: machine.class,
-            },
-        };
+        if (isCollapsed) {
+            // Collapsed: fixed-size node with just the name
+            // Collect event names for port display
+            const inEvents = new Set();
+            const outEvents = new Set();
+            Object.values(states).forEach(sd => {
+                Object.keys(sd.on || {}).forEach(e => inEvents.add(e));
+                if (sd.invoke) {
+                    outEvents.add('@done');
+                    outEvents.add('@fail');
+                }
+            });
 
-        // Add state nodes
-        stateNames.forEach(stateName => {
-            const stateDef = states[stateName];
-            const node = buildStateNode(machineId, stateName, stateDef, mJson.initial);
-            machineNode.children.push(node);
-        });
+            const portLines = [];
+            if (inEvents.size > 0) portLines.push(`IN: ${[...inEvents].slice(0, 4).join(', ')}${inEvents.size > 4 ? '...' : ''}`);
+            if (outEvents.size > 0) portLines.push(`OUT: ${[...outEvents].join(', ')}`);
+            portLines.push(`${stateNames.length} states`);
 
-        // Add internal edges
-        stateNames.forEach(stateName => {
-            const stateDef = states[stateName];
-            const edges = buildEdgesFromState(machineId, stateName, stateDef);
-            machineNode.edges.push(...edges);
-        });
+            const collapsedHeight = 40 + portLines.length * 14;
+            const collapsedWidth = Math.max(180, machineId.length * 10 + 60);
 
-        elkGraph.children.push(machineNode);
+            elkGraph.children.push({
+                id: machineId,
+                width: collapsedWidth,
+                height: collapsedHeight,
+                labels: [{ text: machineId }],
+                properties: {
+                    type: 'machine-collapsed',
+                    machineJson: mJson,
+                    machineClass: machine.class,
+                    portLines: portLines,
+                },
+            });
+        } else {
+            // Expanded: full compound node with children
+            const machineNode = {
+                id: machineId,
+                labels: [{ text: machineId }],
+                layoutOptions: {
+                    'elk.algorithm': 'layered',
+                    'elk.direction': 'DOWN',
+                    'elk.spacing.nodeNode': '30',
+                    'elk.layered.spacing.nodeNodeBetweenLayers': '50',
+                    'elk.edgeRouting': 'SPLINES',
+                    'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+                    'elk.padding': '[top=45,left=20,bottom=20,right=20]',
+                },
+                children: [],
+                edges: [],
+                properties: {
+                    type: 'machine-container',
+                    machineJson: mJson,
+                    machineClass: machine.class,
+                },
+            };
+
+            stateNames.forEach(stateName => {
+                const stateDef = states[stateName];
+                const node = buildStateNode(machineId, stateName, stateDef, mJson.initial);
+                machineNode.children.push(node);
+            });
+
+            stateNames.forEach(stateName => {
+                const stateDef = states[stateName];
+                const edges = buildEdgesFromState(machineId, stateName, stateDef);
+                machineNode.edges.push(...edges);
+            });
+
+            elkGraph.children.push(machineNode);
+        }
     });
 
     // Auto-detect inter-machine delegation edges
@@ -1533,13 +1617,11 @@ function populateSidebarMulti(machines) {
 // Machine Container Rendering (for multi-machine view)
 // ============================================================
 function renderMachineContainers(elkResult, svgGroup) {
-    // Render machine compound nodes with a special header
     (elkResult.children || []).forEach(machineNode => {
         const props = machineNode.properties || {};
-        if (props.type !== 'machine-container') {
-            // Single machine mode — no container rendering needed
-            return;
-        }
+        const isCollapsed = props.type === 'machine-collapsed';
+        const isContainer = props.type === 'machine-container';
+        if (!isCollapsed && !isContainer) return;
 
         const x = machineNode.x || 0;
         const y = machineNode.y || 0;
@@ -1547,7 +1629,7 @@ function renderMachineContainers(elkResult, svgGroup) {
         const h = machineNode.height || 200;
 
         const group = createSvgElement('g', {
-            class: 'machine-container',
+            class: isCollapsed ? 'machine-container machine-collapsed' : 'machine-container',
             'data-machine-id': machineNode.id,
         });
 
@@ -1555,47 +1637,77 @@ function renderMachineContainers(elkResult, svgGroup) {
         const bg = createSvgElement('rect', {
             x: x, y: y, width: w, height: h,
             rx: 12, ry: 12,
-            fill: '#12122a', stroke: '#4a4a6a', 'stroke-width': 2,
+            fill: isCollapsed ? '#161630' : '#12122a',
+            stroke: isCollapsed ? '#5a5a8a' : '#4a4a6a',
+            'stroke-width': 2,
         });
         group.appendChild(bg);
 
         // Header bar
+        const headerH = 36;
         const headerBg = createSvgElement('rect', {
-            x: x, y: y, width: w, height: 36,
+            x: x, y: y, width: w, height: headerH,
             rx: 12, ry: 12,
             fill: '#1e1e3a', stroke: 'none',
         });
         group.appendChild(headerBg);
-        // Bottom corners of header (fill the rounded gap)
         const headerFill = createSvgElement('rect', {
-            x: x, y: y + 24, width: w, height: 12,
+            x: x, y: y + headerH - 12, width: w, height: 12,
             fill: '#1e1e3a', stroke: 'none',
         });
         group.appendChild(headerFill);
-        // Header separator
         const headerLine = createSvgElement('line', {
-            x1: x, y1: y + 36, x2: x + w, y2: y + 36,
+            x1: x, y1: y + headerH, x2: x + w, y2: y + headerH,
             stroke: '#4a4a6a', 'stroke-width': 1,
         });
         group.appendChild(headerLine);
 
-        // Machine name
+        // Collapse/expand indicator + machine name
+        const toggleIcon = isCollapsed ? '\u25B6' : '\u25BC'; // ▶ or ▼
         const nameText = createSvgElement('text', {
             x: x + 14, y: y + 23,
             'font-size': '14px', 'font-weight': '700',
             fill: '#a0c4ff',
+            style: 'cursor:pointer',
         });
-        nameText.textContent = `\u2B22 ${machineNode.id}`;
+        nameText.textContent = `${toggleIcon} ${machineNode.id}`;
         group.appendChild(nameText);
+
+        // Click header to toggle collapse/expand
+        const headerClickArea = createSvgElement('rect', {
+            x: x, y: y, width: w, height: headerH,
+            fill: 'transparent', style: 'cursor:pointer',
+        });
+        headerClickArea.addEventListener('click', (e) => {
+            if (panZoom?.wasDrag()) return;
+            e.stopPropagation();
+            toggleMachineCollapse(machineNode.id);
+        });
+        group.appendChild(headerClickArea);
+
+        // If collapsed, show port summary
+        if (isCollapsed && props.portLines) {
+            props.portLines.forEach((line, idx) => {
+                const portText = createSvgElement('text', {
+                    x: x + 14, y: y + headerH + 16 + idx * 14,
+                    'font-size': '10px',
+                    fill: '#7a7a9a',
+                });
+                portText.textContent = line;
+                group.appendChild(portText);
+            });
+        }
 
         svgGroup.appendChild(group);
 
-        // Render internal states
-        renderNodes(machineNode.children || [], svgGroup, x, y);
-        renderEdges(machineNode.edges || [], svgGroup, x, y);
+        // Render internal states only if expanded
+        if (isContainer) {
+            renderNodes(machineNode.children || [], svgGroup, x, y);
+            renderEdges(machineNode.edges || [], svgGroup, x, y);
+        }
     });
 
-    // Render inter-machine delegation edges (root-level edges)
+    // Render inter-machine delegation edges
     renderEdges(elkResult.edges || [], svgGroup, 0, 0);
 }
 
@@ -1616,6 +1728,8 @@ async function init() {
         // Multi-machine system view
         const names = MACHINES.map(m => m.json.id || m.id).join(' + ');
         document.getElementById('title').textContent = `EventMachine System: ${names}`;
+        document.getElementById('btn-collapse-all').style.display = '';
+        document.getElementById('btn-expand-all').style.display = '';
         populateSidebarMulti(MACHINES);
 
         const elkGraph = xstateToElkMulti(MACHINES);
