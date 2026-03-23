@@ -6,7 +6,6 @@ namespace Tarfinlabs\EventMachine\Actor;
 
 use Symfony\Component\Uid\Ulid;
 use Illuminate\Support\Facades\Log;
-use Tarfinlabs\EventMachine\Context;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
@@ -106,21 +105,17 @@ class State implements \JsonSerializable
     /**
      * Create a lightweight State instance for testing without a full MachineDefinition.
      *
-     * @param  array|ContextManager  $context  Context data as an array or ContextManager instance.
+     * @param  ContextManager  $context  A ContextManager instance.
      * @param  StateDefinition|null  $currentStateDefinition  Optional state definition.
      * @param  EventBehavior|null  $currentEventBehavior  Optional event behavior.
      */
     public static function forTesting(
-        array|ContextManager $context = [],
+        ContextManager $context,
         ?StateDefinition $currentStateDefinition = null,
         ?EventBehavior $currentEventBehavior = null,
     ): self {
-        $contextManager = $context instanceof ContextManager
-            ? $context
-            : Context::from($context);
-
         return new self(
-            context: $contextManager,
+            context: $context,
             currentStateDefinition: $currentStateDefinition,
             currentEventBehavior: $currentEventBehavior,
             history: new EventCollection(),

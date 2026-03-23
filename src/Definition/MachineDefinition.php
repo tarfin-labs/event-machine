@@ -7,7 +7,6 @@ namespace Tarfinlabs\EventMachine\Definition;
 use Mockery\MockInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
-use Tarfinlabs\EventMachine\Context;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -722,10 +721,10 @@ class MachineDefinition
             return $contextClass::validateAndCreate($this->config['context'] ?? []);
         }
 
-        // Otherwise, use the context defined in the machine config
-        $contextConfig = $this->config['context'] ?? [];
-
-        return Context::from($contextConfig);
+        throw new \InvalidArgumentException(
+            "Machine '{$this->id}' requires a typed context class (subclass of ContextManager). "
+            .'Array-based bag context is no longer supported.'
+        );
     }
 
     /**

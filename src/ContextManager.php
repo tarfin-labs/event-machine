@@ -77,17 +77,6 @@ class ContextManager extends TypedData
         return $valueType === $type;
     }
 
-    /**
-     * Remove a key from the context.
-     * On typed contexts, sets the property to null.
-     */
-    public function remove(string $key): void
-    {
-        if (property_exists($this, $key)) {
-            $this->{$key} = null;
-        }
-    }
-
     // endregion
 
     // region Machine Identity
@@ -162,22 +151,4 @@ class ContextManager extends TypedData
 
     // endregion
 
-    // region Magic Setup
-
-    public function __set(string $name, mixed $value): void
-    {
-        $this->set($name, $value);
-    }
-
-    public function __get(string $name): mixed
-    {
-        return $this->get($name);
-    }
-
-    public function __isset(string $name): bool
-    {
-        return $this->has($name);
-    }
-
-    // endregion
 }

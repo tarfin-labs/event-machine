@@ -7,7 +7,6 @@ namespace Tarfinlabs\EventMachine\Actor;
 use Stringable;
 use JsonSerializable;
 use Illuminate\Support\Facades\DB;
-use Tarfinlabs\EventMachine\Context;
 use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\EventCollection;
@@ -167,7 +166,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         $machine->isFakedInstance           = true;
 
         $machine->state = new State(
-            context: Context::from($fake['result'] ?? []),
+            context: $machine->definition->initializeContextFromState(),
             currentStateDefinition: null,
         );
 
@@ -576,12 +575,10 @@ class Machine implements Castable, JsonSerializable, Stringable
             return $contextClass::validateAndCreate($persistedContext);
         }
 
-        // Unwrap legacy v8 format: ['data' => [...]] → [...]
-        $contextData = (count($persistedContext) === 1 && array_key_exists('data', $persistedContext))
-            ? $persistedContext['data']
-            : $persistedContext;
-
-        return Context::from($contextData);
+        throw new \InvalidArgumentException(
+            "Machine '{$this->definition->id}' requires a typed context class (subclass of ContextManager). "
+            .'Array-based bag context is no longer supported.'
+        );
     }
 
     /**
