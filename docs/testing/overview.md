@@ -90,6 +90,7 @@ For fast tests, use SQLite in-memory. This eliminates migration overhead and dis
 | Scheduled Events | Cron-based batch operations via `runSchedule()`, `assertHasSchedule()` | [Scheduled Testing](/testing/scheduled-testing) |
 | Time-Based | `advanceTimers()`, `assertHasTimer()`, timer lifecycle testing | [Time-Based Testing](/testing/time-based-testing) |
 | Persistence | DB, restoration, archival | [Persistence Testing](/testing/persistence-testing) |
+| Path Coverage | Enumerate all paths, track coverage, assert thresholds | [Transitions & Paths — Coverage](/testing/transitions-and-paths#path-coverage-analysis) |
 | Recipes | Common real-world patterns | [Recipes](/testing/recipes) |
 | Migration | Upgrading from legacy test patterns | [Migration Patterns](/getting-started/upgrading#testing-migration-patterns) |
 

@@ -135,6 +135,63 @@ OrderMachine::test()
     ->assertHistoryContains('PROCESSING_COMPLETE');
 ```
 
+## Path Coverage Analysis
+
+EventMachine can statically enumerate all paths through a machine definition and track which paths your tests exercise.
+
+### Enumerating Paths
+
+```bash
+php artisan machine:paths "App\Machines\FindeksMachine"
+```
+
+This produces a complete list of all possible paths grouped by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END.
+
+### Tracking Coverage in Tests
+
+Enable the `PathCoverageTracker` to record which paths tests exercise:
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
+
+beforeEach(fn () => PathCoverageTracker::enable());
+afterEach(fn () => PathCoverageTracker::reset());
+```
+
+The tracker records state transitions automatically through `TestMachine`. Paths are completed when `assertFinished()` or `assertState()` (on a FINAL state) is called.
+
+### Coverage Assertions
+
+<!-- doctest-attr: ignore -->
+```php
+// Assert all enumerated paths are covered by tests
+FindeksMachine::assertAllPathsCovered();
+
+// Assert at least 90% of paths are covered
+FindeksMachine::assertPathCoverage(minimum: 90.0);
+```
+
+### Path Types
+
+| Type | Meaning |
+|------|---------|
+| HAPPY | Reached a FINAL state without @fail or timer |
+| FAIL | Path contains an @fail step |
+| TIMEOUT | Path contains a timer-triggered step or @timeout |
+| LOOP | Cycle detected — path revisits a state |
+| GUARD_BLOCK | All guards fail with no fallback — event swallowed |
+| DEAD_END | ATOMIC state with no transitions and not FINAL |
+
+### CI Integration
+
+```yaml
+- run: composer test
+- run: php artisan machine:coverage FindeksMachine --min=100
+```
+
+See [Artisan Commands](/laravel-integration/artisan-commands#machine-paths) for full command documentation.
+
 ::: tip Related
 See [TestMachine](/testing/test-machine) for the complete assertion API,
 [Isolated Testing](/testing/isolated-testing) for unit-level guard testing,

@@ -292,6 +292,95 @@ Clear machine discovery cache.
 php artisan machine:clear
 ```
 
+## machine:paths
+
+Enumerate all paths through a machine definition. Static analysis — no database needed.
+
+```bash
+# Console output
+php artisan machine:paths "App\Machines\OrderMachine"
+
+# JSON output for CI
+php artisan machine:paths "App\Machines\OrderMachine" --json
+```
+
+### What It Shows
+
+- Machine stats: states, events, guards, actions, calculators, job actors, child machines, timers
+- All terminal paths grouped by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END
+- Parallel state per-region paths with combination count
+- Guard and action details per path
+
+### Example Output
+
+```
+OrderMachine — Path Analysis
+════════════════════════════
+
+  States: 4 (2 atomic, 2 final)
+  Events: 1
+  Guards: 0
+  Actions: 1
+  Terminal paths: 2
+
+HAPPY PATHS (→ completed): 1 path
+──────────────────────────────────
+  #1  → idle
+      → [START] processing (PaymentJob)
+      → [@done] completed
+      Actions: capturePaymentAction
+
+FAIL PATHS (→ failed): 1 path
+──────────────────────────────
+  #2  → idle
+      → [START] processing (PaymentJob)
+      → [@fail] failed
+```
+
+## machine:coverage
+
+Report path coverage for a machine definition. Reads coverage data produced by tests.
+
+```bash
+# Run tests first to generate coverage data
+composer test
+
+# Then report coverage
+php artisan machine:coverage "App\Machines\OrderMachine"
+
+# JSON output
+php artisan machine:coverage "App\Machines\OrderMachine" --json
+
+# Fail CI if below threshold
+php artisan machine:coverage "App\Machines\OrderMachine" --min=100
+
+# Custom coverage file location
+php artisan machine:coverage "App\Machines\OrderMachine" --from=path/to/coverage.json
+```
+
+### Coverage Matching
+
+The command compares enumerated paths (static analysis) against observed paths (test runtime) using state-sequence matching. Enable tracking in tests with `PathCoverageTracker::enable()` and record paths via `TestMachine::assertFinished()`.
+
+### Example Output
+
+```
+OrderMachine — Path Coverage
+════════════════════════════
+
+  Coverage: 1/2 paths (50.0%)
+
+  ✓ #1  idle→[START]→processing→[@done]→completed
+         Tested by: order_completes_successfully
+
+  ✗ #2  idle→[START]→processing→[@fail]→failed
+
+UNTESTED: 1 path
+  → idle
+  → [START] processing
+  → [@fail] failed
+```
+
 ## Scheduling Commands
 
 Add commands to your scheduler:
