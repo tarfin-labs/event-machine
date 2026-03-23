@@ -122,8 +122,8 @@ class StoreVehicleInfoAction extends ActionBehavior
         CarSalesContext $context,
         VehicleAndPricingSubmittedEvent|VehicleEditRequestedEvent $event,
     ): void {
-        // IDE autocompletion for shared properties
-        $vehicleId = $event->payload['vehicle_id'];
+        // Both events share vehicle_id in their payload
+        $vehicleId = $event->data('vehicle_id');
 
         // Discriminate when needed
         if ($event instanceof VehicleEditRequestedEvent) {
