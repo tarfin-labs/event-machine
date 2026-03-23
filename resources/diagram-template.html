@@ -240,6 +240,11 @@ body {
 #detail-panel .detail-value { color: #c0c0c0; }
 
 /* Zoom indicator */
+/* Highlight usages */
+.highlight-usage rect { stroke: #ffeb3b !important; stroke-width: 3 !important; }
+.highlight-usage path { stroke: #ffeb3b !important; stroke-width: 3 !important; }
+.active-behavior { background: #3a3a1a !important; border-left: 3px solid #ffeb3b; }
+
 #zoom-indicator {
     position: absolute;
     bottom: 12px;
@@ -249,6 +254,19 @@ body {
     border-radius: 4px;
     font-size: 11px;
     color: #6a6a8a;
+    z-index: 50;
+}
+
+/* Keyboard shortcut hints */
+#shortcut-hint {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    background: rgba(22, 33, 62, 0.9);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #4a4a6a;
     z-index: 50;
 }
 </style>
@@ -310,6 +328,7 @@ body {
             <g id="diagram-root"></g>
         </svg>
         <div id="zoom-indicator">100%</div>
+        <div id="shortcut-hint">F: fit | +/-: zoom | Esc: close | 0: reset</div>
     </div>
 </div>
 
@@ -373,12 +392,17 @@ class PanZoom {
     onMouseDown(e) {
         if (e.button !== 0) return;
         this.isPanning = true;
+        this.hasMoved = false;
+        this.mouseStart = { x: e.clientX, y: e.clientY };
         this.startPoint = { x: e.clientX - this.transform.x, y: e.clientY - this.transform.y };
         this.svg.style.cursor = 'grabbing';
     }
 
     onMouseMove(e) {
         if (!this.isPanning) return;
+        const dx = e.clientX - this.mouseStart.x;
+        const dy = e.clientY - this.mouseStart.y;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) this.hasMoved = true;
         this.transform.x = e.clientX - this.startPoint.x;
         this.transform.y = e.clientY - this.startPoint.y;
         this.apply();
@@ -388,6 +412,9 @@ class PanZoom {
         this.isPanning = false;
         this.svg.style.cursor = 'grab';
     }
+
+    // Returns true if the last mousedown→mouseup was a drag (not a click)
+    wasDrag() { return this.hasMoved; }
 
     apply() {
         this.content.setAttribute('transform',
@@ -917,8 +944,9 @@ function renderNodes(nodes, parent, offsetX, offsetY) {
             group.insertBefore(compHeader, group.children[1]); // After main rect
         }
 
-        // Click handler
+        // Click handler (ignore drags)
         group.addEventListener('click', (e) => {
+            if (panZoom?.wasDrag()) return;
             e.stopPropagation();
             showStateDetail(node);
         });
@@ -1064,8 +1092,9 @@ function renderEdges(edges, parent, offsetX, offsetY) {
             });
         }
 
-        // Click handler
+        // Click handler (ignore drags)
         group.addEventListener('click', (e) => {
+            if (panZoom?.wasDrag()) return;
             e.stopPropagation();
             showTransitionDetail(edge);
         });
@@ -1177,10 +1206,16 @@ function showTransitionDetail(edge) {
     html += `<div class="detail-row"><span class="detail-key">To:</span><span class="detail-value">${edge.targets?.[0]}</span></div>`;
 
     if (props.guard) {
-        html += `<div class="detail-row"><span class="detail-key">Guard:</span><span class="detail-value">${typeof props.guard === 'object' ? JSON.stringify(props.guard) : props.guard}</span></div>`;
+        const guardStr = typeof props.guard === 'object'
+            ? (props.guard.guards ? props.guard.guards.join(' & ') : JSON.stringify(props.guard))
+            : props.guard;
+        html += `<div class="detail-row"><span class="detail-key">Guard:</span><span class="detail-value" style="color:#ffc107">${guardStr}</span></div>`;
+    }
+    if (props.calculators?.length) {
+        html += `<div class="detail-row"><span class="detail-key">Calculators:</span><span class="detail-value" style="color:#e91e63">${props.calculators.join(', ')}</span></div>`;
     }
     if (props.actions?.length) {
-        html += `<div class="detail-row"><span class="detail-key">Actions:</span><span class="detail-value">${props.actions.join(', ')}</span></div>`;
+        html += `<div class="detail-row"><span class="detail-key">Actions:</span><span class="detail-value" style="color:#66bb6a">${props.actions.join(', ')}</span></div>`;
     }
 
     content.innerHTML = html;
@@ -1235,7 +1270,12 @@ function populateBehaviorList(elementId, behaviors, type) {
         div.className = 'behavior-item';
         let badges = `<span class="behavior-badge badge-${type}">${type}</span>`;
         if (info.inline) badges += `<span class="behavior-badge badge-inline">inline</span>`;
+        if (info.requiredContext?.length) {
+            badges += `<span class="behavior-badge badge-inline" title="Required: ${info.requiredContext.join(', ')}">ctx</span>`;
+        }
         div.innerHTML = `<span class="behavior-name">${name}</span><span>${badges}</span>`;
+        div.addEventListener('click', (e) => highlightBehavior(name, type));
+        div.title = info.class ? `Class: ${info.class}` : 'Inline behavior';
         list.appendChild(div);
     });
 }
@@ -1305,10 +1345,96 @@ async function init() {
 
 // Close detail panel on background click
 document.getElementById('diagram-svg').addEventListener('click', (e) => {
+    if (panZoom?.wasDrag()) return;
     if (e.target === e.currentTarget || e.target.classList.contains('background-rect')) {
         document.getElementById('detail-panel').classList.remove('active');
+        clearHighlights();
     }
 });
+
+// ============================================================
+// Keyboard Shortcuts
+// ============================================================
+document.addEventListener('keydown', (e) => {
+    switch (e.key) {
+        case 'Escape':
+            document.getElementById('detail-panel').classList.remove('active');
+            clearHighlights();
+            break;
+        case '+': case '=':
+            zoomIn();
+            break;
+        case '-':
+            zoomOut();
+            break;
+        case 'f': case 'F':
+            if (!e.ctrlKey && !e.metaKey) fitToScreen();
+            break;
+        case '0':
+            // Reset zoom to 100%
+            if (panZoom) {
+                panZoom.transform = { x: 0, y: 0, k: 1 };
+                panZoom.apply();
+            }
+            break;
+    }
+});
+
+// ============================================================
+// Behavior Highlight — click behavior in sidebar → highlight usages
+// ============================================================
+function highlightBehavior(name, type) {
+    clearHighlights();
+
+    // Find all state nodes that reference this behavior
+    document.querySelectorAll('.state-node').forEach(node => {
+        const stateId = node.dataset.stateId;
+        const stateName = node.dataset.stateName;
+        let matches = false;
+
+        // Check entry/exit actions
+        const texts = node.querySelectorAll('text');
+        texts.forEach(t => {
+            if (t.textContent.includes(name)) {
+                matches = true;
+            }
+        });
+
+        if (matches) {
+            node.classList.add('highlight-usage');
+        }
+    });
+
+    // Find all transition edges that reference this behavior
+    document.querySelectorAll('.transition-edge').forEach(edge => {
+        const texts = edge.querySelectorAll('text, tspan');
+        let matches = false;
+        texts.forEach(t => {
+            if (t.textContent.includes(name)) {
+                matches = true;
+            }
+        });
+
+        if (matches) {
+            edge.classList.add('highlight-usage');
+        }
+    });
+
+    // Highlight the clicked sidebar item
+    document.querySelectorAll('.behavior-item').forEach(item => {
+        item.classList.remove('active-behavior');
+    });
+    event?.currentTarget?.classList.add('active-behavior');
+}
+
+function clearHighlights() {
+    document.querySelectorAll('.highlight-usage').forEach(el => {
+        el.classList.remove('highlight-usage');
+    });
+    document.querySelectorAll('.active-behavior').forEach(el => {
+        el.classList.remove('active-behavior');
+    });
+}
 
 init();
 </script>
