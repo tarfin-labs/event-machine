@@ -70,6 +70,15 @@
             "@test:phpstan",
             "@test:unit",
             "@test:types"
+        ],
+        "quality": [
+            "@pint",
+            "@rector",
+            "@test:rector",
+            "@test:pint",
+            "@test:phpstan",
+            "@test:unit",
+            "@test:types"
         ]
     },
     "config": {
