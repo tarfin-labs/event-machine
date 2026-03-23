@@ -173,10 +173,10 @@ All code, tests, and documentation **must** follow the naming conventions define
 - `src/Scheduling/` - Schedule registration (MachineScheduler)
 - `src/Support/` - Value objects (Timer)
 - `src/Testing/` - Test helpers (TestMachine)
-- `src/Traits/` - Reusable traits like `Fakeable` and `HasMachines`
+- `src/Traits/` - Reusable traits like `Fakeable` and `HasMachines` (v9: no getAttribute override, provides refreshMachine/hasMachine/getMachineId)
 - `tests/LocalQA/` - Local QA tests requiring real MySQL + Redis + Horizon
 - `tests/Stubs/` - Example machine implementations for testing
 - `config/machine.php` - Package configuration
 - `database/migrations/` - Database schema stubs
 
-The package integrates with Laravel through the `MachineServiceProvider` and provides Eloquent model casting via `MachineCast`.
+The package integrates with Laravel through the `MachineServiceProvider` and provides Eloquent model casting via `MachineCast` (PHP 8.4 lazy proxy — zero-cost until property/method access), `PolymorphicMachineCast` (runtime machine class resolution), and `MachineBaseCast` (shared abstract). Machine definitions use `$casts` exclusively (no `$machines` property or `machines()` method).
