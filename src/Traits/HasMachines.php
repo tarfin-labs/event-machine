@@ -30,7 +30,7 @@ trait HasMachines
     {
         static::creating(static function (Model $model): void {
             foreach ($model->getCasts() as $attribute => $cast) {
-                if (isset($model->attributes[$attribute])) {
+                if (array_key_exists($attribute, $model->attributes)) {
                     continue;
                 }
 
@@ -52,7 +52,7 @@ trait HasMachines
      * Clears the cached lazy proxy so the next attribute access
      * creates a fresh proxy whose factory will query the DB.
      */
-    public function refreshMachine(string $attribute): Machine
+    public function refreshMachine(string $attribute): ?Machine
     {
         unset($this->classCastCache[$attribute]);
 
