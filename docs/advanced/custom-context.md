@@ -254,6 +254,63 @@ Computed values are **not** stored in the database — they are recomputed fresh
 Computed keys respect `contextKeys` filtering on endpoints. If an endpoint specifies `contextKeys: ['total', 'item_count']`, only those keys appear — both regular and computed.
 :::
 
+## Context Interfaces for Shared Behaviors
+
+When a behavior is reused across multiple machines with different context classes, avoid coupling the behavior to specific context types with union types. Instead, define a PHP interface:
+
+<!-- doctest-attr: no_run -->
+```php
+interface HasFarmer
+{
+    public function farmer(): Farmer;
+}
+
+interface HasTckn
+{
+    public function tckn(): string;
+}
+```
+
+Implement the interface in each context class:
+
+<!-- doctest-attr: no_run -->
+```php
+class CarSalesContext extends ContextManager implements HasFarmer, HasTckn
+{
+    // ...
+    public function farmer(): Farmer { return $this->farmer; }
+    public function tckn(): string { return $this->tckn; }
+}
+
+class FindeksContext extends ContextManager implements HasFarmer, HasTckn
+{
+    // ...
+    public function farmer(): Farmer { return $this->farmer; }
+    public function tckn(): string { return $this->tckn; }
+}
+```
+
+Now the shared behavior type-hints the interface — no coupling to specific machines:
+
+<!-- doctest-attr: no_run -->
+```php
+class VerifyIdentityAction extends ActionBehavior
+{
+    public function __invoke(HasTckn $context): void
+    {
+        $tckn = $context->tckn(); // IDE autocompletion, static analysis ✓
+    }
+}
+```
+
+This scales cleanly: adding a new machine that uses `VerifyIdentityAction` only requires the new context to implement `HasTckn`. The behavior class never changes.
+
+::: tip When to use interfaces vs union types
+**Interfaces** — when the behavior only needs a few shared properties and is reused across 2+ machines. Scales indefinitely.
+
+**Union types** (`CarSalesContext|FindeksContext`) — when the behavior needs access to machine-specific properties that differ between contexts. Acceptable for 2-3 types.
+:::
+
 ## Model Transformers
 
 Handle Eloquent models in context:
