@@ -17,6 +17,7 @@ use Tarfinlabs\EventMachine\Commands\ArchiveEventsCommand;
 use Tarfinlabs\EventMachine\Commands\ArchiveStatusCommand;
 use Tarfinlabs\EventMachine\Commands\ProcessTimersCommand;
 use Tarfinlabs\EventMachine\Commands\ProcessScheduledCommand;
+use Tarfinlabs\EventMachine\Commands\DiagramCommand;
 use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
 
 /**
@@ -58,7 +59,8 @@ class MachineServiceProvider extends PackageServiceProvider
             ->hasCommand(TimerStatusCommand::class)
             ->hasCommand(MachineCacheCommand::class)
             ->hasCommand(MachineClearCommand::class)
-            ->hasCommand(ProcessScheduledCommand::class);
+            ->hasCommand(ProcessScheduledCommand::class)
+            ->hasCommand(DiagramCommand::class);
     }
 
     public function boot(): void

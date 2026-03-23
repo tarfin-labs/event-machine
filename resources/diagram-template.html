@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventMachine Diagram</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    overflow: hidden;
+    height: 100vh;
+}
+
+#header {
+    background: #16213e;
+    border-bottom: 1px solid #2a2a4a;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    z-index: 100;
+}
+
+#header h1 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #a0c4ff;
+}
+
+#header .controls {
+    display: flex;
+    gap: 8px;
+}
+
+#header button {
+    background: #2a2a4a;
+    color: #c0c0c0;
+    border: 1px solid #3a3a5a;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+#header button:hover {
+    background: #3a3a5a;
+    color: #fff;
+}
+
+#main {
+    display: flex;
+    height: calc(100vh - 44px);
+}
+
+#sidebar {
+    width: 260px;
+    background: #16213e;
+    border-right: 1px solid #2a2a4a;
+    overflow-y: auto;
+    padding: 12px;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+#sidebar h2 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #6a6a8a;
+    margin: 12px 0 6px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #2a2a4a;
+}
+
+#sidebar h2:first-child { margin-top: 0; }
+
+.sidebar-section { margin-bottom: 8px; }
+
+.context-item, .behavior-item {
+    padding: 3px 6px;
+    border-radius: 3px;
+    margin: 2px 0;
+    cursor: default;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.context-item { background: #1e2a45; }
+.context-key { color: #a0c4ff; }
+.context-type { color: #6a6a8a; font-size: 10px; }
+.context-value { color: #808080; font-size: 10px; }
+
+.behavior-item { background: #1e2a45; cursor: pointer; }
+.behavior-item:hover { background: #2a3a55; }
+.behavior-name { color: #c0d0ff; }
+.behavior-badge {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+.badge-action { background: #1a3a2a; color: #4caf50; }
+.badge-guard { background: #3a3a1a; color: #ffc107; }
+.badge-calculator { background: #3a1a2a; color: #e91e63; }
+.badge-event { background: #1a2a3a; color: #2196f3; }
+.badge-inline { background: #2a2a2a; color: #888; font-size: 8px; }
+
+#canvas-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+#diagram-svg {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+}
+
+#diagram-svg:active { cursor: grabbing; }
+
+/* State nodes */
+.state-node rect {
+    rx: 8;
+    ry: 8;
+    stroke-width: 1.5;
+    transition: all 0.15s;
+}
+.state-node:hover rect {
+    stroke-width: 2.5;
+    filter: brightness(1.1);
+}
+
+.state-node text {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 12px;
+    fill: #e0e0e0;
+    pointer-events: none;
+}
+
+.state-label {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.state-detail {
+    font-size: 10px;
+    fill: #8888aa !important;
+}
+
+/* State types */
+.state-atomic rect { fill: #1e3a5f; stroke: #4a90d9; }
+.state-compound rect { fill: #1a1a2e; stroke: #5a5a7a; }
+.state-parallel rect { fill: #2a1e0a; stroke: #cc8833; stroke-dasharray: 6 3; }
+.state-final rect { fill: #1a3a1a; stroke: #4caf50; }
+.state-invoke rect { fill: #2a1a3a; stroke: #9c27b0; }
+
+.state-final .final-inner {
+    fill: none;
+    stroke: #4caf50;
+    stroke-width: 1.5;
+}
+
+/* Initial state indicator */
+.initial-indicator circle { fill: #e0e0e0; }
+.initial-indicator line { stroke: #e0e0e0; stroke-width: 1.5; }
+
+/* Transition edges */
+.transition-edge path {
+    fill: none;
+    stroke: #5a5a7a;
+    stroke-width: 1.5;
+    transition: all 0.15s;
+}
+.transition-edge:hover path {
+    stroke: #a0a0c0;
+    stroke-width: 2.5;
+}
+
+.transition-edge marker path { fill: #5a5a7a; }
+
+.transition-label {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+    fill: #a0a0c0;
+}
+
+.event-name { font-weight: 600; fill: #c0d0ff; }
+.guard-label { fill: #ffc107; }
+.action-label { fill: #4caf50; font-size: 10px; }
+
+/* Transition types */
+.transition-always path { stroke-dasharray: 6 3; stroke: #6a6a8a; }
+.transition-done path { stroke: #4caf50; stroke-width: 2; }
+.transition-fail path { stroke: #f44336; stroke-width: 2; }
+.transition-timeout path { stroke: #ff9800; stroke-dasharray: 3 3; }
+
+/* Detail panel */
+#detail-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #16213e;
+    border-top: 1px solid #2a2a4a;
+    padding: 12px 16px;
+    font-size: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    z-index: 50;
+}
+
+#detail-panel.active { display: block; }
+
+#detail-panel h3 {
+    font-size: 13px;
+    color: #a0c4ff;
+    margin-bottom: 8px;
+}
+
+#detail-panel .detail-row {
+    margin: 4px 0;
+    display: flex;
+    gap: 8px;
+}
+
+#detail-panel .detail-key {
+    color: #6a6a8a;
+    min-width: 100px;
+}
+
+#detail-panel .detail-value { color: #c0c0c0; }
+
+/* Zoom indicator */
+#zoom-indicator {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    background: rgba(22, 33, 62, 0.9);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #6a6a8a;
+    z-index: 50;
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+    <h1 id="title">EventMachine Diagram</h1>
+    <div class="controls">
+        <button onclick="fitToScreen()">Fit</button>
+        <button onclick="zoomIn()">Zoom +</button>
+        <button onclick="zoomOut()">Zoom -</button>
+        <button onclick="toggleDetail()">Detail</button>
+    </div>
+</div>
+
+<div id="main">
+    <div id="sidebar">
+        <div id="context-section">
+            <h2>Context</h2>
+            <div id="context-list"></div>
+        </div>
+        <div id="behaviors-section">
+            <div id="actions-section">
+                <h2>Actions</h2>
+                <div id="actions-list"></div>
+            </div>
+            <div id="guards-section">
+                <h2>Guards</h2>
+                <div id="guards-list"></div>
+            </div>
+            <div id="calculators-section">
+                <h2>Calculators</h2>
+                <div id="calculators-list"></div>
+            </div>
+            <div id="events-section">
+                <h2>Events</h2>
+                <div id="events-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <svg id="diagram-svg">
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#5a5a7a"/>
+                </marker>
+                <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#4caf50"/>
+                </marker>
+                <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#f44336"/>
+                </marker>
+                <marker id="arrowhead-orange" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#ff9800"/>
+                </marker>
+            </defs>
+            <g id="diagram-root"></g>
+        </svg>
+        <div id="zoom-indicator">100%</div>
+    </div>
+</div>
+
+<div id="detail-panel">
+    <h3 id="detail-title">Select a state or transition</h3>
+    <div id="detail-content"></div>
+</div>
+
+<script>
+/* __MACHINE_DATA__ */
+</script>
+
+<script>
+// ============================================================
+// ELK.js will be inlined here by the DiagramCommand
+// For now, load from vendored file or use embedded version
+// ============================================================
+
+// Minimal ELK.js loader — the actual library is large (~1.5MB)
+// The DiagramCommand will inline it. For dev, we use a CDN fallback.
+let ELK;
+
+async function loadELK() {
+    if (typeof ELK !== 'undefined') return;
+
+    // Check if elkjs is available globally (inlined by DiagramCommand)
+    if (typeof ElkApi !== 'undefined') {
+        ELK = ElkApi;
+        return;
+    }
+
+    // Fallback: try loading from CDN for development
+    try {
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/elkjs@0.9.3/lib/elk.bundled.js';
+        document.head.appendChild(script);
+        await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = reject;
+        });
+        ELK = window.ELK;
+    } catch (e) {
+        console.error('Failed to load ELK.js:', e);
+    }
+}
+
+// ============================================================
+// SVG Pan/Zoom (minimal d3-zoom replacement for iteration 1)
+// ============================================================
+class PanZoom {
+    constructor(svgEl, contentEl) {
+        this.svg = svgEl;
+        this.content = contentEl;
+        this.transform = { x: 0, y: 0, k: 1 };
+        this.isPanning = false;
+        this.startPoint = { x: 0, y: 0 };
+
+        this.svg.addEventListener('wheel', this.onWheel.bind(this), { passive: false });
+        this.svg.addEventListener('mousedown', this.onMouseDown.bind(this));
+        this.svg.addEventListener('mousemove', this.onMouseMove.bind(this));
+        this.svg.addEventListener('mouseup', this.onMouseUp.bind(this));
+        this.svg.addEventListener('mouseleave', this.onMouseUp.bind(this));
+    }
+
+    onWheel(e) {
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.1 : 0.9;
+        const rect = this.svg.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        // Zoom towards mouse position
+        this.transform.x = mx - (mx - this.transform.x) * factor;
+        this.transform.y = my - (my - this.transform.y) * factor;
+        this.transform.k *= factor;
+
+        // Clamp zoom
+        this.transform.k = Math.max(0.1, Math.min(5, this.transform.k));
+        this.apply();
+    }
+
+    onMouseDown(e) {
+        if (e.button !== 0) return;
+        this.isPanning = true;
+        this.startPoint = { x: e.clientX - this.transform.x, y: e.clientY - this.transform.y };
+        this.svg.style.cursor = 'grabbing';
+    }
+
+    onMouseMove(e) {
+        if (!this.isPanning) return;
+        this.transform.x = e.clientX - this.startPoint.x;
+        this.transform.y = e.clientY - this.startPoint.y;
+        this.apply();
+    }
+
+    onMouseUp() {
+        this.isPanning = false;
+        this.svg.style.cursor = 'grab';
+    }
+
+    apply() {
+        this.content.setAttribute('transform',
+            `translate(${this.transform.x},${this.transform.y}) scale(${this.transform.k})`);
+        document.getElementById('zoom-indicator').textContent = Math.round(this.transform.k * 100) + '%';
+    }
+
+    fitToContent(bbox, padding = 40) {
+        const svgRect = this.svg.getBoundingClientRect();
+        const scaleX = (svgRect.width - padding * 2) / bbox.width;
+        const scaleY = (svgRect.height - padding * 2) / bbox.height;
+        const scale = Math.min(scaleX, scaleY, 2); // max 200%
+
+        this.transform.k = scale;
+        this.transform.x = (svgRect.width - bbox.width * scale) / 2 - bbox.x * scale;
+        this.transform.y = (svgRect.height - bbox.height * scale) / 2 - bbox.y * scale;
+        this.apply();
+    }
+
+    zoomBy(factor) {
+        const rect = this.svg.getBoundingClientRect();
+        const cx = rect.width / 2;
+        const cy = rect.height / 2;
+        this.transform.x = cx - (cx - this.transform.x) * factor;
+        this.transform.y = cy - (cy - this.transform.y) * factor;
+        this.transform.k *= factor;
+        this.transform.k = Math.max(0.1, Math.min(5, this.transform.k));
+        this.apply();
+    }
+}
+
+// ============================================================
+// XState JSON → ELK Graph Transformer
+// ============================================================
+function xstateToElk(machineJson) {
+    const elkGraph = {
+        id: 'root',
+        layoutOptions: {
+            'elk.algorithm': 'layered',
+            'elk.direction': 'DOWN',
+            'elk.spacing.nodeNode': '30',
+            'elk.layered.spacing.nodeNodeBetweenLayers': '50',
+            'elk.edgeRouting': 'SPLINES',
+            'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+            'elk.padding': '[top=20,left=20,bottom=20,right=20]',
+        },
+        children: [],
+        edges: [],
+    };
+
+    // Build nodes from states
+    const states = machineJson.states || {};
+    const stateNames = Object.keys(states);
+
+    stateNames.forEach(stateName => {
+        const stateDef = states[stateName];
+        const node = buildStateNode(machineJson.id, stateName, stateDef, machineJson.initial);
+        elkGraph.children.push(node);
+    });
+
+    // Build edges from transitions
+    stateNames.forEach(stateName => {
+        const stateDef = states[stateName];
+        const edges = buildEdgesFromState(machineJson.id, stateName, stateDef);
+        elkGraph.edges.push(...edges);
+    });
+
+    return elkGraph;
+}
+
+function buildStateNode(machineId, stateName, stateDef, initialState) {
+    const isInitial = stateName === initialState;
+    const isFinal = stateDef.type === 'final';
+    const isParallel = stateDef.type === 'parallel';
+    const hasInvoke = !!stateDef.invoke;
+    const isCompound = !!stateDef.states && !isParallel;
+
+    // Calculate node size based on content
+    let width = Math.max(140, stateName.length * 9 + 40);
+    let height = 50;
+
+    // Extra height for entry/exit actions
+    const entryActions = stateDef.entry || [];
+    const exitActions = stateDef.exit || [];
+    if (entryActions.length > 0) height += 16;
+    if (exitActions.length > 0) height += 16;
+    if (hasInvoke) height += 16;
+
+    const node = {
+        id: `${machineId}.${stateName}`,
+        width: width,
+        height: height,
+        labels: [{ text: stateName }],
+        properties: {
+            type: isFinal ? 'final' : isParallel ? 'parallel' : hasInvoke ? 'invoke' : isCompound ? 'compound' : 'atomic',
+            isInitial: isInitial,
+            stateDef: stateDef,
+            stateName: stateName,
+        },
+    };
+
+    // If compound or parallel, add children
+    if (stateDef.states) {
+        node.children = [];
+        node.edges = [];
+        node.layoutOptions = {
+            'elk.algorithm': 'layered',
+            'elk.direction': 'DOWN',
+            'elk.spacing.nodeNode': '20',
+            'elk.layered.spacing.nodeNodeBetweenLayers': '40',
+            'elk.padding': '[top=40,left=15,bottom=15,right=15]',
+        };
+
+        const childStates = Object.keys(stateDef.states);
+        const childInitial = stateDef.initial || childStates[0];
+
+        childStates.forEach(childName => {
+            const childDef = stateDef.states[childName];
+            const childNode = buildStateNode(`${machineId}.${stateName}`, childName, childDef, childInitial);
+            node.children.push(childNode);
+        });
+
+        // Child edges
+        childStates.forEach(childName => {
+            const childDef = stateDef.states[childName];
+            const childEdges = buildEdgesFromState(`${machineId}.${stateName}`, childName, childDef);
+            node.edges.push(...childEdges);
+        });
+
+        // Expand size for compound nodes
+        node.width = Math.max(width, 200);
+        node.height = Math.max(height, 100);
+    }
+
+    return node;
+}
+
+let edgeCounter = 0;
+
+function buildEdgesFromState(parentId, stateName, stateDef) {
+    const edges = [];
+    const on = stateDef.on || {};
+
+    Object.entries(on).forEach(([eventName, transition]) => {
+        const branches = normalizeTransition(transition);
+        branches.forEach(branch => {
+            if (branch.target) {
+                // Resolve target — could be relative
+                const targetId = resolveTargetId(parentId, branch.target);
+                edges.push({
+                    id: `edge_${edgeCounter++}`,
+                    sources: [`${parentId}.${stateName}`],
+                    targets: [targetId],
+                    labels: [{
+                        text: formatTransitionLabel(eventName, branch),
+                        width: eventName.length * 7 + 20,
+                        height: 16,
+                    }],
+                    properties: {
+                        eventName: eventName,
+                        guard: branch.guard || null,
+                        actions: branch.actions || [],
+                        type: 'event',
+                    },
+                });
+            }
+        });
+    });
+
+    // Always transitions
+    if (stateDef.always) {
+        const branches = normalizeTransition(stateDef.always);
+        branches.forEach(branch => {
+            if (branch.target) {
+                const targetId = resolveTargetId(parentId, branch.target);
+                edges.push({
+                    id: `edge_${edgeCounter++}`,
+                    sources: [`${parentId}.${stateName}`],
+                    targets: [targetId],
+                    labels: [{ text: formatTransitionLabel('@always', branch), width: 60, height: 16 }],
+                    properties: { eventName: '@always', type: 'always' },
+                });
+            }
+        });
+    }
+
+    // invoke.onDone
+    if (stateDef.invoke?.onDone) {
+        const branches = normalizeTransition(stateDef.invoke.onDone);
+        branches.forEach(branch => {
+            if (branch.target) {
+                const targetId = resolveTargetId(parentId, branch.target);
+                edges.push({
+                    id: `edge_${edgeCounter++}`,
+                    sources: [`${parentId}.${stateName}`],
+                    targets: [targetId],
+                    labels: [{ text: formatTransitionLabel('@done', branch), width: 60, height: 16 }],
+                    properties: { eventName: '@done', type: 'done' },
+                });
+            }
+        });
+    }
+
+    // invoke.onError
+    if (stateDef.invoke?.onError) {
+        const branches = normalizeTransition(stateDef.invoke.onError);
+        branches.forEach(branch => {
+            if (branch.target) {
+                const targetId = resolveTargetId(parentId, branch.target);
+                edges.push({
+                    id: `edge_${edgeCounter++}`,
+                    sources: [`${parentId}.${stateName}`],
+                    targets: [targetId],
+                    labels: [{ text: '@fail', width: 40, height: 16 }],
+                    properties: { eventName: '@fail', type: 'fail' },
+                });
+            }
+        });
+    }
+
+    // onDone (compound state completion)
+    if (stateDef.onDone) {
+        const branches = normalizeTransition(stateDef.onDone);
+        branches.forEach(branch => {
+            if (branch.target) {
+                const targetId = resolveTargetId(parentId, branch.target);
+                edges.push({
+                    id: `edge_${edgeCounter++}`,
+                    sources: [`${parentId}.${stateName}`],
+                    targets: [targetId],
+                    labels: [{ text: formatTransitionLabel('@done', branch), width: 60, height: 16 }],
+                    properties: { eventName: '@done', type: 'done' },
+                });
+            }
+        });
+    }
+
+    // after (timer transitions)
+    if (stateDef.after) {
+        Object.entries(stateDef.after).forEach(([delay, transition]) => {
+            const branches = normalizeTransition(transition);
+            branches.forEach(branch => {
+                if (branch.target) {
+                    const targetId = resolveTargetId(parentId, branch.target);
+                    const delayLabel = formatDelay(parseInt(delay));
+                    edges.push({
+                        id: `edge_${edgeCounter++}`,
+                        sources: [`${parentId}.${stateName}`],
+                        targets: [targetId],
+                        labels: [{ text: `after ${delayLabel}`, width: 80, height: 16 }],
+                        properties: { eventName: `after ${delayLabel}`, type: 'timeout' },
+                    });
+                }
+            });
+        });
+    }
+
+    return edges;
+}
+
+function normalizeTransition(transition) {
+    if (typeof transition === 'string') {
+        return [{ target: transition }];
+    }
+    if (Array.isArray(transition)) {
+        return transition.map(t => typeof t === 'string' ? { target: t } : t);
+    }
+    if (typeof transition === 'object') {
+        return [transition];
+    }
+    return [];
+}
+
+function resolveTargetId(parentId, target) {
+    if (target.startsWith('#')) {
+        // Absolute reference
+        return target.substring(1);
+    }
+    if (target.startsWith('.')) {
+        // Child reference
+        return `${parentId}.${target.substring(1)}`;
+    }
+    // Sibling reference
+    return `${parentId}.${target}`;
+}
+
+function formatTransitionLabel(eventName, branch) {
+    let label = eventName;
+    if (branch.guard) {
+        const guardName = typeof branch.guard === 'object' ? branch.guard.guards?.join(' & ') : branch.guard;
+        label += ` [${guardName}]`;
+    }
+    if (branch.actions && branch.actions.length > 0) {
+        const actionNames = branch.actions.slice(0, 2).join(', ');
+        label += ` / ${actionNames}`;
+        if (branch.actions.length > 2) label += '...';
+    }
+    return label;
+}
+
+function formatDelay(ms) {
+    if (ms >= 60000) return `${ms / 60000}m`;
+    if (ms >= 1000) return `${ms / 1000}s`;
+    return `${ms}ms`;
+}
+
+// ============================================================
+// SVG Renderer — ELK output → SVG elements
+// ============================================================
+function renderElkGraph(elkResult, svgGroup) {
+    // Clear existing content
+    svgGroup.innerHTML = '';
+
+    // Add background rect for pan detection
+    const bgRect = createSvgElement('rect', {
+        class: 'background-rect',
+        x: -10000, y: -10000, width: 20000, height: 20000,
+        fill: 'transparent',
+    });
+    svgGroup.appendChild(bgRect);
+
+    // Render nodes recursively
+    renderNodes(elkResult.children || [], svgGroup, 0, 0);
+
+    // Render edges
+    renderEdges(elkResult.edges || [], svgGroup, 0, 0);
+}
+
+function renderNodes(nodes, parent, offsetX, offsetY) {
+    nodes.forEach(node => {
+        const x = (node.x || 0) + offsetX;
+        const y = (node.y || 0) + offsetY;
+        const w = node.width || 100;
+        const h = node.height || 50;
+        const props = node.properties || {};
+        const type = props.type || 'atomic';
+        const stateDef = props.stateDef || {};
+
+        const group = createSvgElement('g', {
+            class: `state-node state-${type}`,
+            'data-state-id': node.id,
+            'data-state-name': props.stateName || node.id,
+        });
+
+        // Main rect
+        const rect = createSvgElement('rect', {
+            x: x, y: y, width: w, height: h,
+        });
+        group.appendChild(rect);
+
+        // Final state inner circle
+        if (type === 'final') {
+            const innerRect = createSvgElement('rect', {
+                class: 'final-inner',
+                x: x + 4, y: y + 4,
+                width: w - 8, height: h - 8,
+                rx: 6, ry: 6,
+            });
+            group.appendChild(innerRect);
+        }
+
+        // State name label
+        const labelY = y + 18;
+        const label = createSvgElement('text', {
+            x: x + w / 2, y: labelY,
+            'text-anchor': 'middle',
+            class: 'state-label',
+        });
+        label.textContent = props.stateName || node.id;
+        group.appendChild(label);
+
+        // Entry actions
+        const entryActions = stateDef.entry || [];
+        if (entryActions.length > 0) {
+            const entryText = createSvgElement('text', {
+                x: x + w / 2, y: labelY + 16,
+                'text-anchor': 'middle',
+                class: 'state-detail',
+            });
+            entryText.textContent = `entry / ${entryActions.join(', ')}`;
+            group.appendChild(entryText);
+        }
+
+        // Invoke badge
+        if (stateDef.invoke) {
+            const invokeY = labelY + (entryActions.length > 0 ? 32 : 16);
+            const invokeText = createSvgElement('text', {
+                x: x + w / 2, y: invokeY,
+                'text-anchor': 'middle',
+                class: 'state-detail',
+            });
+            invokeText.textContent = `invoke: ${stateDef.invoke.src}`;
+            invokeText.style.fill = '#ce93d8';
+            group.appendChild(invokeText);
+        }
+
+        // Exit actions
+        const exitActions = stateDef.exit || [];
+        if (exitActions.length > 0) {
+            const exitText = createSvgElement('text', {
+                x: x + w / 2, y: y + h - 8,
+                'text-anchor': 'middle',
+                class: 'state-detail',
+            });
+            exitText.textContent = `exit / ${exitActions.join(', ')}`;
+            group.appendChild(exitText);
+        }
+
+        // Initial state indicator
+        if (props.isInitial) {
+            const indicatorGroup = createSvgElement('g', { class: 'initial-indicator' });
+            const circle = createSvgElement('circle', {
+                cx: x - 15, cy: y + h / 2, r: 5,
+            });
+            const line = createSvgElement('line', {
+                x1: x - 10, y1: y + h / 2,
+                x2: x - 2, y2: y + h / 2,
+            });
+            indicatorGroup.appendChild(circle);
+            indicatorGroup.appendChild(line);
+            group.appendChild(indicatorGroup);
+        }
+
+        // Click handler
+        group.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showStateDetail(node);
+        });
+
+        parent.appendChild(group);
+
+        // Render children (compound/parallel states)
+        if (node.children && node.children.length > 0) {
+            renderNodes(node.children, parent, x, y);
+            // Also render child edges
+            if (node.edges) {
+                renderEdges(node.edges, parent, x, y);
+            }
+        }
+    });
+}
+
+function renderEdges(edges, parent, offsetX, offsetY) {
+    edges.forEach(edge => {
+        const props = edge.properties || {};
+        const type = props.type || 'event';
+
+        const group = createSvgElement('g', {
+            class: `transition-edge transition-${type}`,
+            'data-edge-id': edge.id,
+        });
+
+        // Build path from sections
+        if (edge.sections) {
+            edge.sections.forEach(section => {
+                const points = [section.startPoint, ...(section.bendPoints || []), section.endPoint];
+                const pathD = buildSmoothPath(points, offsetX, offsetY);
+
+                const markerMap = {
+                    'done': 'url(#arrowhead-green)',
+                    'fail': 'url(#arrowhead-red)',
+                    'timeout': 'url(#arrowhead-orange)',
+                };
+
+                const path = createSvgElement('path', {
+                    d: pathD,
+                    'marker-end': markerMap[type] || 'url(#arrowhead)',
+                });
+                group.appendChild(path);
+            });
+        }
+
+        // Edge labels
+        if (edge.labels) {
+            edge.labels.forEach(label => {
+                if (label.x !== undefined && label.y !== undefined) {
+                    const text = createSvgElement('text', {
+                        x: (label.x || 0) + offsetX + (label.width || 0) / 2,
+                        y: (label.y || 0) + offsetY + 12,
+                        'text-anchor': 'middle',
+                        class: 'transition-label',
+                    });
+
+                    // Color-code parts of the label
+                    const labelText = label.text || '';
+                    text.textContent = labelText;
+
+                    // Style based on type
+                    if (type === 'done') text.style.fill = '#4caf50';
+                    if (type === 'fail') text.style.fill = '#f44336';
+                    if (type === 'timeout') text.style.fill = '#ff9800';
+                    if (type === 'always') text.style.fill = '#6a6a8a';
+
+                    group.appendChild(text);
+                }
+            });
+        }
+
+        // Click handler
+        group.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showTransitionDetail(edge);
+        });
+
+        parent.appendChild(group);
+    });
+}
+
+function buildSmoothPath(points, offsetX, offsetY) {
+    if (points.length === 0) return '';
+
+    const pts = points.map(p => ({ x: p.x + offsetX, y: p.y + offsetY }));
+
+    if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y}`;
+    if (pts.length === 2) return `M ${pts[0].x} ${pts[0].y} L ${pts[1].x} ${pts[1].y}`;
+
+    // Build a smooth curve through all points
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) {
+        const prev = pts[i - 1];
+        const curr = pts[i];
+        const midX = (prev.x + curr.x) / 2;
+        const midY = (prev.y + curr.y) / 2;
+        d += ` Q ${prev.x} ${prev.y} ${midX} ${midY}`;
+    }
+    // Final segment to last point
+    const last = pts[pts.length - 1];
+    d += ` L ${last.x} ${last.y}`;
+
+    return d;
+}
+
+function createSvgElement(tag, attrs) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attrs).forEach(([key, value]) => {
+        el.setAttribute(key, String(value));
+    });
+    return el;
+}
+
+// ============================================================
+// Detail Panel
+// ============================================================
+function showStateDetail(node) {
+    const panel = document.getElementById('detail-panel');
+    const title = document.getElementById('detail-title');
+    const content = document.getElementById('detail-content');
+    const props = node.properties || {};
+    const stateDef = props.stateDef || {};
+
+    title.textContent = `State: ${props.stateName || node.id}`;
+
+    let html = `<div class="detail-row"><span class="detail-key">Type:</span><span class="detail-value">${props.type}</span></div>`;
+
+    if (stateDef.entry?.length) {
+        html += `<div class="detail-row"><span class="detail-key">Entry Actions:</span><span class="detail-value">${stateDef.entry.join(', ')}</span></div>`;
+    }
+    if (stateDef.exit?.length) {
+        html += `<div class="detail-row"><span class="detail-key">Exit Actions:</span><span class="detail-value">${stateDef.exit.join(', ')}</span></div>`;
+    }
+    if (stateDef.invoke) {
+        html += `<div class="detail-row"><span class="detail-key">Invoke:</span><span class="detail-value">${stateDef.invoke.src}</span></div>`;
+        if (stateDef.invoke.input) {
+            html += `<div class="detail-row"><span class="detail-key">Input Mapping:</span><span class="detail-value">${JSON.stringify(stateDef.invoke.input)}</span></div>`;
+        }
+    }
+
+    const events = Object.keys(stateDef.on || {});
+    if (events.length) {
+        html += `<div class="detail-row"><span class="detail-key">Events:</span><span class="detail-value">${events.join(', ')}</span></div>`;
+    }
+
+    if (stateDef.after) {
+        const timers = Object.entries(stateDef.after).map(([d, t]) => `after ${formatDelay(parseInt(d))} → ${typeof t === 'string' ? t : t.target || '?'}`);
+        html += `<div class="detail-row"><span class="detail-key">Timers:</span><span class="detail-value">${timers.join('; ')}</span></div>`;
+    }
+
+    if (stateDef.meta?.eventMachine) {
+        const em = stateDef.meta.eventMachine;
+        if (em.onTimeout) {
+            html += `<div class="detail-row"><span class="detail-key">@timeout:</span><span class="detail-value">${JSON.stringify(em.onTimeout)}</span></div>`;
+        }
+        if (em.fireAndForget) {
+            html += `<div class="detail-row"><span class="detail-key">Fire & Forget:</span><span class="detail-value">Yes</span></div>`;
+        }
+    }
+
+    content.innerHTML = html;
+    panel.classList.add('active');
+}
+
+function showTransitionDetail(edge) {
+    const panel = document.getElementById('detail-panel');
+    const title = document.getElementById('detail-title');
+    const content = document.getElementById('detail-content');
+    const props = edge.properties || {};
+
+    title.textContent = `Transition: ${props.eventName || edge.id}`;
+
+    let html = `<div class="detail-row"><span class="detail-key">Type:</span><span class="detail-value">${props.type}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-key">From:</span><span class="detail-value">${edge.sources?.[0]}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-key">To:</span><span class="detail-value">${edge.targets?.[0]}</span></div>`;
+
+    if (props.guard) {
+        html += `<div class="detail-row"><span class="detail-key">Guard:</span><span class="detail-value">${typeof props.guard === 'object' ? JSON.stringify(props.guard) : props.guard}</span></div>`;
+    }
+    if (props.actions?.length) {
+        html += `<div class="detail-row"><span class="detail-key">Actions:</span><span class="detail-value">${props.actions.join(', ')}</span></div>`;
+    }
+
+    content.innerHTML = html;
+    panel.classList.add('active');
+}
+
+function toggleDetail() {
+    document.getElementById('detail-panel').classList.toggle('active');
+}
+
+// ============================================================
+// Sidebar population
+// ============================================================
+function populateSidebar(machineJson) {
+    // Context
+    const contextList = document.getElementById('context-list');
+    const context = machineJson.context || {};
+    contextList.innerHTML = '';
+    Object.entries(context).forEach(([key, value]) => {
+        const div = document.createElement('div');
+        div.className = 'context-item';
+        const type = value === null ? 'null' : typeof value;
+        div.innerHTML = `<span class="context-key">${key}</span><span class="context-type">${type}</span>`;
+        if (value !== null && value !== undefined) {
+            div.innerHTML += `<span class="context-value">= ${JSON.stringify(value)}</span>`;
+        }
+        contextList.appendChild(div);
+    });
+
+    // Behaviors
+    const meta = machineJson.meta?.eventMachine || {};
+
+    populateBehaviorList('actions-list', meta.actions || {}, 'action');
+    populateBehaviorList('guards-list', meta.guards || {}, 'guard');
+    populateBehaviorList('calculators-list', meta.calculators || {}, 'calculator');
+    populateBehaviorList('events-list', meta.events || {}, 'event');
+}
+
+function populateBehaviorList(elementId, behaviors, type) {
+    const list = document.getElementById(elementId);
+    list.innerHTML = '';
+    const section = list.closest('[id$="-section"]');
+
+    if (Object.keys(behaviors).length === 0) {
+        if (section) section.style.display = 'none';
+        return;
+    }
+    if (section) section.style.display = 'block';
+
+    Object.entries(behaviors).forEach(([name, info]) => {
+        const div = document.createElement('div');
+        div.className = 'behavior-item';
+        let badges = `<span class="behavior-badge badge-${type}">${type}</span>`;
+        if (info.inline) badges += `<span class="behavior-badge badge-inline">inline</span>`;
+        div.innerHTML = `<span class="behavior-name">${name}</span><span>${badges}</span>`;
+        list.appendChild(div);
+    });
+}
+
+// ============================================================
+// Global controls
+// ============================================================
+let panZoom = null;
+
+function fitToScreen() {
+    const root = document.getElementById('diagram-root');
+    const bbox = root.getBBox();
+    if (bbox.width > 0 && bbox.height > 0) {
+        panZoom.fitToContent(bbox);
+    }
+}
+
+function zoomIn() { panZoom?.zoomBy(1.2); }
+function zoomOut() { panZoom?.zoomBy(0.8); }
+
+// ============================================================
+// Main initialization
+// ============================================================
+async function init() {
+    if (typeof MACHINES === 'undefined') {
+        console.error('No machine data found. This file should be generated by machine:diagram command.');
+        return;
+    }
+
+    await loadELK();
+
+    // Use first machine for now (multi-machine in later iteration)
+    const machine = MACHINES[0];
+    const machineJson = machine.json;
+
+    // Update title
+    document.getElementById('title').textContent = `EventMachine: ${machineJson.id || machine.id}`;
+
+    // Populate sidebar
+    populateSidebar(machineJson);
+
+    // Transform to ELK
+    const elkGraph = xstateToElk(machineJson);
+
+    // Layout with ELK
+    const elk = new ELK();
+    try {
+        const layoutResult = await elk.layout(elkGraph);
+
+        // Render SVG
+        const svgGroup = document.getElementById('diagram-root');
+        renderElkGraph(layoutResult, svgGroup);
+
+        // Setup pan/zoom
+        const svg = document.getElementById('diagram-svg');
+        panZoom = new PanZoom(svg, svgGroup);
+
+        // Fit to screen after a small delay for rendering
+        setTimeout(fitToScreen, 100);
+
+    } catch (err) {
+        console.error('ELK layout error:', err);
+        document.getElementById('diagram-root').innerHTML =
+            `<text x="50" y="50" fill="red">Layout error: ${err.message}</text>`;
+    }
+}
+
+// Close detail panel on background click
+document.getElementById('diagram-svg').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget || e.target.classList.contains('background-rect')) {
+        document.getElementById('detail-panel').classList.remove('active');
+    }
+});
+
+init();
+</script>
+</body>
+</html>
