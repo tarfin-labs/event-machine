@@ -17,6 +17,39 @@ EventMachine evolved rapidly from v1 to v7 with a small team. Maintaining multip
 Each section below has step-by-step migration instructions with before/after examples. For multi-version jumps (e.g., v3 → v7), follow each guide in sequence. No data migration is required between any versions — the `machine_events` table format has not changed since v1.
 :::
 
+## From 8.5.4 to 8.6.0
+
+### Computed Context in API Responses
+
+Custom context classes can now expose computed values in endpoint responses by overriding `computedContext()`. These values are included in API responses but **not** persisted to the database.
+
+**New methods on `ContextManager`:**
+
+<!-- doctest-attr: ignore -->
+```php
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        public array $items = [],
+        public float $total = 0.0,
+    ) {
+        parent::__construct();
+    }
+
+    protected function computedContext(): array
+    {
+        return [
+            'item_count' => count($this->items),
+            'is_empty'   => empty($this->items),
+        ];
+    }
+}
+```
+
+The computed values appear in endpoint responses and `State::toArray()`, but are excluded from `machine_events` persistence. See [Exposing Computed Values](https://eventmachine.dev/advanced/custom-context#exposing-computed-values-in-api-responses) for details.
+
+**No action required** — this is a purely additive feature. Existing context classes without `computedContext()` are unaffected.
+
 ## From 8.5.2 to 8.5.3
 
 ### processPostEntryTransitions Centralized into enterState()
