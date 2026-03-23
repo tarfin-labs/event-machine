@@ -17,7 +17,7 @@ test('toArray returns value and context arrays', function (): void {
 
     expect($array)->toHaveKeys(['value', 'context'])
         ->and($array['value'])->toBe([])
-        ->and($array['context'])->toBe(['data' => ['total' => 100, 'name' => 'test']]);
+        ->and($array['context'])->toBe(['total' => 100, 'name' => 'test']);
 });
 
 test('toArray returns state value when currentStateDefinition is set', function (): void {
@@ -50,7 +50,7 @@ test('toArray returns state value when currentStateDefinition is set', function 
     $array = $state->toArray();
 
     expect($array['value'])->toBe(['toarray_test.idle'])
-        ->and($array['context'])->toBe(['data' => ['count' => 0]]);
+        ->and($array['context'])->toBe(['count' => 0]);
 });
 
 // === jsonSerialize ===
@@ -86,5 +86,5 @@ test('toArray with no currentStateDefinition returns empty value array', functio
 test('toArray with empty context returns empty context array', function (): void {
     $state = State::forTesting(context: []);
 
-    expect($state->toArray()['context'])->toBe(['data' => []]);
+    expect($state->toArray()['context'])->toBe([]);
 });

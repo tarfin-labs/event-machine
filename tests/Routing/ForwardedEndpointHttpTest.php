@@ -209,8 +209,8 @@ test('child context reflects storeCardAction side effect', function (): void {
 
     $response->assertStatus(200);
 
-    // ContextManager::toArray() wraps in 'data' key
-    $childContextData = $response->json('data.child.context.data');
+    // Context::toArray() returns flat array (no 'data' wrapper in v9)
+    $childContextData = $response->json('data.child.context');
 
     // storeCardAction stores last 4 digits and sets status
     expect($childContextData)->toHaveKey('card_last4')
@@ -294,8 +294,8 @@ test('PROVIDE_CARD without contextKeys returns full child context', function ():
 
     $response->assertStatus(200);
 
-    // ContextManager::toArray() wraps in 'data' key
-    $childContextData = $response->json('data.child.context.data');
+    // Context::toArray() returns flat array (no 'data' wrapper in v9)
+    $childContextData = $response->json('data.child.context');
 
     // No contextKeys filtering on PROVIDE_CARD -- full child context
     expect($childContextData)->toHaveKey('order_id')

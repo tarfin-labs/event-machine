@@ -5,42 +5,20 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Behavior;
 
 use Illuminate\Support\Arr;
-use Spatie\LaravelData\Data;
-use Spatie\LaravelData\Optional;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Enumerable;
-use Illuminate\Support\LazyCollection;
-use Spatie\LaravelData\DataCollection;
+use Illuminate\Support\Facades\Validator;
 use Tarfinlabs\EventMachine\ContextManager;
-use Illuminate\Pagination\AbstractPaginator;
 use Tarfinlabs\EventMachine\Enums\SourceType;
-use Illuminate\Validation\ValidationException;
-use Spatie\LaravelData\PaginatedDataCollection;
 use Illuminate\Support\Traits\InteractsWithData;
-use Illuminate\Pagination\AbstractCursorPaginator;
-use Spatie\LaravelData\Attributes\WithoutValidation;
-use Spatie\LaravelData\CursorPaginatedDataCollection;
-use Illuminate\Contracts\Pagination\Paginator as PaginatorContract;
 use Tarfinlabs\EventMachine\Exceptions\MachineEventValidationException;
-use Illuminate\Contracts\Pagination\CursorPaginator as CursorPaginatorContract;
 
 /**
  * Class EventBehavior.
  *
  * Represents the behavior of an event.
  */
-abstract class EventBehavior extends Data
+abstract class EventBehavior
 {
-    /**
-     * Use InteractsWithData trait with aliases to avoid conflicts between:
-     * - Spatie Data's static collect() vs Laravel trait's non-static collect()
-     * - Different return types between parent class and trait methods
-     */
-    use InteractsWithData {
-        InteractsWithData::collect as collection;
-        InteractsWithData::only as onlyItems;
-        InteractsWithData::except as exceptItems;
-    }
+    use InteractsWithData;
 
     /** Actor performing the event. */
     private mixed $actor = null;
@@ -50,27 +28,21 @@ abstract class EventBehavior extends Data
     /**
      * Creates a new instance of the class.
      *
-     * @param  null|string|Optional  $type  The type of the object. Default is null.
-     * @param  null|array|Optional  $payload  The payload to be associated with the object. Default is null.
+     * @param  ?string  $type  The type of the object. Default is null.
+     * @param  ?array  $payload  The payload to be associated with the object. Default is null.
      * @param  mixed  $actor  Actor performing the event. Default is null.
-     * @param  int|Optional  $version  The version number of the object. Default is 1.
+     * @param  int  $version  The version number of the object. Default is 1.
      * @param  SourceType  $source  The source type of the object. Default is SourceType::EXTERNAL.
      */
     public function __construct(
-        public null|string|Optional $type = null,
-        public null|array|Optional $payload = null,
-        #[WithoutValidation]
+        public ?string $type = null,
+        public ?array $payload = null,
         ?bool $isTransactional = null,
-        #[WithoutValidation]
         mixed $actor = null,
-        public int|Optional $version = 1,
-
-        #[WithoutValidation]
+        public int $version = 1,
         public SourceType $source = SourceType::EXTERNAL,
     ) {
-        if ($this->type === null) {
-            $this->type = static::getType();
-        }
+        $this->type ??= static::getType();
 
         if ($isTransactional !== null) {
             $this->isTransactional = $isTransactional;
@@ -86,19 +58,114 @@ abstract class EventBehavior extends Data
      */
     abstract public static function getType(): string;
 
+    // region Validation
+
     /**
-     * Validates the object by calling the static validate() method and handles any validation exceptions.
+     * Laravel validation rules — override in subclasses.
+     *
+     * @return array<string, mixed>
+     */
+    public static function rules(): array
+    {
+        return [];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function messages(): array
+    {
+        return [];
+    }
+
+    /**
+     * Indicates if the validator should stop on the first rule failure.
+     */
+    public static function stopOnFirstFailure(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Validates the object by calling performValidation() and handles any validation exceptions.
      *
      * @throws MachineEventValidationException If the object fails validation.
      */
     public function selfValidate(): void
     {
-        try {
-            static::validate($this);
-        } catch (ValidationException $e) {
-            throw new MachineEventValidationException($e->validator);
+        static::performValidation(
+            ['type' => $this->type, 'payload' => $this->payload, 'version' => $this->version]
+        );
+    }
+
+    protected static function performValidation(array $data): void
+    {
+        $rules = static::rules();
+
+        if ($rules === []) {
+            return;
+        }
+
+        $validator = Validator::make($data, $rules, static::messages());
+
+        if (static::stopOnFirstFailure()) {
+            $validator->stopOnFirstFailure();
+        }
+
+        if ($validator->fails()) {
+            throw new MachineEventValidationException($validator);
         }
     }
+
+    // endregion
+
+    // region Factory
+
+    /**
+     * Create an event instance from an array.
+     *
+     * EventBehavior fields are fixed — users extend via payload array.
+     * Hardcoded from() is faster and more explicit than reflection.
+     */
+    public static function from(array $data): static
+    {
+        return new static(
+            type: $data['type'] ?? null,
+            payload: $data['payload'] ?? null,
+            isTransactional: $data['isTransactional'] ?? null,
+            actor: $data['actor'] ?? null,
+            version: $data['version'] ?? 1,
+            source: isset($data['source']) ? (
+                $data['source'] instanceof SourceType ? $data['source'] : SourceType::from($data['source'])
+            ) : SourceType::EXTERNAL,
+        );
+    }
+
+    public static function validateAndCreate(array $data): static
+    {
+        static::performValidation($data);
+
+        return static::from($data);
+    }
+
+    /**
+     * Create an event instance for testing with sensible defaults.
+     * Override in concrete classes for domain-specific defaults.
+     *
+     * @param  array  $attributes  Attributes to merge with defaults.
+     */
+    public static function forTesting(array $attributes = []): static
+    {
+        return static::from(array_merge([
+            'type'    => static::getType(),
+            'payload' => [],
+            'version' => 1,
+        ], $attributes));
+    }
+
+    // endregion
+
+    // region API
 
     public function actor(ContextManager $context): mixed
     {
@@ -107,49 +174,10 @@ abstract class EventBehavior extends Data
 
     /**
      * Retrieves the scenario value from the payload.
-     *
-     * @return string|null The scenario value if available, otherwise null.
      */
     public function getScenario(): ?string
     {
         return $this->payload['scenarioType'] ?? null;
-    }
-
-    /**
-     * Indicates if the validator should stop on the first rule failure.
-     *
-     * @return bool Returns true by default.
-     */
-    public static function stopOnFirstFailure(): bool
-    {
-        return true;
-    }
-
-    /**
-     * Delegate to parent's static collect() from Spatie Data class.
-     * The trait's non-static collect() is aliased as 'collection' to avoid conflict.
-     */
-    public static function collect(mixed $items, ?string $into = null): array|DataCollection|PaginatedDataCollection|CursorPaginatedDataCollection|Enumerable|AbstractPaginator|PaginatorContract|AbstractCursorPaginator|CursorPaginatorContract|LazyCollection|Collection
-    {
-        return parent::collect($items, $into);
-    }
-
-    /**
-     * Override only() to return static type for fluent interface.
-     * Uses parent implementation which correctly returns EventBehavior instance.
-     */
-    public function only(...$args): static
-    {
-        return parent::only(...$args);
-    }
-
-    /**
-     * Override except() to return static type for fluent interface.
-     * Uses parent implementation which correctly returns EventBehavior instance.
-     */
-    public function except(...$args): static
-    {
-        return parent::except(...$args);
     }
 
     /**
@@ -185,18 +213,23 @@ abstract class EventBehavior extends Data
         return data_get($this->all(), $key, $default);
     }
 
+    // collect(), only(), except() — provided by InteractsWithData trait
+
     /**
-     * Create an event instance for testing with sensible defaults.
-     * Override in concrete classes for domain-specific defaults.
+     * Convert the event to an array representation.
      *
-     * @param  array  $attributes  Attributes to merge with defaults.
+     * @return array<string, mixed>
      */
-    public static function forTesting(array $attributes = []): static
+    public function toArray(): array
     {
-        return static::from(array_merge([
-            'type'    => static::getType(),
-            'payload' => [],
-            'version' => 1,
-        ], $attributes));
+        return [
+            'type'            => $this->type,
+            'payload'         => $this->payload,
+            'version'         => $this->version,
+            'isTransactional' => $this->isTransactional,
+            'source'          => $this->source->value,
+        ];
     }
+
+    // endregion
 }

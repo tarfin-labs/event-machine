@@ -48,18 +48,12 @@ For complex events, create dedicated classes:
 
 ```php no_run
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Spatie\LaravelData\Attributes\Validation\Required;
-use Spatie\LaravelData\Attributes\Validation\Min;
 
 class AddItemEvent extends EventBehavior
 {
     public function __construct(
-        #[Required]
-        public int $productId,
-
-        #[Required, Min(1)]
+        public int $productId = 0,
         public int $quantity = 1,
-
         public ?int $price = null,
     ) {
         parent::__construct();
@@ -68,6 +62,14 @@ class AddItemEvent extends EventBehavior
     public static function getType(): string
     {
         return 'ADD_ITEM';
+    }
+
+    public static function rules(): array
+    {
+        return [
+            'payload.productId' => ['required', 'integer'],
+            'payload.quantity'  => ['required', 'integer', 'min:1'],
+        ];
     }
 }
 ```
@@ -97,13 +99,8 @@ Custom events are validated automatically:
 class PaymentEvent extends EventBehavior
 {
     public function __construct(
-        #[Required]
-        public string $paymentMethod,
-
-        #[Required, Min(1)]
-        public int $amount,
-
-        #[Email]
+        public string $paymentMethod = '',
+        public int $amount = 0,
         public ?string $receiptEmail = null,
     ) {
         parent::__construct();
@@ -112,6 +109,15 @@ class PaymentEvent extends EventBehavior
     public static function getType(): string
     {
         return 'PAY';
+    }
+
+    public static function rules(): array
+    {
+        return [
+            'payload.paymentMethod' => ['required', 'string'],
+            'payload.amount'        => ['required', 'integer', 'min:1'],
+            'payload.receiptEmail'  => ['nullable', 'email'],
+        ];
     }
 }
 ```
@@ -122,7 +128,7 @@ Invalid events throw `MachineEventValidationException`:
 // This will throw validation exception
 $machine->send(PaymentEvent::from([
     'paymentMethod' => 'card',
-    'amount' => 0,  // Fails Min(1) validation
+    'amount' => 0,  // Fails min:1 validation
 ]));
 ```
 
@@ -420,12 +426,8 @@ The `@always` event is reserved for automatic transitions:
 class CheckoutEvent extends EventBehavior
 {
     public function __construct(
-        #[Required]
-        public string $shippingAddress,
-
-        #[Required]
-        public string $paymentMethod,
-
+        public string $shippingAddress = '',
+        public string $paymentMethod = '',
         public ?string $couponCode = null,
     ) {
         parent::__construct();
@@ -434,6 +436,14 @@ class CheckoutEvent extends EventBehavior
     public static function getType(): string
     {
         return 'CHECKOUT';
+    }
+
+    public static function rules(): array
+    {
+        return [
+            'payload.shippingAddress' => ['required', 'string'],
+            'payload.paymentMethod'   => ['required', 'string'],
+        ];
     }
 }
 

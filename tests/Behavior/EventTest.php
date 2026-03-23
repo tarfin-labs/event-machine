@@ -160,5 +160,5 @@ test('trait methods work with event payload', function (): void {
         ->and($event->string('name')->upper()->toString())->toBe('JOHN DOE')
         ->and($event->date('birthdate'))->toEqual(Date::parse('1994-01-01'))
         ->and($event->array('tags'))->toEqual(['php', 'laravel'])
-        ->and($event->collection('tags'))->toHaveCount(2);
+        ->and($event->collect('tags'))->toHaveCount(2);
 });

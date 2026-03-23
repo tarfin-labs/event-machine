@@ -2,8 +2,7 @@
 
 declare(strict_types=1);
 
-use Spatie\LaravelData\Optional;
-use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Context;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\IsOddAction;
@@ -14,7 +13,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsCont
 // === Computed Context Attributes Tests ===
 
 it('can be computed context methods defined', function (): void {
-    $context = new TrafficLightsContext(Optional::create(), Optional::create());
+    $context = new TrafficLightsContext();
 
     expect($context->count)->toBe(0);
     expect($context->isCountEven())->toBeTrue();
@@ -53,7 +52,7 @@ class TestBehaviorWithNestedRequiredContext extends InvokableBehavior
 }
 
 test('hasMissingContext returns null when no required context is defined', function (): void {
-    $context = new ContextManager([
+    $context = Context::from([
         'some' => 'value',
     ]);
 
@@ -63,7 +62,7 @@ test('hasMissingContext returns null when no required context is defined', funct
 });
 
 test('hasMissingContext returns null when all required context is present', function (): void {
-    $context = new ContextManager([
+    $context = Context::from([
         'user' => [
             'id'   => 1,
             'name' => 'John',
@@ -79,7 +78,7 @@ test('hasMissingContext returns null when all required context is present', func
 });
 
 test('hasMissingContext returns the first missing key path when context is missing', function (): void {
-    $context = new ContextManager([
+    $context = Context::from([
         'user' => [
             'id' => 1,
             // name is missing
@@ -96,7 +95,7 @@ test('hasMissingContext returns the first missing key path when context is missi
 
 test('hasMissingContext handles deeply nested context paths', function (): void {
     // All required context present
-    $completeContext = new ContextManager([
+    $completeContext = Context::from([
         'deeply' => [
             'nested' => [
                 'value' => 'test',
@@ -114,7 +113,7 @@ test('hasMissingContext handles deeply nested context paths', function (): void 
     expect($result)->toBeNull();
 
     // Missing nested context
-    $incompleteContext = new ContextManager([
+    $incompleteContext = Context::from([
         'deeply' => [
             'nested' => [
                 'value' => 'test',
@@ -129,7 +128,7 @@ test('hasMissingContext handles deeply nested context paths', function (): void 
 });
 
 test('hasMissingContext returns first missing key for multiple missing fields', function (): void {
-    $context = new ContextManager([
+    $context = Context::from([
         'settings' => [
             'enabled' => true,
         ],
@@ -142,7 +141,7 @@ test('hasMissingContext returns first missing key for multiple missing fields', 
 });
 
 test('hasMissingContext checks type constraints', function (): void {
-    $context = new ContextManager([
+    $context = Context::from([
         'user' => [
             'id'   => 'not_an_integer', // Wrong type
             'name' => 'John',
@@ -158,7 +157,7 @@ test('hasMissingContext checks type constraints', function (): void {
 });
 
 test('validateRequiredContext throws exception with correct missing key message', function (): void {
-    $context = new ContextManager([
+    $context = Context::from([
         'user' => [
             'id' => 1,
             // name is missing
@@ -173,7 +172,7 @@ test('validateRequiredContext throws exception with correct missing key message'
 });
 
 test('validateRequiredContext passes when all context is present', function (): void {
-    $context = new ContextManager([
+    $context = Context::from([
         'user' => [
             'id'   => 1,
             'name' => 'John',
@@ -188,7 +187,7 @@ test('validateRequiredContext passes when all context is present', function (): 
 });
 
 test('validateRequiredContext throws exception for empty context when requirements exist', function (): void {
-    $context = new ContextManager([]);
+    $context = Context::from([]);
 
     expect(fn () => TestBehaviorWithRequiredContext::validateRequiredContext($context))
         ->toThrow(MissingMachineContextException::class, '`user.id` is missing in context.');

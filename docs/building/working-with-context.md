@@ -127,24 +127,24 @@ For type safety and validation, create a custom ContextManager:
 
 ```php no_run
 use Tarfinlabs\EventMachine\ContextManager;
-use Spatie\LaravelData\Attributes\Validation\Required;
-use Spatie\LaravelData\Attributes\Validation\Min;
 
 class OrderContext extends ContextManager
 {
     public function __construct(
-        #[Required]
         public int $total = 0,
-
-        #[Required, Min(0)]
         public int $itemCount = 0,
-
         public ?string $customerId = null,
-
         public array $items = [],
-
         public ?string $couponCode = null,
     ) {}
+
+    public static function rules(): array
+    {
+        return [
+            'total'     => ['required', 'integer'],
+            'itemCount' => ['required', 'integer', 'min:0'],
+        ];
+    }
 }
 ```
 
@@ -165,7 +165,7 @@ MachineDefinition::define(
 ### Benefits of Custom Context
 
 1. **Type Safety**: Properties have explicit types
-2. **Validation**: Uses Laravel Data validation attributes
+2. **Validation**: Uses `rules()` method with Laravel validation rules
 3. **IDE Support**: Full autocomplete and type hints
 4. **Documentation**: Self-documenting structure
 
@@ -203,26 +203,25 @@ $context->selfValidate();  // Throws on failure
 
 ### Validation Rules
 
-Using Laravel Data attributes:
+Define validation via the `rules()` method with standard Laravel validation rules:
 
 ```php no_run
-use Spatie\LaravelData\Attributes\Validation\Required;
-use Spatie\LaravelData\Attributes\Validation\Min;
-use Spatie\LaravelData\Attributes\Validation\Max;
-use Spatie\LaravelData\Attributes\Validation\Email;
-
 class UserContext extends ContextManager
 {
     public function __construct(
-        #[Required, Min(1)]
         public int $balance = 0,
-
-        #[Required, Email]
         public string $email = '',
-
-        #[Max(100)]
         public string $name = '',
     ) {}
+
+    public static function rules(): array
+    {
+        return [
+            'balance' => ['required', 'integer', 'min:1'],
+            'email'   => ['required', 'email'],
+            'name'    => ['string', 'max:100'],
+        ];
+    }
 }
 ```
 

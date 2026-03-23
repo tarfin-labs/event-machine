@@ -6,7 +6,6 @@ namespace Tarfinlabs\EventMachine\Tests\LocalQA;
 
 use Illuminate\Support\Facades\DB;
 use Orchestra\Testbench\TestCase as Orchestra;
-use Spatie\LaravelData\LaravelDataServiceProvider;
 use Tarfinlabs\EventMachine\MachineServiceProvider;
 
 /**
@@ -46,7 +45,6 @@ class LocalQATestCase extends Orchestra
     {
         return [
             MachineServiceProvider::class,
-            LaravelDataServiceProvider::class,
         ];
     }
 

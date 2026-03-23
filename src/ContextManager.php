@@ -4,94 +4,204 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine;
 
-use Illuminate\Support\Arr;
-use Spatie\LaravelData\Data;
-use Spatie\LaravelData\Optional;
+use Carbon\Carbon;
+use ReflectionClass;
+use ReflectionProperty;
+use ReflectionNamedType;
+use ReflectionParameter;
+use ReflectionUnionType;
+use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Contracts\Support\Arrayable;
-use Illuminate\Validation\ValidationException;
-use Spatie\LaravelData\Attributes\Validation\ArrayType;
+use Tarfinlabs\EventMachine\Contracts\ContextCast;
 use Tarfinlabs\EventMachine\Exceptions\MachineContextValidationException;
 
 /**
  * Class ContextManager.
  *
- * ContextManager is a class that provides a simple key-value store
- * for managing and manipulating context data within the event machine.
+ * Base class for typed context classes. Provides reflection-based from()/toArray(),
+ * 3-layer cast resolution (explicit casts, global registry, auto-detect),
+ * and native Laravel validation via rules().
+ *
+ * Bag mode (array-based context) is handled by the Context subclass.
  */
-class ContextManager extends Data
+class ContextManager implements \JsonSerializable, Arrayable
 {
-    /**
-     * Create a new ContextManager instance.
-     *
-     * @param  Optional|array  $data  An optional initial array of key-value pairs.
-     */
-    public function __construct(
-        #[ArrayType]
-        public array|Optional $data = [],
-    ) {}
+    // region Global Cast Registry
+
+    /** @var array<class-string, class-string<ContextCast>> */
+    private static array $globalCasts = [];
+
+    public static function registerCast(string $typeClass, string $castClass): void
+    {
+        self::$globalCasts[$typeClass] = $castClass;
+    }
+
+    public static function flushState(): void
+    {
+        self::$globalCasts    = [];
+        self::$parameterCache = [];
+        self::$propertyCache  = [];
+    }
+
+    // endregion
+
+    // region Reflection Cache
+
+    /** @var array<class-string, array<string, ReflectionParameter>> */
+    private static array $parameterCache = [];
+
+    /** @var array<class-string, array<string, ReflectionProperty>> */
+    private static array $propertyCache = [];
 
     /**
-     * Get a value from the context by its key.
-     *
-     * @param  string  $key  The key of the value to retrieve.
-     *
-     * @return mixed The value associated with the given key, or null if the key does not exist.
+     * @return array<string, ReflectionParameter>
      */
-    public function get(string $key): mixed
+    protected static function getCachedParameters(): array
     {
-        return match (true) {
-            static::class === self::class      => Arr::get($this->data, $key),
-            is_subclass_of($this, self::class) => $this->$key,
-        };
+        return self::$parameterCache[static::class] ??= collect(
+            (new ReflectionClass(static::class))->getConstructor()?->getParameters() ?? []
+        )->keyBy(fn (ReflectionParameter $p): string => $p->getName())->all();
     }
 
     /**
-     * Sets a value for a given key.
+     * @return array<string, ReflectionProperty>
+     */
+    protected static function getCachedProperties(): array
+    {
+        return self::$propertyCache[static::class] ??= collect(
+            (new ReflectionClass(static::class))->getProperties(ReflectionProperty::IS_PUBLIC)
+        )->keyBy(fn (ReflectionProperty $p): string => $p->getName())->all();
+    }
+
+    // endregion
+
+    // region Cast/Transform
+
+    /**
+     * @return array<string, class-string<ContextCast>|array<class-string>>
+     */
+    public static function casts(): array
+    {
+        return [];
+    }
+
+    // endregion
+
+    // region Validation
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function rules(): array
+    {
+        return [];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function messages(): array
+    {
+        return [];
+    }
+
+    /**
+     * Validates the current instance against its own rules.
      *
-     * This method is used to set a value for a given key in the data array.
-     * If the current class is the same as the class of the object, the
-     * value is set in the data array. If the current class is a
-     * subclass of the class of the object, the value is set as
-     * a property of the object.
+     * selfValidate() calls toArray() → serialize (Model→id, Enum→value).
+     * Therefore rules() must be written for the serialized form.
+     */
+    public function selfValidate(): void
+    {
+        static::performValidation($this->toArray());
+    }
+
+    /**
+     * Validates the given payload and creates an instance from it.
      *
-     * @param  string  $key  The key for which to set the value.
-     * @param  mixed  $value  The value to set for the given key.
+     * @param  array<mixed>|Arrayable<string, mixed>  $payload
+     */
+    public static function validateAndCreate(array|Arrayable $payload): static
+    {
+        $data = is_array($payload) ? $payload : $payload->toArray();
+        static::performValidation($data);
+
+        return static::from($data);
+    }
+
+    protected static function performValidation(array $data): void
+    {
+        $rules = static::rules();
+
+        if ($rules === []) {
+            return;
+        }
+
+        $validator = Validator::make($data, $rules, static::messages());
+
+        if ($validator->fails()) {
+            throw new MachineContextValidationException($validator);
+        }
+    }
+
+    // endregion
+
+    // region Factory
+
+    /**
+     * Create a new instance from an array of data.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public static function from(array $data): static
+    {
+        $params = static::getCachedParameters();
+        $args   = [];
+
+        foreach ($params as $name => $param) {
+            if (array_key_exists($name, $data)) {
+                $args[$name] = static::deserializeValue($name, $data[$name], $param);
+            } elseif ($param->isDefaultValueAvailable()) {
+                $args[$name] = $param->getDefaultValue();
+            }
+        }
+
+        return new static(...$args);
+    }
+
+    // endregion
+
+    // region Property Access (engine-internal, works on typed properties)
+
+    /**
+     * Get a value from the context by its key.
+     * On typed contexts, accesses the public property directly.
+     */
+    public function get(string $key): mixed
+    {
+        return $this->{$key} ?? null;
+    }
+
+    /**
+     * Set a value for a given key.
+     * On typed contexts, sets the public property directly.
      */
     public function set(string $key, mixed $value): mixed
     {
-        if ($this->data instanceof Optional) {
-            return null;
-        }
-
-        match (true) {
-            static::class === self::class      => $this->data[$key] = $value,
-            is_subclass_of($this, self::class) => $this->$key       = $value,
-        };
+        $this->{$key} = $value;
 
         return $value;
     }
 
     /**
-     * Determines if a key-value pair exists and optionally checks its type.
-     *
-     * This method checks if the context contains the given key and, if a type is
-     * specified, whether the value associated with that key is of the given type.
-     * If no type is specified, only existence is checked. If the key does not
-     * exist, or if the type does not match, the method returns false.
-     *
-     * @param  string  $key  The key to check for existence.
-     * @param  string|null  $type  The type to check for the value. If null,
-     *                             only existence is checked.
-     *
-     * @return bool True if the key exists and (if a type is specified)
-     *              its value is of the given type. False otherwise.
+     * Check if a key exists and optionally verify its type.
+     * On typed contexts, checks property existence.
      */
     public function has(string $key, ?string $type = null): bool
     {
-        $hasKey = match (true) {
-            static::class === self::class      => Arr::has($this->data, $key),
-            is_subclass_of($this, self::class) => property_exists($this, $key),
-        };
+        $hasKey = property_exists($this, $key);
 
         if (!$hasKey || $type === null) {
             return $hasKey;
@@ -104,52 +214,200 @@ class ContextManager extends Data
     }
 
     /**
-     * Remove a key-value pair from the context by its key.
-     *
-     * @param  string  $key  The key to remove from the context.
+     * Remove a key from the context.
+     * On typed contexts, sets the property to null.
      */
     public function remove(string $key): void
     {
-        unset($this->data[$key]);
-    }
-
-    /**
-     * Validates the current instance against its own rules.
-     *
-     * This method validates the current instance by calling the static validate() method on itself.
-     * If validation fails, it throws a MachineContextValidationException with the validator object.
-     */
-    public function selfValidate(): void
-    {
-        try {
-            static::validate($this);
-        } catch (ValidationException $e) {
-            throw new MachineContextValidationException($e->validator);
+        if (property_exists($this, $key)) {
+            $this->{$key} = null;
         }
     }
 
+    // endregion
+
+    // region Serialization
+
     /**
-     * Validates the given payload and creates an instance from it.
-     *
-     * This method first validates the given payload using the static validate() method.
-     * If the validation passes, it creates a new instance of the class using the
-     * static from() method and returns it.
-     * If validation fails, it throws a MachineContextValidationException.
-     *
-     * @param  array<mixed>|Arrayable<string, mixed>  $payload  The payload to be validated and created from.
-     *
-     * @return static A new instance of the class created from the payload.
+     * @return array<string, mixed>
      */
-    public static function validateAndCreate(array|Arrayable $payload): static
+    public function toArray(): array
     {
-        try {
-            static::validate($payload);
-        } catch (ValidationException $e) {
-            throw new MachineContextValidationException($e->validator);
+        $result = [];
+
+        foreach (static::getCachedProperties() as $name => $prop) {
+            $result[$name] = static::serializeValue($name, $prop->getValue($this));
         }
 
-        return static::from($payload);
+        return $result;
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function jsonSerialize(): array
+    {
+        return $this->toArray();
+    }
+
+    // endregion
+
+    // region Cast Resolution
+
+    protected static function deserializeValue(string $name, mixed $value, ?ReflectionParameter $param = null): mixed
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        // Layer 1: Explicit casts()
+        $casts = static::casts();
+        if (isset($casts[$name])) {
+            return static::applyCast($casts[$name], $value, 'deserialize');
+        }
+
+        // Layer 2: Global registry
+        if ($param instanceof ReflectionParameter) {
+            $typeClass = self::extractTypeClass($param);
+            if ($typeClass !== null && isset(self::$globalCasts[$typeClass])) {
+                return static::applyCast(self::$globalCasts[$typeClass], $value, 'deserialize');
+            }
+        }
+
+        // Layer 3: Auto-detect
+        if ($param instanceof ReflectionParameter) {
+            return self::autoDeserialize($param, $value);
+        }
+
+        return $value;
+    }
+
+    protected static function serializeValue(string $name, mixed $value): mixed
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        // Layer 1: Explicit casts()
+        $casts = static::casts();
+        if (isset($casts[$name])) {
+            return static::applyCast($casts[$name], $value, 'serialize');
+        }
+
+        // Layer 2: Global registry
+        foreach (self::$globalCasts as $typeClass => $castClass) {
+            if ($value instanceof $typeClass) {
+                return static::applyCast($castClass, $value, 'serialize');
+            }
+        }
+
+        // Layer 3: Auto-detect
+        if ($value instanceof Model) {
+            return $value->getKey();
+        }
+
+        if ($value instanceof \BackedEnum) {
+            return $value->value;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('c');
+        }
+
+        if ($value instanceof Collection) {
+            return $value->map(
+                fn ($item) => $item instanceof Arrayable ? $item->toArray() : $item
+            )->all();
+        }
+
+        if ($value instanceof Arrayable) {
+            return $value->toArray();
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param  class-string<ContextCast>|array<class-string>  $cast
+     */
+    protected static function applyCast(string|array $cast, mixed $value, string $direction): mixed
+    {
+        // Array syntax: Collection<DTO>
+        if (is_array($cast)) {
+            $itemClass = $cast[0];
+
+            return match ($direction) {
+                'serialize' => collect($value)->map(
+                    fn ($item) => $item instanceof Arrayable ? $item->toArray() : $item
+                )->all(),
+                'deserialize' => collect($value)->map(
+                    fn ($item) => is_array($item) ? $itemClass::from($item) : $item
+                ),
+            };
+        }
+
+        // ContextCast interface
+        if (is_subclass_of($cast, ContextCast::class)) {
+            $caster = new $cast();
+
+            return $direction === 'serialize'
+                ? $caster->serialize($value)
+                : $caster->deserialize($value);
+        }
+
+        throw new \InvalidArgumentException(
+            "Cast [{$cast}] must implement ContextCast or be an array syntax [ClassName::class]. "
+            .'Model/Enum/DateTime types are auto-detected — no cast needed.'
+        );
+    }
+
+    private static function autoDeserialize(ReflectionParameter $param, mixed $value): mixed
+    {
+        $typeClass = self::extractTypeClass($param);
+
+        if ($typeClass === null) {
+            return $value;
+        }
+
+        if (is_subclass_of($typeClass, Model::class) && (is_int($value) || is_string($value))) {
+            return $typeClass::find($value);
+        }
+
+        if (enum_exists($typeClass) && (is_int($value) || is_string($value))) {
+            return $typeClass::from($value);
+        }
+
+        if (is_subclass_of($typeClass, \DateTimeInterface::class) && is_string($value)) {
+            return Carbon::parse($value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Extract the first non-builtin class name from a parameter's type hint.
+     * For union types (e.g. ?Retailer), skips null and returns the first class.
+     */
+    private static function extractTypeClass(ReflectionParameter $param): ?string
+    {
+        $type = $param->getType();
+
+        if ($type instanceof ReflectionNamedType && !$type->isBuiltin()) {
+            return $type->getName();
+        }
+
+        if ($type instanceof ReflectionUnionType) {
+            foreach ($type->getTypes() as $unionType) {
+                if ($unionType instanceof ReflectionNamedType && !$unionType->isBuiltin()) {
+                    return $unionType->getName();
+                }
+            }
+        }
+
+        return null;
+    }
+
+    // endregion
 
     // region Machine Identity
 
@@ -174,79 +432,24 @@ class ContextManager extends Data
         $this->internalParentMachineClass = $parentMachineClass;
     }
 
-    /**
-     * Get the machine's root_event_id.
-     */
     public function machineId(): ?string
     {
         return $this->internalMachineId;
     }
 
-    /**
-     * Get the parent machine's root_event_id (if this is a child machine).
-     *
-     * Returns null if this machine was not invoked by a parent.
-     */
     public function parentMachineId(): ?string
     {
         return $this->internalParentRootEventId;
     }
 
-    /**
-     * Get the parent machine's FQCN (if this is a child machine).
-     *
-     * Returns null if this machine was not invoked by a parent.
-     */
     public function parentMachineClass(): ?string
     {
         return $this->internalParentMachineClass;
     }
 
-    /**
-     * Check if this machine was invoked by a parent machine.
-     */
     public function isChildMachine(): bool
     {
         return $this->internalParentRootEventId !== null;
-    }
-
-    // endregion
-
-    // region Magic Setup
-
-    /**
-     * Set a value in the context by its name.
-     *
-     * @param  string  $name  The name of the value to set.
-     * @param  mixed  $value  The value to set.
-     */
-    public function __set(string $name, mixed $value): void
-    {
-        $this->set($name, $value);
-    }
-
-    /**
-     * Magic method to dynamically retrieve a value from the context by its key.
-     *
-     * @param  string  $name  The key of the value to retrieve.
-     *
-     * @return mixed The value associated with the given key, or null if the key does not exist.
-     */
-    public function __get(string $name): mixed
-    {
-        return $this->get($name);
-    }
-
-    /**
-     * Checks if a property is set on the object.
-     *
-     * @param  string  $name  The name of the property to check.
-     *
-     * @return bool True if the property exists and is set, false otherwise.
-     */
-    public function __isset(string $name): bool
-    {
-        return $this->has($name);
     }
 
     // endregion

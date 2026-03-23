@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Actor;
 
 use Symfony\Component\Uid\Ulid;
 use Illuminate\Support\Facades\Log;
+use Tarfinlabs\EventMachine\Context;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\SourceType;
@@ -116,7 +117,7 @@ class State implements \JsonSerializable
     ): self {
         $contextManager = $context instanceof ContextManager
             ? $context
-            : new ContextManager($context);
+            : Context::from($context);
 
         return new self(
             context: $contextManager,

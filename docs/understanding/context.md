@@ -86,7 +86,7 @@ class HasItemsGuard extends GuardBehavior
 For complete context documentation including:
 
 - Custom context classes with validation
-- Context validation with Laravel Data attributes
+- Context validation with `rules()` method
 - Required context in behaviors
 - Magic property access
 - Complete examples
