@@ -352,9 +352,12 @@ class Intersection extends Model
 {
     use HasMachines;
 
-    protected $casts = [
-        'light' => MachineCast::class . ':' . TrafficLightMachine::class,
-    ];
+    protected function casts(): array
+    {
+        return [
+            'light' => TrafficLightMachine::class . ':intersection',
+        ];
+    }
 }
 ```
 

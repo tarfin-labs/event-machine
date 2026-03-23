@@ -21,17 +21,11 @@ test('Machine can be cast to string', function (): void {
 });
 
 test('a machine as a model attribute can serialize as root_event_id', function (): void {
-    $modelA = new ModelA();
+    // Model::create() triggers bootHasMachines auto-initialization
+    $modelA = ModelA::create(['value' => 'test']);
 
     expect($modelA->abc_mre)->toBeInstanceOf(Machine::class);
     expect($modelA->traffic_mre)->toBeInstanceOf(Machine::class);
-
-    expect($modelA->toArray())->toBeArray();
-    expect($modelA->toJson())->toBeString();
-
-    $modelA->abc_mre->persist();
-    $modelA->traffic_mre->persist();
-    $modelA->save();
 
     expect($modelA->toArray())->toBeArray();
     expect($modelA->toJson())->toBeString();

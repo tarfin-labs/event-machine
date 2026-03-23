@@ -1005,13 +1005,16 @@ class Machine implements Castable, JsonSerializable, Stringable
      * This method returns the class name of the caster to be used for casting
      * operations. In this case, it returns the `MachineCast` class.
      *
-     * @param  array<mixed>  $arguments
+     * @param  array<mixed>  $arguments  The context key (e.g., ['order']).
      *
-     * @return string The class name of the caster.
+     * @return MachineCast The configured caster instance.
      */
-    public static function castUsing(array $arguments): string
+    public static function castUsing(array $arguments): MachineCast
     {
-        return MachineCast::class;
+        return new MachineCast(
+            machineClass: static::class,
+            contextKey: $arguments[0] ?? 'model',
+        );
     }
 
     /**
@@ -1038,6 +1041,27 @@ class Machine implements Castable, JsonSerializable, Stringable
     public function __toString(): string
     {
         return (string) ($this->state->history->first()->root_event_id ?? '');
+    }
+
+    /**
+     * Re-restore the machine state from the database.
+     *
+     * Fetches a fresh copy of all events from machine_events and
+     * rebuilds the State object. Useful after external changes to
+     * the machine (e.g., another process sent an event).
+     *
+     * @return self Returns $this for method chaining.
+     *
+     * @throws RestoringStateException If the machine state cannot be found.
+     */
+    public function refresh(): self
+    {
+        $rootEventId = $this->definition->rootEventId
+            ?? $this->state->history->first()->root_event_id;
+
+        $this->state = $this->restoreStateFromRootEventId($rootEventId);
+
+        return $this;
     }
 
     // endregion

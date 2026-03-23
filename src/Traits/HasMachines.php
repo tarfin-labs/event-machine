@@ -10,25 +10,35 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 /**
  * Trait HasMachines.
  *
- * This trait provides functionality for initializing
- * machines before creating a model instance.
+ * Provides auto-initialization of machine casts on model creation
+ * and helper methods for working with machine attributes without
+ * triggering lazy proxy initialization.
+ *
+ * v9: No getAttribute() override — zero overhead on non-machine attributes.
+ * Machine definitions are read exclusively from $casts via Castable interface.
  */
 trait HasMachines
 {
     /**
-     * Boot method for ensuring that machines have been
-     * initialized before creating a model instance.
+     * Auto-initialize machines when model is being created.
+     *
+     * Only initializes static (non-polymorphic) machine casts — those
+     * where the cast class is a Machine subclass. PolymorphicMachineCast
+     * is naturally excluded because it is not a Machine subclass.
      */
     protected static function bootHasMachines(): void
     {
         static::creating(static function (Model $model): void {
             foreach ($model->getCasts() as $attribute => $cast) {
-                if (
-                    !isset($model->attributes[$attribute]) &&
-                    is_subclass_of(explode(':', $cast)[0], Machine::class) &&
-                    $model->shouldInitializeMachine()
-                ) {
-                    $machine = $model->$attribute;
+                if (array_key_exists($attribute, $model->attributes)) {
+                    continue;
+                }
+
+                $castClass = is_string($cast) ? explode(':', $cast)[0] : null;
+
+                if ($castClass !== null && is_subclass_of($castClass, Machine::class)) {
+                    $machine = $castClass::create();
+                    $machine->persist();
 
                     $model->attributes[$attribute] = $machine->state->history->first()->root_event_id;
                 }
@@ -36,61 +46,39 @@ trait HasMachines
         });
     }
 
-    public function getAttribute($key)
-    {
-        $attribute = parent::getAttribute($key);
-
-        if ($this->shouldInitializeMachine() === true) {
-
-            $machine = $this->findMachine($key);
-
-            if ($machine !== null) {
-                /** @var Machine $machineClass */
-                [$machineClass, $contextKey] = explode(':', $machine);
-
-                $machine = $machineClass::create(state: $attribute);
-
-                $machine->state->context->set($contextKey, $this);
-
-                return $machine;
-            }
-        }
-
-        return $attribute;
-    }
-
     /**
-     * Determines whether the machine should be initialized.
+     * Force re-restore a machine from the database.
      *
-     * @return bool Returns true if the machine should be initialized, false otherwise.
+     * Clears the cached lazy proxy so the next attribute access
+     * creates a fresh proxy whose factory will query the DB.
      */
-    public function shouldInitializeMachine(): bool
+    public function refreshMachine(string $attribute): ?Machine
     {
-        return true;
+        unset($this->classCastCache[$attribute]);
+
+        return $this->getAttribute($attribute);
     }
 
     /**
-     * Checks if the machine configuration exists for the given key
-     * either in the `machines` method or the `machines` property of the model.
+     * Get raw root_event_id without triggering machine restore.
+     *
+     * Uses $this->attributes directly instead of getAttributes()
+     * to avoid triggering mergeAttributesFromCachedCasts().
      */
-    private function findMachine($key): ?string
+    public function getMachineId(string $attribute): ?string
     {
-        if (method_exists($this, 'machines')) {
-            $machines = $this->machines();
+        return $this->getRawOriginal($attribute)
+            ?? $this->attributes[$attribute]
+            ?? null;
+    }
 
-            if (array_key_exists($key, $machines)) {
-                return $machines[$key];
-            }
-        }
-
-        if (property_exists($this, 'machines')) {
-            $machines = $this->machines;
-
-            if (array_key_exists($key, $machines)) {
-                return $machines[$key];
-            }
-        }
-
-        return null;
+    /**
+     * Check if a machine attribute has been initialized (has a root_event_id).
+     *
+     * Does NOT trigger machine restore.
+     */
+    public function hasMachine(string $attribute): bool
+    {
+        return $this->getMachineId($attribute) !== null;
     }
 }
