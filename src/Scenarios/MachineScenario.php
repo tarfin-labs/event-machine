@@ -172,4 +172,14 @@ abstract class MachineScenario
     {
         return $this->arrange();
     }
+
+    /**
+     * @internal
+     *
+     * @return array<string, mixed>
+     */
+    public function getCreatedModels(): array
+    {
+        return $this->createdModels;
+    }
 }
