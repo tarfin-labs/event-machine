@@ -316,7 +316,7 @@ class ContextManager implements \JsonSerializable, Arrayable
 
         if ($value instanceof Collection) {
             return $value->map(
-                fn ($item) => $item instanceof Arrayable ? $item->toArray() : $item
+                fn (mixed $item): mixed => $item instanceof Arrayable ? $item->toArray() : $item
             )->all();
         }
 
@@ -338,10 +338,10 @@ class ContextManager implements \JsonSerializable, Arrayable
 
             return match ($direction) {
                 'serialize' => collect($value)->map(
-                    fn ($item) => $item instanceof Arrayable ? $item->toArray() : $item
+                    fn (mixed $item): mixed => $item instanceof Arrayable ? $item->toArray() : $item
                 )->all(),
                 'deserialize' => collect($value)->map(
-                    fn ($item) => is_array($item) ? $itemClass::from($item) : $item
+                    fn (mixed $item): mixed => is_array($item) ? $itemClass::from($item) : $item
                 ),
             };
         }

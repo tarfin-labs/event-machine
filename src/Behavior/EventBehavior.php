@@ -185,7 +185,7 @@ abstract class EventBehavior
      *
      * @param  array|mixed|null  $keys
      */
-    public function all($keys = null): array
+    public function all(mixed $keys = null): array
     {
         $input = $this->payload ?? [];
 
@@ -206,9 +206,8 @@ abstract class EventBehavior
      * Retrieve data from the instance.
      *
      * @param  string  $key
-     * @param  mixed  $default
      */
-    public function data($key = null, $default = null): mixed
+    public function data(mixed $key = null, mixed $default = null): mixed
     {
         return data_get($this->all(), $key, $default);
     }
