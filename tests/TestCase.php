@@ -72,5 +72,13 @@ class TestCase extends Orchestra
             $table->ulid('elevator_mre')->nullable();
             $table->timestamps();
         });
+
+        Schema::create('model_b_s', function (Blueprint $table): void {
+            $table->id();
+            $table->string('value')->nullable();
+            $table->string('machine_type')->nullable();
+            $table->ulid('status_mre')->nullable();
+            $table->timestamps();
+        });
     }
 }
