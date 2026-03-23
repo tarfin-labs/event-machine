@@ -140,6 +140,8 @@ class FetchCreditScoreAction extends ActionBehavior implements ScenarioStubContr
 }
 ```
 
+If your action does NOT implement `ScenarioStubContract`, stub data keys are mapped directly to context keys as a convention-based fallback (e.g., `['score' => 750]` calls `$state->context->set('score', 750)`).
+
 ## Model Creation
 
 Use `models()` to create Eloquent models before event replay:
@@ -190,9 +192,9 @@ Merge rules:
 | Aspect | Behavior |
 |--------|----------|
 | `machine()` | Must match across chain |
-| `arrange()` | Deep merged — child overrides parent |
+| `arrange()` | Merged — child overrides parent for same class key |
 | `models()` | Parent models created first, child can add or override |
-| `defaults()` | Deep merged — child overrides parent |
+| `defaults()` | Merged — child overrides parent for same key |
 | `steps()` | Sequential — parent first, then child |
 
 ## Child Machine Scenarios
@@ -258,7 +260,22 @@ $result->currentState;  // Current state name
 $result->models;        // Created models
 $result->stepsExecuted; // Number of steps played
 $result->duration;      // Execution time in ms
+$result->childResults;  // Results from child machine scenarios
 ```
+
+## Error Handling
+
+Scenarios throw specific exceptions:
+
+| Exception | When |
+|-----------|------|
+| `ScenariosDisabledException` | Scenarios are not enabled (`MACHINE_SCENARIOS_ENABLED=false`) |
+| `ScenarioFailedException` | A step fails during replay (guard rejection, invalid event). Includes `stepIndex`, `eventType`, `currentState`, and `rejectionReason`. |
+| `ScenarioConfigurationException` | `machine()` mismatch in parent/child composition chain |
+
+::: warning Production Safety
+Never enable scenarios in production. The `MACHINE_SCENARIOS_ENABLED` flag defaults to `false`. When disabled, scenario routes are not registered and `ScenarioPlayer::play()` throws immediately — zero runtime overhead.
+:::
 
 ## File Organization
 
