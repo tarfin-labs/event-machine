@@ -39,7 +39,7 @@ abstract class MachineBaseCast implements CastsAttributes, SerializesCastableAtt
             return $value;
         }
 
-        if ((new ReflectionClass($value))->isUninitializedLazyObject($value)) {
+        if ($value instanceof Machine && (new ReflectionClass($value))->isUninitializedLazyObject($value)) {
             return $attributes[$key] ?? null;
         }
 
