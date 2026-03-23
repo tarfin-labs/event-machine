@@ -561,19 +561,21 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
             if (branch.target) {
                 // Resolve target — could be relative
                 const targetId = resolveTargetId(parentId, branch.target);
+                const fullLabel = formatTransitionLabel(eventName, branch);
                 edges.push({
                     id: `edge_${edgeCounter++}`,
                     sources: [`${parentId}.${stateName}`],
                     targets: [targetId],
                     labels: [{
-                        text: formatTransitionLabel(eventName, branch),
-                        width: eventName.length * 7 + 20,
+                        text: fullLabel,
+                        width: Math.max(fullLabel.length * 6.5 + 16, 60),
                         height: 16,
                     }],
                     properties: {
                         eventName: eventName,
                         guard: branch.guard || null,
                         actions: branch.actions || [],
+                        calculators: branch.meta?.eventMachine?.calculators || [],
                         type: 'event',
                     },
                 });
@@ -587,12 +589,13 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
         branches.forEach(branch => {
             if (branch.target) {
                 const targetId = resolveTargetId(parentId, branch.target);
+                const label = formatTransitionLabel('@always', branch);
                 edges.push({
                     id: `edge_${edgeCounter++}`,
                     sources: [`${parentId}.${stateName}`],
                     targets: [targetId],
-                    labels: [{ text: formatTransitionLabel('@always', branch), width: 60, height: 16 }],
-                    properties: { eventName: '@always', type: 'always' },
+                    labels: [{ text: label, width: Math.max(label.length * 6.5 + 16, 60), height: 16 }],
+                    properties: { eventName: '@always', guard: branch.guard || null, actions: branch.actions || [], type: 'always' },
                 });
             }
         });
@@ -604,12 +607,13 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
         branches.forEach(branch => {
             if (branch.target) {
                 const targetId = resolveTargetId(parentId, branch.target);
+                const label = formatTransitionLabel('@done', branch);
                 edges.push({
                     id: `edge_${edgeCounter++}`,
                     sources: [`${parentId}.${stateName}`],
                     targets: [targetId],
-                    labels: [{ text: formatTransitionLabel('@done', branch), width: 60, height: 16 }],
-                    properties: { eventName: '@done', type: 'done' },
+                    labels: [{ text: label, width: Math.max(label.length * 6.5 + 16, 60), height: 16 }],
+                    properties: { eventName: '@done', guard: branch.guard || null, actions: branch.actions || [], type: 'done' },
                 });
             }
         });
@@ -621,12 +625,13 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
         branches.forEach(branch => {
             if (branch.target) {
                 const targetId = resolveTargetId(parentId, branch.target);
+                const label = formatTransitionLabel('@fail', branch);
                 edges.push({
                     id: `edge_${edgeCounter++}`,
                     sources: [`${parentId}.${stateName}`],
                     targets: [targetId],
-                    labels: [{ text: '@fail', width: 40, height: 16 }],
-                    properties: { eventName: '@fail', type: 'fail' },
+                    labels: [{ text: label, width: Math.max(label.length * 6.5 + 16, 50), height: 16 }],
+                    properties: { eventName: '@fail', guard: branch.guard || null, actions: branch.actions || [], type: 'fail' },
                 });
             }
         });
@@ -638,12 +643,13 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
         branches.forEach(branch => {
             if (branch.target) {
                 const targetId = resolveTargetId(parentId, branch.target);
+                const label = formatTransitionLabel('@done', branch);
                 edges.push({
                     id: `edge_${edgeCounter++}`,
                     sources: [`${parentId}.${stateName}`],
                     targets: [targetId],
-                    labels: [{ text: formatTransitionLabel('@done', branch), width: 60, height: 16 }],
-                    properties: { eventName: '@done', type: 'done' },
+                    labels: [{ text: label, width: Math.max(label.length * 6.5 + 16, 60), height: 16 }],
+                    properties: { eventName: '@done', guard: branch.guard || null, actions: branch.actions || [], type: 'done' },
                 });
             }
         });
@@ -657,12 +663,13 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
                 if (branch.target) {
                     const targetId = resolveTargetId(parentId, branch.target);
                     const delayLabel = formatDelay(parseInt(delay));
+                    const label = `after ${delayLabel}`;
                     edges.push({
                         id: `edge_${edgeCounter++}`,
                         sources: [`${parentId}.${stateName}`],
                         targets: [targetId],
-                        labels: [{ text: `after ${delayLabel}`, width: 80, height: 16 }],
-                        properties: { eventName: `after ${delayLabel}`, type: 'timeout' },
+                        labels: [{ text: label, width: Math.max(label.length * 6.5 + 16, 70), height: 16 }],
+                        properties: { eventName: label, guard: branch.guard || null, actions: branch.actions || [], type: 'timeout' },
                     });
                 }
             });
@@ -701,8 +708,15 @@ function resolveTargetId(parentId, target) {
 function formatTransitionLabel(eventName, branch) {
     let label = eventName;
     if (branch.guard) {
-        const guardName = typeof branch.guard === 'object' ? branch.guard.guards?.join(' & ') : branch.guard;
+        const guardName = typeof branch.guard === 'object'
+            ? (branch.guard.guards ? branch.guard.guards.join(' & ') : (branch.guard.type === 'and' ? branch.guard.guards?.join(' & ') : JSON.stringify(branch.guard)))
+            : branch.guard;
         label += ` [${guardName}]`;
+    }
+    // Calculators (from meta.eventMachine.calculators)
+    const calcs = branch.meta?.eventMachine?.calculators || [];
+    if (calcs.length > 0) {
+        label += ` calc(${calcs.slice(0, 2).join(', ')}${calcs.length > 2 ? '...' : ''})`;
     }
     if (branch.actions && branch.actions.length > 0) {
         const actionNames = branch.actions.slice(0, 2).join(', ');
@@ -830,9 +844,27 @@ function renderNodes(nodes, parent, offsetX, offsetY) {
                     class: 'state-detail',
                     'font-size': '10px',
                 });
-                const label = formatTransitionLabel(st.event, st);
-                stText.textContent = label;
-                stText.style.fill = '#a0c4ff';
+
+                // Color-coded: event name in blue, guard in yellow, actions in green
+                const eventSpan = createSvgElement('tspan', { fill: '#a0c4ff', 'font-weight': '600' });
+                eventSpan.textContent = st.event;
+                stText.appendChild(eventSpan);
+
+                if (st.guard) {
+                    const gName = typeof st.guard === 'object' ? (st.guard.guards?.join(' & ') || '') : st.guard;
+                    const guardSpan = createSvgElement('tspan', { fill: '#ffc107' });
+                    guardSpan.textContent = ` [${gName}]`;
+                    stText.appendChild(guardSpan);
+                }
+
+                if (st.actions?.length) {
+                    const aNames = st.actions.slice(0, 2).join(', ');
+                    const suffix = st.actions.length > 2 ? '...' : '';
+                    const actionSpan = createSvgElement('tspan', { fill: '#66bb6a', 'font-size': '9px' });
+                    actionSpan.textContent = ` / ${aNames}${suffix}`;
+                    stText.appendChild(actionSpan);
+                }
+
                 group.appendChild(stText);
             });
         }
@@ -955,26 +987,77 @@ function renderEdges(edges, parent, offsetX, offsetY) {
             });
         }
 
-        // Edge labels
+        // Edge labels — color-coded using tspan
         if (edge.labels) {
             edge.labels.forEach(label => {
                 if (label.x !== undefined && label.y !== undefined) {
+                    const lx = (label.x || 0) + offsetX + (label.width || 0) / 2;
+                    const ly = (label.y || 0) + offsetY + 12;
+
+                    // Add background rect for readability
+                    const labelText = label.text || '';
+                    const bgPad = 4;
+                    const estWidth = labelText.length * 6.5 + bgPad * 2;
+                    const labelBg = createSvgElement('rect', {
+                        x: lx - estWidth / 2, y: ly - 12,
+                        width: estWidth, height: 16,
+                        rx: 3, ry: 3,
+                        fill: '#1a1a2e', opacity: 0.85,
+                    });
+                    group.appendChild(labelBg);
+
                     const text = createSvgElement('text', {
-                        x: (label.x || 0) + offsetX + (label.width || 0) / 2,
-                        y: (label.y || 0) + offsetY + 12,
+                        x: lx, y: ly,
                         'text-anchor': 'middle',
                         class: 'transition-label',
+                        'font-size': '11px',
                     });
 
-                    // Color-code parts of the label
-                    const labelText = label.text || '';
-                    text.textContent = labelText;
+                    // Parse and color-code the label parts
+                    const eventName = props.eventName || '';
+                    const guard = props.guard;
+                    const actions = props.actions || [];
 
-                    // Style based on type
-                    if (type === 'done') text.style.fill = '#4caf50';
-                    if (type === 'fail') text.style.fill = '#f44336';
-                    if (type === 'timeout') text.style.fill = '#ff9800';
-                    if (type === 'always') text.style.fill = '#6a6a8a';
+                    // Determine colors based on transition type
+                    const typeColorMap = {
+                        'done': '#4caf50', 'fail': '#f44336',
+                        'timeout': '#ff9800', 'always': '#9e9e9e',
+                    };
+                    const eventColor = typeColorMap[type] || '#c0d0ff';
+
+                    // Event name tspan
+                    const eventSpan = createSvgElement('tspan', { fill: eventColor, 'font-weight': '600' });
+                    eventSpan.textContent = eventName;
+                    text.appendChild(eventSpan);
+
+                    // Guard tspan
+                    if (guard) {
+                        const guardName = typeof guard === 'object'
+                            ? (guard.guards ? guard.guards.join(' & ') : JSON.stringify(guard))
+                            : guard;
+                        const guardSpan = createSvgElement('tspan', { fill: '#ffc107' });
+                        guardSpan.textContent = ` [${guardName}]`;
+                        text.appendChild(guardSpan);
+                    }
+
+                    // Calculators tspan (from meta)
+                    const calcs = props.calculators || [];
+                    if (calcs.length > 0) {
+                        const calcNames = calcs.slice(0, 2).join(', ');
+                        const calcSuffix = calcs.length > 2 ? '...' : '';
+                        const calcSpan = createSvgElement('tspan', { fill: '#e91e63', 'font-size': '10px' });
+                        calcSpan.textContent = ` calc(${calcNames}${calcSuffix})`;
+                        text.appendChild(calcSpan);
+                    }
+
+                    // Actions tspan
+                    if (actions.length > 0) {
+                        const actionNames = actions.slice(0, 2).join(', ');
+                        const suffix = actions.length > 2 ? '...' : '';
+                        const actionSpan = createSvgElement('tspan', { fill: '#66bb6a', 'font-size': '10px' });
+                        actionSpan.textContent = ` / ${actionNames}${suffix}`;
+                        text.appendChild(actionSpan);
+                    }
 
                     group.appendChild(text);
                 }
