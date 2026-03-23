@@ -2,9 +2,18 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\Context;
+use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Models\ModelA;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\MoneyValue;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\LineItemDto;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\OrderContext;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\MoneyValueCast;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\PaymentContext;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\InvalidCastContext;
 use Tarfinlabs\EventMachine\Exceptions\MachineContextValidationException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
@@ -164,3 +173,81 @@ it('can check existence by its type', function (): void {
     $machine->state->context->set('objectKey', new MachineEvent());
     expect($machine->state->context->has(key: 'objectKey', type: MachineEvent::class))->toBe(true);
 });
+
+// --- Cast System Tests ---
+
+it('auto-detects Model serialization and deserialization', function (): void {
+    $model = ModelA::create(['value' => 'test-model']);
+
+    $context = TrafficLightsContext::from([
+        'count'  => 5,
+        'modelA' => $model,
+    ]);
+
+    $array = $context->toArray();
+
+    expect($array['modelA'])->toBe($model->getKey());
+
+    $restored = TrafficLightsContext::from($array);
+
+    expect($restored->modelA)->toBeInstanceOf(ModelA::class);
+    expect($restored->modelA->getKey())->toBe($model->getKey());
+});
+
+it('supports global cast registry via registerCast and flushState', function (): void {
+    ContextManager::registerCast(MoneyValue::class, MoneyValueCast::class);
+
+    $context = PaymentContext::from([
+        'amount' => 1500,
+    ]);
+
+    // Deserialize: int → MoneyValue via global cast
+    expect($context->amount)->toBeInstanceOf(MoneyValue::class);
+    expect($context->amount->cents)->toBe(1500);
+
+    // Serialize: MoneyValue → int via global cast
+    $array = $context->toArray();
+    expect($array['amount'])->toBe(1500);
+
+    ContextManager::flushState();
+});
+
+it('supports explicit casts with array syntax for Collection of DTOs', function (): void {
+    $context = OrderContext::from([
+        'items' => [
+            ['name' => 'Widget', 'price' => 100],
+            ['name' => 'Gadget', 'price' => 200],
+        ],
+    ]);
+
+    // Deserialized items should be a Collection of LineItemDto
+    expect($context->items)->toBeInstanceOf(Collection::class);
+    expect($context->items)->toHaveCount(2);
+    expect($context->items->first())->toBeInstanceOf(LineItemDto::class);
+    expect($context->items->first()->name)->toBe('Widget');
+    expect($context->items->last()->price)->toBe(200);
+
+    // Serialized form should be plain arrays
+    $array = $context->toArray();
+    expect($array['items'])->toBeArray();
+    expect($array['items'][0])->toBe(['name' => 'Widget', 'price' => 100]);
+    expect($array['items'][1])->toBe(['name' => 'Gadget', 'price' => 200]);
+});
+
+it('throws InvalidArgumentException when cast class does not implement ContextCast', function (): void {
+    $context = new InvalidCastContext(value: 'test');
+    $context->toArray();
+})->throws(InvalidArgumentException::class);
+
+it('throws MachineContextValidationException when selfValidate fails', function (): void {
+    $context = TrafficLightsContext::from([
+        'count' => -1,
+    ]);
+
+    $context->selfValidate();
+})->throws(MachineContextValidationException::class);
+
+// NOTE: Legacy format unwrap in restoreContext (where context data was stored
+// under a nested 'context' key) is difficult to test in isolation because
+// restoreContext is an internal engine method that operates within Machine::restore().
+// This remains a test coverage gap.
