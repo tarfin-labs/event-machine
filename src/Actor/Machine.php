@@ -1005,13 +1005,16 @@ class Machine implements Castable, JsonSerializable, Stringable
      * This method returns the class name of the caster to be used for casting
      * operations. In this case, it returns the `MachineCast` class.
      *
-     * @param  array<mixed>  $arguments
+     * @param  array<mixed>  $arguments  The context key (e.g., ['order']).
      *
-     * @return string The class name of the caster.
+     * @return MachineCast The configured caster instance.
      */
-    public static function castUsing(array $arguments): string
+    public static function castUsing(array $arguments): MachineCast
     {
-        return MachineCast::class;
+        return new MachineCast(
+            machineClass: static::class,
+            contextKey: $arguments[0] ?? 'model',
+        );
     }
 
     /**
