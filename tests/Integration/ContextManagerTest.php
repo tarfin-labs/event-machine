@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\Context;
-use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Models\ModelA;
 use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\MoneyValue;
@@ -194,22 +193,19 @@ it('auto-detects Model serialization and deserialization', function (): void {
     expect($restored->modelA->getKey())->toBe($model->getKey());
 });
 
-it('supports global cast registry via registerCast and flushState', function (): void {
-    ContextManager::registerCast(MoneyValue::class, MoneyValueCast::class);
-
+it('supports typeCasts() for per-class type-level cast resolution', function (): void {
+    // PaymentContext defines typeCasts() → [MoneyValue::class => MoneyValueCast::class]
     $context = PaymentContext::from([
         'amount' => 1500,
     ]);
 
-    // Deserialize: int → MoneyValue via global cast
+    // Deserialize: int → MoneyValue via typeCasts()
     expect($context->amount)->toBeInstanceOf(MoneyValue::class);
     expect($context->amount->cents)->toBe(1500);
 
-    // Serialize: MoneyValue → int via global cast
+    // Serialize: MoneyValue → int via typeCasts()
     $array = $context->toArray();
     expect($array['amount'])->toBe(1500);
-
-    ContextManager::flushState();
 });
 
 it('supports explicit casts with array syntax for Collection of DTOs', function (): void {

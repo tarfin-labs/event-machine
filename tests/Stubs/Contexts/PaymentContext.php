@@ -11,4 +11,11 @@ class PaymentContext extends ContextManager
     public function __construct(
         public ?MoneyValue $amount = null,
     ) {}
+
+    public static function typeCasts(): array
+    {
+        return [
+            MoneyValue::class => MoneyValueCast::class,
+        ];
+    }
 }
