@@ -513,7 +513,15 @@ function buildStateNode(machineId, stateName, stateDef, initialState) {
     const exitActions = stateDef.exit || [];
     if (entryActions.length > 0) height += 16;
     if (exitActions.length > 0) height += 16;
-    if (hasInvoke) height += 16;
+    if (hasInvoke) {
+        height += 16; // invoke src line
+        const invokeMeta = stateDef.invoke?.meta?.eventMachine || {};
+        if (stateDef.invoke?.input && Object.keys(stateDef.invoke.input).length > 0) height += 14; // with mapping
+        if (invokeMeta.queue || invokeMeta.timeout) height += 13; // queue/timeout info
+        // Ensure width fits invoke src name
+        const srcName = stateDef.invoke?.src || '';
+        width = Math.max(width, srcName.length * 8 + 80);
+    }
 
     // Extra height for self-transitions shown inside state
     if (selfTransitions.length > 0) {
@@ -703,6 +711,25 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
         });
     }
 
+    // @timeout from state meta (EventMachine-specific)
+    const onTimeout = stateDef.meta?.eventMachine?.onTimeout;
+    if (onTimeout) {
+        const branches = normalizeTransition(onTimeout);
+        branches.forEach(branch => {
+            if (branch.target) {
+                const targetId = resolveTargetId(parentId, branch.target);
+                const label = formatTransitionLabel('@timeout', branch);
+                edges.push({
+                    id: `edge_${edgeCounter++}`,
+                    sources: [`${parentId}.${stateName}`],
+                    targets: [targetId],
+                    labels: [{ text: `\u23F1 ${label}`, width: Math.max(label.length * 6.5 + 30, 80), height: 16 }],
+                    properties: { eventName: '@timeout', guard: branch.guard || null, actions: branch.actions || [], type: 'timeout' },
+                });
+            }
+        });
+    }
+
     return edges;
 }
 
@@ -836,17 +863,65 @@ function renderNodes(nodes, parent, offsetX, offsetY) {
             group.appendChild(entryText);
         }
 
-        // Invoke badge
+        // Invoke badge — shows src, with mapping, fire-and-forget, queue, timeout
         if (stateDef.invoke) {
-            const invokeY = labelY + (entryActions.length > 0 ? 32 : 16);
+            let invokeY = labelY + (entryActions.length > 0 ? 32 : 16);
+            const invokeMeta = stateDef.invoke.meta?.eventMachine || {};
+            const isFireAndForget = invokeMeta.fireAndForget === true;
+
+            // Invoke src line
             const invokeText = createSvgElement('text', {
                 x: x + w / 2, y: invokeY,
                 'text-anchor': 'middle',
                 class: 'state-detail',
             });
-            invokeText.textContent = `invoke: ${stateDef.invoke.src}`;
-            invokeText.style.fill = '#ce93d8';
+            const srcSpan = createSvgElement('tspan', { fill: '#ce93d8', 'font-weight': '600' });
+            srcSpan.textContent = isFireAndForget ? `\u2197 ${stateDef.invoke.src}` : `\u2B22 ${stateDef.invoke.src}`;
+            invokeText.appendChild(srcSpan);
+
+            // Fire-and-forget badge
+            if (isFireAndForget) {
+                const ffSpan = createSvgElement('tspan', { fill: '#ff9800', 'font-size': '9px' });
+                ffSpan.textContent = ' (fire & forget)';
+                invokeText.appendChild(ffSpan);
+            }
             group.appendChild(invokeText);
+            invokeY += 14;
+
+            // with/input mapping
+            if (stateDef.invoke.input && Object.keys(stateDef.invoke.input).length > 0) {
+                const withText = createSvgElement('text', {
+                    x: x + w / 2, y: invokeY,
+                    'text-anchor': 'middle',
+                    'font-size': '9px',
+                });
+                const withLabel = createSvgElement('tspan', { fill: '#7a7a9a' });
+                withLabel.textContent = 'with: ';
+                withText.appendChild(withLabel);
+                const mappings = Object.entries(stateDef.invoke.input)
+                    .map(([k, v]) => k === v ? k : `${k}\u2190${v}`)
+                    .join(', ');
+                const withValues = createSvgElement('tspan', { fill: '#a0c4ff', 'font-size': '9px' });
+                withValues.textContent = mappings;
+                withText.appendChild(withValues);
+                group.appendChild(withText);
+                invokeY += 13;
+            }
+
+            // Queue + timeout info
+            const infoParts = [];
+            if (invokeMeta.queue) infoParts.push(`queue: ${invokeMeta.queue}`);
+            if (invokeMeta.timeout) infoParts.push(`timeout: ${invokeMeta.timeout}s`);
+            if (infoParts.length > 0) {
+                const infoText = createSvgElement('text', {
+                    x: x + w / 2, y: invokeY,
+                    'text-anchor': 'middle',
+                    'font-size': '9px',
+                    fill: '#5a5a7a',
+                });
+                infoText.textContent = infoParts.join(' | ');
+                group.appendChild(infoText);
+            }
         }
 
         // Self-transitions (events without target) — shown inside state box
