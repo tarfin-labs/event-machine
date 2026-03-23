@@ -222,10 +222,18 @@ class MachineQueryBuilder
 
     /**
      * Get the first result, or null if no matches.
+     *
+     * Optimized: limits to 1 ID before hydration when no ordering is applied.
      */
     public function first(): ?MachineQueryResult
     {
-        return $this->get()->first();
+        if ($this->sortDirection !== null) {
+            return $this->get()->first();
+        }
+
+        $rootEventId = $this->buildIdsQuery()->limit(1)->pluck('root_event_id');
+
+        return $this->hydrate($rootEventId)->first();
     }
 
     /**
