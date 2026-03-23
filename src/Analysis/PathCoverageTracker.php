@@ -142,11 +142,6 @@ class PathCoverageTracker
     }
 
     /**
-     * Build a signature from recorded steps, matching MachinePath::signature() format.
-     *
-     * @param  list<array{state: string, event: ?string}>  $steps
-     */
-    /**
      * Build a state-only signature for coverage matching.
      *
      * Uses only state keys (not events) to match against MachinePath::stateSignature().

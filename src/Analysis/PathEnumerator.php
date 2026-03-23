@@ -59,8 +59,6 @@ class PathEnumerator
      *
      * @param  list<PathStep>  $steps  Steps accumulated so far.
      * @param  array<string, true>  $visitedIds  State IDs visited in the current fork.
-     */
-    /**
      * @param  ?string  $event  Event that caused transition to this state (null for initial).
      * @param  ?int  $branchIndex  Branch index for guarded transitions.
      * @param  array<string>  $guards  Guard names on this transition.

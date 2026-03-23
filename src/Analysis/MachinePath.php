@@ -25,7 +25,10 @@ readonly class MachinePath
     ) {}
 
     /**
-     * Deterministic signature for coverage matching.
+     * Human-readable signature with events (for display and JSON output).
+     *
+     * For coverage matching, use stateSignature() instead — runtime event types
+     * differ from static analysis (internal events, triggeringEvent preservation).
      *
      * Format: "stateKey→[event]→stateKey→[event]→stateKey"
      * Examples:
@@ -89,12 +92,13 @@ readonly class MachinePath
      */
     public function guardNames(): array
     {
-        return array_values(array_unique(
-            array_merge(...array_map(
-                static fn (PathStep $step): array => $step->guards,
-                $this->steps,
-            )),
-        ));
+        $guards = [];
+
+        foreach ($this->steps as $step) {
+            $guards = array_merge($guards, $step->guards);
+        }
+
+        return array_values(array_unique($guards));
     }
 
     /**
@@ -102,11 +106,12 @@ readonly class MachinePath
      */
     public function actionNames(): array
     {
-        return array_values(array_unique(
-            array_merge(...array_map(
-                static fn (PathStep $step): array => $step->actions,
-                $this->steps,
-            )),
-        ));
+        $actions = [];
+
+        foreach ($this->steps as $step) {
+            $actions = array_merge($actions, $step->actions);
+        }
+
+        return array_values(array_unique($actions));
     }
 }
