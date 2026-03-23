@@ -8,9 +8,9 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ElevatorMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
-// === HasMachines Trait Tests ===
+// === Machine Casting via $casts Tests ===
 
-it('it should return a machine', function (): void {
+it('returns machine instances when accessing cast attributes', function (): void {
     $abcMachine = AbcMachine::create();
     $abcMachine->persist();
 
@@ -28,34 +28,30 @@ it('it should return a machine', function (): void {
 
     $modelA = ModelA::first();
 
-    expect($modelA->elevator_mre)
-        ->toBeInstanceOf(Machine::class)
-        ->and($modelA->abc_mre)
-        ->toBeInstanceOf(Machine::class)
-        ->and($modelA->traffic_mre)
-        ->toBeInstanceOf(Machine::class);
+    // Accessing machine attributes triggers lazy proxy initialization
+    expect($modelA->abc_mre->state)->not->toBeNull()
+        ->and($modelA->abc_mre)->toBeInstanceOf(Machine::class)
+        ->and($modelA->traffic_mre)->toBeInstanceOf(Machine::class)
+        ->and($modelA->elevator_mre)->toBeInstanceOf(Machine::class);
 });
 
-// === Model Attributes to Machines Tests ===
-
-it('can persist the machine state', function (): void {
-    /** @var ModelA $a */
+it('can persist and restore machine state through transitions', function (): void {
     $modelA = ModelA::create([
         'value' => 'some value',
     ]);
 
+    // Auto-initialized machines have root_event_id stored
+    expect($modelA->getRawOriginal('abc_mre'))->not->toBeNull();
+    expect($modelA->getRawOriginal('traffic_mre'))->not->toBeNull();
+
+    // Send events through lazy proxy — triggers initialization + transition
     $modelA->traffic_mre->send(['type' => 'INCREASE']);
     $modelA->traffic_mre->send(['type' => 'INCREASE']);
     $modelA->traffic_mre->send(['type' => 'INCREASE']);
 
     $modelA->traffic_mre->persist();
 
-    expect($modelA->abc_mre)->toBeInstanceOf(Machine::class);
     expect($modelA->traffic_mre)->toBeInstanceOf(Machine::class);
-
-    $this->assertDatabaseHas(ModelA::class, [
-        'abc_mre' => null,
-    ]);
 
     $this->assertDatabaseHas(ModelA::class, [
         'traffic_mre' => $modelA->traffic_mre->state->history->first()->root_event_id,
