@@ -472,9 +472,12 @@ class Order extends Model
 {
     use HasMachines;
 
-    protected $casts = [
-        'machine' => MachineCast::class.':'.OrderMachine::class,
-    ];
+    protected function casts(): array
+    {
+        return [
+            'machine' => OrderMachine::class.':order',
+        ];
+    }
 }
 ```
 
