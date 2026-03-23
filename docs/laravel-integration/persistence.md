@@ -376,9 +376,12 @@ See [Archival](/laravel-integration/archival) for details.
 
 ```php
 use Illuminate\Database\Eloquent\Model; // [!code hide]
+use Tarfinlabs\EventMachine\Traits\HasMachines; // [!code hide]
 class Order extends Model
 {
-    protected function machines(): array
+    use HasMachines; // [!code hide]
+
+    protected function casts(): array
     {
         return [
             'status' => OrderMachine::class . ':order',
