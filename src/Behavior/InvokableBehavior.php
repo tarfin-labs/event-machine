@@ -102,7 +102,7 @@ abstract class InvokableBehavior
     public function dispatchTo(string $machineClass, string $rootEventId, EventBehavior|array $event): void
     {
         $eventArray = $event instanceof EventBehavior
-            ? ['type' => $event->type, 'payload' => $event->payload]
+            ? ['type' => $event->type, 'payload' => $event->payload()]
             : $event;
 
         dispatch(new SendToMachineJob(

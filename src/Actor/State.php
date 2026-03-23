@@ -195,7 +195,7 @@ class State implements \JsonSerializable
                 'root_event_id'   => $rootEventId,
                 'source'          => $currentEventBehavior->source,
                 'type'            => $currentEventBehavior->type,
-                'payload'         => $currentEventBehavior->payload,
+                'payload'         => $currentEventBehavior->payload(),
                 'version'         => $currentEventBehavior->version,
                 'context'         => $this->context->toArray(),
                 'meta'            => $this->currentStateDefinition->meta,

@@ -141,12 +141,7 @@ class MachineController extends Controller
 
         try {
             $state = $machine->send(event: $event);
-        } catch (MachineValidationException $e) { // @phpstan-ignore catch.neverThrown
-            return response()->json([
-                'message' => $e->getMessage(),
-                'errors'  => method_exists($e, 'errors') ? $e->errors() : [],
-            ], 422);
-        } catch (ValidationException $e) { // @phpstan-ignore catch.neverThrown
+        } catch (MachineValidationException|ValidationException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
                 'errors'  => $e->errors(),
@@ -313,14 +308,9 @@ class MachineController extends Controller
         try {
             $state = $machine->send([
                 'type'    => $parentEventType,
-                'payload' => $event->payload ?? [],
+                'payload' => $event->payload() ?? [],
             ]);
-        } catch (MachineValidationException $e) { // @phpstan-ignore catch.neverThrown
-            return response()->json([
-                'message' => $e->getMessage(),
-                'errors'  => method_exists($e, 'errors') ? $e->errors() : [],
-            ], 422);
-        } catch (ValidationException $e) { // @phpstan-ignore catch.neverThrown
+        } catch (MachineValidationException|ValidationException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
                 'errors'  => $e->errors(),

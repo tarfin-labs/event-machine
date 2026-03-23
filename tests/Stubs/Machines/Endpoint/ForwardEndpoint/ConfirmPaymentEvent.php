@@ -16,7 +16,7 @@ class ConfirmPaymentEvent extends EventBehavior
     public static function rules(): array
     {
         return [
-            'payload.confirmation_code' => ['required', 'string'],
+            'confirmation_code' => ['required', 'string'],
         ];
     }
 }

@@ -20,7 +20,7 @@ class MachineRegisteredEvent extends EventBehavior
     public static function rules(): array
     {
         return [
-            'payload.amount' => ['required', 'integer', 'min:1'],
+            'amount' => ['required', 'integer', 'min:1'],
         ];
     }
 }

@@ -846,7 +846,7 @@ class MachineDefinition
         // Different class — re-instantiate with machine's registered class, preserving metadata
         return new $registeredClass(
             type: $typeString,
-            payload: $event->payload,
+            payload: $event->payload(),
             isTransactional: $event->isTransactional,
             actor: $event->actor($state->context),
             version: $event->version,
@@ -1703,7 +1703,7 @@ class MachineDefinition
         $childMachine = $childMachineClass::create(state: $childRecord->child_root_event_id);
 
         // Send the event (possibly renamed) to the child
-        $childMachine->send(['type' => $childEventType, 'payload' => $eventBehavior->payload]);
+        $childMachine->send(['type' => $childEventType, 'payload' => $eventBehavior->payload()]);
 
         // If child reached a final state, dispatch completion
         if ($childMachine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {

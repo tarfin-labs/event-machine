@@ -26,7 +26,7 @@ class ChildMachineDoneEvent extends EventBehavior
      */
     public function result(?string $key = null): mixed
     {
-        $result = $this->payload['result'] ?? null;
+        $result = $this->payload()['result'] ?? null;
 
         return $key !== null ? data_get($result, $key) : $result;
     }
@@ -41,7 +41,7 @@ class ChildMachineDoneEvent extends EventBehavior
      */
     public function output(?string $key = null): mixed
     {
-        $output = $this->payload['output'] ?? [];
+        $output = $this->payload()['output'] ?? [];
 
         return $key !== null ? data_get($output, $key) : $output;
     }
@@ -51,7 +51,7 @@ class ChildMachineDoneEvent extends EventBehavior
      */
     public function childMachineId(): string
     {
-        return $this->payload['machine_id'];
+        return $this->payload()['machine_id'];
     }
 
     /**
@@ -59,7 +59,7 @@ class ChildMachineDoneEvent extends EventBehavior
      */
     public function childMachineClass(): string
     {
-        return $this->payload['machine_class'];
+        return $this->payload()['machine_class'];
     }
 
     /**
@@ -70,7 +70,7 @@ class ChildMachineDoneEvent extends EventBehavior
      */
     public function finalState(): ?string
     {
-        return $this->payload['final_state'] ?? null;
+        return $this->payload()['final_state'] ?? null;
     }
 
     /**
