@@ -201,6 +201,7 @@ body {
 .transition-done path { stroke: #4caf50; stroke-width: 2; }
 .transition-fail path { stroke: #f44336; stroke-width: 2; }
 .transition-timeout path { stroke: #ff9800; stroke-dasharray: 3 3; }
+.transition-delegation path { stroke: #9c27b0; stroke-width: 2.5; stroke-dasharray: 8 4; }
 
 /* Detail panel */
 #detail-panel {
@@ -323,6 +324,9 @@ body {
                 </marker>
                 <marker id="arrowhead-orange" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
                     <polygon points="0 0, 10 3.5, 0 7" fill="#ff9800"/>
+                </marker>
+                <marker id="arrowhead-purple" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#9c27b0"/>
                 </marker>
             </defs>
             <g id="diagram-root"></g>
@@ -1080,6 +1084,7 @@ function renderEdges(edges, parent, offsetX, offsetY) {
                     'done': 'url(#arrowhead-green)',
                     'fail': 'url(#arrowhead-red)',
                     'timeout': 'url(#arrowhead-orange)',
+                    'delegation': 'url(#arrowhead-purple)',
                 };
 
                 const path = createSvgElement('path', {
@@ -1372,6 +1377,229 @@ function zoomIn() { panZoom?.zoomBy(1.2); }
 function zoomOut() { panZoom?.zoomBy(0.8); }
 
 // ============================================================
+// Multi-Machine ELK Graph Builder
+// ============================================================
+function xstateToElkMulti(machines) {
+    const elkGraph = {
+        id: 'root',
+        layoutOptions: {
+            'elk.algorithm': 'layered',
+            'elk.direction': 'RIGHT',
+            'elk.spacing.nodeNode': '60',
+            'elk.layered.spacing.nodeNodeBetweenLayers': '80',
+            'elk.edgeRouting': 'SPLINES',
+            'elk.padding': '[top=20,left=20,bottom=20,right=20]',
+        },
+        children: [],
+        edges: [],
+    };
+
+    // Build a map of class basename → machine id for inter-machine linking
+    const classToId = {};
+    machines.forEach(m => {
+        const className = m.class.split('\\').pop();
+        classToId[className] = m.json.id;
+    });
+
+    // Each machine becomes a compound node
+    machines.forEach(machine => {
+        const mJson = machine.json;
+        const machineId = mJson.id;
+        const states = mJson.states || {};
+        const stateNames = Object.keys(states);
+
+        const machineNode = {
+            id: machineId,
+            labels: [{ text: machineId }],
+            layoutOptions: {
+                'elk.algorithm': 'layered',
+                'elk.direction': 'DOWN',
+                'elk.spacing.nodeNode': '30',
+                'elk.layered.spacing.nodeNodeBetweenLayers': '50',
+                'elk.edgeRouting': 'SPLINES',
+                'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+                'elk.padding': '[top=45,left=20,bottom=20,right=20]',
+            },
+            children: [],
+            edges: [],
+            properties: {
+                type: 'machine-container',
+                machineJson: mJson,
+                machineClass: machine.class,
+            },
+        };
+
+        // Add state nodes
+        stateNames.forEach(stateName => {
+            const stateDef = states[stateName];
+            const node = buildStateNode(machineId, stateName, stateDef, mJson.initial);
+            machineNode.children.push(node);
+        });
+
+        // Add internal edges
+        stateNames.forEach(stateName => {
+            const stateDef = states[stateName];
+            const edges = buildEdgesFromState(machineId, stateName, stateDef);
+            machineNode.edges.push(...edges);
+        });
+
+        elkGraph.children.push(machineNode);
+    });
+
+    // Auto-detect inter-machine delegation edges
+    machines.forEach(machine => {
+        const mJson = machine.json;
+        const machineId = mJson.id;
+        const states = mJson.states || {};
+
+        Object.entries(states).forEach(([stateName, stateDef]) => {
+            if (stateDef.invoke?.src) {
+                const childSrc = stateDef.invoke.src;
+                // Check if this src matches another machine in the diagram
+                const targetMachineId = classToId[childSrc];
+                if (targetMachineId && targetMachineId !== machineId) {
+                    // Build with-mapping label
+                    const input = stateDef.invoke.input || {};
+                    const mappings = Object.entries(input)
+                        .map(([k, v]) => k === v ? k : `${k}\u2190${v}`)
+                        .join(', ');
+                    const label = mappings ? `with: ${mappings}` : 'delegates to';
+
+                    elkGraph.edges.push({
+                        id: `delegation_${edgeCounter++}`,
+                        sources: [`${machineId}.${stateName}`],
+                        targets: [targetMachineId],
+                        labels: [{ text: label, width: Math.max(label.length * 6.5 + 16, 80), height: 16 }],
+                        properties: {
+                            eventName: 'delegation',
+                            type: 'delegation',
+                        },
+                    });
+                }
+            }
+        });
+    });
+
+    return elkGraph;
+}
+
+// ============================================================
+// Multi-Machine Sidebar
+// ============================================================
+function populateSidebarMulti(machines) {
+    const contextList = document.getElementById('context-list');
+    contextList.innerHTML = '';
+
+    // Merged context from all machines
+    machines.forEach(m => {
+        const mJson = m.json;
+        const context = mJson.context || {};
+        if (Object.keys(context).length === 0) return;
+
+        // Machine name header
+        const header = document.createElement('div');
+        header.style.cssText = 'color:#7a7a9a;font-size:10px;margin-top:6px;font-weight:600';
+        header.textContent = mJson.id;
+        contextList.appendChild(header);
+
+        Object.entries(context).forEach(([key, value]) => {
+            const div = document.createElement('div');
+            div.className = 'context-item';
+            const type = value === null ? 'null' : typeof value;
+            div.innerHTML = `<span class="context-key">${key}</span><span class="context-type">${type}</span>`;
+            if (value !== null && value !== undefined) {
+                div.innerHTML += `<span class="context-value">= ${JSON.stringify(value)}</span>`;
+            }
+            contextList.appendChild(div);
+        });
+    });
+
+    // Merged behaviors
+    const mergedBehaviors = { actions: {}, guards: {}, calculators: {}, events: {} };
+    machines.forEach(m => {
+        const meta = m.json.meta?.eventMachine || {};
+        ['actions', 'guards', 'calculators', 'events'].forEach(cat => {
+            Object.assign(mergedBehaviors[cat], meta[cat] || {});
+        });
+    });
+
+    populateBehaviorList('actions-list', mergedBehaviors.actions, 'action');
+    populateBehaviorList('guards-list', mergedBehaviors.guards, 'guard');
+    populateBehaviorList('calculators-list', mergedBehaviors.calculators, 'calculator');
+    populateBehaviorList('events-list', mergedBehaviors.events, 'event');
+}
+
+// ============================================================
+// Machine Container Rendering (for multi-machine view)
+// ============================================================
+function renderMachineContainers(elkResult, svgGroup) {
+    // Render machine compound nodes with a special header
+    (elkResult.children || []).forEach(machineNode => {
+        const props = machineNode.properties || {};
+        if (props.type !== 'machine-container') {
+            // Single machine mode — no container rendering needed
+            return;
+        }
+
+        const x = machineNode.x || 0;
+        const y = machineNode.y || 0;
+        const w = machineNode.width || 300;
+        const h = machineNode.height || 200;
+
+        const group = createSvgElement('g', {
+            class: 'machine-container',
+            'data-machine-id': machineNode.id,
+        });
+
+        // Machine background
+        const bg = createSvgElement('rect', {
+            x: x, y: y, width: w, height: h,
+            rx: 12, ry: 12,
+            fill: '#12122a', stroke: '#4a4a6a', 'stroke-width': 2,
+        });
+        group.appendChild(bg);
+
+        // Header bar
+        const headerBg = createSvgElement('rect', {
+            x: x, y: y, width: w, height: 36,
+            rx: 12, ry: 12,
+            fill: '#1e1e3a', stroke: 'none',
+        });
+        group.appendChild(headerBg);
+        // Bottom corners of header (fill the rounded gap)
+        const headerFill = createSvgElement('rect', {
+            x: x, y: y + 24, width: w, height: 12,
+            fill: '#1e1e3a', stroke: 'none',
+        });
+        group.appendChild(headerFill);
+        // Header separator
+        const headerLine = createSvgElement('line', {
+            x1: x, y1: y + 36, x2: x + w, y2: y + 36,
+            stroke: '#4a4a6a', 'stroke-width': 1,
+        });
+        group.appendChild(headerLine);
+
+        // Machine name
+        const nameText = createSvgElement('text', {
+            x: x + 14, y: y + 23,
+            'font-size': '14px', 'font-weight': '700',
+            fill: '#a0c4ff',
+        });
+        nameText.textContent = `\u2B22 ${machineNode.id}`;
+        group.appendChild(nameText);
+
+        svgGroup.appendChild(group);
+
+        // Render internal states
+        renderNodes(machineNode.children || [], svgGroup, x, y);
+        renderEdges(machineNode.edges || [], svgGroup, x, y);
+    });
+
+    // Render inter-machine delegation edges (root-level edges)
+    renderEdges(elkResult.edges || [], svgGroup, 0, 0);
+}
+
+// ============================================================
 // Main initialization
 // ============================================================
 async function init() {
@@ -1382,39 +1610,64 @@ async function init() {
 
     await loadELK();
 
-    // Use first machine for now (multi-machine in later iteration)
-    const machine = MACHINES[0];
-    const machineJson = machine.json;
+    const isMulti = MACHINES.length > 1;
 
-    // Update title
-    document.getElementById('title').textContent = `EventMachine: ${machineJson.id || machine.id}`;
+    if (isMulti) {
+        // Multi-machine system view
+        const names = MACHINES.map(m => m.json.id || m.id).join(' + ');
+        document.getElementById('title').textContent = `EventMachine System: ${names}`;
+        populateSidebarMulti(MACHINES);
 
-    // Populate sidebar
-    populateSidebar(machineJson);
+        const elkGraph = xstateToElkMulti(MACHINES);
+        const elk = new ELK();
 
-    // Transform to ELK
-    const elkGraph = xstateToElk(machineJson);
+        try {
+            const layoutResult = await elk.layout(elkGraph);
+            const svgGroup = document.getElementById('diagram-root');
+            svgGroup.innerHTML = '';
 
-    // Layout with ELK
-    const elk = new ELK();
-    try {
-        const layoutResult = await elk.layout(elkGraph);
+            // Background
+            const bgRect = createSvgElement('rect', {
+                class: 'background-rect',
+                x: -10000, y: -10000, width: 20000, height: 20000,
+                fill: 'transparent',
+            });
+            svgGroup.appendChild(bgRect);
 
-        // Render SVG
-        const svgGroup = document.getElementById('diagram-root');
-        renderElkGraph(layoutResult, svgGroup);
+            renderMachineContainers(layoutResult, svgGroup);
 
-        // Setup pan/zoom
-        const svg = document.getElementById('diagram-svg');
-        panZoom = new PanZoom(svg, svgGroup);
+            const svg = document.getElementById('diagram-svg');
+            panZoom = new PanZoom(svg, svgGroup);
+            setTimeout(fitToScreen, 100);
+        } catch (err) {
+            console.error('ELK layout error:', err);
+            document.getElementById('diagram-root').innerHTML =
+                `<text x="50" y="50" fill="red">Layout error: ${err.message}</text>`;
+        }
+    } else {
+        // Single machine view (existing behavior)
+        const machine = MACHINES[0];
+        const machineJson = machine.json;
 
-        // Fit to screen after a small delay for rendering
-        setTimeout(fitToScreen, 100);
+        document.getElementById('title').textContent = `EventMachine: ${machineJson.id || machine.id}`;
+        populateSidebar(machineJson);
 
-    } catch (err) {
-        console.error('ELK layout error:', err);
-        document.getElementById('diagram-root').innerHTML =
-            `<text x="50" y="50" fill="red">Layout error: ${err.message}</text>`;
+        const elkGraph = xstateToElk(machineJson);
+        const elk = new ELK();
+
+        try {
+            const layoutResult = await elk.layout(elkGraph);
+            const svgGroup = document.getElementById('diagram-root');
+            renderElkGraph(layoutResult, svgGroup);
+
+            const svg = document.getElementById('diagram-svg');
+            panZoom = new PanZoom(svg, svgGroup);
+            setTimeout(fitToScreen, 100);
+        } catch (err) {
+            console.error('ELK layout error:', err);
+            document.getElementById('diagram-root').innerHTML =
+                `<text x="50" y="50" fill="red">Layout error: ${err.message}</text>`;
+        }
     }
 }
 
