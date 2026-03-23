@@ -66,7 +66,7 @@ class Order extends Model
 {
     use HasMachines;
 
-    protected function machines(): array
+    protected function casts(): array
     {
         return [
             'status' => OrderStatusMachine::class . ':order',
