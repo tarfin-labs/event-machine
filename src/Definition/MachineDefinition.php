@@ -1209,6 +1209,26 @@ class MachineDefinition
             $this->runTransitionListeners($state, $eventBehavior);
         }
 
+        // SCXML invoker-05 macrostep semantics: raised events from entry actions
+        // must complete BEFORE child machine invocation starts.
+        // If they cause a state change, delegation is skipped entirely.
+        if ($this->eventQueue->isNotEmpty()) {
+            if ($processPostEntry && count($state->value) <= 1) {
+                $stateBeforePostEntry = $state->currentStateDefinition->id;
+                $this->processPostEntryTransitions($state, $eventBehavior);
+
+                // If raised events caused a state change, skip delegation and onDone
+                if ($state->currentStateDefinition->id !== $stateBeforePostEntry) {
+                    return;
+                }
+            } else {
+                // processPostEntry: false — caller (transition()) will handle the
+                // event queue. Return early so delegation is deferred until after
+                // internal events are resolved by the caller.
+                return;
+            }
+        }
+
         // Handle machine delegation (sync child machines)
         $this->handleMachineInvoke($state, $resolvedTarget, $eventBehavior);
 
