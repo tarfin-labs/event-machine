@@ -50,6 +50,17 @@ class TestCase extends Orchestra
         $timerFiresMigration = include __DIR__.'/../database/migrations/create_machine_timer_fires_table.php.stub';
         $timerFiresMigration->up();
 
+        // Laravel jobs table (required for queue assertions in E2E/feature tests)
+        Schema::create('jobs', function (Blueprint $table): void {
+            $table->id();
+            $table->string('queue')->index();
+            $table->longText('payload');
+            $table->unsignedTinyInteger('attempts');
+            $table->unsignedInteger('reserved_at')->nullable();
+            $table->unsignedInteger('available_at');
+            $table->unsignedInteger('created_at');
+        });
+
         // Laravel job_batches table (required for Bus::batch in ProcessTimersCommand)
         Schema::create('job_batches', function (Blueprint $table): void {
             $table->string('id')->primary();
