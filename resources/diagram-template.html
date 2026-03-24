@@ -6,17 +6,41 @@
 <title>EventMachine Diagram</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+    --bg: #1a1a2e; --bg-secondary: #16213e; --bg-tertiary: #1e2a45;
+    --border: #2a2a4a; --text: #e0e0e0; --text-muted: #6a6a8a;
+    --accent: #a0c4ff; --canvas-bg: #1a1a2e;
+    --state-atomic: #1e3a5f; --state-atomic-border: #4a90d9;
+    --state-compound: #1a1a2e; --state-compound-border: #5a5a7a;
+    --state-parallel-bg: #2a1e0a; --state-parallel-border: #cc8833;
+    --state-final: #1a3a1a; --state-final-border: #4caf50;
+    --state-invoke: #2a1a3a; --state-invoke-border: #9c27b0;
+    --machine-bg: #12122a; --machine-header: #1e1e3a; --machine-border: #4a4a6a;
+    --edge-color: #5a5a7a; --label-bg: rgba(26,26,46,0.85);
+}
+body.light-theme {
+    --bg: #f5f5f5; --bg-secondary: #ffffff; --bg-tertiary: #eef2f7;
+    --border: #d0d0d0; --text: #1a1a2e; --text-muted: #6a6a8a;
+    --accent: #1565c0; --canvas-bg: #fafafa;
+    --state-atomic: #e3f2fd; --state-atomic-border: #1976d2;
+    --state-compound: #f5f5f5; --state-compound-border: #9e9e9e;
+    --state-parallel-bg: #fff8e1; --state-parallel-border: #f57c00;
+    --state-final: #e8f5e9; --state-final-border: #388e3c;
+    --state-invoke: #f3e5f5; --state-invoke-border: #7b1fa2;
+    --machine-bg: #ffffff; --machine-header: #e8eaf6; --machine-border: #9e9e9e;
+    --edge-color: #757575; --label-bg: rgba(255,255,255,0.9);
+}
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #1a1a2e;
-    color: #e0e0e0;
+    background: var(--bg);
+    color: var(--text);
     overflow: hidden;
     height: 100vh;
 }
 
 #header {
-    background: #16213e;
-    border-bottom: 1px solid #2a2a4a;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
     padding: 8px 16px;
     display: flex;
     align-items: center;
@@ -28,7 +52,7 @@ body {
 #header h1 {
     font-size: 14px;
     font-weight: 600;
-    color: #a0c4ff;
+    color: var(--accent);
 }
 
 #header .controls {
@@ -37,9 +61,9 @@ body {
 }
 
 #header button {
-    background: #2a2a4a;
-    color: #c0c0c0;
-    border: 1px solid #3a3a5a;
+    background: var(--bg-tertiary);
+    color: var(--text);
+    border: 1px solid var(--border);
     padding: 4px 12px;
     border-radius: 4px;
     font-size: 12px;
@@ -59,8 +83,8 @@ body {
 
 #sidebar {
     width: 260px;
-    background: #16213e;
-    border-right: 1px solid #2a2a4a;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
     overflow-y: auto;
     padding: 12px;
     font-size: 12px;
@@ -71,7 +95,7 @@ body {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: #6a6a8a;
+    color: var(--text-muted);
     margin: 12px 0 6px 0;
     padding-bottom: 4px;
     border-bottom: 1px solid #2a2a4a;
@@ -91,13 +115,13 @@ body {
     align-items: center;
 }
 
-.context-item { background: #1e2a45; }
+.context-item { background: var(--bg-tertiary); }
 .context-key { color: #a0c4ff; }
 .context-type { color: #6a6a8a; font-size: 10px; }
 .context-value { color: #808080; font-size: 10px; }
 
-.behavior-item { background: #1e2a45; cursor: pointer; }
-.behavior-item:hover { background: #2a3a55; }
+.behavior-item { background: var(--bg-tertiary); cursor: pointer; }
+.behavior-item:hover { background: var(--border); }
 .behavior-name { color: #c0d0ff; }
 .behavior-badge {
     font-size: 9px;
@@ -213,8 +237,8 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    background: #16213e;
-    border-top: 1px solid #2a2a4a;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
     padding: 12px 16px;
     font-size: 12px;
     max-height: 200px;
@@ -227,7 +251,7 @@ body {
 
 #detail-panel h3 {
     font-size: 13px;
-    color: #a0c4ff;
+    color: var(--accent);
     margin-bottom: 8px;
 }
 
@@ -249,6 +273,10 @@ body {
 .highlight-usage rect { stroke: #ffeb3b !important; stroke-width: 3 !important; }
 .highlight-usage path { stroke: #ffeb3b !important; stroke-width: 3 !important; }
 .active-behavior { background: #3a3a1a !important; border-left: 3px solid #ffeb3b; }
+
+/* Hover highlight */
+.hover-highlight path { stroke: #64b5f6 !important; stroke-width: 3 !important; }
+.hover-highlight text, .hover-highlight tspan { fill: #64b5f6 !important; }
 
 #zoom-indicator {
     position: absolute;
@@ -284,9 +312,11 @@ body {
         <button id="btn-collapse-all" onclick="collapseAll()" style="display:none">Collapse All</button>
         <button id="btn-expand-all" onclick="expandAll()" style="display:none">Expand All</button>
         <button onclick="fitToScreen()">Fit</button>
-        <button onclick="zoomIn()">Zoom +</button>
-        <button onclick="zoomOut()">Zoom -</button>
-        <button onclick="toggleDetail()">Detail</button>
+        <button onclick="zoomIn()">+</button>
+        <button onclick="zoomOut()">-</button>
+        <button onclick="exportSvg()">SVG</button>
+        <button onclick="toggleTheme()">Theme</button>
+        <button onclick="toggleSidebar()">Sidebar</button>
     </div>
 </div>
 
@@ -338,7 +368,7 @@ body {
             <g id="diagram-root"></g>
         </svg>
         <div id="zoom-indicator">100%</div>
-        <div id="shortcut-hint">F: fit | +/-: zoom | Esc: close | 0: reset</div>
+        <div id="shortcut-hint">F: fit | +/-: zoom | T: theme | S: sidebar | Esc: close | 0: reset</div>
     </div>
 </div>
 
@@ -1858,7 +1888,98 @@ document.addEventListener('keydown', (e) => {
                 panZoom.apply();
             }
             break;
+        case 't': case 'T':
+            if (!e.ctrlKey && !e.metaKey) toggleTheme();
+            break;
+        case 's': case 'S':
+            if (!e.ctrlKey && !e.metaKey) toggleSidebar();
+            break;
     }
+});
+
+// ============================================================
+// Theme Toggle
+// ============================================================
+function toggleTheme() {
+    document.body.classList.toggle('light-theme');
+}
+
+// ============================================================
+// SVG Export
+// ============================================================
+function exportSvg() {
+    const svg = document.getElementById('diagram-svg');
+    const root = document.getElementById('diagram-root');
+    const bbox = root.getBBox();
+
+    // Create a clone with proper viewBox
+    const clone = svg.cloneNode(true);
+    const pad = 40;
+    clone.setAttribute('viewBox', `${bbox.x - pad} ${bbox.y - pad} ${bbox.width + pad * 2} ${bbox.height + pad * 2}`);
+    clone.setAttribute('width', bbox.width + pad * 2);
+    clone.setAttribute('height', bbox.height + pad * 2);
+
+    // Remove transform from root group (we use viewBox instead)
+    const cloneRoot = clone.querySelector('#diagram-root');
+    if (cloneRoot) cloneRoot.removeAttribute('transform');
+
+    // Add background
+    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bgRect.setAttribute('x', bbox.x - pad);
+    bgRect.setAttribute('y', bbox.y - pad);
+    bgRect.setAttribute('width', bbox.width + pad * 2);
+    bgRect.setAttribute('height', bbox.height + pad * 2);
+    bgRect.setAttribute('fill', getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim() || '#1a1a2e');
+    clone.insertBefore(bgRect, clone.firstChild.nextSibling); // After defs
+
+    // Serialize and download
+    const serializer = new XMLSerializer();
+    const svgStr = serializer.serializeToString(clone);
+    const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (document.getElementById('title').textContent || 'diagram') + '.svg';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// Sidebar Toggle
+// ============================================================
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.style.display = sidebar.style.display === 'none' ? '' : 'none';
+}
+
+// ============================================================
+// Hover Highlight — hover event name on transition → highlight all same-event transitions
+// ============================================================
+document.getElementById('diagram-svg').addEventListener('mouseover', (e) => {
+    const edge = e.target.closest('.transition-edge');
+    if (!edge) return;
+    const edgeId = edge.dataset.edgeId;
+    // Find the event name from tspan or text
+    const tspan = edge.querySelector('tspan[font-weight="600"]');
+    if (!tspan) return;
+    const eventName = tspan.textContent.trim();
+    if (!eventName) return;
+
+    // Highlight all transitions with same event name
+    document.querySelectorAll('.transition-edge').forEach(other => {
+        const otherTspan = other.querySelector('tspan[font-weight="600"]');
+        if (otherTspan && otherTspan.textContent.trim() === eventName) {
+            other.classList.add('hover-highlight');
+        }
+    });
+});
+
+document.getElementById('diagram-svg').addEventListener('mouseout', (e) => {
+    const edge = e.target.closest('.transition-edge');
+    if (!edge) return;
+    document.querySelectorAll('.hover-highlight').forEach(el => {
+        el.classList.remove('hover-highlight');
+    });
 });
 
 // ============================================================

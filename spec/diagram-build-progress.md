@@ -1,10 +1,10 @@
 # Diagram Tool Build Progress
 
 ## Current Status
-- **Current Iteration:** 10
-- **Last Completed:** Iteration 9 (Timer + Event Payload Panels)
-- **Last Updated:** 2026-03-25 01:15
-- **HTML Status:** Working — timer durations formatted (days/hours/min/sec), event payload popups, clock icons on timer edges
+- **Current Iteration:** 11
+- **Last Completed:** Iteration 10 (Signal Highlighting + Polish)
+- **Last Updated:** 2026-03-25 01:30
+- **HTML Status:** Working — light/dark theme toggle, SVG export, hover highlighting, sidebar toggle, CSS variables
 
 ## Completed Iterations
 
@@ -27,42 +27,45 @@
 - Multi-machine compound nodes, delegation edges, merged sidebar
 
 ### Iteration 8 — 2026-03-25 01:00
-- Collapse/expand machine containers, re-layout, buttons
+- Collapse/expand machine containers
 
 ### Iteration 9 — 2026-03-25 01:15
-- **Timer duration formatting improved:**
-  - `formatDelay()` now handles days (d), hours (h), minutes (m), seconds (s)
-  - 604800000ms → `7d`, 3600000ms → `1h`, etc.
-  - ⏱ clock icon added to `after` timer transition labels
-- **Event payload popup:**
-  - Click event in sidebar → detail panel shows payload schema
-  - Each field: name, type (color-coded: string=green, number=blue, boolean=orange, array=purple), required/optional badge
-  - Event class FQCN shown
-  - `showEventPayloadDetail()` function added
-- **Tested:**
-  - AfterTimerMachine: `after` edge with ⏱ icon and 7d label
-  - EventResolutionMachine: TEST_EVENT payload popup shows amount (number, required)
-  - TrafficLightsMachine: no regression
-  - Multi-machine: no regression
+- Timer formatting, event payload popup
+
+### Iteration 10 — 2026-03-25 01:30
+- **Light/Dark theme toggle:**
+  - CSS custom properties (`:root` + `.light-theme` override)
+  - All UI elements use variables: background, borders, text, states, edges
+  - `T` keyboard shortcut or button to toggle
+  - Light theme: white backgrounds, darker text, adapted state colors
+- **SVG Export:**
+  - "SVG" button in header
+  - Clones SVG, sets proper viewBox, removes pan/zoom transform
+  - Downloads as `<machine-name>.svg` file
+  - Includes background color from current theme
+- **Sidebar Toggle:** `S` key or button hides/shows sidebar for more diagram space
+- **Hover Highlight:**
+  - Hover over a transition edge → all transitions with same event name highlight blue
+  - Uses `.hover-highlight` CSS class applied/removed on mouseover/mouseout
+- **Updated keyboard shortcuts:** T (theme), S (sidebar) added to hint bar
+- **Tested:** Single and multi-machine both work with all new features
 
 ## Next Up
-- Iteration 10: Signal Highlighting + Polish
-  - Hover event → highlight all transitions using it
-  - Dark/light theme toggle
-  - Export as SVG button
-  - Responsive layout polish
-  - Consider merging with Iteration 11 (simulation) or 12 (QA)
-  - **Checkpoint:** Phase 2 complete — polished tool
+- Iteration 11: Simulation Mode (optional — complex feature)
+  - OR skip to Iteration 12: Final QA with all stub machines
+  - Simulation mode is nice-to-have, QA is essential
+  - **Recommend:** Skip simulation, go to QA
 
 ## Known Issues
 - [ ] Self-transitions shown as text inside state — no loop-back arrows
 - [ ] Testbench needs `CACHE_STORE=array` workaround
 - [ ] Label background width estimated
-- [ ] Delegation edge targeting compound node boundary
+- [ ] Light theme SVG colors may need tuning for some elements (state node fills use hardcoded colors in JS, not CSS variables yet)
+- [ ] SVG export doesn't include CSS styles embedded — rendered SVG may look different
 
 ## Files Modified This Session
 - `src/Commands/DiagramCommand.php` (created, updated)
-- `resources/diagram-template.html` (created, updated x8)
+- `resources/diagram-template.html` (created, updated x9)
 - `resources/vendor/elk.bundled.js` (vendored)
 - `resources/vendor/d3-zoom.min.js` (vendored)
 - `resources/vendor/d3-selection.min.js` (vendored)
