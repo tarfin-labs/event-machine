@@ -25,7 +25,7 @@ it('includes guard error message in MachineValidationException', function (): vo
         $machine->send(['type' => 'SUBMIT_ALWAYS_FAIL']);
         $this->fail('Expected MachineValidationException was not thrown');
     } catch (MachineValidationException $e) {
-        $errors = $e->errors();
+        $errors             = $e->errors();
         $hasExpectedMessage = collect($errors)->flatten()->contains('Validation always fails in parallel.');
         expect($hasExpectedMessage)->toBeTrue();
     }
