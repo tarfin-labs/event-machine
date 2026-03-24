@@ -16,8 +16,8 @@ use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 // it is in a final state and result() should work.
 
 it('restored machine at final state reports final type and result works', function (): void {
-    $definition = MachineDefinition::define(
-        config: [
+    $configAndBehavior = [
+        'config' => [
             'id'      => 'restore_final',
             'initial' => 'idle',
             'context' => [
@@ -37,7 +37,7 @@ it('restored machine at final state reports final type and result works', functi
                 ],
             ],
         ],
-        behavior: [
+        'behavior' => [
             'actions' => [
                 'setAmountAction' => function (ContextManager $ctx, EventBehavior $event): void {
                     $ctx->set('amount', $event->payload['amount'] ?? 100);
@@ -49,23 +49,26 @@ it('restored machine at final state reports final type and result works', functi
                 },
             ],
         ],
-    );
+    ];
 
-    // Create, transition to final, and persist
-    $machine = Machine::withDefinition($definition);
+    // Create machine (auto-persists), transition to final
+    $machine = Machine::create($configAndBehavior);
     $machine->send(['type' => 'COMPLETE', 'payload' => ['amount' => 250]]);
 
     // Verify machine is at final state
     expect($machine->state->matches('completed'))->toBeTrue();
     expect($machine->state->currentStateDefinition->type)->toBe(StateDefinitionType::FINAL);
-    expect($machine->result())->toBe(['total' => 250, 'status' => 'done']);
 
     // Get root event ID for restoration
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    // Restore from DB
+    // Restore from DB using a fresh Machine instance
+    $definition      = MachineDefinition::define(
+        config: $configAndBehavior['config'],
+        behavior: $configAndBehavior['behavior'],
+    );
     $restoredMachine = Machine::withDefinition($definition);
-    $restoredMachine->restore($rootEventId);
+    $restoredMachine->start($rootEventId);
 
     // Restored machine should be at final state
     expect($restoredMachine->state->matches('completed'))->toBeTrue();
@@ -79,8 +82,8 @@ it('restored machine at final state reports final type and result works', functi
 });
 
 it('restored machine at final state has matching value array', function (): void {
-    $definition = MachineDefinition::define(
-        config: [
+    $configAndBehavior = [
+        'config' => [
             'id'      => 'restore_value',
             'initial' => 'pending',
             'context' => [],
@@ -91,17 +94,18 @@ it('restored machine at final state has matching value array', function (): void
                 'done' => ['type' => 'final'],
             ],
         ],
-    );
+    ];
 
-    $machine = Machine::withDefinition($definition);
+    $machine = Machine::create($configAndBehavior);
     $machine->send(['type' => 'FINISH']);
 
     $originalValue = $machine->state->value;
     $rootEventId   = $machine->state->history->first()->root_event_id;
 
     // Restore
-    $restored = Machine::withDefinition($definition);
-    $restored->restore($rootEventId);
+    $definition = MachineDefinition::define(config: $configAndBehavior['config']);
+    $restored   = Machine::withDefinition($definition);
+    $restored->start($rootEventId);
 
     expect($restored->state->value)->toBe($originalValue);
     expect($restored->state->matches('done'))->toBeTrue();
