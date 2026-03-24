@@ -100,6 +100,7 @@ States with `'type' => 'parallel'` run multiple concurrent regions:
 - `@done` fires when all regions reach final states, `@fail` when any region fails
 - **Dispatch mode** (`config/machine.php` → `parallel_dispatch`): regions run as separate queue jobs (`ParallelRegionJob`) with locking
 - Region timeout support via `ParallelRegionTimeoutJob`
+- **Guard semantics in parallel:** Regular `GuardBehavior` failure in a region = "event not handled by this region" (bubbles/throws). `ValidationGuardBehavior` failure = "operation rejected" — entire parallel transition aborted, machine stays, `MachineValidationException` thrown (422 via endpoints). Dispatch mode: validation errors don't propagate (async).
 
 ### Machine Delegation
 
