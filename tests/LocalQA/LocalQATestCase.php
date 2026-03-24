@@ -51,29 +51,31 @@ class LocalQATestCase extends Orchestra
     }
 
     /**
-     * Guarantee a clean slate between tests.
+     * Truncate all machine-related tables and drain Redis queues.
+     * Used instead of RefreshDatabase so queue workers can see data.
      *
-     * Strategy: Drain ALL Redis queues, then truncate all tables.
-     * Orphan jobs (from previous test) that are mid-execution will fail
-     * with RestoringStateException when they try to read truncated data —
-     * this is harmless because the new test uses a different root_event_id.
-     *
-     * No quiet-period wait needed: each test is isolated by root_event_id.
+     * Also drains Redis queues to prevent leftover jobs from previous tests
+     * from interfering with the current test's machines.
      */
     public static function cleanTables(): void
     {
-        // 1. Drain ALL Redis queues (pending, delayed, reserved, notify)
+        // 1. Drain pending + delayed queues (stop NEW jobs from being picked up).
+        // Do NOT delete reserved — those are in-flight, workers will finish them.
         $redis  = app('redis');
         $prefix = config('database.redis.options.prefix', 'laravel_database_');
 
         foreach (['default', 'child-queue'] as $queue) {
-            $redis->del("{$prefix}queues:{$queue}");
-            $redis->del("{$prefix}queues:{$queue}:delayed");
-            $redis->del("{$prefix}queues:{$queue}:reserved");
-            $redis->del("{$prefix}queues:{$queue}:notify");
+            $redis->del("{$prefix}queues:{$queue}");          // pending
+            $redis->del("{$prefix}queues:{$queue}:delayed");  // delayed (timers, afterCommit)
+            $redis->del("{$prefix}queues:{$queue}:notify");   // notification channel
         }
 
-        // 2. Truncate all machine tables
+        // 2. Wait for in-flight (reserved) jobs to finish naturally.
+        // Workers that already picked up a job will complete it and remove from reserved.
+        // We must wait for reserved=0 before truncating tables.
+        static::waitForIdleWorkers($redis, $prefix);
+
+        // 3. Now safe to truncate — no workers are writing to these tables
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         DB::table('machine_events')->truncate();
         DB::table('machine_current_states')->truncate();
@@ -94,69 +96,59 @@ class LocalQATestCase extends Orchestra
     }
 
     /**
-     * Poll DB until condition is true or timeout.
+     * Wait until Horizon workers have no reserved (in-flight) jobs AND
+     * a short quiet period has elapsed (no new completions).
      *
-     * Uses exponential backoff (100ms → 1s cap) to reduce DB pressure.
-     * On timeout, dumps diagnostics to STDERR for debugging.
+     * After draining pending/delayed queues, workers may still be processing
+     * previously-reserved jobs. A completing job can dispatch NEW jobs
+     * (e.g., ChildMachineCompletionJob), so we must wait for the entire
+     * chain to settle — not just the current reserved set.
+     *
+     * Strategy: wait for reserved=0 AND no new machine_events written
+     * for 500ms (the chain has fully settled).
      */
-    public static function waitFor(
-        callable $condition,
-        int $timeoutSeconds = 60,
-        string $description = '',
-    ): bool {
-        $start      = time();
-        $intervalMs = 100;
+    private static function waitForIdleWorkers($redis, string $prefix, int $timeoutSeconds = 15): void
+    {
+        $start     = time();
+        $quietMs   = 0;
+        $lastCount = DB::table('machine_events')->count();
 
+        while (time() - $start < $timeoutSeconds) {
+            usleep(100_000); // 100ms
+
+            // Check reserved jobs across all queues
+            $totalReserved = 0;
+            foreach (['default', 'child-queue'] as $queue) {
+                $totalReserved += (int) $redis->zcard("{$prefix}queues:{$queue}:reserved");
+            }
+
+            $currentCount = DB::table('machine_events')->count();
+
+            if ($totalReserved === 0 && $currentCount === $lastCount) {
+                $quietMs += 100;
+                if ($quietMs >= 500) {
+                    return; // 500ms quiet — chain settled
+                }
+            } else {
+                $quietMs   = 0;
+                $lastCount = $currentCount;
+            }
+        }
+    }
+
+    /**
+     * Poll DB until condition is true or timeout.
+     */
+    public static function waitFor(callable $condition, int $timeoutSeconds = 45, int $intervalMs = 250): bool
+    {
+        $start = time();
         while (time() - $start < $timeoutSeconds) {
             if ($condition()) {
                 return true;
             }
-
             usleep($intervalMs * 1000);
-            $intervalMs = min((int) ($intervalMs * 1.5), 1000);
         }
-
-        static::dumpDiagnostics($description);
 
         return false;
-    }
-
-    /**
-     * Dump diagnostic state to STDERR on waitFor timeout.
-     */
-    private static function dumpDiagnostics(string $description): void
-    {
-        $redis  = app('redis');
-        $prefix = config('database.redis.options.prefix', 'laravel_database_');
-
-        $diagnostics = [
-            'description'    => $description ?: '(no description)',
-            'machine_events' => DB::table('machine_events')->count(),
-            'last_5_events'  => DB::table('machine_events')
-                ->orderByDesc('sequence_number')
-                ->limit(5)
-                ->pluck('type')
-                ->toArray(),
-            'current_states' => DB::table('machine_current_states')
-                ->pluck('state_id')
-                ->toArray(),
-            'children' => DB::table('machine_children')
-                ->get(['status', 'child_machine_class'])
-                ->toArray(),
-            'locks'       => DB::table('machine_locks')->count(),
-            'failed_jobs' => DB::table('failed_jobs')
-                ->limit(3)
-                ->pluck('exception')
-                ->map(fn ($e) => mb_substr((string) $e, 0, 200))
-                ->toArray(),
-        ];
-
-        foreach (['default', 'child-queue'] as $queue) {
-            $diagnostics["queue:{$queue}:pending"]  = (int) $redis->llen("{$prefix}queues:{$queue}");
-            $diagnostics["queue:{$queue}:delayed"]  = (int) $redis->zcard("{$prefix}queues:{$queue}:delayed");
-            $diagnostics["queue:{$queue}:reserved"] = (int) $redis->zcard("{$prefix}queues:{$queue}:reserved");
-        }
-
-        fwrite(STDERR, "\n[waitFor TIMEOUT] ".json_encode($diagnostics, JSON_PRETTY_PRINT)."\n");
     }
 }
