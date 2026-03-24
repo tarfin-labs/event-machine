@@ -1,6 +1,6 @@
 # Fix: ValidationGuardBehavior in Parallel States
 
-**Status:** Plan Ready — TDD Implementation
+**Status:** Implemented — Released in 8.6.1
 **Date:** 2026-03-25
 **Severity:** Bug — validation errors silently swallowed, exception thrown instead of 422 response
 
