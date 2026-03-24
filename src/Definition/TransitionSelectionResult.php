@@ -10,11 +10,11 @@ namespace Tarfinlabs\EventMachine\Definition;
  * Distinguishes "no handler exists" (branches=[], flag=false)
  * from "handler exists but ValidationGuardBehavior failed" (branches=[], flag=true).
  */
-final class TransitionSelectionResult
+final readonly class TransitionSelectionResult
 {
     public function __construct(
         /** @var TransitionBranch[] */
-        public readonly array $branches,
-        public readonly bool $hadValidationGuardFailure,
+        public array $branches,
+        public bool $hadValidationGuardFailure,
     ) {}
 }
