@@ -487,6 +487,17 @@ class PanZoom {
 }
 
 // ============================================================
+// Node/Edge metadata store — ELK chokes on complex objects in properties
+// ============================================================
+const nodeMetadata = {};
+const edgeMetadata = {};
+
+function storeNodeMeta(id, meta) { nodeMetadata[id] = meta; }
+function getNodeMeta(id) { return nodeMetadata[id] || {}; }
+function storeEdgeMeta(id, meta) { edgeMetadata[id] = meta; }
+function getEdgeMeta(id) { return edgeMetadata[id] || {}; }
+
+// ============================================================
 // XState JSON → ELK Graph Transformer
 // ============================================================
 function xstateToElk(machineJson) {
@@ -574,18 +585,23 @@ function buildStateNode(machineId, stateName, stateDef, initialState) {
         });
     }
 
+    const nodeId = `${machineId}.${stateName}`;
+    const nodeType = isFinal ? 'final' : isParallel ? 'parallel' : hasInvoke ? 'invoke' : isCompound ? 'compound' : 'atomic';
+
+    // Store complex data externally — ELK only gets simple layout properties
+    storeNodeMeta(nodeId, {
+        type: nodeType,
+        isInitial: isInitial,
+        stateDef: stateDef,
+        stateName: stateName,
+        selfTransitions: selfTransitions,
+    });
+
     const node = {
-        id: `${machineId}.${stateName}`,
+        id: nodeId,
         width: width,
         height: height,
         labels: [{ text: stateName }],
-        properties: {
-            type: isFinal ? 'final' : isParallel ? 'parallel' : hasInvoke ? 'invoke' : isCompound ? 'compound' : 'atomic',
-            isInitial: isInitial,
-            stateDef: stateDef,
-            stateName: stateName,
-            selfTransitions: selfTransitions,
-        },
     };
 
     // If compound or parallel, add children
@@ -626,6 +642,21 @@ function buildStateNode(machineId, stateName, stateDef, initialState) {
 
 let edgeCounter = 0;
 
+function createEdge(sources, targets, labelText, meta) {
+    const id = `edge_${edgeCounter++}`;
+    storeEdgeMeta(id, meta);
+    return {
+        id: id,
+        sources: sources,
+        targets: targets,
+        labels: [{
+            text: labelText,
+            width: Math.max(labelText.length * 6.5 + 16, 60),
+            height: 16,
+        }],
+    };
+}
+
 function buildEdgesFromState(parentId, stateName, stateDef) {
     const edges = [];
     const on = stateDef.on || {};
@@ -637,23 +668,10 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
                 // Resolve target — could be relative
                 const targetId = resolveTargetId(parentId, branch.target);
                 const fullLabel = formatTransitionLabel(eventName, branch);
-                edges.push({
-                    id: `edge_${edgeCounter++}`,
-                    sources: [`${parentId}.${stateName}`],
-                    targets: [targetId],
-                    labels: [{
-                        text: fullLabel,
-                        width: Math.max(fullLabel.length * 6.5 + 16, 60),
-                        height: 16,
-                    }],
-                    properties: {
-                        eventName: eventName,
-                        guard: branch.guard || null,
-                        actions: branch.actions || [],
-                        calculators: branch.meta?.eventMachine?.calculators || [],
-                        type: 'event',
-                    },
-                });
+                edges.push(createEdge(
+                    [`${parentId}.${stateName}`], [targetId], fullLabel,
+                    { eventName, guard: branch.guard || null, actions: branch.actions || [], calculators: branch.meta?.eventMachine?.calculators || [], type: 'event' }
+                ));
             }
         });
     });
@@ -665,13 +683,10 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
             if (branch.target) {
                 const targetId = resolveTargetId(parentId, branch.target);
                 const label = formatTransitionLabel('@always', branch);
-                edges.push({
-                    id: `edge_${edgeCounter++}`,
-                    sources: [`${parentId}.${stateName}`],
-                    targets: [targetId],
-                    labels: [{ text: label, width: Math.max(label.length * 6.5 + 16, 60), height: 16 }],
-                    properties: { eventName: '@always', guard: branch.guard || null, actions: branch.actions || [], type: 'always' },
-                });
+                edges.push(createEdge(
+                    [`${parentId}.${stateName}`], [targetId], label,
+                    { eventName: '@always', guard: branch.guard || null, actions: branch.actions || [], type: 'always' }
+                ));
             }
         });
     }
@@ -683,13 +698,8 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
             if (branch.target) {
                 const targetId = resolveTargetId(parentId, branch.target);
                 const label = formatTransitionLabel('@done', branch);
-                edges.push({
-                    id: `edge_${edgeCounter++}`,
-                    sources: [`${parentId}.${stateName}`],
-                    targets: [targetId],
-                    labels: [{ text: label, width: Math.max(label.length * 6.5 + 16, 60), height: 16 }],
-                    properties: { eventName: '@done', guard: branch.guard || null, actions: branch.actions || [], type: 'done' },
-                });
+                edges.push(createEdge([`${parentId}.${stateName}`], [targetId], label,
+                    { eventName: '@done', guard: branch.guard || null, actions: branch.actions || [], type: 'done' }));
             }
         });
     }
@@ -701,13 +711,8 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
             if (branch.target) {
                 const targetId = resolveTargetId(parentId, branch.target);
                 const label = formatTransitionLabel('@fail', branch);
-                edges.push({
-                    id: `edge_${edgeCounter++}`,
-                    sources: [`${parentId}.${stateName}`],
-                    targets: [targetId],
-                    labels: [{ text: label, width: Math.max(label.length * 6.5 + 16, 50), height: 16 }],
-                    properties: { eventName: '@fail', guard: branch.guard || null, actions: branch.actions || [], type: 'fail' },
-                });
+                edges.push(createEdge([`${parentId}.${stateName}`], [targetId], label,
+                    { eventName: '@fail', guard: branch.guard || null, actions: branch.actions || [], type: 'fail' }));
             }
         });
     }
@@ -719,13 +724,8 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
             if (branch.target) {
                 const targetId = resolveTargetId(parentId, branch.target);
                 const label = formatTransitionLabel('@done', branch);
-                edges.push({
-                    id: `edge_${edgeCounter++}`,
-                    sources: [`${parentId}.${stateName}`],
-                    targets: [targetId],
-                    labels: [{ text: label, width: Math.max(label.length * 6.5 + 16, 60), height: 16 }],
-                    properties: { eventName: '@done', guard: branch.guard || null, actions: branch.actions || [], type: 'done' },
-                });
+                edges.push(createEdge([`${parentId}.${stateName}`], [targetId], label,
+                    { eventName: '@done', guard: branch.guard || null, actions: branch.actions || [], type: 'done' }));
             }
         });
     }
@@ -739,13 +739,8 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
                     const targetId = resolveTargetId(parentId, branch.target);
                     const delayLabel = formatDelay(parseInt(delay));
                     const label = `\u23F1 after ${delayLabel}`;
-                    edges.push({
-                        id: `edge_${edgeCounter++}`,
-                        sources: [`${parentId}.${stateName}`],
-                        targets: [targetId],
-                        labels: [{ text: label, width: Math.max(label.length * 6.5 + 16, 70), height: 16 }],
-                        properties: { eventName: label, guard: branch.guard || null, actions: branch.actions || [], type: 'timeout' },
-                    });
+                    edges.push(createEdge([`${parentId}.${stateName}`], [targetId], label,
+                        { eventName: label, guard: branch.guard || null, actions: branch.actions || [], type: 'timeout' }));
                 }
             });
         });
@@ -759,13 +754,8 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
             if (branch.target) {
                 const targetId = resolveTargetId(parentId, branch.target);
                 const label = formatTransitionLabel('@timeout', branch);
-                edges.push({
-                    id: `edge_${edgeCounter++}`,
-                    sources: [`${parentId}.${stateName}`],
-                    targets: [targetId],
-                    labels: [{ text: `\u23F1 ${label}`, width: Math.max(label.length * 6.5 + 30, 80), height: 16 }],
-                    properties: { eventName: '@timeout', guard: branch.guard || null, actions: branch.actions || [], type: 'timeout' },
-                });
+                edges.push(createEdge([`${parentId}.${stateName}`], [targetId], `\u23F1 ${label}`,
+                    { eventName: '@timeout', guard: branch.guard || null, actions: branch.actions || [], type: 'timeout' }));
             }
         });
     }
@@ -856,7 +846,7 @@ function renderNodes(nodes, parent, offsetX, offsetY) {
         const y = (node.y || 0) + offsetY;
         const w = node.width || 100;
         const h = node.height || 50;
-        const props = node.properties || {};
+        const props = getNodeMeta(node.id);
         const type = props.type || 'atomic';
         const stateDef = props.stateDef || {};
 
@@ -1104,7 +1094,7 @@ function renderNodes(nodes, parent, offsetX, offsetY) {
 
 function renderEdges(edges, parent, offsetX, offsetY) {
     edges.forEach(edge => {
-        const props = edge.properties || {};
+        const props = getEdgeMeta(edge.id);
         const type = props.type || 'event';
 
         const group = createSvgElement('g', {
@@ -1260,7 +1250,7 @@ function showStateDetail(node) {
     const panel = document.getElementById('detail-panel');
     const title = document.getElementById('detail-title');
     const content = document.getElementById('detail-content');
-    const props = node.properties || {};
+    const props = getNodeMeta(node.id);
     const stateDef = props.stateDef || {};
 
     title.textContent = `State: ${props.stateName || node.id}`;
@@ -1315,7 +1305,7 @@ function showTransitionDetail(edge) {
     const panel = document.getElementById('detail-panel');
     const title = document.getElementById('detail-title');
     const content = document.getElementById('detail-content');
-    const props = edge.properties || {};
+    const props = getEdgeMeta(edge.id);
 
     title.textContent = `Transition: ${props.eventName || edge.id}`;
 
@@ -1548,20 +1538,25 @@ function xstateToElkMulti(machines) {
             const collapsedHeight = 40 + portLines.length * 14;
             const collapsedWidth = Math.max(180, machineId.length * 10 + 60);
 
+            storeNodeMeta(machineId, {
+                type: 'machine-collapsed',
+                machineJson: mJson,
+                machineClass: machine.class,
+                portLines: portLines,
+            });
             elkGraph.children.push({
                 id: machineId,
                 width: collapsedWidth,
                 height: collapsedHeight,
                 labels: [{ text: machineId }],
-                properties: {
-                    type: 'machine-collapsed',
-                    machineJson: mJson,
-                    machineClass: machine.class,
-                    portLines: portLines,
-                },
             });
         } else {
             // Expanded: full compound node with children
+            storeNodeMeta(machineId, {
+                type: 'machine-container',
+                machineJson: mJson,
+                machineClass: machine.class,
+            });
             const machineNode = {
                 id: machineId,
                 labels: [{ text: machineId }],
@@ -1576,11 +1571,6 @@ function xstateToElkMulti(machines) {
                 },
                 children: [],
                 edges: [],
-                properties: {
-                    type: 'machine-container',
-                    machineJson: mJson,
-                    machineClass: machine.class,
-                },
             };
 
             stateNames.forEach(stateName => {
@@ -1618,16 +1608,10 @@ function xstateToElkMulti(machines) {
                         .join(', ');
                     const label = mappings ? `with: ${mappings}` : 'delegates to';
 
-                    elkGraph.edges.push({
-                        id: `delegation_${edgeCounter++}`,
-                        sources: [`${machineId}.${stateName}`],
-                        targets: [targetMachineId],
-                        labels: [{ text: label, width: Math.max(label.length * 6.5 + 16, 80), height: 16 }],
-                        properties: {
-                            eventName: 'delegation',
-                            type: 'delegation',
-                        },
-                    });
+                    elkGraph.edges.push(createEdge(
+                        [`${machineId}.${stateName}`], [targetMachineId], label,
+                        { eventName: 'delegation', type: 'delegation' }
+                    ));
                 }
             }
         });
@@ -1687,7 +1671,7 @@ function populateSidebarMulti(machines) {
 // ============================================================
 function renderMachineContainers(elkResult, svgGroup) {
     (elkResult.children || []).forEach(machineNode => {
-        const props = machineNode.properties || {};
+        const props = getNodeMeta(machineNode.id);
         const isCollapsed = props.type === 'machine-collapsed';
         const isContainer = props.type === 'machine-container';
         if (!isCollapsed && !isContainer) return;
