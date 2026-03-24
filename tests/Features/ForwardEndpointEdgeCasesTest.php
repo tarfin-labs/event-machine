@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\Context;
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -12,6 +11,7 @@ use Tarfinlabs\EventMachine\Routing\ForwardContext;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Routing\ForwardedEndpointDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\AbortEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ProvideCardEvent;
@@ -52,7 +52,8 @@ test('different forward events from different states do not conflict', function 
             ],
         ],
         behavior: [
-            'events' => [
+            'context' => GenericContext::class,
+            'events'  => [
                 'GO_A' => TestStartEvent::class,
                 'GO_B' => TestStartEvent::class,
             ],
@@ -89,7 +90,8 @@ test('each forward endpoint in multiple delegating states maps to correct child 
             ],
         ],
         behavior: [
-            'events' => [
+            'context' => GenericContext::class,
+            'events'  => [
                 'GO_A' => TestStartEvent::class,
                 'GO_B' => TestStartEvent::class,
             ],
@@ -131,7 +133,8 @@ test('overlap rejection throws when forward event collides with parent endpoints
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'START'        => TestStartEvent::class,
                     'PROVIDE_CARD' => ProvideCardEvent::class,
                 ],
@@ -165,7 +168,8 @@ test('overlap rejection error message contains removal instructions', function (
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'START'        => TestStartEvent::class,
                     'PROVIDE_CARD' => ProvideCardEvent::class,
                 ],
@@ -184,7 +188,7 @@ test('overlap rejection error message contains removal instructions', function (
 // ═══════════════════════════════════════════════════════════════
 
 test('ForwardContext.childContext is the child ContextManager', function (): void {
-    $childCtx   = Context::from(['card_last4' => '4242', 'status' => 'ok']);
+    $childCtx   = GenericContext::from(['card_last4' => '4242', 'status' => 'ok']);
     $childDef   = ForwardChildEndpointMachine::definition();
     $childState = State::forTesting(
         context: $childCtx,
@@ -198,7 +202,7 @@ test('ForwardContext.childContext is the child ContextManager', function (): voi
 });
 
 test('ForwardContext.childState exposes child state value', function (): void {
-    $childCtx   = Context::from(['order_id' => 1, 'card_last4' => null, 'status' => 'pending']);
+    $childCtx   = GenericContext::from(['order_id' => 1, 'card_last4' => null, 'status' => 'pending']);
     $childDef   = ForwardChildEndpointMachine::definition();
     $childState = State::forTesting(
         context: $childCtx,
@@ -212,7 +216,7 @@ test('ForwardContext.childState exposes child state value', function (): void {
 });
 
 test('ForwardContext can carry a child state in final state', function (): void {
-    $childCtx   = Context::from(['order_id' => 99, 'card_last4' => '1111', 'status' => 'charged']);
+    $childCtx   = GenericContext::from(['order_id' => 99, 'card_last4' => '1111', 'status' => 'charged']);
     $childDef   = ForwardChildEndpointMachine::definition();
     $childState = State::forTesting(
         context: $childCtx,
@@ -238,7 +242,11 @@ test('available_events on final state returns empty array', function (): void {
             'idle' => ['on' => ['GO' => 'done']],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $tm->send('GO');
 
@@ -264,7 +272,8 @@ test('available_events on state with only @always guarded returns empty array', 
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'neverGuard' => fn (ContextManager $ctx): bool => $ctx->get('ready') === true,
             ],
         ],
@@ -277,7 +286,7 @@ test('available_events on state with only @always guarded returns empty array', 
 
 test('available_events on state with null currentStateDefinition returns empty array', function (): void {
     $state = State::forTesting(
-        context: [],
+        context: GenericContext::from([]),
         currentStateDefinition: null,
     );
 
@@ -386,7 +395,8 @@ test('custom URI + rename forward generates correct route path', function (): vo
             ],
         ],
         behavior: [
-            'events' => ['START' => TestStartEvent::class],
+            'context' => GenericContext::class,
+            'events'  => ['START' => TestStartEvent::class],
         ],
     );
 

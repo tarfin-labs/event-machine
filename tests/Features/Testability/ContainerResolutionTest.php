@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\CounterService;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\TestabilityMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
@@ -76,7 +77,7 @@ it('still handles inline closure behaviors', function (): void {
 // ─── runWithState uses container resolution ──────────────────
 
 it('resolves through container when using runWithState', function (): void {
-    $state = State::forTesting(['count' => 5]);
+    $state = State::forTesting(GenericContext::from(['count' => 5]));
 
     IncrementWithServiceAction::runWithState($state);
 
@@ -88,7 +89,7 @@ it('respects mocked services when using runWithState', function (): void {
     $mock->shouldReceive('increment')->with(10)->once()->andReturn(99);
     App::instance(CounterService::class, $mock);
 
-    $state = State::forTesting(['count' => 10]);
+    $state = State::forTesting(GenericContext::from(['count' => 10]));
 
     IncrementWithServiceAction::runWithState($state);
 

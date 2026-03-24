@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RecordAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\GuardedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\MultiOutcomeChildMachine;
@@ -17,7 +18,11 @@ test('validates root level configuration keys', function (): void {
         'id'              => 'machine',
         'invalid_key'     => 'value',
         'another_invalid' => 'value',
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: 'Invalid root level configuration keys: invalid_key, another_invalid. Allowed keys are: id, version, initial, status_events, context, states, on, type, meta, entry, exit, description, scenarios_enabled, should_persist, delimiter'
     );
@@ -36,7 +41,10 @@ test('accepts valid root level configuration', function (): void {
         'states'            => [
             'state_a' => [],
         ],
-    ]))->not->toThrow(exception: InvalidArgumentException::class);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]))->not->toThrow(exception: InvalidArgumentException::class);
 });
 
 test('accepts machine with root level transitions', function (): void {
@@ -50,7 +58,11 @@ test('accepts machine with root level transitions', function (): void {
             'state_a' => [],
             'state_b' => [],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->not->toThrow(InvalidArgumentException::class);
 });
 
 test('transitions must be defined under the on key', function (): void {
@@ -64,7 +76,11 @@ test('transitions must be defined under the on key', function (): void {
                 ],
             ],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'check' has transitions defined directly. All transitions including '@always' must be defined under the 'on' key."
     );
@@ -79,7 +95,11 @@ test('validates on property is an array', function (): void {
                 'on' => 'invalid_string', // 'on' should be an array
             ],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'state_a' has invalid 'on' definition. 'on' must be an array of transitions."
     );
@@ -96,7 +116,11 @@ test('validates transition target is either string or array', function (): void 
                 ],
             ],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'state_a' has invalid transition for event 'EVENT'. Transition must be a string (target state) or an array (transition config)."
     );
@@ -116,7 +140,11 @@ test('validates condition arrays in transitions', function (): void {
                 ],
             ],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'state_a' has invalid condition in transition for event 'EVENT'. Each condition must be an array with target/guards/actions."
     );
@@ -136,7 +164,11 @@ test('validates guards configuration in transitions', function (): void {
                 ],
             ],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         InvalidArgumentException::class,
         "State 'state_a' has invalid guards configuration for event 'EVENT'. Guards must be an array or string."
     );
@@ -156,7 +188,11 @@ test('validates actions configuration in transitions', function (): void {
                 ],
             ],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'state_a' has invalid actions configuration for event 'EVENT'. Actions must be an array or string."
     );
@@ -176,7 +212,11 @@ test('validates calculators configuration in transitions', function (): void {
                 ],
             ],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'state_a' has invalid calculators configuration for event 'EVENT'. Calculators must be an array or string."
     );
@@ -197,7 +237,11 @@ test('validates allowed keys in transition config', function (): void {
                 ],
             ],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'state_a' has invalid keys in transition config for event 'EVENT': invalid_key, another_invalid. Allowed keys are: target, guards, actions, description, calculators"
     );
@@ -212,7 +256,11 @@ test('validates state type values', function (): void {
                 'type' => 'invalid_type', // Type should be 'atomic', 'compound', 'parallel', or 'final'
             ],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'state_a' has invalid type: invalid_type. Allowed types are: atomic, compound, parallel, final"
     );
@@ -230,7 +278,11 @@ test('validates final states have no transitions', function (): void {
                 ],
             ],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "Final state 'state_a' cannot have transitions"
     );
@@ -248,7 +300,11 @@ test('validates final states have no child states', function (): void {
                 ],
             ],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "Final state 'state_a' cannot have child states"
     );
@@ -264,7 +320,11 @@ test('validates entry and exit actions are arrays or strings', function (): void
                 'exit'  => 123, // Should be an array or a string
             ],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'state_a' has invalid entry/exit actions configuration. Actions must be an array or string."
     );
@@ -316,7 +376,11 @@ test('accepts valid state configuration with all possible features', function ()
             'state_b' => [],
             'state_c' => [],
         ],
-    ]))->not->toThrow(exception: InvalidArgumentException::class);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->not->toThrow(exception: InvalidArgumentException::class);
 });
 
 test('normalizes string behaviors to arrays', function (): void {
@@ -334,7 +398,11 @@ test('normalizes string behaviors to arrays', function (): void {
                 ],
             ],
         ],
-    ]))->not->toThrow(exception: InvalidArgumentException::class);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->not->toThrow(exception: InvalidArgumentException::class);
 });
 
 test('empty array is treated as targetless transition, not empty guarded transition', function (): void {
@@ -347,7 +415,11 @@ test('empty array is treated as targetless transition, not empty guarded transit
                 ],
             ],
         ],
-    ]))->not->toThrow(exception: InvalidArgumentException::class);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->not->toThrow(exception: InvalidArgumentException::class);
 });
 
 test('validates default condition must be last in guarded transitions', function (): void {
@@ -361,14 +433,16 @@ test('validates default condition must be last in guarded transitions', function
                             'target' => 'state_b', // Default condition (no guards)
                         ],
                         [
-                            'target' => 'state_c',
-                            'guards' => 'someGuard',
+                            'context' => GenericContext::class,
+                            'target'  => 'state_c',
+                            'guards'  => 'someGuard',
                         ],
                     ],
                 ],
             ],
         ],
-    ]))->toThrow(
+    ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'state_a' has invalid conditions order for event 'EVENT'. Default condition (no guards) must be the last condition."
     );
@@ -398,7 +472,8 @@ test('accepts valid guarded transitions with multiple conditions', function (): 
                 ],
             ],
         ],
-    ]))->not->toThrow(exception: InvalidArgumentException::class);
+    ]
+    ))->not->toThrow(exception: InvalidArgumentException::class);
 });
 
 test('guarded transitions can run actions without changing state when no target is specified', function (): void {
@@ -448,7 +523,11 @@ test('it accepts string @done configuration', function (): void {
             ],
             'completed' => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->not->toThrow(InvalidArgumentException::class);
 });
 
 test('it accepts array @done with target and actions', function (): void {
@@ -471,7 +550,11 @@ test('it accepts array @done with target and actions', function (): void {
             ],
             'completed' => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->not->toThrow(InvalidArgumentException::class);
 });
 
 test('it accepts conditional @done with guards', function (): void {
@@ -498,7 +581,11 @@ test('it accepts conditional @done with guards', function (): void {
             'approved'      => ['type' => 'final'],
             'manual_review' => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->not->toThrow(InvalidArgumentException::class);
 });
 
 test('it rejects @done with default branch not last', function (): void {
@@ -525,7 +612,11 @@ test('it rejects @done with default branch not last', function (): void {
             'approved'      => ['type' => 'final'],
             'manual_review' => ['type' => 'final'],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'processing' has invalid conditions order for event '@done'. Default condition (no guards) must be the last condition."
     );
@@ -554,7 +645,11 @@ test('it rejects @done with invalid keys in branch', function (): void {
             ],
             'completed' => ['type' => 'final'],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'processing' has invalid keys in transition config for event '@done': invalid_key. Allowed keys are: target, guards, actions, description, calculators"
     );
@@ -584,7 +679,11 @@ test('it accepts conditional @fail with guards', function (): void {
             'retrying' => ['type' => 'final'],
             'failed'   => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->not->toThrow(InvalidArgumentException::class);
 });
 
 test('it rejects invalid @done format', function (): void {
@@ -607,7 +706,11 @@ test('it rejects invalid @done format', function (): void {
             ],
             'completed' => ['type' => 'final'],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'processing' has invalid '@done' configuration. Must be a string or array."
     );
@@ -633,7 +736,11 @@ test('it rejects invalid @fail format', function (): void {
             ],
             'failed' => ['type' => 'final'],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'processing' has invalid '@fail' configuration. Must be a string or array."
     );
@@ -658,7 +765,11 @@ test('it accepts @done on compound state with guards', function (): void {
             'approved' => ['type' => 'final'],
             'rejected' => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->not->toThrow(InvalidArgumentException::class);
 });
 
 test('it rejects @fail with default branch not last', function (): void {
@@ -685,7 +796,11 @@ test('it rejects @fail with default branch not last', function (): void {
             'retrying' => ['type' => 'final'],
             'failed'   => ['type' => 'final'],
         ],
-    ]))->toThrow(
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(
         exception: InvalidArgumentException::class,
         exceptionMessage: "State 'processing' has invalid conditions order for event '@fail'. Default condition (no guards) must be the last condition."
     );

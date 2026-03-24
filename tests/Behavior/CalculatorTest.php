@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Calculators\TotalCalculator;
 use Tarfinlabs\EventMachine\Tests\Stubs\Calculators\AverageCalculator;
 
@@ -63,6 +64,9 @@ test('calculator can set context values that guards and actions can use', functi
                 'processed' => [],
             ],
         ],
+        'behavior' => [
+            'context' => GenericContext::class,
+        ],
     ]);
 
     // 2. Act
@@ -95,6 +99,7 @@ test('inline calculator functions work correctly', function (): void {
             ],
         ],
         'behavior' => [
+            'context'     => GenericContext::class,
             'calculators' => [
                 'calculateSumCalculator' => function (ContextManager $context): void {
                     $numbers = $context->get('numbers');
@@ -134,6 +139,9 @@ test('multiple calculators can be chained', function (): void {
                 'analyzed' => [],
             ],
         ],
+        'behavior' => [
+            'context' => GenericContext::class,
+        ],
     ]);
 
     // 2. Act
@@ -167,6 +175,7 @@ test('calculators run before guards and actions', function (): void {
             ],
         ],
         'behavior' => [
+            'context'     => GenericContext::class,
             'calculators' => [
                 'calculateStuffCalculator' => function () use (&$executionOrder) {
                     return $executionOrder[] = 'calculator';
@@ -218,6 +227,7 @@ test('calculator failures prevent guard and action execution', function (): void
             ],
         ],
         'behavior' => [
+            'context'     => GenericContext::class,
             'calculators' => [
                 'problematicCalculationCalculator' => function (): void {
                     throw new RuntimeException();
@@ -272,6 +282,7 @@ test('calculators can use event data', function (): void {
             ],
         ],
         'behavior' => [
+            'context'     => GenericContext::class,
             'calculators' => [
                 'multiplyNumbersCalculator' => function (ContextManager $context, EventBehavior $event): void {
                     $numbers = $event->payload['numbers'] ?? [];
@@ -314,6 +325,7 @@ test('calculator can have parameters', function (): void {
             ],
         ],
         'behavior' => [
+            'context'     => GenericContext::class,
             'calculators' => [
                 'calculateTaxCalculator' => function (
                     ContextManager $context,

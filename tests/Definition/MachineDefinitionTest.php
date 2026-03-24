@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 test('a machine definition is an instance of a MachineDefinition', function (): void {
     $nullMachine = MachineDefinition::define();
@@ -32,7 +33,11 @@ test('a machine definition config is null if no config given', function (): void
 test('a machine definition has a id', function (): void {
     $machineWithName = MachineDefinition::define(config: [
         'id' => 'machine-id',
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machineWithName)->toHaveProperty('id');
     expect($machineWithName->id)->toBe('machine-id');
@@ -43,7 +48,11 @@ test('a machine definition has a default id', function (): void {
 
     $nullNameMachine = MachineDefinition::define(config: [
         'id' => null,
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($nullNameMachine->id)->toBe(MachineDefinition::DEFAULT_ID);
     expect($nullMachine->id)->toBe(MachineDefinition::DEFAULT_ID);
@@ -52,7 +61,11 @@ test('a machine definition has a default id', function (): void {
 test('a machine definition can have a version', function (): void {
     $machineWithVersion = MachineDefinition::define(config: [
         'version' => '2.3.4',
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machineWithVersion)->toHaveProperty('version');
     expect($machineWithVersion->version)->toBe('2.3.4');
@@ -68,7 +81,11 @@ test('a machine definition version is null if no version config given', function
 test('a machine definition has a delimiter', function (): void {
     $machineWithDelimiter = MachineDefinition::define(config: [
         'delimiter' => '->',
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machineWithDelimiter)->toHaveProperty('delimiter');
     expect($machineWithDelimiter->delimiter)->toBe('->');
@@ -95,7 +112,11 @@ test('a machine definition has a idMap', function (): void {
             'yellow' => [],
             'red'    => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machineWithStates)->toHaveProperty('idMap');
     expect($machineWithStates->idMap)->toBeArray();
@@ -111,7 +132,10 @@ test('a machine definition can have context', function (): void {
         'context' => [
             'foo' => 'bar',
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]);
 
     $context = $machine->config['context'];
 

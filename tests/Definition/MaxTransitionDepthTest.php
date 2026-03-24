@@ -7,6 +7,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Exceptions\MaxTransitionDepthExceededException;
 
 afterEach(function (): void {
@@ -30,6 +31,9 @@ test('it throws exception for two-state @always loop', function (): void {
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $definition->getInitialState();
@@ -55,6 +59,9 @@ test('it throws exception for three-state @always loop', function (): void {
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $definition->getInitialState();
@@ -79,6 +86,9 @@ test('it throws exception for @always loop triggered after event transition', fu
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -103,6 +113,9 @@ test('it allows @always chain within depth limit', function (): void {
                 'e' => [],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -129,7 +142,8 @@ test('it allows @always with guard that breaks the loop', function (): void {
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isPassing' => fn (ContextManager $ctx) => $ctx->get('score') >= 70,
             ],
         ],
@@ -160,6 +174,7 @@ test('it throws exception for raise() event loop between two states', function (
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'raiseGoB' => RaiseGoBAction::class,
                 'raiseGoA' => RaiseGoAAction::class,
@@ -191,6 +206,7 @@ test('it allows raise() chain within depth limit', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'raiseNext' => RaiseNextAction::class,
             ],
@@ -241,6 +257,9 @@ test('it throws exception for @always loop in parallel state after event', funct
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -290,7 +309,8 @@ test('guarded @always in parallel state does not trigger depth limit', function 
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isRegionBDone' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.regionB.done'),
             ],
         ],
@@ -319,6 +339,9 @@ test('exception message contains the state route where limit was hit', function 
                     'pong' => ['on' => ['@always' => 'ping']],
                 ],
             ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
         );
 
         $definition->getInitialState();
@@ -358,6 +381,7 @@ test('it throws exception for @always that triggers raise() creating a loop', fu
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'raiseGo' => RaiseGoAction::class,
             ],
@@ -383,6 +407,9 @@ test('normal event-driven cycle does not trigger depth limit', function (): void
                 'c' => ['on' => ['NEXT' => 'a']],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -468,6 +495,9 @@ test('parallel state entry @always loop throws (regression for dispatch points #
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -489,6 +519,9 @@ test('custom depth from config throws at configured limit', function (): void {
                 'd' => ['on' => ['@always' => 'a']],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $definition->getInitialState();
@@ -508,6 +541,9 @@ test('config not set falls back to DEFAULT_MAX_TRANSITION_DEPTH', function (): v
                 'b' => ['on' => ['@always' => 'a']],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     try {
@@ -530,6 +566,9 @@ test('exception message contains custom depth value', function (): void {
                 'b' => ['on' => ['@always' => 'a']],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     try {
@@ -552,6 +591,9 @@ test('zero config value is clamped to 1', function (): void {
                 'b' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     // Even a single @always step should throw at clamp=1
@@ -575,6 +617,9 @@ test('boundary: depth-1 chain does not throw', function (): void {
             'initial' => 's1',
             'states'  => $states,
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -597,6 +642,9 @@ test('boundary: at-depth chain throws', function (): void {
             'initial' => 's1',
             'states'  => $states,
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $definition->getInitialState();
@@ -617,6 +665,9 @@ test('sync child delegation does not share parent depth counter', function (): v
             'initial' => 'c1',
             'states'  => $childStates,
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     // Child should complete (50 < 100 default limit)
@@ -637,6 +688,9 @@ test('sync child delegation does not share parent depth counter', function (): v
             'initial' => 'p1',
             'states'  => $parentStates,
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $parentState = $parentDefinition->getInitialState();
@@ -669,6 +723,9 @@ test('compound @done with @always loop throws MaxTransitionDepthExceededExceptio
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -711,6 +768,9 @@ test('parallel @done with @always loop throws MaxTransitionDepthExceededExceptio
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -753,6 +813,9 @@ test('raise chain of 99 events does not throw', function (): void {
             'initial' => 's1',
             'states'  => $simpleStates,
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -775,6 +838,9 @@ test('always chain of 101 states throws at depth 100', function (): void {
             'initial' => 's1',
             'states'  => $states,
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $definition->getInitialState();

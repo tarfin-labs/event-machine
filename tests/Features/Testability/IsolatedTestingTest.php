@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
-use Tarfinlabs\EventMachine\Context;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\CounterService;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\LogEntryAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
@@ -22,10 +22,10 @@ afterEach(function (): void {
     IncrementAction::resetAllFakes();
 });
 
-// ─── State::forTesting() ─────────────────────────────────────
+// ─── State::forTesting(GenericContext::from([])) ─────────────────────────────────────
 
 it('creates state from array context', function (): void {
-    $state = State::forTesting(['count' => 5, 'name' => 'test']);
+    $state = State::forTesting(GenericContext::from(['count' => 5, 'name' => 'test']));
 
     expect($state->context)->toBeInstanceOf(ContextManager::class);
     expect($state->context->get('count'))->toBe(5);
@@ -33,7 +33,7 @@ it('creates state from array context', function (): void {
 });
 
 it('creates state from ContextManager instance', function (): void {
-    $context = Context::from(['count' => 10]);
+    $context = GenericContext::from(['count' => 10]);
     $state   = State::forTesting($context);
 
     expect($state->context)->toBe($context);
@@ -41,23 +41,23 @@ it('creates state from ContextManager instance', function (): void {
 });
 
 it('creates state with empty context by default', function (): void {
-    $state = State::forTesting();
+    $state = State::forTesting(GenericContext::from([]));
 
     expect($state->context)->toBeInstanceOf(ContextManager::class);
     expect($state->value)->toBe([]);
     expect($state->history)->not->toBeNull();
 });
 
-// ─── State::forTesting() — null-safe matches ────────────────
+// ─── State::forTesting(GenericContext::from([])) — null-safe matches ────────────────
 
 it('returns false from matches() when currentStateDefinition is null', function (): void {
-    $state = State::forTesting(['count' => 0]);
+    $state = State::forTesting(GenericContext::from(['count' => 0]));
 
     expect($state->matches('idle'))->toBeFalse();
 });
 
 it('returns false from matchesAll() when currentStateDefinition is null', function (): void {
-    $state = State::forTesting();
+    $state = State::forTesting(GenericContext::from([]));
 
     expect($state->matchesAll(['idle', 'active']))->toBeFalse();
 });
@@ -65,7 +65,7 @@ it('returns false from matchesAll() when currentStateDefinition is null', functi
 // ─── runWithState() — eventQueue capture ─────────────────────
 
 it('captures raised events via runWithState', function (): void {
-    $state = State::forTesting(['execution_order' => []]);
+    $state = State::forTesting(GenericContext::from(['execution_order' => []]));
 
     $result = TransitionActionWithRaise::runWithState($state);
 
@@ -78,17 +78,17 @@ it('captures raised events via runWithState', function (): void {
 // ─── runWithState() — guards ─────────────────────────────────
 
 it('runs guard with state and returns boolean', function (): void {
-    $state = State::forTesting(['count' => 5]);
+    $state = State::forTesting(GenericContext::from(['count' => 5]));
     expect(IsCountPositiveGuard::runWithState($state))->toBeTrue();
 
-    $state = State::forTesting(['count' => -1]);
+    $state = State::forTesting(GenericContext::from(['count' => -1]));
     expect(IsCountPositiveGuard::runWithState($state))->toBeFalse();
 });
 
 // ─── runWithState() — actions ────────────────────────────────
 
 it('runs action that modifies context', function (): void {
-    $state = State::forTesting(['entered' => false]);
+    $state = State::forTesting(GenericContext::from(['entered' => false]));
 
     LogEntryAction::runWithState($state);
 
@@ -96,7 +96,7 @@ it('runs action that modifies context', function (): void {
 });
 
 it('runs calculator that modifies context', function (): void {
-    $state = State::forTesting(['count' => 5]);
+    $state = State::forTesting(GenericContext::from(['count' => 5]));
 
     DoubleCountCalculator::runWithState($state);
 
@@ -106,7 +106,7 @@ it('runs calculator that modifies context', function (): void {
 // ─── runWithState() — constructor DI ─────────────────────────
 
 it('resolves constructor DI service when using runWithState', function (): void {
-    $state = State::forTesting(['count' => 7]);
+    $state = State::forTesting(GenericContext::from(['count' => 7]));
 
     IncrementWithServiceAction::runWithState($state);
 
@@ -118,7 +118,7 @@ it('uses mocked constructor DI service with runWithState', function (): void {
     $mock->shouldReceive('increment')->with(7)->once()->andReturn(100);
     App::instance(CounterService::class, $mock);
 
-    $state = State::forTesting(['count' => 7]);
+    $state = State::forTesting(GenericContext::from(['count' => 7]));
 
     IncrementWithServiceAction::runWithState($state);
 

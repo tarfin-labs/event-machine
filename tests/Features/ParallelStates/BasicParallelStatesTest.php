@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
 test('parallel state type is correctly detected', function (): void {
@@ -31,7 +32,11 @@ test('parallel state type is correctly detected', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $activeState = $definition->idMap['test.active'];
 
@@ -61,7 +66,11 @@ test('parallel state enters all regions simultaneously', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -96,7 +105,11 @@ test('state value contains all active region states', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -129,7 +142,11 @@ test('matches method works with partial state paths', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -165,7 +182,11 @@ test('matchesAll verifies multiple states simultaneously', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -203,7 +224,11 @@ test('isInParallelState returns true for parallel states', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -228,7 +253,11 @@ test('parallel state cannot have initial property', function (): void {
                 ],
             ],
         ],
-    ]))->toThrow(InvalidParallelStateDefinitionException::class);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(InvalidParallelStateDefinitionException::class);
 });
 
 test('parallel state must have at least one region', function (): void {
@@ -241,7 +270,11 @@ test('parallel state must have at least one region', function (): void {
                 'states' => [], // Invalid - must have at least one region
             ],
         ],
-    ]))->toThrow(InvalidArgumentException::class);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ))->toThrow(InvalidArgumentException::class);
 });
 
 test('three parallel regions initialize correctly', function (): void {
@@ -278,7 +311,11 @@ test('three parallel regions initialize correctly', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 

@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\Context;
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -10,6 +9,7 @@ use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 
 // ─── Progress Reporting: child → parent via dispatchToParent ─────
@@ -33,7 +33,7 @@ it('child reports progress to parent via dispatchToParent and parent updates con
     };
 
     // Set up context as if this is a child machine with a parent
-    $ctx = Context::from([]);
+    $ctx = GenericContext::from([]);
     $ctx->setMachineIdentity(
         machineId: 'child-machine-id',
         parentRootEventId: 'parent-root-event-id',
@@ -76,6 +76,7 @@ it('parent machine handles progress event on its on map', function (): void {
                 ],
             ],
             behavior: [
+                'context' => GenericContext::class,
                 'actions' => [
                     'updateProgressAction' => function (ContextManager $ctx, EventBehavior $event): void {
                         $ctx->set('progress_percent', $event->payload['percent'] ?? 0);
@@ -129,7 +130,7 @@ it('sendToParent with sync mode sends event directly to parent', function (): vo
     };
 
     // Create child context with parent identity
-    $ctx = Context::from([]);
+    $ctx = GenericContext::from([]);
     $ctx->setMachineIdentity(
         machineId: 'child-id',
         parentRootEventId: $parentRootEventId,

@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessInternalGoAction;
 
@@ -54,6 +55,7 @@ test('internal raised events take priority over external events (SCXML test421)'
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logInternalAction' => function (ContextManager $context): void {
                     $context->set('internal_transition', true);
@@ -125,6 +127,9 @@ test('areAllRegionsFinal does not count non-final states as final', function ():
                 ],
                 'completed' => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ]
     );
 

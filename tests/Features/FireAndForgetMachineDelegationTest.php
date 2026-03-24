@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\StateConfigValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
@@ -39,6 +40,9 @@ it('allows machine + queue without @done (fire-and-forget, stay in state)', func
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     expect($machine)->toBeInstanceOf(MachineDefinition::class);
@@ -62,6 +66,9 @@ it('allows machine + queue + target without @done (fire-and-forget + transition)
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     expect($machine)->toBeInstanceOf(MachineDefinition::class);
@@ -85,6 +92,9 @@ it('allows machine + queue + on @always without @done (fire-and-forget + always)
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     expect($machine)->toBeInstanceOf(MachineDefinition::class);
@@ -104,6 +114,9 @@ it('rejects fire-and-forget with @fail', function (): void {
                 'error' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 })->throws(InvalidArgumentException::class, "'@fail' without '@done'");
 
@@ -121,6 +134,9 @@ it('rejects fire-and-forget with @timeout', function (): void {
                 'timed_out' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 })->throws(InvalidArgumentException::class, "'@timeout' without '@done'");
 
@@ -137,6 +153,9 @@ it('rejects fire-and-forget with output', function (): void {
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 })->throws(InvalidArgumentException::class, "'output' without '@done'");
 
@@ -153,6 +172,9 @@ it('rejects fire-and-forget with forward', function (): void {
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 })->throws(InvalidArgumentException::class, "'forward' without '@done'");
 
@@ -169,6 +191,9 @@ it('rejects machine + target without queue', function (): void {
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 })->throws(InvalidArgumentException::class, "no 'queue'");
 
@@ -187,6 +212,9 @@ it('rejects machine + @done + target', function (): void {
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 })->throws(InvalidArgumentException::class, "both '@done' and 'target'");
 
@@ -465,6 +493,9 @@ it('sync machine without @done stays in state (existing behavior preserved)', fu
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $machine->getInitialState();
@@ -520,6 +551,9 @@ it('job fire-and-forget still works unchanged (regression)', function (): void {
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $machine->getInitialState();
@@ -547,6 +581,9 @@ it('silently stays in state when target references nonexistent state', function 
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $machine->machineClass = 'App\\Machines\\TestMachine';
@@ -584,6 +621,9 @@ it('@done.{state} prevents fire-and-forget detection (T18)', function (): void {
                 'declined'  => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $machine->machineClass = 'App\\Machines\\TestMachine';

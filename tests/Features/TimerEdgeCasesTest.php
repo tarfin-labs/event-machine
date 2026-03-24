@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Definition\TimerDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\EveryTimerMachine;
 
@@ -111,7 +112,8 @@ it('mixed array: multi-branch guarded transition with after key', function (): v
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isExpiredGuard' => fn (): bool => true,
             ],
         ],
@@ -153,7 +155,8 @@ it('multi-branch guarded after: guard pass goes to first branch', function (): v
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isExpiredGuard' => fn (ContextManager $ctx): bool => $ctx->get('is_expired'),
             ],
         ],
@@ -186,7 +189,8 @@ it('multi-branch guarded after: guard fail goes to fallback branch', function ()
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isExpiredGuard' => fn (ContextManager $ctx): bool => $ctx->get('is_expired'),
             ],
         ],
@@ -217,6 +221,7 @@ it('after and every coexist on same state different events', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'heartbeatAction' => function (): void {},
             ],

@@ -19,6 +19,7 @@ use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\FailingTestJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsAllowedGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\SuccessfulTestJob;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseRetryAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\SendToTargetAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AlwaysGuardMachine;
@@ -60,6 +61,9 @@ it('V1: fakingChild registers fake and returns self', function (): void {
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $result = $testMachine->fakingChild(
@@ -88,6 +92,9 @@ it('V2: fakingChild is cleaned up by resetFakes', function (): void {
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $testMachine->fakingChild(ImmediateApprovedChildMachine::class, result: ['decision' => 'yes']);
@@ -113,6 +120,9 @@ it('V3: fakingChild with multiple children cleans all', function (): void {
                 ],
                 'completed' => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 
@@ -214,6 +224,9 @@ it('V10: assertRoutedViaDoneState passes for matching route (@done.approved)', f
                 'fallback'  => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $testMachine
@@ -242,6 +255,9 @@ it('V11: assertRoutedViaDoneState fails for catch-all (lastChildDoneRoute is nul
                 'completed' => ['type' => 'final'],
                 'fallback'  => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 
@@ -295,6 +311,9 @@ it('V13: simulateChildDone with finalState routes via @done.{state}', function (
                 'fallback' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     // Set machineClass to avoid NOT NULL constraint on parent_machine_class in MachineChild
@@ -319,6 +338,9 @@ it('V14: simulateChildDone fails when not in delegating state', function (): voi
                 ],
                 'active' => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 
@@ -345,6 +367,9 @@ it('V15: simulateChildDone fails when wrong child class', function (): void {
                 ],
                 'completed' => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 
@@ -382,6 +407,7 @@ it('V16: simulateChildFail transitions parent via @fail', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'captureErrorAction' => function (ContextManager $ctx, ChildMachineFailEvent $event): void {
                     $ctx->set('error', $event->errorMessage() ?? 'unknown');
@@ -422,6 +448,9 @@ it('V17: simulateChildTimeout transitions parent via @timeout', function (): voi
                 'timed_out' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $testMachine->machine()->definition->machineClass = 'InlineV17Parent';
@@ -460,6 +489,7 @@ it('V18: simulateChildDone result data accessible via output and result', functi
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'captureAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedOutput, &$capturedResult): void {
                     $capturedOutput = $event->output('payment_id');
@@ -527,6 +557,9 @@ it('V18c: simulateChildTimeout routes @timeout for job actors', function (): voi
                 'timed_out' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $testMachine
@@ -593,6 +626,9 @@ it('V18g: simulateChildDone throws on fire-and-forget job target state', functio
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     // Fire-and-forget transitions immediately to 'waiting'
@@ -650,6 +686,7 @@ it('V18i: full job actor flow with multiple simulateChildDone calls', function (
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'captureStepOneAction' => function (ContextManager $ctx, EventBehavior $event): void {
                     $ctx->set('step_one_result', $event->payload['output']['data'] ?? 'done');
@@ -732,6 +769,9 @@ it('V75: assertNotDispatchedTo passes when no dispatch sent', function (): void 
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $test->send('GO')
@@ -759,6 +799,7 @@ it('V76: assertNotDispatchedTo fails when dispatch was sent', function (): void 
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'dispatchAction' => DispatchToTargetAction::class,
             ],
@@ -796,6 +837,7 @@ it('V40: fakingAllActions spies all class-based actions', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logAction' => LogAction::class,
             ],
@@ -830,6 +872,7 @@ it('V41: fakingAllActions except by FQCN skips specified actions', function (): 
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logAction' => LogAction::class,
             ],
@@ -879,6 +922,7 @@ it('V43: fakingAllActions ignores inline closures', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'inlineAction' => function (ContextManager $ctx): void {
                     $ctx->set('value', 'inline_ran');
@@ -926,7 +970,8 @@ it('V45: fakingAllGuards spies all class-based guards', function (): void {
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isAllowedGuard' => IsAllowedGuard::class,
             ],
         ],
@@ -957,7 +1002,8 @@ it('V46: fakingAllGuards except: skips specified guards', function (): void {
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isAllowedGuard' => IsAllowedGuard::class,
             ],
         ],
@@ -988,7 +1034,8 @@ it('V47: fakingAllGuards spy returns null — guard fails by default', function 
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isAllowedGuard' => IsAllowedGuard::class,
             ],
         ],
@@ -1023,6 +1070,7 @@ it('V48: fakingAllBehaviors fakes actions + guards + calculators', function (): 
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logAction' => LogAction::class,
             ],
@@ -1211,6 +1259,9 @@ it('V61: startingAt registers timers for advanceTimers', function (): void {
                 'expired' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $test->advanceTimers(Timer::seconds(61))
@@ -1239,6 +1290,9 @@ it('V62: startingAt with advanceTimers fires after timer', function (): void {
                 'expired' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $test->send('GO')
@@ -1260,6 +1314,9 @@ it('V19: recordingCommunication enables recorder', function (): void {
             'states'  => [
                 'idle' => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 
@@ -1288,6 +1345,9 @@ it('V20: assertSentTo passes when sendTo was called', function (): void {
                 'notified' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $testMachine
@@ -1315,6 +1375,9 @@ it('V21: assertSentTo with eventType filters correctly', function (): void {
                 'notified' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $testMachine
@@ -1338,6 +1401,9 @@ it('V22: assertSentTo fails when sendTo not called', function (): void {
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $testMachine
@@ -1358,6 +1424,9 @@ it('V23: assertNotSentTo passes when no sendTo', function (): void {
                 ],
                 'done' => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 
@@ -1388,6 +1457,9 @@ it('V24: assertDispatchedTo wraps Queue::assertPushed', function (): void {
                 'dispatched' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $testMachine
@@ -1409,6 +1481,9 @@ it('V25: assertDispatchedTo throws when Queue not faked', function (): void {
                 ],
                 'done' => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 
@@ -1436,6 +1511,9 @@ it('V26: assertRaisedEvent checks history for processed event', function (): voi
                 ],
                 'retrying' => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 
@@ -1495,6 +1573,9 @@ it('V28: withRunningChild fails without persistence', function (): void {
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $testMachine->withRunningChild(SimpleChildMachine::class);
@@ -1521,12 +1602,15 @@ it('V29: State::lastChildDoneRoute set by routeChildDoneEvent (direct routing te
             'declined'  => ['type' => 'final'],
             'fallback'  => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]);
 
     // Build state manually to test routeChildDoneEvent in isolation
     // (bypassing getInitialState which now correctly invokes child machines)
     $stateDefinition = $definition->idMap['v29_machine.delegating'];
-    $state           = State::forTesting(context: [], currentStateDefinition: $stateDefinition);
+    $state           = State::forTesting(context: GenericContext::from([]), currentStateDefinition: $stateDefinition);
 
     // Route a @done.approved event directly
     $doneEvent = ChildMachineDoneEvent::forChild([
@@ -1557,11 +1641,15 @@ it('V30: State::lastChildDoneRoute is null for catch-all @done', function (): vo
             'completed' => ['type' => 'final'],
             'fallback'  => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     // Build state manually to test routeChildDoneEvent in isolation
     $stateDefinition = $definition->idMap['v30_machine.delegating'];
-    $state           = State::forTesting(context: [], currentStateDefinition: $stateDefinition);
+    $state           = State::forTesting(context: GenericContext::from([]), currentStateDefinition: $stateDefinition);
 
     // Route with an unknown finalState that doesn't match any @done.{state}
     $doneEvent = ChildMachineDoneEvent::forChild([

@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\LogAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseResultReadyAction;
 
 afterEach(function (): void {
@@ -17,7 +18,7 @@ afterEach(function (): void {
 // ============================================================
 
 it('assertRaised passes when event was raised by type string', function (): void {
-    $state = State::forTesting(['protocol_result' => null]);
+    $state = State::forTesting(GenericContext::from(['protocol_result' => null]));
 
     RaiseResultReadyAction::runWithState($state);
 
@@ -29,7 +30,7 @@ it('assertRaised passes when event was raised by type string', function (): void
 // ============================================================
 
 it('assertRaised passes when event was raised by FQCN', function (): void {
-    $state = State::forTesting(['protocol_result' => null]);
+    $state = State::forTesting(GenericContext::from(['protocol_result' => null]));
 
     RaiseResultReadyAction::runWithState($state);
 
@@ -44,7 +45,7 @@ it('assertRaised passes when event was raised by FQCN', function (): void {
 // ============================================================
 
 it('assertNotRaised passes when event was not raised', function (): void {
-    $state = State::forTesting(['protocol_result' => null]);
+    $state = State::forTesting(GenericContext::from(['protocol_result' => null]));
 
     RaiseResultReadyAction::runWithState($state);
 
@@ -56,7 +57,7 @@ it('assertNotRaised passes when event was not raised', function (): void {
 // ============================================================
 
 it('assertRaisedCount verifies exact count', function (): void {
-    $state = State::forTesting(['protocol_result' => null]);
+    $state = State::forTesting(GenericContext::from(['protocol_result' => null]));
 
     RaiseResultReadyAction::runWithState($state);
 
@@ -68,7 +69,7 @@ it('assertRaisedCount verifies exact count', function (): void {
 // ============================================================
 
 it('assertNothingRaised passes when no events raised', function (): void {
-    $state = State::forTesting(['logged' => false]);
+    $state = State::forTesting(GenericContext::from(['logged' => false]));
 
     LogAction::runWithState($state);
 
@@ -80,7 +81,7 @@ it('assertNothingRaised passes when no events raised', function (): void {
 // ============================================================
 
 it('assertRaised throws when event was not raised', function (): void {
-    $state = State::forTesting(['protocol_result' => null]);
+    $state = State::forTesting(GenericContext::from(['protocol_result' => null]));
 
     RaiseResultReadyAction::runWithState($state);
 

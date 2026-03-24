@@ -6,12 +6,12 @@ namespace Tarfinlabs\EventMachine\Tests;
 
 use RuntimeException;
 use Mockery\MockInterface;
-use Tarfinlabs\EventMachine\Context;
 use Tarfinlabs\EventMachine\ContextManager;
 use Mockery\Exception\InvalidCountException;
 use Tarfinlabs\EventMachine\Facades\EventMachine;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 class TestIncrementAction extends ActionBehavior
 {
@@ -61,7 +61,7 @@ it('returns null for non-faked behavior', function (): void {
 
 it('provides a cleaner syntax with `shouldReturn()` for simple return value mocking', function (): void {
     // 1. Arrange
-    $context = Context::from(['count' => -1]);
+    $context = GenericContext::from(['count' => -1]);
 
     // 2. Act
     TestCountGuard::shouldReturn(true);
@@ -95,7 +95,7 @@ it('properly resets fakes', function (): void {
 
 it('can set run expectations with various configurations', function (): void {
     // 1. Arrange
-    $context = Context::from(['count' => 0]);
+    $context = GenericContext::from(['count' => 0]);
 
     // Test basic expectation
     TestIncrementAction::fake();
@@ -119,7 +119,7 @@ it('can set run expectations with various configurations', function (): void {
 
 it('can mock action to modify context', function (): void {
     // 1. Arrange
-    $context = Context::from(['count' => 0]);
+    $context = GenericContext::from(['count' => 0]);
 
     TestIncrementAction::fake();
     TestIncrementAction::shouldRun()
@@ -139,7 +139,7 @@ it('can mock action to modify context', function (): void {
 
 it('returns real instance result when not faked', function (): void {
     // 1. Arrange
-    $context = Context::from(['count' => 0]);
+    $context = GenericContext::from(['count' => 0]);
 
     // 2. Act
     TestIncrementAction::run($context);
@@ -151,7 +151,7 @@ it('returns real instance result when not faked', function (): void {
 
 it('can verify method arguments', function (): void {
     // 1. Arrange
-    $context = Context::from(['count' => 5]);
+    $context = GenericContext::from(['count' => 5]);
 
     TestIncrementAction::fake();
     TestIncrementAction::shouldRun()
@@ -179,7 +179,7 @@ it('can verify behavior was not run', function (): void {
 
 it('can use mock to throw exceptions', function (): void {
     // 1. Arrange
-    $context = Context::from(['count' => 0]);
+    $context = GenericContext::from(['count' => 0]);
     TestIncrementAction::fake();
     TestIncrementAction::shouldRun()
         ->once()
@@ -195,7 +195,7 @@ it('can use mock to throw exceptions', function (): void {
 // region Edge Cases for shouldRun and shouldReturn
 
 it('handles calling shouldReturn without explicit fake call', function (): void {
-    $context = Context::from(['value' => 5]);
+    $context = GenericContext::from(['value' => 5]);
 
     // shouldReturn implicitly calls fake()
     TestCountGuard::shouldReturn(true);
@@ -204,7 +204,7 @@ it('handles calling shouldReturn without explicit fake call', function (): void 
 });
 
 it('handles calling shouldRun without explicit fake call', function (): void {
-    $context = Context::from(['count' => 0]);
+    $context = GenericContext::from(['count' => 0]);
 
     // shouldRun implicitly calls fake()
     TestIncrementAction::shouldRun()->once();
@@ -217,7 +217,7 @@ it('handles calling shouldRun without explicit fake call', function (): void {
 it('verifies expectation counts accurately', function (): void {
     TestIncrementAction::shouldRun()->times(3);
 
-    $context = Context::from([]);
+    $context = GenericContext::from([]);
     TestIncrementAction::run($context);
     TestIncrementAction::run($context);
 
@@ -232,7 +232,7 @@ it('verifies expectation counts accurately', function (): void {
 
 it('can fake guard behavior with various return value patterns', function (): void {
     // 1. Arrange
-    $context = Context::from(['count' => 0]);
+    $context = GenericContext::from(['count' => 0]);
 
     // Test ordered expectations with different return values
     TestCountGuard::fake();
@@ -265,7 +265,7 @@ it('can fake guard behavior with various return value patterns', function (): vo
 
 it('can handle multiple shouldReturn calls in the same test', function (): void {
     // 1. Arrange
-    $context = Context::from(['value' => 10]);
+    $context = GenericContext::from(['value' => 10]);
 
     // 2. Act & 3. Assert - First call
     TestCountGuard::shouldReturn(true);
@@ -280,7 +280,7 @@ it('can handle multiple shouldReturn calls in the same test', function (): void 
 
 it('can mix shouldRun and shouldReturn calls in the same test', function (): void {
     // 1. Arrange
-    $context = Context::from(['value' => 5]);
+    $context = GenericContext::from(['value' => 5]);
 
     TestCountGuard::shouldRun()
         ->once()
@@ -308,7 +308,7 @@ it('handles multiple consecutive calls with never() expectation', function (): v
 });
 
 it('can chain multiple mock configurations', function (): void {
-    $context = Context::from(['count' => 5]);
+    $context = GenericContext::from(['count' => 5]);
 
     TestIncrementAction::shouldRun()
         ->once()
@@ -334,7 +334,7 @@ it('maintains separate fake states for different behaviors', function (): void {
     TestCountGuard::shouldRun()->once()->andReturn(true);
 
     // 2. Act
-    TestCountGuard::run(Context::from([]));
+    TestCountGuard::run(GenericContext::from([]));
 
     // 3. Assert
     TestCountGuard::assertRan();
@@ -343,7 +343,7 @@ it('maintains separate fake states for different behaviors', function (): void {
 
 it('handles multiple shouldRun calls across different behaviors', function (): void {
     // 1. Arrange
-    $context = Context::from(['count' => 0]);
+    $context = GenericContext::from(['count' => 0]);
 
     TestIncrementAction::shouldRun()
         ->once()
@@ -429,7 +429,7 @@ it('maintains behavior isolation and consistency after resetting fakes', functio
     EventMachine::resetAllFakes();
 
     TestIncrementAction::shouldRun()->once();
-    TestIncrementAction::run(Context::from(['count' => 0]));
+    TestIncrementAction::run(GenericContext::from(['count' => 0]));
 
     TestIncrementAction::assertRan();
     expect(TestCountGuard::isFaked())->toBeFalse();

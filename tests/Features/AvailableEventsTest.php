@@ -11,6 +11,7 @@ use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ForwardChildEndpointMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ForwardParentEndpointMachine;
 
@@ -30,7 +31,7 @@ test('it returns parent on-events for simple atomic state', function (): void {
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     $events = $test->state()->availableEvents();
 
@@ -54,7 +55,7 @@ test('it returns multiple parent on-events', function (): void {
             'active' => ['on' => ['FINISH' => 'done']],
             'done'   => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     $events = $test->state()->availableEvents();
     $types  = array_column($events, 'type');
@@ -76,7 +77,7 @@ test('it returns events with source parent annotation', function (): void {
             'processing' => ['type' => 'final'],
             'cancelled'  => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     $events = $test->state()->availableEvents();
 
@@ -115,7 +116,8 @@ test('it excludes @always from available events', function (): void {
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isReadyGuard' => fn (ContextManager $ctx): bool => $ctx->get('ready') === true,
             ],
         ],
@@ -146,7 +148,11 @@ test('it excludes @done from available events', function (): void {
             'completed' => ['type' => 'final'],
             'cancelled' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state  = $definition->getInitialState();
     $events = $state->availableEvents();
@@ -167,7 +173,11 @@ test('it excludes @fail from available events', function (): void {
             ],
             'failed' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state  = $definition->getInitialState();
     $events = $state->availableEvents();
@@ -189,7 +199,11 @@ test('it excludes @timeout from available events', function (): void {
             'done'      => ['type' => 'final'],
             'timed_out' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state  = $definition->getInitialState();
     $events = $state->availableEvents();
@@ -213,7 +227,7 @@ test('it includes timer events since they are user-sendable event types', functi
             'processing' => ['type' => 'final'],
             'cancelled'  => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     $events = $test->state()->availableEvents();
     $types  = array_column($events, 'type');
@@ -237,7 +251,7 @@ test('it returns empty array for final state', function (): void {
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     $test->send('GO');
 
@@ -248,7 +262,7 @@ test('it returns empty array for final state', function (): void {
 
 test('it returns empty array when current state definition is null', function (): void {
     $state = State::forTesting(
-        context: [],
+        context: GenericContext::from([]),
         currentStateDefinition: null,
     );
 
@@ -278,7 +292,7 @@ test('it returns available events for new state after transition', function (): 
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     // In idle state
     expect(array_column($test->state()->availableEvents(), 'type'))->toBe(['START']);
@@ -375,7 +389,7 @@ test('it excludes forward events when no running child exists', function (): voi
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     // idle state has no machine invoke, so no forward events
     $events  = $test->state()->availableEvents();
@@ -542,7 +556,11 @@ test('it returns events from all active regions in parallel state', function ():
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state  = $definition->getInitialState();
     $events = $state->availableEvents();
@@ -582,7 +600,11 @@ test('parallel state events include region annotation', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state  = $definition->getInitialState();
     $events = $state->availableEvents();
@@ -628,7 +650,11 @@ test('parallel state events exclude internal events from all regions', function 
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state  = $definition->getInitialState();
     $events = $state->availableEvents();
@@ -653,7 +679,7 @@ test('State toArray includes available_events', function (): void {
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     $array = $test->state()->toArray();
 
@@ -673,7 +699,7 @@ test('State toArray available_events is empty for final state', function (): voi
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     $test->send('GO');
 
@@ -692,7 +718,7 @@ test('Machine availableEvents proxies to state', function (): void {
             ],
             'submitted' => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     $machine = $test->machine();
 
@@ -715,7 +741,7 @@ test('TestMachine assertAvailableEvent passes for existing event', function (): 
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     // Should not throw, and returns self for chaining
     $result = $test->assertAvailableEvent('GO');
@@ -733,7 +759,7 @@ test('TestMachine assertNotAvailableEvent passes for missing event', function ()
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     // Should not throw, and returns self for chaining
     $result = $test->assertNotAvailableEvent('NONEXISTENT');
@@ -755,7 +781,7 @@ test('TestMachine assertAvailableEvents passes for exact match', function (): vo
             'active' => ['type' => 'final'],
             'done'   => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     // Order-independent, returns self for chaining
     $result = $test->assertAvailableEvents(['CANCEL', 'GO']);
@@ -773,7 +799,7 @@ test('TestMachine assertNoAvailableEvents passes for final state', function (): 
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     $test->send('GO');
     $result = $test->assertNoAvailableEvents();
@@ -791,7 +817,7 @@ test('State jsonSerialize includes available_events', function (): void {
             ],
             'active' => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     $json = $test->state()->jsonSerialize();
 

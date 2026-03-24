@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 test('initial states are correctly set for both top-level machine definition and sub-states when explicitly specified', function (): void {
     $machine = MachineDefinition::define(config: [
@@ -22,7 +23,11 @@ test('initial states are correctly set for both top-level machine definition and
             'yellow' => [],
             'red'    => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machine->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
@@ -53,7 +58,11 @@ test('first state auto-set as initial for machine and sub-states when not specif
             'yellow' => [],
             'red'    => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machine->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)
@@ -85,6 +94,7 @@ it('should run entry actions for building initial state', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'incrementAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') + 1);
@@ -115,7 +125,11 @@ test('initial state can be a child state', function (): void {
             'yellow' => [],
             'red'    => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machine->initialStateDefinition)
         ->toBeInstanceOf(StateDefinition::class)

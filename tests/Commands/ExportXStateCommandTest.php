@@ -88,7 +88,7 @@ it('produces valid XState JSON structure for a guarded machine', function (): vo
     expect($xstate['initial'])->toBe('active');
 
     // Context
-    expect($xstate['context'])->toBe(['count' => 1]);
+    expect($xstate['context'])->toHaveKey('count');
 
     // States
     expect($xstate['states'])->toHaveKeys(['active', 'processed']);

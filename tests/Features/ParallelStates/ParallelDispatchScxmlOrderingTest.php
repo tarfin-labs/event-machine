@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 test('parallel state entry: parent entered before children (SCXML test404)', function (): void {
     $actionsExecuted = [];
@@ -37,6 +38,7 @@ test('parallel state entry: parent entered before children (SCXML test404)', fun
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'parentEntryAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'parent_entry';
@@ -102,6 +104,7 @@ test('parallel state exit: children exited before parent (SCXML test406)', funct
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'childAExitAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'child_a_exit';
@@ -171,6 +174,7 @@ test('entry ordering across nested parallel compound states (SCXML test405)', fu
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'parallelEntryAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'parallel_entry';

@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 class OrderMachine extends Machine
 {
@@ -34,6 +35,7 @@ class OrderMachine extends Machine
                 ],
             ],
             behavior: [
+                'context'     => GenericContext::class,
                 'calculators' => [
                     'calculateOrderTotalCalculator' => function (ContextManager $context): void {
                         $context->items_count *= 10;

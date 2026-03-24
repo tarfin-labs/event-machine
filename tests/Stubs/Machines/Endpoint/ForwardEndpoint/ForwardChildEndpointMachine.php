@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Child machine that accepts forwarded events from a parent.
@@ -48,7 +49,8 @@ class ForwardChildEndpointMachine extends Machine
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'PROVIDE_CARD'    => ProvideCardEvent::class,
                     'CONFIRM_PAYMENT' => ConfirmPaymentEvent::class,
                     'ABORT'           => AbortEvent::class,

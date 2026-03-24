@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchChainedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithFailMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMultiRaiseMachine;
@@ -68,7 +69,8 @@ test('@always transitions fire after parallel region completion (plan #18)', fun
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isSiblingApprovedGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('parallel_parent.region_b.approved_b')
                     || $state->matches('parallel_parent.region_b.completed'),
             ],
@@ -252,6 +254,9 @@ test('nested parallel state within region enters correctly (plan #44)', function
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -337,6 +342,9 @@ test('three-level nesting: outer parallel → inner parallel → leaf states (pl
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();

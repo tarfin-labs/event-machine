@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMachine;
 
 uses(RefreshDatabase::class);
@@ -51,6 +52,7 @@ test('region done events fire BEFORE parallel done event (SCXML test570)', funct
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'regionAEntryAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'region_a_entry';
@@ -167,6 +169,9 @@ test('compound child done fires within parallel region (SCXML test417)', functio
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -224,6 +229,7 @@ test('region done event fires AFTER all entry actions complete (SCXML test372)',
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'finalEntryAction' => function () use (&$entryComplete): void {
                     $entryComplete = true;

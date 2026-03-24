@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /*
  * These tests verify that all code examples in docs/advanced/parallel-states.md
@@ -48,7 +49,11 @@ test('docs example: basic parallel state syntax', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -87,7 +92,11 @@ test('docs example: checking active states with matches()', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -133,7 +142,11 @@ test('docs example: single region handling', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     // document: editing, format: normal
@@ -187,6 +200,7 @@ test('docs example: multiple region handling - same event triggers both regions'
             ],
         ],
     ], [
+        'context' => GenericContext::class,
         'actions' => [
             'updateValueAction' => function (ContextManager $ctx, EventBehavior $event): void {
                 $ctx->set('value', $event->payload['value'] ?? 'changed');
@@ -246,6 +260,7 @@ test('docs example: entry action execution order', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logParallelEntryAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = '1. Entering parallel state';
@@ -316,6 +331,7 @@ test('docs example: exit action execution order', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logStateAExitAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = '1. Exiting state a';
@@ -386,6 +402,7 @@ test('docs example: shared context across regions', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'incrementAction' => function (ContextManager $ctx): void {
                     $ctx->set('count', $ctx->get('count') + 1);
@@ -444,7 +461,11 @@ test('docs example: onDone transitions when all regions are final', function ():
             ],
             'complete' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     // processing.payment.pending, processing.shipping.preparing
@@ -491,7 +512,11 @@ test('docs example: transitioning from non-parallel to parallel', function (): v
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     expect($state->matches('idle'))->toBeTrue();
@@ -550,7 +575,11 @@ test('docs example: transitioning into nested parallel within parallel region', 
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     // Initial: outer1.off, outer2.waiting
@@ -619,7 +648,11 @@ test('docs example: deep nesting (3+ levels)', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -688,7 +721,8 @@ test('docs example: guards checking cross-region state', function (): void {
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isRegion2ReadyGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('parallel.region2.ready'),
             ],
         ]
@@ -772,7 +806,11 @@ test('docs example: text formatting with multiple toggles', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     // All formatting off, no list

@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\FakeExternalService;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\ExternalServiceContract;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\DependencyInjectedTestJob;
@@ -29,6 +30,9 @@ it('validates job + machine mutual exclusivity', function (): void {
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 })->throws(InvalidArgumentException::class, "cannot have both 'job' and 'machine'");
 
@@ -45,6 +49,9 @@ it('validates job without @done requires target', function (): void {
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 })->throws(InvalidArgumentException::class, "without '@done' or 'target'");
 
@@ -62,6 +69,9 @@ it('validates @done + target ambiguity', function (): void {
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 })->throws(InvalidArgumentException::class, "cannot have both '@done' and 'target'");
 
@@ -89,6 +99,9 @@ it('dispatches ChildJobJob when entering a state with job key', function (): voi
                 'failed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $machine->getInitialState();
@@ -123,6 +136,9 @@ it('dispatches fire-and-forget job and transitions immediately', function (): vo
                 'next_state' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $machine->getInitialState();

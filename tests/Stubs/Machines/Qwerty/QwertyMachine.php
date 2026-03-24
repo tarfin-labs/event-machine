@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Qwerty\Events\EEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Qwerty\Events\QEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Qwerty\Events\REvent;
@@ -74,6 +75,7 @@ class QwertyMachine extends Machine
                 ],
             ],
             behavior: [
+                'context' => GenericContext::class,
                 'actions' => [
                     'logAction' => function (ContextManager $context, EventBehavior $eventBehavior): void {
                         Log::debug($eventBehavior->actor(context: $context));

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Support\Timer;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 // ─── after key accepted ─────────────────────────────────────────
 
@@ -21,6 +22,9 @@ it('accepts after key on transition', function (): void {
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     expect($machine)->toBeInstanceOf(MachineDefinition::class);
@@ -44,6 +48,7 @@ it('accepts every key on transition', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'billingAction' => function (): void {},
             ],
@@ -71,6 +76,7 @@ it('accepts max and then with every', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'retryAction' => function (): void {},
             ],
@@ -96,6 +102,9 @@ it('extracts TimerDefinition from after key on transition', function (): void {
                 'expired' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state      = $machine->idMap['extract_after.waiting'];
@@ -125,6 +134,7 @@ it('extracts TimerDefinition from every key on transition', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'billingAction' => function (): void {},
             ],
@@ -153,6 +163,9 @@ it('does not extract timer when no after/every key', function (): void {
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state      = $machine->idMap['no_timer.idle'];

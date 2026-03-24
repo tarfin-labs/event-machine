@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Log;
-use Tarfinlabs\EventMachine\Context;
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -11,6 +10,7 @@ use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ParentOrderMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 
@@ -38,7 +38,7 @@ it('sends event to a target machine synchronously via sendTo', function (): void
     };
 
     // Execute the action (simulates being called within a machine)
-    $action->__invoke(Context::from([
+    $action->__invoke(GenericContext::from([
         'target_root_event_id' => $rootEventId,
     ]));
 
@@ -63,7 +63,7 @@ it('dispatches SendToMachineJob via dispatchTo', function (): void {
         }
     };
 
-    $action->__invoke(Context::from([]));
+    $action->__invoke(GenericContext::from([]));
 
     Queue::assertPushed(SendToMachineJob::class, function (SendToMachineJob $job): bool {
         return $job->machineClass === SimpleChildMachine::class
@@ -148,7 +148,7 @@ it('sendToParent throws on non-child machine', function (): void {
     };
 
     // Context without parent identity
-    $ctx = Context::from([]);
+    $ctx = GenericContext::from([]);
 
     $action->__invoke($ctx);
 })->throws(RuntimeException::class, 'Cannot sendToParent');
@@ -169,7 +169,7 @@ it('sendToParent sends event synchronously to parent', function (): void {
     };
 
     // Create child context with parent identity
-    $ctx = Context::from([]);
+    $ctx = GenericContext::from([]);
     $ctx->setMachineIdentity(
         machineId: 'child-id',
         parentRootEventId: $parentRootEventId,
@@ -199,7 +199,7 @@ it('dispatchToParent dispatches SendToMachineJob to parent', function (): void {
     };
 
     // Create context with parent identity set
-    $ctx = Context::from([]);
+    $ctx = GenericContext::from([]);
     $ctx->setMachineIdentity(
         machineId: 'child-root-event-id',
         parentRootEventId: $parentRootEventId,
@@ -224,7 +224,7 @@ it('dispatchToParent throws on non-child machine', function (): void {
         }
     };
 
-    $ctx = Context::from([]);
+    $ctx = GenericContext::from([]);
 
     $action->__invoke($ctx);
 })->throws(RuntimeException::class, 'Cannot dispatchToParent');

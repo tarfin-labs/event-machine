@@ -12,6 +12,7 @@ use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 use Tarfinlabs\EventMachine\Support\CompressionManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /*
  * Tests the complete archive lifecycle:
@@ -103,7 +104,11 @@ describe('Archive Lifecycle', function (): void {
                 'step2' => ['on' => ['COMPLETE' => 'done']],
                 'done'  => ['type' => 'final'],
             ],
-        ]);
+        ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
+        );
 
         $machine = Machine::withDefinition($machineDefinition);
         $state   = $machine->restoreStateFromRootEventId($rootEventId);
@@ -234,7 +239,11 @@ describe('Archive Lifecycle', function (): void {
                 'initial'    => ['on' => ['NEW_EVENT' => 'processing']],
                 'processing' => ['type' => 'final'],
             ],
-        ]);
+        ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
+        );
 
         $machine = Machine::withDefinition($machineDefinition);
         $state   = $machine->restoreStateFromRootEventId($rootEventId);

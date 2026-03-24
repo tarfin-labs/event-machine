@@ -158,7 +158,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      */
     protected static function createFaked(): self
     {
-        $fake = self::getMachineFake(static::class);
+        self::getMachineFake(static::class);
 
         $machine                            = self::withDefinition(static::definition());
         $machine->definition->machineClass  = static::class;

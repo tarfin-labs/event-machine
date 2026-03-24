@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 test('same event transitions multiple regions simultaneously', function (): void {
     $definition = MachineDefinition::define(
@@ -37,6 +38,9 @@ test('same event transitions multiple regions simultaneously', function (): void
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -84,6 +88,7 @@ test('targetless transition in parallel region fires actions without state chang
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'pingAction' => function () use (&$actionFired): void {
                     $actionFired = true;
@@ -137,6 +142,7 @@ test('cross-region event does NOT re-enter parallel state', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'parallelEntryAction' => function () use (&$parallelEntryCount): void {
                     $parallelEntryCount++;
@@ -195,6 +201,7 @@ test('re-entering transition fires exit then entry actions', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'entryAction' => function () use (&$entryCount): void {
                     $entryCount++;

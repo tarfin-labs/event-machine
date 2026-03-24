@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RecordAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 class GuardedMachine extends Machine
 {
@@ -40,7 +41,8 @@ class GuardedMachine extends Machine
                 ],
             ],
             behavior: [
-                'guards' => [
+                'context' => GenericContext::class,
+                'guards'  => [
                     'isEvenGuard' => function (ContextManager $context): bool {
                         return $context->get('count') % 2 === 0;
                     },

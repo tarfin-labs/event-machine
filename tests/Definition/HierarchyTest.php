@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 // === Root State Definition Tests ===
 
@@ -14,7 +15,11 @@ test('root state definition has a reference to the machine definition', function
 
 test('root state definition has a local id', function (): void {
     $machineName = 'custom_machine_name';
-    $machine     = MachineDefinition::define(config: ['id' => $machineName]);
+    $machine     = MachineDefinition::define(config: ['id' => $machineName],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machine->root)->toHaveProperty('key');
     expect($machine->root->key)->toBe($machineName);
@@ -38,7 +43,11 @@ test('search nothing', function (): void {
             'yellow' => [],
             'red'    => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machine->getNearestStateDefinitionByString(stateDefinitionId: ''))->toBe(null);
     expect($machine->getNearestStateDefinitionByString(stateDefinitionId: 'g'))->toBe(null);
@@ -60,7 +69,11 @@ test('search root states by string', function (): void {
             'yellow' => [],
             'red'    => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $greenStateDefinition  = $machine->stateDefinitions['green'];
     $yellowStateDefinition = $machine->stateDefinitions['yellow'];
@@ -89,7 +102,11 @@ test('search unique child states by string', function (): void {
             'yellow' => [],
             'red'    => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $uniqueSubStateDefinition = $machine->stateDefinitions['green']->stateDefinitions['uniqueSubState'];
     $foundStateDefinition     = $machine->getNearestStateDefinitionByString(stateDefinitionId: 'green'.$delimiter.'uniqueSubState');
@@ -118,7 +135,11 @@ it('can transition to a child state', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $newState = $machine->transition(event: [
         'type' => 'EVENT',
@@ -143,7 +164,11 @@ it('can transition to a child state, targets as arrays', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $newState = $machine->transition(event: [
         'type' => 'EVENT',
@@ -167,7 +192,11 @@ it('can transition from a child state', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $newState = $machine->transition(event: [
         'type' => 'EVENT',
@@ -193,7 +222,11 @@ it('can transition from a child state, targets as arrays', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $newState = $machine->transition(event: [
         'type' => 'EVENT',

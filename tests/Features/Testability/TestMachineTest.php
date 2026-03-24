@@ -8,6 +8,7 @@ use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
 use PHPUnit\Framework\ExpectationFailedException;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\MachineWithScenarios;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\TestabilityMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\IncreaseEvent;
@@ -49,7 +50,7 @@ it('creates TestMachine via define() for inline definitions', function (): void 
             ],
             'active' => [],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     $test->send('GO')->assertState('active');
 });
@@ -58,7 +59,7 @@ it('auto-disables persistence in define()', function (): void {
     $test = TestMachine::define([
         'initial' => 'idle',
         'states'  => ['idle' => []],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     expect($test->machine()->definition->shouldPersist)->toBeFalse();
 });
@@ -178,7 +179,7 @@ it('treats unknown events as guarded in assertGuarded', function (): void {
             ],
             'active' => [],
         ],
-    ])->assertGuarded('NONEXISTENT_EVENT');
+    ], ['context' => GenericContext::class])->assertGuarded('NONEXISTENT_EVENT');
 
     $test->assertState('idle');
 });
@@ -261,7 +262,7 @@ it('assertFinished passes when in final state', function (): void {
                 'type' => 'final',
             ],
         ],
-    ])->send('COMPLETE')->assertFinished();
+    ], ['context' => GenericContext::class])->send('COMPLETE')->assertFinished();
 });
 
 it('assertFinished fails when not in final state', function (): void {
@@ -283,7 +284,7 @@ it('asserts result value with assertResult', function (): void {
                 'type' => 'final',
             ],
         ],
-    ])->send('COMPLETE')->assertResult(null);
+    ], ['context' => GenericContext::class])->send('COMPLETE')->assertResult(null);
 });
 
 // ─── Validation assertions ──────────────────────────────────

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 // ---------------------------------------------------------------------------
 // Nested parallel state should run exit on the parallel state itself
@@ -75,6 +76,7 @@ it('runs exit action on the nested parallel state itself when @done fires', func
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'exitInnerParallelAction' => function () use ($exits): void {
                     $exits->exited[] = 'inner_parallel';

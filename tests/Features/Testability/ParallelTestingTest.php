@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Testing\TestMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 // ─── withoutParallelDispatch() ──────────────────────────────
@@ -53,7 +54,7 @@ it('asserts region state from value array', function (): void {
         'states'  => [
             'active' => [],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     // Manually set state value to simulate parallel regions
     $test->state()->value = [
@@ -71,7 +72,7 @@ it('rejects partial region name matches in assertRegionState', function (): void
         'states'  => [
             'active' => [],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     $test->state()->value = [
         'machine.processing.payment.pending',
@@ -88,7 +89,7 @@ it('rejects partial state name matches in assertRegionState', function (): void 
         'states'  => [
             'active' => [],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     $test->state()->value = [
         'machine.processing.payment.pending',

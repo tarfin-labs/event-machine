@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Parent machine that delegates to MultiOutcomeChildMachine with @done.{state} routing.
@@ -34,6 +35,9 @@ class DoneDotParentMachine extends Machine
                 'declined'  => ['type' => 'final'],
                 'error'     => ['type' => 'final'],
             ],
-        ]);
+        ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]);
     }
 }

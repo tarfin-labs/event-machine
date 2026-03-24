@@ -11,6 +11,7 @@ use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 use Tarfinlabs\EventMachine\Support\CompressionManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 describe('Archive Transparency Integration', function (): void {
     beforeEach(function (): void {
@@ -84,7 +85,11 @@ describe('Archive Transparency Integration', function (): void {
                     'type' => 'final',
                 ],
             ],
-        ]);
+        ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
+        );
 
         $machine = Machine::withDefinition($machineDefinition);
 
@@ -157,7 +162,11 @@ describe('Archive Transparency Integration', function (): void {
                 'initial'    => ['on' => ['new.event' => 'processing']],
                 'processing' => ['type' => 'final'],
             ],
-        ]);
+        ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
+        );
 
         $machine = Machine::withDefinition($machineDefinition);
         $state   = $machine->restoreStateFromRootEventId($rootEventId);
@@ -179,7 +188,11 @@ describe('Archive Transparency Integration', function (): void {
             'states'  => [
                 'initial' => ['type' => 'final'],
             ],
-        ]);
+        ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
+        );
 
         $machine = Machine::withDefinition($machineDefinition);
 

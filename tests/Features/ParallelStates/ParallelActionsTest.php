@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 test('entry actions fire when entering parallel regions', function (): void {
     $actionsExecuted = [];
@@ -38,6 +39,7 @@ test('entry actions fire when entering parallel regions', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logEntryA1Action' => function (ContextManager $ctx) use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'entryA1';
@@ -93,6 +95,7 @@ test('transition actions fire during parallel region transitions', function (): 
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logPlayAction' => function (ContextManager $ctx) use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'play';
@@ -144,6 +147,7 @@ test('exit actions fire during parallel region transitions', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logExitPausedAction' => function (ContextManager $ctx) use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'exitPaused';
@@ -193,6 +197,7 @@ test('context is shared across all parallel regions', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'incrementCountAction' => function (ContextManager $ctx): void {
                     $ctx->set('count', $ctx->get('count') + 1);

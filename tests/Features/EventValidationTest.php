@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Illuminate\Validation\ValidationException;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Events\ValidatedEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 test('an event payload can be validated', function (): void {
     $randomMachineValue = random_int(1, 10);
@@ -29,6 +30,7 @@ test('an event payload can be validated', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'updateContextAction' => function (ContextManager $context, ValidatedEvent $event) {
                     return $context->set('value', $context->get('value') + $event->payload['attribute']);
@@ -69,6 +71,7 @@ test('an event validator can stopping on the first validation failure', function
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'foo' => function (ContextManager $context, ValidatedEvent $event) {
                     return 'bar';

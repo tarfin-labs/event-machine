@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /*
  * Tests for @always transitions in parallel states, especially cross-region
@@ -53,7 +54,8 @@ test('always transition with guard in parallel state does not throw when guard f
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isRegionBReadyGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.region_b.ready'),
             ],
         ]
@@ -126,7 +128,8 @@ test('always transition fires when cross-region guard becomes satisfied', functi
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isPreApprovalPassedGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.customer.personal_details')
                     || $state->matches('processing.customer.customer_done'),
             ],
@@ -195,7 +198,8 @@ test('always transition fires when region enters awaiting after sibling is alrea
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isRegionBReadyGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.region_b.ready'),
             ],
         ]
@@ -258,7 +262,8 @@ test('mutual cross-region always transitions resolve in sequence', function (): 
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isBAtB2Guard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.region_b.b2'),
             ],
         ]
@@ -315,7 +320,8 @@ test('always transition with context flag guard in parallel state', function ():
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isApprovedGuard' => fn (ContextManager $ctx) => $ctx->get('approved') === true,
             ],
             'actions' => [
@@ -377,7 +383,8 @@ test('always guard failure in parallel does not affect other regions', function 
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'neverTrueGuard' => fn () => false,
             ],
         ]
@@ -437,7 +444,8 @@ test('cross-region always with onDone completes when all regions reach final', f
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isRegionBDoneGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $state->matches('processing.region_b.done'),
             ],
         ]

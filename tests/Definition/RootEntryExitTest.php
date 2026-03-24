@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 // region Root entry
 
@@ -20,6 +21,7 @@ it('runs root entry actions on machine initialization', function (): void {
             'active' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'markRootEntryAction' => function (ContextManager $context): void {
                 $context->set('root_entered', true);
@@ -44,6 +46,7 @@ it('runs root entry before initial state entry', function (): void {
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'logRootEntryAction' => function (ContextManager $context): void {
                 $context->set('log', [...$context->get('log'), 'root']);
@@ -73,6 +76,7 @@ it('runs root exit actions when machine reaches final state', function (): void 
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'markRootExitAction' => function (ContextManager $context): void {
                 $context->set('root_exited', true);
@@ -96,6 +100,7 @@ it('runs root exit before MACHINE_FINISH when initial state is final', function 
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'markEntryAction' => function (ContextManager $context): void {
                 $context->set('root_entered', true);
@@ -124,7 +129,7 @@ it('works normally without root entry or exit', function (): void {
             ],
             'done' => ['type' => 'final'],
         ],
-    ])
+    ], ['context' => GenericContext::class])
         ->assertState('idle')
         ->send('GO')
         ->assertState('done');
@@ -142,6 +147,7 @@ it('does not run root entry on subsequent transitions', function (): void {
             'c' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'countRootEntryAction' => function (ContextManager $context): void {
                 $context->set('root_entry_count', $context->get('root_entry_count') + 1);

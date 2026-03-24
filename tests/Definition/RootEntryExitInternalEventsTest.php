@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 it('records MACHINE_ENTRY internal events for root entry actions', function (): void {
     $machine = TestMachine::define([
@@ -16,6 +17,7 @@ it('records MACHINE_ENTRY internal events for root entry actions', function (): 
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'rootEntryAction' => function (ContextManager $context): void {},
         ],
@@ -42,6 +44,7 @@ it('records MACHINE_EXIT internal events for root exit actions', function (): vo
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'rootExitAction' => function (ContextManager $context): void {},
         ],

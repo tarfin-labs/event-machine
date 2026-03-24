@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ProvideCardEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\FqcnForwardParentMachine;
@@ -38,7 +39,8 @@ test('it rejects forward array config with unknown keys', function (): void {
                 ],
             ],
             behavior: [
-                'events' => ['START' => TestStartEvent::class],
+                'context' => GenericContext::class,
+                'events'  => ['START' => TestStartEvent::class],
             ],
         );
     })->toThrow(InvalidArgumentException::class, 'unknown keys');
@@ -67,7 +69,8 @@ test('it rejects forward with uri not starting with slash', function (): void {
                 ],
             ],
             behavior: [
-                'events' => ['START' => TestStartEvent::class],
+                'context' => GenericContext::class,
+                'events'  => ['START' => TestStartEvent::class],
             ],
         );
     })->toThrow(InvalidArgumentException::class, "uri must start with '/'");
@@ -95,7 +98,8 @@ test('it rejects forward without queue', function (): void {
                 ],
             ],
             behavior: [
-                'events' => ['START' => TestStartEvent::class],
+                'context' => GenericContext::class,
+                'events'  => ['START' => TestStartEvent::class],
             ],
         );
     })->toThrow(InvalidArgumentException::class, 'forward');
@@ -122,7 +126,8 @@ test('it rejects forward with fire-and-forget (queue without @done)', function (
                 ],
             ],
             behavior: [
-                'events' => ['START' => TestStartEvent::class],
+                'context' => GenericContext::class,
+                'events'  => ['START' => TestStartEvent::class],
             ],
         );
     })->toThrow(InvalidArgumentException::class, 'forward');
@@ -156,7 +161,8 @@ test('it rejects forward event that also appears in parent endpoints', function 
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'START'        => TestStartEvent::class,
                     'PROVIDE_CARD' => ProvideCardEvent::class,
                 ],
@@ -185,7 +191,8 @@ test('it rejects forward event that also appears in parent behavior.events', fun
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'START'        => TestStartEvent::class,
                     'PROVIDE_CARD' => ProvideCardEvent::class,
                 ],
@@ -221,7 +228,8 @@ test('it rejects forward FQCN that resolves to same type as parent endpoint', fu
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'START'        => TestStartEvent::class,
                     'PROVIDE_CARD' => ProvideCardEvent::class,
                 ],
@@ -259,7 +267,8 @@ test('it rejects same forward event in two delegating states', function (): void
                 ],
             ],
             behavior: [
-                'events' => ['START' => TestStartEvent::class],
+                'context' => GenericContext::class,
+                'events'  => ['START' => TestStartEvent::class],
             ],
         );
     })->toThrow(InvalidArgumentException::class, 'multiple delegating states');
@@ -293,7 +302,8 @@ test('error message for endpoint overlap includes clear migration instructions',
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'START'        => TestStartEvent::class,
                     'PROVIDE_CARD' => ProvideCardEvent::class,
                 ],
@@ -329,7 +339,8 @@ test('error message for behavior.events overlap includes clear removal instructi
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'START'        => TestStartEvent::class,
                     'PROVIDE_CARD' => ProvideCardEvent::class,
                 ],
@@ -405,7 +416,8 @@ test('it accepts forward event NOT in parent endpoints or behavior.events', func
             ],
         ],
         behavior: [
-            'events' => ['START' => TestStartEvent::class],
+            'context' => GenericContext::class,
+            'events'  => ['START' => TestStartEvent::class],
         ],
         endpoints: ['START'],
     );

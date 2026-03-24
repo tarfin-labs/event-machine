@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ListenerMachines;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ListenerMachines\Actions\SyncMarkerAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ListenerMachines\Actions\QueuedMarkerAction;
 
@@ -40,6 +41,9 @@ class ListenerQueuedMachine extends Machine
                     'done'   => ['type' => 'final'],
                 ],
             ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
         );
     }
 }

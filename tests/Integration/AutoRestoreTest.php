@@ -12,6 +12,7 @@ use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 use Tarfinlabs\EventMachine\Support\CompressionManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /*
  * Tests for auto-restore feature:
@@ -360,7 +361,11 @@ describe('Auto-Restore Full Lifecycle', function (): void {
                 'step2' => ['on' => ['COMPLETE' => 'done']],
                 'done'  => ['type' => 'final'],
             ],
-        ]);
+        ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
+        );
 
         $machine = Machine::withDefinition($machineDefinition);
         $state   = $machine->restoreStateFromRootEventId($rootEventId);

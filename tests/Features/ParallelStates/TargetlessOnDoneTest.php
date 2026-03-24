@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 // ---------------------------------------------------------------------------
 // Targetless @done on compound state — actions should run, state stays
@@ -34,6 +35,7 @@ it('runs branch actions on targetless compound @done', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logCompletionAction' => function () use ($tracker): void {
                     $tracker->fired = true;
@@ -91,6 +93,7 @@ it('runs branch actions on targetless parallel @done', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logParallelDoneAction' => function () use ($tracker): void {
                     $tracker->fired = true;
@@ -140,7 +143,8 @@ it('runs guarded targetless @done branch actions when guard passes', function ()
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'alwaysTrueGuard' => fn () => true,
             ],
             'actions' => [

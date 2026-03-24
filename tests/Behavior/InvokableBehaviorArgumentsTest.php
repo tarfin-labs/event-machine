@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 test('an action can have multiple arguments', function (): void {
     $machine = MachineDefinition::define(
@@ -24,6 +25,7 @@ test('an action can have multiple arguments', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'additionAction' => function (ContextManager $ctx, EventDefinition $ed, ?array $arguments = null): void {
                     $ctx->count += array_sum($arguments);
@@ -56,6 +58,7 @@ test('a guard can have multiple arguments', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'additionAction' => function (ContextManager $context, EventDefinition $eventDefinition, ?array $arguments = null): void {
                     $context->count += array_sum($arguments);

@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Support\Timer;
 use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 // region @after — basic
 
@@ -24,7 +25,7 @@ it('fires after timer when deadline is reached with define()', function (): void
             ],
             'expired' => ['type' => 'final'],
         ],
-    ])
+    ], ['context' => GenericContext::class])
         ->assertState('waiting')
         ->advanceTimers(Timer::seconds(31))
         ->assertState('expired');
@@ -45,7 +46,7 @@ it('does not fire after timer before deadline', function (): void {
             ],
             'expired' => ['type' => 'final'],
         ],
-    ])
+    ], ['context' => GenericContext::class])
         ->assertState('waiting')
         ->advanceTimers(Timer::seconds(20))
         ->assertState('waiting');
@@ -72,6 +73,7 @@ it('fires after timer only once (dedup)', function (): void {
             ],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'incrementAction' => function (ContextManager $context): void {
                 $context->set('count', $context->get('count') + 1);
@@ -100,7 +102,7 @@ it('preserves timer fire history after state transition', function (): void {
             ],
             'expired' => ['type' => 'final'],
         ],
-    ])
+    ], ['context' => GenericContext::class])
         ->advanceTimers(Timer::seconds(31))
         ->assertState('expired')
         ->assertTimerFired('EXPIRE');
@@ -127,6 +129,7 @@ it('fires every timer on interval', function (): void {
             ],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'incrementAction' => function (ContextManager $context): void {
                 $context->set('poll_count', $context->get('poll_count') + 1);
@@ -159,6 +162,7 @@ it('respects every timer max count', function (): void {
             ],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'incrementAction' => function (ContextManager $context): void {
                 $context->set('retry_count', $context->get('retry_count') + 1);
@@ -198,6 +202,7 @@ it('sends then-event after every timer max reached', function (): void {
             'failed' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'incrementAction' => function (ContextManager $context): void {
                 $context->set('retry_count', $context->get('retry_count') + 1);
@@ -231,7 +236,7 @@ it('asserts timer exists with correct duration', function (): void {
             ],
             'done' => ['type' => 'final'],
         ],
-    ])
+    ], ['context' => GenericContext::class])
         ->assertHasTimer('EXPIRE', Timer::seconds(120));
 });
 
@@ -250,7 +255,7 @@ it('fails assertHasTimer when duration does not match', function (): void {
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     expect(fn () => $machine->assertHasTimer('EXPIRE', Timer::seconds(60)))
         ->toThrow(AssertionFailedError::class);
@@ -271,7 +276,7 @@ it('assertTimerFired works in-memory', function (): void {
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     // Before timer fires
     expect(fn () => $machine->assertTimerFired('EXPIRE'))
@@ -313,7 +318,7 @@ it('resets timers on state transition', function (): void {
             ],
             'done' => ['type' => 'final'],
         ],
-    ])
+    ], ['context' => GenericContext::class])
         ->advanceTimers(Timer::seconds(11))
         ->assertState('state_b')
         ->advanceTimers(Timer::seconds(15))
@@ -340,7 +345,8 @@ it('records fire even when guard blocks transition', function (): void {
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
-        'guards' => [
+        'context' => GenericContext::class,
+        'guards'  => [
             'allowGuard' => function (ContextManager $context): bool {
                 return $context->get('allow') === true;
             },
@@ -365,7 +371,7 @@ it('fires timer with cumulative advanceTimers calls', function (): void {
             ],
             'expired' => ['type' => 'final'],
         ],
-    ])
+    ], ['context' => GenericContext::class])
         ->advanceTimers(Timer::seconds(60))
         ->assertState('waiting')
         ->advanceTimers(Timer::seconds(61))
@@ -395,7 +401,7 @@ it('works with withContext and advanceTimers', function (): void {
             ],
             'timed_out' => ['type' => 'final'],
         ],
-    ])
+    ], ['context' => GenericContext::class])
         ->assertContext('user_id', 42)
         ->advanceTimers(Timer::minutes(31))
         ->assertState('timed_out');

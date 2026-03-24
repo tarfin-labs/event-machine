@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\Context;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
@@ -32,6 +32,7 @@ it('should run entry actions when transitioning to a new state', function (): vo
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'incrementAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') + 1);
@@ -47,7 +48,7 @@ it('should run entry actions when transitioning to a new state', function (): vo
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
-        ->and($newState->context->toArray())->toBe(['count' => 1]);
+        ->and($newState->context->count)->toBe(1);
 });
 
 it('should run entry actions when transitioning to a substate', function (): void {
@@ -74,6 +75,7 @@ it('should run entry actions when transitioning to a substate', function (): voi
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'incrementAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') + 1);
@@ -89,7 +91,7 @@ it('should run entry actions when transitioning to a substate', function (): voi
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active.idle'])
-        ->and($newState->context->toArray())->toBe(['count' => 1]);
+        ->and($newState->context->count)->toBe(1);
 
     $this->assertDatabaseHas(MachineEvent::class, [
         'machine_value' => json_encode([$newState->currentStateDefinition->id], JSON_THROW_ON_ERROR),
@@ -114,6 +116,7 @@ it('should run exit actions when transitioning from a state', function (): void 
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'incrementAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') + 1);
@@ -129,7 +132,7 @@ it('should run exit actions when transitioning from a state', function (): void 
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
-        ->and($newState->context->toArray())->toBe(['count' => 1]);
+        ->and($newState->context->count)->toBe(1);
 });
 
 // === Guarded Actions Tests ===
@@ -155,6 +158,7 @@ it('should run the guarded action when the guards are passed', function (): void
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'multiplyByTwoAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') * 2);
@@ -179,10 +183,10 @@ it('should run the guarded action when the guards are passed', function (): void
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
-        ->and($newState->context->toArray())->toBe(['count' => 1]);
+        ->and($newState->context->count)->toBe(1);
 
     $newState = $machine->transition(event: ['type' => 'INCREASE'], state: $newState);
-    expect($newState->context->toArray())->toBe(['count' => 2]);
+    expect($newState->context->count)->toBe(2);
 
     $newState = $machine->transition(event: [
         'type' => 'MULTIPLY',
@@ -191,7 +195,7 @@ it('should run the guarded action when the guards are passed', function (): void
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
-        ->and($newState->context->toArray())->toBe(['count' => 4]);
+        ->and($newState->context->count)->toBe(4);
 });
 
 it('should not run the guarded action when the guards are not passed', function (): void {
@@ -215,6 +219,7 @@ it('should not run the guarded action when the guards are not passed', function 
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'multiplyByTwoAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') * 2);
@@ -239,13 +244,13 @@ it('should not run the guarded action when the guards are not passed', function 
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active'])
-        ->and($newState->context->toArray())->toBe(['count' => 1]);
+        ->and($newState->context->count)->toBe(1);
 
     $newState = $machine->transition(event: ['type' => 'INCREASE'], state: $newState);
-    expect($newState->context->toArray())->toBe(['count' => 2]);
+    expect($newState->context->count)->toBe(2);
 
     $newState = $machine->transition(event: ['type' => 'DECREASE'], state: $newState);
-    expect($newState->context->toArray())->toBe(['count' => 1]);
+    expect($newState->context->count)->toBe(1);
 
     $newState = $machine->transition(event: [
         'type' => 'MULTIPLY',
@@ -255,7 +260,7 @@ it('should not run the guarded action when the guards are not passed', function 
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active']);
     // Guards is not passed, the action will not be executed
-    expect($newState->context->toArray())->toBe(['count' => 1]);
+    expect($newState->context->count)->toBe(1);
 });
 
 it('should transition through multiple if-else targets based on guards', function (): void {
@@ -290,7 +295,8 @@ it('should transition through multiple if-else targets based on guards', functio
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isOneGuard' => function (ContextManager $context): bool {
                     return $context->get('value') === 1;
                 },
@@ -309,7 +315,7 @@ it('should transition through multiple if-else targets based on guards', functio
     $newState = $machine->transition(
         event: ['type' => 'TIMER'],
         state: new State(
-            context: Context::from(['value' => 2]),
+            context: GenericContext::from(['value' => 2]),
             currentStateDefinition: $machine->stateDefinitions['green'],
         )
     );
@@ -321,7 +327,7 @@ it('should transition through multiple if-else targets based on guards', functio
     $newState = $machine->transition(
         event: ['type' => 'TIMER'],
         state: new State(
-            context: Context::from(['value' => 3]),
+            context: GenericContext::from(['value' => 3]),
             currentStateDefinition: $machine->stateDefinitions['green'],
         )
     );
@@ -356,7 +362,8 @@ it('should prevent infinite loops when no guards evaluate to true for @always tr
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'guard1Guard' => fn (): bool => false,
             ],
         ],

@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Events\SimpleEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 class TestNoEndpointMachine extends Machine
 {
@@ -25,7 +26,8 @@ class TestNoEndpointMachine extends Machine
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'GO' => SimpleEvent::class,
                 ],
             ],

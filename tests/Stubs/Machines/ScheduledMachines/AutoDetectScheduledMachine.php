@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Machine with null resolver schedule on a state-level event.
@@ -41,6 +42,9 @@ class AutoDetectScheduledMachine extends Machine
             schedules: [
                 'CHECK_EXPIRY' => null,
             ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
         );
     }
 }
