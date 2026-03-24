@@ -781,3 +781,50 @@ test('always chain of 101 states throws at depth 100', function (): void {
 })->throws(MaxTransitionDepthExceededException::class);
 
 // endregion
+
+// region @always All Guards False — No Transition
+
+test('it stays in current state when all @always guards return false and no fallback exists', function (): void {
+    $definition = MachineDefinition::define(
+        config: [
+            'id'      => 'allGuardsFalse',
+            'initial' => 'checking',
+            'context' => ['score' => 50],
+            'states'  => [
+                'checking' => [
+                    'on' => [
+                        '@always' => [
+                            ['target' => 'excellent', 'guards' => 'isExcellent'],
+                            ['target' => 'good', 'guards' => 'isGood'],
+                            ['target' => 'passing', 'guards' => 'isPassing'],
+                        ],
+                        'MANUAL_OVERRIDE' => 'done',
+                    ],
+                ],
+                'excellent' => [],
+                'good'      => [],
+                'passing'   => [],
+                'done'      => [],
+            ],
+        ],
+        behavior: [
+            'guards' => [
+                'isExcellent' => fn (ContextManager $ctx) => $ctx->get('score') >= 90,
+                'isGood'      => fn (ContextManager $ctx) => $ctx->get('score') >= 80,
+                'isPassing'   => fn (ContextManager $ctx) => $ctx->get('score') >= 70,
+            ],
+        ],
+    );
+
+    // score=50 fails all three guards (>=90, >=80, >=70)
+    // No unguarded fallback @always exists
+    // Machine should stay in 'checking' — no infinite loop, no exception
+    $state = $definition->getInitialState();
+    expect($state->matches('checking'))->toBeTrue();
+
+    // Machine is still functional — can respond to explicit events
+    $state = $definition->transition(['type' => 'MANUAL_OVERRIDE'], $state);
+    expect($state->matches('done'))->toBeTrue();
+});
+
+// endregion
