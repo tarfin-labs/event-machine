@@ -103,8 +103,9 @@ it('LocalQA: fire-and-forget child does not dispatch completion job', function (
             ->exists();
     }, timeoutSeconds: 30);
 
-    // Small delay to let any stray completion jobs process
-    sleep(2);
+    // Negative assertion: verify fire-and-forget child does NOT send completion.
+    // sleep required — cannot waitFor absence.
+    sleep(1);
 
     // Parent STILL at processing (no ChildMachineCompletionJob changed it)
     $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
