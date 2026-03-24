@@ -8,7 +8,7 @@ use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines\ScheduledMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
+
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines\ExpiredApplicationsResolver;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncAutoCompleteParentMachine;
 
@@ -92,28 +92,7 @@ it('LocalQA: async completion is idempotent — only one done event in history',
     expect($doneEvents)->toBe(1);
 });
 
-// ═══════════════════════════════════════════════════════════════
-//  Machine faking with async delegation
-// ═══════════════════════════════════════════════════════════════
-
-it('LocalQA: machine faking intercepts async delegation on Horizon', function (): void {
-    ImmediateChildMachine::fake(result: ['test' => 'faked']);
-
-    $parent = AsyncAutoCompleteParentMachine::create();
-    $parent->send(['type' => 'START']);
-    $parent->persist();
-    $rootEventId = $parent->state->history->first()->root_event_id;
-
-    $completed = LocalQATestCase::waitFor(function () use ($rootEventId) {
-        $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
-
-        return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
-
-    expect($completed)->toBeTrue('Faked async delegation not completed');
-
-    ImmediateChildMachine::assertInvoked();
-});
+// Machine::fake test removed — LocalQA must use real Horizon, never Machine::fake().
 
 // ═══════════════════════════════════════════════════════════════
 //  Multiple machines — independent persistence in MySQL
