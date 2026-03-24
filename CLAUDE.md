@@ -158,6 +158,7 @@ Four top-level sections:
 ### Releases
 - **NEVER create a release (gh release, git tag) without explicit user approval.** Always ask first.
 - **Tag names: NO `v` prefix.** Use `7.0.0`, not `v7.0.0`. All existing tags follow this convention (`6.4.0`, `5.0.0`, etc.).
+- **Spec files: version-prefix before release.** Rename `spec/my-feature.md` → `spec/8.6.1-my-feature.md` with the release version. Do this before tagging.
 
 ### Quality Gate
 - **Always run `composer quality`** after completing work — this runs pint, rector, and test (which includes phpstan, unit tests in parallel, and type coverage).
