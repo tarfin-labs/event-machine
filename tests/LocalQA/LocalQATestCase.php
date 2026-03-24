@@ -96,9 +96,12 @@ class LocalQATestCase extends Orchestra
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-        // 4. NOW drain reserved (workers finished, safe to clean up stale entries)
+        // 4. Final drain: reserved + delayed + pending (catch any jobs that arrived during quiet period)
         foreach (['default', 'child-queue'] as $queue) {
+            $redis->del("{$prefix}queues:{$queue}");
+            $redis->del("{$prefix}queues:{$queue}:delayed");
             $redis->del("{$prefix}queues:{$queue}:reserved");
+            $redis->del("{$prefix}queues:{$queue}:notify");
         }
     }
 
