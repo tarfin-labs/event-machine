@@ -15,7 +15,6 @@ class DiagramCommand extends Command
         {--output= : Output file path (default: auto-generated)}
         {--stdout : Print HTML to stdout instead of writing to file}
         {--open : Open in default browser after generating}';
-
     protected $description = 'Generate an interactive HTML diagram for EventMachine definitions';
 
     public function handle(): int
@@ -25,7 +24,7 @@ class DiagramCommand extends Command
 
         foreach ($machinePaths as $machinePath) {
             // Resolve file path to FQCN if a file path was given
-            if (str_ends_with($machinePath, '.php') || str_contains($machinePath, DIRECTORY_SEPARATOR)) {
+            if (str_ends_with((string) $machinePath, '.php') || str_contains((string) $machinePath, DIRECTORY_SEPARATOR)) {
                 $machinePath = $this->resolveClassFromFile($machinePath);
                 if ($machinePath === null) {
                     $this->error("Could not resolve a Machine class from the given file path: {$machinePath}");
@@ -40,12 +39,10 @@ class DiagramCommand extends Command
                 return self::FAILURE;
             }
 
-            // Use the ExportXStateCommand logic to get JSON
-            $machine    = $machinePath::create();
-            $definition = $machine->definition;
+            // Get definition directly (without starting the machine, which could trigger entry actions)
+            $definition = $machinePath::definition();
 
-            $xstateCommand = new ExportXStateCommand();
-            $xstateJson    = $this->getXStateJson($definition);
+            $xstateJson = $this->getXStateJson($definition);
 
             $machines[] = [
                 'class' => $machinePath,
@@ -108,7 +105,7 @@ class DiagramCommand extends Command
         // Inline ELK.js for offline support
         $elkPath = dirname(__DIR__, 2).'/resources/vendor/elk.bundled.js';
         if (File::exists($elkPath)) {
-            $elkJs   = File::get($elkPath);
+            $elkJs    = File::get($elkPath);
             $template = str_replace('/* __ELK_JS__ */', $elkJs, $template);
         }
 

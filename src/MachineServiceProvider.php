@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine;
 use Spatie\LaravelPackageTools\Package;
 use Illuminate\Console\Scheduling\Schedule;
 use Tarfinlabs\EventMachine\Enums\TimerResolution;
+use Tarfinlabs\EventMachine\Commands\DiagramCommand;
 use Tarfinlabs\EventMachine\Support\MachineDiscovery;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tarfinlabs\EventMachine\Commands\TimerStatusCommand;
@@ -17,7 +18,6 @@ use Tarfinlabs\EventMachine\Commands\ArchiveEventsCommand;
 use Tarfinlabs\EventMachine\Commands\ArchiveStatusCommand;
 use Tarfinlabs\EventMachine\Commands\ProcessTimersCommand;
 use Tarfinlabs\EventMachine\Commands\ProcessScheduledCommand;
-use Tarfinlabs\EventMachine\Commands\DiagramCommand;
 use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
 
 /**
