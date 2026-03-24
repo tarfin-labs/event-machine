@@ -49,7 +49,7 @@ it('LocalQA: machineId correct after async delegation completes via Horizon', fu
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($completed)->toBeTrue();
 

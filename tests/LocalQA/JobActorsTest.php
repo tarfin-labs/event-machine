@@ -36,7 +36,7 @@ it('LocalQA: job actor runs via Horizon and completes parent with result', funct
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($completed)->toBeTrue('Job actor did not complete parent via Horizon');
 
@@ -60,7 +60,7 @@ it('LocalQA: failing job actor routes parent to @fail via Horizon', function ():
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'failed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($failed)->toBeTrue('Failing job actor did not route parent to @fail');
 

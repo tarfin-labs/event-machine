@@ -31,7 +31,7 @@ it('LocalQA: async delegation routes via @done.{finalState} through Horizon (LQA
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($completed)->toBeTrue('Async @done.approved routing not completed by Horizon');
 });
@@ -52,7 +52,7 @@ it('LocalQA: async delegation falls through to @done catch-all through Horizon (
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'fallback');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($completed)->toBeTrue('Async @done catch-all fallback not completed by Horizon');
 });

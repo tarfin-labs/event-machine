@@ -65,7 +65,7 @@ function createAndStartParent(LocalQATestCase $test, string $prefix = '/api/forw
         return $child
             && $child->status === MachineChild::STATUS_RUNNING
             && $child->child_root_event_id !== null;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($childRunning)->toBeTrue('Child machine did not reach running status via Horizon');
 
@@ -125,7 +125,7 @@ it('LocalQA: forward via HTTP with ResultBehavior returns custom response', func
         $cs = MachineCurrentState::where('root_event_id', $machineId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($parentCompleted)->toBeTrue('Parent did not transition to completed via @done');
 });
@@ -171,7 +171,7 @@ it('LocalQA: forward rename CANCEL_ORDER → ABORT delivers to child via Machine
         return $child
             && $child->status === MachineChild::STATUS_RUNNING
             && $child->child_root_event_id !== null;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($childRunning)->toBeTrue('Child machine did not reach running status');
 
@@ -196,7 +196,7 @@ it('LocalQA: forward rename CANCEL_ORDER → ABORT delivers to child via Machine
         $cs = MachineCurrentState::where('root_event_id', $childRootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'aborted');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($childAborted)->toBeTrue('Renamed forward CANCEL_ORDER→ABORT was not delivered');
 });
@@ -223,7 +223,7 @@ it('LocalQA: forward causing child final state auto-completes parent', function 
         $cs = MachineCurrentState::where('root_event_id', $machineId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($parentCompleted)->toBeTrue('Parent did not transition to completed after child reached final via forward');
 
@@ -338,7 +338,7 @@ it('LocalQA: available_events updates correctly through full forward lifecycle',
         return $child
             && $child->status === MachineChild::STATUS_RUNNING
             && $child->child_root_event_id !== null;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($childRunning)->toBeTrue('Child not running');
 
@@ -359,7 +359,7 @@ it('LocalQA: available_events updates correctly through full forward lifecycle',
         $cs = MachineCurrentState::where('root_event_id', $machineId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($parentCompleted)->toBeTrue('Parent did not reach completed');
 

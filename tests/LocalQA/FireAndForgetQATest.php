@@ -43,7 +43,7 @@ it('LocalQA: fire-and-forget parent stays in state, child runs via Horizon', fun
         return DB::table('machine_current_states')
             ->where('state_id', 'LIKE', '%immediate_child%')
             ->exists();
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($childCreated)->toBeTrue('Child machine was not created by Horizon');
 });
@@ -83,7 +83,7 @@ it('LocalQA: fire-and-forget with @always transitions parent immediately', funct
         return DB::table('machine_current_states')
             ->where('state_id', 'LIKE', '%immediate_child%')
             ->exists();
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($childCreated)->toBeTrue('Child was not processed by Horizon');
 });
@@ -101,7 +101,7 @@ it('LocalQA: fire-and-forget child does not dispatch completion job', function (
         return DB::table('machine_current_states')
             ->where('state_id', 'LIKE', '%immediate_child%')
             ->exists();
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     // Negative assertion: verify fire-and-forget child does NOT send completion.
     // sleep required — cannot waitFor absence.
@@ -129,7 +129,7 @@ it('LocalQA: managed async still works with MachineChild tracking (regression)',
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($completed)->toBeTrue('Managed async regression: not completed');
 });

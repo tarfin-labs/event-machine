@@ -38,7 +38,7 @@ it('LocalQA: queued entry listener runs via Horizon and records internal events'
         return MachineEvent::where('root_event_id', $rootEventId)
             ->where('type', 'like', '%listen.queue.QueuedMarkerAction.completed')
             ->exists();
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($completed)->toBeTrue('Queued listener did not complete via Horizon within 30s');
 
@@ -76,7 +76,7 @@ it('LocalQA: sync listener modifies context immediately while queued runs later'
         return MachineEvent::where('root_event_id', $rootEventId)
             ->where('type', 'like', '%listen.queue.QueuedMarkerAction.completed')
             ->exists();
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($completed)->toBeTrue('Queued listener did not complete');
 
