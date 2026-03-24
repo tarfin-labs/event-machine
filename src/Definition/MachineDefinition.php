@@ -22,7 +22,6 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
-use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineTimeoutJob;
@@ -30,6 +29,7 @@ use Tarfinlabs\EventMachine\Routing\MachineEndpointAction;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Routing\ForwardedEndpointDefinition;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidEndpointDefinitionException;
@@ -1080,8 +1080,8 @@ class MachineDefinition
      */
     protected function selectTransitions(EventBehavior $eventBehavior, State $state): TransitionSelectionResult
     {
-        $transitions                = [];
-        $seen                       = [];
+        $transitions               = [];
+        $seen                      = [];
         $hadValidationGuardFailure = false;
 
         foreach ($this->getActiveAtomicStates($state) as $atomicState) {
@@ -2619,7 +2619,22 @@ class MachineDefinition
     protected function transitionParallelState(State $state, EventBehavior $eventBehavior, int $recursionDepth = 0): State
     {
         // Find transitions for all active atomic states
-        $transitions = $this->selectTransitions($eventBehavior, $state);
+        $result      = $this->selectTransitions($eventBehavior, $state);
+        $transitions = $result->branches;
+
+        // Validation guard failure blocks entire parallel transition.
+        // Excluded for @always — automatic transitions have no HTTP caller.
+        // Machine::handleValidationGuards() will scan history and throw MachineValidationException.
+        if ($result->hadValidationGuardFailure
+            && $eventBehavior->type !== TransitionProperty::Always->value
+        ) {
+            $state->setInternalEventBehavior(
+                type: InternalEvent::TRANSITION_FAIL,
+                placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
+            );
+
+            return $state;
+        }
 
         // If no transitions found for a real event, throw exception.
         // For @always transitions, guard failure is expected (e.g., cross-region
