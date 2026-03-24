@@ -22,6 +22,7 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineTimeoutJob;
@@ -1075,12 +1076,13 @@ class MachineDefinition
      * @param  EventBehavior  $eventBehavior  The event behavior.
      * @param  State  $state  The current state.
      *
-     * @return array<TransitionBranch> Array of valid transition branches.
+     * @return TransitionSelectionResult Contains valid branches and whether a ValidationGuardBehavior failed.
      */
-    protected function selectTransitions(EventBehavior $eventBehavior, State $state): array
+    protected function selectTransitions(EventBehavior $eventBehavior, State $state): TransitionSelectionResult
     {
-        $transitions = [];
-        $seen        = [];
+        $transitions                = [];
+        $seen                       = [];
+        $hadValidationGuardFailure = false;
 
         foreach ($this->getActiveAtomicStates($state) as $atomicState) {
             $transitionDef = $this->findTransitionDefinitionOrNull($atomicState, $eventBehavior);
@@ -1098,11 +1100,42 @@ class MachineDefinition
 
                 if ($branch instanceof TransitionBranch) {
                     $transitions[] = $branch;
+                } elseif ($this->transitionHasValidationGuard($transitionDef)) {
+                    $hadValidationGuardFailure = true;
                 }
             }
         }
 
-        return $transitions;
+        return new TransitionSelectionResult($transitions, $hadValidationGuardFailure);
+    }
+
+    /**
+     * Check if any branch of a transition definition has a ValidationGuardBehavior guard.
+     *
+     * Guard definitions come in two forms (matching getInvokableBehavior resolution):
+     * - FQCN: IsVinValidValidationGuard::class → is_subclass_of directly
+     * - String key: 'isVinValid' → look up in behavior registry, then is_subclass_of
+     */
+    private function transitionHasValidationGuard(TransitionDefinition $transitionDef): bool
+    {
+        foreach ($transitionDef->branches as $branch) {
+            foreach ($branch->guards ?? [] as $guardDefinition) {
+                $baseName = explode(':', (string) $guardDefinition, 2)[0];
+
+                // FQCN: class directly extends ValidationGuardBehavior
+                if (is_subclass_of($baseName, ValidationGuardBehavior::class)) {
+                    return true;
+                }
+
+                // String key: resolve from behavior registry
+                $guardClass = $this->behavior[BehaviorType::Guard->value][$baseName] ?? null;
+                if (is_string($guardClass) && is_subclass_of($guardClass, ValidationGuardBehavior::class)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
