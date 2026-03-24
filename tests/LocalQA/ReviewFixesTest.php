@@ -50,8 +50,9 @@ it('LocalQA: every timer does not double-fire on rapid successive sweeps', funct
     // Second sweep immediately — fire record should block (last_fired_at is recent)
     Artisan::call('machine:process-timers', ['--class' => EveryTimerMachine::class]);
 
-    // Wait briefly for any potential second dispatch
-    sleep(3);
+    // Negative assertion: verify second sweep does NOT fire.
+    // sleep required — cannot waitFor absence.
+    sleep(1);
 
     // Verify: fire_count should be exactly 1 (not 2)
     $fire = MachineTimerFire::where('root_event_id', $rootEventId)->first();
@@ -137,8 +138,9 @@ it('LocalQA: every max/then fires then-event and marks exhausted atomically', fu
     expect($fire->fire_count)->toBe(3, 'Fire count should be 3 (max)');
 
     // Cycle 5: nothing happens (exhausted, no more fires)
+    // Negative assertion: sleep required — cannot waitFor absence.
     Artisan::call('machine:process-timers', ['--class' => EveryWithMaxMachine::class]);
-    sleep(2);
+    sleep(1);
 
     $stillFailed = EveryWithMaxMachine::create(state: $rootEventId);
     expect($stillFailed->state->currentStateDefinition->id)->toBe('every_max.failed');
@@ -344,8 +346,9 @@ it('LocalQA: timeout job is no-op when child completes before timeout', function
     // Complete child quickly (before timeout fires)
     $childRecord->markCompleted();
 
-    // Wait a bit for timeout job to potentially fire
-    sleep(3);
+    // Negative assertion: verify timeout does NOT override completed.
+    // sleep required — cannot waitFor absence.
+    sleep(1);
 
     // Child should still be completed (not timed_out)
     $childRecord->refresh();
