@@ -69,7 +69,14 @@ it('LocalQA: parallel regions complete via events → @done fires', function ():
         event: ['type' => 'REGION_A_DONE'],
     );
 
-    sleep(1);
+    // Wait for Region A completion before sending Region B
+    LocalQATestCase::waitFor(function () use ($rootEventId) {
+        $events = DB::table('machine_events')
+            ->where('root_event_id', $rootEventId)
+            ->pluck('type');
+
+        return $events->contains(fn ($t) => str_contains($t, 'region_a') && str_contains($t, 'done'));
+    }, timeoutSeconds: 60, description: 'parallel regions: waiting for region_a done');
 
     SendToMachineJob::dispatch(
         machineClass: ParallelDispatchViaEventMachine::class,
