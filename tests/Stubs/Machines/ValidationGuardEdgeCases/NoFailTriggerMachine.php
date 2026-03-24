@@ -34,7 +34,7 @@ class NoFailTriggerMachine extends Machine
                         ],
                     ],
                     'completed' => ['type' => 'final'],
-                    'failed'   => ['type' => 'final'],
+                    'failed'    => ['type' => 'final'],
                 ],
             ],
             behavior: [
