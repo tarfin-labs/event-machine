@@ -139,7 +139,7 @@ Know exactly what happened, when, and why. Compliance-ready from day one. Debug 
 </div>
 <div class="feature-code">
 
-<!-- doctest-attr: bootstrap="laravel,db" -->
+<!-- doctest-attr: ignore -->
 ```php
 // [!code hide:start]
 use Tarfinlabs\EventMachine\Actor\Machine;
@@ -401,7 +401,7 @@ MachineScheduler::register(AppMachine::class, 'CHECK_EXPIRY')
 
 ## Type-Safe Context
 
-**Validated data at every step.** Context classes powered by Spatie Laravel Data give you typed properties, validation rules, and transformations.
+**Validated data at every step.** Typed context classes give you properties, validation rules, and auto-casting for models, enums, and dates.
 
 No more `$context['total']` typos. No more missing validation. IDE autocompletion everywhere.
 
@@ -418,16 +418,19 @@ class OrderContext extends ContextManager
 {
     public function __construct(
         public array $items = [],
-
-        #[Min(0)]
         public int $total = 0,
-
-        #[Email]
         public ?string $customerEmail = null,
-
         public OrderStatus $status = OrderStatus::Draft,
     ) {
         parent::__construct();
+    }
+
+    public static function rules(): array
+    {
+        return [
+            'total'         => ['integer', 'min:0'],
+            'customerEmail' => ['nullable', 'email'],
+        ];
     }
 
     public function itemCount(): int

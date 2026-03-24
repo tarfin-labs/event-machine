@@ -127,7 +127,7 @@ class ProcessAction extends ActionBehavior
         $orderId = $context->orderId;
 
         // Access event payload
-        $amount = $event->payload['amount'];
+        $amount = $event->payload()['amount'];
 
         // Access current state
         $currentState = $state->currentStateDefinition->id;
@@ -274,7 +274,7 @@ class AddItemAction extends ActionBehavior
         ContextManager $context,
         EventBehavior $event,
     ): void {
-        $item = $event->payload['item'];
+        $item = $event->payload()['item'];
 
         $context->items[] = $item;
         $context->itemCount = count($context->items);

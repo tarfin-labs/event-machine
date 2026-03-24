@@ -24,7 +24,7 @@ class ChildMachineFailEvent extends EventBehavior
      */
     public function errorMessage(): ?string
     {
-        return $this->payload['error_message'] ?? null;
+        return $this->payload()['error_message'] ?? null;
     }
 
     /**
@@ -36,7 +36,7 @@ class ChildMachineFailEvent extends EventBehavior
      */
     public function errorCode(): int|string|null
     {
-        return $this->payload['error_code'] ?? null;
+        return $this->payload()['error_code'] ?? null;
     }
 
     /**
@@ -44,7 +44,7 @@ class ChildMachineFailEvent extends EventBehavior
      */
     public function childMachineId(): string
     {
-        return $this->payload['machine_id'];
+        return $this->payload()['machine_id'];
     }
 
     /**
@@ -52,7 +52,7 @@ class ChildMachineFailEvent extends EventBehavior
      */
     public function childMachineClass(): string
     {
-        return $this->payload['machine_class'];
+        return $this->payload()['machine_class'];
     }
 
     /**
@@ -62,7 +62,7 @@ class ChildMachineFailEvent extends EventBehavior
      */
     public function output(?string $key = null): mixed
     {
-        $output = $this->payload['output'] ?? [];
+        $output = $this->payload()['output'] ?? [];
 
         return $key !== null ? data_get($output, $key) : $output;
     }

@@ -7,6 +7,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 test('parallel state detects when all regions are final', function (): void {
     $definition = MachineDefinition::define([
@@ -41,7 +42,11 @@ test('parallel state detects when all regions are final', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -93,7 +98,11 @@ test('regions can complete in any order', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -167,7 +176,11 @@ test('three regions workflow completes correctly', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -235,7 +248,11 @@ test('onDone transitions to next state when all regions are final', function ():
             ],
             'completed' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -291,7 +308,11 @@ test('onDone works with array configuration', function (): void {
             ],
             'finished' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -357,7 +378,11 @@ test('nested final state in compound sub-state should NOT trigger region complet
             ],
             'application_submitted' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -458,7 +483,8 @@ test('car sales style: compound onDone + cross-region sync + parallel onDone', f
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isPreApprovalPassedGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $ctx->get('policy_result') === 'approved',
             ],
             'actions' => [
@@ -546,7 +572,11 @@ test('three levels of nesting: deeply nested final should NOT trigger region com
             ],
             'all_done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -617,7 +647,11 @@ test('non-onDone compound parent should NOT propagate to grandparent onDone', fu
             ],
             'finished' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     expect($state->matches('processing.region_b.outer.inner.running'))->toBeTrue();
@@ -687,6 +721,7 @@ test('compound parent exit actions fire when onDone transitions', function (): v
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logVerifiedExitAction' => function () use (&$exitLog): void {
                     $exitLog[] = 'verified_exit';
@@ -759,6 +794,7 @@ test('compound onDone with actions config runs onDone actions', function (): voi
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logOnDoneTransitionAction' => function () use (&$actionLog): void {
                     $actionLog[] = 'oncompletedction_fired';
@@ -827,7 +863,11 @@ test('chained compound onDone across multiple levels', function (): void {
             ],
             'all_done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     expect($state->matches('processing.region_b.phase1.running'))->toBeTrue();
@@ -872,7 +912,11 @@ test('region where initial state is immediately final triggers parallel onDone',
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -942,7 +986,11 @@ test('compound sub-state onDone transitions within a parallel region', function 
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     expect($state->matches('processing.region_a.working'))->toBeTrue();

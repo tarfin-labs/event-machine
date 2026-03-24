@@ -7,6 +7,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
@@ -49,7 +50,11 @@ function createDispatchableParallelDefinition(): MachineDefinition
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 }
 
 it('does not dispatch when parallel_dispatch config is disabled', function (): void {
@@ -82,7 +87,11 @@ it('does not dispatch when parallel_dispatch config is disabled', function (): v
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -121,7 +130,11 @@ it('does not dispatch when fewer than 2 regions have entry actions', function ()
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
     $definition->machineClass = AsdMachine::class;
 
     // Sequential mode — but only 1 region has entry, which tries to resolve
@@ -208,7 +221,11 @@ it('sequential mode runs entry actions normally (regression)', function (): void
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 

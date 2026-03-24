@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
 use Tarfinlabs\EventMachine\Tests\Stubs\Models\ModelA;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Events\EEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Events\SEvent;
@@ -33,6 +34,9 @@ it('can transition through a sequence of states using events', function (): void
                 'red' => [],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $greenState = $machine->getInitialState();
@@ -56,8 +60,8 @@ it('should apply the given state\'s context data to the machine\'s context when 
         config: [
             'initial' => 'active',
             'context' => [
-                'count'     => 0,
-                'someValue' => 'abc',
+                'count'  => 0,
+                'status' => 'abc',
             ],
             'states' => [
                 'active' => [
@@ -68,6 +72,7 @@ it('should apply the given state\'s context data to the machine\'s context when 
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'incrementAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') + 1);
@@ -86,7 +91,8 @@ it('should apply the given state\'s context data to the machine\'s context when 
     expect($newState)
         ->toBeInstanceOf(State::class)
         ->and($newState->value)->toBe([MachineDefinition::DEFAULT_ID.MachineDefinition::STATE_DELIMITER.'active']);
-    expect($newState->context->data)->toBe(['count' => 6, 'someValue' => 'abc']);
+    expect($newState->context->count)->toBe(6);
+    expect($newState->context->get('status'))->toBe('abc');
 });
 
 // === Transactional Tests ===
@@ -164,6 +170,9 @@ test('Top-level event transition can switch from a deeply nested state to anothe
                 'x' => [],
             ],
         ],
+        'behavior' => [
+            'context' => GenericContext::class,
+        ],
     ]);
 
     $machine->start();
@@ -221,6 +230,9 @@ test('Forbidded Transition: Nested state can override top-level event transition
                 'x' => [],
             ],
         ],
+        'behavior' => [
+            'context' => GenericContext::class,
+        ],
     ]);
 
     $machine->start();
@@ -245,6 +257,7 @@ test('Top-Level Transitions', function (): void {
             ],
         ],
         'behavior' => [
+            'context' => GenericContext::class,
             'actions' => [
                 'increaseValueAction' => function (ContextManager $context): void {
                     $context->value++;

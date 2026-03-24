@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Events\EEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Events\SEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Actions\AAction;
@@ -44,6 +45,9 @@ class AsdMachine extends Machine
                 ],
                 'state_e' => [],
             ],
-        ]);
+        ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]);
     }
 }

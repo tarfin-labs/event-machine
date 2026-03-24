@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\Events\SEvent;
 
 test('invokable behavior shouldLog property defaults to false', function (): void {
@@ -25,7 +26,7 @@ test('hasMissingContext returns null for empty required context', function (): v
         public function __invoke(): void {}
     };
 
-    $contextManager = new ContextManager([]);
+    $contextManager = GenericContext::from([]);
 
     // Test that when requiredContext is empty, method returns null
     expect($behavior::hasMissingContext($contextManager))->toBeNull();
@@ -41,7 +42,7 @@ test('hasMissingContext returns null for empty required context', function (): v
     expect($behaviorWithRequirements::hasMissingContext($contextManager))->toBe('user_id');
 
     // Should return null when context has required data
-    $contextWithData = new ContextManager(['user_id' => '123']);
+    $contextWithData = GenericContext::from(['user_id' => '123']);
     expect($behaviorWithRequirements::hasMissingContext($contextWithData))->toBeNull();
 });
 
@@ -51,7 +52,11 @@ test('injectInvokableBehaviorParameters handles reflection correctly', function 
         'states'  => [
             'idle' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $machine->getInitialState();
     $event = new SEvent();
@@ -94,7 +99,11 @@ test('injectInvokableBehaviorParameters handles union types correctly', function
         'states'  => [
             'idle' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $machine->getInitialState();
     $event = new SEvent();

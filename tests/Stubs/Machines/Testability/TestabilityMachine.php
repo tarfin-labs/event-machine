@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\IncrementWithServiceAction;
 
 class TestabilityMachine extends Machine
@@ -28,6 +29,9 @@ class TestabilityMachine extends Machine
                     ],
                 ],
             ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
         );
     }
 }

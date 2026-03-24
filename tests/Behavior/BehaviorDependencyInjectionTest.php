@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 it('it can inject requested parameters', function (): void {
     $machine = Machine::create(MachineDefinition::define(
@@ -25,6 +26,7 @@ it('it can inject requested parameters', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'contextAction' => function (
                     ContextManager $c,

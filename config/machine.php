@@ -5,6 +5,21 @@ declare(strict_types=1);
 return [
     /*
     |--------------------------------------------------------------------------
+    | Type Casts
+    |--------------------------------------------------------------------------
+    |
+    | Register app-wide type casts for context and event properties.
+    | Maps a type class to a ContextCast implementation.
+    | These apply to any TypedData subclass (ContextManager, EventBehavior).
+    |
+    | Example:
+    |   \Brick\Money\Money::class => \App\Machines\Casts\MoneyCast::class,
+    |
+    */
+    'casts' => [],
+
+    /*
+    |--------------------------------------------------------------------------
     | Machine Events Archival Settings
     |--------------------------------------------------------------------------
     |

@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Child machine A for parallel region delegation tests.
@@ -24,6 +25,9 @@ class ImmediateChildAMachine extends Machine
                     'done' => ['type' => 'final'],
                 ],
             ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
         );
     }
 }

@@ -47,7 +47,7 @@ Actions perform side effects, typically modifying context values. Since they ret
 <!-- doctest-attr: ignore -->
 ```php
 $state = State::forTesting(
-    new TrafficLightsContext(count: 0, modelA: new \Spatie\LaravelData\Optional())
+    new TrafficLightsContext(count: 0)
 );
 IncrementAction::runWithState($state);
 expect($state->context->count)->toBe(1);
@@ -110,7 +110,7 @@ When an action reads event payload (e.g., values submitted by the user), pass an
 <!-- doctest-attr: ignore -->
 ```php
 $state = State::forTesting(
-    new TrafficLightsContext(count: 10, modelA: new \Spatie\LaravelData\Optional())
+    new TrafficLightsContext(count: 10)
 );
 $event = AddValueEvent::forTesting(['payload' => ['value' => 5]]);
 

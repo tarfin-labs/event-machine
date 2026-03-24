@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Parent machine where the @done target state has an @always transition.
@@ -53,6 +54,7 @@ class AlwaysOnDoneParentMachine extends Machine
                 ],
             ],
             behavior: [
+                'context' => GenericContext::class,
                 'actions' => [
                     'captureResultAction' => function (ContextManager $ctx, EventBehavior $event): void {
                         $ctx->set('result', $event->payload['result'] ?? null);

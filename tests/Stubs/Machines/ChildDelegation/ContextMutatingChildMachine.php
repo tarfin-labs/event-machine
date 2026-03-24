@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Child machine that mutates context (for isolation testing).
@@ -33,6 +34,7 @@ class ContextMutatingChildMachine extends Machine
                 ],
             ],
             behavior: [
+                'context' => GenericContext::class,
                 'actions' => [
                     'mutateAction' => function (ContextManager $ctx): void {
                         $ctx->set('order_id', 'CHANGED_BY_CHILD');

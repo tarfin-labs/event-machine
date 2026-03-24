@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMachine;
 
 it('createEventBehavior returns EventBehavior from array input', function (): void {
@@ -67,6 +68,9 @@ it('areAllRegionsFinal returns correct result for various states', function (): 
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state          = $definition->getInitialState();
@@ -111,6 +115,9 @@ it('areAllRegionsFinal is read-only and does not modify state', function (): voi
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state          = $definition->getInitialState();
@@ -159,6 +166,9 @@ it('processParallelOnDone transitions out of parallel state', function (): void 
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();

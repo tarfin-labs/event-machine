@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Support\Timer;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Machine with @every timer with max and then.
@@ -37,6 +38,7 @@ class EveryWithMaxMachine extends Machine
                 ],
             ],
             behavior: [
+                'context' => GenericContext::class,
                 'actions' => [
                     'incrementRetryAction' => function (ContextManager $ctx): void {
                         $ctx->set('retry_count', $ctx->get('retry_count') + 1);

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildAMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildBMachine;
@@ -53,6 +54,9 @@ it('invokes child machines on parallel region initial states', function (): void
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -100,6 +104,9 @@ it('invokes child machine on a single parallel region initial state', function (
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -154,6 +161,9 @@ it('invokes child machine when transitioning into a parallel state', function ()
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -186,6 +196,9 @@ it('invokes child machine on non-parallel initial state', function (): void {
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -229,6 +242,9 @@ it('invokes child machine on compound onDone target', function (): void {
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -286,6 +302,9 @@ it('invokes child machine when transitioning within a parallel region', function
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -336,6 +355,9 @@ it('invokes child machine when escaping a parallel state to a delegating target'
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();

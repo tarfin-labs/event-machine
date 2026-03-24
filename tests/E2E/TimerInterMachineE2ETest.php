@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
 
 // ─── Timer + Delegation ─────────────────────────────────────────
@@ -49,6 +50,7 @@ it('E2E: @after and @every coexist on same state', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'heartbeatAction' => function (ContextManager $ctx): void {
                     $ctx->set('heartbeat_count', $ctx->get('heartbeat_count') + 1);

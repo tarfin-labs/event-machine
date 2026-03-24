@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Fire-and-forget parent: target transition pattern.
@@ -41,6 +42,9 @@ class FireAndForgetTargetParentMachine extends Machine
                     ],
                 ],
             ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
         );
     }
 }

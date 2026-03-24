@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\CanRetryGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\AlwaysFailGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SendAlertAction;
@@ -39,7 +40,11 @@ test('it resolves simple string @fail unchanged', function (): void {
             'completed' => ['type' => 'final'],
             'failed'    => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -90,7 +95,11 @@ test('it transitions to first matching guard branch on @fail', function (): void
             'retrying'  => ['type' => 'final'],
             'failed'    => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -143,7 +152,11 @@ test('it falls through to default branch on @fail', function (): void {
             'retrying'  => ['type' => 'final'],
             'failed'    => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -193,7 +206,11 @@ test('it aborts @fail when all guards fail and no default', function (): void {
             'retrying'      => ['type' => 'final'],
             'also_retrying' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -247,6 +264,7 @@ test('it runs branch actions BEFORE exit on @fail', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'captureSnapshotAction' => function () use (&$capturedValues, &$state): void {
                     // Capture state.value at the moment the action runs.
@@ -310,7 +328,11 @@ test('it works with canRetry pattern across multiple fail invocations', function
             'retrying'  => ['type' => 'final'],
             'failed'    => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 

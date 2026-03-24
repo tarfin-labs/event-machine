@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionAResultAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBResultAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithRaiseMachine;
@@ -82,6 +83,9 @@ it('cross-region event advances sibling → sibling job detects stale state', fu
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     // This test verifies the general principle: when Job A completes and sends

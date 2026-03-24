@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 test('event is handled by the correct region only', function (): void {
     $definition = MachineDefinition::define([
@@ -45,7 +46,11 @@ test('event is handled by the correct region only', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     expect($state->matches('active.track.paused'))->toBeTrue();
@@ -91,7 +96,11 @@ test('mute event only affects volume region', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -135,7 +144,11 @@ test('both regions can transition with different events', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 

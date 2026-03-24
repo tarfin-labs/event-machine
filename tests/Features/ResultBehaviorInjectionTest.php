@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Results\GreenResult;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 // region Core Injection
 
@@ -26,6 +27,7 @@ it('injects ContextManager into result behavior', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'results' => [
                 'done' => fn (ContextManager $context): int => $context->get('value'),
             ],
@@ -68,6 +70,7 @@ it('injects EventBehavior into result behavior', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'results' => [
                 'done' => fn (ContextManager $context, EventBehavior $event): bool => $event instanceof EventBehavior,
             ],
@@ -100,6 +103,7 @@ it('injects parameters regardless of order (reversed)', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'results' => [
                 // Reversed order: Event first, Context second
                 // Injection should resolve by type, not position
@@ -139,6 +143,7 @@ it('injects State into result behavior', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'results' => [
                 'done' => fn (ContextManager $context, State $state): array => $state->value,
             ],
@@ -169,6 +174,7 @@ it('works with no parameters', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'results' => [
                 'done' => fn (): string => 'hello',
             ],
@@ -206,6 +212,9 @@ it('Machine::result() uses injection for FQCN result class', function (): void {
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -228,6 +237,9 @@ it('Machine::result() uses injection for closure result', function (): void {
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();

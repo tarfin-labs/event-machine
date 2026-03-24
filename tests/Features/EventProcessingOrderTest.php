@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\XyzMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\EventProcessingOrder\Actions\FinalEntryAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\EventProcessingOrder\Actions\EntryActionSimple;
@@ -41,6 +42,9 @@ test('entry actions execute before raised events', function (): void {
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $machine->transition(event: ['type' => 'GO']);
@@ -107,6 +111,7 @@ test('multiple entry actions complete in order', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'firstEntryAction' => function (ContextManager $context): void {
                     $order   = $context->get('execution_order');
@@ -155,6 +160,7 @@ test('context changes are visible across actions', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'incrementCounterAction' => function (ContextManager $context): void {
                     $context->set('counter', $context->get('counter') + 1);
@@ -197,6 +203,7 @@ test('exit actions execute before entry actions', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'exitAAction' => function (ContextManager $context): void {
                     $order   = $context->get('execution_order');

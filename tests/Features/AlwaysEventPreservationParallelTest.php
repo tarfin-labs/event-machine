@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 // === Parallel Integration — Event Preservation ===
 
@@ -52,6 +53,7 @@ test('sync parallel with @always in region preserves triggering event in entry a
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'captureRegionAEventAction' => function (ContextManager $ctx, EventBehavior $event): void {
                     $ctx->set('region_a_event_type', $event->type);
@@ -89,6 +91,9 @@ test('async parallel dispatch loses transient triggering event — no regression
                 'processing' => [],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -149,7 +154,8 @@ test('cross-region @always guard receives triggering event', function (): void {
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'captureAndPassGuard' => function (ContextManager $ctx, EventBehavior $event, State $state): bool {
                     $ctx->set('guard_received_event_type', $event->type);
                     $ctx->set('guard_received_event_payload', $event->payload);

@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
 
 /**
@@ -39,7 +40,8 @@ class FqcnForwardParentMachine extends Machine
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'START' => TestStartEvent::class,
                 ],
             ],

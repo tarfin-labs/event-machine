@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\LogExitAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Actions\LogEntryAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Testability\Guards\IsCountPositiveGuard;
@@ -41,6 +42,9 @@ class AllInvocationPointsMachine extends Machine
                     ],
                 ],
             ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
         );
     }
 }

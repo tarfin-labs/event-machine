@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\Events\YEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\Actions\XAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\Actions\YAction;
@@ -45,6 +46,7 @@ class XyzMachine extends Machine
                 ],
             ],
             behavior: [
+                'context' => GenericContext::class,
                 'actions' => [
                     '!xAction' => XAction::class,
                     '!yAction' => YAction::class,

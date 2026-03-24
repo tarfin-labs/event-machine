@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\OrderMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 test('it can get a calculator behavior', function (): void {
     // 1. Arrange
     $calculator = OrderMachine::getCalculator('calculateOrderTotalCalculator');
-    $context    = new ContextManager(['items_count' => 5]);
+    $context    = GenericContext::from(['items_count' => 5]);
 
     // 2. Act
     $calculator($context);
@@ -23,8 +23,8 @@ test('it can get a calculator behavior', function (): void {
 test('it can get a guard behavior', function (): void {
     // 1. Arrange
     $guard          = OrderMachine::getGuard('validateOrderGuard');
-    $validContext   = new ContextManager(['items_count' => 5]);
-    $invalidContext = new ContextManager(['items_count' => 0]);
+    $validContext   = GenericContext::from(['items_count' => 5]);
+    $invalidContext = GenericContext::from(['items_count' => 0]);
 
     // 2. Act & 3. Assert
     expect($guard)->toBeCallable()
@@ -35,7 +35,7 @@ test('it can get a guard behavior', function (): void {
 test('it can get an action behavior', function (): void {
     // 1. Arrange
     $action  = OrderMachine::getAction('createOrderAction');
-    $context = new ContextManager();
+    $context = GenericContext::from([]);
 
     // 2. Act
     $action($context);

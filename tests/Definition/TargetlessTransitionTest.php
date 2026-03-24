@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 it('handles null target as targetless transition', function (): void {
     TestMachine::define([
@@ -17,7 +18,7 @@ it('handles null target as targetless transition', function (): void {
                 ],
             ],
         ],
-    ])
+    ], ['context' => GenericContext::class])
         ->send('PING')
         ->assertState('idle');
 });
@@ -34,7 +35,7 @@ it('handles empty string target as targetless transition', function (): void {
                 ],
             ],
         ],
-    ])
+    ], ['context' => GenericContext::class])
         ->send('PING')
         ->assertState('idle');
 });
@@ -51,7 +52,7 @@ it('handles empty array target as targetless transition', function (): void {
                 ],
             ],
         ],
-    ])
+    ], ['context' => GenericContext::class])
         ->send('PING')
         ->assertState('idle');
 });
@@ -72,6 +73,7 @@ it('handles empty string in target key as targetless transition', function (): v
             ],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'incrementAction' => function (ContextManager $context): void {
                 $context->set('count', $context->get('count') + 1);
@@ -99,6 +101,7 @@ it('handles null in target key as targetless transition', function (): void {
             ],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'incrementAction' => function (ContextManager $context): void {
                 $context->set('count', $context->get('count') + 1);
@@ -128,6 +131,7 @@ it('handles empty string with actions as targetless transition', function (): vo
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'incrementAction' => function (ContextManager $context): void {
                 $context->set('count', $context->get('count') + 1);

@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Yns;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Yns\Events\SEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Yns\Actions\YAction;
 
@@ -27,6 +28,9 @@ class YnsMachine extends Machine
                 ],
                 'state_s' => [],
             ],
-        ]);
+        ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]);
     }
 }

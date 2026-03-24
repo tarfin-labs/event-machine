@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\SuccessfulTestJob;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseResultReadyAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
 
@@ -47,6 +48,7 @@ it('processes raised events from entry actions after compound @done transition',
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'raiseResultAction' => RaiseResultReadyAction::class,
             ],
@@ -96,6 +98,9 @@ it('processes @always transitions after compound @done transition', function ():
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -148,6 +153,9 @@ it('processes @always after parallel @done (exitParallelStateAndTransitionToTarg
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -199,6 +207,7 @@ it('processes raised events after parallel @done', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'raiseResultAction' => RaiseResultReadyAction::class,
             ],
@@ -247,7 +256,8 @@ it('guarded @always after compound @done — guard fails, stays at target', func
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isEligibleGuard' => function (ContextManager $ctx): bool {
                     return $ctx->get('eligible') === true;
                 },
@@ -293,6 +303,9 @@ it('compound @done → @always → child delegation chain', function (): void {
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();
@@ -326,6 +339,9 @@ it('fire-and-forget job with @always on target state', function (): void {
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $definition->getInitialState();

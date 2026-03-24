@@ -6,8 +6,8 @@ Only the **latest major version** receives bug fixes, new features, and security
 
 | Version | Status |
 |---------|--------|
-| **8.x** | **Active** — bug fixes, features, security |
-| 7.x and below | End of life — upgrade to latest |
+| **9.x** | **Active** — bug fixes, features, security |
+| 8.x and below | End of life — upgrade to latest |
 
 **Why only latest?**
 
@@ -16,6 +16,291 @@ EventMachine evolved rapidly from v1 to v7 with a small team. Maintaining multip
 ::: tip Upgrading from any version
 Each section below has step-by-step migration instructions with before/after examples. For multi-version jumps (e.g., v3 → v7), follow each guide in sequence. No data migration is required between any versions — the `machine_events` table format has not changed since v1.
 :::
+
+## From 8.x to 9.0
+
+EventMachine v9.0 removes the `spatie/laravel-data` dependency. Context and event classes now use Laravel-native validation (`rules()`) and a built-in cast system instead of Spatie attributes.
+
+### Breaking Change 1: Bag Mode Removed
+
+Context bag mode (`'context' => [...]` with plain arrays) has been removed. You must use a typed context class extending `ContextManager`.
+
+**Before (v8):**
+
+<!-- doctest-attr: ignore -->
+```php
+MachineDefinition::define(
+    config: [
+        'context' => ['count' => 0, 'items' => []],  // Bag mode — no longer supported
+        'states' => [...],
+    ],
+);
+```
+
+**After (v9):**
+
+<!-- doctest-attr: ignore -->
+```php
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        public int $count = 0,
+        public array $items = [],
+    ) {}
+}
+
+MachineDefinition::define(
+    config: [
+        'context' => OrderContext::class,  // Typed context required
+        'states' => [...],
+    ],
+);
+```
+
+### Breaking Change 2: Spatie Optional Removed
+
+**Before (v8):**
+
+<!-- doctest-attr: ignore -->
+```php
+use Spatie\LaravelData\Optional;
+
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        public int|Optional $quantity,
+        public ?string|Optional $email,
+    ) {
+        parent::__construct();
+        if ($this->quantity instanceof Optional) { $this->quantity = 0; }
+    }
+}
+```
+
+**After (v9):**
+
+<!-- doctest-attr: ignore -->
+```php
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        public int     $quantity = 0,
+        public ?string $email    = null,
+    ) {}
+}
+```
+
+### Breaking Change 3: Validation Attributes → rules()
+
+**Before (v8):**
+
+<!-- doctest-attr: ignore -->
+```php
+use Spatie\LaravelData\Attributes\Validation\Min;
+use Spatie\LaravelData\Attributes\Validation\IntegerType;
+
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        #[IntegerType] #[Min(0)]
+        public int $quantity = 0,
+    ) { parent::__construct(); }
+}
+```
+
+**After (v9):**
+
+<!-- doctest-attr: ignore -->
+```php
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        public int $quantity = 0,
+    ) {}
+
+    public static function rules(): array
+    {
+        return [
+            'quantity' => ['integer', 'min:0'],
+        ];
+    }
+}
+```
+
+### Breaking Change 4: Cast/Transform System
+
+**Before (v8):**
+
+<!-- doctest-attr: ignore -->
+```php
+use Spatie\LaravelData\Attributes\WithCast;
+use Spatie\LaravelData\Attributes\WithTransformer;
+
+class ApplicationContext extends ContextManager
+{
+    public function __construct(
+        #[WithCast(EnumCast::class, type: SalesChannelType::class)]
+        #[WithTransformer(EnumTransformer::class)]
+        public Optional|SalesChannelType $salesChannelType,
+        #[WithCast(ModelCast::class, type: Retailer::class)]
+        #[WithTransformer(ModelTransformer::class)]
+        public Optional|Retailer $retailer,
+    ) { parent::__construct(); }
+}
+```
+
+**After (v9):**
+
+<!-- doctest-attr: ignore -->
+```php
+class ApplicationContext extends ContextManager
+{
+    public function __construct(
+        public ?SalesChannelType $salesChannelType = null,  // Auto: BackedEnum
+        public ?Retailer $retailer = null,                   // Auto: Model
+        public ?Money $totalCashPrice = null,                 // Via typeCasts() or config
+        public ?Collection $orderItems = null,
+    ) {}
+
+    public static function casts(): array
+    {
+        return ['orderItems' => [OrderItemData::class]];  // Layer 1: per-property
+    }
+
+    public static function typeCasts(): array
+    {
+        return [Money::class => MoneyCast::class];  // Layer 2: per-type, class-level
+    }
+}
+
+// Or register app-wide in config/machine.php:
+// 'casts' => [Money::class => MoneyCast::class]  // Layer 3: per-type, app-wide
+```
+
+The 4-layer cast resolution order: `casts()` > `typeCasts()` > `config/machine.php` > auto-detect.
+
+Auto-detected types (zero config): `Model`, `BackedEnum`, `DateTimeInterface`, `Arrayable`.
+
+### Breaking Change 5: Event rules() Signature and Flat Keys
+
+**Before (v8):**
+
+<!-- doctest-attr: ignore -->
+```php
+use Spatie\LaravelData\Support\Validation\ValidationContext;
+
+public static function rules(ValidationContext $context): array
+{
+    return ['payload.amount' => ['required', 'integer']];
+}
+```
+
+**After (v9):**
+
+<!-- doctest-attr: ignore -->
+```php
+public static function rules(): array
+{
+    return ['amount' => ['required', 'integer']];  // Flat keys, no 'payload.' prefix
+}
+```
+
+::: warning Flat Validation Keys
+Event `rules()` now use flat keys (`'amount'`, not `'payload.amount'`). This applies to both typed and untyped events. Search your codebase for `payload.` in event rules and remove the prefix.
+:::
+
+### Breaking Change 6: ModelTransformer Removed
+
+`src/Transformers/ModelTransformer.php` has been deleted. Model serialization is now handled automatically by the cast system's auto-detect layer.
+
+### Breaking Change 7: `registerCast()` Removed
+
+The `ContextManager::registerCast()` static method has been removed. Use `typeCasts()` on your class or register casts in `config/machine.php`:
+
+**Before (v8/v9-early):**
+
+<!-- doctest-attr: ignore -->
+```php
+// AppServiceProvider
+ContextManager::registerCast(Money::class, MoneyCast::class);
+```
+
+**After (v9):**
+
+<!-- doctest-attr: ignore -->
+```php
+// Option A: Per-class via typeCasts()
+class OrderContext extends ContextManager
+{
+    public static function typeCasts(): array
+    {
+        return [Money::class => MoneyCast::class];
+    }
+}
+
+// Option B: App-wide via config/machine.php
+// 'casts' => [Money::class => MoneyCast::class]
+```
+
+### Breaking Change 8: `$event->payload` Returns Null on Typed Events
+
+On typed events (events with constructor properties), the `$event->payload` property returns `null`. Use the `$event->payload()` method instead, which works for both typed and untyped events.
+
+**Before:**
+```php
+$data = $event->payload['key'];
+```
+
+**After:**
+
+<!-- doctest-attr: ignore -->
+```php
+$data = $event->payload()['key'];
+
+// Or for typed events, access properties directly:
+$data = $event->key;
+```
+
+### New in v9.0
+
+| Feature | Description |
+|---------|-------------|
+| **TypedData base class** | Shared base for `ContextManager` and `EventBehavior` — provides `from()`, `toArray()`, cast resolution, and validation |
+| **Typed events** | Event subclasses can declare constructor properties for typed payload access (`$event->productId` instead of `$event->payload()['productId']`) |
+| **`typeCasts()` method** | Per-type cast overrides at the class level (Layer 2 of 4-layer resolution) |
+| **`config/machine.php` casts** | App-wide type cast registration (Layer 3 of 4-layer resolution) |
+| **`$event->payload()` method** | Canonical accessor that works for both typed and untyped events |
+| **4-layer cast resolution** | `casts()` > `typeCasts()` > `config/machine.php` > auto-detect |
+
+### Migration Steps
+
+1. `composer require tarfin-labs/event-machine:^9.0`
+2. Remove `spatie/laravel-data` from your `composer.json` (unless you use it elsewhere)
+3. Remove `LaravelDataServiceProvider` from test setup
+4. **Bag mode:** Replace `'context' => [...]` arrays with typed `ContextManager` subclasses
+5. **Context classes:** Remove Spatie imports/attributes, add `rules()` if needed, replace `Optional` with nullable defaults
+6. **Event classes:** Remove `ValidationContext` parameter from `rules()` methods; change `payload.xxx` keys to flat `xxx` keys
+7. **Custom casts:** Implement `ContextCast` interface instead of separate Spatie Cast + Transformer
+8. **Global casts:** Replace `ContextManager::registerCast()` calls with either `typeCasts()` on the class or `config/machine.php` `casts` section
+9. **`instanceof Optional` checks:** Replace with `=== null`
+10. **Event payload access:** Use `$event->payload()` method instead of `$event->payload` property (the property returns `null` on typed events)
+11. Run tests: `composer test`
+
+### What Did NOT Change
+
+| Feature | Status |
+|---------|--------|
+| `$context->property` (read/write) | Same |
+| `$context->machineId()` | Same |
+| `Machine::create()` / `::send()` | Same |
+| Machine config format | Same |
+| Action/Guard/Calculator signatures | Same |
+| Event `getType()`, `payload()`, `type` | Same |
+| `selfValidate()` / `validateAndCreate()` | Same API, new internal |
+| `from()` / `toArray()` | Same API, new internal |
+| State persistence (machine_events) | Same format |
+| Child delegation | Same |
+| Timers, schedules, endpoints | Same |
 
 ## From 8.5.4 to 8.6.0
 
@@ -93,7 +378,7 @@ class CustomerDetailResult extends ResultBehavior
     public function __invoke(ContextManager $context, EventBehavior $event): array
     {
         // $event is now the original triggering event with full payload
-        return ['tckn' => $event->payload['tckn']]; // ✅ works
+        return ['tckn' => $event->payload()['tckn']]; // ✅ works
     }
 }
 ```
@@ -334,7 +619,7 @@ For full documentation, see [Machine Delegation](/advanced/machine-delegation).
 
 Behaviors can now send events to other machine instances. Sync methods (`sendTo`, `sendToParent`) deliver immediately. Async methods (`dispatchTo`, `dispatchToParent`) dispatch via queue:
 
-<!-- doctest-attr: no_run -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
@@ -372,7 +657,7 @@ For full documentation, see [Cross-Machine Messaging](/advanced/sendto) and [Int
 
 Short-circuit child machines in tests — no child actually runs:
 
-<!-- doctest-attr: no_run -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Actor\Machine;
 
@@ -450,7 +735,7 @@ MachineDefinition::define(
 
 Register the cron schedule in `routes/console.php`:
 
-<!-- doctest-attr: no_run -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Scheduling\MachineScheduler;
 
@@ -1465,13 +1750,18 @@ use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class OrderContext extends ContextManager
 {
     public function __construct(
-        #[Required]
-        public string $orderId,
-
-        #[Min(0)]
+        public string $orderId = '',
         public int $total = 0,
     ) {
         parent::__construct();
+    }
+
+    public static function rules(): array
+    {
+        return [
+            'orderId' => ['required', 'string'],
+            'total'   => ['integer', 'min:0'],
+        ];
     }
 }
 ```

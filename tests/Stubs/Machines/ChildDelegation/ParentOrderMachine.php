@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * A parent machine stub that delegates to a child machine.
@@ -56,6 +57,7 @@ class ParentOrderMachine extends Machine
                 ],
             ],
             behavior: [
+                'context' => GenericContext::class,
                 'actions' => [
                     'storePaymentResultAction' => function (
                         ContextManager $context,

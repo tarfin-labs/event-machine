@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\ComputedTestContext;
 
 it('does not include computed values in toArray', function (): void {
@@ -39,7 +39,7 @@ it('reflects current state in computed values', function (): void {
 });
 
 it('returns same result for toResponseArray and toArray on base ContextManager', function (): void {
-    $context = new ContextManager(data: ['a' => 1, 'b' => 'hello']);
+    $context = GenericContext::from(['a' => 1, 'b' => 'hello']);
 
     expect($context->toResponseArray())->toBe($context->toArray());
 });

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 test('when calculator and guarded transition succeed, action is executed', function (): void {
     // 1. Arrange
@@ -37,6 +38,7 @@ test('when calculator and guarded transition succeed, action is executed', funct
             ],
         ],
         'behavior' => [
+            'context'     => GenericContext::class,
             'calculators' => [
                 'successCalculator' => function () use (&$calculatorExecuted): void {
                     $calculatorExecuted = true;
@@ -100,6 +102,7 @@ test('when calculator succeeds but guarded transition guard fails, next branch i
             ],
         ],
         'behavior' => [
+            'context'     => GenericContext::class,
             'calculators' => [
                 'successCalculator' => function () use (&$calculatorExecuted): void {
                     $calculatorExecuted = true;
@@ -162,6 +165,7 @@ test('when calculator fails, guards and actions are not executed', function (): 
             ],
         ],
         'behavior' => [
+            'context'     => GenericContext::class,
             'calculators' => [
                 'failingCalculator' => function (): void {
                     throw new RuntimeException('Calculator failed');
@@ -230,6 +234,7 @@ test('multiple calculators are executed in sequence and stop on first failure', 
             ],
         ],
         'behavior' => [
+            'context'     => GenericContext::class,
             'calculators' => [
                 'calculator1Calculator' => function () use (&$calculator1Executed): void {
                     $calculator1Executed = true;
@@ -301,6 +306,7 @@ test('first subtransition calculator is always executed even if its guards fail'
             ],
         ],
         'behavior' => [
+            'context'     => GenericContext::class,
             'calculators' => [
                 'firstCalculator' => function () use (&$firstCalculatorExecuted): void {
                     $firstCalculatorExecuted = true;

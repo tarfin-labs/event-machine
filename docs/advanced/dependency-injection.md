@@ -72,7 +72,7 @@ public function __invoke(
     ContextManager $context,
     EventBehavior $event,
 ): void {
-    $context->value = $event->payload['value'];
+    $context->value = $event->payload()['value'];
 }
 
 // All parameters

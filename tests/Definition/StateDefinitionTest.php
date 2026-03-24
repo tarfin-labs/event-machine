@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Results\GreenResult;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 // === StateDefinition Basic Tests ===
 
@@ -19,14 +20,18 @@ test('state definition is an instance of StateDefinition', function (): void {
             'yellow' => [],
             'red'    => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machineWithStates->root)->toBeInstanceOf(StateDefinition::class);
     expect($machineWithStates->stateDefinitions)->each->toBeInstanceOf(StateDefinition::class);
 });
 
 test('state definition has a machine reference', function (): void {
-    $machine = MachineDefinition::define();
+    $machine = MachineDefinition::define(behavior: ['context' => GenericContext::class]);
 
     expect($machine->root)->toHaveProperty('machine');
     expect($machine->root->machine)->toBeInstanceOf(MachineDefinition::class);
@@ -44,7 +49,11 @@ test('a state definition config should reference original machine definition con
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $oneState = $machine->stateDefinitions['one'];
     expect($oneState->config)->toBe($machine->config['states']['one']);
@@ -64,7 +73,11 @@ test('a state definition has a key', function (): void {
             'yellow' => [],
             'red'    => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machineWithStates->root)->toHaveProperty('key');
     expect($machineWithStates->root->key)->toBe(MachineDefinition::DEFAULT_ID);
@@ -83,14 +96,14 @@ test('a state definition has a config', function (): void {
     $machineConfiguration = [
         'id' => 'machine_name',
     ];
-    $machine = MachineDefinition::define($machineConfiguration);
+    $machine = MachineDefinition::define($machineConfiguration, behavior: ['context' => GenericContext::class]);
 
     expect($machine->root)->toHaveProperty('config');
     expect($machine->root->config)->toBe($machineConfiguration);
 });
 
 test('a state definition has a null config when not provided', function (): void {
-    $machine = MachineDefinition::define();
+    $machine = MachineDefinition::define(behavior: ['context' => GenericContext::class]);
 
     expect($machine->root)->toHaveProperty('config');
     expect($machine->root->config)->toBeNull();
@@ -103,7 +116,11 @@ test('a state definition has a parent state definition', function (): void {
             'yellow' => [],
             'red'    => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machineWithStates->stateDefinitions['green'])->toHaveProperty('parent');
     expect($machineWithStates->stateDefinitions['green']->parent)->toBe($machineWithStates->root);
@@ -122,7 +139,11 @@ test('the parent of a state definition is null if it has no parent', function ()
             'yellow' => [],
             'red'    => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machineWithStates->root->parent)->toBeNull();
 });
@@ -134,7 +155,11 @@ test('a state definition has a path', function (): void {
             'yellow' => [],
             'red'    => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machineWithStates->root)->toHaveProperty('path');
     expect($machineWithStates->root->path)->toBe([]);
@@ -153,14 +178,18 @@ test('a state definition can have a description', function (): void {
     $description = 'This is a description';
     $machine     = MachineDefinition::define(config: [
         'description' => $description,
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machine->root)->toHaveProperty('description');
     expect($machine->root->description)->toBe($description);
 });
 
 test('the state definition is null if not provided', function (): void {
-    $nullMachine = MachineDefinition::define();
+    $nullMachine = MachineDefinition::define(behavior: ['context' => GenericContext::class]);
 
     expect($nullMachine->root)->toHaveProperty('description');
     expect($nullMachine->root->description)->toBeNull();
@@ -173,7 +202,11 @@ test('a state definition has an order', function (): void {
             'yellow' => [],
             'red'    => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machineWithStates->root)->toHaveProperty('order');
     expect($machineWithStates->root->order)->toBe(0);
@@ -195,7 +228,11 @@ test('a state definition has states', function (): void {
             'yellow' => [],
             'red'    => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machineWithStates->stateDefinitions)
         ->toBeArray()
@@ -210,7 +247,11 @@ test('a state config can be null', function (): void {
             'yellow' => null,
             'red'    => null,
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machineWithStates->stateDefinitions)
         ->toBeArray()
@@ -271,7 +312,11 @@ test('a state definition can have transitions', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($lightMachine->stateDefinitions['green']->transitionDefinitions)->each->toBeInstanceOf(TransitionDefinition::class);
     expect($lightMachine->stateDefinitions['yellow']->transitionDefinitions)->each->toBeInstanceOf(TransitionDefinition::class);
@@ -347,7 +392,11 @@ test('a state definition can have events', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($lightMachine)
         ->toHaveProperty('events')
@@ -413,7 +462,11 @@ test('a state definition can have entry actions', function (): void {
             ],
             'red' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $greenState  = $machine->stateDefinitions['green'];
     $yellowState = $machine->stateDefinitions['yellow'];
@@ -438,7 +491,11 @@ test('a state definition can have exit actions', function (): void {
             ],
             'red' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $greenState  = $machine->stateDefinitions['green'];
     $yellowState = $machine->stateDefinitions['yellow'];
@@ -464,7 +521,11 @@ test('a state definition can have meta', function (): void {
             ],
             'red' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $greenState  = $machine->stateDefinitions['green'];
     $yellowState = $machine->stateDefinitions['yellow'];
@@ -483,7 +544,11 @@ it('should correctly assign machine definition id', function (): void {
         'states' => [
             'idle' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($idMachine->id)->toBe('some-id');
 });
@@ -496,7 +561,11 @@ it('should correctly assign state definition id', function (): void {
                 'id' => 'idle-id',
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($idMachine->stateDefinitions['idle']->id)->toBe('idle-id');
 });
@@ -507,7 +576,11 @@ it('should use the key as the id if no id is provided', function (): void {
         'states' => [
             'idle' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($noStateDefinitionIdMachine->stateDefinitions['idle']->id)->toBe('some-id.idle');
 });
@@ -520,7 +593,11 @@ test('a state definition can be atomic', function (): void {
         'states'  => [
             'yellow' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $yellowState = $machine->stateDefinitions['yellow'];
 
@@ -538,7 +615,11 @@ test('a state definition can be compound', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $yellowState = $machine->stateDefinitions['yellow'];
 
@@ -553,7 +634,11 @@ test('a state definition can be defined as final', function (): void {
                 'type' => 'final',
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $yellowState = $machine->stateDefinitions['yellow'];
 
@@ -586,6 +671,9 @@ test('a machine can have outputs on final states', function (string $eventType):
                 ],
             ],
         ],
+        'behavior' => [
+            'context' => GenericContext::class,
+        ],
     ]);
 
     $machine->send($eventType);
@@ -609,6 +697,9 @@ test('an initial state of type final triggers machine finish event', function ()
                     'type' => 'final',
                 ],
             ],
+        ],
+        'behavior' => [
+            'context' => GenericContext::class,
         ],
     ]);
 
@@ -638,7 +729,11 @@ test('a state of type final triggers machine finish event', function (): void {
                 'type' => 'final',
             ],
         ],
-    ]));
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ));
 
     $state = $machine->send(['type' => 'EVENT']);
 

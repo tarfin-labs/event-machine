@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Support\Timer;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Machine with @every timer on a transition.
@@ -35,6 +36,7 @@ class EveryTimerMachine extends Machine
                 ],
             ],
             behavior: [
+                'context' => GenericContext::class,
                 'actions' => [
                     'incrementBillingAction' => function (ContextManager $ctx): void {
                         $ctx->set('billing_count', $ctx->get('billing_count') + 1);

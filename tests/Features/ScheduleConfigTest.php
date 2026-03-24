@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\ScheduleDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Events\SimpleEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Exceptions\InvalidScheduleDefinitionException;
 
 it('define() accepts schedules parameter with class resolver', function (): void {
@@ -26,6 +27,9 @@ it('define() accepts schedules parameter with class resolver', function (): void
         schedules: [
             'CHECK_EXPIRY' => 'App\\Resolvers\\ExpiredResolver',
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     expect($definition->parsedSchedules)
@@ -61,6 +65,9 @@ it('define() accepts schedules with closure resolver', function (): void {
         schedules: [
             'SEND_REMINDER' => $closure,
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     expect($definition->parsedSchedules['SEND_REMINDER']->resolver)->toBe($closure)
@@ -86,6 +93,9 @@ it('define() accepts schedules with null resolver for auto-detect', function ():
         schedules: [
             'DAILY_REPORT' => null,
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     expect($definition->parsedSchedules['DAILY_REPORT']->resolver)->toBeNull()
@@ -111,6 +121,9 @@ it('schedules normalizes EventBehavior FQCN key to event type string', function 
         schedules: [
             SimpleEvent::class => 'App\\Resolvers\\SimpleResolver',
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     expect($definition->parsedSchedules)
@@ -127,6 +140,9 @@ it('parsedSchedules is null when no schedules provided', function (): void {
                 'idle' => [],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     expect($definition->parsedSchedules)->toBeNull();
@@ -142,6 +158,9 @@ it('empty schedules array results in empty parsedSchedules', function (): void {
             ],
         ],
         schedules: [],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     expect($definition->parsedSchedules)->toBeArray()->toBeEmpty();
@@ -168,6 +187,9 @@ it('define() accepts multiple schedules', function (): void {
             'CHECK_EXPIRY'  => 'App\\Resolvers\\ExpiredResolver',
             'SEND_REMINDER' => fn () => collect(),
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     expect($definition->parsedSchedules)
@@ -187,5 +209,8 @@ it('throws when schedule references undefined event type', function (): void {
         schedules: [
             'NONEXISTENT_EVENT' => null,
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 })->throws(InvalidScheduleDefinitionException::class, 'NONEXISTENT_EVENT');

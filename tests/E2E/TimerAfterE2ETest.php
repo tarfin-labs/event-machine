@@ -7,6 +7,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
 
 // ─── @after Basic Pipeline ──────────────────────────────────────
@@ -144,7 +145,8 @@ it('E2E: @after with guarded multi-branch transition via real pipeline', functio
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isExpiredGuard' => fn (ContextManager $ctx): bool => $ctx->get('is_expired'),
             ],
         ],

@@ -125,7 +125,7 @@ class ChildMachineJob implements ShouldQueue
                 childRootEventId: $childRootEventId,
                 success: true,
                 result: $childMachine->result(),
-                childContextData: $childMachine->state->context->data,
+                childContextData: $childMachine->state->context->toArray(),
                 outputData: MachineDefinition::resolveChildOutput(
                     $childMachine->state->currentStateDefinition,
                     $childMachine->state->context,

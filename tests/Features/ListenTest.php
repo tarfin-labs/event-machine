@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 // region Sync Listeners — Entry/Exit
 
@@ -21,6 +22,7 @@ it('fires entry listener on state entry', function (): void {
             'active' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'entryListenerAction' => function (ContextManager $context): void {
                 $context->set('listened', true);
@@ -43,6 +45,7 @@ it('fires exit listener before state exit', function (): void {
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'exitListenerAction' => function (ContextManager $context): void {
                 $context->set('exit_listened', true);
@@ -67,6 +70,7 @@ it('runs multiple listeners in order', function (): void {
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'firstAction' => function (ContextManager $context): void {
                 $context->set('log', [...$context->get('log'), 'first']);
@@ -95,6 +99,7 @@ it('skips listeners on transient states', function (): void {
             'done'   => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'countEntryAction' => function (ContextManager $context): void {
                 $context->set('entry_count', $context->get('entry_count') + 1);
@@ -121,6 +126,7 @@ it('listener sees post-entry context', function (): void {
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'setValueAction' => function (ContextManager $context): void {
                 $context->set('value', 'modified');
@@ -149,6 +155,7 @@ it('runs state entry actions before listener', function (): void {
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'stateEntryAction' => function (ContextManager $context): void {
                 $context->set('log', [...$context->get('log'), 'state_entry']);
@@ -174,6 +181,7 @@ it('fires listener on initial state', function (): void {
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'listenerAction' => function (ContextManager $context): void {
                 $context->set('init_listened', true);
@@ -196,6 +204,7 @@ it('fires entry listener on final state entry', function (): void {
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'listenerAction' => function (ContextManager $context): void {
                 $context->set('final_entered', true);
@@ -219,6 +228,7 @@ it('does not fire exit listener on final states', function (): void {
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'exitListenerAction' => function (ContextManager $context): void {
                 $context->set('exit_count', $context->get('exit_count') + 1);
@@ -250,6 +260,7 @@ it('does not fire listeners on guard-blocked transitions', function (): void {
             'active' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'countAction' => function (ContextManager $context): void {
                 $context->set('entry_count', $context->get('entry_count') + 1);
@@ -276,7 +287,7 @@ it('works without any listeners defined', function (): void {
             'idle' => ['on' => ['GO' => 'done']],
             'done' => ['type' => 'final'],
         ],
-    ])
+    ], ['context' => GenericContext::class])
         ->assertState('idle')
         ->send('GO')
         ->assertState('done');
@@ -296,6 +307,7 @@ it('fires entry and exit together in correct order', function (): void {
             'b' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'entryAction' => function (ContextManager $context): void {
                 $context->set('log', [...$context->get('log'), 'entry']);
@@ -326,6 +338,7 @@ it('fires listener on each non-transient state in multiple transitions', functio
             'c' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'countAction' => function (ContextManager $context): void {
                 $context->set('entry_count', $context->get('entry_count') + 1);
@@ -356,6 +369,7 @@ it('fires transition listener after successful transition', function (): void {
             'b' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'transitionAction' => function (ContextManager $context): void {
                 $context->set('transition_count', $context->get('transition_count') + 1);
@@ -391,6 +405,7 @@ it('fires transition listener on targetless transitions but not entry/exit', fun
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'entryAction' => function (ContextManager $context): void {
                 $context->set('entry_count', $context->get('entry_count') + 1);
@@ -427,6 +442,7 @@ it('fires all three listeners on self-transition', function (): void {
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'entryAction' => function (ContextManager $context): void {
                 $context->set('log', [...$context->get('log'), 'entry']);
@@ -459,6 +475,7 @@ it('does not fire transition listener on transient states', function (): void {
             'b'       => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'transitionAction' => function (ContextManager $context): void {
                 $context->set('transition_count', $context->get('transition_count') + 1);
@@ -484,6 +501,7 @@ it('fires entry before transition listener', function (): void {
             'b' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'entryAction' => function (ContextManager $context): void {
                 $context->set('log', [...$context->get('log'), 'entry']);
@@ -511,6 +529,7 @@ it('does not fire transition listener on init', function (): void {
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'transitionAction' => function (ContextManager $context): void {
                 $context->set('transition_count', $context->get('transition_count') + 1);
@@ -554,6 +573,7 @@ it('fires entry listeners on parallel state and each region', function (): void 
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'countAction' => function (ContextManager $context): void {
                     $context->set('entry_count', $context->get('entry_count') + 1);
@@ -587,6 +607,7 @@ it('records dispatched internal event for queued entry listener', function (): v
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'queuedAction' => function (): void {},
         ],
@@ -612,6 +633,7 @@ it('records dispatched internal event for queued transition listener', function 
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'queuedAction' => function (): void {},
         ],
@@ -638,6 +660,7 @@ it('runs sync listener inline and records queued dispatch event', function (): v
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'syncAction' => function (ContextManager $context): void {
                 $context->set('sync_ran', true);
@@ -668,6 +691,7 @@ it('does not record queued dispatch for transient states', function (): void {
             'active'  => [],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'queuedAction' => function (): void {},
         ],
@@ -697,6 +721,7 @@ it('queued and sync dispatched events appear in correct listener block', functio
             'done' => ['type' => 'final'],
         ],
     ], behavior: [
+        'context' => GenericContext::class,
         'actions' => [
             'syncAction'   => function (): void {},
             'queuedAction' => function (): void {},

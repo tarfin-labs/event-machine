@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ListenerMachines;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Child machine that has its OWN listen config.
@@ -33,6 +34,7 @@ class ChildWithListenMachine extends Machine
                 ],
             ],
             behavior: [
+                'context' => GenericContext::class,
                 'actions' => [
                     'childCountAction' => function (ContextManager $context): void {
                         $context->set('child_listen_count', $context->get('child_listen_count') + 1);

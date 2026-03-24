@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\CanRetryGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SendAlertAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\LogApprovalAction;
@@ -51,7 +52,11 @@ test('it resolves conditional @done in async mode with null EventBehavior', func
             'approved'      => ['type' => 'final'],
             'manual_review' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -104,7 +109,11 @@ test('it handles null EventBehavior with synthetic event on guard failure', func
             'approved'      => ['type' => 'final'],
             'manual_review' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -156,7 +165,11 @@ test('it resolves conditional @fail in async timeout with null EventBehavior', f
             'retrying'  => ['type' => 'final'],
             'failed'    => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ListenerMachines\ChildWithListenMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ListenerMachines\MultiStateChildMachine;
@@ -29,6 +30,7 @@ it('parent listen.entry fires on delegation state and @done target (sync child)'
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logEntryAction' => function (ContextManager $context): void {
                     $context->set('entry_log', [...$context->get('entry_log'), 'parent_entry']);
@@ -66,6 +68,7 @@ it('parent listen does NOT fire on child machine internal state changes', functi
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'countAction' => function (ContextManager $context): void {
                     $context->set('parent_entry_count', $context->get('parent_entry_count') + 1);
@@ -107,6 +110,7 @@ it('child machine own listen fires independently of parent', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'parentCountAction' => function (ContextManager $context): void {
                     $context->set('parent_listen_count', $context->get('parent_listen_count') + 1);
@@ -149,6 +153,7 @@ it('queued listen records dispatched event on delegation state entry', function 
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'queuedAction' => function (): void {},
             ],
@@ -189,6 +194,7 @@ it('listen.transition fires for delegation transition', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'countTransitionAction' => function (ContextManager $context): void {
                     $context->set('transition_count', $context->get('transition_count') + 1);

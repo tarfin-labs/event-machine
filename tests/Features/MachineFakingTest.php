@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ParentOrderMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
@@ -241,7 +242,7 @@ it('TestMachine::resetFakes() clears child machine fakes', function (): void {
         'initial' => 'idle',
         'context' => [],
         'states'  => ['idle' => ['type' => 'final']],
-    ]);
+    ], ['context' => GenericContext::class]);
 
     $testMachine->resetFakes();
 
@@ -266,7 +267,10 @@ it('fake(finalState:) routes to matching @done.{state} (T11)', function (): void
             'completed' => ['type' => 'final'],
             'declined'  => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]);
 
     $state = $machine->getInitialState();
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
@@ -289,7 +293,11 @@ it('fake(finalState:) falls through to catch-all when no match (T12)', function 
             'completed' => ['type' => 'final'],
             'fallback'  => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $machine->getInitialState();
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
@@ -312,7 +320,11 @@ it('fake() without finalState falls through to @done catch-all (T13)', function 
             'completed' => ['type' => 'final'],
             'fallback'  => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $machine->getInitialState();
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
@@ -341,6 +353,7 @@ it('fake(finalState:) with result data provides both in event (T14)', function (
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'storeAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedFinalState, &$capturedPaymentId): void {
                     $capturedFinalState = $event->finalState();

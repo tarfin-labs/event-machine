@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Parent machine that raises an event in the @done target state's entry action.
@@ -53,6 +54,7 @@ class RaiseOnDoneParentMachine extends Machine
                 ],
             ],
             behavior: [
+                'context' => GenericContext::class,
                 'actions' => [
                     'captureResultAction' => function (ContextManager $ctx): void {
                         // no-op: just transitions to target

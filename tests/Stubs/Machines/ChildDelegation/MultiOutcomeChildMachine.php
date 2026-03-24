@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Child machine with 3 reachable final states for testing @done.{state} routing.
@@ -44,6 +45,9 @@ class MultiOutcomeChildMachine extends Machine
                     'type' => 'final',
                 ],
             ],
-        ]);
+        ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]);
     }
 }

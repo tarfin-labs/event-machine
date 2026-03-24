@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionADeepReportAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBDeepReportAction;
 
@@ -53,6 +54,9 @@ class ParallelDispatchDeepContextMachine extends Machine
                     'completed' => ['type' => 'final'],
                 ],
             ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
         );
     }
 }

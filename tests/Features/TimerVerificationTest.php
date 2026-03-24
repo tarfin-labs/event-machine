@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Definition\TimerDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\EveryTimerMachine;
 
@@ -109,7 +110,11 @@ it('extractTimerConfig: simple target + after', function (): void {
             'a' => ['on' => ['E' => ['target' => 'b', 'after' => Timer::days(7)]]],
             'b' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $t = $machine->idMap['ext1.a']->transitionDefinitions['E'];
     expect($t->timerDefinition)->not->toBeNull()
@@ -130,7 +135,8 @@ it('extractTimerConfig: action only + every (no target)', function (): void {
                 'b' => ['type' => 'final'],
             ],
         ],
-        behavior: ['actions' => ['tickAction' => function (): void {}]],
+        behavior: [
+            'context' => GenericContext::class, 'actions' => ['tickAction' => function (): void {}]],
     );
 
     $t = $machine->idMap['ext2.a']->transitionDefinitions['TICK'];
@@ -157,7 +163,8 @@ it('extractTimerConfig: mixed array (multi-branch + after)', function (): void {
                 'c' => ['type' => 'final'],
             ],
         ],
-        behavior: ['guards' => ['g1' => fn (): bool => true]],
+        behavior: [
+            'context' => GenericContext::class, 'guards' => ['g1' => fn (): bool => true]],
     );
 
     $t = $machine->idMap['ext3.a']->transitionDefinitions['E'];
@@ -179,7 +186,8 @@ it('extractTimerConfig: every with max and then', function (): void {
                 'b' => ['type' => 'final'],
             ],
         ],
-        behavior: ['actions' => ['act' => function (): void {}]],
+        behavior: [
+            'context' => GenericContext::class, 'actions' => ['act' => function (): void {}]],
     );
 
     $t = $machine->idMap['ext4.a']->transitionDefinitions['RETRY'];
@@ -197,7 +205,8 @@ it('extractTimerConfig: no timer keys — timerDefinition is null', function ():
             'a' => ['on' => ['E' => ['target' => 'b', 'guards' => 'g']]],
             'b' => ['type' => 'final'],
         ],
-    ], behavior: ['guards' => ['g' => fn (): bool => true]]);
+    ], behavior: [
+        'context' => GenericContext::class, 'guards' => ['g' => fn (): bool => true]]);
 
     $t = $machine->idMap['ext5.a']->transitionDefinitions['E'];
     expect($t->timerDefinition)->toBeNull();

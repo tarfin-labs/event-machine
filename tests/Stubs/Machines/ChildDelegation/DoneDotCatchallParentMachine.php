@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Parent machine with @done.{state} + @done catch-all for LocalQA tests.
@@ -33,6 +34,9 @@ class DoneDotCatchallParentMachine extends Machine
                 'fallback'  => ['type' => 'final'],
                 'error'     => ['type' => 'final'],
             ],
-        ]);
+        ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]);
     }
 }

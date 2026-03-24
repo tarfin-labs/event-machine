@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 function createParallelMachineWithOnFail(array|string $onFail = 'failed'): MachineDefinition
 {
@@ -35,7 +36,11 @@ function createParallelMachineWithOnFail(array|string $onFail = 'failed'): Machi
             'done'   => ['type' => 'final'],
             'failed' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 }
 
 it('processParallelOnFail transitions to onFail target', function (): void {
@@ -88,7 +93,11 @@ it('processParallelOnFail without onFail records event and stays in parallel', f
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state         = $machine->getInitialState();
     $parallelState = $machine->idMap['test.parallel_state'];

@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Testing\CommunicationRecorder;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\MultiOutcomeChildMachine;
@@ -155,7 +156,10 @@ it('F11: send() works normally on non-faked Machine::withDefinition path', funct
             ],
             'active' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]);
 
     $definition->shouldPersist = false;
 
@@ -280,7 +284,10 @@ it('F21: assertCreated does NOT pass for child delegation invocations', function
             ],
             'completed' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]);
 
     $definition->shouldPersist = false;
 
@@ -314,7 +321,11 @@ it('F22: child delegation still works when create fake is active', function (): 
             'declined'  => ['type' => 'final'],
             'fallback'  => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $definition->shouldPersist = false;
 
@@ -356,7 +367,11 @@ it('F23: existing Machine::fake() for child delegation unchanged', function (): 
             ],
             'completed' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $definition->shouldPersist = false;
 
@@ -384,6 +399,9 @@ it('F24: TestMachine::fakingChild() still works', function (): void {
                 ],
                 'completed' => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 
@@ -419,6 +437,9 @@ it('F25: TestMachine::simulateChildDone() still works', function (): void {
                 ],
                 'completed' => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 

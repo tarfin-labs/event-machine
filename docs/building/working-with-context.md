@@ -2,19 +2,30 @@
 
 Context is the data that accompanies your state machine throughout its lifecycle. It persists across transitions and can be read or modified by behaviors.
 
-## Defining Initial Context
+## Defining Context
 
-Set initial context values in your machine configuration:
+Context must be defined as a typed class extending `ContextManager`:
+
+```php ignore
+use Tarfinlabs\EventMachine\ContextManager;
+
+class CounterContext extends ContextManager
+{
+    public function __construct(
+        public int $count = 0,
+        public array $items = [],
+        public ?string $user = null,
+    ) {}
+}
+```
+
+Reference it in your machine configuration:
 
 ```php ignore
 MachineDefinition::define(
     config: [
         'initial' => 'idle',
-        'context' => [
-            'count' => 0,
-            'items' => [],
-            'user' => null,
-        ],
+        'context' => CounterContext::class,
         'states' => [...],
     ],
 );
@@ -24,32 +35,28 @@ MachineDefinition::define(
 
 ### In Actions
 
-```php
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
-use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+```php no_run
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
 class IncrementCountAction extends ActionBehavior
 {
-    public function __invoke(ContextManager $context): void
+    public function __invoke(CounterContext $context): void
     {
-        $currentCount = $context->get('count');
-        $context->set('count', $currentCount + 1);
+        $context->count++;
     }
 }
 ```
 
 ### In Guards
 
-```php
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
-use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+```php no_run
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 
 class HasItemsGuard extends GuardBehavior
 {
-    public function __invoke(ContextManager $context): bool
+    public function __invoke(CounterContext $context): bool
     {
-        $items = $context->get('items');
-        return count($items) > 0;
+        return count($context->items) > 0;
     }
 }
 ```
@@ -60,39 +67,24 @@ class HasItemsGuard extends GuardBehavior
 $machine = OrderMachine::create();
 $state = $machine->send(['type' => 'ADD_ITEM', 'item' => $item]);
 
-$count = $state->context->get('count');
-$items = $state->context->get('items');
+$count = $state->context->count;
+$items = $state->context->items;
 ```
 
 ## Writing Context
 
-### Using `set()`
+### Direct Property Access
 
-```php
-use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
-$context = new ContextManager(); // [!code hide]
-$userData = ['name' => 'Alice']; // [!code hide]
-$items = ['item1']; // [!code hide]
-$newItem = 'item2'; // [!code hide]
-
-$context->set('count', 5);
-$context->set('user', $userData);
-$context->set('items', [...$items, $newItem]);
-```
-
-### Using Magic Properties
-
-The ContextManager supports magic property access:
-
-```php
-use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
-$context = new ContextManager(); // [!code hide]
-
-// Reading
-$count = $context->count;
-
-// Writing
-$context->count = 5;
+```php no_run
+class UpdateAction extends ActionBehavior
+{
+    public function __invoke(CounterContext $context): void
+    {
+        $context->count = 5;
+        $context->user = 'Alice';
+        $context->items = [...$context->items, 'new_item'];
+    }
+}
 ```
 
 ## Context Methods
@@ -106,74 +98,57 @@ $context->count = 5;
 | `computedContext()` | Override in subclasses to define computed key-value pairs for API responses |
 | `toResponseArray()` | Returns `toArray()` merged with `computedContext()` — used by endpoints and `State::toArray()` |
 
-### Checking Existence
+## Creating Context Classes
 
-```php
-use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
-$context = new ContextManager(); // [!code hide]
-$context->set('user', new stdClass()); // [!code hide]
-
-if ($context->has('user')) {
-    // Key exists
-}
-
-// Check existence with type
-if ($context->has('user', User::class)) {
-    // Key exists and value is instance of User
-}
-```
-
-## Custom Context Classes
-
-For type safety and validation, create a custom ContextManager:
+Create a custom ContextManager for type safety, validation, and IDE support:
 
 ```php no_run
 use Tarfinlabs\EventMachine\ContextManager;
-use Spatie\LaravelData\Attributes\Validation\Required;
-use Spatie\LaravelData\Attributes\Validation\Min;
 
 class OrderContext extends ContextManager
 {
     public function __construct(
-        #[Required]
         public int $total = 0,
-
-        #[Required, Min(0)]
         public int $itemCount = 0,
-
         public ?string $customerId = null,
-
         public array $items = [],
-
         public ?string $couponCode = null,
     ) {}
+
+    public static function rules(): array
+    {
+        return [
+            'total'     => ['required', 'integer'],
+            'itemCount' => ['required', 'integer', 'min:0'],
+        ];
+    }
 }
 ```
 
-### Using Custom Context
+### Using Your Context
 
-Reference it in your configuration:
+Reference the class in your configuration:
 
 ```php ignore
 MachineDefinition::define(
     config: [
         'initial' => 'cart',
-        'context' => OrderContext::class,  // Reference the class
+        'context' => OrderContext::class,
         'states' => [...],
     ],
 );
 ```
 
-### Benefits of Custom Context
+### Benefits
 
 1. **Type Safety**: Properties have explicit types
-2. **Validation**: Uses Laravel Data validation attributes
+2. **Validation**: Uses `rules()` method with Laravel validation rules
 3. **IDE Support**: Full autocomplete and type hints
 4. **Documentation**: Self-documenting structure
 
-### Accessing Custom Context
+### Accessing Context in Behaviors
 
-With custom context classes, access properties directly:
+Type-hint your context class directly:
 
 ```php no_run
 class AddItemAction extends ActionBehavior
@@ -205,26 +180,25 @@ $context->selfValidate();  // Throws on failure
 
 ### Validation Rules
 
-Using Laravel Data attributes:
+Define validation via the `rules()` method with standard Laravel validation rules:
 
 ```php no_run
-use Spatie\LaravelData\Attributes\Validation\Required;
-use Spatie\LaravelData\Attributes\Validation\Min;
-use Spatie\LaravelData\Attributes\Validation\Max;
-use Spatie\LaravelData\Attributes\Validation\Email;
-
 class UserContext extends ContextManager
 {
     public function __construct(
-        #[Required, Min(1)]
         public int $balance = 0,
-
-        #[Required, Email]
         public string $email = '',
-
-        #[Max(100)]
         public string $name = '',
     ) {}
+
+    public static function rules(): array
+    {
+        return [
+            'balance' => ['required', 'integer', 'min:1'],
+            'email'   => ['required', 'email'],
+            'name'    => ['string', 'max:100'],
+        ];
+    }
 }
 ```
 
@@ -243,22 +217,18 @@ $machine->send([
 ]);
 ```
 
-Access event payload in actions:
+Access event payload in actions using the `payload()` method:
 
-```php
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
-use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
-use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
-
+```php no_run
 class UpdateSettingsAction extends ActionBehavior
 {
     public function __invoke(
-        ContextManager $context,
+        AppContext $context,
         EventBehavior $event
     ): void {
-        $settings = $event->payload['settings'];
-        $context->set('theme', $settings['theme']);
-        $context->set('notifications', $settings['notifications']);
+        $settings = $event->payload()['settings'];
+        $context->theme = $settings['theme'];
+        $context->notifications = $settings['notifications'];
     }
 }
 ```
@@ -267,10 +237,7 @@ class UpdateSettingsAction extends ActionBehavior
 
 Declare required context keys for behaviors:
 
-```php
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
-use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
-
+```php no_run
 class ProcessPaymentAction extends ActionBehavior
 {
     public static array $requiredContext = [
@@ -278,11 +245,11 @@ class ProcessPaymentAction extends ActionBehavior
         'customerId',
     ];
 
-    public function __invoke(ContextManager $context): void
+    public function __invoke(OrderContext $context): void
     {
         // Guaranteed to have 'total' and 'customerId'
-        $total = $context->get('total');
-        $customerId = $context->get('customerId');
+        $total = $context->total;
+        $customerId = $context->customerId;
     }
 }
 ```
@@ -310,6 +277,8 @@ $machine = OrderMachine::create(state: $rootEventId);
 ## Complete Example
 
 ```php ignore
+use Tarfinlabs\EventMachine\ContextManager;
+
 // Context class
 class ShoppingCartContext extends ContextManager
 {

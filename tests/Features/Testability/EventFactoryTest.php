@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Spatie\LaravelData\Optional;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\AddValueEvent;
@@ -65,7 +64,6 @@ it('can be used with runWithState', function (): void {
     $state = State::forTesting(
         new TrafficLightsContext(
             count: 10,
-            modelA: new Optional(),
         )
     );
 

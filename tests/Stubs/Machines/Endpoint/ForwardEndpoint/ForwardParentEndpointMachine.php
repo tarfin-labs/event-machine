@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Routing\ForwardContext;
 use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
 
 /**
@@ -54,7 +55,8 @@ class ForwardParentEndpointMachine extends Machine
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'START'  => TestStartEvent::class,
                     'CANCEL' => TestStartEvent::class,
                 ],

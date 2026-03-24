@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Guards\AlwaysFailGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ConditionalOnDoneMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\LogApprovalAction;
@@ -38,7 +39,11 @@ test('it resolves simple string @done unchanged', function (): void {
             ],
             'completed' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     $state = $definition->transition(['type' => 'DONE_A'], $state);
@@ -77,7 +82,11 @@ test('it resolves array @done with target and actions unchanged', function (): v
             ],
             'completed' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     $state = $definition->transition(['type' => 'DONE_A'], $state);
@@ -144,7 +153,11 @@ test('it falls through to default branch when first guard fails', function (): v
             'approved'      => ['type' => 'final'],
             'manual_review' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -192,7 +205,11 @@ test('it aborts @done when all guards fail and no default', function (): void {
             'approved'      => ['type' => 'final'],
             'also_approved' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     $state = $definition->transition(['type' => 'DONE_A'], $state);
@@ -265,7 +282,11 @@ test('it works with compound state @done when guard passes', function (): void {
             'approved'      => ['type' => 'final'],
             'manual_review' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     $state = $definition->transition(['type' => 'CHECK_COMPLETED'], $state);
@@ -307,7 +328,11 @@ test('it works with compound state @done when guard fails', function (): void {
             'approved'      => ['type' => 'final'],
             'manual_review' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     $state = $definition->transition(['type' => 'CHECK_COMPLETED'], $state);
@@ -344,7 +369,11 @@ test('it aborts compound @done when all guards fail and no default', function ()
             'approved'      => ['type' => 'final'],
             'also_approved' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     $state = $definition->transition(['type' => 'CHECK_COMPLETED'], $state);
@@ -391,7 +420,11 @@ test('it falls through to default branch when all guarded branches fail', functi
             'partial_review' => ['type' => 'final'],
             'manual_review'  => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     $state = $definition->transition(['type' => 'DONE_A'], $state);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Routing\ForwardedEndpointDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestNoEndpointMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\AbortEvent;
@@ -123,7 +124,8 @@ test('it parses rename FQCN both sides as ForwardedEndpointDefinition', function
             ],
         ],
         behavior: [
-            'events' => [
+            'context' => GenericContext::class,
+            'events'  => [
                 'START' => TestStartEvent::class,
             ],
         ],
@@ -255,7 +257,8 @@ test('it parses full array forward with FQCN child_event value', function (): vo
             ],
         ],
         behavior: [
-            'events' => [
+            'context' => GenericContext::class,
+            'events'  => [
                 'START' => TestStartEvent::class,
             ],
         ],
@@ -323,7 +326,8 @@ test('it parses Format 1 + Format 2 + Format 3 in same forward array', function 
             ],
         ],
         behavior: [
-            'events' => [
+            'context' => GenericContext::class,
+            'events'  => [
                 'START' => TestStartEvent::class,
             ],
         ],
@@ -422,7 +426,8 @@ test('it throws when forward event name collides with parent event', function ()
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'START'        => TestStartEvent::class,
                     'PROVIDE_CARD' => ProvideCardEvent::class,
                 ],
@@ -462,7 +467,8 @@ test('it throws when same forward event name used in two different delegating st
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'START' => TestStartEvent::class,
                 ],
             ],
@@ -500,7 +506,8 @@ test('it throws when forward event also declared in parent endpoints', function 
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'START'        => TestStartEvent::class,
                     'PROVIDE_CARD' => ProvideCardEvent::class,
                 ],
@@ -537,7 +544,8 @@ test('it throws when forward event also declared in parent behavior.events', fun
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'START'           => TestStartEvent::class,
                     'CONFIRM_PAYMENT' => ConfirmPaymentEvent::class,
                 ],

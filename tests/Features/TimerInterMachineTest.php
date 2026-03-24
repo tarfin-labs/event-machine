@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Bus;
 use Tarfinlabs\EventMachine\Support\Timer;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 
 // ─── Timer on delegation state ──────────────────────────────────
@@ -33,6 +34,9 @@ it('after timer on delegation state fires when child is still running', function
                 'timed_out' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     // Verify: the processing state has a timer definition on FORCE_CANCEL transition
@@ -64,6 +68,7 @@ it('after timer coexists with @timeout on delegation state', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'alertAction' => function (): void {},
             ],
@@ -97,6 +102,9 @@ it('timer event can be triggered manually (external send)', function (): void {
                 'expired' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $machine->getInitialState();
@@ -126,6 +134,7 @@ it('every timer with actions stays in same state', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'heartbeatAction' => function (ContextManager $ctx) use (&$actionRan): void {
                     $ctx->set('count', $ctx->get('count') + 1);

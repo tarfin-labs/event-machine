@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\OutputChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ParentOrderMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ResultChildMachine;
@@ -42,6 +43,9 @@ it('delegates to a child machine and transitions via @done on completion', funct
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $machine->getInitialState();
@@ -74,6 +78,7 @@ it('transfers context to child via with array (same-name format)', function (): 
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'captureResultAction' => function (ContextManager $context, EventBehavior $event): void {
                     $context->set('received_order_id', $event->payload['output']['order_id'] ?? null);
@@ -112,6 +117,7 @@ it('transfers context to child via with key mapping format', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'storeAction' => function (ContextManager $ctx, EventBehavior $event): void {
                     $ctx->set('child_got_price', $event->payload['result']['amount'] ?? null);
@@ -148,6 +154,7 @@ it('routes to @fail when child machine throws exception', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'captureErrorAction' => function (ContextManager $ctx, EventBehavior $event): void {
                     $ctx->set('error', $event->payload['error_message'] ?? 'unknown');
@@ -178,6 +185,9 @@ it('re-throws exception when no @fail is defined', function (): void {
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $machine->getInitialState();
@@ -191,7 +201,7 @@ it('re-throws exception when no @fail is defined', function (): void {
 // ============================================================
 
 it('returns null from machineId() when identity has not been set', function (): void {
-    $context = ContextManager::from(['data' => ['key' => 'value']]);
+    $context = GenericContext::from(['key' => 'value']);
 
     expect($context->machineId())->toBeNull();
 });
@@ -211,6 +221,7 @@ it('injects _machine_id accessible via machineId() on every machine', function (
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'captureIdAction' => function (ContextManager $ctx) use (&$capturedId): void {
                     $capturedId = $ctx->machineId();
@@ -235,6 +246,9 @@ it('isChildMachine returns false for standalone machines', function (): void {
                 'idle' => [],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $machine->getInitialState();
@@ -256,6 +270,9 @@ it('delegates to child and parent completes via @done', function (): void {
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state           = $machine->getInitialState();
@@ -288,6 +305,9 @@ it('child context changes do not affect parent context', function (): void {
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $machine->getInitialState();
@@ -312,6 +332,9 @@ it('parent state value does not include child states', function (): void {
                 'finished' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $machine->getInitialState();
@@ -346,7 +369,8 @@ it('supports @done multi-branch guarded fork', function (): void {
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'isApprovedGuard' => function (ContextManager $ctx, EventBehavior $event): bool {
                     return ($event->payload['result']['status'] ?? '') === 'approved';
                 },
@@ -382,7 +406,8 @@ it('supports @fail multi-branch guarded fork', function (): void {
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'canRetryGuard' => function (ContextManager $ctx): bool {
                     return $ctx->get('retries') < 3;
                 },
@@ -416,6 +441,9 @@ it('handles immediate final child (sync-completing)', function (): void {
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state = $machine->getInitialState();
@@ -445,6 +473,7 @@ it('ChildMachineDoneEvent has typed accessors', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'captureEventAction' => function (ContextManager $ctx, EventBehavior $event) use (&$receivedEvent): void {
                     $receivedEvent = $event;
@@ -487,6 +516,7 @@ it('output key filters child context to only specified keys', function (): void 
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'captureOutputAction' => function (ContextManager $context, ChildMachineDoneEvent $event) use (&$receivedEvent): void {
                     $receivedEvent = $event;
@@ -528,6 +558,7 @@ it('output falls back to full context when no output key defined', function (): 
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'captureOutputAction' => function (ContextManager $context, ChildMachineDoneEvent $event) use (&$receivedEvent): void {
                     $receivedEvent = $event;
@@ -561,6 +592,9 @@ it('validates machine + parallel type mutual exclusivity', function (): void {
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     ))->toThrow(
         InvalidArgumentException::class,
         "cannot have both 'machine' and type 'parallel'"
@@ -578,6 +612,9 @@ it('validates machine value must be a string', function (): void {
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     ))->toThrow(
         InvalidArgumentException::class,
         'Must be a string'
@@ -596,6 +633,9 @@ it('validates forward requires queue', function (): void {
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     ))->toThrow(
         InvalidArgumentException::class,
         "has 'forward' without 'queue'"
@@ -620,7 +660,11 @@ it('routes to correct target based on child final state key via @done.{state} (T
             'target_a' => ['type' => 'final'],
             'target_b' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $machineA->getInitialState();
     $state = $machineA->transition(event: ['type' => 'GO'], state: $state);
@@ -639,7 +683,11 @@ it('routes to correct target based on child final state key via @done.{state} (T
             'target_a' => ['type' => 'final'],
             'target_b' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $machineB->getInitialState();
     $state = $machineB->transition(event: ['type' => 'GO'], state: $state);
@@ -662,6 +710,7 @@ it('@done.{state} supports config with actions (T2)', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'storeDecisionAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedFinalState): void {
                     $ctx->set('child_decision', $event->output('decision'));
@@ -693,7 +742,11 @@ it('falls through to @done catch-all when child reaches unmatched final state (T
             'completed' => ['type' => 'final'],
             'fallback'  => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $machine->getInitialState();
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
@@ -712,7 +765,11 @@ it('@done.{state} works without catch-all when final state matches (T6)', functi
             ],
             'completed' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $machine->getInitialState();
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
@@ -760,7 +817,8 @@ it('guard on specific @done.{state} receives ChildMachineDoneEvent (T4)', functi
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'hasDecisionGuard' => function (ContextManager $ctx, ChildMachineDoneEvent $event): bool {
                     return $event->output('decision') === 'yes';
                 },
@@ -792,7 +850,8 @@ it('guard fallthrough from @done.{state} falls to @done catch-all (T5)', functio
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'alwaysFailGuard' => fn (): bool => false,
             ],
         ],
@@ -820,6 +879,7 @@ it('ChildMachineDoneEvent.finalState() returns key not full ID (T7)', function (
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'captureAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedFinalState): void {
                     $capturedFinalState = $event->finalState();
@@ -862,7 +922,11 @@ it('@done.{state} coexists with @fail independently (T9)', function (): void {
             'declined'  => ['type' => 'final'],
             'error'     => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $machine->getInitialState();
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
@@ -889,6 +953,7 @@ it('@done.{state} action receives output, result, and finalState together (T10)'
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'captureAllAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedOutput, &$capturedResult, &$capturedFinalState): void {
                     $capturedOutput     = $event->output('status');
@@ -924,7 +989,11 @@ it('multiple @done.{state} keys with same target cause no conflict (T32)', funct
             ],
             'error' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $machine->getInitialState();
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
@@ -945,7 +1014,11 @@ it('@done.{state} on state with on transitions work independently (T33)', functi
             'completed' => ['type' => 'final'],
             'cancelled' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $machine->getInitialState();
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
@@ -973,6 +1046,7 @@ it('@done.{state} with calculators runs calculator before guard (T31)', function
             ],
         ],
         behavior: [
+            'context'     => GenericContext::class,
             'calculators' => [
                 'computeTotalCalculator' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$calculatorRan): void {
                     $calculatorRan = true;

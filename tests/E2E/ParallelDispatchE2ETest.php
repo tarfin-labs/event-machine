@@ -7,6 +7,7 @@ use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EFailMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EBasicMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EChainedMachine;
@@ -797,6 +798,9 @@ it('validates config requires should_persist and Machine subclass for dispatch',
                 'completed' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     // machineClass is null (not a Machine subclass) → shouldDispatchParallel = false

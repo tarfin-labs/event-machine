@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ForwardChildEndpointMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ForwardParentEndpointMachine;
 
@@ -24,6 +25,9 @@ test('assertAvailableEvent passes when event is in available events', function (
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $result = $tm->assertAvailableEvent('GO');
@@ -41,6 +45,9 @@ test('assertAvailableEvent fails when event is not in available events', functio
                 'idle' => ['on' => ['GO' => 'done']],
                 'done' => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 
@@ -63,6 +70,9 @@ test('assertNotAvailableEvent passes when event is not available', function (): 
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $result = $tm->assertNotAvailableEvent('NONEXISTENT');
@@ -80,6 +90,9 @@ test('assertNotAvailableEvent fails when event is available', function (): void 
                 'idle' => ['on' => ['GO' => 'done']],
                 'done' => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 
@@ -108,6 +121,9 @@ test('assertAvailableEvents passes for exact set (order-independent)', function 
                 'done'   => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     // Pass in reverse order to verify order-independence
@@ -133,6 +149,9 @@ test('assertAvailableEvents fails when extra event present', function (): void {
                 'done'   => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     // Machine has GO + STOP, but we only assert GO
@@ -150,6 +169,9 @@ test('assertAvailableEvents fails when missing event', function (): void {
                 'idle' => ['on' => ['GO' => 'done']],
                 'done' => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 
@@ -194,6 +216,9 @@ test('assertForwardAvailable fails for parent-sourced event', function (): void 
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     // GO has source 'parent', not 'forward'
@@ -216,6 +241,9 @@ test('assertNoAvailableEvents passes on final state', function (): void {
                 'done' => ['type' => 'final'],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ],
     );
 
     $result = $tm->send('GO')->assertNoAvailableEvents();
@@ -233,6 +261,9 @@ test('assertNoAvailableEvents fails when events exist', function (): void {
                 'idle' => ['on' => ['GO' => 'done']],
                 'done' => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 
@@ -256,6 +287,9 @@ test('available events change as machine transitions through states', function (
                 'active' => ['on' => ['FINISH' => 'done']],
                 'done'   => ['type' => 'final'],
             ],
+        ],
+        behavior: [
+            'context' => GenericContext::class,
         ],
     );
 

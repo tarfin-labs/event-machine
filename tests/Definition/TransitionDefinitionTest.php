@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Exceptions\NoStateDefinitionFoundException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
@@ -26,7 +27,11 @@ test('single actions can be defined as strings instead of arrays', function (): 
             ],
             'yellow' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $timerTransition = $machine->stateDefinitions['green']->transitionDefinitions['TIMER'];
 
@@ -46,7 +51,11 @@ test('transitions can have decriptions', function (): void {
             ],
             'yellow' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $timerTransition = $machine->stateDefinitions['green']->transitionDefinitions['TIMER'];
 
@@ -68,7 +77,11 @@ test('the transition target can be null', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $incTransition = $machine->stateDefinitions['active']->transitionDefinitions['INC'];
     $decTransition = $machine->stateDefinitions['active']->transitionDefinitions['DEC'];
@@ -93,7 +106,11 @@ test('transitions can have actions', function (): void {
             ],
             'yellow' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $timerTransition = $machine->stateDefinitions['green']->transitionDefinitions['TIMER'];
 
@@ -112,7 +129,11 @@ it('throws NoTransitionDefinitionFoundException for unknown events', function ()
             ],
             'yellow' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect(fn () => $machine->transition(event: ['type' => 'TIMERX']))
         ->toThrow(
@@ -133,7 +154,11 @@ it('throws NoStateDefinitionFoundException for unknown states - I', function ():
             ],
             'yellow' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 })->throws(
     exception: NoStateDefinitionFoundException::class,
     exceptionMessage: "No transition defined in the event machine from state 'machine.green' to state 'no-yellow' for the event type 'TIMER'. Please ensure that a transition for this event type is defined in the current state definition."
@@ -149,7 +174,11 @@ it('throws NoStateDefinitionFoundException for unknown states - II', function ()
             ],
             'yellow' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 })->throws(
     exception: NoStateDefinitionFoundException::class,
     exceptionMessage: "No transition defined in the event machine from state 'machine.green' to state 'no-yellow' for the event type 'TIMER'. Please ensure that a transition for this event type is defined in the current state definition."
@@ -168,7 +197,11 @@ test('a guarded transition can have specified guards', function (): void {
             ],
             'yellow' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     /** @var TransitionDefinition $timerTransition */
     $timerTransition = $machine->stateDefinitions['green']->transitionDefinitions['TIMER'];
@@ -193,7 +226,11 @@ test('a guarded transition can have multiple specified guards', function (): voi
             ],
             'yellow' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     /** @var TransitionDefinition $timerTransition */
     $timerTransition = $machine->stateDefinitions['green']->transitionDefinitions['TIMER'];
@@ -229,7 +266,10 @@ test('a guarded transition can have multiple if-else targets', function (): void
             'red'        => [],
             'pedestrian' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]);
 
     $transitions = $machine->stateDefinitions['green']->transitionDefinitions;
     expect($transitions)
@@ -270,7 +310,11 @@ test('always transitions', function (): void {
             ],
             'state_c' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $newState = $machine->transition(
         event: ['type' => 'EVENT'],
@@ -290,7 +334,11 @@ test('always transitions with initial jump', function (): void {
             ],
             'state_c' => [],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     /** @var State $newState */
     $newState = $machine->getInitialState();
@@ -346,6 +394,7 @@ test('always guarded transitions', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'incrementAction' => function (ContextManager $context): void {
                     $context->set('count', $context->get('count') + 1);

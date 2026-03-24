@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 it('accepts valid listen config', function (): void {
     $definition = MachineDefinition::define(
@@ -19,6 +20,7 @@ it('accepts valid listen config', function (): void {
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'someAction' => function (): void {},
             ],
@@ -40,6 +42,9 @@ it('rejects invalid listen keys', function (): void {
                 'idle' => [],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 })->throws(InvalidArgumentException::class, "Invalid 'listen' keys: invalid_key");
 
@@ -53,5 +58,8 @@ it('rejects non-array listen value', function (): void {
                 'idle' => [],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 })->throws(InvalidArgumentException::class, 'must be an array');

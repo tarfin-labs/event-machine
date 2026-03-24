@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\SuccessfulTestJob;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Parent machine that delegates to a job actor (SuccessfulTestJob).
@@ -46,6 +47,7 @@ class JobActorParentMachine extends Machine
                 ],
             ],
             behavior: [
+                'context' => GenericContext::class,
                 'actions' => [
                     'capturePaymentAction' => function (ContextManager $ctx, EventBehavior $event): void {
                         $ctx->set('payment_id', $event->payload['output']['payment_id'] ?? null);

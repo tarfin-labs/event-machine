@@ -158,7 +158,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      */
     protected static function createFaked(): self
     {
-        $fake = self::getMachineFake(static::class);
+        self::getMachineFake(static::class);
 
         $machine                            = self::withDefinition(static::definition());
         $machine->definition->machineClass  = static::class;
@@ -166,7 +166,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         $machine->isFakedInstance           = true;
 
         $machine->state = new State(
-            context: new ContextManager(data: $fake['result'] ?? []),
+            context: $machine->definition->initializeContextFromState(),
             currentStateDefinition: null,
         );
 
@@ -350,7 +350,7 @@ class Machine implements Castable, JsonSerializable, Stringable
                 rootEventId: $rootEventId,
                 regionId: $dispatch['region_id'],
                 initialStateId: $dispatch['initial_state_id'],
-                contextAtDispatch: $this->state->context->data,
+                contextAtDispatch: $this->state->context->toArray(),
             );
 
             if ($queue !== null) {
@@ -575,7 +575,10 @@ class Machine implements Castable, JsonSerializable, Stringable
             return $contextClass::validateAndCreate($persistedContext);
         }
 
-        return ContextManager::validateAndCreate($persistedContext);
+        throw new \InvalidArgumentException(
+            "Machine '{$this->definition->id}' requires a typed context class (subclass of ContextManager). "
+            .'Array-based bag context is no longer supported.'
+        );
     }
 
     /**

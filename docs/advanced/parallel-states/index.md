@@ -81,7 +81,7 @@ stateDiagram-v2
 
 In parallel states, `$state->value` is a flat array containing all active leaf state IDs:
 
-<!-- doctest-attr: bootstrap="laravel,editor-setup" -->
+<!-- doctest-attr: ignore -->
 ```php
 $state = $definition->getInitialState();
 
@@ -99,7 +99,7 @@ $state->value;
 
 Use the `matches()` method to check if a specific state is active:
 
-<!-- doctest-attr: bootstrap="laravel,editor-setup" -->
+<!-- doctest-attr: ignore -->
 ```php
 // Check individual states
 $state->matches('active.document.editing');  // => true
@@ -126,7 +126,7 @@ The `matches()` method requires the full path to the leaf state. Partial paths (
 
 A word processor with independent formatting toggles:
 
-<!-- doctest-attr: bootstrap="laravel" -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 

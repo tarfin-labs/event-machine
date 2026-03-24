@@ -14,6 +14,7 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Definition\MachineInvokeDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
@@ -586,7 +587,10 @@ it('async child completion routes via @done.{state} (T15)', function (): void {
             'completed' => ['type' => 'final'],
             'declined'  => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]);
 
     // Start in delegating state (simulates async parent waiting for child)
     $state     = $machine->getInitialState();
@@ -618,7 +622,11 @@ it('async @done.{state} falls through to catch-all (T16)', function (): void {
             'completed' => ['type' => 'final'],
             'fallback'  => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state     = $machine->getInitialState();
     $stateDefn = $state->currentStateDefinition;

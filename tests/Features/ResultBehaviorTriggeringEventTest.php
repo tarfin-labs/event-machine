@@ -7,6 +7,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 // ═══════════════════════════════════════════════════════════════
 //  ResultBehavior receives triggeringEvent, not internal events
@@ -27,6 +28,9 @@ it('Machine::result() receives the original event payload, not internal event', 
                     ],
                 ],
             ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
         ),
     );
 
@@ -53,6 +57,9 @@ it('Machine::result() receives event type, not internal event type', function ()
                     ],
                 ],
             ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
         ),
     );
 
@@ -80,6 +87,9 @@ it('Machine::result() works when no event was sent (initial final state)', funct
                 ],
             ],
         ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
     );
 
     $state          = $definition->getInitialState();
@@ -116,6 +126,7 @@ it('Machine::result() preserves payload through entry actions', function (): voi
                 ],
             ],
             behavior: [
+                'context' => GenericContext::class,
                 'actions' => [
                     'markProcessedAction' => function (ContextManager $ctx): void {
                         $ctx->set('processed', true);
@@ -155,6 +166,9 @@ it('Machine::result() preserves payload through @always chain', function (): voi
                     ],
                 ],
             ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
         ),
     );
 
@@ -183,6 +197,9 @@ it('Machine::result() receives the last triggering event in multi-step flow', fu
                     ],
                 ],
             ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
         ),
     );
 

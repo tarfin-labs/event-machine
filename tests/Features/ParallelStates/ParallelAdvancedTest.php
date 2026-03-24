@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /*
  * Advanced parallel state tests covering edge cases and complex scenarios.
@@ -59,6 +60,7 @@ test('same event can trigger transitions in multiple regions simultaneously', fu
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'updateValueAction' => function (ContextManager $ctx): void {
                     $ctx->set('value', 'changed');
@@ -146,7 +148,11 @@ test('nested parallel states work correctly', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     expect($state->matches('active.outer1.off'))->toBeTrue();
@@ -209,6 +215,7 @@ test('entry actions fire in all parallel regions on initial state', function ():
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'logRegion1EntryAction' => function () use (&$actionsExecuted): void {
                     $actionsExecuted[] = 'region1';
@@ -272,7 +279,11 @@ test('four regions word processor style machine', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -346,7 +357,11 @@ test('deep nested parallel with multiple levels', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -403,7 +418,11 @@ test('transition entering parallel state initializes all nested parallel regions
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
     expect($state->matches('idle'))->toBeTrue();

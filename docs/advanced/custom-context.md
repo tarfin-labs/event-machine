@@ -1,6 +1,6 @@
 # Custom Context Classes
 
-Custom context classes provide type safety, validation, and computed methods for your machine's data. They extend `ContextManager` and use Spatie Laravel Data.
+Custom context classes provide type safety, validation, and computed methods for your machine's data. They extend `ContextManager`.
 
 ## Basic Custom Context
 
@@ -53,67 +53,52 @@ class ProcessAction extends ActionBehavior
 }
 ```
 
-## Validation Attributes
+## Validation Rules
 
-Use Spatie Laravel Data validation:
+Define validation rules via the `rules()` method:
 
 <!-- doctest-attr: ignore -->
 ```php
-use Spatie\LaravelData\Attributes\Validation\Min;
-use Spatie\LaravelData\Attributes\Validation\Max;
-use Spatie\LaravelData\Attributes\Validation\Email;
-use Spatie\LaravelData\Attributes\Validation\Required;
-use Spatie\LaravelData\Attributes\Validation\ArrayType;
-use Spatie\LaravelData\Attributes\Validation\IntegerType;
-use Spatie\LaravelData\Optional;
-
 class OrderContext extends ContextManager
 {
     public function __construct(
-        #[Required]
-        public string $orderId,
-
-        #[Email]
-        public string $customerEmail,
-
-        #[ArrayType]
+        public string $orderId = '',
+        public string $customerEmail = '',
         public array $items = [],
-
-        #[IntegerType]
-        #[Min(0)]
-        public int|Optional $quantity = 0,
-
-        #[Min(0)]
-        #[Max(1000000)]
-        public float|Optional $total = 0.0,
+        public int $quantity = 0,
+        public float $total = 0.0,
     ) {
         parent::__construct();
+    }
+
+    public static function rules(): array
+    {
+        return [
+            'orderId'       => ['required', 'string'],
+            'customerEmail' => ['required', 'email'],
+            'items'         => ['array'],
+            'quantity'      => ['integer', 'min:0'],
+            'total'         => ['numeric', 'min:0', 'max:1000000'],
+        ];
     }
 }
 ```
 
-## Optional Properties
+## Nullable Properties
 
-Use `Optional` for fields that may not be set:
+Use nullable types with defaults for fields that may not be set:
 
 <!-- doctest-attr: ignore -->
 ```php
-use Spatie\LaravelData\Optional;
-
 class UserContext extends ContextManager
 {
     public function __construct(
-        public string $userId,
-        public string|Optional $email = '',
+        public string $userId = '',
+        public ?string $email = null,
         public ?string $name = null,
-        public int|Optional $age = 0,
+        public ?int $age = null,
     ) {
         parent::__construct();
-
-        // Initialize Optional values
-        if ($this->email instanceof Optional) {
-            $this->email = '';
-        }
     }
 }
 ```
@@ -190,7 +175,7 @@ class CartContext extends ContextManager
 // In actions
 'actions' => [
     'applyDiscountAction' => function (CartContext $ctx, EventBehavior $event) {
-        $ctx->discountPercent = $event->payload['percent'];
+        $ctx->discountPercent = $event->payload()['percent'];
         // `total()` will automatically reflect the discount
     },
 ],
@@ -311,24 +296,17 @@ This scales cleanly: adding a new machine that uses `VerifyIdentityAction` only 
 **Union types** (`CarSalesContext|FindeksContext`) — when the behavior needs access to machine-specific properties that differ between contexts. Acceptable for 2-3 types.
 :::
 
-## Model Transformers
+## Model Casting
 
-Handle Eloquent models in context:
+Eloquent models in context are auto-detected and cast automatically (stored as IDs, loaded when accessed):
 
 <!-- doctest-attr: ignore -->
 ```php
-use Spatie\LaravelData\Attributes\WithTransformer;
-
 class OrderContext extends ContextManager
 {
     public function __construct(
-        #[WithTransformer(ModelTransformer::class)]
-        public User|int|Optional $user,
-
-        #[WithTransformer(ModelTransformer::class)]
-        public Order|int|Optional $order,
-
-        #[WithTransformer(ModelTransformer::class)]
+        public ?User $user = null,
+        public ?Order $order = null,
         public ?Product $product = null,
     ) {
         parent::__construct();
@@ -336,9 +314,84 @@ class OrderContext extends ContextManager
 }
 ```
 
-The transformer handles:
-- Storing model IDs for serialization
-- Loading models when accessed
+Model, Enum, and DateTime types are auto-detected. For custom value objects, use `typeCasts()`, `casts()`, or register them in `config/machine.php`. See [Cast Resolution](#cast-resolution) below.
+
+## Cast Resolution
+
+Both `ContextManager` and `EventBehavior` extend `TypedData`, which provides a 4-layer cast resolution system for serializing and deserializing property values:
+
+| Layer | Method | Scope | Use Case |
+|-------|--------|-------|----------|
+| 1 | `casts()` | Per-property | Override cast for a specific property name |
+| 2 | `typeCasts()` | Per-type, class-level | Override cast for all properties of a given type in this class |
+| 3 | `config/machine.php` `casts` | Per-type, app-wide | Register a cast once for the entire application |
+| 4 | Auto-detect | Per-type, built-in | Model, BackedEnum, DateTimeInterface, Arrayable |
+
+### Layer 1: `casts()` — Per-Property
+
+Override how a specific property is serialized:
+
+<!-- doctest-attr: ignore -->
+```php
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        public ?Collection $orderItems = null,
+    ) {}
+
+    public static function casts(): array
+    {
+        return [
+            'orderItems' => [OrderItemData::class],  // Collection<OrderItemData>
+        ];
+    }
+}
+```
+
+### Layer 2: `typeCasts()` — Per-Type, Class-Level
+
+Apply a cast to all properties of a given type within this class:
+
+<!-- doctest-attr: ignore -->
+```php
+class FinanceContext extends ContextManager
+{
+    public function __construct(
+        public ?Money $totalPrice = null,
+        public ?Money $taxAmount = null,
+    ) {}
+
+    public static function typeCasts(): array
+    {
+        return [
+            Money::class => MoneyCast::class,
+        ];
+    }
+}
+```
+
+### Layer 3: `config/machine.php` — App-Wide
+
+Register casts globally so every `ContextManager` and `EventBehavior` subclass can use them:
+
+```php
+// config/machine.php
+return [
+    'casts' => [
+        \Brick\Money\Money::class => \App\Machines\Casts\MoneyCast::class,
+    ],
+    // ...
+];
+```
+
+### Layer 4: Auto-Detect
+
+The following types are automatically detected and cast without any configuration:
+
+- **Eloquent Model** — stored as ID, loaded when accessed
+- **BackedEnum** — stored as value, cast back to enum
+- **DateTimeInterface** — stored as ISO 8601 string
+- **Arrayable** — stored via `toArray()`, reconstructed via constructor
 
 ## Initialization Logic
 
@@ -349,20 +402,12 @@ use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class GameContext extends ContextManager
 {
     public function __construct(
-        public int|Optional $score = 0,
-        public int|Optional $lives = 3,
+        public int $score = 0,
+        public int $lives = 3,
         public array $inventory = [],
         public ?string $currentLevel = null,
     ) {
         parent::__construct();
-
-        // Initialize Optional values
-        if ($this->score instanceof Optional) {
-            $this->score = 0;
-        }
-        if ($this->lives instanceof Optional) {
-            $this->lives = 3;
-        }
 
         // Set default level
         if ($this->currentLevel === null) {
@@ -410,30 +455,27 @@ use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class EcommerceContext extends ContextManager
 {
     public function __construct(
-        #[Required]
-        public string $sessionId,
-
+        public string $sessionId = '',
         public array $cartItems = [],
-
-        #[Email]
-        public string|Optional $customerEmail = '',
-
+        public ?string $customerEmail = null,
         public ?array $shippingAddress = null,
-
         public ?array $billingAddress = null,
-
         public ?string $paymentMethod = null,
-
         public ?string $couponCode = null,
-
-        #[Min(0)]
         public float $discountAmount = 0,
-
         public ?string $orderId = null,
-
         public ?string $trackingNumber = null,
     ) {
         parent::__construct();
+    }
+
+    public static function rules(): array
+    {
+        return [
+            'sessionId'      => ['required', 'string'],
+            'customerEmail'  => ['nullable', 'email'],
+            'discountAmount' => ['numeric', 'min:0'],
+        ];
     }
 
     public function subtotal(): float
@@ -474,34 +516,27 @@ use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class LoanApplicationContext extends ContextManager
 {
     public function __construct(
-        #[Required]
-        public string $applicationId,
-
-        #[Required]
-        #[Min(1000)]
-        #[Max(1000000)]
-        public float $requestedAmount,
-
-        #[Required]
-        #[Min(12)]
-        #[Max(360)]
-        public int $termMonths,
-
+        public string $applicationId = '',
+        public float $requestedAmount = 0,
+        public int $termMonths = 12,
         public ?float $approvedAmount = null,
-
         public ?float $interestRate = null,
-
         public ?int $creditScore = null,
-
         public float $debtToIncomeRatio = 0,
-
         public array $documents = [],
-
         public array $approvals = [],
-
         public ?string $rejectionReason = null,
     ) {
         parent::__construct();
+    }
+
+    public static function rules(): array
+    {
+        return [
+            'applicationId'  => ['required', 'string'],
+            'requestedAmount' => ['required', 'numeric', 'min:1000', 'max:1000000'],
+            'termMonths'     => ['required', 'integer', 'min:12', 'max:360'],
+        ];
     }
 
     public function monthlyPayment(): ?float
@@ -543,11 +578,8 @@ use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 class WorkflowContext extends ContextManager
 {
     public function __construct(
-        #[Required]
-        public string $workflowId,
-
-        #[Required]
-        public string $requesterId,
+        public string $workflowId = '',
+        public string $requesterId = '',
 
         public string $currentStep = 'start',
 
@@ -608,18 +640,15 @@ public array $items;
 public mixed $data;
 ```
 
-### 2. Initialize Optional Values
+### 2. Use Nullable with Defaults
 
 <!-- doctest-attr: ignore -->
 ```php
 public function __construct(
-    public int|Optional $count = 0,
+    public ?int $count = 0,
+    public ?string $label = null,
 ) {
     parent::__construct();
-
-    if ($this->count instanceof Optional) {
-        $this->count = 0;
-    }
 }
 ```
 

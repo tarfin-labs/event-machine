@@ -44,8 +44,16 @@ parameters:
         # PHPDoc type mismatches - inherited from Laravel
         - identifier: varTag.nativeType
         - identifier: return.phpDocType
-        # Spatie Laravel Data attribute issues
-        - identifier: attribute.target
         # Covariant return types - Laravel framework patterns
         - identifier: method.childReturnType
+        # ContextManager/Context factory pattern — new static() is intentional for from()
+        - identifier: new.static
+        # MachineController catches validation exceptions defensively
+        -
+            identifier: catch.neverThrown
+            path: src/Routing/MachineController.php
+        # ContextCast implementations are instantiated dynamically
+        -
+            identifier: new.noConstructor
+            reportUnmatched: false
 

@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\StateConfigValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
 use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
@@ -139,7 +140,11 @@ it('throws when parallel_dispatch enabled but should_persist is false', function
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 })->throws(InvalidParallelStateDefinitionException::class, 'should_persist: true');
 
 it('does not throw when parallel_dispatch enabled and should_persist is true', function (): void {
@@ -155,7 +160,11 @@ it('does not throw when parallel_dispatch enabled and should_persist is true', f
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machine)->toBeInstanceOf(MachineDefinition::class);
 });
@@ -173,7 +182,11 @@ it('skips validation when parallel_dispatch is disabled', function (): void {
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($machine)->toBeInstanceOf(MachineDefinition::class);
 });
@@ -189,6 +202,9 @@ it('falls back to sequential when parallel_dispatch enabled but using base Machi
             'states'         => [
                 'idle' => ['type' => 'final'],
             ],
+        ],
+        'behavior' => [
+            'context' => GenericContext::class,
         ],
     ]);
 
@@ -214,6 +230,9 @@ it('skips subclass validation when parallel_dispatch is disabled', function (): 
             'states'  => [
                 'idle' => ['type' => 'final'],
             ],
+        ],
+        'behavior' => [
+            'context' => GenericContext::class,
         ],
     ]);
 
@@ -245,7 +264,11 @@ it('has empty pendingParallelDispatches by default', function (): void {
         'states'  => [
             'idle' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     expect($definition->pendingParallelDispatches)->toBe([]);
 });
@@ -260,7 +283,11 @@ it('createEventBehavior returns EventBehavior instance', function (): void {
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $machine->getInitialState();
 
@@ -300,7 +327,11 @@ it('areAllRegionsFinal is callable as public method', function (): void {
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state         = $machine->getInitialState();
     $parallelState = $machine->idMap['test.parallel_state'];

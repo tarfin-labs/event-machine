@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsTimerValidValidationGuard;
 
@@ -21,7 +22,11 @@ test('machine validation exception from a past event is not rethrown during a su
             ],
             'yellow' => [],
         ],
-    ]));
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    ));
 
     expect(fn () => $machine->send([
         'type'    => 'TIMER',

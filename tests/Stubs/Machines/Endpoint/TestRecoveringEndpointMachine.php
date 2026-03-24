@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Machine with a throwing action and a recovering endpoint action.
@@ -33,7 +34,8 @@ class TestRecoveringEndpointMachine extends Machine
                 ],
             ],
             behavior: [
-                'events' => [
+                'context' => GenericContext::class,
+                'events'  => [
                     'START' => TestStartEvent::class,
                 ],
                 'actions' => [

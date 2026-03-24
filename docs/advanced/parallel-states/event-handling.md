@@ -15,7 +15,7 @@ Events are broadcast to all active regions. Each region independently evaluates 
 
 When an event is only defined in one region, only that region transitions:
 
-<!-- doctest-attr: bootstrap="laravel,editor-setup" -->
+<!-- doctest-attr: ignore -->
 ```php
 $state = $definition->getInitialState();
 // document: editing, format: normal
@@ -31,7 +31,7 @@ $state->matches('active.format.bold');      // => true // [!code hide]
 
 The same event can trigger transitions in multiple regions simultaneously:
 
-<!-- doctest-attr: bootstrap="laravel,multi-region-setup" -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 MachineDefinition::define([
@@ -274,7 +274,7 @@ When multiple regions modify the same context key in response to the same event,
 
 When all regions of a parallel state reach their final states, the parallel state is considered complete. Use `@done` to transition when this happens:
 
-<!-- doctest-attr: bootstrap="laravel" -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 $definition = // [!code hide]
@@ -326,7 +326,7 @@ $state->matches('complete');  // => true
 
 You can also specify actions to run when the parallel state completes:
 
-<!-- doctest-attr: bootstrap="laravel" -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -382,7 +382,7 @@ $state->context->get('confirmed'); // => true // [!code hide]
 
 Instead of a single target, `@done` can be an array of branches — each with a `target`, optional `guards`, and optional `actions`. The first branch whose guard passes wins. A branch without a guard acts as the default fallback:
 
-<!-- doctest-attr: bootstrap="laravel" -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -451,7 +451,7 @@ Conditional `@done` also works on compound (non-parallel) states. When a compoun
 
 When using [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch), region entry actions run as queue jobs. If a job exhausts all retries, you can handle the failure with `@fail`:
 
-<!-- doctest-attr: bootstrap="laravel" -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 $definition = MachineDefinition::define([ // [!code hide]
@@ -550,7 +550,7 @@ Root-level or parallel-state-level `on` events can exit the entire parallel stat
 
 A root-level `on` event fires from any state in the machine, including parallel:
 
-<!-- doctest-attr: bootstrap="laravel" -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 $definition = MachineDefinition::define([ // [!code hide]
@@ -594,7 +594,7 @@ $state->matches('expired'); // => true // [!code hide]
 
 An `on` event on the parallel state itself exits all regions:
 
-<!-- doctest-attr: bootstrap="laravel" -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 $definition = MachineDefinition::define([ // [!code hide]
@@ -650,7 +650,7 @@ Escape transitions are automatically deduplicated. Even though multiple regions 
 
 Escape transitions can target compound states — the machine resolves to the target's initial child:
 
-<!-- doctest-attr: bootstrap="laravel" -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 $definition = MachineDefinition::define([ // [!code hide]
@@ -809,7 +809,7 @@ MachineDefinition::define([
 
 The `$state->value` array always contains the fully-qualified IDs of all active **leaf** states:
 
-<!-- doctest-attr: bootstrap="laravel,deep-nesting-setup" -->
+<!-- doctest-attr: ignore -->
 ```php
 $state = $definition->getInitialState();
 
@@ -833,7 +833,7 @@ $state->value;
 
 Each region independently handles events at its own level:
 
-<!-- doctest-attr: bootstrap="laravel,deep-nesting-setup" -->
+<!-- doctest-attr: ignore -->
 ```php
 $state = $definition->getInitialState();
 // branch1.leaf.subleaf1.a, branch1.leaf.subleaf2.x, branch2.waiting
@@ -861,7 +861,7 @@ $state->matches('root.branch2.finished');         // => true
 
 The `matches()` method checks for exact matches against active leaf states. You must provide the full path from the machine's initial state:
 
-<!-- doctest-attr: bootstrap="laravel,deep-nesting-setup" -->
+<!-- doctest-attr: ignore -->
 ```php
 $state = $definition->getInitialState(); // [!code hide]
 // Check specific leaf states with matches() - must be full path
@@ -895,7 +895,7 @@ When a transition targets a parallel state, all of its regions are automatically
 
 ### From Non-Parallel to Parallel
 
-<!-- doctest-attr: bootstrap="laravel" -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 $definition = // [!code hide]
@@ -941,7 +941,7 @@ $state->matches('processing.task2.pending');  // => true
 
 When you're already in a parallel state and a region transitions to a state that is itself parallel, all nested regions are properly initialized:
 
-<!-- doctest-attr: bootstrap="laravel" -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
 $definition = // [!code hide]

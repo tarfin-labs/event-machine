@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Definition;
 
 use Mockery\MockInterface;
-use Spatie\LaravelData\Optional;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Actor\State;
@@ -722,10 +721,10 @@ class MachineDefinition
             return $contextClass::validateAndCreate($this->config['context'] ?? []);
         }
 
-        // Otherwise, use the context defined in the machine config
-        $contextConfig = $this->config['context'] ?? [];
-
-        return ContextManager::validateAndCreate(['data' => $contextConfig]);
+        throw new \InvalidArgumentException(
+            "Machine '{$this->id}' requires a typed context class (subclass of ContextManager). "
+            .'Array-based bag context is no longer supported.'
+        );
     }
 
     /**
@@ -846,10 +845,10 @@ class MachineDefinition
         // Different class — re-instantiate with machine's registered class, preserving metadata
         return new $registeredClass(
             type: $typeString,
-            payload: $event->payload instanceof Optional ? null : $event->payload,
+            payload: $event->payload(),
             isTransactional: $event->isTransactional,
             actor: $event->actor($state->context),
-            version: $event->version instanceof Optional ? 1 : $event->version,
+            version: $event->version,
             source: $event->source,
         );
     }
@@ -1703,7 +1702,7 @@ class MachineDefinition
         $childMachine = $childMachineClass::create(state: $childRecord->child_root_event_id);
 
         // Send the event (possibly renamed) to the child
-        $childMachine->send(['type' => $childEventType, 'payload' => $eventBehavior->payload]);
+        $childMachine->send(['type' => $childEventType, 'payload' => $eventBehavior->payload()]);
 
         // If child reached a final state, dispatch completion
         if ($childMachine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
@@ -1717,7 +1716,7 @@ class MachineDefinition
                 childRootEventId: $childRecord->child_root_event_id,
                 success: true,
                 result: $childMachine->result(),
-                childContextData: $childMachine->state->context->data,
+                childContextData: $childMachine->state->context->toArray(),
                 outputData: self::resolveChildOutput(
                     $childMachine->state->currentStateDefinition,
                     $childMachine->state->context,
@@ -1743,7 +1742,7 @@ class MachineDefinition
         }
 
         $childRootEventId = $childMachine->state->history->first()->root_event_id;
-        $childContext     = $childMachine->state->context->data;
+        $childContext     = $childMachine->state->context->toArray();
 
         $doneEvent = ChildMachineDoneEvent::forChild([
             'result'        => $childMachine->result(),

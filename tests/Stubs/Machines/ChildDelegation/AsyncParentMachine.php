@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Parent machine that delegates to a child asynchronously via queue.
@@ -57,6 +58,7 @@ class AsyncParentMachine extends Machine
                 ],
             ],
             behavior: [
+                'context' => GenericContext::class,
                 'actions' => [
                     'captureResultAction' => function (ContextManager $ctx, EventBehavior $event): void {
                         $ctx->set('result', $event->payload['result'] ?? null);

@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 it('can update context using actions defined in transition definitions', function (): void {
     $machine = MachineDefinition::define(
@@ -28,6 +29,7 @@ it('can update context using actions defined in transition definitions', functio
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'additionAction' => function (ContextManager $context, EventBehavior $eventBehavior): void {
                     $context->set('count', $context->get('count') + $eventBehavior->payload['value']);

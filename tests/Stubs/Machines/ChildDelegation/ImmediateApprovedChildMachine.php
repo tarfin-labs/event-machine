@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 class ImmediateApprovedChildMachine extends Machine
 {
@@ -18,6 +19,9 @@ class ImmediateApprovedChildMachine extends Machine
             'states'  => [
                 'approved' => ['type' => 'final', 'output' => ['decision']],
             ],
-        ]);
+        ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]);
     }
 }

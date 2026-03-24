@@ -5,151 +5,235 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Behavior;
 
 use Illuminate\Support\Arr;
-use Spatie\LaravelData\Data;
-use Spatie\LaravelData\Optional;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Enumerable;
-use Illuminate\Support\LazyCollection;
-use Spatie\LaravelData\DataCollection;
+use Tarfinlabs\EventMachine\TypedData;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Contracts\Support\Arrayable;
 use Tarfinlabs\EventMachine\ContextManager;
-use Illuminate\Pagination\AbstractPaginator;
 use Tarfinlabs\EventMachine\Enums\SourceType;
-use Illuminate\Validation\ValidationException;
-use Spatie\LaravelData\PaginatedDataCollection;
 use Illuminate\Support\Traits\InteractsWithData;
-use Illuminate\Pagination\AbstractCursorPaginator;
-use Spatie\LaravelData\Attributes\WithoutValidation;
-use Spatie\LaravelData\CursorPaginatedDataCollection;
-use Illuminate\Contracts\Pagination\Paginator as PaginatorContract;
 use Tarfinlabs\EventMachine\Exceptions\MachineEventValidationException;
-use Illuminate\Contracts\Pagination\CursorPaginator as CursorPaginatorContract;
 
 /**
  * Class EventBehavior.
  *
- * Represents the behavior of an event.
+ * Abstract base for event classes. Extends TypedData for reflection-based
+ * from()/toArray(), cast resolution, and validation.
+ *
+ * Supports two modes:
+ * - Typed: subclass declares constructor properties → payload data as real properties
+ * - Untyped: no constructor properties → payload stored in $payload array
  */
-abstract class EventBehavior extends Data
+abstract class EventBehavior extends TypedData
 {
-    /**
-     * Use InteractsWithData trait with aliases to avoid conflicts between:
-     * - Spatie Data's static collect() vs Laravel trait's non-static collect()
-     * - Different return types between parent class and trait methods
-     */
-    use InteractsWithData {
-        InteractsWithData::collect as collection;
-        InteractsWithData::only as onlyItems;
-        InteractsWithData::except as exceptItems;
-    }
+    use InteractsWithData;
 
-    /** Actor performing the event. */
-    private mixed $actor = null;
+    // region Infrastructure Fields
 
+    public ?string $type         = null;
+    public ?array $payload       = null;
+    public int $version          = 1;
+    public SourceType $source    = SourceType::EXTERNAL;
     public bool $isTransactional = true;
+    private mixed $actor         = null;
 
     /**
-     * Creates a new instance of the class.
-     *
-     * @param  null|string|Optional  $type  The type of the object. Default is null.
-     * @param  null|array|Optional  $payload  The payload to be associated with the object. Default is null.
-     * @param  mixed  $actor  Actor performing the event. Default is null.
-     * @param  int|Optional  $version  The version number of the object. Default is 1.
-     * @param  SourceType  $source  The source type of the object. Default is SourceType::EXTERNAL.
+     * Constructor for untyped events and direct instantiation (engine internal).
+     * Typed event subclasses override this with their own constructor params.
      */
     public function __construct(
-        public null|string|Optional $type = null,
-        public null|array|Optional $payload = null,
-        #[WithoutValidation]
+        ?string $type = null,
+        ?array $payload = null,
         ?bool $isTransactional = null,
-        #[WithoutValidation]
         mixed $actor = null,
-        public int|Optional $version = 1,
-
-        #[WithoutValidation]
-        public SourceType $source = SourceType::EXTERNAL,
+        int $version = 1,
+        SourceType $source = SourceType::EXTERNAL,
     ) {
-        if ($this->type === null) {
-            $this->type = static::getType();
-        }
+        $this->type    = $type ?? static::getType();
+        $this->payload = $payload;
+        $this->version = $version;
+        $this->source  = $source;
+        $this->actor   = $actor;
 
         if ($isTransactional !== null) {
             $this->isTransactional = $isTransactional;
         }
-
-        $this->actor = $actor;
     }
 
-    /**
-     * Gets the type of the object.
-     *
-     * @return string The type of the object.
-     */
-    abstract public static function getType(): string;
+    /** @var array<int, string> */
+    private static array $infrastructure = [
+        'type', 'payload', 'version', 'source', 'isTransactional',
+    ];
+
+    // endregion
+
+    // region Template Method Overrides
+
+    protected static function extractInputData(array $data): array
+    {
+        return $data['payload'] ?? [];
+    }
+
+    protected static function isInfrastructureField(string $name): bool
+    {
+        return in_array($name, self::$infrastructure, true);
+    }
+
+    protected static function hydrateInfrastructure(TypedData $instance, array $data): void
+    {
+        /* @var EventBehavior $instance */
+        $instance->type            = $data['type'] ?? static::getType();
+        $instance->version         = $data['version'] ?? 1;
+        $instance->isTransactional = $data['isTransactional'] ?? true;
+        $instance->source          = isset($data['source'])
+            ? ($data['source'] instanceof SourceType ? $data['source'] : SourceType::from($data['source']))
+            : SourceType::EXTERNAL;
+        $instance->actor = $data['actor'] ?? null;
+
+        $instance->payload = static::hasUserProperties() ? null : $data['payload'] ?? null;
+    }
+
+    protected function buildArray(array $properties): array
+    {
+        return [
+            'type'            => $this->type,
+            'payload'         => $properties ?: ($this->payload ?? []),
+            'version'         => $this->version,
+            'isTransactional' => $this->isTransactional,
+            'source'          => $this->source->value,
+        ];
+    }
+
+    // endregion
+
+    // region Typed/Untyped Detection
+
+    protected static function hasUserProperties(): bool
+    {
+        return static::getUserProperties() !== [];
+    }
+
+    // endregion
+
+    // region Canonical Payload Accessor
 
     /**
-     * Validates the object by calling the static validate() method and handles any validation exceptions.
+     * Returns the payload as an array — works in both typed and untyped mode.
      *
-     * @throws MachineEventValidationException If the object fails validation.
+     * - Typed: computes from typed public properties (raw, unserialized values)
+     * - Untyped: returns $this->payload (the stored array)
+     *
+     * Engine code and internal events should use this instead of $this->payload.
+     *
+     * @return array<string, mixed>
+     */
+    public function payload(): array
+    {
+        if (static::hasUserProperties()) {
+            $result = [];
+
+            foreach (static::getUserProperties() as $name => $prop) {
+                $result[$name] = $prop->getValue($this);
+            }
+
+            return $result;
+        }
+
+        return $this->payload ?? [];
+    }
+
+    // endregion
+
+    // region Validation Override
+
+    /**
+     * Always validates flat payload keys — no 'payload.' prefix needed.
+     * Infrastructure fields (type, version, source) are the engine's
+     * responsibility, not the event author's.
+     *
+     * Both typed and untyped use flat keys: 'vehicle_id', not 'payload.vehicle_id'.
      */
     public function selfValidate(): void
     {
-        try {
-            static::validate($this);
-        } catch (ValidationException $e) {
-            throw new MachineEventValidationException($e->validator);
+        if (static::hasUserProperties()) {
+            $serialized = [];
+
+            foreach (static::getUserProperties() as $name => $prop) {
+                $serialized[$name] = static::serializeValue($name, $prop->getValue($this));
+            }
+
+            static::performValidation($serialized);
+        } else {
+            static::performValidation($this->payload ?? []);
         }
     }
+
+    public static function validateAndCreate(array|Arrayable $data): static
+    {
+        static::performValidation($data['payload'] ?? []);
+
+        return static::from($data);
+    }
+
+    public static function stopOnFirstFailure(): bool
+    {
+        return true;
+    }
+
+    protected static function performValidation(array $data): void
+    {
+        $rules = static::rules();
+
+        if ($rules === []) {
+            return;
+        }
+
+        $validator = Validator::make($data, $rules, static::messages());
+
+        if (static::stopOnFirstFailure()) {
+            $validator->stopOnFirstFailure();
+        }
+
+        if ($validator->fails()) {
+            throw new MachineEventValidationException($validator);
+        }
+    }
+
+    // endregion
+
+    // region Magic Property Access
+
+    /**
+     * $event->someKey delegates to payload via __get.
+     *
+     * On typed events: declared properties are accessed directly (PHP skips __get).
+     *   $event->vehicle_id → real property (no __get).
+     *   $event->unknown_key → __get fires → data('unknown_key') → null.
+     * On untyped events: all payload keys go through __get.
+     */
+    public function __get(string $name): mixed
+    {
+        return $this->data($name);
+    }
+
+    public function __isset(string $name): bool
+    {
+        return isset($this->payload()[$name]);
+    }
+
+    // endregion
+
+    // region Abstract & API
+
+    abstract public static function getType(): string;
 
     public function actor(ContextManager $context): mixed
     {
         return $this->actor;
     }
 
-    /**
-     * Retrieves the scenario value from the payload.
-     *
-     * @return string|null The scenario value if available, otherwise null.
-     */
     public function getScenario(): ?string
     {
-        return $this->payload['scenarioType'] ?? null;
-    }
-
-    /**
-     * Indicates if the validator should stop on the first rule failure.
-     *
-     * @return bool Returns true by default.
-     */
-    public static function stopOnFirstFailure(): bool
-    {
-        return true;
-    }
-
-    /**
-     * Delegate to parent's static collect() from Spatie Data class.
-     * The trait's non-static collect() is aliased as 'collection' to avoid conflict.
-     */
-    public static function collect(mixed $items, ?string $into = null): array|DataCollection|PaginatedDataCollection|CursorPaginatedDataCollection|Enumerable|AbstractPaginator|PaginatorContract|AbstractCursorPaginator|CursorPaginatorContract|LazyCollection|Collection
-    {
-        return parent::collect($items, $into);
-    }
-
-    /**
-     * Override only() to return static type for fluent interface.
-     * Uses parent implementation which correctly returns EventBehavior instance.
-     */
-    public function only(...$args): static
-    {
-        return parent::only(...$args);
-    }
-
-    /**
-     * Override except() to return static type for fluent interface.
-     * Uses parent implementation which correctly returns EventBehavior instance.
-     */
-    public function except(...$args): static
-    {
-        return parent::except(...$args);
+        return $this->payload()['scenarioType'] ?? null;
     }
 
     /**
@@ -157,9 +241,9 @@ abstract class EventBehavior extends Data
      *
      * @param  array|mixed|null  $keys
      */
-    public function all($keys = null): array
+    public function all(mixed $keys = null): array
     {
-        $input = $this->payload ?? [];
+        $input = $this->payload();
 
         if (!$keys) {
             return $input;
@@ -176,21 +260,30 @@ abstract class EventBehavior extends Data
 
     /**
      * Retrieve data from the instance.
-     *
-     * @param  string  $key
-     * @param  mixed  $default
      */
-    public function data($key = null, $default = null): mixed
+    public function data(mixed $key = null, mixed $default = null): mixed
     {
         return data_get($this->all(), $key, $default);
     }
 
+    // collect(), only(), except() — provided by InteractsWithData trait
+
     /**
-     * Create an event instance for testing with sensible defaults.
-     * Override in concrete classes for domain-specific defaults.
+     * Convert the event to an array representation.
      *
-     * @param  array  $attributes  Attributes to merge with defaults.
+     * @return array<string, mixed>
      */
+    public function toArray(): array
+    {
+        $properties = [];
+
+        foreach (static::getUserProperties() as $name => $prop) {
+            $properties[$name] = static::serializeValue($name, $prop->getValue($this));
+        }
+
+        return $this->buildArray($properties);
+    }
+
     public static function forTesting(array $attributes = []): static
     {
         return static::from(array_merge([
@@ -199,4 +292,6 @@ abstract class EventBehavior extends Data
             'version' => 1,
         ], $attributes));
     }
+
+    // endregion
 }

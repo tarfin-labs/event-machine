@@ -124,10 +124,10 @@ class AmountGuard extends GuardBehavior
         State $state,
     ): bool {
         // Check context
-        $hasBalance = $context->balance >= $event->payload['amount'];
+        $hasBalance = $context->balance >= $event->payload()['amount'];
 
         // Check event
-        $isValidAmount = $event->payload['amount'] > 0;
+        $isValidAmount = $event->payload()['amount'] > 0;
 
         return $hasBalance && $isValidAmount;
     }

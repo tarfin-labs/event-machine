@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Machine with compound (hierarchical) state where the parent handles the scheduled event.
@@ -45,6 +46,9 @@ class CompoundScheduledMachine extends Machine
             schedules: [
                 'CHECK_EXPIRY' => null,
             ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
         );
     }
 }

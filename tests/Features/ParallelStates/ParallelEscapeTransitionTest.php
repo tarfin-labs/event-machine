@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 // ---------------------------------------------------------------------------
 // Root-level `on` event while in parallel state
@@ -42,7 +43,11 @@ it('handles root-level on event that escapes the parallel state', function (): v
             'done'    => ['type' => 'final'],
             'expired' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -100,7 +105,11 @@ it('handles parallel-state on event that escapes to a sibling state', function (
             'done'      => ['type' => 'final'],
             'cancelled' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -162,6 +171,7 @@ it('does not duplicate transition actions for ancestor-level events', function (
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'incrementAction' => function () use ($counter): void {
                     $counter->count++;
@@ -219,7 +229,8 @@ it('evaluates guards on root-level escape transitions', function (): void {
             ],
         ],
         behavior: [
-            'guards' => [
+            'context' => GenericContext::class,
+            'guards'  => [
                 'canTimeOutGuard' => fn () => true,
             ],
         ]
@@ -266,7 +277,11 @@ it('still handles normal within-region transitions correctly', function (): void
             'done'    => ['type' => 'final'],
             'expired' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 
@@ -325,6 +340,7 @@ it('runs exit actions on all active leaf states during escape', function (): voi
             ],
         ],
         behavior: [
+            'context' => GenericContext::class,
             'actions' => [
                 'exitRegionAAction' => function () use ($exits): void {
                     $exits->exited[] = 'region_a';
@@ -386,7 +402,11 @@ it('escapes parallel state to a compound target and resolves to its initial chil
             ],
             'done' => ['type' => 'final'],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $state = $definition->getInitialState();
 

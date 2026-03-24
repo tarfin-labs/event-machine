@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Machine with schedule definitions for testing.
@@ -39,6 +40,9 @@ class ScheduledMachine extends Machine
                 'CHECK_EXPIRY' => ExpiredApplicationsResolver::class,
                 'DAILY_REPORT' => null,
             ],
+            behavior: [
+                'context' => GenericContext::class,
+            ]
         );
     }
 }

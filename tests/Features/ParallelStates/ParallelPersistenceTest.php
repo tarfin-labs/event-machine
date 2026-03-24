@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 uses(RefreshDatabase::class);
 
@@ -42,7 +43,10 @@ test('parallel state can be restored from database', function (): void {
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]);
 
     // Create and transition
     $machine = Machine::create($definition);
@@ -85,7 +89,11 @@ test('parallel state value is correctly stored in machine events', function (): 
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     $machine   = Machine::create($definition);
     $lastEvent = $machine->state->history->last();
@@ -135,7 +143,11 @@ test('parallel state restoration after multiple transitions', function (): void 
                 ],
             ],
         ],
-    ]);
+    ],
+        behavior: [
+            'context' => GenericContext::class,
+        ]
+    );
 
     // Create and run through multiple transitions
     $machine = Machine::create($definition);

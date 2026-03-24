@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\LogAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsAllowedGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\GenericContext;
 
 /**
  * Machine with @always transition guarded by IsAllowedGuard + LogAction.
@@ -40,7 +41,8 @@ class AlwaysGuardMachine extends Machine
                 ],
             ],
             behavior: [
-                'guards' => [
+                'context' => GenericContext::class,
+                'guards'  => [
                     'isAllowedGuard' => IsAllowedGuard::class,
                 ],
                 'actions' => [
