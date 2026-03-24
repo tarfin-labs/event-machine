@@ -6,16 +6,16 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ValidationGuardEdgeCases;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ValidationGuardEdgeCases\Guards\AlwaysPassRegularGuard;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ValidationGuardEdgeCases\Guards\AlwaysFailValidationGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ValidationGuardEdgeCases\Guards\AlwaysPassValidationGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ValidationGuardEdgeCases\Guards\SecondAlwaysFailValidationGuard;
 
-class CombinedGuardsMachine extends Machine
+class ChainSecondFailsMachine extends Machine
 {
     public static function definition(): MachineDefinition
     {
         return MachineDefinition::define(
             config: [
-                'id'      => 'combined_guards',
+                'id'      => 'chain_second_fails',
                 'initial' => 'idle',
                 'context' => [],
                 'states'  => [
@@ -24,8 +24,8 @@ class CombinedGuardsMachine extends Machine
                             'SUBMIT' => [
                                 'target' => 'done',
                                 'guards' => [
-                                    AlwaysPassRegularGuard::class,
-                                    AlwaysFailValidationGuard::class,
+                                    AlwaysPassValidationGuard::class,
+                                    SecondAlwaysFailValidationGuard::class,
                                 ],
                             ],
                         ],
@@ -35,8 +35,8 @@ class CombinedGuardsMachine extends Machine
             ],
             behavior: [
                 'guards' => [
-                    AlwaysPassRegularGuard::class,
-                    AlwaysFailValidationGuard::class,
+                    AlwaysPassValidationGuard::class,
+                    SecondAlwaysFailValidationGuard::class,
                 ],
             ],
         );
