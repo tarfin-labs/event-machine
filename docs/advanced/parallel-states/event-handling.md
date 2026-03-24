@@ -1022,6 +1022,12 @@ When transitioning into a nested parallel state, entry actions fire in order:
 With [Parallel Dispatch](./parallel-dispatch) enabled, entry actions for each region run as concurrent queue jobs instead of sequentially. This changes the execution model: entry actions no longer share an in-memory context during execution. Each job snapshots context before running, computes a diff after, and merges under a database lock. Regions should write to **separate context keys** — if two regions write to the same key, a `PARALLEL_CONTEXT_CONFLICT` event is recorded and the last writer wins. If a region's entry action does not call `$this->raise()`, a `PARALLEL_REGION_STALLED` event is recorded as an audit trail.
 :::
 
+## Validation Guards in Parallel States
+
+When a `ValidationGuardBehavior` fails in any region, the entire parallel transition is blocked — no region transitions. This differs from regular `GuardBehavior` failure, which only affects the region where it occurred.
+
+See [Validation Guards → Parallel States](/behaviors/validation-guards#parallel-states) for details and examples.
+
 ::: tip Testing
 For testing event handling in parallel states, see [Parallel Testing](/testing/parallel-testing).
 :::
