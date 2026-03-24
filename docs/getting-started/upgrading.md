@@ -26,6 +26,8 @@ EventMachine v9.0 removes the `spatie/laravel-data` dependency. Context and even
 Context bag mode (`'context' => [...]` with plain arrays) has been removed. You must use a typed context class extending `ContextManager`.
 
 **Before (v8):**
+
+<!-- doctest-attr: ignore -->
 ```php
 MachineDefinition::define(
     config: [
@@ -36,6 +38,8 @@ MachineDefinition::define(
 ```
 
 **After (v9):**
+
+<!-- doctest-attr: ignore -->
 ```php
 class OrderContext extends ContextManager
 {
@@ -56,6 +60,8 @@ MachineDefinition::define(
 ### Breaking Change 2: Spatie Optional Removed
 
 **Before (v8):**
+
+<!-- doctest-attr: ignore -->
 ```php
 use Spatie\LaravelData\Optional;
 
@@ -72,6 +78,8 @@ class OrderContext extends ContextManager
 ```
 
 **After (v9):**
+
+<!-- doctest-attr: ignore -->
 ```php
 class OrderContext extends ContextManager
 {
@@ -85,6 +93,8 @@ class OrderContext extends ContextManager
 ### Breaking Change 3: Validation Attributes → rules()
 
 **Before (v8):**
+
+<!-- doctest-attr: ignore -->
 ```php
 use Spatie\LaravelData\Attributes\Validation\Min;
 use Spatie\LaravelData\Attributes\Validation\IntegerType;
@@ -99,6 +109,8 @@ class OrderContext extends ContextManager
 ```
 
 **After (v9):**
+
+<!-- doctest-attr: ignore -->
 ```php
 class OrderContext extends ContextManager
 {
@@ -118,6 +130,8 @@ class OrderContext extends ContextManager
 ### Breaking Change 4: Cast/Transform System
 
 **Before (v8):**
+
+<!-- doctest-attr: ignore -->
 ```php
 use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\Attributes\WithTransformer;
@@ -136,6 +150,8 @@ class ApplicationContext extends ContextManager
 ```
 
 **After (v9):**
+
+<!-- doctest-attr: ignore -->
 ```php
 class ApplicationContext extends ContextManager
 {
@@ -168,6 +184,8 @@ Auto-detected types (zero config): `Model`, `BackedEnum`, `DateTimeInterface`, `
 ### Breaking Change 5: Event rules() Signature and Flat Keys
 
 **Before (v8):**
+
+<!-- doctest-attr: ignore -->
 ```php
 use Spatie\LaravelData\Support\Validation\ValidationContext;
 
@@ -178,6 +196,8 @@ public static function rules(ValidationContext $context): array
 ```
 
 **After (v9):**
+
+<!-- doctest-attr: ignore -->
 ```php
 public static function rules(): array
 {
@@ -198,12 +218,16 @@ Event `rules()` now use flat keys (`'amount'`, not `'payload.amount'`). This app
 The `ContextManager::registerCast()` static method has been removed. Use `typeCasts()` on your class or register casts in `config/machine.php`:
 
 **Before (v8/v9-early):**
+
+<!-- doctest-attr: ignore -->
 ```php
 // AppServiceProvider
 ContextManager::registerCast(Money::class, MoneyCast::class);
 ```
 
 **After (v9):**
+
+<!-- doctest-attr: ignore -->
 ```php
 // Option A: Per-class via typeCasts()
 class OrderContext extends ContextManager
@@ -228,6 +252,8 @@ $data = $event->payload['key'];
 ```
 
 **After:**
+
+<!-- doctest-attr: ignore -->
 ```php
 $data = $event->payload()['key'];
 
@@ -593,7 +619,7 @@ For full documentation, see [Machine Delegation](/advanced/machine-delegation).
 
 Behaviors can now send events to other machine instances. Sync methods (`sendTo`, `sendToParent`) deliver immediately. Async methods (`dispatchTo`, `dispatchToParent`) dispatch via queue:
 
-<!-- doctest-attr: no_run -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
@@ -631,7 +657,7 @@ For full documentation, see [Cross-Machine Messaging](/advanced/sendto) and [Int
 
 Short-circuit child machines in tests — no child actually runs:
 
-<!-- doctest-attr: no_run -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Actor\Machine;
 
@@ -709,7 +735,7 @@ MachineDefinition::define(
 
 Register the cron schedule in `routes/console.php`:
 
-<!-- doctest-attr: no_run -->
+<!-- doctest-attr: ignore -->
 ```php
 use Tarfinlabs\EventMachine\Scheduling\MachineScheduler;
 
