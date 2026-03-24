@@ -316,7 +316,7 @@ class PaymentFlowMachine extends Machine
                 ],
                 'actions' => [
                     'storeCardAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                        $cardNumber = $event->payload['card_number'] ?? '';
+                        $cardNumber = $event->payload()['card_number'] ?? '';
                         $ctx->set('card_last4', substr($cardNumber, -4));
                         $ctx->set('status', 'card_provided');
                     },

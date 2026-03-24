@@ -67,8 +67,8 @@ class AddItemEvent extends EventBehavior
     public static function rules(): array
     {
         return [
-            'payload.productId' => ['required', 'integer'],
-            'payload.quantity'  => ['required', 'integer', 'min:1'],
+            'productId' => ['required', 'integer'],
+            'quantity'  => ['required', 'integer', 'min:1'],
         ];
     }
 }
@@ -114,9 +114,9 @@ class PaymentEvent extends EventBehavior
     public static function rules(): array
     {
         return [
-            'payload.paymentMethod' => ['required', 'string'],
-            'payload.amount'        => ['required', 'integer', 'min:1'],
-            'payload.receiptEmail'  => ['nullable', 'email'],
+            'paymentMethod' => ['required', 'string'],
+            'amount'        => ['required', 'integer', 'min:1'],
+            'receiptEmail'  => ['nullable', 'email'],
         ];
     }
 }
@@ -148,15 +148,15 @@ class AddItemAction extends ActionBehavior
         ContextManager $context,
         EventBehavior $event
     ): void {
-        $productId = $event->payload['productId'];
-        $quantity = $event->payload['quantity'];
+        $productId = $event->payload()['productId'];
+        $quantity = $event->payload()['quantity'];
 
         // Add to cart...
     }
 }
 ```
 
-### From Custom Event Classes
+### From Typed Event Classes
 
 ```php no_run
 class AddItemAction extends ActionBehavior
@@ -216,7 +216,7 @@ class ProcessOrderAction extends ActionBehavior
         // Raise a follow-up event
         $this->raise([
             'type' => 'SEND_CONFIRMATION',
-            'payload' => ['orderId' => $context->get('orderId')],
+            'payload' => ['orderId' => $context->orderId],
         ]);
     }
 }
@@ -229,7 +229,7 @@ The `raise()` method is inherited from `InvokableBehavior` and queues events to 
 | Property | Type | Description |
 |----------|------|-------------|
 | `type` | string | Event identifier |
-| `payload` | array | Event data |
+| `payload()` | array | Event data (canonical accessor) |
 | `actor` | mixed | Who triggered the event |
 | `version` | int | Event version (default: 1) |
 | `source` | SourceType | EXTERNAL or INTERNAL |
@@ -293,7 +293,7 @@ class ApprovalEvent extends EventBehavior
     public function actor(ContextManager $context): mixed
     {
         // Custom actor resolution
-        return $this->payload['approvedBy'] ?? auth()->id();
+        return $this->payload()['approvedBy'] ?? auth()->id();
     }
 }
 ```
@@ -441,8 +441,8 @@ class CheckoutEvent extends EventBehavior
     public static function rules(): array
     {
         return [
-            'payload.shippingAddress' => ['required', 'string'],
-            'payload.paymentMethod'   => ['required', 'string'],
+            'shippingAddress' => ['required', 'string'],
+            'paymentMethod'   => ['required', 'string'],
         ];
     }
 }

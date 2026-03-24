@@ -4,15 +4,28 @@ Context is the data that travels with your state machine. While states describe 
 
 ## Quick Overview
 
+Context is defined as a typed class extending `ContextManager`:
+
+```php ignore
+use Tarfinlabs\EventMachine\ContextManager;
+
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        public int $count = 0,
+        public array $items = [],
+        public float $total = 0.0,
+    ) {}
+}
+```
+
+Reference it in your machine configuration:
+
 ```php ignore
 MachineDefinition::define(
     config: [
         'initial' => 'idle',
-        'context' => [
-            'count' => 0,
-            'items' => [],
-            'total' => 0.0,
-        ],
+        'context' => OrderContext::class,
         'states' => [...],
     ],
 );
@@ -23,11 +36,9 @@ MachineDefinition::define(
 ```php no_run
 $state = $machine->state;
 
-// Get a value
-$count = $state->context->get('count');
-
-// Check if key exists
-$state->context->has('customer');
+// Direct property access (type-safe)
+$count = $state->context->count;
+$items = $state->context->items;
 
 // Get all as array
 $data = $state->context->toArray();
@@ -37,20 +48,17 @@ $data = $state->context->toArray();
 
 Actions modify context during transitions:
 
-```php
+```php no_run
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\ContextManager;
 
 class AddItemAction extends ActionBehavior
 {
     public function __invoke(
-        ContextManager $context,
+        OrderContext $context,
         EventBehavior $event
     ): void {
-        $items = $context->get('items', []);
-        $items[] = $event->payload['item'];
-        $context->set('items', $items);
+        $context->items = [...$context->items, $event->payload()['item']];
     }
 }
 ```
@@ -59,15 +67,14 @@ class AddItemAction extends ActionBehavior
 
 Guards read context to control transitions:
 
-```php
+```php no_run
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
-use Tarfinlabs\EventMachine\ContextManager;
 
 class HasItemsGuard extends GuardBehavior
 {
-    public function __invoke(ContextManager $context): bool
+    public function __invoke(OrderContext $context): bool
     {
-        return count($context->get('items', [])) > 0;
+        return count($context->items) > 0;
     }
 }
 ```
@@ -76,9 +83,8 @@ class HasItemsGuard extends GuardBehavior
 
 | Concept | Description |
 |---------|-------------|
-| **Initial Context** | Default values when machine starts |
-| **ContextManager** | Class that holds and manages context data |
-| **Custom Context** | Type-safe context with validation |
+| **ContextManager** | Base class for typed context with validation |
+| **TypedData** | Shared base providing reflection-based from()/toArray() and cast resolution |
 | **Persistence** | Context is saved with each event |
 
 ## Learn More

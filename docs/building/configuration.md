@@ -13,7 +13,7 @@ MachineDefinition::define(
         'version' => '1.0.0',
         'initial' => 'pending',
         'delimiter' => '.',
-        'context' => [...],
+        'context' => OrderContext::class,
         'states' => [...],
         'should_persist' => true,
         'scenarios_enabled' => false,
@@ -29,7 +29,7 @@ MachineDefinition::define(
 | `version` | string | `null` | Version string for tracking |
 | `initial` | string | First state | Initial state name |
 | `delimiter` | string | `'.'` | Path separator for state IDs |
-| `context` | array\|class | `[]` | Initial context or ContextManager class |
+| `context` | class-string | `null` | ContextManager subclass for typed context |
 | `states` | array | Required | State definitions |
 | `on` | array | `null` | Root-level transitions |
 | `should_persist` | bool | `true` | Enable database persistence |

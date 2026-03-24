@@ -175,7 +175,7 @@ class CartContext extends ContextManager
 // In actions
 'actions' => [
     'applyDiscountAction' => function (CartContext $ctx, EventBehavior $event) {
-        $ctx->discountPercent = $event->payload['percent'];
+        $ctx->discountPercent = $event->payload()['percent'];
         // `total()` will automatically reflect the discount
     },
 ],
@@ -314,7 +314,84 @@ class OrderContext extends ContextManager
 }
 ```
 
-Model, Enum, and DateTime types are auto-detected. For custom value objects, use `registerCast()` or override the `casts()` method.
+Model, Enum, and DateTime types are auto-detected. For custom value objects, use `typeCasts()`, `casts()`, or register them in `config/machine.php`. See [Cast Resolution](#cast-resolution) below.
+
+## Cast Resolution
+
+Both `ContextManager` and `EventBehavior` extend `TypedData`, which provides a 4-layer cast resolution system for serializing and deserializing property values:
+
+| Layer | Method | Scope | Use Case |
+|-------|--------|-------|----------|
+| 1 | `casts()` | Per-property | Override cast for a specific property name |
+| 2 | `typeCasts()` | Per-type, class-level | Override cast for all properties of a given type in this class |
+| 3 | `config/machine.php` `casts` | Per-type, app-wide | Register a cast once for the entire application |
+| 4 | Auto-detect | Per-type, built-in | Model, BackedEnum, DateTimeInterface, Arrayable |
+
+### Layer 1: `casts()` — Per-Property
+
+Override how a specific property is serialized:
+
+<!-- doctest-attr: ignore -->
+```php
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        public ?Collection $orderItems = null,
+    ) {}
+
+    public static function casts(): array
+    {
+        return [
+            'orderItems' => [OrderItemData::class],  // Collection<OrderItemData>
+        ];
+    }
+}
+```
+
+### Layer 2: `typeCasts()` — Per-Type, Class-Level
+
+Apply a cast to all properties of a given type within this class:
+
+<!-- doctest-attr: ignore -->
+```php
+class FinanceContext extends ContextManager
+{
+    public function __construct(
+        public ?Money $totalPrice = null,
+        public ?Money $taxAmount = null,
+    ) {}
+
+    public static function typeCasts(): array
+    {
+        return [
+            Money::class => MoneyCast::class,
+        ];
+    }
+}
+```
+
+### Layer 3: `config/machine.php` — App-Wide
+
+Register casts globally so every `ContextManager` and `EventBehavior` subclass can use them:
+
+```php
+// config/machine.php
+return [
+    'casts' => [
+        \Brick\Money\Money::class => \App\Machines\Casts\MoneyCast::class,
+    ],
+    // ...
+];
+```
+
+### Layer 4: Auto-Detect
+
+The following types are automatically detected and cast without any configuration:
+
+- **Eloquent Model** — stored as ID, loaded when accessed
+- **BackedEnum** — stored as value, cast back to enum
+- **DateTimeInterface** — stored as ISO 8601 string
+- **Arrayable** — stored via `toArray()`, reconstructed via constructor
 
 ## Initialization Logic
 

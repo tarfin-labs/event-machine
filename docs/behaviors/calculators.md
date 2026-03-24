@@ -108,7 +108,7 @@ class DiscountCalculator extends CalculatorBehavior
         ContextManager $context,
         EventBehavior $event,
     ): void {
-        $discountCode = $event->payload['discountCode'] ?? null;
+        $discountCode = $event->payload()['discountCode'] ?? null;
 
         if ($discountCode) {
             $discount = $this->lookupDiscount($discountCode);
@@ -235,8 +235,8 @@ class CalculatePricingCalculator extends CalculatorBehavior
         ContextManager $context,
         EventBehavior $event,
     ): void {
-        $plan = $event->payload['plan'];
-        $period = $event->payload['period'] ?? 'monthly';
+        $plan = $event->payload()['plan'];
+        $period = $event->payload()['period'] ?? 'monthly';
 
         $pricing = $this->getPricing($plan, $period);
 

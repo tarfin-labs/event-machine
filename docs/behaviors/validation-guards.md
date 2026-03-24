@@ -107,7 +107,7 @@ class ValidateAmountGuard extends ValidationGuardBehavior
         ContextManager $context,
         EventBehavior $event,
     ): bool {
-        $amount = $event->payload['amount'] ?? 0;
+        $amount = $event->payload()['amount'] ?? 0;
 
         if ($amount <= 0) {
             $this->errorMessage = 'Amount must be greater than zero';

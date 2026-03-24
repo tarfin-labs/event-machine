@@ -21,29 +21,37 @@ Each section below has step-by-step migration instructions with before/after exa
 
 EventMachine v9.0 removes the `spatie/laravel-data` dependency. Context and event classes now use Laravel-native validation (`rules()`) and a built-in cast system instead of Spatie attributes.
 
-### Breaking Change 1: ContextManager Split
+### Breaking Change 1: Bag Mode Removed
 
-`ContextManager` no longer has a `$data` property or wraps bag-mode data in `['data' => [...]]`. Bag mode is now handled by the internal `Context` class.
+Context bag mode (`'context' => [...]` with plain arrays) has been removed. You must use a typed context class extending `ContextManager`.
 
 **Before (v8):**
 ```php
-// Bag mode created a ContextManager with $data property
-$context = new ContextManager(['key' => 'value']);
-$context->data; // ['key' => 'value']
-$context->toArray(); // ['data' => ['key' => 'value']]
+MachineDefinition::define(
+    config: [
+        'context' => ['count' => 0, 'items' => []],  // Bag mode — no longer supported
+        'states' => [...],
+    ],
+);
 ```
 
 **After (v9):**
 ```php
-// Bag mode uses Context class (internal)
-$context = Context::from(['key' => 'value']);
-$context->toArray(); // ['key' => 'value'] — flat, no wrapper
-```
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        public int $count = 0,
+        public array $items = [],
+    ) {}
+}
 
-**Who Is Affected?**
-- If you use `'context' => [...]` (array config): No code change needed — engine internally uses `Context` now
-- If you use typed context classes: No change — property access works the same
-- If you call `$context->get()` or `$context->set()` explicitly on a typed context: These still work (engine uses them internally)
+MachineDefinition::define(
+    config: [
+        'context' => OrderContext::class,  // Typed context required
+        'states' => [...],
+    ],
+);
+```
 
 ### Breaking Change 2: Spatie Optional Removed
 
@@ -129,28 +137,35 @@ class ApplicationContext extends ContextManager
 
 **After (v9):**
 ```php
-// AppServiceProvider — register custom VOs once:
-ContextManager::registerCast(Money::class, MoneyCast::class);
-
 class ApplicationContext extends ContextManager
 {
     public function __construct(
         public ?SalesChannelType $salesChannelType = null,  // Auto: BackedEnum
         public ?Retailer $retailer = null,                   // Auto: Model
-        public ?Money $totalCashPrice = null,                 // Auto: Global registry
+        public ?Money $totalCashPrice = null,                 // Via typeCasts() or config
         public ?Collection $orderItems = null,
     ) {}
 
     public static function casts(): array
     {
-        return ['orderItems' => [OrderItemData::class]];  // Only for Collection<DTO>
+        return ['orderItems' => [OrderItemData::class]];  // Layer 1: per-property
+    }
+
+    public static function typeCasts(): array
+    {
+        return [Money::class => MoneyCast::class];  // Layer 2: per-type, class-level
     }
 }
+
+// Or register app-wide in config/machine.php:
+// 'casts' => [Money::class => MoneyCast::class]  // Layer 3: per-type, app-wide
 ```
+
+The 4-layer cast resolution order: `casts()` > `typeCasts()` > `config/machine.php` > auto-detect.
 
 Auto-detected types (zero config): `Model`, `BackedEnum`, `DateTimeInterface`, `Arrayable`.
 
-### Breaking Change 5: Event rules() Signature
+### Breaking Change 5: Event rules() Signature and Flat Keys
 
 **Before (v8):**
 ```php
@@ -166,25 +181,84 @@ public static function rules(ValidationContext $context): array
 ```php
 public static function rules(): array
 {
-    return ['payload.amount' => ['required', 'integer']];
+    return ['amount' => ['required', 'integer']];  // Flat keys, no 'payload.' prefix
 }
 ```
+
+::: warning Flat Validation Keys
+Event `rules()` now use flat keys (`'amount'`, not `'payload.amount'`). This applies to both typed and untyped events. Search your codebase for `payload.` in event rules and remove the prefix.
+:::
 
 ### Breaking Change 6: ModelTransformer Removed
 
 `src/Transformers/ModelTransformer.php` has been deleted. Model serialization is now handled automatically by the cast system's auto-detect layer.
+
+### Breaking Change 7: `registerCast()` Removed
+
+The `ContextManager::registerCast()` static method has been removed. Use `typeCasts()` on your class or register casts in `config/machine.php`:
+
+**Before (v8/v9-early):**
+```php
+// AppServiceProvider
+ContextManager::registerCast(Money::class, MoneyCast::class);
+```
+
+**After (v9):**
+```php
+// Option A: Per-class via typeCasts()
+class OrderContext extends ContextManager
+{
+    public static function typeCasts(): array
+    {
+        return [Money::class => MoneyCast::class];
+    }
+}
+
+// Option B: App-wide via config/machine.php
+// 'casts' => [Money::class => MoneyCast::class]
+```
+
+### Breaking Change 8: `$event->payload` Returns Null on Typed Events
+
+On typed events (events with constructor properties), the `$event->payload` property returns `null`. Use the `$event->payload()` method instead, which works for both typed and untyped events.
+
+**Before:**
+```php
+$data = $event->payload['key'];
+```
+
+**After:**
+```php
+$data = $event->payload()['key'];
+
+// Or for typed events, access properties directly:
+$data = $event->key;
+```
+
+### New in v9.0
+
+| Feature | Description |
+|---------|-------------|
+| **TypedData base class** | Shared base for `ContextManager` and `EventBehavior` — provides `from()`, `toArray()`, cast resolution, and validation |
+| **Typed events** | Event subclasses can declare constructor properties for typed payload access (`$event->productId` instead of `$event->payload()['productId']`) |
+| **`typeCasts()` method** | Per-type cast overrides at the class level (Layer 2 of 4-layer resolution) |
+| **`config/machine.php` casts** | App-wide type cast registration (Layer 3 of 4-layer resolution) |
+| **`$event->payload()` method** | Canonical accessor that works for both typed and untyped events |
+| **4-layer cast resolution** | `casts()` > `typeCasts()` > `config/machine.php` > auto-detect |
 
 ### Migration Steps
 
 1. `composer require tarfin-labs/event-machine:^9.0`
 2. Remove `spatie/laravel-data` from your `composer.json` (unless you use it elsewhere)
 3. Remove `LaravelDataServiceProvider` from test setup
-4. **Context classes:** Remove Spatie imports/attributes, add `rules()` if needed, replace `Optional` with nullable defaults
-5. **Event classes:** Remove `ValidationContext` parameter from `rules()` methods
-6. **Custom casts:** Implement `ContextCast` interface instead of separate Spatie Cast + Transformer
-7. **Global casts:** Register custom VOs in service provider: `ContextManager::registerCast(Money::class, MoneyCast::class)`
-8. **`instanceof Optional` checks:** Replace with `=== null`
-9. Run tests: `composer test`
+4. **Bag mode:** Replace `'context' => [...]` arrays with typed `ContextManager` subclasses
+5. **Context classes:** Remove Spatie imports/attributes, add `rules()` if needed, replace `Optional` with nullable defaults
+6. **Event classes:** Remove `ValidationContext` parameter from `rules()` methods; change `payload.xxx` keys to flat `xxx` keys
+7. **Custom casts:** Implement `ContextCast` interface instead of separate Spatie Cast + Transformer
+8. **Global casts:** Replace `ContextManager::registerCast()` calls with either `typeCasts()` on the class or `config/machine.php` `casts` section
+9. **`instanceof Optional` checks:** Replace with `=== null`
+10. **Event payload access:** Use `$event->payload()` method instead of `$event->payload` property (the property returns `null` on typed events)
+11. Run tests: `composer test`
 
 ### What Did NOT Change
 
@@ -195,7 +269,7 @@ public static function rules(): array
 | `Machine::create()` / `::send()` | Same |
 | Machine config format | Same |
 | Action/Guard/Calculator signatures | Same |
-| Event `getType()`, `payload`, `type` | Same |
+| Event `getType()`, `payload()`, `type` | Same |
 | `selfValidate()` / `validateAndCreate()` | Same API, new internal |
 | `from()` / `toArray()` | Same API, new internal |
 | State persistence (machine_events) | Same format |
@@ -278,7 +352,7 @@ class CustomerDetailResult extends ResultBehavior
     public function __invoke(ContextManager $context, EventBehavior $event): array
     {
         // $event is now the original triggering event with full payload
-        return ['tckn' => $event->payload['tckn']]; // ✅ works
+        return ['tckn' => $event->payload()['tckn']]; // ✅ works
     }
 }
 ```

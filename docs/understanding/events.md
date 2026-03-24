@@ -53,8 +53,8 @@ class ProcessPaymentAction extends ActionBehavior
         ContextManager $context,
         EventBehavior $event
     ): void {
-        $amount = $event->payload['amount'];
-        $method = $event->payload['method'];
+        $amount = $event->payload()['amount'];
+        $method = $event->payload()['method'];
         // Process...
     }
 }

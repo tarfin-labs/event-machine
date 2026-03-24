@@ -71,7 +71,7 @@ All machine behaviors extend `InvokableBehavior` (parameter injection by type-hi
 - **Actions** (`ActionBehavior`): Execute side effects during transitions and state entry/exit
 - **Guards** (`GuardBehavior` / `ValidationGuardBehavior`): Control transition execution with conditions
 - **Calculators** (`CalculatorBehavior`): Pre-compute values before guards/actions in a transition
-- **Events** (`EventBehavior`): Define event structure and validation (native Laravel Validator, rules() method)
+- **Events** (`EventBehavior`): Define event structure and validation (extends TypedData, typed constructor properties, flat rules() keys, `payload()` accessor)
 - **Results** (`ResultBehavior`): Compute final state machine outputs (used by `Machine::result()` and HTTP endpoints)
 
 Behaviors can be defined as classes or inline closures. All support parameter injection: `ContextManager`, `EventBehavior`, `State`, `EventCollection`, `ForwardContext`.
@@ -114,8 +114,8 @@ States with `'type' => 'parallel'` run multiple concurrent regions:
 
 - **StateDefinition** (`src/Definition/StateDefinition.php`): Defines state behavior, transitions, and hierarchy
 - **TransitionDefinition** (`src/Definition/TransitionDefinition.php`): Defines state transitions with conditions
-- **ContextManager** (`src/ContextManager.php`): Base class for typed context — reflection-based from()/toArray(), 3-layer cast resolution, native Laravel validation via rules(). Subclasses can define computed methods and `toResponseArray()` for API responses.
-- **Context** (`src/Context.php`): Bag mode context (array-based) — internal, used when config has `'context' => [...]`
+- **TypedData** (`src/TypedData.php`): Abstract base class for typed data containers — reflection-based from()/toArray(), 4-layer cast resolution (casts > typeCasts > config/machine.php > auto-detect), native Laravel validation via rules()
+- **ContextManager** (`src/ContextManager.php`): Base class for typed context (extends TypedData). Subclasses can define computed methods and `toResponseArray()` for API responses. Bag mode (array-based context) has been removed.
 
 ### Database Integration
 
@@ -137,7 +137,8 @@ States with `'type' => 'parallel'` run multiple concurrent regions:
 
 ### Configuration (`config/machine.php`)
 
-Four top-level sections:
+Five top-level sections:
+- **`casts`** — app-wide type casts for context and event properties (maps type class to ContextCast implementation)
 - **`archival`** — archive old machine events (enabled, compression level, days inactive, restore cooldown)
 - **`parallel_dispatch`** — dispatch parallel regions as queue jobs (enabled, queue, lock timeout/ttl, job timeout/tries/backoff, region timeout)
 - **`timers`** — timer resolution, batch size, backpressure threshold
@@ -179,7 +180,7 @@ MachineDefinition::define(
     config: [
         'id' => 'machine_name',
         'initial' => 'initial_state',
-        'context' => [...],
+        'context' => MyContext::class,
         'states' => [...],
     ],
     behavior: [
@@ -231,6 +232,7 @@ All code, tests, and documentation **must** follow the naming conventions define
 - `src/Actor/` - Runtime machine and state classes
 - `src/Behavior/` - Base behavior classes (Action, Guard, Calculator, Event, Result)
 - `src/Commands/` - Artisan commands (timers, schedules, cache, xstate, archive)
+- `src/TypedData.php` - Abstract base for typed data containers (shared by ContextManager and EventBehavior)
 - `src/Contracts/` - Interfaces (ScheduleResolver, ReturnsResult, ContextCast, ProvidesFailureContext)
 - `src/Definition/` - Machine definition, state, transition, timer, schedule definitions
 - `src/Enums/` - Type definitions and constants
@@ -246,7 +248,7 @@ All code, tests, and documentation **must** follow the naming conventions define
 - `src/Traits/` - Reusable traits (Fakeable, HasMachines)
 - `tests/LocalQA/` - Local QA tests requiring real MySQL + Redis + Horizon
 - `tests/Stubs/` - Example machine implementations for testing
-- `config/machine.php` - Package configuration (archival, parallel dispatch, timers, max transition depth)
+- `config/machine.php` - Package configuration (casts, archival, parallel dispatch, timers, max transition depth)
 - `database/migrations/` - Database schema stubs
 - `spec/` - Implementation specs and plans (version-prefixed, e.g., `8.5.3-centralize-post-entry-transitions.md`)
 
