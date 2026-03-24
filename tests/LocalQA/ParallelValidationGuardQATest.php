@@ -70,7 +70,7 @@ it('LocalQA: validation guard failure followed by successful retry transitions n
     expect($machine->state->currentStateDefinition->id)->toBe('validation_guard_parallel.completed');
 
     // Event history shows both attempts
-    $events = MachineEvent::where('root_event_id', $rootEventId)->pluck('type')->toArray();
+    $events      = MachineEvent::where('root_event_id', $rootEventId)->pluck('type')->toArray();
     $guardFails  = collect($events)->filter(fn (string $type) => str_contains($type, 'guard.') && str_contains($type, '.fail'));
     $guardPasses = collect($events)->filter(fn (string $type) => str_contains($type, 'guard.') && str_contains($type, '.pass'));
     expect($guardFails)->not->toBeEmpty();
