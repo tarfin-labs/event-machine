@@ -117,9 +117,15 @@ it('LocalQA: every max/then fires then-event and marks exhausted atomically', fu
 
         $fired = LocalQATestCase::waitFor(function () use ($rootEventId, $i) {
             $fire = MachineTimerFire::where('root_event_id', $rootEventId)->first();
+            if (!$fire || $fire->fire_count < $i) {
+                return false;
+            }
 
-            return $fire && $fire->fire_count >= $i;
-        }, timeoutSeconds: 60);
+            // Wait for Horizon to process the timer job (context updated)
+            $restored = EveryWithMaxMachine::create(state: $rootEventId);
+
+            return $restored->state->context->get('billing_count') >= $i;
+        }, timeoutSeconds: 60, description: "every max/then: cycle {$i} fire_count+billing_count");
 
         expect($fired)->toBeTrue("Retry cycle {$i} not processed");
     }

@@ -157,8 +157,15 @@ it('LocalQA: every max/then transitions machine to failed via Horizon', function
                 ->where('root_event_id', $rootEventId)
                 ->first();
 
-            return $fire && (int) $fire->fire_count >= ($i + 1);
-        }, timeoutSeconds: 60);
+            if (!$fire || (int) $fire->fire_count < ($i + 1)) {
+                return false;
+            }
+
+            // Also wait for Horizon to process the timer job (context updated)
+            $restored = EveryWithMaxMachine::create(state: $rootEventId);
+
+            return $restored->state->context->get('billing_count') >= ($i + 1);
+        }, timeoutSeconds: 60, description: "every max/then: cycle ".($i + 1)." fire_count+billing_count");
     }
 
     // After max, sweep should send then event
