@@ -1,10 +1,10 @@
 # Diagram Tool Build Progress
 
 ## Current Status
-- **Current Iteration:** 9
-- **Last Completed:** Iteration 8 (Collapse/Expand)
-- **Last Updated:** 2026-03-25 01:00
-- **HTML Status:** Working — collapse/expand machine containers, re-layout on toggle, Collapse All / Expand All buttons
+- **Current Iteration:** 10
+- **Last Completed:** Iteration 9 (Timer + Event Payload Panels)
+- **Last Updated:** 2026-03-25 01:15
+- **HTML Status:** Working — timer durations formatted (days/hours/min/sec), event payload popups, clock icons on timer edges
 
 ## Completed Iterations
 
@@ -27,36 +27,42 @@
 - Multi-machine compound nodes, delegation edges, merged sidebar
 
 ### Iteration 8 — 2026-03-25 01:00
-- **Collapse/expand machine containers:**
-  - `collapsedMachines` Set tracks which machines are collapsed
-  - Click machine header (▶/▼ indicator) to toggle
-  - Collapsed nodes show: event port summary (IN/OUT events), state count
-  - Expanded nodes show full internal state machine
-  - `reLayoutMulti()` rebuilds ELK graph and re-renders on every toggle
-  - Edge counter reset on re-layout to avoid stale IDs
-- **Collapse All / Expand All buttons** in header bar (only shown in multi-machine mode)
-- **Collapsed styling:** Semi-transparent background, port lines in gray
-- **No single-machine regression** — collapse buttons hidden in single mode
+- Collapse/expand machine containers, re-layout, buttons
+
+### Iteration 9 — 2026-03-25 01:15
+- **Timer duration formatting improved:**
+  - `formatDelay()` now handles days (d), hours (h), minutes (m), seconds (s)
+  - 604800000ms → `7d`, 3600000ms → `1h`, etc.
+  - ⏱ clock icon added to `after` timer transition labels
+- **Event payload popup:**
+  - Click event in sidebar → detail panel shows payload schema
+  - Each field: name, type (color-coded: string=green, number=blue, boolean=orange, array=purple), required/optional badge
+  - Event class FQCN shown
+  - `showEventPayloadDetail()` function added
 - **Tested:**
-  - Multi-machine (ParentOrder + ChildPayment): collapse/expand toggle works
-  - Single machine (TrafficLights): no regression
+  - AfterTimerMachine: `after` edge with ⏱ icon and 7d label
+  - EventResolutionMachine: TEST_EVENT payload popup shows amount (number, required)
+  - TrafficLightsMachine: no regression
+  - Multi-machine: no regression
 
 ## Next Up
-- Iteration 9: Timer + Event Payload Panels
-  - Timer machines test (after/every)
-  - Event payload popup on click
-  - Then Iteration 10: Polish + dark/light theme
-- **Checkpoint:** Timer machines + event details working
+- Iteration 10: Signal Highlighting + Polish
+  - Hover event → highlight all transitions using it
+  - Dark/light theme toggle
+  - Export as SVG button
+  - Responsive layout polish
+  - Consider merging with Iteration 11 (simulation) or 12 (QA)
+  - **Checkpoint:** Phase 2 complete — polished tool
 
 ## Known Issues
 - [ ] Self-transitions shown as text inside state — no loop-back arrows
 - [ ] Testbench needs `CACHE_STORE=array` workaround
 - [ ] Label background width estimated
-- [ ] Delegation edge targeting compound node boundary (not initial state)
+- [ ] Delegation edge targeting compound node boundary
 
 ## Files Modified This Session
 - `src/Commands/DiagramCommand.php` (created, updated)
-- `resources/diagram-template.html` (created, updated x7)
+- `resources/diagram-template.html` (created, updated x8)
 - `resources/vendor/elk.bundled.js` (vendored)
 - `resources/vendor/d3-zoom.min.js` (vendored)
 - `resources/vendor/d3-selection.min.js` (vendored)

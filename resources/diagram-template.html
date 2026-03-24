@@ -708,7 +708,7 @@ function buildEdgesFromState(parentId, stateName, stateDef) {
                 if (branch.target) {
                     const targetId = resolveTargetId(parentId, branch.target);
                     const delayLabel = formatDelay(parseInt(delay));
-                    const label = `after ${delayLabel}`;
+                    const label = `\u23F1 after ${delayLabel}`;
                     edges.push({
                         id: `edge_${edgeCounter++}`,
                         sources: [`${parentId}.${stateName}`],
@@ -791,8 +791,10 @@ function formatTransitionLabel(eventName, branch) {
 }
 
 function formatDelay(ms) {
-    if (ms >= 60000) return `${ms / 60000}m`;
-    if (ms >= 1000) return `${ms / 1000}s`;
+    if (ms >= 86400000) return `${Math.round(ms / 86400000)}d`;
+    if (ms >= 3600000) return `${Math.round(ms / 3600000)}h`;
+    if (ms >= 60000) return `${Math.round(ms / 60000)}m`;
+    if (ms >= 1000) return `${Math.round(ms / 1000)}s`;
     return `${ms}ms`;
 }
 
@@ -1360,10 +1362,47 @@ function populateBehaviorList(elementId, behaviors, type) {
             badges += `<span class="behavior-badge badge-inline" title="Required: ${info.requiredContext.join(', ')}">ctx</span>`;
         }
         div.innerHTML = `<span class="behavior-name">${name}</span><span>${badges}</span>`;
-        div.addEventListener('click', (e) => highlightBehavior(name, type));
+        div.addEventListener('click', (e) => {
+            highlightBehavior(name, type);
+            // For events, show payload schema in detail panel
+            if (type === 'event' && info.payload) {
+                showEventPayloadDetail(name, info);
+            }
+        });
         div.title = info.class ? `Class: ${info.class}` : 'Inline behavior';
         list.appendChild(div);
     });
+}
+
+function showEventPayloadDetail(eventName, eventInfo) {
+    const panel = document.getElementById('detail-panel');
+    const title = document.getElementById('detail-title');
+    const content = document.getElementById('detail-content');
+
+    title.textContent = `Event: ${eventName}`;
+
+    let html = '';
+    if (eventInfo.class) {
+        html += `<div class="detail-row"><span class="detail-key">Class:</span><span class="detail-value" style="color:#6a6a8a;font-size:11px">${eventInfo.class}</span></div>`;
+    }
+
+    const payload = eventInfo.payload || {};
+    if (Object.keys(payload).length > 0) {
+        html += `<div class="detail-row"><span class="detail-key" style="font-weight:600">Payload Schema:</span></div>`;
+        Object.entries(payload).forEach(([field, schema]) => {
+            const required = schema.required ? '<span style="color:#f44336;font-size:10px"> required</span>' : '<span style="color:#6a6a8a;font-size:10px"> optional</span>';
+            const typeColor = { string: '#4caf50', number: '#2196f3', boolean: '#ff9800', array: '#9c27b0' }[schema.type] || '#999';
+            html += `<div class="detail-row" style="padding-left:12px">`;
+            html += `<span class="detail-key" style="color:#a0c4ff">${field}</span>`;
+            html += `<span class="detail-value"><span style="color:${typeColor};font-weight:600">${schema.type}</span>${required}</span>`;
+            html += `</div>`;
+        });
+    } else {
+        html += `<div class="detail-row"><span class="detail-value" style="color:#6a6a8a">No payload schema defined</span></div>`;
+    }
+
+    content.innerHTML = html;
+    panel.classList.add('active');
 }
 
 // ============================================================
