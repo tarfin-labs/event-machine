@@ -41,9 +41,15 @@ it('LocalQA: every timer does not double-fire on rapid successive sweeps', funct
 
     $firstFired = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $fire = MachineTimerFire::where('root_event_id', $rootEventId)->first();
+        if (!$fire || $fire->fire_count < 1) {
+            return false;
+        }
 
-        return $fire && $fire->fire_count >= 1;
-    }, timeoutSeconds: 30);
+        // Also wait for the timer job to actually process (update context)
+        $restored = EveryTimerMachine::create(state: $rootEventId);
+
+        return $restored->state->context->get('billing_count') >= 1;
+    }, timeoutSeconds: 45, description: 'every timer: waiting for fire_count>=1 AND billing_count>=1');
 
     expect($firstFired)->toBeTrue('First every-timer fire not processed');
 
