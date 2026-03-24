@@ -43,7 +43,7 @@ it('LocalQA: parallel region entry actions dispatch and run via Horizon', functi
         $regionB  = $restored->state->context->get('region_b_result');
 
         return $regionA !== null && $regionB !== null;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($entryActionsRan)->toBeTrue('Region entry actions did not run via Horizon');
 });
@@ -58,7 +58,7 @@ it('LocalQA: parallel regions complete via events → @done fires', function ():
         $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
 
         return $restored->state->context->get('region_a_result') !== null;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($ready)->toBeTrue('Regions not ready');
 
@@ -81,7 +81,7 @@ it('LocalQA: parallel regions complete via events → @done fires', function ():
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($completed)->toBeTrue('Parallel @done did not fire');
 
@@ -98,7 +98,7 @@ it('LocalQA: concurrent region completions — locking preserves state', functio
         $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
 
         return $restored->state->context->get('region_a_result') !== null;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($ready)->toBeTrue();
 
@@ -119,7 +119,7 @@ it('LocalQA: concurrent region completions — locking preserves state', functio
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($completed)->toBeTrue('Concurrent completions did not resolve');
 

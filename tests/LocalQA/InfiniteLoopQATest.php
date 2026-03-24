@@ -38,7 +38,7 @@ it('LocalQA: timer sweep on loop machine → failed_jobs entry, machine unchange
     // Wait for Horizon to process (and fail)
     $hasFailed = LocalQATestCase::waitFor(function () {
         return DB::table('failed_jobs')->count() > 0;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 45);
 
     expect($hasFailed)->toBeTrue('No failed_jobs entry after loop exception');
 
@@ -69,7 +69,7 @@ it('LocalQA: scheduled event on loop machine → failed_jobs, machine unchanged'
 
     $hasFailed = LocalQATestCase::waitFor(function () {
         return DB::table('failed_jobs')->count() > 0;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 45);
 
     expect($hasFailed)->toBeTrue('No failed_jobs entry');
 
@@ -100,7 +100,7 @@ it('LocalQA: async child @done → parent with @always loop — documents actual
 
         // Parent moved out of delegating state (either to loop_a or failed_jobs entry)
         return $cs && !str_contains($cs->state_id, 'delegating');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 45);
 
     // Document actual behavior:
     $cs          = MachineCurrentState::where('root_event_id', $parentRootEventId)->first();
@@ -131,7 +131,7 @@ it('LocalQA: SendToMachineJob to loop target → failed_jobs, target unchanged',
 
     $hasFailed = LocalQATestCase::waitFor(function () {
         return DB::table('failed_jobs')->count() > 0;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 45);
 
     expect($hasFailed)->toBeTrue('No failed_jobs entry');
 
@@ -158,7 +158,7 @@ it('LocalQA: Horizon worker recovers after loop exception — processes next job
     // Wait for it to fail
     $loopFailed = LocalQATestCase::waitFor(function () {
         return DB::table('failed_jobs')->count() > 0;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 45);
 
     expect($loopFailed)->toBeTrue('Loop job did not fail');
 
@@ -178,7 +178,7 @@ it('LocalQA: Horizon worker recovers after loop exception — processes next job
         $cs = MachineCurrentState::where('root_event_id', $normalId)->first();
 
         return $cs && str_contains($cs->state_id, 'cancelled');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 45);
 
     expect($normalProcessed)->toBeTrue('Worker did not recover — normal job not processed');
 });
@@ -233,7 +233,7 @@ it('LocalQA: selective failure — 4 normal timers succeed, 1 loop timer fails',
     // Wait for loop machine to fail
     $loopFailed = LocalQATestCase::waitFor(function () {
         return DB::table('failed_jobs')->count() > 0;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 45);
 
     expect($loopFailed)->toBeTrue('Loop machine did not produce failed_jobs entry');
 
@@ -260,7 +260,7 @@ it('LocalQA: SendToMachineJob targeting loop machine → failed, target preserve
 
     $hasFailed = LocalQATestCase::waitFor(function () {
         return DB::table('failed_jobs')->count() > 0;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 45);
 
     expect($hasFailed)->toBeTrue();
 

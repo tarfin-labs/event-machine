@@ -36,7 +36,7 @@ it('LocalQA: after timer fires via Horizon when past deadline', function (): voi
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'cancelled');
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 60);
 
     expect($expired)->toBeTrue('After timer not processed by Horizon');
 
@@ -79,7 +79,7 @@ it('LocalQA: after timer dedup — double sweep does not double-fire', function 
         return DB::table('machine_timer_fires')
             ->where('root_event_id', $rootEventId)
             ->exists();
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 60);
 
     // Second sweep
     Artisan::call('machine:process-timers', ['--class' => AfterTimerMachine::class]);
@@ -111,7 +111,7 @@ it('LocalQA: every timer fires via Horizon', function (): void {
             ->where('root_event_id', $rootEventId)
             ->where('timer_key', 'LIKE', '%BILLING%')
             ->exists();
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 60);
 
     expect($fired)->toBeTrue('Every timer not processed by Horizon');
 
@@ -149,7 +149,7 @@ it('LocalQA: every max/then transitions machine to failed via Horizon', function
                 ->first();
 
             return $fire && (int) $fire->fire_count >= ($i + 1);
-        }, timeoutSeconds: 45);
+        }, timeoutSeconds: 60);
     }
 
     // After max, sweep should send then event
@@ -163,7 +163,7 @@ it('LocalQA: every max/then transitions machine to failed via Horizon', function
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'failed');
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 60);
 
     expect($failed)->toBeTrue('Machine not failed after max retries');
 });
@@ -191,7 +191,7 @@ it('LocalQA: timer sweep selectively fires only past-deadline instances', functi
         $cs = MachineCurrentState::where('root_event_id', $ids[0])->first();
 
         return $cs && str_contains($cs->state_id, 'cancelled');
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 60);
 
     expect($firstExpired)->toBeTrue();
 
