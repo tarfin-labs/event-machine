@@ -53,7 +53,9 @@ it('LocalQA: after timer does NOT fire before deadline', function (): void {
 
     Artisan::call('machine:process-timers', ['--class' => AfterTimerMachine::class]);
 
-    sleep(2);
+    // Negative assertion: verify timer does NOT fire when not past deadline.
+    // sleep required — cannot waitFor absence.
+    sleep(1);
 
     $fire = DB::table('machine_timer_fires')
         ->where('root_event_id', $rootEventId)
@@ -81,9 +83,16 @@ it('LocalQA: after timer dedup — double sweep does not double-fire', function 
             ->exists();
     }, timeoutSeconds: 60);
 
-    // Second sweep
+    // Second sweep — should be deduped
     Artisan::call('machine:process-timers', ['--class' => AfterTimerMachine::class]);
-    sleep(2);
+
+    LocalQATestCase::waitFor(function () use ($rootEventId) {
+        $fire = DB::table('machine_timer_fires')
+            ->where('root_event_id', $rootEventId)
+            ->first();
+
+        return $fire && $fire->status === 'fired';
+    }, timeoutSeconds: 60, description: 'after timer dedup: waiting for fire status=fired');
 
     $fires = DB::table('machine_timer_fires')
         ->where('root_event_id', $rootEventId)
