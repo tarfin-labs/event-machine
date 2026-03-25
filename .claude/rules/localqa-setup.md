@@ -161,3 +161,9 @@ Internal events use the pattern `{machine}.parallel.{placeholder}.region.timeout
 
 ### ChildMachineCompletionJob propagates deep delegation chains
 After fix: when ChildMachineCompletionJob routes @done/@fail and the parent reaches a final state, it checks if the parent is itself a managed child and dispatches another ChildMachineCompletionJob to the grandparent. This enables Parent→Child→Grandchild async chains.
+
+### waitFor must check ACTUAL state, not event record
+In parallel dispatch, `machine_events` may contain a transition event (e.g., `INVENTORY_CHECKED.finish`) but `machine_current_states` still shows the old state. This happens when concurrent `SendToMachineJob` or `ParallelRegionJob` overwrites the state after the transition was logged. Always wait for the **restored machine's state value array** or `MachineCurrentState`, not just event existence in `machine_events`.
+
+### Concurrent SendToMachineJobs to same parallel machine cause lost-update
+Two `SendToMachineJob`s dispatched simultaneously to the same parallel machine can cause one event's state change to be lost. Both jobs restore from the same base state → apply their event → persist. The last to persist overwrites the first's changes. In tests, always **wait for the first event to fully commit** (check `MachineCurrentState` or restored state) before dispatching the second event. This is a known product-level limitation of parallel dispatch locking.
