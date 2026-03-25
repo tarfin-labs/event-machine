@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
-use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FailingChildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ValidationGuardEdgeCases\Guards\AlwaysFailValidationGuard;
 
 // region Test 1: parallel-entry-error-clean-exit
 // Error in parallel region triggers @fail and exits cleanly to error state.
@@ -22,9 +22,9 @@ it('routes to @fail and exits cleanly when parallel region fails', function (): 
             ],
             'states' => [
                 'processing' => [
-                    'type'   => 'parallel',
-                    '@done'  => 'completed',
-                    '@fail'  => [
+                    'type'  => 'parallel',
+                    '@done' => 'completed',
+                    '@fail' => [
                         'target'  => 'error_state',
                         'actions' => 'markErrorCaughtAction',
                     ],
@@ -82,6 +82,10 @@ it('routes to @fail and exits cleanly when parallel region fails', function (): 
 it('throws MachineValidationException instead of routing through @fail when ValidationGuard rejects', function (): void {
     $failReached = false;
 
+    // Machine with a child delegation state that has @fail defined.
+    // The idle state has a ValidationGuard on its transition.
+    // When the ValidationGuard rejects, MachineValidationException must be thrown,
+    // NOT @fail (which is only for child machine / parallel failures).
     $machine = Machine::create([
         'config' => [
             'id'      => 'validation_bypasses_fail',
@@ -93,31 +97,26 @@ it('throws MachineValidationException instead of routing through @fail when Vali
                 'idle' => [
                     'on' => [
                         'SUBMIT' => [
-                            'target' => 'submitted',
-                            'guards' => 'alwaysRejectValidationGuard',
+                            'target' => 'processing',
+                            'guards' => AlwaysFailValidationGuard::class,
                         ],
                     ],
+                ],
+                'processing' => [
                     'machine' => FailingChildMachine::class,
+                    '@done'   => 'completed',
                     '@fail'   => [
                         'target'  => 'failed',
                         'actions' => 'markFailReachedAction',
                     ],
                 ],
-                'submitted' => ['type' => 'final'],
+                'completed' => ['type' => 'final'],
                 'failed'    => ['type' => 'final'],
             ],
         ],
         'behavior' => [
             'guards' => [
-                'alwaysRejectValidationGuard' => new class extends ValidationGuardBehavior
-                {
-                    public function __invoke(): bool
-                    {
-                        $this->errorMessage = 'Always rejects';
-
-                        return false;
-                    }
-                },
+                AlwaysFailValidationGuard::class,
             ],
             'actions' => [
                 'markFailReachedAction' => function () use (&$failReached): void {
@@ -148,10 +147,10 @@ it('routes to correct @fail branch based on guard conditions', function (): void
             'id'      => 'conditional_fail_routing',
             'initial' => 'processing',
             'context' => [
-                'retry_count'   => 0,
-                'alert_sent'    => false,
-                'retried'       => false,
-                'fallback_hit'  => false,
+                'retry_count'  => 0,
+                'alert_sent'   => false,
+                'retried'      => false,
+                'fallback_hit' => false,
             ],
             'states' => [
                 'processing' => [

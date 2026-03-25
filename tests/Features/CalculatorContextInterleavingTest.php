@@ -40,8 +40,8 @@ test('calculator sets context key that subsequent action reads in same transitio
         'behavior' => [
             'calculators' => [
                 'computeTotalCalculator' => function (ContextManager $ctx): void {
-                    $price    = $ctx->get('raw_price');
-                    $taxRate  = $ctx->get('tax_rate');
+                    $price   = $ctx->get('raw_price');
+                    $taxRate = $ctx->get('tax_rate');
                     $ctx->set('total', $price + (int) ($price * $taxRate));
                 },
             ],

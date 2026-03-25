@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 // ============================================================
@@ -14,13 +13,13 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 test('parallel lifecycle counts entry and exit actions correctly', function (): void {
     $counts = [
-        'parallel_entry'   => 0,
+        'parallel_entry'    => 0,
         'region_a_a1_entry' => 0,
         'region_a_a2_entry' => 0,
         'region_b_b1_entry' => 0,
         'region_a_a1_exit'  => 0,
         'region_b_b1_exit'  => 0,
-        'parallel_exit'    => 0,
+        'parallel_exit'     => 0,
     ];
 
     $definition = MachineDefinition::define(
@@ -153,10 +152,10 @@ test('parallel @done lifecycle fires entry and exit for all regions reaching fin
             'context' => [],
             'states'  => [
                 'active' => [
-                    'type'  => 'parallel',
-                    'entry' => 'activeEntryAction',
-                    'exit'  => 'activeExitAction',
-                    '@done' => 'completed',
+                    'type'   => 'parallel',
+                    'entry'  => 'activeEntryAction',
+                    'exit'   => 'activeExitAction',
+                    '@done'  => 'completed',
                     'states' => [
                         'region_x' => [
                             'initial' => 'working',
@@ -196,15 +195,33 @@ test('parallel @done lifecycle fires entry and exit for all regions reaching fin
         ],
         behavior: [
             'actions' => [
-                'activeEntryAction'    => function () use (&$actionLog): void { $actionLog[] = 'active_entry'; },
-                'activeExitAction'     => function () use (&$actionLog): void { $actionLog[] = 'active_exit'; },
-                'xWorkingEntryAction'  => function () use (&$actionLog): void { $actionLog[] = 'x_working_entry'; },
-                'xWorkingExitAction'   => function () use (&$actionLog): void { $actionLog[] = 'x_working_exit'; },
-                'xDoneEntryAction'     => function () use (&$actionLog): void { $actionLog[] = 'x_done_entry'; },
-                'yWorkingEntryAction'  => function () use (&$actionLog): void { $actionLog[] = 'y_working_entry'; },
-                'yWorkingExitAction'   => function () use (&$actionLog): void { $actionLog[] = 'y_working_exit'; },
-                'yDoneEntryAction'     => function () use (&$actionLog): void { $actionLog[] = 'y_done_entry'; },
-                'completedEntryAction' => function () use (&$actionLog): void { $actionLog[] = 'completed_entry'; },
+                'activeEntryAction' => function () use (&$actionLog): void {
+                    $actionLog[] = 'active_entry';
+                },
+                'activeExitAction' => function () use (&$actionLog): void {
+                    $actionLog[] = 'active_exit';
+                },
+                'xWorkingEntryAction' => function () use (&$actionLog): void {
+                    $actionLog[] = 'x_working_entry';
+                },
+                'xWorkingExitAction' => function () use (&$actionLog): void {
+                    $actionLog[] = 'x_working_exit';
+                },
+                'xDoneEntryAction' => function () use (&$actionLog): void {
+                    $actionLog[] = 'x_done_entry';
+                },
+                'yWorkingEntryAction' => function () use (&$actionLog): void {
+                    $actionLog[] = 'y_working_entry';
+                },
+                'yWorkingExitAction' => function () use (&$actionLog): void {
+                    $actionLog[] = 'y_working_exit';
+                },
+                'yDoneEntryAction' => function () use (&$actionLog): void {
+                    $actionLog[] = 'y_done_entry';
+                },
+                'completedEntryAction' => function () use (&$actionLog): void {
+                    $actionLog[] = 'completed_entry';
+                },
             ],
         ],
     );

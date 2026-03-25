@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 // ============================================================
 // Restored Final State
@@ -33,7 +33,10 @@ it('restored machine at final state reports final type and result works', functi
                     ],
                 ],
                 'completed' => [
-                    'type' => 'final',
+                    'type'   => 'final',
+                    'result' => function (ContextManager $ctx): array {
+                        return ['total' => $ctx->get('amount'), 'status' => 'done'];
+                    },
                 ],
             ],
         ],
@@ -41,11 +44,6 @@ it('restored machine at final state reports final type and result works', functi
             'actions' => [
                 'setAmountAction' => function (ContextManager $ctx, EventBehavior $event): void {
                     $ctx->set('amount', $event->payload['amount'] ?? 100);
-                },
-            ],
-            'results' => [
-                'completed' => function (ContextManager $ctx): array {
-                    return ['total' => $ctx->get('amount'), 'status' => 'done'];
                 },
             ],
         ],
@@ -63,7 +61,7 @@ it('restored machine at final state reports final type and result works', functi
     $rootEventId = $machine->state->history->first()->root_event_id;
 
     // Restore from DB using a fresh Machine instance
-    $definition      = MachineDefinition::define(
+    $definition = MachineDefinition::define(
         config: $configAndBehavior['config'],
         behavior: $configAndBehavior['behavior'],
     );

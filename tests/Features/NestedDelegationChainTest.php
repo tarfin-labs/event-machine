@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\GrandchildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\MiddleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ThreeLevelParentMachine;
