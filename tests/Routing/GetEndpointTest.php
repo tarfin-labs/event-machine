@@ -156,6 +156,10 @@ test('#9 — forwarded GET validates child event and reaches child', function ()
     $response = $this->get("/api/get-fwd/{$machineId}/child-status?child_param=hello");
 
     $response->assertStatus(200);
+
+    $childContext = $response->json('data.child.context');
+
+    expect($childContext['data']['child_param'])->toBe('hello');
 });
 
 test('#10 — forwarded GET missing required child param returns 422', function (): void {
