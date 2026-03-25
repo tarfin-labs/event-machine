@@ -441,3 +441,102 @@ For details, see [Parallel Dispatch](/advanced/parallel-states/parallel-dispatch
 ::: tip Testing
 For testing configuration options like `should_persist`, see [Testing Overview](/testing/overview).
 :::
+
+## Syntax Shorthands
+
+EventMachine accepts both verbose and shorthand forms for common configuration patterns. **Prefer the short form when no extra options are needed** — it's easier to read and reduces noise.
+
+### Transitions
+
+```php ignore
+// ✅ Short — target only
+'SUBMIT' => 'processing',
+
+// Verbose equivalent
+'SUBMIT' => ['target' => 'processing'],
+
+// Use verbose only when adding guards, actions, or calculators
+'SUBMIT' => [
+    'target'  => 'processing',
+    'guards'  => IsValidGuard::class,
+    'actions' => LogAction::class,
+],
+```
+
+### Entry / Exit Actions
+
+```php ignore
+// ✅ Short — single action
+'entry' => InitAction::class,
+'exit'  => CleanupAction::class,
+
+// Multiple actions require array
+'entry' => [InitAction::class, NotifyAction::class],
+```
+
+### Guards, Actions, Calculators on Transitions
+
+```php ignore
+// ✅ Short — single behavior
+'guards'      => IsValidGuard::class,
+'actions'     => LogAction::class,
+'calculators' => TotalCalculator::class,
+
+// Multiple behaviors require array
+'guards' => [IsValidGuard::class, HasBalanceGuard::class],
+```
+
+### @done / @fail (Child Delegation)
+
+```php ignore
+// ✅ Short — target only
+'@done' => 'completed',
+'@fail' => 'failed',
+
+// Verbose — with actions
+'@done' => [
+    'target'  => 'completed',
+    'actions' => CaptureResultAction::class,
+],
+
+// Per-final-state routing
+'@done.approved' => 'processing',
+'@done.rejected' => 'declined',
+```
+
+### Queue (Async Delegation)
+
+```php ignore
+// ✅ Short — default queue
+'queue' => true,
+
+// Named queue
+'queue' => 'child-queue',
+
+// Full config
+'queue' => [
+    'queue'      => 'child-queue',
+    'connection' => 'redis',
+    'retry'      => 3,
+],
+```
+
+### Quick Reference
+
+| Element | Short Form | Verbose Form |
+|---------|-----------|-------------|
+| Transition target | `'EVENT' => 'state'` | `'EVENT' => ['target' => 'state']` |
+| Forbidden event | `'EVENT' => null` | — |
+| Single entry action | `'entry' => Action::class` | `'entry' => [Action::class]` |
+| Single exit action | `'exit' => Action::class` | `'exit' => [Action::class]` |
+| Single guard | `'guards' => Guard::class` | `'guards' => [Guard::class]` |
+| Single action | `'actions' => Action::class` | `'actions' => [Action::class]` |
+| Single calculator | `'calculators' => Calc::class` | `'calculators' => [Calc::class]` |
+| @done target | `'@done' => 'state'` | `'@done' => ['target' => 'state']` |
+| @fail target | `'@fail' => 'state'` | `'@fail' => ['target' => 'state']` |
+| Default queue | `'queue' => true` | `'queue' => ['queue' => null]` |
+| Named queue | `'queue' => 'name'` | `'queue' => ['queue' => 'name']` |
+
+::: tip Rule of Thumb
+If you're only specifying a **target** or a **single value**, use the short form. Switch to verbose only when you need extra options (guards, actions, calculators, description).
+:::
