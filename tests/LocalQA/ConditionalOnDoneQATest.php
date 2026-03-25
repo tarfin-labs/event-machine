@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Facades\DB;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
@@ -30,7 +29,6 @@ afterEach(function (): void {
 // ═══════════════════════════════════════════════════════════════
 
 it('LocalQA: guarded @done routes to approved when both regions succeed via Horizon', function (): void {
-    // QA variant starts in idle → transition into parallel via START
     $machine = ConditionalOnDoneQAMachine::create();
     $machine->send(['type' => 'START']);
     $rootEventId = $machine->state->history->first()->root_event_id;
@@ -45,20 +43,30 @@ it('LocalQA: guarded @done routes to approved when both regions succeed via Hori
 
     expect($ready)->toBeTrue('Region entry actions did not complete');
 
-    // Complete inventory region
+    // Complete inventory region and wait for ACTUAL state change (not just event record)
     SendToMachineJob::dispatch(
         machineClass: ConditionalOnDoneQAMachine::class,
         rootEventId: $rootEventId,
         event: ['type' => 'INVENTORY_CHECKED'],
     );
 
-    LocalQATestCase::waitFor(function () use ($rootEventId) {
-        $events = DB::table('machine_events')
-            ->where('root_event_id', $rootEventId)
-            ->pluck('type');
+    $inventoryDone = LocalQATestCase::waitFor(function () use ($rootEventId) {
+        $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
-        return $events->contains(fn ($t) => str_contains($t, 'inventory') && str_contains($t, 'done'));
-    }, timeoutSeconds: 60, description: 'conditional @done: inventory checked');
+        // inventory.done should appear in the state value
+        return $cs && str_contains($cs->state_id, 'inventory') && str_contains($cs->state_id, 'done');
+    }, timeoutSeconds: 60, description: 'conditional @done: inventory reaching done state');
+
+    // If direct state check failed, try restored machine value array
+    if (!$inventoryDone) {
+        $inventoryDone = LocalQATestCase::waitFor(function () use ($rootEventId) {
+            $restored = ConditionalOnDoneQAMachine::create(state: $rootEventId);
+
+            return collect($restored->state->value)->contains(fn ($v) => str_contains($v, 'inventory') && str_contains($v, 'done'));
+        }, timeoutSeconds: 30, description: 'conditional @done: inventory done via restored state');
+    }
+
+    expect($inventoryDone)->toBeTrue('Inventory did not reach done state');
 
     // Complete payment region
     SendToMachineJob::dispatch(
@@ -82,7 +90,6 @@ it('LocalQA: guarded @done routes to approved when both regions succeed via Hori
 });
 
 it('LocalQA: guarded @done fallback to manual_review when guard fails', function (): void {
-    // ConditionalOnDoneFailMachine: payment sets 'failure' instead of 'success'
     $machine = ConditionalOnDoneFailMachine::create();
     $machine->send(['type' => 'START']);
     $rootEventId = $machine->state->history->first()->root_event_id;
@@ -97,21 +104,22 @@ it('LocalQA: guarded @done fallback to manual_review when guard fails', function
 
     expect($ready)->toBeTrue('Region entry actions did not complete');
 
-    // Complete both regions
+    // Complete inventory region — wait for ACTUAL state change
     SendToMachineJob::dispatch(
         machineClass: ConditionalOnDoneFailMachine::class,
         rootEventId: $rootEventId,
         event: ['type' => 'INVENTORY_CHECKED'],
     );
 
-    LocalQATestCase::waitFor(function () use ($rootEventId) {
-        $events = DB::table('machine_events')
-            ->where('root_event_id', $rootEventId)
-            ->pluck('type');
+    $inventoryDone = LocalQATestCase::waitFor(function () use ($rootEventId) {
+        $restored = ConditionalOnDoneFailMachine::create(state: $rootEventId);
 
-        return $events->contains(fn ($t) => str_contains($t, 'inventory') && str_contains($t, 'done'));
-    }, timeoutSeconds: 60);
+        return collect($restored->state->value)->contains(fn ($v) => str_contains($v, 'inventory') && str_contains($v, 'done'));
+    }, timeoutSeconds: 60, description: 'conditional @done fail: inventory reaching done state');
 
+    expect($inventoryDone)->toBeTrue('Inventory did not reach done state');
+
+    // Complete payment region
     SendToMachineJob::dispatch(
         machineClass: ConditionalOnDoneFailMachine::class,
         rootEventId: $rootEventId,
