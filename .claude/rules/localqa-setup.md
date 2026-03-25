@@ -145,7 +145,10 @@ ParallelRegionJobs are only dispatched when entry actions exist AND the machine 
 3. Ensure regions have entry actions (no-op actions are fine)
 
 ### Static counters in stub actions pollute Horizon workers
-ThrowOnceAction (and similar stubs with `static` counters) persist across jobs in the same Horizon worker process. `beforeEach` resets in the test process, NOT in the worker. Fix: use **separate machine stubs** for tests that depend on specific counter states, so each machine class gets its own fresh counter lifecycle.
+ThrowOnceAction (and similar stubs with `static` counters) persist across jobs in the same Horizon worker process. `beforeEach` resets in the test process, NOT in the worker. Fix: use **separate machine stubs** for tests that depend on specific counter states. Design actions to work regardless of counter value (e.g., ThrowOnceAction succeeds when counter != 1, which handles both fresh workers and accumulated runs).
+
+### Concurrent queued listeners cause lost-update
+When a single transition dispatches BOTH exit and transition ListenerJobs, they run concurrently. Each restores machine → modifies context → persists. The last to persist wins, losing the other's changes. Fix: use **separate machines** with only ONE listener type each (ListenerExitOnlyMachine, ListenerTransitionOnlyMachine).
 
 ### dispatchToParent is transient-only (not persisted)
 `ContextManager::setMachineIdentity()` stores parent identity in `$internalParentRootEventId` — transient properties NOT in the data array. Parent identity is set AFTER `start()` in `ChildMachineJob`, so:
