@@ -58,9 +58,9 @@ Context changes within parallel states are persisted incrementally. Each event s
 // Event 1: Payment succeeds
 $machine->send([
     'type' => 'PAYMENT_SUCCEEDED',
-    'payload' => ['payment_id' => 'pay_123'],
+    'payload' => ['paymentId' => 'pay_123'],
 ]);
-// Persists: {"payment_id": "pay_123"}
+// Persists: {"paymentId": "pay_123"}
 
 // Event 2: Shipping progresses
 $machine->send(['type' => 'PICKED']);
@@ -97,7 +97,7 @@ $machine = OrderFulfillmentMachine::create(state: $order->machine_root_event_id)
 // All regions are restored to their exact states
 $machine->state->matches('processing.payment.charged');
 $machine->state->matches('processing.shipping.packing');
-$machine->state->context->payment_id;  // 'pay_123'
+$machine->state->context->paymentId;  // 'pay_123'
 ```
 
 ### Using `MachineCast` with Eloquent
@@ -117,7 +117,7 @@ class Order extends Model
 
 // The cast handles root_event_id storage automatically
 $order = Order::create(['customer_id' => 123]);
-$order->fulfillment_state->send(['type' => 'PAYMENT_SUCCEEDED', 'payload' => ['payment_id' => 'pay_123']]);
+$order->fulfillment_state->send(['type' => 'PAYMENT_SUCCEEDED', 'payload' => ['paymentId' => 'pay_123']]);
 $order->save();
 
 // Later retrieval restores the full parallel state
@@ -185,10 +185,10 @@ For complex parallel structures, store summary flags in context:
 ```php
 'actions' => [
     'markPaymentCompleteAction' => function (ContextManager $ctx): void {
-        $ctx->set('payment_complete', true);
+        $ctx->set('paymentComplete', true);
     },
     'markShippingCompleteAction' => function (ContextManager $ctx): void {
-        $ctx->set('shipping_complete', true);
+        $ctx->set('shippingComplete', true);
     },
 ],
 ```
@@ -199,8 +199,8 @@ Then query by context instead of state value:
 ```php
 MachineEvent::query()
     ->where('machine_id', 'order_fulfillment')
-    ->whereJsonContains('context', ['payment_complete' => true])
-    ->whereJsonContains('context', ['shipping_complete' => false])
+    ->whereJsonContains('context', ['paymentComplete' => true])
+    ->whereJsonContains('context', ['shippingComplete' => false])
     ->get();
 ```
 

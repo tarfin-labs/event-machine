@@ -168,7 +168,7 @@ $order->send(['type' => 'SUBMIT']);
 // | id | type    | payload         | created_at          |
 // |----|---------|-----------------|---------------------|
 // | 1  | @init   | {}              | 2024-01-15 10:30:00 |
-// | 2  | SUBMIT  | {"user_id": 5}  | 2024-01-15 10:30:01 |
+// | 2  | SUBMIT  | {"userId": 5}   | 2024-01-15 10:30:01 |
 // | 3  | APPROVE | {"by": "admin"} | 2024-01-15 11:45:00 |
 
 // Restore full state from any point in history
@@ -264,7 +264,7 @@ Run children inline for simple cases, or dispatch to a queue for external I/O an
 ```php
 'processing_payment' => [
     'machine' => PaymentMachine::class,
-    'with'    => ['order_id', 'total_amount'],
+    'with'    => ['orderId', 'totalAmount'],
     'queue'   => 'payments',
     '@done'   => [
         'target'  => 'shipping',
@@ -281,13 +281,13 @@ Run children inline for simple cases, or dispatch to a queue for external I/O an
 <!-- doctest-attr: ignore -->
 ```php
 // Test without running the real child machine
-PaymentMachine::fake(result: ['payment_id' => 'pay_123']);
+PaymentMachine::fake(result: ['paymentId' => 'pay_123']);
 
 $machine = OrderWorkflowMachine::create();
 $machine->send(['type' => 'START']);
 
 PaymentMachine::assertInvoked();
-PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
+PaymentMachine::assertInvokedWith(['orderId' => 'ORD-1']);
 
 Machine::resetMachineFakes();
 ```

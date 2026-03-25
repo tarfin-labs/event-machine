@@ -47,7 +47,7 @@ The `output` key on a final state controls which context values are exposed to t
 ```php
 'approved' => [
     'type'   => 'final',
-    'output' => ['payment_id', 'status'],  // only these keys are exposed
+    'output' => ['paymentId', 'status'],  // only these keys are exposed
 ],
 ```
 
@@ -58,7 +58,7 @@ The `output` key on a final state controls which context values are exposed to t
 'approved' => [
     'type'   => 'final',
     'output' => fn(ContextManager $ctx) => [
-        'payment_id' => $ctx->get('payment_id'),
+        'paymentId' => $ctx->get('paymentId'),
         'total'      => $ctx->get('amount') + $ctx->get('tax'),
     ],
 ],
@@ -83,7 +83,7 @@ class StorePaymentResultAction extends ActionBehavior
     public function __invoke(ContextManager $context, ChildMachineDoneEvent $event): void
     {
         // Filtered output (respects child's output key)
-        $context->set('payment_id', $event->output('payment_id'));
+        $context->set('paymentId', $event->output('paymentId'));
         $context->set('status', $event->output('status'));
 
         // ResultBehavior output from child (if defined)
@@ -125,7 +125,7 @@ class HandlePaymentFailureAction extends ActionBehavior
         $context->set('error', $event->errorMessage());
 
         // Child's context at the time of failure
-        $context->set('failed_amount', $event->output('amount'));
+        $context->set('failedAmount', $event->output('amount'));
 
         // Child identity
         $childId    = $event->childMachineId();
@@ -194,7 +194,7 @@ The default forward response shape:
     "child": {
       "value": ["awaiting_confirmation"],
       "context": {
-        "card_last4": "1111",
+        "cardLast4": "1111",
         "status": "card_provided"
       }
     }
@@ -219,8 +219,8 @@ class PaymentStepResult extends ResultBehavior
     public function __invoke(ContextManager $context, ForwardContext $forwardContext): array
     {
         return [
-            'order_id'   => $context->get('order_id'),                         // Parent context
-            'card_last4' => $forwardContext->childContext->get('card_last4'),   // Child context
+            'orderId'    => $context->get('orderId'),                             // Parent context
+            'cardLast4'  => $forwardContext->childContext->get('cardLast4'),    // Child context
             'child_step' => $forwardContext->childState->value[0] ?? null,     // Child state
         ];
     }
@@ -256,11 +256,11 @@ Regular (non-forwarded) endpoints include `available_events` in the response by 
 
 <!-- doctest-attr: ignore -->
 ```php
-PaymentMachine::fake(result: ['payment_id' => 'pay_123', 'status' => 'settled']);
+PaymentMachine::fake(result: ['paymentId' => 'pay_123', 'status' => 'settled']);
 
 OrderMachine::test()
     ->send('START_PAYMENT')
-    ->assertContext('payment_id', 'pay_123');
+    ->assertContext('paymentId', 'pay_123');
 
 Machine::resetMachineFakes();
 ```

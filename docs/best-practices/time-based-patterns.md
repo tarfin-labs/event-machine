@@ -118,8 +118,8 @@ class SendPaymentReminderAction extends ActionBehavior
     public function __invoke(ContextManager $context): void
     {
         // BAD: sends duplicate email on retry
-        Mail::to($context->get('customer_email'))
-            ->send(new PaymentReminderMail($context->get('order_id')));
+        Mail::to($context->get('customerEmail'))
+            ->send(new PaymentReminderMail($context->get('orderId')));
     }
 }
 ```
@@ -136,14 +136,14 @@ class SendPaymentReminderAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $reminderKey = 'reminder_sent_' . $context->get('order_id');
+        $reminderKey = 'reminder_sent_' . $context->get('orderId');
 
         if (cache()->has($reminderKey)) {
             return;  // already sent
         }
 
-        Mail::to($context->get('customer_email'))
-            ->send(new PaymentReminderMail($context->get('order_id')));
+        Mail::to($context->get('customerEmail'))
+            ->send(new PaymentReminderMail($context->get('orderId')));
 
         cache()->put($reminderKey, true, now()->addDay());
     }
@@ -158,9 +158,9 @@ A complete pattern combining `after`, `every`, `max`, and `then`:
 'id'      => 'order_workflow',
 'initial' => 'awaiting_payment',
 'context' => [
-    'order_id'    => null,
-    'order_total' => 0,
-    'retry_count' => 0,
+    'orderId'    => null,
+    'orderTotal' => 0,
+    'retryCount' => 0,
 ],
 'states' => [
     'awaiting_payment' => [

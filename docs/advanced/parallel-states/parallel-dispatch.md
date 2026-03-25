@@ -235,7 +235,7 @@ class CheckInventoryAction extends ActionBehavior
     public function __invoke(ContextManager $context): void
     {
         // Idempotent: overwrites existing value
-        $stock = InventoryApi::checkStock($context->get('order_id'));
+        $stock = InventoryApi::checkStock($context->get('orderId'));
         $context->set('inventory_result', $stock);
     }
 }

@@ -367,7 +367,7 @@ class TransferFundsEvent extends EventBehavior
     public function actor(ContextManager $context): mixed
     {
         return [
-            'user_id' => auth()->id(),
+            'userId' => auth()->id(),
             'ip' => request()->ip(),
         ];
     }

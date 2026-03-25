@@ -27,7 +27,7 @@ No `@done`/`@fail` — the job is dispatched and the parent transitions immediat
 ```php
 'logging' => [
     'job'    => AuditLogJob::class,
-    'with'   => ['action', 'user_id'],
+    'with'   => ['action', 'userId'],
     'target' => 'next_state',
 ],
 ```
@@ -58,7 +58,7 @@ class SendWelcomeEmailJob implements ShouldQueue, ReturnsResult
 
     public function result(): array
     {
-        return ['message_id' => $this->messageId];
+        return ['messageId' => $this->messageId];
     }
 }
 ```
@@ -75,7 +75,7 @@ class StoreEmailResultAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, ChildMachineDoneEvent $event): void
     {
-        $context->set('message_id', $event->output('message_id'));
+        $context->set('messageId', $event->output('messageId'));
     }
 }
 ```

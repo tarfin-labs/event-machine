@@ -20,10 +20,10 @@ class ChargePaymentAction extends ActionBehavior
         // Payment gateway deduplicates on idempotency_key
         $result = PaymentGateway::charge(
             amount: $context->get('order_total'),
-            idempotencyKey: $context->get('order_id') . '_charge',
+            idempotencyKey: $context->get('orderId') . '_charge',
         );
 
-        $context->set('charge_id', $result->id);
+        $context->set('chargeId', $result->id);
     }
 }
 ```
@@ -38,8 +38,8 @@ class CreateInvoiceAction extends ActionBehavior
     public function __invoke(ContextManager $context): void
     {
         // BAD: no dedup -- retry creates a second invoice
-        $invoice = Invoice::create(['order_id' => $context->get('order_id')]);
-        $context->set('invoice_id', $invoice->id);
+        $invoice = Invoice::create(['order_id' => $context->get('orderId')]);
+        $context->set('invoiceId', $invoice->id);
     }
 }
 ```

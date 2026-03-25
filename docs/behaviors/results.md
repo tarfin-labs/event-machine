@@ -405,7 +405,7 @@ Pass arguments to results:
 
 <!-- doctest-attr: ignore -->
 ```php
-$test = OrderMachine::test(['order_id' => 'ord-123'])
+$test = OrderMachine::test(['orderId' => 'ord-123'])
     ->sendMany(['SUBMIT', 'PAY', 'SHIP', 'DELIVER'])
     ->assertFinished();
 
@@ -419,7 +419,7 @@ expect($result['status'])->toBe('completed');
 <!-- doctest-attr: ignore -->
 ```php
 $state = State::forTesting([
-    'order_id' => 'ord-123',
+    'orderId' => 'ord-123',
     'total' => 250,
 ]);
 
@@ -437,7 +437,7 @@ it('generates receipt via injected service', function () {
         ->shouldReceive('generate')
         ->andReturn(new Receipt(url: 'https://example.com/receipt/123'));
 
-    $state = State::forTesting(['order_id' => 'ord-123']);
+    $state = State::forTesting(['orderId' => 'ord-123']);
     $result = OrderResultBehavior::runWithState($state);
 
     expect($result['receiptUrl'])->toBe('https://example.com/receipt/123');

@@ -11,7 +11,7 @@ Use `Machine::fake()` to short-circuit child machine execution in tests:
 use Tarfinlabs\EventMachine\Actor\Machine;
 
 // Fake a successful child result
-PaymentMachine::fake(result: ['payment_id' => 'pay_123']);
+PaymentMachine::fake(result: ['paymentId' => 'pay_123']);
 
 // Fake a failure
 PaymentMachine::fake(fail: true, error: 'Insufficient funds');
@@ -39,7 +39,7 @@ After faking, verify invocations:
 ```php
 use Tarfinlabs\EventMachine\Actor\Machine;
 
-PaymentMachine::fake(result: ['payment_id' => 'pay_123']);
+PaymentMachine::fake(result: ['paymentId' => 'pay_123']);
 
 // ... run the parent machine ...
 
@@ -50,7 +50,7 @@ PaymentMachine::assertInvoked();
 PaymentMachine::assertInvokedTimes(1);
 
 // With specific context values?
-PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
+PaymentMachine::assertInvokedWith(['orderId' => 'ORD-1']);
 
 // Was it NOT invoked?
 PaymentMachine::assertNotInvoked();
@@ -69,7 +69,7 @@ OrderMachine::test()
     ->send('PLACE_ORDER')
     ->assertState('completed')
     ->assertChildInvoked(PaymentMachine::class)
-    ->assertChildInvokedWith(PaymentMachine::class, ['order_id' => 'ORD-1'])
+    ->assertChildInvokedWith(PaymentMachine::class, ['orderId' => 'ORD-1'])
     ->assertRoutedViaDoneState('approved');
 ```
 
@@ -187,18 +187,18 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 
 it('processes order through payment', function (): void {
     // Arrange: fake the child machine
-    PaymentMachine::fake(result: ['payment_id' => 'pay_456']);
+    PaymentMachine::fake(result: ['paymentId' => 'pay_456']);
 
     // Act: run the orchestrator
     $machine = OrderWorkflowMachine::create();
-    $machine->send(['type' => 'START_ORDER', 'payload' => ['order_id' => 'ORD-1']]);
+    $machine->send(['type' => 'START_ORDER', 'payload' => ['orderId' => 'ORD-1']]);
 
     // Assert: child was invoked with correct context
     PaymentMachine::assertInvoked();
-    PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
+    PaymentMachine::assertInvokedWith(['orderId' => 'ORD-1']);
 
     // Assert: parent received child result and transitioned
-    expect($machine->state->context->get('payment_id'))->toBe('pay_456');
+    expect($machine->state->context->get('paymentId'))->toBe('pay_456');
     // No cleanup needed — InteractsWithMachines handles it
 });
 ```
@@ -292,7 +292,7 @@ VerificationMachine::test()
     ->faking([StoreItemsAction::class, ValidateOrderAction::class])
     ->assertState('processing_items')
     ->simulateChildDone(ProcessItemsJob::class, result: [
-        'phones' => [['item_id' => 'ITEM-1', 'quantity' => 2]],
+        'phones' => [['itemId' => 'ITEM-1', 'quantity' => 2]],
     ])
     ->assertState('awaiting_confirmation');
 ```
@@ -318,7 +318,7 @@ it('fire-and-forget machine delegation stays in state', function (): void {
 
     // Child was invoked
     AuditMachine::assertInvoked();
-    AuditMachine::assertInvokedWith(['user_id' => 'usr_123']);
+    AuditMachine::assertInvokedWith(['userId' => 'usr_123']);
     // No cleanup needed — InteractsWithMachines handles it
 });
 ```

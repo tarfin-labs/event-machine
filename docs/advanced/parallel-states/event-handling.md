@@ -508,7 +508,7 @@ use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 $definition = MachineDefinition::define([ // [!code hide]
     'id' => 'order', // [!code hide]
     'initial' => 'processing', // [!code hide]
-    'context' => ['retry_count' => 0], // [!code hide]
+    'context' => ['retryCount' => 0], // [!code hide]
     'states' => [ // [!code hide]
 'processing' => [
     'type'   => 'parallel',

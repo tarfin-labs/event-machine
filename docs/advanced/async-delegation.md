@@ -70,7 +70,7 @@ OrderMachine::test()
 Queue::assertPushed(ChildMachineJob::class);
 
 // Test with faked child (sync short-circuit)
-PaymentMachine::fake(result: ['payment_id' => 'pay_123'], finalState: 'approved');
+PaymentMachine::fake(result: ['paymentId' => 'pay_123'], finalState: 'approved');
 OrderMachine::test()
     ->send('START_PAYMENT')
     ->assertState('completed');
@@ -153,7 +153,7 @@ class PaymentMachine extends Machine
             config: [
                 'id'      => 'payment',
                 'initial' => 'awaiting_charge',
-                'context' => ['order_id' => null, 'amount' => 0],
+                'context' => ['orderId' => null, 'amount' => 0],
                 'states'  => [
                     'awaiting_charge' => [
                         'on' => [
@@ -235,7 +235,7 @@ class OrderMachine extends Machine
             config: [
                 'id'      => 'order',
                 'initial' => 'idle',
-                'context' => ['order_id' => null],
+                'context' => ['orderId' => null],
                 'states'  => [
                     'idle' => [
                         'on' => ['START' => 'processing_payment'],
@@ -243,11 +243,11 @@ class OrderMachine extends Machine
                     'processing_payment' => [
                         'machine' => PaymentFlowMachine::class,
                         'queue'   => 'default',
-                        'with'    => ['order_id'],
+                        'with'    => ['orderId'],
                         'forward' => [
                             'PROVIDE_CARD',                      // Format 1: forward as-is
                             'CONFIRM_PAYMENT' => [               // Format 3: with endpoint customization
-                                'contextKeys' => ['card_last4', 'status'],
+                                'contextKeys' => ['cardLast4', 'status'],
                                 'status'      => 200,
                             ],
                         ],
@@ -293,9 +293,9 @@ class PaymentFlowMachine extends Machine
                 'id'      => 'payment_flow',
                 'initial' => 'awaiting_card',
                 'context' => [
-                    'order_id'   => null,
-                    'card_last4' => null,
-                    'status'     => 'pending',
+                    'orderId'  => null,
+                    'cardLast4' => null,
+                    'status'    => 'pending',
                 ],
                 'states' => [
                     'awaiting_card' => [
@@ -322,7 +322,7 @@ class PaymentFlowMachine extends Machine
                 'actions' => [
                     'storeCardAction' => function (ContextManager $ctx, EventBehavior $event): void {
                         $cardNumber = $event->payload['card_number'] ?? '';
-                        $ctx->set('card_last4', substr($cardNumber, -4));
+                        $ctx->set('cardLast4', substr($cardNumber, -4));
                         $ctx->set('status', 'card_provided');
                     },
                 ],
@@ -367,7 +367,7 @@ Forward entries support the same endpoint customization keys as regular endpoint
         'middleware'       => ['throttle:10'],      // Route middleware
         'action'           => CustomAction::class,  // Parent-level action lifecycle
         'result'           => CustomResult::class,  // ResultBehavior (receives ForwardContext)
-        'contextKeys'      => ['card_last4'],       // Filter child context in response
+        'contextKeys'      => ['cardLast4'],       // Filter child context in response
         'status'           => 202,                  // HTTP status code
         'available_events' => false,                // Suppress available_events in response
     ],

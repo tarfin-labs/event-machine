@@ -24,16 +24,16 @@ class IsRetryAllowedGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
     {
-        return $context->get('retry_count') < 3;
+        return $context->get('retryCount') < 3;
     }
 }
 
 // Test: guard returns true when retries remain
-$state = State::forTesting(['retry_count' => 2]);
+$state = State::forTesting(['retryCount' => 2]);
 assert(IsRetryAllowedGuard::runWithState($state) === true);
 
 // Test: guard returns false when retries exhausted
-$state = State::forTesting(['retry_count' => 3]);
+$state = State::forTesting(['retryCount' => 3]);
 assert(IsRetryAllowedGuard::runWithState($state) === false);
 ```
 
@@ -46,19 +46,19 @@ Test transition paths and guard gating using the `TestMachine` fluent API. This 
 ```php ignore
 // Test: order follows happy path
 
-OrderWorkflowMachine::test(['order_id' => 'ORD-001', 'order_total' => 500])
+OrderWorkflowMachine::test(['orderId' => 'ORD-001', 'orderTotal' => 500])
     ->assertState('idle')
     ->send('ORDER_SUBMITTED')
     ->assertState('submitted')
     ->send('PAYMENT_RECEIVED')
     ->assertState('processing')
-    ->assertContext('order_total', 500);
+    ->assertContext('orderTotal', 500);
 ```
 
 ```php ignore
 // Test: guard blocks transition when total is zero
 
-OrderWorkflowMachine::test(['order_id' => 'ORD-002', 'order_total' => 0])
+OrderWorkflowMachine::test(['orderId' => 'ORD-002', 'orderTotal' => 0])
     ->assertState('idle')
     ->send('ORDER_SUBMITTED')
     ->assertState('idle');   // guard blocked, stayed in idle
@@ -73,7 +73,7 @@ Test the complete lifecycle including persistence, timer processing, and schedul
 ```php ignore
 // Test: timer fires after advancing time
 
-OrderWorkflowMachine::test(['order_id' => 'ORD-003', 'order_total' => 100])
+OrderWorkflowMachine::test(['orderId' => 'ORD-003', 'orderTotal' => 100])
     ->send('ORDER_SUBMITTED')
     ->assertState('awaiting_payment')
     ->assertHasTimer('ORDER_EXPIRED')
@@ -113,10 +113,10 @@ When testing a parent machine, you do not want child machines to actually run. `
 
 ```php ignore
 // Arrange: fake the child machine before creating the parent
-PaymentMachine::fake(result: ['payment_id' => 'pay_123'], finalState: 'settled');
+PaymentMachine::fake(result: ['paymentId' => 'pay_123'], finalState: 'settled');
 
 // Act + Assert: test parent orchestration without running children
-OrderWorkflowMachine::test(['order_id' => 'ORD-004'])
+OrderWorkflowMachine::test(['orderId' => 'ORD-004'])
     ->send('ORDER_SUBMITTED')
     ->assertState('shipping');   // child faked, @done fired, parent moved to next
 // No cleanup needed — InteractsWithMachines handles it
@@ -146,7 +146,7 @@ CarSalesMachine::fake();
 ```php ignore
 // Test: payment reminder sent after 1 day, order expires after 7
 
-OrderWorkflowMachine::test(['order_id' => 'ORD-005'])
+OrderWorkflowMachine::test(['orderId' => 'ORD-005'])
     ->send('ORDER_SUBMITTED')
     ->assertState('awaiting_payment')
     ->advanceTimers(Timer::days(1))
@@ -203,16 +203,16 @@ The internal routing through `@always` states may change during refactoring. Tes
 
 ```php ignore
 // UNIT: guard logic
-$state = State::forTesting(['order_total' => 500]);
+$state = State::forTesting(['orderTotal' => 500]);
 assert(IsOrderTotalValidGuard::runWithState($state) === true);
 
-$state = State::forTesting(['order_total' => 0]);
+$state = State::forTesting(['orderTotal' => 0]);
 assert(IsOrderTotalValidGuard::runWithState($state) === false);
 ```
 
 ```php ignore
 // INTEGRATION: happy path
-OrderWorkflowMachine::test(['order_id' => 'ORD-100', 'order_total' => 500])
+OrderWorkflowMachine::test(['orderId' => 'ORD-100', 'orderTotal' => 500])
     ->send('ORDER_SUBMITTED')
     ->assertState('processing')
     ->send('PAYMENT_RECEIVED')
@@ -221,7 +221,7 @@ OrderWorkflowMachine::test(['order_id' => 'ORD-100', 'order_total' => 500])
 
 ```php ignore
 // E2E: timer expiry
-OrderWorkflowMachine::test(['order_id' => 'ORD-101', 'order_total' => 500])
+OrderWorkflowMachine::test(['orderId' => 'ORD-101', 'orderTotal' => 500])
     ->send('ORDER_SUBMITTED')
     ->assertState('awaiting_payment')
     ->advanceTimers(Timer::days(7))
@@ -231,7 +231,7 @@ OrderWorkflowMachine::test(['order_id' => 'ORD-101', 'order_total' => 500])
 ```php ignore
 // LOCAL QA: async child delegation (tests/LocalQA/)
 // Requires MySQL + Redis + Horizon running
-OrderWorkflowMachine::create(['order_id' => 'ORD-102', 'order_total' => 500])
+OrderWorkflowMachine::create(['orderId' => 'ORD-102', 'orderTotal' => 500])
     ->send(['type' => 'ORDER_SUBMITTED']);
 // Assert child job dispatched, await completion, verify parent advanced
 ```

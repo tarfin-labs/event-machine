@@ -71,7 +71,7 @@ Only fake what you need — everything else runs with real logic:
 
 <!-- doctest-attr: ignore -->
 ```php
-OrderMachine::test(['order_id' => 1])
+OrderMachine::test(['orderId' => 1])
     ->faking([SendEmailAction::class])
     ->send('SUBMIT')
     ->assertState('awaiting_payment')

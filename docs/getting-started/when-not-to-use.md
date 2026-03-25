@@ -95,7 +95,7 @@ class InvoiceMachine extends Machine
             config: [
                 'id'      => 'invoice',
                 'initial' => 'draft',
-                'context' => ['invoice_id' => null],
+                'context' => ['invoiceId' => null],
                 'states'  => [
                     'draft' => [
                         'on' => [

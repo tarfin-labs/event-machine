@@ -311,7 +311,7 @@ OrderMachine::test()
     ->assertChildInvoked(PaymentMachine::class)
     ->assertChildNotInvoked(AuditMachine::class)
     ->assertChildInvokedTimes(PaymentMachine::class, 1)
-    ->assertChildInvokedWith(PaymentMachine::class, ['order_id' => 'ORD-1'])
+    ->assertChildInvokedWith(PaymentMachine::class, ['orderId' => 'ORD-1'])
     ->assertRoutedViaDoneState('approved')
 ```
 
@@ -339,7 +339,7 @@ OrderMachine::test()
     ->assertChildInvoked(FraudCheckMachine::class)
     ->assertRoutedViaDoneState('approved')
     ->assertState('order_confirmed')
-    ->assertContext('payment_id', 'pay_1')
+    ->assertContext('paymentId', 'pay_1')
 ```
 
 ## Async Simulation
@@ -425,7 +425,7 @@ The `guards:` and `faking:` parameters on `Machine::test()` and `Machine::starti
 <!-- doctest-attr: no_run -->
 ```php
 VerificationMachine::test(
-    context: ['order_id' => 'ORD-1'],
+    context: ['orderId' => 'ORD-1'],
     guards: [
         HasExistingOrderGuard::class  => false,
         IsPaymentValidGuard::class       => true,
@@ -447,11 +447,11 @@ Skip path replay and start the machine at any state:
 ```php
 VerificationMachine::startingAt(
     stateId: 'processing_payment',
-    context: ['order_id' => 'ORD-1', 'amount' => 5000],
+    context: ['orderId' => 'ORD-1', 'amount' => 5000],
     guards: [IsRetryableGuard::class => true],
 )
 ->fakingAllActions(except: [StorePaymentAction::class])
-->send(PaymentConfirmedEvent::make(['confirmation_code' => 'ABC123']))
+->send(PaymentConfirmedEvent::make(['confirmationCode' => 'ABC123']))
 ->assertState('verifying');
 ```
 

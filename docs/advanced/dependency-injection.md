@@ -122,8 +122,8 @@ class StoreVehicleInfoAction extends ActionBehavior
         CarSalesContext $context,
         VehicleAndPricingSubmittedEvent|VehicleEditRequestedEvent $event,
     ): void {
-        // Both events share vehicle_id in their payload
-        $vehicleId = $event->data('vehicle_id');
+        // Both events share vehicleId in their payload
+        $vehicleId = $event->data('vehicleId');
 
         // Discriminate when needed
         if ($event instanceof VehicleEditRequestedEvent) {
@@ -403,7 +403,7 @@ it('processes order with mocked services', function () {
     $state = State::forTesting(['items' => [['id' => 1]]]);
     ProcessOrderAction::runWithState($state);
 
-    expect($state->context->get('order_id'))->toBe('order-123');
+    expect($state->context->get('orderId'))->toBe('order-123');
 });
 ```
 

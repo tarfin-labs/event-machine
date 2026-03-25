@@ -94,7 +94,7 @@ it('raised event failure path', function () {
 ```php
 it('completes full order lifecycle', function () {
     // Fake notifications but run everything else real
-    OrderMachine::test(['order_id' => 1])
+    OrderMachine::test(['orderId' => 1])
         ->faking([SendEmailAction::class, SendSmsAction::class])
         ->assertPath([
             ['event' => 'SUBMIT',  'state' => 'awaiting_payment'],
@@ -289,8 +289,8 @@ it('runs both entry and exit actions on transition', function () {
 
 <!-- doctest-attr: ignore -->
 ```php
-// Context injected before start — entry action sees order_id = 1
-OrderMachine::test(context: ['order_id' => 1])
+// Context injected before start — entry action sees orderId = 1
+OrderMachine::test(context: ['orderId' => 1])
     ->assertState('processing')
     ->assertContextHas('order_loaded');
 ```
@@ -477,7 +477,7 @@ Test which events your machine accepts at each state — especially useful with 
 
 <!-- doctest-attr: ignore -->
 ```php
-OrderMachine::test(['order_id' => 'ORD-1'])
+OrderMachine::test(['orderId' => 'ORD-1'])
     ->assertAvailableEvent('SUBMIT_ORDER')            // initial state accepts SUBMIT
     ->send('SUBMIT_ORDER')
     ->assertNotAvailableEvent('SUBMIT_ORDER')          // no longer in initial state
@@ -599,11 +599,11 @@ it('routes to completed after job finishes', function (): void {
         ->send('START_PAYMENT')
         ->assertState('charging')
         ->simulateChildDone(ChargeCardJob::class, result: [
-            'transaction_id' => 'txn_123',
+            'transactionId' => 'txn_123',
             'amount'         => 5000,
         ])
         ->assertState('completed')
-        ->assertContext('transaction_id', 'txn_123');
+        ->assertContext('transactionId', 'txn_123');
 });
 ```
 
@@ -641,7 +641,7 @@ it('handles PIN retry from processing_payment state', function (): void {
 
     VerificationMachine::startingAt(
         stateId: 'processing_payment',
-        context: ['order_id' => 'ORD-1', 'amount' => 5000],
+        context: ['orderId' => 'ORD-1', 'amount' => 5000],
         guards: [IsRetryableGuard::class => true],
     )
     ->fakingAllActions(except: [StorePaymentAction::class])
@@ -738,11 +738,11 @@ it('compound @done triggers child delegation', function (): void {
     // Machine: review (compound, initial: checking) → checking is final
     //          → @done → processing (machine: PaymentMachine)
     //          → @done → completed
-    ApprovalMachine::test(context: ['order_id' => 'ORD-1'])
+    ApprovalMachine::test(context: ['orderId' => 'ORD-1'])
         ->withoutPersistence()
         ->fakingAllActions()
         ->assertState('processing')  // compound @done already fired
-        ->simulateChildDone(PaymentMachine::class, result: ['payment_id' => 'pay_1'])
+        ->simulateChildDone(PaymentMachine::class, result: ['paymentId' => 'pay_1'])
         ->assertState('completed');
 });
 ```
@@ -760,7 +760,7 @@ it('parallel @fail fires when one region fails', function (): void {
 
     // ShippingMachine has parallel: warehouse + delivery regions
     // Both delegate to child machines
-    ShippingMachine::test(context: ['order_id' => 'ORD-1'])
+    ShippingMachine::test(context: ['orderId' => 'ORD-1'])
         ->withoutPersistence()
         ->fakingAllActions()
         ->fakingChild(WarehouseMachine::class, result: ['packed' => true])
@@ -779,7 +779,7 @@ it('sync child completes immediately, async child via Horizon', function (): voi
     Queue::fake();
 
     // OrderMachine has parallel: validation (sync) + payment (async queue)
-    $test = OrderMachine::test(context: ['order_id' => 'ORD-1'])
+    $test = OrderMachine::test(context: ['orderId' => 'ORD-1'])
         ->withoutPersistence()
         ->fakingAllActions();
 
@@ -788,7 +788,7 @@ it('sync child completes immediately, async child via Horizon', function (): voi
     $test->assertRegionState('validation', 'completed');
 
     // Simulate async payment completion
-    $test->simulateChildDone(PaymentMachine::class, result: ['payment_id' => 'pay_1'])
+    $test->simulateChildDone(PaymentMachine::class, result: ['paymentId' => 'pay_1'])
         ->assertAllRegionsCompleted()
         ->assertState('fulfilled');
 });
@@ -835,22 +835,22 @@ Test that `with:` passes only specified context keys and child modifications don
 it('child receives only with: keys, parent context unchanged', function (): void {
     Queue::fake();
 
-    // OrderMachine delegates to PaymentMachine with: ['order_id', 'amount']
-    // Parent has order_id, amount, customer_name — child only gets first two
+    // OrderMachine delegates to PaymentMachine with: ['orderId', 'amount']
+    // Parent has orderId, amount, customerName — child only gets first two
     OrderMachine::test(
         context: [
-            'order_id'      => 'ORD-1',
+            'orderId'       => 'ORD-1',
             'amount'        => 5000,
-            'customer_name' => 'John',
+            'customerName' => 'John',
         ],
     )
     ->withoutPersistence()
     ->fakingAllActions()
-    ->fakingChild(PaymentMachine::class, result: ['payment_id' => 'pay_1'])
+    ->fakingChild(PaymentMachine::class, result: ['paymentId' => 'pay_1'])
     ->assertState('completed')
-    ->assertContext('customer_name', 'John')  // parent context preserved
+    ->assertContext('customerName', 'John')  // parent context preserved
     ->assertChildInvokedWith(PaymentMachine::class, [
-        'order_id' => 'ORD-1',
+        'orderId' => 'ORD-1',
         'amount'   => 5000,
         // customer_name NOT passed — not in with: config
     ]);

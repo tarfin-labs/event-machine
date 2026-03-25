@@ -454,7 +454,7 @@ it('checks permission via auth service', function () {
         ->shouldReceive('can')->with('user-1', 'submit_order')
         ->andReturn(true);
 
-    $state = State::forTesting(['user_id' => 'user-1']);
+    $state = State::forTesting(['userId' => 'user-1']);
     expect(HasPermissionGuard::runWithState($state))->toBeTrue();
 });
 ```
