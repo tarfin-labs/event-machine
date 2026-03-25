@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
-use Tarfinlabs\EventMachine\Support\Timer;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 /**
- * Parallel machine where Region A completes quickly (raises event)
- * but Region B stalls at initial (no raise — simulates slow region).
+ * Parallel machine where Region A completes via entry action (sets context + raises REGION_A_DONE)
+ * but Region B stalls at initial (entry action only sets context, no transition).
  *
  * Used for testing ParallelRegionTimeoutJob behavior.
+ * Both regions have entry actions so ParallelRegionJobs are dispatched,
+ * which is required for the timeout job to also be dispatched.
  */
 class SlowRegionParallelMachine extends Machine
 {
@@ -21,13 +22,17 @@ class SlowRegionParallelMachine extends Machine
     {
         return MachineDefinition::define(
             config: [
-                'id'      => 'slow_region_parallel',
-                'initial' => 'processing',
-                'context' => [
+                'id'             => 'slow_region_parallel',
+                'initial'        => 'idle',
+                'should_persist' => true,
+                'context'        => [
                     'region_a_done' => false,
                     'region_b_done' => false,
                 ],
                 'states' => [
+                    'idle' => [
+                        'on' => ['START' => 'processing'],
+                    ],
                     'processing' => [
                         'type'   => 'parallel',
                         '@done'  => 'completed',
@@ -37,7 +42,7 @@ class SlowRegionParallelMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => 'completeRegionAAction',
+                                        'entry' => 'markRegionAAction',
                                         'on'    => [
                                             'REGION_A_DONE' => 'finished',
                                         ],
@@ -49,8 +54,8 @@ class SlowRegionParallelMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        // No entry action, no raise → stalls here
-                                        'on' => [
+                                        'entry' => 'markRegionBAction',
+                                        'on'    => [
                                             'REGION_B_DONE' => 'finished',
                                         ],
                                     ],
@@ -65,9 +70,12 @@ class SlowRegionParallelMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'completeRegionAAction' => function (ContextManager $ctx): void {
+                    'markRegionAAction' => function (ContextManager $ctx): void {
                         $ctx->set('region_a_done', true);
-                        $ctx->raise(['type' => 'REGION_A_DONE']);
+                    },
+                    'markRegionBAction' => function (ContextManager $ctx): void {
+                        // Only sets context, does NOT raise any event → region B stalls
+                        $ctx->set('region_b_done', true);
                     },
                 ],
             ],
