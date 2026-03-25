@@ -59,7 +59,7 @@ it('LocalQA: timer sweep and concurrent send do not double-fire timer event', fu
             str_contains($cs->state_id, 'cancelled')
             || str_contains($cs->state_id, 'awaiting_payment') // manual event not handled
         );
-    }, timeoutSeconds: 60);
+    }, timeoutSeconds: 60, description: 'machine settles after concurrent timer sweep + manual send');
 
     expect($settled)->toBeTrue('Machine did not settle after concurrent timer + send');
 
@@ -101,7 +101,7 @@ it('LocalQA: timer sweep after manual transition is dedup no-op', function (): v
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && !str_contains($cs->state_id, 'awaiting_payment');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 30, description: 'manual PAY event transitions machine out of awaiting_payment');
 
     // Now run timer sweep — machine already left the timer state
     Artisan::call('machine:process-timers', ['--class' => AfterTimerMachine::class]);

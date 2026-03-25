@@ -58,7 +58,7 @@ it('LocalQA: scheduled event concurrent with send does not corrupt machine', fun
             str_contains($cs->state_id, 'expired')
             || str_contains($cs->state_id, 'active') // DAILY_REPORT keeps it active, CHECK_EXPIRY transitions
         );
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'machine settles after concurrent send + schedule sweep');
 
     expect($settled)->toBeTrue('Machine did not settle after concurrent send + schedule');
 

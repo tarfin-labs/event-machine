@@ -60,7 +60,7 @@ it('LocalQA: entry/exit actions execute exactly once per transition under concur
 
         // After PROCESS → COMPLETE → PROCESS, should be in processing with entry_count=4
         return $restored->state->context->get('entry_count') >= 4;
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'all 3 sequential transitions processed (entry_count >= 4)');
 
     expect($settled)->toBeTrue('Machine did not process all 3 events');
 
@@ -120,7 +120,7 @@ it('LocalQA: rapid concurrent sends to same machine — action count matches eve
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'machine reaches completed after rapid PROCESS + FINISH');
 
     expect($completed)->toBeTrue('Machine did not reach completed state');
 

@@ -54,7 +54,7 @@ it('LocalQA: slow action blocks concurrent event without deadlock', function ():
             str_contains($cs->state_id, 'processing')
             || str_contains($cs->state_id, 'interrupted')
         );
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'machine settles after slow action + concurrent interrupt');
 
     expect($settled)->toBeTrue('Machine did not settle — possible deadlock');
 
@@ -95,7 +95,7 @@ it('LocalQA: slow action does not cause worker timeout or job failure', function
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'processing');
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'slow action completes without worker timeout');
 
     expect($completed)->toBeTrue('Slow action did not complete — possible timeout');
 
