@@ -86,13 +86,20 @@ class ChildMachineCompletionJob implements ShouldQueue
             return;
         }
 
-        // 3. Acquire lock for parent state mutation
-        $lockHandle = MachineLockManager::acquire(
-            rootEventId: $this->parentRootEventId,
-            timeout: 30,
-            ttl: 60,
-            context: 'child_machine_completion',
-        );
+        // 3. Acquire lock for parent state mutation.
+        //    Re-entrant check: in sync queue mode, send() on the parent may already
+        //    hold the lock (send → transition → ChildMachineJob → ChildMachineCompletionJob).
+        $alreadyLocked = isset(Machine::$heldLockIds[$this->parentRootEventId]);
+        $lockHandle    = null;
+
+        if (!$alreadyLocked) {
+            $lockHandle = MachineLockManager::acquire(
+                rootEventId: $this->parentRootEventId,
+                timeout: 30,
+                ttl: 60,
+                context: 'child_machine_completion',
+            );
+        }
 
         $shouldPropagate = false;
 
