@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\GetEndpoint;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 class GetForwardChildMachine extends Machine
@@ -35,7 +37,7 @@ class GetForwardChildMachine extends Machine
                     'CHILD_STATUS' => ChildStatusEvent::class,
                 ],
                 'calculators' => [
-                    'storeChildParamCalculator' => function (\Tarfinlabs\EventMachine\ContextManager $ctx, \Tarfinlabs\EventMachine\Behavior\EventBehavior $event): void {
+                    'storeChildParamCalculator' => function (ContextManager $ctx, EventBehavior $event): void {
                         $ctx->set('child_param', $event->payload['child_param'] ?? null);
                     },
                 ],
