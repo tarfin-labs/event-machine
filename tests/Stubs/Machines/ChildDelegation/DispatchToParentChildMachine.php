@@ -10,8 +10,11 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 /**
- * Child machine that calls dispatchToParent in entry action.
- * Used for testing child→parent communication via Horizon.
+ * Child machine that calls dispatchToParent when receiving REPORT_PROGRESS event.
+ *
+ * Note: dispatchToParent cannot be used in entry actions during start() because
+ * parent identity (setMachineIdentity) is set AFTER start() in ChildMachineJob.
+ * So we use an external event to trigger the dispatch after the child is persisted.
  */
 class DispatchToParentChildMachine extends Machine
 {
@@ -26,8 +29,11 @@ class DispatchToParentChildMachine extends Machine
                 ],
                 'states' => [
                     'working' => [
-                        'entry' => SendProgressToParentAction::class,
-                        'on'    => [
+                        'on' => [
+                            'REPORT_PROGRESS' => [
+                                'target'  => 'working',
+                                'actions' => SendProgressToParentAction::class,
+                            ],
                             'FINISH' => 'done',
                         ],
                     ],
@@ -44,7 +50,7 @@ class SendProgressToParentAction extends ActionBehavior
     {
         $context->set('progress', 50);
 
-        $this->dispatchToParent([
+        $this->dispatchToParent($context, [
             'type'    => 'CHILD_PROGRESS',
             'payload' => ['progress' => 50],
         ]);
