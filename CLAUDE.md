@@ -76,6 +76,8 @@ All machine behaviors extend `InvokableBehavior` (parameter injection by type-hi
 
 Behaviors can be defined as classes or inline closures. All support parameter injection: `ContextManager`, `EventBehavior`, `State`, `EventCollection`, `ForwardContext`.
 
+**Guard purity enforcement:** Guards must be pure (no I/O, no context mutation). EventMachine enforces this at runtime via context snapshot/restore — before evaluating guards on a transition branch, context is snapshotted; if any guard fails, context is restored. This prevents side-effect leakage between branches in multi-path transitions. Calculators always run before guards to pre-compute values guards may need.
+
 ### Listener System
 
 The `listen` key in machine config supports lifecycle hooks:
@@ -101,6 +103,7 @@ States with `'type' => 'parallel'` run multiple concurrent regions:
 - **Dispatch mode** (`config/machine.php` → `parallel_dispatch`): regions run as separate queue jobs (`ParallelRegionJob`) with locking
 - Region timeout support via `ParallelRegionTimeoutJob`
 - **Guard semantics in parallel:** Regular `GuardBehavior` failure in a region = "event not handled by this region" (bubbles/throws). `ValidationGuardBehavior` failure = "operation rejected" — entire parallel transition aborted, machine stays, `MachineValidationException` thrown (422 via endpoints). Dispatch mode: validation errors don't propagate (async).
+- **Cross-region transitions rejected:** Transitions between sibling orthogonal regions are rejected at definition time. Regions are independent — use events (`raise()`, `sendTo`) for inter-region coordination. This matches Boost.Statechart philosophy and XState guidance.
 
 ### Machine Delegation
 
@@ -110,6 +113,7 @@ States with `'type' => 'parallel'` run multiple concurrent regions:
 - `@fail` / `@timeout` — handle child failures and timeouts
 - Fire-and-forget: omit `@done` with `queue` key — parent continues, child runs independently
 - `forward` key — auto-generate HTTP routes that delegate requests to running child machines
+- **Invoke timing:** Child machine invocation (sync or async) is deferred until after the macrostep completes — entry actions, listeners, and raised events are processed first. If raised events cause a state change, delegation is skipped entirely (SCXML invoker-05 semantics).
 
 ### State Management
 
