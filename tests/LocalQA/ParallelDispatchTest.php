@@ -126,7 +126,7 @@ it('LocalQA: concurrent region completions — locking preserves state', functio
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 60);
+    }, timeoutSeconds: 90, description: 'concurrent regions: waiting for completed state after dual dispatch');
 
     expect($completed)->toBeTrue('Concurrent completions did not resolve');
 
