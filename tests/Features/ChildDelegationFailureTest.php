@@ -6,9 +6,12 @@ use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FailingChildMachine;
+
+uses(RefreshDatabase::class);
 
 // ============================================================
 // Test 1: child-done-after-timeout
@@ -59,6 +62,8 @@ it('ignores @done after @timeout — parent stays in timed_out', function (): vo
             ],
         ],
     );
+
+    $testMachine->machine()->definition->machineClass = 'InlineDoneAfterTimeout';
 
     // Step 1: Send START → parent enters delegation state (async child, faked queue)
     $testMachine->send('START')->assertState('processing');
