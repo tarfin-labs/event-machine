@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Behavior;
 
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Optional;
 use Illuminate\Support\Collection;
@@ -80,11 +81,31 @@ abstract class EventBehavior extends Data
     }
 
     /**
-     * Gets the type of the object.
+     * Returns the event type string.
      *
-     * @return string The type of the object.
+     * By default, derives the type from the class name by stripping
+     * the 'Event' suffix and converting to SCREAMING_SNAKE_CASE.
+     *
+     * Override this method only when the auto-generated type doesn't
+     * match your needs (e.g., legacy compatibility, external system integration).
+     *
+     * Examples:
+     *   OrderSubmittedEvent    → ORDER_SUBMITTED
+     *   IncreaseEvent          → INCREASE
+     *   AddAnotherValueEvent   → ADD_ANOTHER_VALUE
+     *
+     * @return string The event type in SCREAMING_SNAKE_CASE.
      */
-    abstract public static function getType(): string;
+    public static function getType(): string
+    {
+        $baseName = Str::of(static::class)->classBasename();
+        $stripped = $baseName->beforeLast('Event');
+
+        return ($stripped->isEmpty() ? $baseName : $stripped)
+            ->snake()
+            ->upper()
+            ->toString();
+    }
 
     /**
      * Validates the object by calling the static validate() method and handles any validation exceptions.
