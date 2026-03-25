@@ -10,6 +10,10 @@ use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 //  Bead 3: machine_current_states table shows final resting
 //  state after @always chain. Machine with @always A→B→C.
 //  Verify MachineCurrentState record shows C, not A or B.
+//
+//  NOTE: These tests INTENTIONALLY assert on MachineCurrentState
+//  (not restored machine) because they verify the current_state
+//  table is correctly updated after @always chains.
 // ═══════════════════════════════════════════════════════════════
 
 it('machine_current_states shows final resting state after @always chain', function (): void {
