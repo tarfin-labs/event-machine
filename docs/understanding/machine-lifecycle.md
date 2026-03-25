@@ -139,12 +139,12 @@ When an event is sent, here's exactly what happens:
 │     └─► If found, repeat from step 1                        │
 │     └─► Original event preserved for behaviors (v8+)        │
 │                                                              │
-│  7. RAISED EVENTS                                            │
-│     └─► Process any events raised during actions            │
-│     └─► Each raised event goes through steps 1-7            │
+│  10. RAISED EVENTS                                           │
+│      └─► Process any events raised during actions           │
+│      └─► Each raised event goes through steps 1-10          │
 │                                                              │
-│  8. PERSIST                                                  │
-│     └─► Save event and context to database                  │
+│  11. PERSIST                                                 │
+│      └─► Save event and context to database                 │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```

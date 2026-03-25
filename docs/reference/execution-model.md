@@ -82,7 +82,7 @@ When a state has `@always` transitions, EventMachine automatically re-evaluates 
 - **Entry and exit actions fire** for all intermediate (transient) states
 - **Listeners are skipped** for transient states -- they only fire on the final resting state
 - The **original triggering event** is preserved across the chain (actions in intermediate states receive the original event, not the synthetic `@always` event)
-- **Loop protection** limits chain depth (configurable via `max_transition_depth`, default: 50)
+- **Loop protection** limits chain depth (configurable via `max_transition_depth`, default: 100)
 
 A state is considered "transient" if it has an `@always` transition defined.
 
