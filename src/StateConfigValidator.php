@@ -295,6 +295,9 @@ class StateConfigValidator
                 message: "Parallel state '{$path}' must have at least one region defined in 'states'."
             );
         }
+
+        // Validate no cross-region transitions exist
+        self::validateNoCrossRegionTransitions($stateConfig['states'], $path);
     }
 
     /**
@@ -767,6 +770,135 @@ class StateConfigValidator
                     .". Add specific '@done.{state}' keys or a catch-all '@done' to handle all outcomes."
             );
         }
+    }
+
+    /**
+     * Validates that no transition in a parallel region targets a state in a sibling region.
+     *
+     * @param  array<string, array|null>  $regions  The regions defined under a parallel state
+     * @param  string  $parallelPath  The dot-path of the parallel state
+     *
+     * @throws InvalidArgumentException When a cross-region transition is detected
+     */
+    private static function validateNoCrossRegionTransitions(array $regions, string $parallelPath): void
+    {
+        // Build a map: regionName => [stateNames in that region]
+        $statesByRegion = [];
+
+        foreach ($regions as $regionName => $regionConfig) {
+            $statesByRegion[$regionName] = isset($regionConfig['states']) && is_array($regionConfig['states'])
+                ? array_keys($regionConfig['states'])
+                : [];
+        }
+
+        // For each region, collect transition targets and check against sibling regions
+        foreach ($regions as $regionName => $regionConfig) {
+            if (!isset($regionConfig['states'])) {
+                continue;
+            }
+            if (!is_array($regionConfig['states'])) {
+                continue;
+            }
+
+            $ownStates         = $statesByRegion[$regionName];
+            $transitionTargets = self::collectTransitionTargets($regionConfig['states']);
+
+            foreach ($transitionTargets as [$sourceName, $target]) {
+                // If the target exists in this region, it's a valid intra-region transition
+                if (in_array($target, $ownStates, true)) {
+                    continue;
+                }
+
+                // Target not found in own region — check if it exists in a sibling region
+                foreach ($statesByRegion as $siblingRegionName => $siblingStates) {
+                    if ($siblingRegionName === $regionName) {
+                        continue;
+                    }
+
+                    if (in_array($target, $siblingStates, true)) {
+                        throw new InvalidArgumentException(
+                            message: "Cross-region transition not allowed: state \"{$parallelPath}.{$regionName}.{$sourceName}\" "
+                                ."in region \"{$regionName}\" cannot target state \"{$target}\" in sibling region \"{$siblingRegionName}\". "
+                                .'Use events (raise/sendTo) to coordinate between regions.'
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Collect all transition targets from a set of states.
+     *
+     * @param  array<string, array|null>  $states
+     *
+     * @return array<array{0: string, 1: string}> List of [sourceStateName, targetStateName] pairs
+     */
+    private static function collectTransitionTargets(array $states): array
+    {
+        $targets = [];
+
+        foreach ($states as $stateName => $stateConfig) {
+            if (!is_array($stateConfig)) {
+                continue;
+            }
+            if (!isset($stateConfig['on'])) {
+                continue;
+            }
+
+            foreach ($stateConfig['on'] as $transitionConfig) {
+                foreach (self::extractTargetsFromTransition($transitionConfig) as $target) {
+                    $targets[] = [$stateName, $target];
+                }
+            }
+        }
+
+        return $targets;
+    }
+
+    /**
+     * Extract target state names from a single transition config.
+     *
+     * @return array<string>
+     */
+    private static function extractTargetsFromTransition(mixed $transition): array
+    {
+        // String shorthand: 'SOME_EVENT' => 'target_state'
+        if (is_string($transition) && $transition !== '') {
+            return [$transition];
+        }
+
+        if (!is_array($transition)) {
+            return [];
+        }
+
+        // Guarded transitions (list of condition objects)
+        if (array_is_list($transition)) {
+            $targets = [];
+
+            foreach ($transition as $condition) {
+                if (!is_array($condition)) {
+                    continue;
+                }
+                if (!isset($condition['target'])) {
+                    continue;
+                }
+                if (!is_string($condition['target'])) {
+                    continue;
+                }
+
+                $targets[] = $condition['target'];
+            }
+
+            return $targets;
+        }
+
+        // Single transition config with 'target' key
+        if (isset($transition['target']) && is_string($transition['target'])) {
+            return [$transition['target']];
+        }
+
+        return [];
     }
 
     /**
