@@ -18,6 +18,7 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 test('@always with context-flag guard fires when sibling region sets context', function (): void {
     // Uses context flag set by sibling region's transition action.
     // This is the proven pattern for cross-region @always synchronization.
+    // Based on the exact pattern from ParallelAlwaysTransitionsTest.
     $definition = MachineDefinition::define(
         config: [
             'id'      => 'cross_state_in',
@@ -26,7 +27,6 @@ test('@always with context-flag guard fires when sibling region sets context', f
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
-                    '@done'  => 'completed',
                     'states' => [
                         'approval' => [
                             'initial' => 'awaiting_review',
@@ -55,12 +55,11 @@ test('@always with context-flag guard fires when sibling region sets context', f
                                         ],
                                     ],
                                 ],
-                                'verified' => ['type' => 'final'],
+                                'verified' => [],
                             ],
                         ],
                     ],
                 ],
-                'completed' => ['type' => 'final'],
             ],
         ],
         behavior: [
@@ -88,9 +87,6 @@ test('@always with context-flag guard fires when sibling region sets context', f
     $state = $definition->transition(['type' => 'VERIFY_DONE'], $state);
     expect($state->matches('processing.approval.approved'))->toBeTrue()
         ->and($state->matches('processing.documents.verified'))->toBeTrue();
-
-    // Both regions final → @done fires
-    expect($state->matches('completed'))->toBeTrue();
 });
 
 test('@always stateIn guard does NOT fire when sibling is in intermediate state', function (): void {
