@@ -305,6 +305,34 @@ Forward parent events to the running child machine. Useful when the child needs 
 ],
 ```
 
+## Delegation Timing
+
+Child machine invocation is **deferred** until after the macrostep completes. When a state with a `machine` key is entered, the following sequence applies:
+
+1. **Entry actions** run on the target state
+2. **Entry listeners** fire
+3. **Raised events** from entry actions are drained (if any exist, `@always` transitions and internal events are processed first)
+4. **If the state changed** during step 3: delegation is **skipped** -- the machine already left the delegating state
+5. **If the state is unchanged:** `handleMachineInvoke()` runs (sync inline or async dispatch)
+
+This means an entry action can `raise()` an event that transitions the machine away from the delegating state, effectively preventing child machine creation. This is by design -- it follows SCXML invoker-05 macrostep semantics.
+
+### Practical Implication
+
+```php ignore
+'validating' => [
+    'entry'   => 'checkCacheAction',      // May raise CACHE_HIT
+    'machine' => ValidationMachine::class,
+    'with'    => ['order_id'],
+    '@done'   => 'processing',
+    'on'      => [
+        'CACHE_HIT' => 'processing',      // Bypasses delegation entirely
+    ],
+],
+```
+
+If `checkCacheAction` raises `CACHE_HIT`, the machine transitions to `processing` before `ValidationMachine` is ever started.
+
 ## Delegation Inside Parallel States
 
 The `machine` key works at any state level, including within parallel regions. Each region runs its own child machine. The region's `@done` fires when its child completes. The parallel state's `@done` fires when **all** regions reach final.
