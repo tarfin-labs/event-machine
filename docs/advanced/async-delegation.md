@@ -23,10 +23,15 @@ Parent.send(EVENT)
 
 Add the `queue` key to run the child on a Laravel queue:
 
+::: tip Dispatch Timing
+`ChildMachineJob` is not dispatched during entry action execution. It is dispatched **after the macrostep completes** -- after all entry actions, listeners, and raised events have been processed. If raised events cause a state change, the job is never dispatched. See [Macrostep and Invoke Timing](/reference/execution-model#macrostep-and-invoke-timing).
+:::
+
 ```
 Parent.send(EVENT)
   → Parent enters 'processing' state
-  → Dispatches ChildMachineJob to queue
+  → Entry actions and raised events processed (macrostep)
+  → Dispatches ChildMachineJob to queue (after macrostep)
   → Parent STAYS in 'processing' state (waiting)
   → Parent persists to DB
 

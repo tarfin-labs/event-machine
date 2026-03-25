@@ -105,6 +105,43 @@ Exit and entry actions execute on **atomic (leaf) states only**:
 - Parent states are **not** exited or entered during transitions between their children
 - Parent states participate in **guard lookup** (event bubbling) but not in action execution
 
+## Macrostep and Invoke Timing
+
+Child machine invocation (`machine` key) does **not** happen immediately when a state is entered. It happens after all entry actions, listeners, and raised events have been processed. Critically, if raised events cause a state change during the macrostep, delegation is **skipped entirely** -- the machine has already left the delegating state.
+
+This follows SCXML invoker-05 macrostep semantics: the internal event queue must drain before any invocation starts.
+
+### Sequence
+
+```mermaid
+sequenceDiagram
+    participant T as Transition
+    participant S as Target State
+    participant EQ as Event Queue
+    participant I as Invoke (child)
+
+    T->>S: Enter state (actions, listeners)
+    S->>EQ: Entry actions may raise events
+    alt Event queue is NOT empty
+        EQ->>EQ: Process raised events (@always, etc.)
+        alt Raised events cause state change
+            Note over I: Delegation SKIPPED (state changed)
+        else State unchanged after queue drain
+            EQ->>I: Proceed with child invocation
+        end
+    else Event queue is empty
+        S->>I: Proceed with child invocation immediately
+    end
+```
+
+### Why This Matters
+
+1. **Entry actions run before invoke.** An entry action can `raise()` an event that transitions the machine out of the delegating state. The child machine is never started.
+2. **Raised events are processed first.** All internal events queued during entry are resolved before delegation begins. This prevents orphaned child machines.
+3. **Async dispatch is also deferred.** `ChildMachineJob` is dispatched to the queue only after the macrostep completes, not during entry action execution.
+
+This ordering makes it safe to use `raise()` in entry actions to conditionally bypass delegation.
+
 ## Delegation Lifecycle
 
 | Signal | Fires When | Use For |
