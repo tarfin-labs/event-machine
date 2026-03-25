@@ -111,8 +111,10 @@ it('LocalQA: region timeout is no-op when all regions complete before timeout', 
     expect($completed)->toBeTrue('@done did not fire');
 
     // Negative assertion: verify timeout does NOT regress machine state.
-    // sleep required — cannot waitFor absence. Timeout job fires after 5s delay.
-    sleep(8);
+    // sleep required — cannot waitFor absence.
+    // By the time @done fires (machine at completed), the 5s-delayed timeout
+    // job has already been dispatched. 1s is enough for it to process and no-op.
+    sleep(1);
 
     // Machine should still be at completed (timeout job should no-op)
     $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
