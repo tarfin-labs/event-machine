@@ -15,6 +15,7 @@ use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
 |
 */
 
-afterEach(function (): void {
-    LocalQATestCase::cleanTables();
-});
+// cleanTables() runs in beforeEach of each test file (not afterEach).
+// afterEach cleanup was causing excessive quiet-period waits (68 tests × 500ms+)
+// which slowed the suite and didn't prevent all cross-test pollution.
+// The beforeEach approach is sufficient: each test starts with a clean slate.

@@ -1,0 +1,109 @@
+# LocalQA Test Environment Setup
+
+LocalQA tests run against **real MySQL + Redis + Horizon** (NOT SQLite/sync/Bus::fake).
+They live in `tests/LocalQA/` and are excluded from `composer test`.
+
+## Setup — Geçici Laravel Projesi
+
+LocalQA requires a temporary Laravel project because:
+- Package tests run via testbench (no artisan horizon)
+- Horizon needs a real Laravel app with autoload for test stubs
+
+### Quick Setup Script
+
+```bash
+# 1. Create project
+cd /tmp && composer create-project laravel/laravel qa-v7-review
+cd /tmp/qa-v7-review
+
+# 2. Add package as path repo
+python3 -c "
+import json
+with open('composer.json') as f:
+    data = json.load(f)
+data['repositories'] = [{'type': 'path', 'url': '/Users/deligoez/Developer/github/tarfin-labs/event-machine', 'options': {'symlink': True}}]
+data['minimum-stability'] = 'dev'
+data['prefer-stable'] = True
+# Add test stubs to autoload so Horizon can resolve them
+if 'autoload-dev' not in data: data['autoload-dev'] = {}
+if 'psr-4' not in data['autoload-dev']: data['autoload-dev']['psr-4'] = {}
+data['autoload-dev']['psr-4']['Tarfinlabs\\\\EventMachine\\\\Tests\\\\'] = 'vendor/tarfin-labs/event-machine/tests/'
+with open('composer.json', 'w') as f:
+    json.dump(data, f, indent=4)
+"
+composer require tarfin-labs/event-machine:@dev
+composer require laravel/horizon
+php artisan horizon:install
+
+# 3. Fix .env (Horizon reads this!)
+sed -i '' 's/DB_CONNECTION=sqlite/DB_CONNECTION=mysql/' .env
+sed -i '' 's/# DB_HOST=127.0.0.1/DB_HOST=127.0.0.1/' .env
+sed -i '' 's/# DB_PORT=3306/DB_PORT=3306/' .env
+sed -i '' 's/# DB_DATABASE=laravel/DB_DATABASE=qa_event_machine_v7/' .env
+sed -i '' 's/# DB_USERNAME=root/DB_USERNAME=root/' .env
+sed -i '' 's/# DB_PASSWORD=/DB_PASSWORD=/' .env
+sed -i '' 's/QUEUE_CONNECTION=database/QUEUE_CONNECTION=redis/' .env
+echo 'REDIS_PREFIX=laravel_database_' >> .env
+
+# 4. Fix .env.testing (test process reads this)
+cat > .env.testing << 'ENVEOF'
+APP_ENV=testing
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=qa_event_machine_v7
+DB_USERNAME=root
+DB_PASSWORD=
+QUEUE_CONNECTION=redis
+CACHE_STORE=redis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PREFIX=laravel_database_
+ENVEOF
+
+# 5. Horizon config — listen to ALL queues, enough workers for full suite
+# In config/horizon.php, change defaults:
+#   'queue' => ['default', 'child-queue'],
+#   'maxProcesses' => 8,
+#   'minProcesses' => 4,    # prevent auto-scaling to 1 worker during test suite
+#   'tries' => 3,
+
+# 6. DB + migrations
+mysql -u root -e "CREATE DATABASE IF NOT EXISTS qa_event_machine_v7;"
+php artisan vendor:publish --provider="Tarfinlabs\EventMachine\MachineServiceProvider"
+sed -i '' "s/json('machine_value')->index()/json('machine_value')/" database/migrations/*_create_machine_events_table.php
+php artisan migrate:fresh
+```
+
+## Running Tests
+
+```bash
+# 1. Start Horizon (separate terminal or background)
+cd /tmp/qa-v7-review && redis-cli FLUSHALL && php artisan horizon &
+sleep 5
+
+# 2. Run tests from package directory
+cd /path/to/event-machine
+vendor/bin/pest tests/LocalQA/
+```
+
+## Critical Gotchas
+
+| Problem | Cause | Fix |
+|---------|-------|-----|
+| Jobs silently discarded | `.env` still has `DB_CONNECTION=sqlite` | Fix `.env` to use mysql |
+| "must exist and extend" error | Test stubs not in Horizon autoload | Add test namespace to QA app's `autoload-dev` |
+| Jobs in Redis but not processed | Redis prefix mismatch | Set `REDIS_PREFIX=laravel_database_` in both `.env` and `.env.testing` |
+| Horizon only processes `default` queue | `config/horizon.php` only lists `default` | Add `child-queue` to queue array |
+| Multiple old Horizon instances | Previous sessions left orphans | `pkill -9 -f horizon` before starting |
+
+## Rules
+
+1. **NEVER** use `Bus::fake()`, `Queue::fake()`, sync queue, or in-memory SQLite in LocalQA tests
+2. **ALWAYS** use `LocalQATestCase::cleanTables()` in `beforeEach` — manual truncate, not `RefreshDatabase`
+3. **ALWAYS** use `LocalQATestCase::waitFor()` for async assertions — poll DB, generous timeouts (30-45s)
+4. **ALWAYS** `redis-cli FLUSHALL` before test session (NOT between tests)
+5. **ALWAYS** `pkill -9 -f horizon` before starting fresh Horizon
+6. **ALWAYS** verify 3 things before running: MySQL OK, Redis PONG, Horizon workers running
+7. **ALWAYS** run LocalQA tests in real environment after writing them — never skip this step. Writing tests without running them against real infrastructure is incomplete work.
+8. **ALWAYS** `pkill -9 -f horizon` after tests complete — never leave orphan Horizon processes running
