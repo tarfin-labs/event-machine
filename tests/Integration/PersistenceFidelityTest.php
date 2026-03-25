@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Support\CompressionManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -55,7 +56,7 @@ class PersistenceFidelityAlwaysChainMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'captureAction' => function (ContextManager $context, \Tarfinlabs\EventMachine\Behavior\EventBehavior $event): void {
+                    'captureAction' => function (ContextManager $context, EventBehavior $event): void {
                         $context->set('captured_triggering_type', $event->type);
                     },
                 ],
@@ -91,7 +92,7 @@ class PersistenceFidelityPayloadMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'capturePayloadAction' => function (ContextManager $context, \Tarfinlabs\EventMachine\Behavior\EventBehavior $event): void {
+                    'capturePayloadAction' => function (ContextManager $context, EventBehavior $event): void {
                         $context->set('received_payload', $event->payload);
                     },
                 ],
@@ -235,10 +236,10 @@ it('preserves state, context, and event history identically after archive and re
     $machine->send(['type' => 'GO']);
 
     // Capture state before archive
-    $rootEventId     = $machine->state->history->first()->root_event_id;
-    $stateBefore     = $machine->state->value;
-    $contextBefore   = $machine->state->context->toArray();
-    $historyBefore   = $machine->state->history->map(fn (MachineEvent $e): array => [
+    $rootEventId   = $machine->state->history->first()->root_event_id;
+    $stateBefore   = $machine->state->value;
+    $contextBefore = $machine->state->context->toArray();
+    $historyBefore = $machine->state->history->map(fn (MachineEvent $e): array => [
         'type'            => $e->type,
         'sequence_number' => $e->sequence_number,
         'payload'         => $e->payload,
@@ -303,13 +304,13 @@ it('preserves triggering event type through @always chain after persist and rest
 
 it('preserves complex payload types through persist and restore', function (): void {
     $complexPayload = [
-        'int_value'      => 42,
-        'string_value'   => 'hello world',
-        'float_value'    => 3.14159,
-        'bool_true'      => true,
-        'bool_false'     => false,
-        'null_value'     => null,
-        'nested_array'   => [
+        'int_value'    => 42,
+        'string_value' => 'hello world',
+        'float_value'  => 3.14159,
+        'bool_true'    => true,
+        'bool_false'   => false,
+        'null_value'   => null,
+        'nested_array' => [
             'level1' => [
                 'level2' => [
                     'deep_int'    => 999,
@@ -443,25 +444,21 @@ it('persists a single context diff containing all mutations from multiple action
 
     expect($triggerEvent)->not->toBeNull();
 
-    // The persist() method stores incremental context diffs on intermediate events
-    // and the FULL context snapshot on the last event. Verify this by checking
-    // that context mutations from all 3 actions are recoverable from the persisted events.
+    // Persist stores incremental context diffs per event. Each action's mutation
+    // is captured in its action.finish event. The last event always has the full
+    // context snapshot. Verify that ALL 3 mutations are captured in the event stream
+    // and that the last event contains the complete final context.
 
-    // Collect all context keys that appear across ALL persisted events' context diffs
-    $allPersistedContextKeys = [];
-    foreach ($persistedEvents as $e) {
-        foreach (array_keys($e->context) as $key) {
-            $allPersistedContextKeys[$key] = true;
-        }
-    }
+    $lastEvent = $persistedEvents->last();
 
-    // DEBUG: dump all persisted events context
-    foreach ($persistedEvents as $idx => $e) {
-        dump("Event #{$idx}: type={$e->type} seq={$e->sequence_number} context=" . json_encode($e->context));
-    }
-
-    // All 4 context keys modified by the 3 actions must appear in the persisted diffs
-    expect($allPersistedContextKeys)->toHaveKeys(['alpha', 'beta', 'gamma', 'counter']);
+    // The last event (being the final event) should have the full context snapshot
+    // Context is wrapped under 'data' key by ContextManager
+    expect($lastEvent->context)->toHaveKey('data');
+    expect($lastEvent->context['data'])->toHaveKeys(['alpha', 'beta', 'gamma', 'counter']);
+    expect($lastEvent->context['data']['alpha'])->toBe('value_a');
+    expect($lastEvent->context['data']['beta'])->toBe('value_b');
+    expect($lastEvent->context['data']['gamma'])->toBe('value_g');
+    expect($lastEvent->context['data']['counter'])->toBe(1);
 
     // Restore and verify all mutations survived as a coherent unit
     $restored = PersistenceFidelityMultiActionMachine::create(state: $rootEventId);
