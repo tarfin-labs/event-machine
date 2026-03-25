@@ -2947,15 +2947,6 @@ class MachineDefinition
         // If a target state definition is defined, find its initial state definition
         $targetStateDefinition = $transitionBranch->target?->findInitialStateDefinition() ?? $transitionBranch->target;
 
-        // Execute actions associated with the transition
-        $transitionBranch->runActions($state, $eventBehavior);
-
-        // Record transition start finish
-        $state->setInternalEventBehavior(
-            type: InternalEvent::TRANSITION_FINISH,
-            placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
-        );
-
         // Run exit listeners before state exit actions (only for targeted transitions)
         if ($targetStateDefinition instanceof StateDefinition) {
             $this->runExitListeners($state);
@@ -2971,6 +2962,15 @@ class MachineDefinition
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_EXIT,
             placeholder: $state->currentStateDefinition->route,
+        );
+
+        // Execute actions associated with the transition (SCXML order: exit → transition → entry)
+        $transitionBranch->runActions($state, $eventBehavior);
+
+        // Record transition finish
+        $state->setInternalEventBehavior(
+            type: InternalEvent::TRANSITION_FINISH,
+            placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
         );
 
         // Set the new state, or keep the current state if no target state definition is defined

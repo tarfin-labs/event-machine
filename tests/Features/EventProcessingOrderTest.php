@@ -220,8 +220,8 @@ test('exit actions execute before entry actions', function (): void {
     $state = $machine->transition(event: ['type' => 'GO']);
 
     expect($state->context->get('execution_order'))->toBe([
-        'transition_action',
         'exit_A',
+        'transition_action',
         'entry_B',
     ]);
 });
