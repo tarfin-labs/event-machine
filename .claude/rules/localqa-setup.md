@@ -78,13 +78,15 @@ php artisan migrate:fresh
 ## Running Tests
 
 ```bash
-# 1. Start Horizon (separate terminal or background)
+# Option A: Automated (recommended)
+bash tests/LocalQA/run-qa.sh
+
+# Option B: Manual
+pkill -9 -f horizon 2>/dev/null; sleep 1
 cd /tmp/qa-v7-review && redis-cli FLUSHALL && php artisan horizon &
 sleep 5
-
-# 2. Run tests from package directory
-cd /path/to/event-machine
-vendor/bin/pest tests/LocalQA/
+cd /path/to/event-machine && vendor/bin/pest tests/LocalQA/
+pkill -9 -f horizon
 ```
 
 ## Critical Gotchas
@@ -96,14 +98,19 @@ vendor/bin/pest tests/LocalQA/
 | Jobs in Redis but not processed | Redis prefix mismatch | Set `REDIS_PREFIX=laravel_database_` in both `.env` and `.env.testing` |
 | Horizon only processes `default` queue | `config/horizon.php` only lists `default` | Add `child-queue` to queue array |
 | Multiple old Horizon instances | Previous sessions left orphans | `pkill -9 -f horizon` before starting |
+| Horizon auto-scales to 1 worker | `minProcesses=1` default | Set `minProcesses=4` in `config/horizon.php` |
+| waitFor timeout in full suite | 30s too short under Horizon load | Use 60s+ for all waitFor, 90s for heavy tests |
+| Wrong context key in waitFor | Machine uses `retry_count` not `billing_count` | Always verify context key name from machine stub |
 
 ## Rules
 
-1. **NEVER** use `Bus::fake()`, `Queue::fake()`, sync queue, or in-memory SQLite in LocalQA tests
-2. **ALWAYS** use `LocalQATestCase::cleanTables()` in `beforeEach` — manual truncate, not `RefreshDatabase`
-3. **ALWAYS** use `LocalQATestCase::waitFor()` for async assertions — poll DB, generous timeouts (30-45s)
-4. **ALWAYS** `redis-cli FLUSHALL` before test session (NOT between tests)
-5. **ALWAYS** `pkill -9 -f horizon` before starting fresh Horizon
-6. **ALWAYS** verify 3 things before running: MySQL OK, Redis PONG, Horizon workers running
-7. **ALWAYS** run LocalQA tests in real environment after writing them — never skip this step. Writing tests without running them against real infrastructure is incomplete work.
-8. **ALWAYS** `pkill -9 -f horizon` after tests complete — never leave orphan Horizon processes running
+1. **NEVER** use `Bus::fake()`, `Queue::fake()`, `Machine::fake()`, `Mockery`, sync queue, or in-memory SQLite in LocalQA tests
+2. **ALWAYS** use `LocalQATestCase::cleanTables()` in `beforeEach` — drain queues + truncate, not `RefreshDatabase`
+3. **ALWAYS** use `LocalQATestCase::waitFor()` for async assertions — poll DB with 60s+ timeout
+4. **ALWAYS** wait for BOTH fire_count AND context update in timer tests — `fire_count` updates before Horizon processes the job
+5. **ALWAYS** `redis-cli FLUSHALL` before test session (NOT between tests)
+6. **ALWAYS** `pkill -9 -f horizon` before starting fresh Horizon
+7. **ALWAYS** verify 3 things before running: MySQL OK, Redis PONG, Horizon workers running
+8. **ALWAYS** run LocalQA tests in real environment after writing them — never skip this step
+9. **ALWAYS** `pkill -9 -f horizon` after tests complete — never leave orphan Horizon processes
+10. **NEVER** use `sleep()` except for negative assertions (verifying something does NOT happen). Document with comment why sleep is needed.
