@@ -23,6 +23,7 @@ class GetForwardParentMachine extends Machine
                     ],
                     'delegating' => [
                         'machine' => GetForwardChildMachine::class,
+                        'queue'   => 'default',
                         'forward' => [
                             'CHILD_STATUS' => [
                                 'child_event' => 'CHILD_STATUS',
