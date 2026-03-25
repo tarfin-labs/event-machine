@@ -114,3 +114,26 @@ pkill -9 -f horizon
 8. **ALWAYS** run LocalQA tests in real environment after writing them — never skip this step
 9. **ALWAYS** `pkill -9 -f horizon` after tests complete — never leave orphan Horizon processes
 10. **NEVER** use `sleep()` except for negative assertions (verifying something does NOT happen). Document with comment why sleep is needed.
+
+## Learned Patterns (from QA infrastructure overhaul)
+
+### waitFor must check the FINAL observable state, not intermediate
+Timer fire_count is written by the artisan command. Machine context is updated by the Horizon job. These are different processes with different timings. Always wait for the **end result** (context value) not just the intermediate record (fire_count).
+
+### Quiet-period settlement is unnecessary
+`cleanTables()` does NOT need to wait for idle workers. Each test uses a unique `root_event_id`. Orphan jobs from previous tests fail with `RestoringStateException` on truncated data — this is harmless and does not affect the new test.
+
+### afterEach cleanup is counterproductive
+Running `cleanTables()` in `afterEach` adds 500ms+ per test (quiet period wait). With 68 tests, this adds 34+ seconds. Since tests are already isolated by `root_event_id`, afterEach cleanup provides no benefit.
+
+### Horizon minProcesses prevents flakiness
+Auto-scaling can reduce workers to 1, causing queue backlog. Set `minProcesses=4` to maintain baseline throughput during the full test suite.
+
+### Negative assertions require sleep — document why
+When verifying something does NOT happen (timer does NOT fire, parent does NOT receive completion), `waitFor` can't help — you can't wait for absence. Use `sleep(1)` with a comment explaining the negative assertion. Keep sleep duration minimal (1s).
+
+### Diagnostics dump is essential for debugging
+`waitFor` dumps queue sizes, last 5 events, current states, children status, failed job exceptions on every timeout. This turns "test failed" into "test failed because X" — always add a `$description` parameter.
+
+### Use `run-qa.sh` for automated lifecycle
+`bash tests/LocalQA/run-qa.sh` handles: preflight checks → kill orphan Horizon → FLUSHALL → start Horizon → run tests → cleanup. No manual steps needed.
