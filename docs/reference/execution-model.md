@@ -155,6 +155,17 @@ This ordering makes it safe to use `raise()` in entry actions to conditionally b
 
 For detailed usage, see [Machine System Design: Guidelines](/best-practices/machine-system-design#guidelines).
 
+## Lock Strategy
+
+EventMachine uses a database-backed distributed lock (`machine_locks` table) to prevent concurrent state mutation:
+
+- **Scope:** One lock per `root_event_id` (machine instance). Concurrent `send()` / `SendToMachineJob` calls on the same machine are serialized.
+- **Acquisition:** `MachineLockManager::acquire()` attempts to insert/claim a row in `machine_locks`. If the lock is held, the caller retries with backoff until `lock_timeout` expires.
+- **TTL:** Locks have an `expires_at` timestamp (`lock_ttl`). If a worker crashes without releasing, the lock becomes stale after TTL.
+- **Stale cleanup:** On next `acquire()` attempt, `MachineLockManager` deletes all expired locks (across all machines, not just the target). This is a global sweep to prevent lock table bloat.
+- **Parallel dispatch:** When `parallel_dispatch.enabled` is true, `ParallelRegionJob` acquires the lock before applying region results. The `failed()` handler also acquires the lock to fire `@fail` safely.
+- **No cross-machine locking:** Locks are per-machine. Two different machines can process events concurrently without contention.
+
 ## Related
 
 - [Transition Design](/best-practices/transition-design) -- guard priority, @always chains
