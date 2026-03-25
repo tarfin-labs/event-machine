@@ -570,6 +570,11 @@ class Machine implements Castable, JsonSerializable, Stringable
             $state->setValues($lastMachineEvent->machine_value);
         }
 
+        // Restore machine identity from event history (transient — not in context data array).
+        // Without this, machineId() returns null after state reload in send() or any restore path.
+        $rootEventId = $machineEvents->first()->root_event_id;
+        $state->context->setMachineIdentity($rootEventId);
+
         return $state;
     }
 
