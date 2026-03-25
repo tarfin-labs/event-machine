@@ -42,18 +42,24 @@ class ListenerJob implements ShouldQueue
         // Acquire lock to prevent concurrent ListenerJobs from overwriting
         // each other's context changes (lost-update). This happens when
         // exit + transition listeners dispatch simultaneously for the same machine.
-        try {
-            $lockHandle = MachineLockManager::acquire(
-                rootEventId: $this->rootEventId,
-                timeout: 10,
-                ttl: 30,
-                context: 'listener_job:'.class_basename($this->actionClass),
-            );
-        } catch (MachineLockTimeoutException) {
-            // Another job holds the lock — release back to queue with delay.
-            $this->release(2);
+        // Re-entrant check: in sync queue mode, send() may already hold the lock.
+        $alreadyLocked = isset(Machine::$heldLockIds[$this->rootEventId]);
+        $lockHandle    = null;
 
-            return;
+        if (!$alreadyLocked) {
+            try {
+                $lockHandle = MachineLockManager::acquire(
+                    rootEventId: $this->rootEventId,
+                    timeout: 10,
+                    ttl: 30,
+                    context: 'listener_job:'.class_basename($this->actionClass),
+                );
+            } catch (MachineLockTimeoutException) {
+                // Another job holds the lock — release back to queue with delay.
+                $this->release(2);
+
+                return;
+            }
         }
 
         try {
