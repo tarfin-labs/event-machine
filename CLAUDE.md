@@ -230,7 +230,8 @@ All code, tests, and documentation **must** follow the naming conventions define
 - **State names**: `snake_case` adjective/participle, must pass the "is" test (`awaiting_payment`, not `awaitPayment`)
 - **Machine IDs**: `snake_case` (`order_workflow`, not `orderWorkflow`)
 - **Inline behavior keys**: `camelCase` with type suffix (`sendEmailAction`, `isValidGuard`, `orderTotalCalculator`)
-- **Context array keys**: `snake_case` (`total_amount`, not `totalAmount`)
+- **Business data keys** (context, payloads, input/output): `camelCase` (`totalAmount`, not `total_amount`)
+- **Config keys**: `snake_case` (`should_persist`, not `shouldPersist`)
 - **Class names**: PascalCase with type suffix (`SendEmailAction`, `IsPaymentValidGuard`)
 
 ## Package Structure
