@@ -3,7 +3,7 @@
 LocalQA tests run against **real MySQL + Redis + Horizon** (NOT SQLite/sync/Bus::fake).
 They live in `tests/LocalQA/` and are excluded from `composer test`.
 
-## Setup — Geçici Laravel Projesi
+## Setup — Temporary Laravel Project
 
 LocalQA requires a temporary Laravel project because:
 - Package tests run via testbench (no artisan horizon)
