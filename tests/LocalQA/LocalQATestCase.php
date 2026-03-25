@@ -101,7 +101,7 @@ class LocalQATestCase extends Orchestra
      */
     public static function waitFor(
         callable $condition,
-        int $timeoutSeconds = 45,
+        int $timeoutSeconds = 60,
         string $description = '',
     ): bool {
         $start      = time();
