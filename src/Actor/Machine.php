@@ -54,6 +54,18 @@ class Machine implements Castable, JsonSerializable, Stringable
     /** @var array<class-string, array{result: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>, creations: list<array>, sends: list<array>}> Machine-level fakes for testing. */
     private static array $machineFakes = [];
 
+    /**
+     * Tracks root_event_ids for which a lock is held in the current process.
+     * Enables re-entrant locking: when a transition dispatches a ChildMachineJob
+     * synchronously (sync queue) and the completion job tries to lock the parent,
+     * it detects the parent is already locked in-process and skips acquisition.
+     *
+     * Public for cross-class access (ChildMachineCompletionJob, ListenerJob).
+     *
+     * @var array<string, true>
+     */
+    public static array $heldLockIds = [];
+
     /** Whether this instance was created via createFaked() — send/persist become no-ops. */
     protected bool $isFakedInstance = false;
 
@@ -269,27 +281,48 @@ class Machine implements Castable, JsonSerializable, Stringable
             return $this->state;
         }
 
-        $lockHandle = null;
+        $lockHandle   = null;
+        $acquiredLock = false;
+        $rootEventId  = null;
 
-        if ($this->state instanceof State && config('machine.parallel_dispatch.enabled', false)) {
+        // Acquire lock for persisted machines to prevent concurrent state mutation.
+        // Lock is acquired when:
+        //   - Queue is async (redis/database) — concurrent workers can mutate same machine
+        //   - OR parallel_dispatch is explicitly enabled — tests can verify lock behavior
+        // Sync queue without parallel_dispatch has no concurrency risk — skip lock to
+        // avoid overhead and re-entrant deadlocks in sync dispatch chains.
+        $shouldLock = config('queue.default') !== 'sync'
+            || config('machine.parallel_dispatch.enabled', false);
+
+        if ($this->state instanceof State && $this->definition->shouldPersist && $shouldLock) {
             $rootEventId = $this->state->history->first()->root_event_id;
 
-            // Reload from DB — local state may be stale after previous sync dispatch.
-            try {
-                $this->state = $this->restoreStateFromRootEventId($rootEventId);
-            } catch (\Throwable) {
-                // Defensive: if reload fails, continue with current local state.
-            }
+            // Re-entrant check: if this root_event_id is already locked in the current
+            // process (e.g., sync queue: send() → ChildMachineJob → ChildMachineCompletionJob
+            // → send() on same parent), skip lock acquisition to prevent deadlock.
+            $alreadyLocked = isset(self::$heldLockIds[$rootEventId]);
 
-            try {
-                $lockHandle = MachineLockManager::acquire(
-                    rootEventId: $rootEventId,
-                    timeout: 0,
-                    ttl: (int) config('machine.parallel_dispatch.lock_ttl', 60),
-                    context: 'send',
-                );
-            } catch (MachineLockTimeoutException) {
-                throw MachineAlreadyRunningException::build($rootEventId);
+            if (!$alreadyLocked) {
+                // Reload from DB — local state may be stale after previous sync dispatch.
+                try {
+                    $this->state = $this->restoreStateFromRootEventId($rootEventId);
+                } catch (\Throwable) {
+                    // Defensive: if reload fails, continue with current local state.
+                }
+
+                try {
+                    $lockHandle = MachineLockManager::acquire(
+                        rootEventId: $rootEventId,
+                        timeout: 0,
+                        ttl: (int) config('machine.parallel_dispatch.lock_ttl', 60),
+                        context: 'send',
+                    );
+
+                    self::$heldLockIds[$rootEventId] = true;
+                    $acquiredLock                    = true;
+                } catch (MachineLockTimeoutException) {
+                    throw MachineAlreadyRunningException::build($rootEventId);
+                }
             }
         }
 
@@ -318,7 +351,10 @@ class Machine implements Castable, JsonSerializable, Stringable
 
             $shouldDispatch = true;
         } finally {
-            $lockHandle?->release();
+            if ($acquiredLock && $rootEventId !== null) {
+                unset(self::$heldLockIds[$rootEventId]);
+                $lockHandle?->release();
+            }
 
             if ($shouldDispatch) {
                 $this->dispatchPendingParallelJobs();
