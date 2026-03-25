@@ -133,7 +133,7 @@ class MachineController extends Controller
         $data = $request->all();
 
         if ($request->isMethod('GET') && !isset($data['payload'])) {
-            $data = ['payload' => $data];
+            return ['payload' => $data];
         }
 
         return $data;
