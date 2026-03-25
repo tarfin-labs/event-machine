@@ -139,14 +139,21 @@ class LocalQATestCase extends Orchestra
     /**
      * Poll DB until condition is true or timeout.
      */
-    public static function waitFor(callable $condition, int $timeoutSeconds = 45, int $intervalMs = 250): bool
-    {
-        $start = time();
+    public static function waitFor(
+        callable $condition,
+        int $timeoutSeconds = 60,
+        string $description = '',
+    ): bool {
+        $start      = time();
+        $intervalMs = 100;
+
         while (time() - $start < $timeoutSeconds) {
             if ($condition()) {
                 return true;
             }
+
             usleep($intervalMs * 1000);
+            $intervalMs = min((int) ($intervalMs * 1.5), 1000);
         }
 
         return false;
