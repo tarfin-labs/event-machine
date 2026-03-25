@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Jobs;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Tarfinlabs\EventMachine\Actor\Machine;
@@ -63,14 +64,25 @@ class ChildMachineJob implements ShouldQueue
             throw new \InvalidArgumentException("Machine class '{$this->childMachineClass}' must exist and extend ".Machine::class.'.');
         }
 
-        // 1. Update tracking record to running (skip for fire-and-forget)
+        // 1. Update tracking record to running (skip for fire-and-forget).
+        //    Use lockForUpdate to prevent duplicate child creation from
+        //    concurrent ChildMachineJob dispatches (race on same machineChildId).
         if (!$this->fireAndForget) {
-            $childRecord = MachineChild::find($this->machineChildId);
-            if ($childRecord === null || $childRecord->isTerminal()) {
+            $childRecord = DB::transaction(function () {
+                $record = MachineChild::lockForUpdate()->find($this->machineChildId);
+
+                if ($record === null || $record->isTerminal()) {
+                    return null;
+                }
+
+                $record->update(['status' => MachineChild::STATUS_RUNNING]);
+
+                return $record;
+            });
+
+            if ($childRecord === null) {
                 return;
             }
-
-            $childRecord->update(['status' => MachineChild::STATUS_RUNNING]);
         }
 
         // 2. Create child machine with merged context
