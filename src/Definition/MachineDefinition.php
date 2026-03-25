@@ -2732,12 +2732,20 @@ class MachineDefinition
                 ?? $transitionBranch->target
                 ?? $sourceState;
 
-            // Execute transition actions
+            // Exit protocol — only for targeted transitions (SCXML: targetless = no exit/entry)
+            if ($transitionBranch->target instanceof StateDefinition) {
+                // Run exit listeners then exit actions for the source state
+                $this->runExitListeners($state);
+                $sourceState->runExitActions($state);
+            }
+
+            // Execute transition actions (SCXML order: exit → transition → entry)
             $transitionBranch->runActions($state, $eventBehavior);
 
-            // Run exit listeners then exit actions for the source state
-            $this->runExitListeners($state);
-            $sourceState->runExitActions($state);
+            // Targetless transitions: no state update, no entry actions
+            if (!$transitionBranch->target instanceof StateDefinition) {
+                continue;
+            }
 
             // Update the state value for this region immediately
             // This ensures entry actions and subsequent events see the correct value
@@ -2947,22 +2955,23 @@ class MachineDefinition
         // If a target state definition is defined, find its initial state definition
         $targetStateDefinition = $transitionBranch->target?->findInitialStateDefinition() ?? $transitionBranch->target;
 
-        // Run exit listeners before state exit actions (only for targeted transitions)
+        // Exit protocol — only for targeted transitions (SCXML: targetless = no exit/entry)
         if ($targetStateDefinition instanceof StateDefinition) {
+            // Run exit listeners before state exit actions
             $this->runExitListeners($state);
+
+            // Execute exit actions for the current state definition
+            $transitionBranch->transitionDefinition->source->runExitActions($state);
+
+            // Cancel active children when leaving a state with machine delegation
+            $this->cleanupActiveChildren($state, $transitionBranch->transitionDefinition->source);
+
+            // Record state exit event
+            $state->setInternalEventBehavior(
+                type: InternalEvent::STATE_EXIT,
+                placeholder: $state->currentStateDefinition->route,
+            );
         }
-
-        // Execute exit actions for the current state definition
-        $transitionBranch->transitionDefinition->source->runExitActions($state);
-
-        // Cancel active children when leaving a state with machine delegation
-        $this->cleanupActiveChildren($state, $transitionBranch->transitionDefinition->source);
-
-        // Record state exit event
-        $state->setInternalEventBehavior(
-            type: InternalEvent::STATE_EXIT,
-            placeholder: $state->currentStateDefinition->route,
-        );
 
         // Execute actions associated with the transition (SCXML order: exit → transition → entry)
         $transitionBranch->runActions($state, $eventBehavior);

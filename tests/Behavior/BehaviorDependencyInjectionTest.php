@@ -42,7 +42,7 @@ it('it can inject requested parameters', function (): void {
                     expect($s->value)->toBe(['machine.ready']);
 
                     expect($ec)->toBeInstanceOf(EventCollection::class);
-                    expect($ec->count())->toBe(10);
+                    expect($ec->count())->toBe(7);
                 },
             ],
         ],

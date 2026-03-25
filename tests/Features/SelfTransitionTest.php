@@ -42,9 +42,9 @@ it('external self-transition triggers both exit and entry actions', function ():
 
 // === Targetless (Internal) Transition ===
 
-// SCXML-correct: targetless transitions fire exit actions (SCXML order: exit before transition)
-// but NOT entry actions. Exit runs before transition action per SCXML section 3.13.
-it('targetless transition fires exit actions before transition action but not entry actions', function (): void {
+// SCXML-correct: targetless transitions skip BOTH exit and entry actions.
+// Only the transition action itself runs.
+it('targetless transition skips both exit and entry actions (SCXML semantics)', function (): void {
     TestMachine::define([
         'id'      => 'internal_transition',
         'initial' => 'active',
@@ -76,8 +76,8 @@ it('targetless transition fires exit actions before transition action but not en
         // Initial entry fires the entry action
         ->assertState('active')
         ->assertContext('action_log', ['entry:active'])
-        // Send TICK: targetless transition fires exit before transition action (SCXML order), no entry
+        // Send TICK: targetless transition fires ONLY transition action — no exit, no entry
         ->send('TICK')
         ->assertState('active')
-        ->assertContext('action_log', ['entry:active', 'exit:active', 'action:tick']);
+        ->assertContext('action_log', ['entry:active', 'action:tick']);
 });
