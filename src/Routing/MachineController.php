@@ -118,7 +118,25 @@ class MachineController extends Controller
             abort(422, "Event type '{$eventType}' not found in behavior.");
         }
 
-        return $eventClass::validateAndCreate($request->all());
+        return $eventClass::validateAndCreate($this->resolveRequestData($request));
+    }
+
+    /**
+     * Normalize request data for EventBehavior consumption.
+     *
+     * For GET requests, query params arrive as flat key-value pairs without
+     * the `payload` wrapper that POST JSON bodies naturally have. This method
+     * wraps them so validation rules targeting `payload.*` work uniformly.
+     */
+    protected function resolveRequestData(Request $request): array
+    {
+        $data = $request->all();
+
+        if ($request->isMethod('GET') && !isset($data['payload'])) {
+            $data = ['payload' => $data];
+        }
+
+        return $data;
     }
 
     /**
@@ -293,7 +311,7 @@ class MachineController extends Controller
 
         // 1. Resolve event using CHILD's EventBehavior class
         $childEventClass = $defaults['_child_event_class'];
-        $event           = $childEventClass::validateAndCreate($request->all());
+        $event           = $childEventClass::validateAndCreate($this->resolveRequestData($request));
 
         // 2. Run parent-level action.before() if configured
         $actionClass = $defaults['_action_class'] ?? null;
