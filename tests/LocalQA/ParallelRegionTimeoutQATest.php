@@ -116,7 +116,8 @@ it('LocalQA: region timeout is no-op when all regions complete before timeout', 
     // job has already been dispatched. 1s is enough for it to process and no-op.
     sleep(1);
 
-    // Machine should still be at completed (timeout job should no-op)
-    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
-    expect($cs->state_id)->toContain('completed');
+    // Machine should still be at completed (timeout job should no-op).
+    // Use restored machine for assertion — MachineCurrentState can be stale under parallel dispatch.
+    $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
+    expect($restored->state->currentStateDefinition->id)->toContain('completed');
 });
