@@ -65,10 +65,7 @@ class AddItemEvent extends EventBehavior
         parent::__construct();
     }
 
-    public static function getType(): string
-    {
-        return 'ADD_ITEM';
-    }
+    // getType() auto-generates 'ADD_ITEM' from class name
 }
 ```
 
