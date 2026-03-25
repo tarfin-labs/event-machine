@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
 
 // ═══════════════════════════════════════════════════════════════
@@ -15,8 +16,8 @@ use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
 it('throws MachineAlreadyRunningException when another process holds the lock', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
-    $machine = Machine::create([
-        'config' => [
+    $definition = MachineDefinition::define(
+        config: [
             'id'      => 'lock_rejection',
             'initial' => 'idle',
             'context' => [
@@ -34,15 +35,16 @@ it('throws MachineAlreadyRunningException when another process holds the lock', 
                 'active' => [],
             ],
         ],
-        'behavior' => [
+        behavior: [
             'actions' => [
                 'incrementAction' => function (ContextManager $context): void {
                     $context->set('counter', $context->get('counter') + 1);
                 },
             ],
         ],
-    ]);
+    );
 
+    $machine = Machine::create($definition);
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
@@ -60,7 +62,7 @@ it('throws MachineAlreadyRunningException when another process holds the lock', 
 
     try {
         // Restore machine and attempt to send event while lock is held
-        $contestedMachine = Machine::create(state: $rootEventId);
+        $contestedMachine = Machine::create($definition, state: $rootEventId);
 
         expect(fn () => $contestedMachine->send(['type' => 'GO']))
             ->toThrow(MachineAlreadyRunningException::class);
@@ -69,7 +71,7 @@ it('throws MachineAlreadyRunningException when another process holds the lock', 
     }
 
     // Restore machine and verify state is completely unchanged
-    $afterMachine = Machine::create(state: $rootEventId);
+    $afterMachine = Machine::create($definition, state: $rootEventId);
 
     expect($afterMachine->state->value)->toBe($stateBefore)
         ->and($afterMachine->state->context->get('counter'))->toBe($contextBefore);
@@ -78,8 +80,8 @@ it('throws MachineAlreadyRunningException when another process holds the lock', 
 it('preserves context data exactly after lock rejection', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
-    $machine = Machine::create([
-        'config' => [
+    $definition = MachineDefinition::define(
+        config: [
             'id'      => 'lock_rejection_ctx',
             'initial' => 'idle',
             'context' => [
@@ -99,7 +101,7 @@ it('preserves context data exactly after lock rejection', function (): void {
                 'modified' => [],
             ],
         ],
-        'behavior' => [
+        behavior: [
             'actions' => [
                 'modifyContextAction' => function (ContextManager $context): void {
                     $context->set('name', 'changed');
@@ -108,8 +110,9 @@ it('preserves context data exactly after lock rejection', function (): void {
                 },
             ],
         ],
-    ]);
+    );
 
+    $machine = Machine::create($definition);
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
@@ -122,7 +125,7 @@ it('preserves context data exactly after lock rejection', function (): void {
     );
 
     try {
-        $contestedMachine = Machine::create(state: $rootEventId);
+        $contestedMachine = Machine::create($definition, state: $rootEventId);
 
         expect(fn () => $contestedMachine->send(['type' => 'MODIFY']))
             ->toThrow(MachineAlreadyRunningException::class);
@@ -131,7 +134,7 @@ it('preserves context data exactly after lock rejection', function (): void {
     }
 
     // Context should be completely unchanged
-    $afterMachine = Machine::create(state: $rootEventId);
+    $afterMachine = Machine::create($definition, state: $rootEventId);
     expect($afterMachine->state->context->get('name'))->toBe('original')
         ->and($afterMachine->state->context->get('amount'))->toBe(42)
         ->and($afterMachine->state->context->get('tags'))->toBe(['a', 'b'])

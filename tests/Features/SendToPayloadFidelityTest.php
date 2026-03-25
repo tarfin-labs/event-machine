@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 // ═══════════════════════════════════════════════════════════════
 //  Bead 4: sendTo payload type fidelity through serialization.
@@ -14,9 +15,8 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 // ═══════════════════════════════════════════════════════════════
 
 it('sendTo preserves payload types through synchronous cross-machine call', function (): void {
-    // Target machine: captures received payload into context
-    $target = Machine::create([
-        'config' => [
+    $definition = MachineDefinition::define(
+        config: [
             'id'      => 'send_to_target',
             'initial' => 'waiting',
             'context' => [
@@ -34,15 +34,16 @@ it('sendTo preserves payload types through synchronous cross-machine call', func
                 'received' => [],
             ],
         ],
-        'behavior' => [
+        behavior: [
             'actions' => [
                 'capturePayloadAction' => function (ContextManager $context, EventBehavior $event): void {
                     $context->set('received_payload', $event->payload);
                 },
             ],
         ],
-    ]);
+    );
 
+    $target = Machine::create($definition);
     $target->persist();
     $targetRootEventId = $target->state->history->first()->root_event_id;
 
@@ -63,7 +64,7 @@ it('sendTo preserves payload types through synchronous cross-machine call', func
     ];
 
     // Simulate sendTo by restoring and sending directly (same as InvokableBehavior::sendTo)
-    $targetMachine = Machine::create(state: $targetRootEventId);
+    $targetMachine = Machine::create($definition, state: $targetRootEventId);
     $targetMachine->send([
         'type'    => 'DELIVER',
         'payload' => $complexPayload,
@@ -89,38 +90,6 @@ it('sendTo preserves payload types through synchronous cross-machine call', func
 });
 
 it('SendToMachineJob preserves payload types through serialization round-trip', function (): void {
-    // Target machine: captures received payload into context
-    $target = Machine::create([
-        'config' => [
-            'id'      => 'sendto_job_target',
-            'initial' => 'waiting',
-            'context' => [
-                'received_payload' => null,
-            ],
-            'states' => [
-                'waiting' => [
-                    'on' => [
-                        'DELIVER' => [
-                            'target'  => 'received',
-                            'actions' => 'capturePayloadAction',
-                        ],
-                    ],
-                ],
-                'received' => [],
-            ],
-        ],
-        'behavior' => [
-            'actions' => [
-                'capturePayloadAction' => function (ContextManager $context, EventBehavior $event): void {
-                    $context->set('received_payload', $event->payload);
-                },
-            ],
-        ],
-    ]);
-
-    $target->persist();
-    $targetRootEventId = $target->state->history->first()->root_event_id;
-
     $complexPayload = [
         'amount'   => 1500,
         'rate'     => 0.18,
@@ -130,10 +99,10 @@ it('SendToMachineJob preserves payload types through serialization round-trip', 
         'notes'    => null,
     ];
 
-    // Create the job and handle it synchronously (simulates queue round-trip serialization)
+    // Create the job and simulate queue round-trip serialization
     $job = new SendToMachineJob(
         machineClass: Machine::class,
-        rootEventId: $targetRootEventId,
+        rootEventId: 'test-root-event-id',
         event: ['type' => 'DELIVER', 'payload' => $complexPayload],
     );
 
@@ -153,8 +122,8 @@ it('SendToMachineJob preserves payload types through serialization round-trip', 
 });
 
 it('payload survives persist and restore cycle with type fidelity', function (): void {
-    $machine = Machine::create([
-        'config' => [
+    $definition = MachineDefinition::define(
+        config: [
             'id'      => 'persist_restore_fidelity',
             'initial' => 'idle',
             'context' => [
@@ -172,15 +141,16 @@ it('payload survives persist and restore cycle with type fidelity', function ():
                 'stored' => [],
             ],
         ],
-        'behavior' => [
+        behavior: [
             'actions' => [
                 'captureAction' => function (ContextManager $context, EventBehavior $event): void {
                     $context->set('captured', $event->payload);
                 },
             ],
         ],
-    ]);
+    );
 
+    $machine = Machine::create($definition);
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
@@ -195,7 +165,7 @@ it('payload survives persist and restore cycle with type fidelity', function ():
     ]);
 
     // Restore from DB and verify types survived the round-trip
-    $restored = Machine::create(state: $rootEventId);
+    $restored = Machine::create($definition, state: $rootEventId);
     $captured = $restored->state->context->get('captured');
 
     expect($captured['int_val'])->toBe(7)
