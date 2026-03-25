@@ -377,9 +377,9 @@ Entry actions complete before `@always` transitions check:
 ],
 ```
 
-## Self-Transitions
+## Self-Transitions vs Targetless Transitions
 
-Self-transitions trigger exit and entry actions:
+**Self-transitions** (explicit `target` pointing to the same state) trigger exit and entry actions:
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -388,21 +388,24 @@ Self-transitions trigger exit and entry actions:
     'exit' => 'logExitAction',
     'on' => [
         'INCREMENT' => [
-            // Self-transition (no target = same state)
+            // Targetless transition (no target key) — only transition actions run
             'actions' => 'incrementAction',
         ],
         'RESET' => [
-            'target' => 'counting',  // Explicit self-transition
+            'target' => 'counting',  // Explicit self-transition — exit + entry fire
             'actions' => 'resetAction',
         ],
     ],
 ],
 ```
 
-When `RESET` is sent:
+When `RESET` is sent (self-transition):
 1. `logExit` runs
 2. `reset` runs
 3. `logEntry` runs
+
+When `INCREMENT` is sent (targetless):
+1. `increment` runs (no exit, no entry)
 
 ## Testing Entry/Exit Actions
 

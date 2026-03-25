@@ -24,21 +24,21 @@ When `Machine::send()` is called:
 
 ## Action Execution Order
 
-The order of execution during a transition is **not** the intuitive exit → transition → entry. The actual order, verified against `MachineDefinition.php`:
+The order of execution during a targeted transition follows SCXML W3C section 3.13 (exit, transition, entry):
 
 | # | Phase | What Runs |
 |---|-------|-----------|
-| 1 | **Transition actions** | Actions defined on the transition branch |
-| 2 | **Exit listeners** | State change listeners (skipped for transient states) |
-| 3 | **Exit actions** | Actions defined via `exit` on the source state |
+| 1 | **Exit listeners** | State change listeners (skipped for transient states) |
+| 2 | **Exit actions** | Actions defined via `exit` on the source state |
+| 3 | **Transition actions** | Actions defined on the transition branch |
 | 4 | **State change** | Current state is updated to the target |
 | 5 | **Entry actions** | Actions defined via `entry` on the target state |
 | 6 | **Entry listeners** | State change listeners (skipped for transient states) |
 | 7 | **Transition listeners** | Transition listeners (skipped for transient states) |
 | 8 | **Machine invocation** | Child machine launch (if `machine` key present) |
 
-::: warning Transition Actions Run First
-Transition actions execute **before** exit actions, not between exit and entry. If your transition action depends on cleanup done by an exit action, move the logic to an entry action on the target state instead.
+::: info Targetless Transitions
+Targetless transitions (no `target` key) execute **only** transition actions. No exit actions, exit listeners, entry actions, or entry listeners fire. The machine stays in the current state. This follows SCXML semantics where targetless transitions are purely internal.
 :::
 
 ## Guard and Calculator Order
