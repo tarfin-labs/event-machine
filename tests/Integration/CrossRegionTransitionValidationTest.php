@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Exceptions\NoStateDefinitionFoundException;
 
 // region Cross-Region Transition Validation
 // Source: Boost.Statechart InvalidTransitionTest1-2 — illegal transitions between sibling orthogonal regions.
@@ -12,20 +11,16 @@ use Tarfinlabs\EventMachine\Exceptions\NoStateDefinitionFoundException;
 // boundaries are illegal. A state in region_a must NOT target a state in region_b,
 // because each region is an independent concurrent context.
 //
-// EventMachine rejects cross-region transitions at definition time via its target
-// resolution algorithm (resolveStateRelativeToSource). The resolver walks up the
-// hierarchy from the source state but never descends into sibling regions, so a
-// target inside a sibling region is unresolvable. TransitionBranch throws
-// NoStateDefinitionFoundException during MachineDefinition::define().
-//
-// Note: This is an implicit rejection (target resolution failure), not an explicit
-// validation rule in StateConfigValidator. A dedicated validator message (e.g.,
-// "cross-region transitions are not allowed") would improve the developer experience.
+// EventMachine rejects cross-region transitions at definition time via explicit
+// validation in StateConfigValidator. The validator walks each parallel region's
+// states' transitions and checks if any target matches a state in a sibling region.
+// If so, it throws an InvalidArgumentException with a clear error message explaining
+// the cross-region violation and suggesting events (raise/sendTo) as the alternative.
 // endregion
 
 test('cross-region transition from region_a to region_b is rejected at definition time', function (): void {
     // A state in region_a targets "received" which only exists in region_b.
-    // The target resolver cannot find it — NoStateDefinitionFoundException is thrown.
+    // StateConfigValidator detects this and throws with a clear cross-region message.
     expect(fn () => MachineDefinition::define(
         config: [
             'id'      => 'cross_region_target',
@@ -61,8 +56,8 @@ test('cross-region transition from region_a to region_b is rejected at definitio
             ],
         ],
     ))->toThrow(
-        exception: NoStateDefinitionFoundException::class,
-        exceptionMessage: "from state 'cross_region_target.active.region_a.idle' to state 'received'"
+        exception: InvalidArgumentException::class,
+        exceptionMessage: 'Cross-region transition not allowed: state "active.region_a.idle" in region "region_a" cannot target state "received" in sibling region "region_b". Use events (raise/sendTo) to coordinate between regions.'
     );
 });
 
@@ -101,8 +96,8 @@ test('cross-region transition from region_b to region_a is also rejected', funct
             ],
         ],
     ))->toThrow(
-        exception: NoStateDefinitionFoundException::class,
-        exceptionMessage: "from state 'cross_region_reverse.processing.region_b.pending' to state 'step_two'"
+        exception: InvalidArgumentException::class,
+        exceptionMessage: 'Cross-region transition not allowed: state "processing.region_b.pending" in region "region_b" cannot target state "step_two" in sibling region "region_a". Use events (raise/sendTo) to coordinate between regions.'
     );
 });
 
@@ -141,8 +136,49 @@ test('cross-region transition with array config is also rejected', function (): 
             ],
         ],
     ))->toThrow(
-        exception: NoStateDefinitionFoundException::class,
-        exceptionMessage: "from state 'cross_region_array.running.region_a.idle' to state 'finished'"
+        exception: InvalidArgumentException::class,
+        exceptionMessage: 'Cross-region transition not allowed: state "running.region_a.idle" in region "region_a" cannot target state "finished" in sibling region "region_b". Use events (raise/sendTo) to coordinate between regions.'
+    );
+});
+
+test('cross-region transition with guarded conditions is also rejected', function (): void {
+    // Guarded transition array where one branch targets a sibling region state.
+    expect(fn () => MachineDefinition::define(
+        config: [
+            'id'      => 'cross_region_guarded',
+            'initial' => 'active',
+            'states'  => [
+                'active' => [
+                    'type'   => 'parallel',
+                    'states' => [
+                        'region_a' => [
+                            'initial' => 'idle',
+                            'states'  => [
+                                'idle' => [
+                                    'on' => [
+                                        'GUARDED_CROSS' => [
+                                            ['target' => 'done_b', 'guards' => 'someGuard'],
+                                            ['target' => 'done_a'],
+                                        ],
+                                    ],
+                                ],
+                                'done_a' => ['type' => 'final'],
+                            ],
+                        ],
+                        'region_b' => [
+                            'initial' => 'waiting',
+                            'states'  => [
+                                'waiting' => [],
+                                'done_b'  => ['type' => 'final'],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ))->toThrow(
+        exception: InvalidArgumentException::class,
+        exceptionMessage: 'Cross-region transition not allowed: state "active.region_a.idle" in region "region_a" cannot target state "done_b" in sibling region "region_b". Use events (raise/sendTo) to coordinate between regions.'
     );
 });
 
@@ -200,4 +236,43 @@ test('intra-region transitions remain valid within parallel states', function ()
 
     expect($goATransition)->not->toBeNull()
         ->and($goBTransition)->not->toBeNull();
+});
+
+test('intra-region transitions with shared state names across regions remain valid', function (): void {
+    // Both regions have a state named "finished" — transitions to own region's "finished" must work.
+    $definition = MachineDefinition::define(
+        config: [
+            'id'      => 'shared_names_valid',
+            'initial' => 'processing',
+            'states'  => [
+                'processing' => [
+                    'type'   => 'parallel',
+                    '@done'  => 'completed',
+                    'states' => [
+                        'region_a' => [
+                            'initial' => 'working',
+                            'states'  => [
+                                'working' => [
+                                    'on' => ['DONE_A' => 'finished'],
+                                ],
+                                'finished' => ['type' => 'final'],
+                            ],
+                        ],
+                        'region_b' => [
+                            'initial' => 'working',
+                            'states'  => [
+                                'working' => [
+                                    'on' => ['DONE_B' => 'finished'],
+                                ],
+                                'finished' => ['type' => 'final'],
+                            ],
+                        ],
+                    ],
+                ],
+                'completed' => ['type' => 'final'],
+            ],
+        ],
+    );
+
+    expect($definition)->toBeInstanceOf(MachineDefinition::class);
 });
