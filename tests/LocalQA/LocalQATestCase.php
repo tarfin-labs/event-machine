@@ -53,31 +53,27 @@ class LocalQATestCase extends Orchestra
     /**
      * Guarantee a clean slate between tests.
      *
-     * Flow:
-     * 1. Drain pending + delayed queues (stop new jobs from being picked up)
-     * 2. Wait for chain settlement (no new DB writes for 500ms)
-     * 3. Truncate all machine tables
-     * 4. Drain reserved set (workers already finished by now)
+     * Strategy: Drain ALL Redis queues, then truncate all tables.
+     * Orphan jobs (from previous test) that are mid-execution will fail
+     * with RestoringStateException when they try to read truncated data —
+     * this is harmless because the new test uses a different root_event_id.
+     *
+     * No quiet-period wait needed: each test is isolated by root_event_id.
      */
     public static function cleanTables(): void
     {
+        // 1. Drain ALL Redis queues (pending, delayed, reserved, notify)
         $redis  = app('redis');
         $prefix = config('database.redis.options.prefix', 'laravel_database_');
 
-        // 1. Drain pending + delayed (stop NEW jobs from being picked up).
-        //    Do NOT delete reserved — workers will finish those naturally.
         foreach (['default', 'child-queue'] as $queue) {
             $redis->del("{$prefix}queues:{$queue}");
             $redis->del("{$prefix}queues:{$queue}:delayed");
+            $redis->del("{$prefix}queues:{$queue}:reserved");
             $redis->del("{$prefix}queues:{$queue}:notify");
         }
 
-        // 2. Wait for chain settlement: no new DB writes for 500ms.
-        //    Catches in-flight reserved jobs AND chained dispatches
-        //    (e.g., ChildMachineJob → ChildMachineCompletionJob).
-        static::waitForQuietPeriod(quietMs: 500, timeoutSeconds: 15);
-
-        // 3. Truncate — safe because no jobs are writing
+        // 2. Truncate all machine tables
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         DB::table('machine_events')->truncate();
         DB::table('machine_current_states')->truncate();
@@ -95,46 +91,6 @@ class LocalQATestCase extends Orchestra
         }
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-
-        // 4. Final drain: reserved + delayed + pending (catch any jobs that arrived during quiet period)
-        foreach (['default', 'child-queue'] as $queue) {
-            $redis->del("{$prefix}queues:{$queue}");
-            $redis->del("{$prefix}queues:{$queue}:delayed");
-            $redis->del("{$prefix}queues:{$queue}:reserved");
-            $redis->del("{$prefix}queues:{$queue}:notify");
-        }
-    }
-
-    /**
-     * Wait until DB write activity settles (no new rows for $quietMs).
-     *
-     * Checks machine_events + failed_jobs count every 50ms.
-     * If count doesn't change for $quietMs, the chain has settled.
-     */
-    private static function waitForQuietPeriod(int $quietMs, int $timeoutSeconds): void
-    {
-        $start      = time();
-        $quietAccum = 0;
-        $lastCount  = DB::table('machine_events')->count() + DB::table('failed_jobs')->count();
-
-        while (time() - $start < $timeoutSeconds) {
-            usleep(50_000); // 50ms poll
-
-            $currentCount = DB::table('machine_events')->count() + DB::table('failed_jobs')->count();
-
-            if ($currentCount === $lastCount) {
-                $quietAccum += 50;
-
-                if ($quietAccum >= $quietMs) {
-                    return;
-                }
-            } else {
-                $quietAccum = 0;
-                $lastCount  = $currentCount;
-            }
-        }
-
-        fwrite(STDERR, "[cleanTables] waitForQuietPeriod timed out after {$timeoutSeconds}s — truncating anyway\n");
     }
 
     /**
