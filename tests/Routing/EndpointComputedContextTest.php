@@ -29,10 +29,10 @@ test('endpoint response includes computed context values', function (): void {
 
     $context = $response->json('data.context');
 
-    expect($context)->toHaveKeys(['count', 'status', 'is_count_even', 'display_label'])
+    expect($context)->toHaveKeys(['count', 'status', 'isCountEven', 'displayLabel'])
         ->and($context['count'])->toBe(1)
-        ->and($context['is_count_even'])->toBeFalse()
-        ->and($context['display_label'])->toBe('Item #1 (active)');
+        ->and($context['isCountEven'])->toBeFalse()
+        ->and($context['displayLabel'])->toBe('Item #1 (active)');
 });
 
 test('contextKeys filtering includes computed values', function (): void {
@@ -41,15 +41,15 @@ test('contextKeys filtering includes computed values', function (): void {
 
     $this->postJson("/api/computed/{$machineId}/start");
 
-    // COMPLETE endpoint has contextKeys: ['count', 'is_count_even']
+    // COMPLETE endpoint has contextKeys: ['count', 'isCountEven']
     $response = $this->postJson("/api/computed/{$machineId}/complete");
 
     $response->assertOk();
 
     $context = $response->json('data.context');
 
-    expect($context)->toHaveKeys(['count', 'is_count_even'])
-        ->and($context)->not->toHaveKeys(['status', 'display_label']);
+    expect($context)->toHaveKeys(['count', 'isCountEven'])
+        ->and($context)->not->toHaveKeys(['status', 'displayLabel']);
 });
 
 test('contextKeys filtering excludes computed values', function (): void {
@@ -58,12 +58,12 @@ test('contextKeys filtering excludes computed values', function (): void {
 
     $this->postJson("/api/computed/{$machineId}/start");
 
-    // COMPLETE endpoint has contextKeys: ['count', 'is_count_even']
+    // COMPLETE endpoint has contextKeys: ['count', 'isCountEven']
     $response = $this->postJson("/api/computed/{$machineId}/complete");
 
     $context = $response->json('data.context');
 
-    expect($context)->not->toHaveKey('display_label');
+    expect($context)->not->toHaveKey('displayLabel');
 });
 
 test('State toArray includes computed context', function (): void {
@@ -72,8 +72,8 @@ test('State toArray includes computed context', function (): void {
 
     $stateArray = $state->toArray();
 
-    expect($stateArray['context'])->toHaveKeys(['count', 'status', 'is_count_even', 'display_label'])
-        ->and($stateArray['context']['is_count_even'])->toBeFalse()
+    expect($stateArray['context'])->toHaveKeys(['count', 'status', 'isCountEven', 'displayLabel'])
+        ->and($stateArray['context']['isCountEven'])->toBeFalse()
         ->and($stateArray['context']['count'])->toBe(1);
 });
 
@@ -91,5 +91,5 @@ test('DB persisted context excludes computed values', function (): void {
     $persistedContext = $lastEvent->context;
 
     expect($persistedContext)->toHaveKeys(['count', 'status'])
-        ->and($persistedContext)->not->toHaveKeys(['is_count_even', 'display_label']);
+        ->and($persistedContext)->not->toHaveKeys(['isCountEven', 'displayLabel']);
 });

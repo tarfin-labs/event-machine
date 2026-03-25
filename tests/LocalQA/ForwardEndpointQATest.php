@@ -81,7 +81,7 @@ it('LocalQA: forward via HTTP endpoint delivers PROVIDE_CARD to async child', fu
 
     // Forward PROVIDE_CARD via HTTP
     $response = $this->postJson("/api/forward-parent/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4242424242424242'],
+        'payload' => ['cardNumber' => '4242424242424242'],
     ]);
 
     $response->assertStatus(200);
@@ -95,7 +95,7 @@ it('LocalQA: forward via HTTP endpoint delivers PROVIDE_CARD to async child', fu
 
     // Verify child context was updated by storeCardAction
     $childContext = $data['child']['context'] ?? [];
-    expect($childContext['data']['card_last4'] ?? $childContext['card_last4'] ?? null)->toBe('4242');
+    expect($childContext['data']['cardLast4'] ?? $childContext['cardLast4'] ?? null)->toBe('4242');
 });
 
 it('LocalQA: forward via HTTP with ResultBehavior returns custom response', function (): void {
@@ -103,12 +103,12 @@ it('LocalQA: forward via HTTP with ResultBehavior returns custom response', func
 
     // Step 1: Forward PROVIDE_CARD (no result, default response)
     $this->postJson("/api/forward-parent/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4242424242424242'],
+        'payload' => ['cardNumber' => '4242424242424242'],
     ])->assertStatus(200);
 
     // Step 2: Forward CONFIRM_PAYMENT (has result: PaymentStepResult)
     $response = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
-        'payload' => ['confirmation_code' => 'ABC123'],
+        'payload' => ['confirmationCode' => 'ABC123'],
     ]);
 
     $response->assertStatus(200);
@@ -116,9 +116,9 @@ it('LocalQA: forward via HTTP with ResultBehavior returns custom response', func
     $data = $response->json('data');
 
     // PaymentStepResult returns: order_id, card_last4, child_step
-    expect($data)->toHaveKey('card_last4')
-        ->and($data['card_last4'])->toBe('4242');
-    expect($data)->toHaveKey('child_step');
+    expect($data)->toHaveKey('cardLast4')
+        ->and($data['cardLast4'])->toBe('4242');
+    expect($data)->toHaveKey('childStep');
 
     // Wait for child completion → parent @done
     $parentCompleted = LocalQATestCase::waitFor(function () use ($machineId) {
@@ -141,7 +141,7 @@ it('LocalQA: forward returns error when parent not in delegating state', functio
 
     // Try to forward — parent is in idle, not processing
     $response = $this->postJson("/api/forward-parent/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4242424242424242'],
+        'payload' => ['cardNumber' => '4242424242424242'],
     ]);
 
     // Should fail — parent tries to send PROVIDE_CARD which is not in its own events
@@ -181,7 +181,7 @@ it('LocalQA: forward rename CANCEL_ORDER → ABORT delivers to child via Machine
     // Child starts in awaiting_card. ABORT is only in awaiting_confirmation.
     // Advance child to awaiting_confirmation first via direct send.
     $child = ForwardChildEndpointMachine::create(state: $childRootEventId);
-    $child->send(['type' => 'PROVIDE_CARD', 'payload' => ['card_number' => '4242424242424242']]);
+    $child->send(['type' => 'PROVIDE_CARD', 'payload' => ['cardNumber' => '4242424242424242']]);
 
     // Verify child is now in awaiting_confirmation
     $childCs = MachineCurrentState::where('root_event_id', $childRootEventId)->first();
@@ -210,12 +210,12 @@ it('LocalQA: forward causing child final state auto-completes parent', function 
 
     // Step 1: PROVIDE_CARD → child in awaiting_confirmation
     $this->postJson("/api/forward-parent/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4242424242424242'],
+        'payload' => ['cardNumber' => '4242424242424242'],
     ])->assertStatus(200);
 
     // Step 2: CONFIRM_PAYMENT → child reaches 'charged' (final)
     $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
-        'payload' => ['confirmation_code' => 'FINAL123'],
+        'payload' => ['confirmationCode' => 'FINAL123'],
     ])->assertStatus(200);
 
     // Wait for ChildMachineCompletionJob → parent @done → completed
@@ -242,7 +242,7 @@ it('LocalQA: forward with custom URI + method + action works via real HTTP', fun
     // FullConfigForwardParentMachine has:
     // uri: '/enter-payment-details', method: 'PATCH', action: ForwardEndpointAction
     $response = $this->patchJson("/api/full-config-parent/{$machineId}/enter-payment-details", [
-        'payload' => ['card_number' => '4242424242424242'],
+        'payload' => ['cardNumber' => '4242424242424242'],
     ]);
 
     // Custom status code: 202
@@ -262,12 +262,12 @@ it('LocalQA: parent ResultBehavior receives both parent and child context via HT
 
     // Forward PROVIDE_CARD → child stores card_last4
     $this->postJson("/api/forward-parent/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '5555555555554444'],
+        'payload' => ['cardNumber' => '5555555555554444'],
     ])->assertStatus(200);
 
     // Forward CONFIRM_PAYMENT (has result: PaymentStepResult using ForwardContext)
     $response = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
-        'payload' => ['confirmation_code' => 'CTX-TEST'],
+        'payload' => ['confirmationCode' => 'CTX-TEST'],
     ]);
 
     $response->assertStatus(200);
@@ -275,10 +275,10 @@ it('LocalQA: parent ResultBehavior receives both parent and child context via HT
 
     // PaymentStepResult reads parent context (order_id) and child context (card_last4)
     // order_id comes from parent context (default null)
-    expect($data)->toHaveKey('order_id')
-        ->and($data)->toHaveKey('card_last4')
-        ->and($data['card_last4'])->toBe('4444')
-        ->and($data)->toHaveKey('child_step');
+    expect($data)->toHaveKey('orderId')
+        ->and($data)->toHaveKey('cardLast4')
+        ->and($data['cardLast4'])->toBe('4444')
+        ->and($data)->toHaveKey('childStep');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -290,7 +290,7 @@ it('LocalQA: parent CANCEL orphans child, subsequent forward fails', function ()
 
     // Forward PROVIDE_CARD first via HTTP
     $this->postJson("/api/forward-parent/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4242424242424242'],
+        'payload' => ['cardNumber' => '4242424242424242'],
     ])->assertStatus(200);
 
     // Send CANCEL via Machine::send() (CANCEL uses TestStartEvent which returns
@@ -304,7 +304,7 @@ it('LocalQA: parent CANCEL orphans child, subsequent forward fails', function ()
 
     // Try to forward again — should fail (parent not in delegating state)
     $response = $this->postJson("/api/forward-parent/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '1111111111111111'],
+        'payload' => ['cardNumber' => '1111111111111111'],
     ]);
 
     expect($response->status())->toBeGreaterThanOrEqual(400);
@@ -344,13 +344,13 @@ it('LocalQA: available_events updates correctly through full forward lifecycle',
 
     // 3. Forward PROVIDE_CARD → child moves to awaiting_confirmation
     $provideResponse = $this->postJson("/api/forward-parent/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4242424242424242'],
+        'payload' => ['cardNumber' => '4242424242424242'],
     ]);
     $provideResponse->assertStatus(200);
 
     // 4. Forward CONFIRM_PAYMENT → child reaches final
     $confirmResponse = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
-        'payload' => ['confirmation_code' => 'LIFECYCLE'],
+        'payload' => ['confirmationCode' => 'LIFECYCLE'],
     ]);
     $confirmResponse->assertStatus(200);
 
@@ -378,20 +378,20 @@ it('LocalQA: ForwardContext carries correct child data through real async flow',
 
     // Forward PROVIDE_CARD with specific card number
     $this->postJson("/api/forward-parent/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '9876543210987654'],
+        'payload' => ['cardNumber' => '9876543210987654'],
     ])->assertStatus(200);
 
     // Forward CONFIRM_PAYMENT (uses PaymentStepResult with ForwardContext)
     $response = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
-        'payload' => ['confirmation_code' => 'FC-VERIFY'],
+        'payload' => ['confirmationCode' => 'FC-VERIFY'],
     ]);
 
     $response->assertStatus(200);
     $data = $response->json('data');
 
-    // ForwardContext->childContext->get('card_last4') should be last 4 of card
-    expect($data)->toHaveKey('order_id')
-        ->and($data)->toHaveKey('card_last4')
-        ->and($data['card_last4'])->toBe('7654')
-        ->and($data)->toHaveKey('child_step');
+    // ForwardContext->childContext->get('cardLast4') should be last 4 of card
+    expect($data)->toHaveKey('orderId')
+        ->and($data)->toHaveKey('cardLast4')
+        ->and($data['cardLast4'])->toBe('7654')
+        ->and($data)->toHaveKey('childStep');
 });

@@ -83,8 +83,8 @@ it('LocalQA: restored state is always a valid known state during concurrent proc
             }
 
             // Context counters must be non-negative integers
-            $entryCount = $restored->state->context->get('entry_count');
-            $exitCount  = $restored->state->context->get('exit_count');
+            $entryCount = $restored->state->context->get('entryCount');
+            $exitCount  = $restored->state->context->get('exitCount');
 
             expect($entryCount)->toBeGreaterThanOrEqual(0);
             expect($exitCount)->toBeGreaterThanOrEqual(0);

@@ -63,8 +63,8 @@ it('LocalQA: both parallel regions fail simultaneously — single @fail transiti
     expect($failEvents)->toBe(1, 'Expected exactly one @fail event, got '.$failEvents);
 
     // Neither region's result was set (both threw before setting context)
-    expect($restored->state->context->get('region_a_result'))->toBeNull();
-    expect($restored->state->context->get('region_b_result'))->toBeNull();
+    expect($restored->state->context->get('regionAResult'))->toBeNull();
+    expect($restored->state->context->get('regionBResult'))->toBeNull();
 
     // No stale locks
     $locks = DB::table('machine_locks')->where('root_event_id', $rootEventId)->count();
@@ -96,11 +96,11 @@ it('LocalQA: parallel region scalar context overwrite — last writer wins under
     $restored = E2EContextConflictMachine::create(state: $rootEventId);
 
     // Both regions executed
-    expect($restored->state->context->get('region_a_wrote'))->toBeTrue();
-    expect($restored->state->context->get('region_b_wrote'))->toBeTrue();
+    expect($restored->state->context->get('regionAWrote'))->toBeTrue();
+    expect($restored->state->context->get('regionBWrote'))->toBeTrue();
 
     // Scalar: one of the two values wins (last-writer-wins, nondeterministic under concurrency)
-    $sharedScalar = $restored->state->context->get('shared_scalar');
+    $sharedScalar = $restored->state->context->get('sharedScalar');
     expect($sharedScalar)->toBeIn(['value_from_a', 'value_from_b']);
 
     // A PARALLEL_CONTEXT_CONFLICT event should be recorded for the second writer
@@ -139,7 +139,7 @@ it('LocalQA: parallel region context merge preserves both regions changes under 
     expect($completed)->toBeTrue('Context conflict machine did not complete');
 
     $restored    = E2EContextConflictMachine::create(state: $rootEventId);
-    $sharedArray = $restored->state->context->get('shared_array');
+    $sharedArray = $restored->state->context->get('sharedArray');
 
     // Deep merge: both regions' unique keys survive
     expect($sharedArray['from_a'])->toBeTrue('Region A key not preserved in merge');

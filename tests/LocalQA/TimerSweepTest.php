@@ -164,7 +164,7 @@ it('LocalQA: every max/then transitions machine to failed via Horizon', function
             // Also wait for Horizon to process the timer job (context updated)
             $restored = EveryWithMaxMachine::create(state: $rootEventId);
 
-            return $restored->state->context->get('retry_count') >= ($i + 1);
+            return $restored->state->context->get('retryCount') >= ($i + 1);
         }, timeoutSeconds: 60, description: 'every max/then: cycle '.($i + 1).' fire_count+retry_count');
     }
 

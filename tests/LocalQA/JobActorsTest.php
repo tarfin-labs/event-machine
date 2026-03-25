@@ -42,7 +42,7 @@ it('LocalQA: job actor runs via Horizon and completes parent with result', funct
 
     // Verify result was passed to parent context
     $restored = JobActorParentMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('payment_id'))->toBe('pay_test_123');
+    expect($restored->state->context->get('paymentId'))->toBe('pay_test_123');
 });
 
 // ═══════════════════════════════════════════════════════════════

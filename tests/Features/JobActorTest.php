@@ -253,7 +253,7 @@ it('ChildJobJob resolves handle() dependencies via service container', function 
 
     Queue::assertPushed(ChildMachineCompletionJob::class, function (ChildMachineCompletionJob $completionJob): bool {
         return $completionJob->success === true
-            && $completionJob->outputData === ['service_result' => 'fake-result'];
+            && $completionJob->outputData === ['serviceResult' => 'fake-result'];
     });
 });
 

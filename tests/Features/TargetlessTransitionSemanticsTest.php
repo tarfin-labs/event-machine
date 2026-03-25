@@ -270,7 +270,7 @@ it('targetless in compound state fires no exit/entry at any level', function ():
         config: [
             'id'      => 'targetless_compound',
             'initial' => 'parent',
-            'context' => ['exit_child_count' => 0, 'exit_parent_count' => 0, 'tick_count' => 0],
+            'context' => ['exitChildCount' => 0, 'exitParentCount' => 0, 'tickCount' => 0],
             'states'  => [
                 'parent' => [
                     'initial' => 'child_a',
@@ -291,13 +291,13 @@ it('targetless in compound state fires no exit/entry at any level', function ():
         behavior: [
             'actions' => [
                 'countParentExitAction' => function (ContextManager $ctx): void {
-                    $ctx->set('exit_parent_count', $ctx->get('exit_parent_count') + 1);
+                    $ctx->set('exitParentCount', $ctx->get('exitParentCount') + 1);
                 },
                 'countChildExitAction' => function (ContextManager $ctx): void {
-                    $ctx->set('exit_child_count', $ctx->get('exit_child_count') + 1);
+                    $ctx->set('exitChildCount', $ctx->get('exitChildCount') + 1);
                 },
                 'countTickAction' => function (ContextManager $ctx): void {
-                    $ctx->set('tick_count', $ctx->get('tick_count') + 1);
+                    $ctx->set('tickCount', $ctx->get('tickCount') + 1);
                 },
             ],
         ],
@@ -309,10 +309,10 @@ it('targetless in compound state fires no exit/entry at any level', function ():
     $state = $definition->transition(['type' => 'TICK'], $state);
 
     // Transition action ran
-    expect($state->context->get('tick_count'))->toBe(1);
+    expect($state->context->get('tickCount'))->toBe(1);
     // CORRECT: neither child nor parent exit should fire for targetless
-    expect($state->context->get('exit_child_count'))->toBe(0);
-    expect($state->context->get('exit_parent_count'))->toBe(0);
+    expect($state->context->get('exitChildCount'))->toBe(0);
+    expect($state->context->get('exitParentCount'))->toBe(0);
 });
 
 // ------------------------------------------------------------------
@@ -447,7 +447,7 @@ it('multiple targetless transitions run actions without exit/entry', function ()
     TestMachine::define([
         'id'      => 'targetless_multi',
         'initial' => 'active',
-        'context' => ['tick_count' => 0, 'log' => []],
+        'context' => ['tickCount' => 0, 'log' => []],
         'states'  => [
             'active' => [
                 'entry' => 'logEntryAction',
@@ -468,16 +468,16 @@ it('multiple targetless transitions run actions without exit/entry', function ()
                 $ctx->set('log', [...$ctx->get('log'), 'exit']);
             },
             'tickAction' => function (ContextManager $ctx): void {
-                $ctx->set('tick_count', $ctx->get('tick_count') + 1);
+                $ctx->set('tickCount', $ctx->get('tickCount') + 1);
             },
         ],
     ])
         ->assertContext('log', ['entry'])
-        ->assertContext('tick_count', 0)
+        ->assertContext('tickCount', 0)
         ->send('TICK')
         ->send('TICK')
         ->send('TICK')
-        ->assertContext('tick_count', 3)
+        ->assertContext('tickCount', 3)
         // CORRECT: only initial entry — no exit, no re-entry
         ->assertContext('log', ['entry']);
 });

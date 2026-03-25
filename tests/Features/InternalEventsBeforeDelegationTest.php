@@ -32,7 +32,7 @@ test('internal events raised in entry are processed before sync child machine in
             'id'      => 'internal_before_delegation',
             'initial' => 'idle',
             'context' => [
-                'execution_order' => [],
+                'executionOrder' => [],
             ],
             'states' => [
                 'idle' => [
@@ -63,9 +63,9 @@ test('internal events raised in entry are processed before sync child machine in
         behavior: [
             'actions' => [
                 'logRedirectAction' => function (ContextManager $context): void {
-                    $order   = $context->get('execution_order');
+                    $order   = $context->get('executionOrder');
                     $order[] = 'transition:redirect';
-                    $context->set('execution_order', $order);
+                    $context->set('executionOrder', $order);
                 },
             ],
         ],
@@ -77,7 +77,7 @@ test('internal events raised in entry are processed before sync child machine in
     // Machine should be in 'redirected', NOT 'child_completed'.
     expect($state->matches('redirected'))->toBeTrue();
 
-    expect($state->context->get('execution_order'))->toBe([
+    expect($state->context->get('executionOrder'))->toBe([
         'entry:raise_redirect',  // 1. Entry action runs and raises REDIRECT
         'transition:redirect',   // 2. REDIRECT processed -> transition to redirected
         'entry:redirected',      // 3. Redirected state entered
@@ -93,7 +93,7 @@ test('sync delegation still works when no internal events are raised in entry', 
             'id'      => 'delegation_no_raise',
             'initial' => 'idle',
             'context' => [
-                'execution_order' => [],
+                'executionOrder' => [],
             ],
             'states' => [
                 'idle' => [
@@ -115,14 +115,14 @@ test('sync delegation still works when no internal events are raised in entry', 
         behavior: [
             'actions' => [
                 'logEntryAction' => function (ContextManager $context): void {
-                    $order   = $context->get('execution_order');
+                    $order   = $context->get('executionOrder');
                     $order[] = 'entry:delegating';
-                    $context->set('execution_order', $order);
+                    $context->set('executionOrder', $order);
                 },
                 'logChildCompletedAction' => function (ContextManager $context): void {
-                    $order   = $context->get('execution_order');
+                    $order   = $context->get('executionOrder');
                     $order[] = 'entry:child_completed';
-                    $context->set('execution_order', $order);
+                    $context->set('executionOrder', $order);
                 },
             ],
         ],
@@ -133,7 +133,7 @@ test('sync delegation still works when no internal events are raised in entry', 
     // No raised events -> child delegation proceeds normally
     expect($state->matches('child_completed'))->toBeTrue();
 
-    expect($state->context->get('execution_order'))->toBe([
+    expect($state->context->get('executionOrder'))->toBe([
         'entry:delegating',       // 1. Entry action (no raise)
         'entry:child_completed',  // 2. Child completes, @done -> child_completed
     ]);
@@ -149,7 +149,7 @@ test('raised event transitions machine away so child delegation is skipped entir
             'id'      => 'raise_skips_delegation',
             'initial' => 'idle',
             'context' => [
-                'execution_order' => [],
+                'executionOrder' => [],
             ],
             'states' => [
                 'idle' => [
@@ -180,14 +180,14 @@ test('raised event transitions machine away so child delegation is skipped entir
         behavior: [
             'actions' => [
                 'logSetupTransitionAction' => function (ContextManager $context): void {
-                    $order   = $context->get('execution_order');
+                    $order   = $context->get('executionOrder');
                     $order[] = 'transition:setup';
-                    $context->set('execution_order', $order);
+                    $context->set('executionOrder', $order);
                 },
                 'logSettingUpEntryAction' => function (ContextManager $context): void {
-                    $order   = $context->get('execution_order');
+                    $order   = $context->get('executionOrder');
                     $order[] = 'entry:setting_up';
-                    $context->set('execution_order', $order);
+                    $context->set('executionOrder', $order);
                 },
             ],
         ],
@@ -199,7 +199,7 @@ test('raised event transitions machine away so child delegation is skipped entir
     // Child delegation on 'delegating' is skipped entirely.
     expect($state->matches('setting_up'))->toBeTrue();
 
-    expect($state->context->get('execution_order'))->toBe([
+    expect($state->context->get('executionOrder'))->toBe([
         'entry:raise_setup',     // 1. Entry action raises SETUP
         'transition:setup',      // 2. SETUP processed -> transition to setting_up
         'entry:setting_up',      // 3. setting_up state entered

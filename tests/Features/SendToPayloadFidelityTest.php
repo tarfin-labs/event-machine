@@ -20,7 +20,7 @@ it('sendTo preserves payload types through synchronous cross-machine call', func
             'id'      => 'send_to_target',
             'initial' => 'waiting',
             'context' => [
-                'received_payload' => null,
+                'receivedPayload' => null,
             ],
             'states' => [
                 'waiting' => [
@@ -37,7 +37,7 @@ it('sendTo preserves payload types through synchronous cross-machine call', func
         behavior: [
             'actions' => [
                 'capturePayloadAction' => function (ContextManager $context, EventBehavior $event): void {
-                    $context->set('received_payload', $event->payload);
+                    $context->set('receivedPayload', $event->payload);
                 },
             ],
         ],
@@ -71,7 +71,7 @@ it('sendTo preserves payload types through synchronous cross-machine call', func
     ]);
 
     // Verify received payload matches exactly
-    $receivedPayload = $targetMachine->state->context->get('received_payload');
+    $receivedPayload = $targetMachine->state->context->get('receivedPayload');
 
     expect($receivedPayload['integer_value'])->toBe(42)
         ->and($receivedPayload['integer_value'])->toBeInt()

@@ -37,7 +37,7 @@ it('E2E: @after and @every coexist on same state', function (): void {
         config: [
             'id'      => 'coexist_e2e',
             'initial' => 'active',
-            'context' => ['heartbeat_count' => 0],
+            'context' => ['heartbeatCount' => 0],
             'states'  => [
                 'active' => [
                     'on' => [
@@ -51,7 +51,7 @@ it('E2E: @after and @every coexist on same state', function (): void {
         behavior: [
             'actions' => [
                 'heartbeatAction' => function (ContextManager $ctx): void {
-                    $ctx->set('heartbeat_count', $ctx->get('heartbeat_count') + 1);
+                    $ctx->set('heartbeatCount', $ctx->get('heartbeatCount') + 1);
                 },
             ],
         ],
@@ -63,7 +63,7 @@ it('E2E: @after and @every coexist on same state', function (): void {
     // Send HEARTBEAT — should run action, stay in active
     $state = $definition->transition(event: ['type' => 'HEARTBEAT'], state: $state);
     expect($state->value)->toBe(['coexist_e2e.active'])
-        ->and($state->context->get('heartbeat_count'))->toBe(1);
+        ->and($state->context->get('heartbeatCount'))->toBe(1);
 
     // Send EXPIRED — should transition to done
     $state = $definition->transition(event: ['type' => 'EXPIRED'], state: $state);

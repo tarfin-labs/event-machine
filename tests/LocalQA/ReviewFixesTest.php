@@ -48,7 +48,7 @@ it('LocalQA: every timer does not double-fire on rapid successive sweeps', funct
         // Also wait for the timer job to actually process (update context)
         $restored = EveryTimerMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('billing_count') >= 1;
+        return $restored->state->context->get('billingCount') >= 1;
     }, timeoutSeconds: 45, description: 'every timer: waiting for fire_count>=1 AND billing_count>=1');
 
     expect($firstFired)->toBeTrue('First every-timer fire not processed');
@@ -66,7 +66,7 @@ it('LocalQA: every timer does not double-fire on rapid successive sweeps', funct
 
     // Verify: billing_count in machine context should be 1
     $restored = EveryTimerMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('billing_count'))->toBe(1);
+    expect($restored->state->context->get('billingCount'))->toBe(1);
 });
 
 it('LocalQA: every timer fire record exists before job is processed', function (): void {
@@ -89,7 +89,7 @@ it('LocalQA: every timer fire record exists before job is processed', function (
     $processed = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = EveryTimerMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('billing_count') >= 1;
+        return $restored->state->context->get('billingCount') >= 1;
     }, timeoutSeconds: 60);
 
     expect($processed)->toBeTrue('Every timer job not processed by Horizon');
@@ -124,7 +124,7 @@ it('LocalQA: every max/then fires then-event and marks exhausted atomically', fu
             // Wait for Horizon to process the timer job (context updated)
             $restored = EveryWithMaxMachine::create(state: $rootEventId);
 
-            return $restored->state->context->get('retry_count') >= $i;
+            return $restored->state->context->get('retryCount') >= $i;
         }, timeoutSeconds: 60, description: "every max/then: cycle {$i} fire_count+retry_count");
 
         expect($fired)->toBeTrue("Retry cycle {$i} not processed");
@@ -247,7 +247,7 @@ it('LocalQA: forward event routing renames PARENT_UPDATE to CHILD_UPDATE', funct
 
     // Verify child context was updated by the action
     $child = ForwardableChildMachine::create(state: $childRootEventId);
-    expect($child->state->context->get('updated_value'))->toBe('received');
+    expect($child->state->context->get('updatedValue'))->toBe('received');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -287,8 +287,8 @@ it('LocalQA: concurrent child machines do not share mutated definition context',
     // Both should be in idle with their own default context
     expect($child1->state->currentStateDefinition->id)->toBe('forwardable_child.idle')
         ->and($child2->state->currentStateDefinition->id)->toBe('forwardable_child.idle')
-        ->and($child1->state->context->get('updated_value'))->toBeNull()
-        ->and($child2->state->context->get('updated_value'))->toBeNull();
+        ->and($child1->state->context->get('updatedValue'))->toBeNull()
+        ->and($child2->state->context->get('updatedValue'))->toBeNull();
 });
 
 // ═══════════════════════════════════════════════════════════════

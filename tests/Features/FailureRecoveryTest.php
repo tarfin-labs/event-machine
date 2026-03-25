@@ -18,7 +18,7 @@ it('routes to @fail and exits cleanly when parallel region fails', function (): 
             'id'      => 'parallel_entry_error',
             'initial' => 'processing',
             'context' => [
-                'error_caught' => false,
+                'errorCaught' => false,
             ],
             'states' => [
                 'processing' => [
@@ -52,7 +52,7 @@ it('routes to @fail and exits cleanly when parallel region fails', function (): 
         behavior: [
             'actions' => [
                 'markErrorCaughtAction' => function (ContextManager $ctx): void {
-                    $ctx->set('error_caught', true);
+                    $ctx->set('errorCaught', true);
                 },
             ],
         ],
@@ -70,7 +70,7 @@ it('routes to @fail and exits cleanly when parallel region fails', function (): 
 
     // @fail fires, machine exits parallel state cleanly and transitions to error_state
     expect($state->value)->toBe(['parallel_entry_error.error_state'])
-        ->and($state->context->get('error_caught'))->toBeTrue()
+        ->and($state->context->get('errorCaught'))->toBeTrue()
         ->and($state->isInParallelState())->toBeFalse();
 });
 
@@ -91,7 +91,7 @@ it('throws MachineValidationException instead of routing through @fail when Vali
             'id'      => 'validation_bypasses_fail',
             'initial' => 'idle',
             'context' => [
-                'fail_reached' => false,
+                'failReached' => false,
             ],
             'states' => [
                 'idle' => [
@@ -147,10 +147,10 @@ it('routes to correct @fail branch based on guard conditions', function (): void
             'id'      => 'conditional_fail_routing',
             'initial' => 'processing',
             'context' => [
-                'retry_count'  => 0,
-                'alert_sent'   => false,
-                'retried'      => false,
-                'fallback_hit' => false,
+                'retryCount'  => 0,
+                'alertSent'   => false,
+                'retried'     => false,
+                'fallbackHit' => false,
             ],
             'states' => [
                 'processing' => [
@@ -187,19 +187,19 @@ it('routes to correct @fail branch based on guard conditions', function (): void
         behavior: [
             'guards' => [
                 'canRetryGuard' => function (ContextManager $ctx): bool {
-                    return $ctx->get('retry_count') < 3;
+                    return $ctx->get('retryCount') < 3;
                 },
                 'tooManyRetriesGuard' => function (ContextManager $ctx): bool {
-                    return $ctx->get('retry_count') >= 10;
+                    return $ctx->get('retryCount') >= 10;
                 },
             ],
             'actions' => [
                 'incrementRetryAndMarkAction' => function (ContextManager $ctx): void {
-                    $ctx->set('retry_count', $ctx->get('retry_count') + 1);
+                    $ctx->set('retryCount', $ctx->get('retryCount') + 1);
                     $ctx->set('retried', true);
                 },
                 'sendAlertAction' => function (ContextManager $ctx): void {
-                    $ctx->set('alert_sent', true);
+                    $ctx->set('alertSent', true);
                 },
             ],
         ],
@@ -212,24 +212,24 @@ it('routes to correct @fail branch based on guard conditions', function (): void
 
     expect($state->value)->toBe(['conditional_fail_routing.retrying'])
         ->and($state->context->get('retried'))->toBeTrue()
-        ->and($state->context->get('retry_count'))->toBe(1)
-        ->and($state->context->get('alert_sent'))->toBeFalse();
+        ->and($state->context->get('retryCount'))->toBe(1)
+        ->and($state->context->get('alertSent'))->toBeFalse();
 
     // Scenario 2: retry_count=10 → canRetryGuard fails, tooManyRetriesGuard passes → critical_failure
     $state2 = $definition->getInitialState();
-    $state2->context->set('retry_count', 10);
+    $state2->context->set('retryCount', 10);
     $state2 = $definition->processParallelOnFail($parallelState, $state2);
 
     expect($state2->value)->toBe(['conditional_fail_routing.critical_failure'])
-        ->and($state2->context->get('alert_sent'))->toBeTrue();
+        ->and($state2->context->get('alertSent'))->toBeTrue();
 
     // Scenario 3: retry_count=5 → canRetryGuard fails (5 >= 3), tooManyRetriesGuard fails (5 < 10) → generic_error (no-guard fallback)
     $state3 = $definition->getInitialState();
-    $state3->context->set('retry_count', 5);
+    $state3->context->set('retryCount', 5);
     $state3 = $definition->processParallelOnFail($parallelState, $state3);
 
     expect($state3->value)->toBe(['conditional_fail_routing.generic_error'])
-        ->and($state3->context->get('alert_sent'))->toBeFalse()
+        ->and($state3->context->get('alertSent'))->toBeFalse()
         ->and($state3->context->get('retried'))->toBeFalse();
 });
 
@@ -244,8 +244,8 @@ it('can transition out of error state after @fail routes there', function (): vo
             'id'      => 'recovery_after_fail',
             'initial' => 'idle',
             'context' => [
-                'error_message' => null,
-                'recovered'     => false,
+                'errorMessage' => null,
+                'recovered'    => false,
             ],
             'states' => [
                 'idle' => [
@@ -276,7 +276,7 @@ it('can transition out of error state after @fail routes there', function (): vo
         'behavior' => [
             'actions' => [
                 'captureErrorAction' => function (ContextManager $ctx): void {
-                    $ctx->set('error_message', 'Child failed');
+                    $ctx->set('errorMessage', 'Child failed');
                 },
                 'markRecoveredAction' => function (ContextManager $ctx): void {
                     $ctx->set('recovered', true);
@@ -289,7 +289,7 @@ it('can transition out of error state after @fail routes there', function (): vo
     $state = $machine->send(['type' => 'START']);
 
     expect($state->currentStateDefinition->key)->toBe('error_state')
-        ->and($state->context->get('error_message'))->toBe('Child failed');
+        ->and($state->context->get('errorMessage'))->toBe('Child failed');
 
     // Step 2: Send RETRY — machine recovers from error state
     $state = $machine->send(['type' => 'RETRY']);

@@ -10,21 +10,21 @@ use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 test('it can get a calculator behavior', function (): void {
     // 1. Arrange
     $calculator = OrderMachine::getCalculator('calculateOrderTotalCalculator');
-    $context    = new ContextManager(['items_count' => 5]);
+    $context    = new ContextManager(['itemsCount' => 5]);
 
     // 2. Act
     $calculator($context);
 
     // 3. Assert
     expect($calculator)->toBeCallable();
-    expect($context->get('items_count'))->toBe(50);
+    expect($context->get('itemsCount'))->toBe(50);
 });
 
 test('it can get a guard behavior', function (): void {
     // 1. Arrange
     $guard          = OrderMachine::getGuard('validateOrderGuard');
-    $validContext   = new ContextManager(['items_count' => 5]);
-    $invalidContext = new ContextManager(['items_count' => 0]);
+    $validContext   = new ContextManager(['itemsCount' => 5]);
+    $invalidContext = new ContextManager(['itemsCount' => 0]);
 
     // 2. Act & 3. Assert
     expect($guard)->toBeCallable()
@@ -42,7 +42,7 @@ test('it can get an action behavior', function (): void {
 
     // 3. Assert
     expect($action)->toBeCallable()
-        ->and($context->get('order_created'))->toBeTrue();
+        ->and($context->get('orderCreated'))->toBeTrue();
 });
 
 test('it can get an event behavior', function (): void {

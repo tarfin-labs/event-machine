@@ -13,8 +13,8 @@ test('parallel state entry action raises event → processed in Phase 1', functi
             'id'      => 'parent_raise',
             'initial' => 'parallel_parent',
             'context' => [
-                'raise_action_ran' => false,
-                'setup_complete'   => false,
+                'raiseActionRan' => false,
+                'setupComplete'  => false,
             ],
             'states' => [
                 'parallel_parent' => [
@@ -48,7 +48,7 @@ test('parallel state entry action raises event → processed in Phase 1', functi
         behavior: [
             'actions' => [
                 'markSetupAction' => function (ContextManager $context): void {
-                    $context->set('setup_complete', true);
+                    $context->set('setupComplete', true);
                 },
             ],
         ]
@@ -57,8 +57,8 @@ test('parallel state entry action raises event → processed in Phase 1', functi
     $state = $definition->getInitialState();
 
     // Parallel state entry raised INTERNAL_GO → region A transitioned
-    expect($state->context->get('raise_action_ran'))->toBeTrue();
-    expect($state->context->get('setup_complete'))->toBeTrue();
+    expect($state->context->get('raiseActionRan'))->toBeTrue();
+    expect($state->context->get('setupComplete'))->toBeTrue();
     expect($state->value)->toContain('parent_raise.parallel_parent.region_a.active_a');
 });
 
@@ -68,7 +68,7 @@ test('parallel state entry raises event with no handler → throws NoTransitionD
             'id'      => 'no_handler',
             'initial' => 'parallel_parent',
             'context' => [
-                'raise_action_ran' => false,
+                'raiseActionRan' => false,
             ],
             'states' => [
                 'parallel_parent' => [

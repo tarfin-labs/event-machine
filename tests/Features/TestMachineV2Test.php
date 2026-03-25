@@ -130,7 +130,7 @@ it('V3: fakingChild with multiple children cleans all', function (): void {
 });
 
 it('V4: assertChildInvoked passes when child invoked', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_v4']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_v4']);
 
     $testMachine = ParentOrderMachine::test();
     $testMachine->send('START_PAYMENT');
@@ -140,7 +140,7 @@ it('V4: assertChildInvoked passes when child invoked', function (): void {
 });
 
 it('V5: assertChildInvoked fails when child not invoked', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_v5']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_v5']);
 
     $testMachine = ParentOrderMachine::test();
     // Never send START_PAYMENT - child is never invoked
@@ -148,7 +148,7 @@ it('V5: assertChildInvoked fails when child not invoked', function (): void {
 })->throws(AssertionFailedError::class);
 
 it('V6: assertChildNotInvoked passes when child not invoked', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_v6']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_v6']);
 
     $testMachine = ParentOrderMachine::test();
     // Never send START_PAYMENT
@@ -158,7 +158,7 @@ it('V6: assertChildNotInvoked passes when child not invoked', function (): void 
 });
 
 it('V7: assertChildInvokedTimes validates exact count', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_v7']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_v7']);
 
     $testMachine = ParentOrderMachine::test();
     $testMachine->send('START_PAYMENT');
@@ -168,27 +168,27 @@ it('V7: assertChildInvokedTimes validates exact count', function (): void {
 });
 
 it('V8: assertChildInvokedWith validates context subset', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_v8']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_v8']);
 
     $testMachine = ParentOrderMachine::test([
-        'order_id'     => 'ORD-V8',
-        'total_amount' => 3000,
+        'orderId'     => 'ORD-V8',
+        'totalAmount' => 3000,
     ]);
     $testMachine->send('START_PAYMENT');
 
-    // ParentOrderMachine 'with' maps: 'order_id' => order_id, 'amount' => 'total_amount'
-    $testMachine->assertChildInvokedWith(ChildPaymentMachine::class, ['order_id' => 'ORD-V8']);
+    // ParentOrderMachine 'with' maps: 'orderId' => order_id, 'amount' => 'totalAmount'
+    $testMachine->assertChildInvokedWith(ChildPaymentMachine::class, ['orderId' => 'ORD-V8']);
 
     expect(true)->toBeTrue();
 });
 
 it('V9: assertChildInvokedWith fails on mismatch', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_v9']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_v9']);
 
     $testMachine = ParentOrderMachine::test();
     $testMachine->send('START_PAYMENT');
 
-    $testMachine->assertChildInvokedWith(ChildPaymentMachine::class, ['order_id' => 'NONEXISTENT']);
+    $testMachine->assertChildInvokedWith(ChildPaymentMachine::class, ['orderId' => 'NONEXISTENT']);
 })->throws(AssertionFailedError::class);
 
 it('V10: assertRoutedViaDoneState passes for matching route (@done.approved)', function (): void {
@@ -265,7 +265,7 @@ it('V12: simulateChildDone transitions parent via @done', function (): void {
     $testMachine = AsyncParentMachine::test();
 
     $testMachine
-        ->send(['type' => 'START', 'payload' => ['order_id' => 'ORD-12']])
+        ->send(['type' => 'START', 'payload' => ['orderId' => 'ORD-12']])
         ->assertState('processing')
         ->simulateChildDone(SimpleChildMachine::class, result: ['status' => 'ok'])
         ->assertState('completed');
@@ -443,7 +443,7 @@ it('V18: simulateChildDone result data accessible via output and result', functi
         config: [
             'id'      => 'v18_parent',
             'initial' => 'idle',
-            'context' => ['payment_id' => null],
+            'context' => ['paymentId' => null],
             'states'  => [
                 'idle' => [
                     'on' => ['GO' => 'delegating'],
@@ -462,9 +462,9 @@ it('V18: simulateChildDone result data accessible via output and result', functi
         behavior: [
             'actions' => [
                 'captureAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedOutput, &$capturedResult): void {
-                    $capturedOutput = $event->output('payment_id');
-                    $capturedResult = $event->result('payment_id');
-                    $ctx->set('payment_id', $capturedOutput);
+                    $capturedOutput = $event->output('paymentId');
+                    $capturedResult = $event->result('paymentId');
+                    $ctx->set('paymentId', $capturedOutput);
                 },
             ],
         ],
@@ -475,9 +475,9 @@ it('V18: simulateChildDone result data accessible via output and result', functi
     $testMachine
         ->send('GO')
         ->assertState('delegating')
-        ->simulateChildDone(SimpleChildMachine::class, result: ['payment_id' => 'pay_v18'])
+        ->simulateChildDone(SimpleChildMachine::class, result: ['paymentId' => 'pay_v18'])
         ->assertState('completed')
-        ->assertContext('payment_id', 'pay_v18');
+        ->assertContext('paymentId', 'pay_v18');
 
     expect($capturedOutput)->toBe('pay_v18');
     expect($capturedResult)->toBe('pay_v18');
@@ -493,9 +493,9 @@ it('V18a: simulateChildDone routes @done for job actors', function (): void {
     JobActorParentMachine::test()
         ->send(['type' => 'START'])
         ->assertState('processing')
-        ->simulateChildDone(SuccessfulTestJob::class, result: ['payment_id' => 'pay_job_1'])
+        ->simulateChildDone(SuccessfulTestJob::class, result: ['paymentId' => 'pay_job_1'])
         ->assertState('completed')
-        ->assertContext('payment_id', 'pay_job_1');
+        ->assertContext('paymentId', 'pay_job_1');
 });
 
 it('V18b: simulateChildFail routes @fail for job actors', function (): void {
@@ -552,7 +552,7 @@ it('V18e: simulateChildDone throws for wrong machine class (regression)', functi
     Queue::fake();
 
     $testMachine = AsyncParentMachine::test()
-        ->send(['type' => 'START', 'payload' => ['order_id' => 'ORD-REG']])
+        ->send(['type' => 'START', 'payload' => ['orderId' => 'ORD-REG']])
         ->assertState('processing');
 
     expect(fn () => $testMachine->simulateChildDone(FailingTestJob::class))
@@ -611,9 +611,9 @@ it('V18h: simulateChildDone with result data accessible in @done action for job 
     JobActorParentMachine::test()
         ->send(['type' => 'START'])
         ->assertState('processing')
-        ->simulateChildDone(SuccessfulTestJob::class, result: ['payment_id' => 'pay_result_check'])
+        ->simulateChildDone(SuccessfulTestJob::class, result: ['paymentId' => 'pay_result_check'])
         ->assertState('completed')
-        ->assertContext('payment_id', 'pay_result_check');
+        ->assertContext('paymentId', 'pay_result_check');
 });
 
 it('V18i: full job actor flow with multiple simulateChildDone calls', function (): void {
@@ -624,8 +624,8 @@ it('V18i: full job actor flow with multiple simulateChildDone calls', function (
             'id'      => 'v18i_machine',
             'initial' => 'step_one',
             'context' => [
-                'step_one_result' => null,
-                'step_two_result' => null,
+                'stepOneResult' => null,
+                'stepTwoResult' => null,
             ],
             'states' => [
                 'step_one' => [
@@ -652,10 +652,10 @@ it('V18i: full job actor flow with multiple simulateChildDone calls', function (
         behavior: [
             'actions' => [
                 'captureStepOneAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                    $ctx->set('step_one_result', $event->payload['output']['data'] ?? 'done');
+                    $ctx->set('stepOneResult', $event->payload['output']['data'] ?? 'done');
                 },
                 'captureStepTwoAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                    $ctx->set('step_two_result', $event->payload['output']['data'] ?? 'done');
+                    $ctx->set('stepTwoResult', $event->payload['output']['data'] ?? 'done');
                 },
             ],
         ],
@@ -665,7 +665,7 @@ it('V18i: full job actor flow with multiple simulateChildDone calls', function (
         ->assertState('step_one')
         ->simulateChildDone(SuccessfulTestJob::class, result: ['data' => 'phase_1'])
         ->assertState('step_two')
-        ->assertContext('step_one_result', 'phase_1')
+        ->assertContext('stepOneResult', 'phase_1')
         ->simulateChildFail(FailingTestJob::class, errorMessage: 'Step 2 crashed')
         ->assertState('failed');
 });
@@ -678,9 +678,9 @@ it('V70: Machine::test() creates TestMachine with pre-init context', function ()
     Queue::fake();
 
     // Machine::test() delegates to TestMachine::withContext() (pre-init)
-    $test = JobActorParentMachine::test(context: ['order_id' => 'ORD-70']);
+    $test = JobActorParentMachine::test(context: ['orderId' => 'ORD-70']);
 
-    $test->assertContext('order_id', 'ORD-70')
+    $test->assertContext('orderId', 'ORD-70')
         ->assertState('idle');
 });
 
@@ -853,11 +853,11 @@ it('V42: fakingAllActions except by behavior key skips specified actions', funct
 
     $test->send(['type' => 'START'])
         ->assertState('processing')
-        ->simulateChildDone(SuccessfulTestJob::class, result: ['payment_id' => 'pay_42'])
+        ->simulateChildDone(SuccessfulTestJob::class, result: ['paymentId' => 'pay_42'])
         ->assertState('completed');
 
     // capturePaymentAction was excluded — ran real logic, context updated
-    $test->assertContext('payment_id', 'pay_42');
+    $test->assertContext('paymentId', 'pay_42');
 });
 
 it('V43: fakingAllActions ignores inline closures', function (): void {
@@ -1120,11 +1120,11 @@ it('V53: startingAt does not run entry actions', function (): void {
     // Define a machine where initial state has an entry action that sets context
     $test = JobActorParentMachine::startingAt(
         stateId: 'idle',
-        context: ['payment_id' => null],
+        context: ['paymentId' => null],
     );
 
     // Entry actions did NOT run — context stays as provided
-    $test->assertContext('payment_id', null);
+    $test->assertContext('paymentId', null);
 });
 
 it('V54: startingAt does not fire @always transitions', function (): void {
@@ -1164,7 +1164,7 @@ it('V58: startingAt supports simulateChildDone after creation', function (): voi
     JobActorParentMachine::startingAt(
         stateId: 'processing',
     )
-        ->simulateChildDone(SuccessfulTestJob::class, result: ['payment_id' => 'pay_58'])
+        ->simulateChildDone(SuccessfulTestJob::class, result: ['paymentId' => 'pay_58'])
         ->assertState('completed');
 });
 
@@ -1188,9 +1188,9 @@ it('V60: startingAt with fakingAllActions full flow', function (): void {
         stateId: 'processing',
     )
         ->fakingAllActions()
-        ->simulateChildDone(SuccessfulTestJob::class, result: ['payment_id' => 'pay_60'])
+        ->simulateChildDone(SuccessfulTestJob::class, result: ['paymentId' => 'pay_60'])
         ->assertState('completed')
-        ->assertContext('payment_id', 'pay_60'); // inline closure ran (fakingAll skips inline)
+        ->assertContext('paymentId', 'pay_60'); // inline closure ran (fakingAll skips inline)
 });
 
 it('V61: startingAt registers timers for advanceTimers', function (): void {
@@ -1277,9 +1277,9 @@ it('V20: assertSentTo passes when sendTo was called', function (): void {
             'id'      => 'v20_machine',
             'initial' => 'idle',
             'context' => [
-                'target_class'         => AsyncParentMachine::class,
-                'target_root_event_id' => 'fake-root-event-id',
-                'event_type'           => 'PING',
+                'targetClass'       => AsyncParentMachine::class,
+                'targetRootEventId' => 'fake-root-event-id',
+                'eventType'         => 'PING',
             ],
             'states' => [
                 'idle' => [
@@ -1304,9 +1304,9 @@ it('V21: assertSentTo with eventType filters correctly', function (): void {
             'id'      => 'v21_machine',
             'initial' => 'idle',
             'context' => [
-                'target_class'         => AsyncParentMachine::class,
-                'target_root_event_id' => 'fake-root-event-id',
-                'event_type'           => 'CUSTOM_EVENT',
+                'targetClass'       => AsyncParentMachine::class,
+                'targetRootEventId' => 'fake-root-event-id',
+                'eventType'         => 'CUSTOM_EVENT',
             ],
             'states' => [
                 'idle' => [
@@ -1377,9 +1377,9 @@ it('V24: assertDispatchedTo wraps Queue::assertPushed', function (): void {
             'id'      => 'v24_machine',
             'initial' => 'idle',
             'context' => [
-                'target_class'         => AsyncParentMachine::class,
-                'target_root_event_id' => 'fake-root-event-id',
-                'event_type'           => 'ASYNC_EVENT',
+                'targetClass'       => AsyncParentMachine::class,
+                'targetRootEventId' => 'fake-root-event-id',
+                'eventType'         => 'ASYNC_EVENT',
             ],
             'states' => [
                 'idle' => [
@@ -1458,7 +1458,7 @@ it('V27: withRunningChild creates MachineChild record', function (): void {
     $parentMachine = AsyncParentMachine::create();
     $parentMachine->send([
         'type'    => 'START',
-        'payload' => ['order_id' => 'ORD-V27'],
+        'payload' => ['orderId' => 'ORD-V27'],
     ]);
 
     expect($parentMachine->state->currentStateDefinition->id)->toBe('async_parent.processing');
@@ -1579,7 +1579,7 @@ it('V30: State::lastChildDoneRoute is null for catch-all @done', function (): vo
 });
 
 it('V31: Machine::resetMachineFake clears single class only', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_v31']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_v31']);
     SimpleChildMachine::fake(result: ['status' => 'ok']);
 
     expect(ChildPaymentMachine::isMachineFaked())->toBeTrue();

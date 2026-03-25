@@ -23,7 +23,7 @@ it('follows SCXML ordering: exit:A → transition:A->B → entry:B', function ()
     TestMachine::define([
         'id'      => 'scxml_basic_ordering',
         'initial' => 'state_a',
-        'context' => ['action_log' => []],
+        'context' => ['actionLog' => []],
         'states'  => [
             'state_a' => [
                 'exit' => 'exitAAction',
@@ -42,21 +42,21 @@ it('follows SCXML ordering: exit:A → transition:A->B → entry:B', function ()
     ], behavior: [
         'actions' => [
             'exitAAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:state_a']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:state_a']);
             },
             'transitionAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'transition:state_a->state_b']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'transition:state_a->state_b']);
             },
             'entryBAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:state_b']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:state_b']);
             },
         ],
     ])
         ->assertState('state_a')
-        ->assertContext('action_log', [])
+        ->assertContext('actionLog', [])
         ->send('GO')
         ->assertState('state_b')
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             'exit:state_a',
             'transition:state_a->state_b',
             'entry:state_b',
@@ -74,7 +74,7 @@ it('exits deeply nested hierarchy inner-to-outer before transition action', func
     TestMachine::define([
         'id'      => 'deep_hierarchy_ordering',
         'initial' => 'state_a',
-        'context' => ['action_log' => []],
+        'context' => ['actionLog' => []],
         'states'  => [
             'state_a' => [
                 'initial' => 'state_a1',
@@ -105,25 +105,25 @@ it('exits deeply nested hierarchy inner-to-outer before transition action', func
     ], behavior: [
         'actions' => [
             'exitA1aAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:state_a1a']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:state_a1a']);
             },
             'exitA1Action' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:state_a1']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:state_a1']);
             },
             'exitAAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:state_a']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:state_a']);
             },
             'transitionAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'transition:A->B']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'transition:A->B']);
             },
             'entryBAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:state_b']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:state_b']);
             },
         ],
     ])
         ->send('GO')
         ->assertState('state_b')
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             // Inner-to-outer exit, then transition, then entry
             'exit:state_a1a',
             'exit:state_a1',
@@ -143,7 +143,7 @@ it('does not exit or re-enter parent during sibling transition', function (): vo
     TestMachine::define([
         'id'      => 'sibling_ordering',
         'initial' => 'parent',
-        'context' => ['action_log' => []],
+        'context' => ['actionLog' => []],
         'states'  => [
             'parent' => [
                 'initial' => 'child_a',
@@ -169,25 +169,25 @@ it('does not exit or re-enter parent during sibling transition', function (): vo
     ], behavior: [
         'actions' => [
             'entryParentAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:parent']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:parent']);
             },
             'exitParentAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:parent']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:parent']);
             },
             'exitChildAAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:child_a']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:child_a']);
             },
             'transitionAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'transition:child_a->child_b']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'transition:child_a->child_b']);
             },
             'entryChildBAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:child_b']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:child_b']);
             },
         ],
     ])
-        ->assertContext('action_log', ['entry:parent'])
+        ->assertContext('actionLog', ['entry:parent'])
         ->send('GO')
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             'entry:parent',
             // Parent NOT exited — only child_a exits
             'exit:child_a',
@@ -204,7 +204,7 @@ it('runs exit then transition then entry on self-transition', function (): void 
     TestMachine::define([
         'id'      => 'self_transition_ordering',
         'initial' => 'state_a',
-        'context' => ['action_log' => [], 'count' => 0],
+        'context' => ['actionLog' => [], 'count' => 0],
         'states'  => [
             'state_a' => [
                 'entry' => 'entryAAction',
@@ -224,20 +224,20 @@ it('runs exit then transition then entry on self-transition', function (): void 
     ], behavior: [
         'actions' => [
             'entryAAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:state_a']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:state_a']);
             },
             'exitAAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:state_a']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:state_a']);
             },
             'transitionAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'transition:state_a->state_a']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'transition:state_a->state_a']);
             },
         ],
     ])
-        ->assertContext('action_log', ['entry:state_a'])
+        ->assertContext('actionLog', ['entry:state_a'])
         ->send('LOOP')
         ->assertState('state_a')
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             'entry:state_a',       // initial entry
             'exit:state_a',        // exit before transition
             'transition:state_a->state_a',
@@ -253,7 +253,7 @@ it('runs calculator before exit actions', function (): void {
     TestMachine::define([
         'id'      => 'calculator_ordering',
         'initial' => 'state_a',
-        'context' => ['action_log' => [], 'computed' => null],
+        'context' => ['actionLog' => [], 'computed' => null],
         'states'  => [
             'state_a' => [
                 'exit' => 'exitAAction',
@@ -273,18 +273,18 @@ it('runs calculator before exit actions', function (): void {
     ], behavior: [
         'actions' => [
             'exitAAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:state_a']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:state_a']);
             },
             'transitionAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'transition:A->B']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'transition:A->B']);
             },
             'entryBAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:state_b']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:state_b']);
             },
         ],
         'calculators' => [
             'computeValueCalculator' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'calculator']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'calculator']);
                 $context->set('computed', 42);
             },
         ],
@@ -292,7 +292,7 @@ it('runs calculator before exit actions', function (): void {
         ->send('GO')
         ->assertState('state_b')
         ->assertContext('computed', 42)
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             // Calculator runs FIRST (before guard evaluation, before any exit/transition/entry)
             'calculator',
             'exit:state_a',
@@ -309,7 +309,7 @@ it('evaluates guard before exit so guard sees source state context', function ()
     TestMachine::define([
         'id'      => 'guard_before_exit_ordering',
         'initial' => 'state_a',
-        'context' => ['action_log' => [], 'source_value' => 'original'],
+        'context' => ['actionLog' => [], 'sourceValue' => 'original'],
         'states'  => [
             'state_a' => [
                 'exit' => 'exitAAction',
@@ -330,20 +330,20 @@ it('evaluates guard before exit so guard sees source state context', function ()
         'actions' => [
             'exitAAction' => function (ContextManager $context): void {
                 // Exit modifies context — guard should NOT see this
-                $context->set('source_value', 'modified_by_exit');
-                $context->set('action_log', [...$context->get('action_log'), 'exit:state_a']);
+                $context->set('sourceValue', 'modified_by_exit');
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:state_a']);
             },
             'transitionAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'transition:A->B']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'transition:A->B']);
             },
             'entryBAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:state_b']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:state_b']);
             },
         ],
         'guards' => [
             'checkSourceValueGuard' => function (ContextManager $context): bool {
                 // Guard runs BEFORE exit — should see 'original', not 'modified_by_exit'
-                $context->set('action_log', [...$context->get('action_log'), 'guard:saw:'.$context->get('source_value')]);
+                $context->set('actionLog', [...$context->get('actionLog'), 'guard:saw:'.$context->get('sourceValue')]);
 
                 return true;
             },
@@ -351,7 +351,7 @@ it('evaluates guard before exit so guard sees source state context', function ()
     ])
         ->send('GO')
         ->assertState('state_b')
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             'guard:saw:original',  // Guard ran before exit, sees original value
             'exit:state_a',
             'transition:A->B',
@@ -368,7 +368,7 @@ it('follows exit → transition → entry at each hop in @always chain', functio
     TestMachine::define([
         'id'      => 'always_chain_ordering',
         'initial' => 'state_a',
-        'context' => ['action_log' => []],
+        'context' => ['actionLog' => []],
         'states'  => [
             'state_a' => [
                 'exit' => 'exitAAction',
@@ -407,37 +407,37 @@ it('follows exit → transition → entry at each hop in @always chain', functio
     ], behavior: [
         'actions' => [
             'exitAAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:A']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:A']);
             },
             'transitionABAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'transition:A->B']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'transition:A->B']);
             },
             'entryBAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:B']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:B']);
             },
             'exitBAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:B']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:B']);
             },
             'transitionBCAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'transition:B->C']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'transition:B->C']);
             },
             'entryCAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:C']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:C']);
             },
             'exitCAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:C']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:C']);
             },
             'transitionCDAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'transition:C->D']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'transition:C->D']);
             },
             'entryDAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:D']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:D']);
             },
         ],
     ])
         ->send('GO')
         ->assertState('state_d')
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             // Hop 1: A → B
             'exit:A',
             'transition:A->B',
@@ -461,7 +461,7 @@ it('enters parallel regions in document order after parallel state entry', funct
     TestMachine::define([
         'id'      => 'parallel_entry_ordering',
         'initial' => 'idle',
-        'context' => ['action_log' => []],
+        'context' => ['actionLog' => []],
         'states'  => [
             'idle' => [
                 'on' => [
@@ -494,18 +494,18 @@ it('enters parallel regions in document order after parallel state entry', funct
     ], behavior: [
         'actions' => [
             'entryProcessingAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:processing']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:processing']);
             },
             'entryAlphaAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:alpha_active']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:alpha_active']);
             },
             'entryBetaAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:beta_active']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:beta_active']);
             },
         ],
     ])
         ->send('START')
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             // Parallel state entry first, then regions in document order
             'entry:processing',
             'entry:alpha_active',
@@ -521,7 +521,7 @@ it('allows transition action to read context modified by exit action', function 
     TestMachine::define([
         'id'      => 'exit_modifies_context_ordering',
         'initial' => 'state_a',
-        'context' => ['action_log' => [], 'counter' => 0],
+        'context' => ['actionLog' => [], 'counter' => 0],
         'states'  => [
             'state_a' => [
                 'exit' => 'exitAAction',
@@ -542,23 +542,23 @@ it('allows transition action to read context modified by exit action', function 
             'exitAAction' => function (ContextManager $context): void {
                 // Exit increments counter
                 $context->set('counter', $context->get('counter') + 10);
-                $context->set('action_log', [...$context->get('action_log'), 'exit:counter='.$context->get('counter')]);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:counter='.$context->get('counter')]);
             },
             'transitionAction' => function (ContextManager $context): void {
                 // Transition should see counter=10 (set by exit) in SCXML order
                 $context->set('counter', $context->get('counter') + 5);
-                $context->set('action_log', [...$context->get('action_log'), 'transition:counter='.$context->get('counter')]);
+                $context->set('actionLog', [...$context->get('actionLog'), 'transition:counter='.$context->get('counter')]);
             },
             'entryBAction' => function (ContextManager $context): void {
                 // Entry should see counter=15 (exit+transition)
-                $context->set('action_log', [...$context->get('action_log'), 'entry:counter='.$context->get('counter')]);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:counter='.$context->get('counter')]);
             },
         ],
     ])
         ->send('GO')
         ->assertState('state_b')
         ->assertContext('counter', 15)
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             'exit:counter=10',       // Exit runs first, sets counter to 10
             'transition:counter=15', // Transition reads 10, adds 5 = 15
             'entry:counter=15',      // Entry sees final value 15
@@ -573,7 +573,7 @@ it('processes raised events from entry action after entry phase completes', func
     TestMachine::define([
         'id'      => 'entry_raise_ordering',
         'initial' => 'state_a',
-        'context' => ['action_log' => []],
+        'context' => ['actionLog' => []],
         'states'  => [
             'state_a' => [
                 'exit' => 'exitAAction',
@@ -602,26 +602,26 @@ it('processes raised events from entry action after entry phase completes', func
     ], behavior: [
         'actions' => [
             'exitAAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:A']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:A']);
             },
             'transitionABAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'transition:A->B']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'transition:A->B']);
             },
             'entryBAndRaiseAction' => EntryBAndRaiseAutoAdvanceAction::class,
             'exitBAction'          => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:B']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:B']);
             },
             'transitionBCAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'transition:B->C']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'transition:B->C']);
             },
             'entryCAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:C']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:C']);
             },
         ],
     ])
         ->send('GO')
         ->assertState('state_c')
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             // First transition: A → B (SCXML order)
             'exit:A',
             'transition:A->B',
@@ -646,7 +646,7 @@ class EntryBAndRaiseAutoAdvanceAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('action_log', [...$context->get('action_log'), 'entry:B']);
+        $context->set('actionLog', [...$context->get('actionLog'), 'entry:B']);
         $this->raise(['type' => 'AUTO_ADVANCE']);
     }
 }

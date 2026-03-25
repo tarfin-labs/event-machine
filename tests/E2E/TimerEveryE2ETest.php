@@ -23,7 +23,7 @@ it('E2E: @every fires and runs action via real pipeline', function (): void {
     $restored = EveryTimerMachine::create(state: $rootEventId);
 
     expect($restored->state->currentStateDefinition->id)->toBe('every_timer.active')
-        ->and($restored->state->context->get('billing_count'))->toBe(1);
+        ->and($restored->state->context->get('billingCount'))->toBe(1);
 
     $fire = MachineTimerFire::where('root_event_id', $rootEventId)->first();
     expect($fire)->not->toBeNull()
@@ -45,7 +45,7 @@ it('E2E: @every fires multiple times across sweep cycles', function (): void {
     $this->artisan('machine:process-timers', ['--class' => EveryTimerMachine::class]);
 
     $restored = EveryTimerMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('billing_count'))->toBe(1);
+    expect($restored->state->context->get('billingCount'))->toBe(1);
 
     // Cycle 2: backdate last_fired_at
     MachineTimerFire::where('root_event_id', $rootEventId)
@@ -54,7 +54,7 @@ it('E2E: @every fires multiple times across sweep cycles', function (): void {
     $this->artisan('machine:process-timers', ['--class' => EveryTimerMachine::class]);
 
     $restored = EveryTimerMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('billing_count'))->toBe(2);
+    expect($restored->state->context->get('billingCount'))->toBe(2);
 
     // Cycle 3
     MachineTimerFire::where('root_event_id', $rootEventId)
@@ -63,7 +63,7 @@ it('E2E: @every fires multiple times across sweep cycles', function (): void {
     $this->artisan('machine:process-timers', ['--class' => EveryTimerMachine::class]);
 
     $restored = EveryTimerMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('billing_count'))->toBe(3);
+    expect($restored->state->context->get('billingCount'))->toBe(3);
 
     // Verify fire_count
     $fire = MachineTimerFire::where('root_event_id', $rootEventId)->first();
@@ -87,7 +87,7 @@ it('E2E: @every max/then fires then event exactly once', function (): void {
         $this->artisan('machine:process-timers', ['--class' => EveryWithMaxMachine::class]);
 
         $restored = EveryWithMaxMachine::create(state: $rootEventId);
-        expect($restored->state->context->get('retry_count'))->toBe($i);
+        expect($restored->state->context->get('retryCount'))->toBe($i);
     }
 
     // Cycle 4: max reached → MAX_RETRIES sent → machine transitions to failed
@@ -125,13 +125,13 @@ it('E2E: @every interval resets from last fire not state entry', function (): vo
     $this->artisan('machine:process-timers', ['--class' => EveryTimerMachine::class]);
 
     $restored = EveryTimerMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('billing_count'))->toBe(1);
+    expect($restored->state->context->get('billingCount'))->toBe(1);
 
     // Immediate second sweep — should NOT fire (last_fired_at = now, interval not passed)
     $this->artisan('machine:process-timers', ['--class' => EveryTimerMachine::class]);
 
     $restored = EveryTimerMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('billing_count'))->toBe(1); // still 1
+    expect($restored->state->context->get('billingCount'))->toBe(1); // still 1
 
     // Backdate last_fired_at — should fire again
     MachineTimerFire::where('root_event_id', $rootEventId)
@@ -140,7 +140,7 @@ it('E2E: @every interval resets from last fire not state entry', function (): vo
     $this->artisan('machine:process-timers', ['--class' => EveryTimerMachine::class]);
 
     $restored = EveryTimerMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('billing_count'))->toBe(2);
+    expect($restored->state->context->get('billingCount'))->toBe(2);
 });
 
 // ─── @every Stops on Exit ───────────────────────────────────────
@@ -157,7 +157,7 @@ it('E2E: @every stops when machine exits state', function (): void {
     $this->artisan('machine:process-timers', ['--class' => EveryTimerMachine::class]);
 
     $restored = EveryTimerMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('billing_count'))->toBe(1);
+    expect($restored->state->context->get('billingCount'))->toBe(1);
 
     // Exit state
     $restored->send(['type' => 'CANCEL']);
@@ -170,6 +170,6 @@ it('E2E: @every stops when machine exits state', function (): void {
     $this->artisan('machine:process-timers', ['--class' => EveryTimerMachine::class]);
 
     $final = EveryTimerMachine::create(state: $rootEventId);
-    expect($final->state->context->get('billing_count'))->toBe(1); // still 1
+    expect($final->state->context->get('billingCount'))->toBe(1); // still 1
     expect($final->state->currentStateDefinition->id)->toBe('every_timer.cancelled');
 });

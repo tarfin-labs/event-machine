@@ -72,8 +72,8 @@ it('three-level inline chain with custom machines and result propagation', funct
             'id'      => 'inline_three_level',
             'initial' => 'idle',
             'context' => [
-                'grandchild_data' => null,
-                'chain_depth'     => 0,
+                'grandchildData' => null,
+                'chainDepth'     => 0,
             ],
             'states' => [
                 'idle' => [
@@ -95,8 +95,8 @@ it('three-level inline chain with custom machines and result propagation', funct
         behavior: [
             'actions' => [
                 'captureLevelOneAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                    $ctx->set('grandchild_data', $event->payload['result'] ?? null);
-                    $ctx->set('chain_depth', 3);
+                    $ctx->set('grandchildData', $event->payload['result'] ?? null);
+                    $ctx->set('chainDepth', 3);
                 },
             ],
         ],
@@ -109,6 +109,6 @@ it('three-level inline chain with custom machines and result propagation', funct
         ->assertState('level_one')
         ->simulateChildDone(MiddleChildMachine::class, result: ['origin' => 'grandchild'])
         ->assertState('level_one_done')
-        ->assertContext('grandchild_data', ['origin' => 'grandchild'])
-        ->assertContext('chain_depth', 3);
+        ->assertContext('grandchildData', ['origin' => 'grandchild'])
+        ->assertContext('chainDepth', 3);
 });

@@ -392,7 +392,7 @@ test('car sales style: compound onDone + cross-region sync + parallel onDone', f
         config: [
             'id'      => 'car_sales',
             'initial' => 'data_collection',
-            'context' => ['policy_result' => null],
+            'context' => ['policyResult' => null],
             'states'  => [
                 'data_collection' => [
                     'type'   => 'parallel',
@@ -459,10 +459,10 @@ test('car sales style: compound onDone + cross-region sync + parallel onDone', f
         ],
         behavior: [
             'guards' => [
-                'isPreApprovalPassedGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $ctx->get('policy_result') === 'approved',
+                'isPreApprovalPassedGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state) => $ctx->get('policyResult') === 'approved',
             ],
             'actions' => [
-                'setPolicyApprovedAction' => fn (ContextManager $ctx) => $ctx->set('policy_result', 'approved'),
+                'setPolicyApprovedAction' => fn (ContextManager $ctx) => $ctx->set('policyResult', 'approved'),
             ],
         ]
     );

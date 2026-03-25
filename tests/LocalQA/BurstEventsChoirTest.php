@@ -58,7 +58,7 @@ it('LocalQA: 4 burst events all processed in sequence via lock serialization (ch
     expect($restored->state->currentStateDefinition->id)->toBe('burst_choir.completed');
 
     // Verify all 4 notes were recorded in context
-    $notesSung = $restored->state->context->get('notes_sung');
+    $notesSung = $restored->state->context->get('notesSung');
     expect($notesSung)->toBe(['A_SING', 'B_SING', 'C_SING', 'D_SING']);
 
     // No stale locks
@@ -109,7 +109,7 @@ it('LocalQA: burst events on multiple machines do not interfere (choir isolation
     // Verify each machine has its own complete set of notes
     foreach ($machines as $rootEventId) {
         $restored = BurstChoirMachine::create(state: $rootEventId);
-        expect($restored->state->context->get('notes_sung'))
+        expect($restored->state->context->get('notesSung'))
             ->toBe(['A_SING', 'B_SING', 'C_SING', 'D_SING']);
     }
 

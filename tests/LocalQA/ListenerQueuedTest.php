@@ -25,7 +25,7 @@ it('LocalQA: queued entry listener runs via Horizon and records internal events'
     $rootEventId = $machine->state->history->first()->root_event_id;
 
     // Sync listener should have run immediately
-    expect($machine->state->context->get('sync_listener_ran'))->toBeTrue();
+    expect($machine->state->context->get('syncListenerRan'))->toBeTrue();
 
     // Verify dispatched event is in DB
     $dispatchedEvent = MachineEvent::where('root_event_id', $rootEventId)
@@ -67,9 +67,9 @@ it('LocalQA: sync listener modifies context immediately while queued runs later'
     $rootEventId = $machine->state->history->first()->root_event_id;
 
     // Sync ran immediately
-    expect($machine->state->context->get('sync_listener_ran'))->toBeTrue();
+    expect($machine->state->context->get('syncListenerRan'))->toBeTrue();
     // Queued NOT yet (worker hasn't run)
-    expect($machine->state->context->get('queued_listener_ran'))->toBeFalse();
+    expect($machine->state->context->get('queuedListenerRan'))->toBeFalse();
 
     // Wait for Horizon
     $completed = LocalQATestCase::waitFor(function () use ($rootEventId) {
@@ -82,5 +82,5 @@ it('LocalQA: sync listener modifies context immediately while queued runs later'
 
     // Restore machine — queued listener should have modified context
     $restored = ListenerQueuedMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('queued_listener_ran'))->toBeTrue();
+    expect($restored->state->context->get('queuedListenerRan'))->toBeTrue();
 });

@@ -59,7 +59,7 @@ it('intercepts faked inline entry action', function (): void {
         ->send('PROCESS')
         ->assertState('active')
         ->assertBehaviorRan('entryAction')
-        ->assertContext('entry_ran', false); // original sets true, fake no-op leaves false
+        ->assertContext('entryRan', false); // original sets true, fake no-op leaves false
 });
 
 it('intercepts faked inline exit action', function (): void {
@@ -68,7 +68,7 @@ it('intercepts faked inline exit action', function (): void {
         ->send('PROCESS')
         ->assertState('active')
         ->assertBehaviorRan('exitAction')
-        ->assertContext('exit_ran', false); // original sets true, fake no-op leaves false
+        ->assertContext('exitRan', false); // original sets true, fake no-op leaves false
 });
 
 // ═════════════════════════════════════════════════════════════

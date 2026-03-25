@@ -138,7 +138,7 @@ test('it forwards event via parent endpoint and returns child state in response'
     $machineId = createAndStartForwardMachine($this);
 
     $response = $this->postJson("/api/forward/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4111111111111111'],
+        'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
     $response->assertStatus(200);
@@ -155,7 +155,7 @@ test('forwarded response includes parent machine_id and value', function (): voi
     $machineId = createAndStartForwardMachine($this);
 
     $response = $this->postJson("/api/forward/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4111111111111111'],
+        'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
     $response->assertStatus(200);
@@ -172,7 +172,7 @@ test('forwarded default response includes available_events', function (): void {
     $machineId = createAndStartForwardMachine($this);
 
     $response = $this->postJson("/api/forward/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4242424242424242'],
+        'payload' => ['cardNumber' => '4242424242424242'],
     ]);
 
     $response->assertStatus(200);
@@ -188,7 +188,7 @@ test('forwarded response includes child value and child context', function (): v
     $machineId = createAndStartForwardMachine($this);
 
     $response = $this->postJson("/api/forward/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4111111111111111'],
+        'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
     $response->assertStatus(200);
@@ -204,7 +204,7 @@ test('child context reflects storeCardAction side effect', function (): void {
     $machineId = createAndStartForwardMachine($this);
 
     $response = $this->postJson("/api/forward/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4111111111111111'],
+        'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
     $response->assertStatus(200);
@@ -213,8 +213,8 @@ test('child context reflects storeCardAction side effect', function (): void {
     $childContextData = $response->json('data.child.context.data');
 
     // storeCardAction stores last 4 digits and sets status
-    expect($childContextData)->toHaveKey('card_last4')
-        ->and($childContextData['card_last4'])->toBe('1111')
+    expect($childContextData)->toHaveKey('cardLast4')
+        ->and($childContextData['cardLast4'])->toBe('1111')
         ->and($childContextData)->toHaveKey('status')
         ->and($childContextData['status'])->toBe('card_provided');
 });
@@ -228,7 +228,7 @@ test('sequential forward events advance child through multiple states', function
 
     // Step 1: PROVIDE_CARD -> child moves to awaiting_confirmation
     $provideResponse = $this->postJson("/api/forward/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4111111111111111'],
+        'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
     $provideResponse->assertStatus(200);
@@ -238,7 +238,7 @@ test('sequential forward events advance child through multiple states', function
     // Step 2: CONFIRM_PAYMENT -> child moves to charged (final)
     // CONFIRM_PAYMENT has result: PaymentStepResult, so response is custom
     $confirmResponse = $this->postJson("/api/forward/{$machineId}/confirm-payment", [
-        'payload' => ['confirmation_code' => 'CONF-001'],
+        'payload' => ['confirmationCode' => 'CONF-001'],
     ]);
 
     $confirmResponse->assertStatus(200);
@@ -246,10 +246,10 @@ test('sequential forward events advance child through multiple states', function
     $data = $confirmResponse->json('data');
 
     // PaymentStepResult returns custom keys
-    expect($data)->toHaveKey('order_id')
-        ->and($data)->toHaveKey('card_last4')
-        ->and($data['card_last4'])->toBe('1111')
-        ->and($data)->toHaveKey('child_step');
+    expect($data)->toHaveKey('orderId')
+        ->and($data)->toHaveKey('cardLast4')
+        ->and($data['cardLast4'])->toBe('1111')
+        ->and($data)->toHaveKey('childStep');
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -261,12 +261,12 @@ test('it runs parent ResultBehavior and returns custom response', function (): v
 
     // First forward PROVIDE_CARD to set up child state
     $this->postJson("/api/forward/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '5500000000000004'],
+        'payload' => ['cardNumber' => '5500000000000004'],
     ]);
 
     // CONFIRM_PAYMENT has result: PaymentStepResult
     $response = $this->postJson("/api/forward/{$machineId}/confirm-payment", [
-        'payload' => ['confirmation_code' => 'CONF-ABC'],
+        'payload' => ['confirmationCode' => 'CONF-ABC'],
     ]);
 
     $response->assertStatus(200);
@@ -274,11 +274,11 @@ test('it runs parent ResultBehavior and returns custom response', function (): v
     $data = $response->json('data');
 
     // PaymentStepResult reads parent context.order_id and child context.card_last4
-    expect($data)->toHaveKey('order_id')
-        ->and($data)->toHaveKey('card_last4')
-        ->and($data['card_last4'])->toBe('0004')
-        ->and($data)->toHaveKey('child_step')
-        ->and($data['child_step'])->toContain('forward_endpoint_child');
+    expect($data)->toHaveKey('orderId')
+        ->and($data)->toHaveKey('cardLast4')
+        ->and($data['cardLast4'])->toBe('0004')
+        ->and($data)->toHaveKey('childStep')
+        ->and($data['childStep'])->toContain('forward_endpoint_child');
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -289,7 +289,7 @@ test('PROVIDE_CARD without contextKeys returns full child context', function ():
     $machineId = createAndStartForwardMachine($this);
 
     $response = $this->postJson("/api/forward/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4111111111111111'],
+        'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
     $response->assertStatus(200);
@@ -298,8 +298,8 @@ test('PROVIDE_CARD without contextKeys returns full child context', function ():
     $childContextData = $response->json('data.child.context.data');
 
     // No contextKeys filtering on PROVIDE_CARD -- full child context
-    expect($childContextData)->toHaveKey('order_id')
-        ->and($childContextData)->toHaveKey('card_last4')
+    expect($childContextData)->toHaveKey('orderId')
+        ->and($childContextData)->toHaveKey('cardLast4')
         ->and($childContextData)->toHaveKey('status');
 });
 
@@ -315,7 +315,7 @@ test('it runs MachineEndpointAction before and after for forwarded endpoint', fu
 
     // FullConfigForwardParentMachine has action: ForwardEndpointAction on forward
     $response = $this->patchJson("/api/full-config/{$machineId}/enter-payment-details", [
-        'payload' => ['card_number' => '4111111111111111'],
+        'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
     $response->assertSuccessful();
@@ -333,7 +333,7 @@ test('custom URI overrides auto-generated URI', function (): void {
 
     // FullConfigForwardParentMachine has uri: '/enter-payment-details'
     $response = $this->patchJson("/api/full-config/{$machineId}/enter-payment-details", [
-        'payload' => ['card_number' => '4111111111111111'],
+        'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
     $response->assertSuccessful();
@@ -345,14 +345,14 @@ test('custom method overrides default POST', function (): void {
     // FullConfigForwardParentMachine has method: 'PATCH'
     // POST should not match
     $postResponse = $this->postJson("/api/full-config/{$machineId}/enter-payment-details", [
-        'payload' => ['card_number' => '4111111111111111'],
+        'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
     $postResponse->assertStatus(405);
 
     // PATCH should match
     $patchResponse = $this->patchJson("/api/full-config/{$machineId}/enter-payment-details", [
-        'payload' => ['card_number' => '4111111111111111'],
+        'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
     $patchResponse->assertSuccessful();
@@ -363,7 +363,7 @@ test('custom status code overrides default 200', function (): void {
 
     // FullConfigForwardParentMachine has status: 202
     $response = $this->patchJson("/api/full-config/{$machineId}/enter-payment-details", [
-        'payload' => ['card_number' => '4111111111111111'],
+        'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
     $response->assertStatus(202);
@@ -376,8 +376,8 @@ test('custom status code overrides default 200', function (): void {
 test('it validates request payload using child EventBehavior', function (): void {
     $machineId = createAndStartForwardMachine($this);
 
-    // ProvideCardEvent requires payload.card_number (string, min:13, max:19)
-    // Send without card_number
+    // ProvideCardEvent requires payload.cardNumber (string, min:13, max:19)
+    // Send without cardNumber
     $response = $this->postJson("/api/forward/{$machineId}/provide-card", [
         'payload' => [],
     ]);
@@ -388,9 +388,9 @@ test('it validates request payload using child EventBehavior', function (): void
 test('it returns 422 when child event validation fails with details', function (): void {
     $machineId = createAndStartForwardMachine($this);
 
-    // Send with card_number too short
+    // Send with cardNumber too short
     $response = $this->postJson("/api/forward/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '123'],
+        'payload' => ['cardNumber' => '123'],
     ]);
 
     $response->assertStatus(422)
@@ -417,7 +417,7 @@ test('forwarding fails when parent is not in delegating state', function (): voi
 
     // Try to forward PROVIDE_CARD -- parent is in idle, not processing
     $response = $this->postJson("/api/forward/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4111111111111111'],
+        'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
     // Should fail -- parent cannot forward from idle state
@@ -429,7 +429,7 @@ test('forwarding event not valid for child current state fails', function (): vo
 
     // Child starts in awaiting_card. CONFIRM_PAYMENT is only valid in awaiting_confirmation.
     $response = $this->postJson("/api/forward/{$machineId}/confirm-payment", [
-        'payload' => ['confirmation_code' => 'CONF-001'],
+        'payload' => ['confirmationCode' => 'CONF-001'],
     ]);
 
     // Should fail -- child does not accept CONFIRM_PAYMENT in awaiting_card state
@@ -446,7 +446,7 @@ test('FQCN Format 1 forward works end-to-end via HTTP', function (): void {
     // FqcnForwardParentMachine: ProvideCardEvent::class (Format 1 FQCN)
     // Routes as PROVIDE_CARD -> PROVIDE_CARD (no rename)
     $response = $this->postJson("/api/fqcn/{$machineId}/provide-card", [
-        'payload' => ['card_number' => '4111111111111111'],
+        'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
     $response->assertStatus(200);
@@ -484,7 +484,7 @@ test('parent CANCEL event still works when forward endpoints are registered', fu
 
 test('forwarded endpoint with non-existent machineId returns error', function (): void {
     $response = $this->postJson('/api/forward/does-not-exist/provide-card', [
-        'payload' => ['card_number' => '4111111111111111'],
+        'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
     expect($response->status())->toBeGreaterThanOrEqual(400);
@@ -505,7 +505,7 @@ test('rename forward CANCEL_ORDER → ABORT works via HTTP endpoint', function (
     $childRootEventId = $childRecord->child_root_event_id;
 
     $child = ForwardChildEndpointMachine::create(state: $childRootEventId);
-    $child->send(['type' => 'PROVIDE_CARD', 'payload' => ['card_number' => '4242424242424242']]);
+    $child->send(['type' => 'PROVIDE_CARD', 'payload' => ['cardNumber' => '4242424242424242']]);
 
     // Now POST to the rename forward endpoint — CANCEL_ORDER should be forwarded as ABORT to child
     $response = $this->postJson("/api/rename/{$machineId}/cancel-order");

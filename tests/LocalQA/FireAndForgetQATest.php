@@ -23,7 +23,7 @@ beforeEach(function (): void {
 
 it('LocalQA: fire-and-forget parent stays in state, child runs via Horizon', function (): void {
     $parent = FireAndForgetParentMachine::create();
-    $parent->state->context->set('order_id', 'ORD-QA-1');
+    $parent->state->context->set('orderId', 'ORD-QA-1');
     $parent->send(['type' => 'START']);
     $parent->persist();
 
@@ -50,7 +50,7 @@ it('LocalQA: fire-and-forget parent stays in state, child runs via Horizon', fun
 
 it('LocalQA: fire-and-forget parent accepts events while child runs', function (): void {
     $parent = FireAndForgetParentMachine::create();
-    $parent->state->context->set('order_id', 'ORD-QA-2');
+    $parent->state->context->set('orderId', 'ORD-QA-2');
     $parent->send(['type' => 'START']);
     $parent->persist();
 
@@ -90,7 +90,7 @@ it('LocalQA: fire-and-forget with @always transitions parent immediately', funct
 
 it('LocalQA: fire-and-forget child does not dispatch completion job', function (): void {
     $parent = FireAndForgetParentMachine::create();
-    $parent->state->context->set('order_id', 'ORD-QA-4');
+    $parent->state->context->set('orderId', 'ORD-QA-4');
     $parent->send(['type' => 'START']);
     $parent->persist();
 

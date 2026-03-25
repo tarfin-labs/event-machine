@@ -340,9 +340,9 @@ it('3-region parallel with entry actions and context updates per region', functi
             'id'      => 'three_region_context',
             'initial' => 'processing',
             'context' => [
-                'region_a_done' => false,
-                'region_b_done' => false,
-                'region_c_done' => false,
+                'regionADone' => false,
+                'regionBDone' => false,
+                'regionCDone' => false,
             ],
             'states' => [
                 'processing' => [
@@ -398,9 +398,9 @@ it('3-region parallel with entry actions and context updates per region', functi
         ],
         behavior: [
             'actions' => [
-                'markRegionADoneAction' => fn (ContextManager $ctx) => $ctx->set('region_a_done', true),
-                'markRegionBDoneAction' => fn (ContextManager $ctx) => $ctx->set('region_b_done', true),
-                'markRegionCDoneAction' => fn (ContextManager $ctx) => $ctx->set('region_c_done', true),
+                'markRegionADoneAction' => fn (ContextManager $ctx) => $ctx->set('regionADone', true),
+                'markRegionBDoneAction' => fn (ContextManager $ctx) => $ctx->set('regionBDone', true),
+                'markRegionCDoneAction' => fn (ContextManager $ctx) => $ctx->set('regionCDone', true),
             ],
         ]
     );
@@ -408,15 +408,15 @@ it('3-region parallel with entry actions and context updates per region', functi
     $state = $definition->getInitialState();
 
     $state = $definition->transition(['type' => 'FINISH_B'], $state);
-    expect($state->context->get('region_b_done'))->toBeTrue();
-    expect($state->context->get('region_a_done'))->toBeFalse();
-    expect($state->context->get('region_c_done'))->toBeFalse();
+    expect($state->context->get('regionBDone'))->toBeTrue();
+    expect($state->context->get('regionADone'))->toBeFalse();
+    expect($state->context->get('regionCDone'))->toBeFalse();
 
     $state = $definition->transition(['type' => 'FINISH_C'], $state);
-    expect($state->context->get('region_c_done'))->toBeTrue();
+    expect($state->context->get('regionCDone'))->toBeTrue();
 
     $state = $definition->transition(['type' => 'FINISH_A'], $state);
-    expect($state->context->get('region_a_done'))->toBeTrue();
+    expect($state->context->get('regionADone'))->toBeTrue();
 
     // All 3 done → @done fires
     expect($state->matches('completed'))->toBeTrue();

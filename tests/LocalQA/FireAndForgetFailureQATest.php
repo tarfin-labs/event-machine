@@ -42,7 +42,7 @@ it('LocalQA: fire-and-forget child failure does not affect parent', function ():
 
     // Assert: parent context is intact
     $restored = FailingFireAndForgetParentMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('parent_ok'))->toBeTrue();
+    expect($restored->state->context->get('parentOk'))->toBeTrue();
 
     // Assert: no MachineChild record (fire-and-forget has no tracking)
     expect(DB::table('machine_children')

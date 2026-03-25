@@ -24,8 +24,8 @@ it('full lifecycle: create → dispatch → jobs complete → onDone → next st
     $rootEventId = $machine->state->history->first()->root_event_id;
 
     expect($machine->definition->pendingParallelDispatches)->toHaveCount(2);
-    expect($machine->state->context->get('region_a_result'))->toBeNull();
-    expect($machine->state->context->get('region_b_result'))->toBeNull();
+    expect($machine->state->context->get('regionAResult'))->toBeNull();
+    expect($machine->state->context->get('regionBResult'))->toBeNull();
 
     // 2. Simulate dispatching jobs (normally done by dispatchPendingParallelJobs)
     $jobA = new ParallelRegionJob(
@@ -48,8 +48,8 @@ it('full lifecycle: create → dispatch → jobs complete → onDone → next st
 
     // 4. Both contexts merged
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 
     // 5. Machine still in parallel (entry actions done, but regions not at final states)
     expect($restored->state->isInParallelState())->toBeTrue();
@@ -70,8 +70,8 @@ it('sequential fallback when dispatch disabled', function (): void {
     $machine = ParallelDispatchMachine::create();
 
     // Entry actions ran synchronously
-    expect($machine->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($machine->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($machine->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($machine->state->context->get('regionBResult'))->toBe('processed_by_b');
     expect($machine->definition->pendingParallelDispatches)->toBe([]);
 });
 
@@ -105,8 +105,8 @@ it('context merge preserves keys set by first job when second job runs', functio
 
     // Verify A's context is persisted
     $afterA = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($afterA->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($afterA->state->context->get('region_b_result'))->toBeNull();
+    expect($afterA->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($afterA->state->context->get('regionBResult'))->toBeNull();
 
     // Job B runs second, sets region_b_result
     (new ParallelRegionJob(
@@ -118,8 +118,8 @@ it('context merge preserves keys set by first job when second job runs', functio
 
     // Both keys preserved
     $afterBoth = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($afterBoth->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($afterBoth->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($afterBoth->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($afterBoth->state->context->get('regionBResult'))->toBe('processed_by_b');
 });
 
 it('context merge works regardless of job completion order', function (): void {
@@ -146,8 +146,8 @@ it('context merge works regardless of job completion order', function (): void {
     ))->handle();
 
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });
 
 it('compound onDone fires within parallel region after transition', function (): void {

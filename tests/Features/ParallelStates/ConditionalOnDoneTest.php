@@ -113,9 +113,9 @@ test('it falls through to default branch when first guard fails', function (): v
         'id'      => 'test_fallback',
         'initial' => 'processing',
         'context' => [
-            'inventory_result'  => null,
-            'payment_result'    => null,
-            'reviewer_notified' => false,
+            'inventoryResult'  => null,
+            'paymentResult'    => null,
+            'reviewerNotified' => false,
         ],
         'states' => [
             'processing' => [
@@ -162,8 +162,8 @@ test('it aborts @done when all guards fail and no default', function (): void {
         'id'      => 'test_all_fail',
         'initial' => 'processing',
         'context' => [
-            'inventory_result' => null,
-            'payment_result'   => null,
+            'inventoryResult' => null,
+            'paymentResult'   => null,
         ],
         'states' => [
             'processing' => [
@@ -215,7 +215,7 @@ test('it runs branch-specific actions on @done', function (): void {
     // Both entry actions set 'success', guard passes → approved with LogApprovalAction
     expect($state->value)->toBe(['conditional_on_done.approved'])
         ->and(LogApprovalAction::wasExecuted())->toBeTrue()
-        ->and($state->context->get('approval_logged'))->toBeTrue();
+        ->and($state->context->get('approvalLogged'))->toBeTrue();
 });
 
 // Test 7: Losing branch actions do NOT execute
@@ -243,10 +243,10 @@ test('it works with compound state @done when guard passes', function (): void {
         'id'      => 'compound_test',
         'initial' => 'verification',
         'context' => [
-            'inventory_result'  => 'success',
-            'payment_result'    => 'success',
-            'approval_logged'   => false,
-            'reviewer_notified' => false,
+            'inventoryResult'  => 'success',
+            'paymentResult'    => 'success',
+            'approvalLogged'   => false,
+            'reviewerNotified' => false,
         ],
         'states' => [
             'verification' => [
@@ -285,10 +285,10 @@ test('it works with compound state @done when guard fails', function (): void {
         'id'      => 'compound_fail_test',
         'initial' => 'verification',
         'context' => [
-            'inventory_result'  => null,
-            'payment_result'    => null,
-            'approval_logged'   => false,
-            'reviewer_notified' => false,
+            'inventoryResult'  => null,
+            'paymentResult'    => null,
+            'approvalLogged'   => false,
+            'reviewerNotified' => false,
         ],
         'states' => [
             'verification' => [
@@ -324,8 +324,8 @@ test('it aborts compound @done when all guards fail and no default', function ()
         'id'      => 'compound_abort',
         'initial' => 'verification',
         'context' => [
-            'inventory_result' => null,
-            'payment_result'   => null,
+            'inventoryResult' => null,
+            'paymentResult'   => null,
         ],
         'states' => [
             'verification' => [
@@ -359,8 +359,8 @@ test('it falls through to default branch when all guarded branches fail', functi
         'id'      => 'test_second_branch',
         'initial' => 'processing',
         'context' => [
-            'inventory_result' => null,
-            'payment_result'   => 'success',
+            'inventoryResult' => null,
+            'paymentResult'   => 'success',
         ],
         'states' => [
             'processing' => [
@@ -415,8 +415,8 @@ test('it handles conditional @done via Machine::create with full lifecycle', fun
     // Second send: payment validated → entry sets payment_result=success, all regions final, @done fires
     $state = $machine->send(['type' => 'PAYMENT_VALIDATED']);
     expect($state->value)->toBe(['conditional_on_done.approved'])
-        ->and($state->context->get('inventory_result'))->toBe('success')
-        ->and($state->context->get('payment_result'))->toBe('success')
+        ->and($state->context->get('inventoryResult'))->toBe('success')
+        ->and($state->context->get('paymentResult'))->toBe('success')
         ->and(LogApprovalAction::wasExecuted())->toBeTrue()
         ->and(NotifyReviewerAction::wasExecuted())->toBeFalse();
 });
@@ -445,7 +445,7 @@ test('compound @done guard passes when context is pre-set via Machine::create', 
     $machine = ConditionalCompoundOnDoneMachine::create();
 
     // Pre-set payment_result so both are success after entry action
-    $machine->state->context->set('payment_result', 'success');
+    $machine->state->context->set('paymentResult', 'success');
 
     $state = $machine->send(['type' => 'CHECK_COMPLETED']);
 

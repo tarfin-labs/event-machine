@@ -20,9 +20,9 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\MultiOutcomeChi
 it('routes faked child result through @done to parent', function (): void {
     // Arrange: fake the child machine with a result
     ChildPaymentMachine::fake(result: [
-        'payment_id'  => 'pay_fake_123',
-        'receipt_url' => 'https://fake.example.com/receipt',
-        'amount'      => 500,
+        'paymentId'  => 'pay_fake_123',
+        'receiptUrl' => 'https://fake.example.com/receipt',
+        'amount'     => 500,
     ]);
 
     // Act: parent machine starts and delegates to child
@@ -32,15 +32,15 @@ it('routes faked child result through @done to parent', function (): void {
     // Assert: parent received the faked result via @done
     expect($machine->state->currentStateDefinition->id)
         ->toBe('parent_order.completed')
-        ->and($machine->state->context->get('payment_id'))
+        ->and($machine->state->context->get('paymentId'))
         ->toBe('pay_fake_123')
-        ->and($machine->state->context->get('receipt_url'))
+        ->and($machine->state->context->get('receiptUrl'))
         ->toBe('https://fake.example.com/receipt');
 });
 
 it('does not create a real child machine when faked', function (): void {
     // Arrange
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_faked']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_faked']);
 
     // Act
     $machine = ParentOrderMachine::create();
@@ -92,7 +92,7 @@ it('short-circuits async delegation when child is faked', function (): void {
     $machine = AsyncParentMachine::create();
     $machine->send([
         'type'    => 'START',
-        'payload' => ['order_id' => 'ORD-999'],
+        'payload' => ['orderId' => 'ORD-999'],
     ]);
 
     // Assert: no jobs dispatched, parent immediately completed
@@ -113,7 +113,7 @@ it('short-circuits async failure when child is faked with fail', function (): vo
     $machine = AsyncParentMachine::create();
     $machine->send([
         'type'    => 'START',
-        'payload' => ['order_id' => 'ORD-999'],
+        'payload' => ['orderId' => 'ORD-999'],
     ]);
 
     // Assert: parent transitioned to @fail
@@ -128,17 +128,17 @@ it('short-circuits async failure when child is faked with fail', function (): vo
 
 it('resolves with context and passes it to faked child invocation', function (): void {
     // Arrange
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_ctx']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_ctx']);
 
     // Act: set parent context so `with` resolves actual values
-    $machine = ParentOrderMachine::test(context: ['order_id' => 'ORD-42', 'total_amount' => 1500]);
+    $machine = ParentOrderMachine::test(context: ['orderId' => 'ORD-42', 'totalAmount' => 1500]);
     $machine->send(['type' => 'START_PAYMENT']);
 
     // Assert: invocation recorded the resolved context from `with`
     $invocations = ChildPaymentMachine::getMachineInvocations();
     expect($invocations)->toHaveCount(1)
-        ->and($invocations[0])->toHaveKey('order_id')
-        ->and($invocations[0]['order_id'])->toBe('ORD-42')
+        ->and($invocations[0])->toHaveKey('orderId')
+        ->and($invocations[0]['orderId'])->toBe('ORD-42')
         ->and($invocations[0])->toHaveKey('amount')
         ->and($invocations[0]['amount'])->toBe(1500);
 });
@@ -146,7 +146,7 @@ it('resolves with context and passes it to faked child invocation', function ():
 // ─── Assertion Methods ──────────────────────────────────────────
 
 it('assertInvoked passes when faked child was invoked', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_assert']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_assert']);
 
     $machine = ParentOrderMachine::create();
     $machine->send(['type' => 'START_PAYMENT']);
@@ -157,7 +157,7 @@ it('assertInvoked passes when faked child was invoked', function (): void {
 });
 
 it('assertNotInvoked passes when faked child was not invoked', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_unused']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_unused']);
 
     // Do NOT send START_PAYMENT — child never invoked
     ParentOrderMachine::create();
@@ -168,7 +168,7 @@ it('assertNotInvoked passes when faked child was not invoked', function (): void
 });
 
 it('assertInvoked fails when faked child was not invoked', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_unused']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_unused']);
 
     // Never trigger delegation
     ParentOrderMachine::create();
@@ -177,7 +177,7 @@ it('assertInvoked fails when faked child was not invoked', function (): void {
 })->throws(AssertionFailedError::class);
 
 it('assertNotInvoked fails when faked child was invoked', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_assert']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_assert']);
 
     $machine = ParentOrderMachine::create();
     $machine->send(['type' => 'START_PAYMENT']);
@@ -186,7 +186,7 @@ it('assertNotInvoked fails when faked child was invoked', function (): void {
 })->throws(AssertionFailedError::class);
 
 it('assertInvokedTimes validates exact invocation count', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_times']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_times']);
 
     $machine = ParentOrderMachine::create();
     $machine->send(['type' => 'START_PAYMENT']);
@@ -196,30 +196,30 @@ it('assertInvokedTimes validates exact invocation count', function (): void {
 });
 
 it('assertInvokedWith validates context subset match', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_with']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_with']);
 
     // `with` reads from parent context, so set context values via withContext
-    $machine = ParentOrderMachine::test(context: ['order_id' => 'ORD-77', 'total_amount' => 2000]);
+    $machine = ParentOrderMachine::test(context: ['orderId' => 'ORD-77', 'totalAmount' => 2000]);
     $machine->send(['type' => 'START_PAYMENT']);
 
-    // `with` config maps: 'order_id' → order_id, 'amount' => 'total_amount' → 2000
-    ChildPaymentMachine::assertInvokedWith(['order_id' => 'ORD-77']);
+    // `with` config maps: 'orderId' → order_id, 'amount' => 'totalAmount' → 2000
+    ChildPaymentMachine::assertInvokedWith(['orderId' => 'ORD-77']);
     expect(true)->toBeTrue();
 });
 
 it('assertInvokedWith fails when no invocation matches', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_mismatch']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_mismatch']);
 
     $machine = ParentOrderMachine::create();
     $machine->send(['type' => 'START_PAYMENT']);
 
-    ChildPaymentMachine::assertInvokedWith(['order_id' => 'NONEXISTENT']);
+    ChildPaymentMachine::assertInvokedWith(['orderId' => 'NONEXISTENT']);
 })->throws(AssertionFailedError::class);
 
 // ─── Reset ──────────────────────────────────────────────────────
 
 it('resetMachineFakes clears all fakes', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_reset']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_reset']);
     SimpleChildMachine::fake(result: ['status' => 'ok']);
 
     expect(ChildPaymentMachine::isMachineFaked())->toBeTrue()
@@ -232,7 +232,7 @@ it('resetMachineFakes clears all fakes', function (): void {
 });
 
 it('TestMachine::resetFakes() clears child machine fakes', function (): void {
-    ChildPaymentMachine::fake(result: ['payment_id' => 'pay_reset_test']);
+    ChildPaymentMachine::fake(result: ['paymentId' => 'pay_reset_test']);
 
     expect(ChildPaymentMachine::isMachineFaked())->toBeTrue();
 
@@ -321,14 +321,14 @@ it('fake() without finalState falls through to @done catch-all (T13)', function 
 });
 
 it('fake(finalState:) with result data provides both in event (T14)', function (): void {
-    MultiOutcomeChildMachine::fake(result: ['payment_id' => 'pay_123'], finalState: 'approved');
+    MultiOutcomeChildMachine::fake(result: ['paymentId' => 'pay_123'], finalState: 'approved');
 
     $capturedFinalState = null;
     $capturedPaymentId  = null;
 
     $machine = MachineDefinition::define(
         config: [
-            'id'     => 'fake_data', 'initial' => 'idle', 'context' => ['payment_id' => null],
+            'id'     => 'fake_data', 'initial' => 'idle', 'context' => ['paymentId' => null],
             'states' => [
                 'idle'       => ['on' => ['GO' => 'delegating']],
                 'delegating' => [
@@ -344,7 +344,7 @@ it('fake(finalState:) with result data provides both in event (T14)', function (
             'actions' => [
                 'storeAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedFinalState, &$capturedPaymentId): void {
                     $capturedFinalState = $event->finalState();
-                    $capturedPaymentId  = $event->output('payment_id');
+                    $capturedPaymentId  = $event->output('paymentId');
                 },
             ],
         ],

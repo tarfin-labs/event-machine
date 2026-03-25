@@ -64,7 +64,7 @@ it('parent with @fail handler stays active after handling, without handler excep
         config: [
             'id'      => 'handled_parent',
             'initial' => 'idle',
-            'context' => ['error_handled' => false],
+            'context' => ['errorHandled' => false],
             'states'  => [
                 'idle'       => ['on' => ['GO' => 'processing']],
                 'processing' => [
@@ -82,7 +82,7 @@ it('parent with @fail handler stays active after handling, without handler excep
         behavior: [
             'actions' => [
                 'markHandledAction' => function (ContextManager $ctx): void {
-                    $ctx->set('error_handled', true);
+                    $ctx->set('errorHandled', true);
                 },
             ],
         ],
@@ -93,7 +93,7 @@ it('parent with @fail handler stays active after handling, without handler excep
 
     // Parent handled the failure and is in error_handled (non-final) state
     expect($state->value)->toBe(['handled_parent.error_handled'])
-        ->and($state->context->get('error_handled'))->toBeTrue();
+        ->and($state->context->get('errorHandled'))->toBeTrue();
 
     // WITHOUT @fail: exception propagates
     $unhandledDefinition = MachineDefinition::define(
@@ -130,8 +130,8 @@ it('child final state entry action runs sendToParent before @done fires to paren
             'id'      => 'order_parent',
             'initial' => 'idle',
             'context' => [
-                'child_notified' => false,
-                'done_received'  => false,
+                'childNotified' => false,
+                'doneReceived'  => false,
             ],
             'states' => [
                 'idle'       => ['on' => ['GO' => 'delegating']],
@@ -149,7 +149,7 @@ it('child final state entry action runs sendToParent before @done fires to paren
             'actions' => [
                 'markDoneAction' => function (ContextManager $ctx) use (&$executionOrder): void {
                     $executionOrder[] = 'parent_done_action';
-                    $ctx->set('done_received', true);
+                    $ctx->set('doneReceived', true);
                 },
             ],
         ],
@@ -160,6 +160,6 @@ it('child final state entry action runs sendToParent before @done fires to paren
 
     // Verify parent received @done and transitioned
     expect($state->value)->toBe(['order_parent.completed'])
-        ->and($state->context->get('done_received'))->toBeTrue()
+        ->and($state->context->get('doneReceived'))->toBeTrue()
         ->and($executionOrder)->toContain('parent_done_action');
 });

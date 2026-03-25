@@ -46,5 +46,5 @@ it('LocalQA: three-level async delegation completes via Horizon', function (): v
 
     // Assert: context flows through chain
     $restored = DeepDelegationParentMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('chain_completed'))->toBeTrue();
+    expect($restored->state->context->get('chainCompleted'))->toBeTrue();
 });

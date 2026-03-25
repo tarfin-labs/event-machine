@@ -235,8 +235,8 @@ test('second transition action throwing after first mutated context leaves machi
         'config' => [
             'initial' => 'idle',
             'context' => [
-                'step_one' => false,
-                'step_two' => false,
+                'stepOne' => false,
+                'stepTwo' => false,
             ],
             'states' => [
                 'idle' => [
@@ -253,7 +253,7 @@ test('second transition action throwing after first mutated context leaves machi
         'behavior' => [
             'actions' => [
                 'stepOneAction' => function (ContextManager $context): void {
-                    $context->set('step_one', true);
+                    $context->set('stepOne', true);
                 },
                 'throwingStepTwoAction' => function (): void {
                     throw new RuntimeException('Step two exploded');

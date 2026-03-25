@@ -18,7 +18,7 @@ it('processes raised events from entry actions after compound @done transition',
         config: [
             'id'      => 'compound_raise_test',
             'initial' => 'idle',
-            'context' => ['protocol_result' => null],
+            'context' => ['protocolResult' => null],
             'states'  => [
                 'idle' => [
                     'on' => ['START' => 'review'],
@@ -61,7 +61,7 @@ it('processes raised events from entry actions after compound @done transition',
 
     // approved (final) → compound @done → evaluating → entry raises RESULT_READY → completed
     expect($state->value)->toBe(['compound_raise_test.completed']);
-    expect($state->context->get('protocol_result'))->toBe('decided');
+    expect($state->context->get('protocolResult'))->toBe('decided');
 });
 
 it('processes @always transitions after compound @done transition', function (): void {
@@ -163,7 +163,7 @@ it('processes raised events after parallel @done', function (): void {
         config: [
             'id'      => 'parallel_done_raise',
             'initial' => 'processing',
-            'context' => ['protocol_result' => null],
+            'context' => ['protocolResult' => null],
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
@@ -211,7 +211,7 @@ it('processes raised events after parallel @done', function (): void {
 
     // Both regions done → parallel @done → evaluating → raise RESULT_READY → completed
     expect($state->value)->toBe(['parallel_done_raise.completed']);
-    expect($state->context->get('protocol_result'))->toBe('decided');
+    expect($state->context->get('protocolResult'))->toBe('decided');
 });
 
 // ============================================================

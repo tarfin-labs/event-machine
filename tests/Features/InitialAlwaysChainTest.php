@@ -23,7 +23,7 @@ class InitialAlwaysChainMachine extends Machine
                 'id'      => 'initial_always_chain',
                 'initial' => 'workflow',
                 'context' => [
-                    'action_log' => [],
+                    'actionLog' => [],
                 ],
                 'states' => [
                     'workflow' => [
@@ -57,19 +57,19 @@ class InitialAlwaysChainMachine extends Machine
             behavior: [
                 'actions' => [
                     'logStepOneAction' => function (ContextManager $context): void {
-                        $log   = $context->get('action_log');
+                        $log   = $context->get('actionLog');
                         $log[] = 'entry:step_one';
-                        $context->set('action_log', $log);
+                        $context->set('actionLog', $log);
                     },
                     'logStepTwoAction' => function (ContextManager $context): void {
-                        $log   = $context->get('action_log');
+                        $log   = $context->get('actionLog');
                         $log[] = 'entry:step_two';
-                        $context->set('action_log', $log);
+                        $context->set('actionLog', $log);
                     },
                     'logStepThreeAction' => function (ContextManager $context): void {
-                        $log   = $context->get('action_log');
+                        $log   = $context->get('actionLog');
                         $log[] = 'entry:step_three';
-                        $context->set('action_log', $log);
+                        $context->set('actionLog', $log);
                     },
                 ],
                 'guards' => [
@@ -94,7 +94,7 @@ it('resolves initial @always chain to final stable state in a single macrostep',
 it('executes all entry actions through the @always chain', function (): void {
     $machine = InitialAlwaysChainMachine::create();
 
-    $actionLog = $machine->state->context->get('action_log');
+    $actionLog = $machine->state->context->get('actionLog');
 
     expect($actionLog)->toBe([
         'entry:step_one',

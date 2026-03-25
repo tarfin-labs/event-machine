@@ -23,14 +23,14 @@ it('child context changes do not leak into parent context after delegation compl
             'id'      => 'ctx_isolation',
             'initial' => 'idle',
             'context' => [
-                'order_id'    => 'PARENT_ORIGINAL',
-                'parent_only' => 'untouched',
+                'orderId'    => 'PARENT_ORIGINAL',
+                'parentOnly' => 'untouched',
             ],
             'states' => [
                 'idle'       => ['on' => ['GO' => 'processing']],
                 'processing' => [
                     'machine' => ContextMutatingChildMachine::class,
-                    'with'    => ['order_id'],
+                    'with'    => ['orderId'],
                     '@done'   => 'completed',
                 ],
                 'completed' => ['type' => 'final'],
@@ -42,8 +42,8 @@ it('child context changes do not leak into parent context after delegation compl
     $state = $definition->transition(event: ['type' => 'GO'], state: $state);
 
     // Parent context must be completely untouched by child mutations
-    expect($state->context->get('order_id'))->toBe('PARENT_ORIGINAL')
-        ->and($state->context->get('parent_only'))->toBe('untouched');
+    expect($state->context->get('orderId'))->toBe('PARENT_ORIGINAL')
+        ->and($state->context->get('parentOnly'))->toBe('untouched');
 });
 
 // ─── Test 9: Persist before sendTo side effects ────────────────

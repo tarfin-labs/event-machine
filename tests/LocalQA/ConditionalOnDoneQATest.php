@@ -37,8 +37,8 @@ it('LocalQA: guarded @done routes to approved when both regions succeed via Hori
     $ready = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = ConditionalOnDoneQAMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('inventory_result') === 'success'
-            && $restored->state->context->get('payment_result') === 'success';
+        return $restored->state->context->get('inventoryResult') === 'success'
+            && $restored->state->context->get('paymentResult') === 'success';
     }, timeoutSeconds: 60, description: 'conditional @done: waiting for region entry actions');
 
     expect($ready)->toBeTrue('Region entry actions did not complete');
@@ -77,7 +77,7 @@ it('LocalQA: guarded @done routes to approved when both regions succeed via Hori
     expect($approved)->toBeTrue('Guarded @done did not route to approved');
 
     $restored = ConditionalOnDoneQAMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('approval_logged'))->toBeTrue();
+    expect($restored->state->context->get('approvalLogged'))->toBeTrue();
 });
 
 it('LocalQA: guarded @done fallback to manual_review when guard fails', function (): void {
@@ -89,8 +89,8 @@ it('LocalQA: guarded @done fallback to manual_review when guard fails', function
     $ready = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = ConditionalOnDoneFailMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('inventory_result') === 'success'
-            && $restored->state->context->get('payment_result') === 'failure';
+        return $restored->state->context->get('inventoryResult') === 'success'
+            && $restored->state->context->get('paymentResult') === 'failure';
     }, timeoutSeconds: 60, description: 'conditional @done fail: waiting for region entry actions');
 
     expect($ready)->toBeTrue('Region entry actions did not complete');
@@ -129,6 +129,6 @@ it('LocalQA: guarded @done fallback to manual_review when guard fails', function
     expect($review)->toBeTrue('Guarded @done did not fallback to manual_review');
 
     $restored = ConditionalOnDoneFailMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('reviewer_notified'))->toBeTrue();
-    expect($restored->state->context->get('approval_logged'))->toBeFalse();
+    expect($restored->state->context->get('reviewerNotified'))->toBeTrue();
+    expect($restored->state->context->get('approvalLogged'))->toBeFalse();
 });

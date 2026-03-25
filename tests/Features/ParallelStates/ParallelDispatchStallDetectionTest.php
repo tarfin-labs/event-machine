@@ -218,7 +218,7 @@ it('machine can be restored correctly after stall events exist in history', func
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
 
     expect($restored->state->isInParallelState())->toBeTrue();
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
     // Region still at initial — stall is informational, not destructive
     expect($restored->state->value)->toContain('parallel_dispatch.processing.region_a.working');
 });

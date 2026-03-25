@@ -23,7 +23,7 @@ it('restore from DB does not replay entry actions', function (): void {
             'id'      => 'restore_no_replay',
             'initial' => 'idle',
             'context' => [
-                'entry_count' => 0,
+                'entryCount' => 0,
             ],
             'states' => [
                 'idle' => [
@@ -40,7 +40,7 @@ it('restore from DB does not replay entry actions', function (): void {
             'actions' => [
                 'countEntryAction' => function (ContextManager $ctx) use (&$entryActionCount): void {
                     $entryActionCount++;
-                    $ctx->set('entry_count', $ctx->get('entry_count') + 1);
+                    $ctx->set('entryCount', $ctx->get('entryCount') + 1);
                 },
             ],
         ],
@@ -51,7 +51,7 @@ it('restore from DB does not replay entry actions', function (): void {
     $machine->send(['type' => 'GO']);
 
     expect($entryActionCount)->toBe(1)
-        ->and($machine->state->context->get('entry_count'))->toBe(1);
+        ->and($machine->state->context->get('entryCount'))->toBe(1);
 
     $rootEventId = $machine->state->history->first()->root_event_id;
 
@@ -69,7 +69,7 @@ it('restore from DB does not replay entry actions', function (): void {
     // Entry action should NOT have been called again
     expect($entryActionCount)->toBe(0)
         ->and($restoredMachine->state->matches('active'))->toBeTrue()
-        ->and($restoredMachine->state->context->get('entry_count'))->toBe(1);
+        ->and($restoredMachine->state->context->get('entryCount'))->toBe(1);
 });
 
 // ─── Test 6: Restore failed state preserves error context ──────
@@ -80,8 +80,8 @@ it('machine transitioned to @fail state preserves error context after persist an
             'id'      => 'restore_fail_fidelity',
             'initial' => 'idle',
             'context' => [
-                'error_message' => null,
-                'error_code'    => null,
+                'errorMessage' => null,
+                'errorCode'    => null,
             ],
             'states' => [
                 'idle'       => ['on' => ['GO' => 'processing']],
@@ -100,8 +100,8 @@ it('machine transitioned to @fail state preserves error context after persist an
         'behavior' => [
             'actions' => [
                 'captureFailAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                    $ctx->set('error_message', $event->payload['error_message'] ?? 'unknown');
-                    $ctx->set('error_code', 'CHILD_FAILED');
+                    $ctx->set('errorMessage', $event->payload['error_message'] ?? 'unknown');
+                    $ctx->set('errorCode', 'CHILD_FAILED');
                 },
             ],
         ],
@@ -112,8 +112,8 @@ it('machine transitioned to @fail state preserves error context after persist an
     $machine->send(['type' => 'GO']);
 
     expect($machine->state->matches('failed'))->toBeTrue()
-        ->and($machine->state->context->get('error_message'))->toBe('Payment gateway down')
-        ->and($machine->state->context->get('error_code'))->toBe('CHILD_FAILED');
+        ->and($machine->state->context->get('errorMessage'))->toBe('Payment gateway down')
+        ->and($machine->state->context->get('errorCode'))->toBe('CHILD_FAILED');
 
     // Persist and restore
     $rootEventId = $machine->state->history->first()->root_event_id;
@@ -127,8 +127,8 @@ it('machine transitioned to @fail state preserves error context after persist an
 
     // Error context must be preserved exactly
     expect($restored->state->matches('failed'))->toBeTrue()
-        ->and($restored->state->context->get('error_message'))->toBe('Payment gateway down')
-        ->and($restored->state->context->get('error_code'))->toBe('CHILD_FAILED');
+        ->and($restored->state->context->get('errorMessage'))->toBe('Payment gateway down')
+        ->and($restored->state->context->get('errorCode'))->toBe('CHILD_FAILED');
 });
 
 // ─── Test 7: Restored machine with completed child does NOT re-send @done ──
@@ -141,7 +141,7 @@ it('restored machine with completed child does not re-send @done to parent', fun
             'id'      => 'restore_no_renotify',
             'initial' => 'idle',
             'context' => [
-                'done_count' => 0,
+                'doneCount' => 0,
             ],
             'states' => [
                 'idle'       => ['on' => ['GO' => 'delegating']],
@@ -159,7 +159,7 @@ it('restored machine with completed child does not re-send @done to parent', fun
             'actions' => [
                 'countDoneAction' => function (ContextManager $ctx) use (&$doneActionCount): void {
                     $doneActionCount++;
-                    $ctx->set('done_count', $ctx->get('done_count') + 1);
+                    $ctx->set('doneCount', $ctx->get('doneCount') + 1);
                 },
             ],
         ],
@@ -170,7 +170,7 @@ it('restored machine with completed child does not re-send @done to parent', fun
     $machine->send(['type' => 'GO']);
 
     expect($doneActionCount)->toBe(1)
-        ->and($machine->state->context->get('done_count'))->toBe(1);
+        ->and($machine->state->context->get('doneCount'))->toBe(1);
 
     $rootEventId = $machine->state->history->first()->root_event_id;
 
@@ -188,5 +188,5 @@ it('restored machine with completed child does not re-send @done to parent', fun
     // @done action should NOT have been called again
     expect($doneActionCount)->toBe(0)
         ->and($restored->state->matches('completed'))->toBeTrue()
-        ->and($restored->state->context->get('done_count'))->toBe(1);
+        ->and($restored->state->context->get('doneCount'))->toBe(1);
 });

@@ -196,7 +196,7 @@ it('parent stays in delegating state after fire-and-forget dispatch', function (
     Queue::fake();
 
     $machine = FireAndForgetParentMachine::create();
-    $machine->state->context->set('order_id', 'ORD-1');
+    $machine->state->context->set('orderId', 'ORD-1');
     $state = $machine->send(['type' => 'START']);
 
     expect($state->currentStateDefinition->id)->toBe('ff_parent.processing');
@@ -206,7 +206,7 @@ it('parent can handle on events after fire-and-forget', function (): void {
     Queue::fake();
 
     $machine = FireAndForgetParentMachine::create();
-    $machine->state->context->set('order_id', 'ORD-1');
+    $machine->state->context->set('orderId', 'ORD-1');
     $machine->send(['type' => 'START']);
     $state = $machine->send(['type' => 'FINISH']);
 
@@ -217,7 +217,7 @@ it('dispatches ChildMachineJob with fireAndForget flag', function (): void {
     Queue::fake();
 
     $machine = FireAndForgetParentMachine::create();
-    $machine->state->context->set('order_id', 'ORD-1');
+    $machine->state->context->set('orderId', 'ORD-1');
     $machine->send(['type' => 'START']);
 
     Queue::assertPushed(ChildMachineJob::class, function (ChildMachineJob $job): bool {
@@ -231,7 +231,7 @@ it('does not create MachineChild record', function (): void {
     Queue::fake();
 
     $machine = FireAndForgetParentMachine::create();
-    $machine->state->context->set('order_id', 'ORD-1');
+    $machine->state->context->set('orderId', 'ORD-1');
     $machine->send(['type' => 'START']);
 
     expect(DB::table('machine_children')->count())->toBe(0);
@@ -241,7 +241,7 @@ it('hasActiveChildren returns false after fire-and-forget', function (): void {
     Queue::fake();
 
     $machine = FireAndForgetParentMachine::create();
-    $machine->state->context->set('order_id', 'ORD-1');
+    $machine->state->context->set('orderId', 'ORD-1');
     $machine->send(['type' => 'START']);
 
     expect($machine->state->hasActiveChildren())->toBeFalse();
@@ -251,11 +251,11 @@ it('passes with context correctly', function (): void {
     Queue::fake();
 
     $machine = FireAndForgetParentMachine::create();
-    $machine->state->context->set('order_id', 'ORD-789');
+    $machine->state->context->set('orderId', 'ORD-789');
     $machine->send(['type' => 'START']);
 
     Queue::assertPushed(ChildMachineJob::class, function (ChildMachineJob $job): bool {
-        return $job->childContext === ['order_id' => 'ORD-789'];
+        return $job->childContext === ['orderId' => 'ORD-789'];
     });
 });
 
@@ -396,7 +396,7 @@ it('fake short-circuits fire-and-forget, parent stays in state', function (): vo
     ImmediateChildMachine::fake(result: []);
 
     $machine = FireAndForgetParentMachine::create();
-    $machine->state->context->set('order_id', 'ORD-1');
+    $machine->state->context->set('orderId', 'ORD-1');
     $state = $machine->send(['type' => 'START']);
 
     expect($state->currentStateDefinition->id)->toBe('ff_parent.processing');
@@ -418,13 +418,13 @@ it('fake records invocation with correct context', function (): void {
     ImmediateChildMachine::fake(result: []);
 
     $machine = FireAndForgetParentMachine::create();
-    $machine->state->context->set('order_id', 'ORD-CTX');
+    $machine->state->context->set('orderId', 'ORD-CTX');
     $machine->send(['type' => 'START']);
 
     $invocations = ImmediateChildMachine::getMachineInvocations();
 
     expect($invocations)->toHaveCount(1)
-        ->and($invocations[0]['order_id'])->toBe('ORD-CTX');
+        ->and($invocations[0]['orderId'])->toBe('ORD-CTX');
 });
 
 it('fake ignores fail config for fire-and-forget', function (): void {
@@ -477,7 +477,7 @@ it('fire-and-forget child receives parent identity', function (): void {
     Queue::fake();
 
     $machine = FireAndForgetParentMachine::create();
-    $machine->state->context->set('order_id', 'ORD-IDENTITY');
+    $machine->state->context->set('orderId', 'ORD-IDENTITY');
     $machine->send(['type' => 'START']);
     $machine->persist();
 

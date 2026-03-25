@@ -17,8 +17,8 @@ it('fires @fail (not @done) when region fails while sibling is already at final'
             'id'      => 'region_fail_sibling_done',
             'initial' => 'processing',
             'context' => [
-                'done_reached'  => false,
-                'error_reached' => false,
+                'doneReached'  => false,
+                'errorReached' => false,
             ],
             'states' => [
                 'processing' => [
@@ -55,10 +55,10 @@ it('fires @fail (not @done) when region fails while sibling is already at final'
         behavior: [
             'actions' => [
                 'markDoneAction' => function (ContextManager $ctx): void {
-                    $ctx->set('done_reached', true);
+                    $ctx->set('doneReached', true);
                 },
                 'markErrorAction' => function (ContextManager $ctx): void {
-                    $ctx->set('error_reached', true);
+                    $ctx->set('errorReached', true);
                 },
             ],
         ],
@@ -79,8 +79,8 @@ it('fires @fail (not @done) when region fails while sibling is already at final'
 
     // Machine should be in error_state via @fail
     expect($state->value)->toBe(['region_fail_sibling_done.error_state'])
-        ->and($state->context->get('error_reached'))->toBeTrue()
-        ->and($state->context->get('done_reached'))->toBeFalse();
+        ->and($state->context->get('errorReached'))->toBeTrue()
+        ->and($state->context->get('doneReached'))->toBeFalse();
 });
 
 // ============================================================
@@ -96,7 +96,7 @@ it('fires single @fail when both regions fail in sync mode', function (): void {
             'id'      => 'both_regions_fail',
             'initial' => 'processing',
             'context' => [
-                'fail_count' => 0,
+                'failCount' => 0,
             ],
             'states' => [
                 'processing' => [
@@ -131,7 +131,7 @@ it('fires single @fail when both regions fail in sync mode', function (): void {
             'actions' => [
                 'countFailAction' => function (ContextManager $ctx) use (&$failCount): void {
                     $failCount++;
-                    $ctx->set('fail_count', $failCount);
+                    $ctx->set('failCount', $failCount);
                 },
             ],
         ],
@@ -148,7 +148,7 @@ it('fires single @fail when both regions fail in sync mode', function (): void {
     // Single @fail transition: machine exits parallel → error_state
     expect($state->value)->toBe(['both_regions_fail.error_state'])
         ->and($failCount)->toBe(1)
-        ->and($state->context->get('fail_count'))->toBe(1);
+        ->and($state->context->get('failCount'))->toBe(1);
 
     // Calling processParallelOnFail again is a no-op:
     // the machine is already out of the parallel state, so the second
