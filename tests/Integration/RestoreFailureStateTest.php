@@ -84,7 +84,7 @@ it('machine transitioned to @fail state preserves error context after persist an
                 'error_code'    => null,
             ],
             'states' => [
-                'idle' => ['on' => ['GO' => 'processing']],
+                'idle'       => ['on' => ['GO' => 'processing']],
                 'processing' => [
                     'machine' => FailingChildMachine::class,
                     '@done'   => 'completed',
@@ -144,7 +144,7 @@ it('restored machine with completed child does not re-send @done to parent', fun
                 'done_count' => 0,
             ],
             'states' => [
-                'idle' => ['on' => ['GO' => 'delegating']],
+                'idle'       => ['on' => ['GO' => 'delegating']],
                 'delegating' => [
                     'machine' => ImmediateChildMachine::class,
                     '@done'   => [
