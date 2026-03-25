@@ -162,7 +162,7 @@ class ProcessPaymentAction extends ActionBehavior
     {
         // ... process payment ...
 
-        $this->raise('PAYMENT_PROCESSED', ['transaction_id' => $txId]);
+        $this->raise('PAYMENT_PROCESSED', ['transactionId' => $txId]);
     }
 }
 ```
