@@ -114,6 +114,8 @@ States with `'type' => 'parallel'` run multiple concurrent regions:
 - Fire-and-forget: omit `@done` with `queue` key — parent continues, child runs independently
 - `forward` key — auto-generate HTTP routes that delegate requests to running child machines
 - **Invoke timing:** Child machine invocation (sync or async) is deferred until after the macrostep completes — entry actions, listeners, and raised events are processed first. If raised events cause a state change, delegation is skipped entirely (SCXML invoker-05 semantics).
+- **`dispatchToParent` is transient-only:** `dispatchToParent()` dispatches a `SendToMachineJob` to the parent machine. The parent must be in a state that handles the event — if the parent has already transitioned away (e.g., via `@timeout`), the event is silently dropped. This is by design: async child-to-parent communication is fire-and-forget.
+- **Deep delegation chain propagation:** In multi-level delegation (grandparent → parent → child), child completion propagates upward via `ChildMachineCompletionJob`. Each level resolves its `@done` / `@fail` independently. There is no single atomic transaction spanning the full chain — each hop is a separate queue job with its own lock acquisition.
 
 ### State Management
 
@@ -124,7 +126,7 @@ States with `'type' => 'parallel'` run multiple concurrent regions:
 ### Database Integration
 
 - `machine_events` — persisted via `MachineEvent` model. Incremental context changes optimize storage.
-- `machine_current_states` — normalized current state per instance (for timers + schedules)
+- `machine_current_states` — normalized current state per instance (for timers + schedules). **Staleness caveat under parallel dispatch:** `MachineCurrentState` is updated at persist time, which may lag behind actual state during parallel region processing. For assertions in tests, always prefer restoring the machine via `MyMachine::create(state: $rootEventId)` instead of reading `MachineCurrentState` directly. Using `MachineCurrentState` inside `waitFor` polling is acceptable (it converges).
 - `machine_timer_fires` — timer dedup and recurring fire tracking
 - `machine_children` — async child machine tracking (delegation)
 - `machine_locks` — concurrent state mutation prevention
