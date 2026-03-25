@@ -55,7 +55,7 @@ test('unhandled event throws exception and preserves state', function (): void {
 
     // Capture original state for comparison
     $originalValue   = $state->value;
-    $originalContext  = $state->context->toArray();
+    $originalContext = $state->context->toArray();
     $originalHistory = $state->history->toArray();
 
     // Send an event that idle does not handle
