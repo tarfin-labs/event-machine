@@ -393,7 +393,7 @@ CounterMachine::test(['count' => 0])
 
 // Fake with custom side-effect
 ProcessOrderAction::shouldRun()
-    ->andReturnUsing(fn($ctx) => $ctx->set('order_id', 'fake-123'));
+    ->andReturnUsing(fn($ctx) => $ctx->set('orderId', 'fake-123'));
 
 // Fake inline action via TestMachine
 CounterMachine::test(['count' => 0])
@@ -411,7 +411,7 @@ it('sends notification via injected service', function () {
     $this->mock(NotificationService::class)
         ->shouldReceive('send')->once();
 
-    $state = State::forTesting(['user_id' => 'user-1']);
+    $state = State::forTesting(['userId' => 'user-1']);
     SendNotificationAction::runWithState($state);
 });
 ```

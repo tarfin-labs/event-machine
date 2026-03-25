@@ -223,8 +223,8 @@ class CartContext extends ContextManager
         return [
             'subtotal'  => $this->subtotal(),
             'total'     => $this->total(),
-            'is_empty'  => $this->isEmpty(),
-            'item_count' => count($this->items),
+            'isEmpty'   => $this->isEmpty(),
+            'itemCount' => count($this->items),
         ];
     }
 }
@@ -240,8 +240,8 @@ Now the endpoint response includes computed values alongside regular properties:
     "shippingMethod": "express",
     "subtotal": 99.99,
     "total": 104.98,
-    "is_empty": false,
-    "item_count": 3
+    "isEmpty": false,
+    "itemCount": 3
   }
 }
 ```
@@ -251,7 +251,7 @@ Computed values are **not** stored in the database — they are recomputed fresh
 :::
 
 ::: tip contextKeys Filtering
-Computed keys respect `contextKeys` filtering on endpoints. If an endpoint specifies `contextKeys: ['total', 'item_count']`, only those keys appear — both regular and computed.
+Computed keys respect `contextKeys` filtering on endpoints. If an endpoint specifies `contextKeys: ['total', 'itemCount']`, only those keys appear — both regular and computed.
 :::
 
 ## Context Interfaces for Shared Behaviors

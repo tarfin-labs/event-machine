@@ -39,8 +39,8 @@ class OrderContext extends ContextManager
     protected function computedContext(): array
     {
         return [
-            'item_count' => count($this->items),
-            'is_empty'   => empty($this->items),
+            'itemCount' => count($this->items),
+            'isEmpty'   => empty($this->items),
         ];
     }
 }
@@ -303,7 +303,7 @@ A state can now invoke a child machine via the `machine` key. The child runs its
 ```php
 'processing_payment' => [
     'machine' => PaymentMachine::class,
-    'with'    => ['order_id', 'total_amount'],
+    'with'    => ['orderId', 'totalAmount'],
     '@done'   => 'shipping',
     '@fail'   => 'payment_failed',
 ],
@@ -376,13 +376,13 @@ Short-circuit child machines in tests — no child actually runs:
 ```php
 use Tarfinlabs\EventMachine\Actor\Machine;
 
-PaymentMachine::fake(result: ['payment_id' => 'pay_123']);
+PaymentMachine::fake(result: ['paymentId' => 'pay_123']);
 
 $machine = OrderWorkflowMachine::create();
 $machine->send(['type' => 'START']);
 
 PaymentMachine::assertInvoked();
-PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
+PaymentMachine::assertInvokedWith(['orderId' => 'ORD-1']);
 
 Machine::resetMachineFakes();
 ```
@@ -607,7 +607,7 @@ class PaymentFlowMachine extends Machine
             config: [
                 'id'      => 'payment_flow',
                 'initial' => 'collecting',
-                'context' => ['order_id' => null],
+                'context' => ['orderId' => null],
                 'states'  => [
                     'collecting' => [
                         'on' => ['START' => 'processing'],
@@ -645,7 +645,7 @@ class PaymentFlowMachine extends Machine
             config: [
                 'id'      => 'payment_flow',
                 'initial' => 'collecting',
-                'context' => ['order_id' => null],
+                'context' => ['orderId' => null],
                 'states'  => [
                     'collecting' => [
                         'on' => ['START' => 'processing'],
@@ -685,7 +685,7 @@ class PaymentFlowMachine extends Machine
             config: [
                 'id'      => 'payment_flow',
                 'initial' => 'collecting',
-                'context' => ['order_id' => null],
+                'context' => ['orderId' => null],
                 'states'  => [
                     'collecting' => [
                         'on' => ['START' => 'processing'],
@@ -726,7 +726,7 @@ class PaymentFlowMachine extends Machine
             config: [
                 'id'      => 'payment_flow',
                 'initial' => 'collecting',
-                'context' => ['order_id' => null],
+                'context' => ['orderId' => null],
                 'states'  => [
                     'collecting' => [
                         'on' => ['START' => 'processing'],
@@ -783,7 +783,7 @@ Forwarded endpoint responses now include both parent and child state:
     "data": {
         "machine_id": "root-event-id",
         "value": ["payment_flow.processing"],
-        "context": { "order_id": 1 }
+        "context": { "orderId": 1 }
     }
 }
 ```

@@ -58,23 +58,23 @@ Now the machine's structure tells the story. No hidden boolean, no guard checkin
 // Anti-pattern: 20+ unrelated keys
 
 'context' => [
-    'customer_name'        => null,
-    'customer_email'       => null,
-    'customer_phone'       => null,
-    'customer_address'     => null,
-    'order_total'          => 0,
-    'order_currency'       => 'TRY',
-    'order_discount_code'  => null,
-    'order_discount_pct'   => 0,
-    'shipping_method'      => null,
-    'shipping_cost'        => 0,
-    'shipping_address'     => null,
-    'shipping_tracking_id' => null,
-    'payment_method'       => null,
-    'payment_status'       => null,
-    'payment_transaction'  => null,
-    'invoice_id'           => null,
-    'invoice_url'          => null,
+    'customerName'        => null,
+    'customerEmail'       => null,
+    'customerPhone'       => null,
+    'customerAddress'     => null,
+    'orderTotal'          => 0,
+    'orderCurrency'       => 'TRY',
+    'orderDiscountCode'   => null,
+    'orderDiscountPct'    => 0,
+    'shippingMethod'      => null,
+    'shippingCost'        => 0,
+    'shippingAddress'     => null,
+    'shippingTrackingId'  => null,
+    'paymentMethod'       => null,
+    'paymentStatus'       => null,
+    'paymentTransaction'  => null,
+    'invoiceId'           => null,
+    'invoiceUrl'          => null,
     'notes'                => null,
     'internal_flags'       => [],
     'audit_log'            => [],
@@ -89,10 +89,10 @@ When context becomes a grab-bag, it is hard to know which keys are relevant at w
 // Lean context: only what the machine needs
 
 'context' => [
-    'order_id'      => null,
-    'order_total'   => 0,
-    'payment_id'    => null,
-    'retry_count'   => 0,
+    'orderId'      => null,
+    'orderTotal'   => 0,
+    'paymentId'    => null,
+    'retryCount'   => 0,
 ],
 ```
 
@@ -164,10 +164,10 @@ When using parallel states, give each region its own context namespace to avoid 
 // Each region owns its own keys
 
 'context' => [
-    'payment_status'  => null,   // written by payment region
-    'payment_id'      => null,   // written by payment region
-    'shipping_status' => null,   // written by shipping region
-    'tracking_id'     => null,   // written by shipping region
+    'paymentStatus'  => null,   // written by payment region
+    'paymentId'      => null,   // written by payment region
+    'shippingStatus' => null,   // written by shipping region
+    'trackingId'     => null,   // written by shipping region
 ],
 ```
 
@@ -201,7 +201,7 @@ After:
 
 ```php ignore
 'context' => [
-    'order_id' => null,
+    'orderId' => null,
 ],
 'states' => [
     'validating' => [

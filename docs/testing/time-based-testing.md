@@ -32,9 +32,9 @@ SubscriptionMachine::test()
     ->assertState('active')
     ->advanceTimers(Timer::days(31))    // past 30-day interval
     ->assertState('active')             // stays in state
-    ->assertContext('billing_count', 1) // action ran
+    ->assertContext('billingCount', 1) // action ran
     ->advanceTimers(Timer::days(31))    // another cycle
-    ->assertContext('billing_count', 2);
+    ->assertContext('billingCount', 2);
 ```
 
 ## Testing `every` with max/then
@@ -46,11 +46,11 @@ use Tarfinlabs\EventMachine\Support\Timer;
 RetryMachine::test()
     ->assertState('retrying')
     ->advanceTimers(Timer::hours(7))    // retry 1
-    ->assertContext('retry_count', 1)
+    ->assertContext('retryCount', 1)
     ->advanceTimers(Timer::hours(7))    // retry 2
-    ->assertContext('retry_count', 2)
+    ->assertContext('retryCount', 2)
     ->advanceTimers(Timer::hours(7))    // retry 3 (max)
-    ->assertContext('retry_count', 3)
+    ->assertContext('retryCount', 3)
     ->advanceTimers(Timer::hours(7))    // past max → MAX_RETRIES sent
     ->assertState('failed')
     ->assertFinished();
@@ -94,7 +94,7 @@ OrderMachine::test()
 
 <!-- doctest-attr: no_run -->
 ```php
-OrderMachine::test(['order_id' => 'ORD-123'])
+OrderMachine::test(['orderId' => 'ORD-123'])
     ->assertState('awaiting_payment')
     ->assertHasTimer('ORDER_EXPIRED')
     ->assertHasTimer('PAYMENT_REMINDER')

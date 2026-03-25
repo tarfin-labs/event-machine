@@ -143,8 +143,8 @@ it('every timer fires and updates context', function (): void {
 
         // Also wait for Horizon to process the timer job
         $restored = EveryTimerMachine::create(state: $rootEventId);
-        return $restored->state->context->get('billing_count') >= 1;
-    }, timeoutSeconds: 60, description: 'every timer: fire_count + billing_count');
+        return $restored->state->context->get('billingCount') >= 1;
+    }, timeoutSeconds: 60, description: 'every timer: fire_count + billingCount');
 
     expect($fired)->toBeTrue();
 });

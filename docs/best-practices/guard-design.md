@@ -30,7 +30,7 @@ class IsPaymentValidGuard extends GuardBehavior
     public function __invoke(ContextManager $context): bool
     {
         // BAD: network failure changes guard result
-        $response = Http::get("https://api.payment.com/verify/{$context->get('payment_id')}");
+        $response = Http::get("https://api.payment.com/verify/{$context->get('paymentId')}");
 
         return $response->json('status') === 'valid';
     }
@@ -51,8 +51,8 @@ class VerifyPaymentAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $response = Http::get("https://api.payment.com/verify/{$context->get('payment_id')}");
-        $context->set('payment_status', $response->json('status'));
+        $response = Http::get("https://api.payment.com/verify/{$context->get('paymentId')}");
+        $context->set('paymentStatus', $response->json('status'));
     }
 }
 
@@ -61,7 +61,7 @@ class IsPaymentValidGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
     {
-        return $context->get('payment_status') === 'valid';
+        return $context->get('paymentStatus') === 'valid';
     }
 }
 ```
@@ -157,7 +157,7 @@ class IsPaymentValidGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
     {
-        return $context->get('payment_status') === 'valid';
+        return $context->get('paymentStatus') === 'valid';
     }
 }
 ```
@@ -185,7 +185,7 @@ class IsRetryAllowedGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
     {
-        return $context->get('retry_count') < 3;
+        return $context->get('retryCount') < 3;
     }
 }
 ```

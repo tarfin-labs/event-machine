@@ -228,8 +228,8 @@ When no `result` is specified, the endpoint returns the machine state as JSON:
         "machine_id": "01JARX5Z8KQVN...",
         "value": ["submitted"],
         "context": {
-            "total_amount": 15000,
-            "customer_email": "user@example.com"
+            "totalAmount": 15000,
+            "customerEmail": "user@example.com"
         },
         "available_events": [
             { "type": "APPROVE", "source": "parent" },
@@ -285,7 +285,7 @@ class OrderDetailEndpointResult extends ResultBehavior
             'id'     => $order->id,
             'status' => $order->status,
             'items'  => $order->items->toArray(),
-            'total'  => $context->get('total_amount'),
+            'total'  => $context->get('totalAmount'),
         ];
     }
 }
@@ -325,7 +325,7 @@ class InvoiceEndpointResult extends ResultBehavior
     public function __invoke(ContextManager $context): array
     {
         return $this->invoices->generateSummary(
-            $context->get('order_id'),
+            $context->get('orderId'),
         );
     }
 }
@@ -445,7 +445,7 @@ The create endpoint:
         "machine_id": "01JARX5Z8KQVN...",
         "value": ["idle"],
         "context": {
-            "total_amount": 0,
+            "totalAmount": 0,
             "items": []
         }
     }
@@ -1002,7 +1002,7 @@ You can also use an `EventBehavior` class reference:
         'middleware'        => ['auth:customer'],   // optional — additive
         'action'           => CardEndpointAction::class,   // optional — parent-level action
         'result'           => 'cardSubmittedResult',       // optional — ResultBehavior key or FQCN
-        'contextKeys'      => ['card_token', 'last_four'], // optional — filter child context keys
+        'contextKeys'      => ['cardToken', 'lastFour'], // optional — filter child context keys
         'status'           => 200,                 // optional — default: 200
         'available_events' => true,                // optional — include available_events in response
     ],
@@ -1037,13 +1037,13 @@ class OrderMachine extends Machine
             config: [
                 'id'      => 'order',
                 'initial' => 'created',
-                'context' => ['order_id' => null],
+                'context' => ['orderId' => null],
                 'states'  => [
                     'created' => ['on' => ['SUBMIT' => 'processing_payment']],
                     'processing_payment' => [
                         'machine'  => PaymentMachine::class,
                         'queue'    => 'payments',
-                        'with'     => ['order_id'],
+                        'with'     => ['orderId'],
                         'forward'  => ['PROVIDE_CARD', 'CANCEL_ORDER' => 'ABORT'],
                         'on'       => [
                             '@done' => 'paid',
@@ -1082,8 +1082,8 @@ When no `result` is specified, forwarded endpoints return both parent and child 
         "child": {
             "value": ["awaiting_verification"],
             "context": {
-                "card_token": "tok_abc123",
-                "last_four": "4242"
+                "cardToken": "tok_abc123",
+                "lastFour": "4242"
             }
         }
     }
@@ -1140,8 +1140,8 @@ class CardSubmittedResult extends ResultBehavior
     public function __invoke(ContextManager $context, ForwardContext $forwardContext): array
     {
         return [
-            'order_id'    => $context->get('order_id'),
-            'card_status' => $forwardContext->childContext->get('status'),
+            'orderId'     => $context->get('orderId'),
+            'cardStatus'  => $forwardContext->childContext->get('status'),
             'child_state' => $forwardContext->childState->value,
         ];
     }

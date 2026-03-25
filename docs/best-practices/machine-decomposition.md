@@ -63,7 +63,7 @@ A machine this size is impossible to visualise, test comprehensively, or reason 
 'states' => [
     'validating' => [
         'machine' => ValidationMachine::class,
-        'with'    => ['order_id'],
+        'with'    => ['orderId'],
         '@done'   => 'awaiting_payment',
         '@fail'   => 'validation_failed',
     ],
@@ -72,13 +72,13 @@ A machine this size is impossible to visualise, test comprehensively, or reason 
     ],
     'processing_payment' => [
         'machine' => PaymentMachine::class,
-        'with'    => ['order_id', 'order_total'],
+        'with'    => ['orderId', 'orderTotal'],
         '@done'   => 'shipping',
         '@fail'   => 'payment_failed',
     ],
     'shipping' => [
         'machine' => ShippingMachine::class,
-        'with'    => ['order_id'],
+        'with'    => ['orderId'],
         '@done'   => 'completed',
         '@fail'   => 'shipping_failed',
     ],
@@ -161,17 +161,17 @@ class OrderWorkflowMachine extends Machine
             config: [
                 'id'      => 'order_workflow',
                 'initial' => 'processing_payment',
-                'context' => ['order_id' => null, 'order_total' => 0],
+                'context' => ['orderId' => null, 'orderTotal' => 0],
                 'states'  => [
                     'processing_payment' => [
                         'machine' => PaymentMachine::class,
-                        'with'    => ['order_id', 'order_total'],
+                        'with'    => ['orderId', 'orderTotal'],
                         '@done'   => 'shipping',
                         '@fail'   => 'payment_failed',
                     ],
                     'shipping' => [
                         'machine' => ShippingMachine::class,
-                        'with'    => ['order_id'],
+                        'with'    => ['orderId'],
                         '@done'   => 'completed',
                         '@fail'   => 'shipping_failed',
                     ],
