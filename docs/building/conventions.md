@@ -108,20 +108,33 @@ class DocumentsUploadedEvent extends EventBehavior { ... }
 class ItemAddedToCartEvent extends EventBehavior { ... }
 ```
 
-The `getType()` method should return the event type in `SCREAMING_SNAKE_CASE`, derived from the full class meaning — not abbreviated:
+The `getType()` method is **automatically derived** from the class name — strip the `Event` suffix, convert to `SCREAMING_SNAKE_CASE`. You don't need to implement it:
 
 ```php no_run
 class OrderSubmittedEvent extends EventBehavior
 {
-    public function getType(): string
+    // getType() auto-generates 'ORDER_SUBMITTED' — no override needed!
+}
+```
+
+Override `getType()` only when the auto-generated type doesn't match your needs (e.g., legacy compatibility):
+
+```php no_run
+class CallerEvent extends EventBehavior
+{
+    public static function getType(): string
     {
-        return 'ORDER_SUBMITTED';
+        return 'TEST_EVENT'; // explicit override
     }
 }
 ```
 
 ::: danger Avoid Abbreviations
 Don't abbreviate event types. Use `ORDER_SUBMITTED` instead of `ORD_SUB` or `OS`. Abbreviated types are cryptic and make debugging harder.
+:::
+
+::: warning Don't prefix event types with the machine name
+Event types should describe **what happened**, not which machine they belong to. The `machine_id` column and internal event format already carry machine identity. Use `ADDRESS_INFO_EDIT_REQUESTED`, not `CAR_SALES_ADDRESS_INFO_EDIT_REQUESTED`.
 :::
 
 ### Event Types in Configuration
@@ -138,10 +151,10 @@ When referencing events as string keys in the machine config, use `SCREAMING_SNA
 
 ### Multi-Word Events
 
-For events with multiple words, ensure every word is clearly separated:
+For events with multiple words, the auto-generation handles separation correctly:
 
-| Class Name | `getType()` |
-|------------|-------------|
+| Class Name | Auto-generated `getType()` |
+|------------|---------------------------|
 | `OrderSubmittedEvent` | `ORDER_SUBMITTED` |
 | `PaymentMethodUpdatedEvent` | `PAYMENT_METHOD_UPDATED` |
 | `UserEmailVerifiedEvent` | `USER_EMAIL_VERIFIED` |
