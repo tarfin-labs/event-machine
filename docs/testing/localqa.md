@@ -32,8 +32,9 @@ LocalQA tests run inside a real Laravel application (not the package's testbench
 3. **Configure `.env`** — MySQL connection, `QUEUE_CONNECTION=redis`, `REDIS_PREFIX=laravel_database_`
 4. **Publish migrations** — `php artisan vendor:publish --provider="Tarfinlabs\EventMachine\MachineServiceProvider"`
 5. **Run migrations** — `php artisan migrate`
-6. **Configure Horizon queues** — add `child-queue` to `config/horizon.php` queue array, set `maxProcesses` ≥ 3
-7. **Autoload test stubs** — add the package's `tests/` namespace to `composer.json` `autoload-dev` so Horizon can resolve test machine classes
+6. **Configure Horizon queues** — add `child-queue` to `config/horizon.php` queue array
+7. **Set worker limits** — `maxProcesses=8`, `minProcesses=4` (prevents auto-scaling to 1 worker during test suite)
+8. **Autoload test stubs** — add the package's `tests/` namespace to `composer.json` `autoload-dev` so Horizon can resolve test machine classes
 
 ::: tip
 If you already have a Laravel project that uses EventMachine, you can skip steps 1-5 and run LocalQA tests directly against your existing database. Just ensure `QUEUE_CONNECTION=redis` and Horizon is configured.
@@ -58,8 +59,38 @@ beforeEach(function (): void {
 
 | Method | Purpose |
 |--------|---------|
-| `cleanTables()` | Truncates all machine tables + drains Redis queues. Use in `beforeEach`. |
-| `waitFor(callback, timeout)` | Polls until callback returns `true` or timeout (default 30s). Use for async assertions. |
+| `cleanTables()` | Drains all Redis queues + truncates all machine tables. Use in `beforeEach`. |
+| `waitFor(callback, timeout, description)` | Polls until callback returns `true` or timeout (default 45s). Uses exponential backoff (100ms→1s). Dumps diagnostics on timeout. |
+
+## Rules
+
+1. **Never fake** — `Bus::fake()`, `Queue::fake()`, `Machine::fake()`, `Mockery` are all forbidden. LocalQA tests must use real Horizon workers.
+2. **Never sleep for positive assertions** — use `waitFor()` instead. `sleep()` is only acceptable for negative assertions (verifying something does NOT happen), and must be documented with a comment.
+3. **Wait for context, not just fire records** — timer tests must wait for both `fire_count` AND context update (e.g., `retry_count`). The fire record is written by the sweep command, but the context update happens when Horizon processes the job — these are different timings.
+4. **Use generous timeouts** — 60s minimum for `waitFor`, 90s for heavy concurrent tests. Horizon workers may be processing other tests' chain completions.
+5. **Every test starts with `cleanTables()`** — drains Redis queues and truncates tables. Each test is isolated by unique `root_event_id`.
+6. **Always add `$description`** to `waitFor()` — on timeout, the diagnostics dump shows queue state, last events, failed jobs. Without a description, debugging is blind.
+
+## Diagnostics on Timeout
+
+When `waitFor()` times out, it dumps a JSON diagnostic snapshot to STDERR:
+
+```json
+{
+  "description": "every timer: waiting for fire_count>=1",
+  "machine_events": 13,
+  "last_5_events": ["state.retrying.enter", "transition.retrying.RETRY.finish", ...],
+  "current_states": ["every_max.retrying"],
+  "children": [],
+  "locks": 0,
+  "failed_jobs": ["MaxTransitionDepthExceededException..."],
+  "queue:default:pending": 0,
+  "queue:default:reserved": 1,
+  "queue:child-queue:delayed": 2
+}
+```
+
+This shows exactly **what happened** (last events), **where the machine is** (current states), **what's stuck** (queue sizes), and **why it failed** (exception messages).
 
 ## Example: Async Child Delegation
 
@@ -74,42 +105,81 @@ it('async child completes via Horizon', function (): void {
 
     $rootEventId = $parent->state->history->first()->root_event_id;
 
-    // Parent should be in delegating state (child dispatched to queue)
-    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
-    expect($cs->state_id)->toContain('processing_payment');
-
     // Wait for Horizon to complete the child and route @done
     $completed = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60, description: 'async child: waiting for completed state');
 
     expect($completed)->toBeTrue('Child delegation not completed by Horizon');
 });
 ```
 
-## Example: Parallel Regions
+## Example: Timer with Context Verification
 
-Test that both parallel regions complete and `@done` fires:
+When testing timers, wait for **both** the fire record AND the context update:
 
 <!-- doctest-attr: no_run -->
 ```php
-it('parallel regions complete via Horizon', function (): void {
-    $machine = ShippingMachine::create();
-    $machine->send(['type' => 'START']);
+it('every timer fires and updates context', function (): void {
+    $machine = EveryTimerMachine::create();
     $machine->persist();
-
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    // Wait for both warehouse + delivery regions to complete
-    $completed = LocalQATestCase::waitFor(function () use ($rootEventId) {
-        $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+    // Backdate past timer interval
+    DB::table('machine_current_states')
+        ->where('root_event_id', $rootEventId)
+        ->update(['state_entered_at' => now()->subDays(31)]);
 
-        return $cs !== null && str_contains($cs->state_id, '.shipped');
-    }, timeoutSeconds: 45);
+    Artisan::call('machine:process-timers', ['--class' => EveryTimerMachine::class]);
 
-    expect($completed)->toBeTrue('Parallel regions did not complete');
+    // Wait for BOTH fire_count AND context update
+    $fired = LocalQATestCase::waitFor(function () use ($rootEventId) {
+        $fire = MachineTimerFire::where('root_event_id', $rootEventId)->first();
+        if (!$fire || $fire->fire_count < 1) {
+            return false;
+        }
+
+        // Also wait for Horizon to process the timer job
+        $restored = EveryTimerMachine::create(state: $rootEventId);
+        return $restored->state->context->get('billing_count') >= 1;
+    }, timeoutSeconds: 60, description: 'every timer: fire_count + billing_count');
+
+    expect($fired)->toBeTrue();
+});
+```
+
+::: warning Common Mistake
+Waiting only for `fire_count` is not enough — the fire record is written by the artisan command, but the machine context is updated by the Horizon job. These happen at different times.
+:::
+
+## Example: Negative Assertion (sleep)
+
+When verifying something does **not** happen, `sleep()` is the only option:
+
+<!-- doctest-attr: no_run -->
+```php
+it('fire-and-forget child does NOT send completion to parent', function (): void {
+    $parent = FireAndForgetMachine::create();
+    $parent->send(['type' => 'START']);
+    $parent->persist();
+
+    $rootEventId = $parent->state->history->first()->root_event_id;
+
+    // Wait for child to finish running
+    LocalQATestCase::waitFor(function () {
+        return DB::table('machine_current_states')
+            ->where('state_id', 'LIKE', '%child%')
+            ->exists();
+    }, timeoutSeconds: 60);
+
+    // Negative assertion: verify NO completion job fires.
+    // sleep required — cannot waitFor absence.
+    sleep(1);
+
+    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+    expect($cs->state_id)->toContain('processing'); // Parent unaffected
 });
 ```
 
@@ -121,29 +191,33 @@ it('parallel regions complete via Horizon', function (): void {
 | Redis prefix mismatch | Set `REDIS_PREFIX=laravel_database_` in both `.env` and `.env.testing` |
 | Horizon only processes `default` queue | Add `child-queue` to `config/horizon.php` queue array |
 | Old Horizon processes interfere | Run `pkill -9 -f horizon` before starting fresh |
-| Tests timeout at 30s | Increase `waitFor` timeout to 45s — Horizon startup can be slow |
-| Jobs in Redis but not processed | Verify Horizon workers are running: `php artisan horizon:status` |
+| Horizon auto-scales to 1 worker | Set `minProcesses=4` in `config/horizon.php` |
+| Tests timeout under load | Use 60s+ for all `waitFor`, 90s for concurrent tests |
+| Timer test flaky | Wait for context update, not just fire_count |
+| Wrong context key in assertion | Verify key name from machine stub (e.g., `retry_count` not `billing_count`) |
+| `RestoringStateException` in logs | Harmless — orphan job from previous test found truncated table. Each test uses unique `root_event_id` |
 
 ## Running LocalQA Tests
 
 <!-- doctest-attr: ignore -->
 ```bash
-# 1. Ensure services are running
-mysql -u root -e "SELECT 1"
-redis-cli PING
+# Automated (recommended)
+bash tests/LocalQA/run-qa.sh
 
-# 2. Flush Redis and start Horizon
+# With filter
+bash tests/LocalQA/run-qa.sh --filter="async delegation"
+
+# Manual
+pkill -9 -f horizon 2>/dev/null; sleep 1
 redis-cli FLUSHALL
 cd /path/to/qa-project && php artisan horizon &
 sleep 5
-
-# 3. Run tests from package directory
-cd /path/to/event-machine
-vendor/bin/pest tests/LocalQA/
+cd /path/to/event-machine && vendor/bin/pest tests/LocalQA/
+pkill -9 -f horizon
 ```
 
 ::: tip
-LocalQA tests are excluded from `composer test`. Run them separately with `vendor/bin/pest tests/LocalQA/`.
+LocalQA tests are excluded from `composer test`. Run them separately with `vendor/bin/pest tests/LocalQA/` or via `run-qa.sh`.
 :::
 
 ## Related
