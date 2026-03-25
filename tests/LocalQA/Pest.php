@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
-
 /*
 |--------------------------------------------------------------------------
 | LocalQA Global Hooks

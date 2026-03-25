@@ -165,7 +165,7 @@ it('LocalQA: every max/then transitions machine to failed via Horizon', function
             $restored = EveryWithMaxMachine::create(state: $rootEventId);
 
             return $restored->state->context->get('retry_count') >= ($i + 1);
-        }, timeoutSeconds: 60, description: "every max/then: cycle ".($i + 1)." fire_count+retry_count");
+        }, timeoutSeconds: 60, description: 'every max/then: cycle '.($i + 1).' fire_count+retry_count');
     }
 
     // After max, sweep should send then event
