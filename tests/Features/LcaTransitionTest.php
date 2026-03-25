@@ -14,7 +14,7 @@ it('does not exit or enter parent when transitioning between sibling states', fu
     TestMachine::define([
         'id'      => 'lca_sibling_test',
         'initial' => 'parent.child_a',
-        'context' => ['action_log' => []],
+        'context' => ['actionLog' => []],
         'states'  => [
             'parent' => [
                 'initial' => 'child_a',
@@ -36,26 +36,26 @@ it('does not exit or enter parent when transitioning between sibling states', fu
     ], behavior: [
         'actions' => [
             'entryParentAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:parent']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:parent']);
             },
             'exitParentAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:parent']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:parent']);
             },
             'exitChildAAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:child_a']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:child_a']);
             },
             'entryChildBAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:child_b']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:child_b']);
             },
         ],
     ])
         // After initialization, parent entry fires (entering the compound state initially)
         // and then we clear the log to isolate the sibling transition
         ->tap(function (TestMachine $testMachine): void {
-            $testMachine->context()->set('action_log', []);
+            $testMachine->context()->set('actionLog', []);
         })
         ->assertState('parent.child_a')
         ->send('SWITCH')
         ->assertState('parent.child_b')
-        ->assertContext('action_log', ['exit:child_a', 'entry:child_b']);
+        ->assertContext('actionLog', ['exit:child_a', 'entry:child_b']);
 });

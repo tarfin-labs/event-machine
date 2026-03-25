@@ -291,8 +291,8 @@ it('verification: TestMachine every with multiple cycles', function (): void {
         ->assertState('active')
         ->assertHasTimer('BILLING')
         ->advanceTimers(Timer::days(31))
-        ->assertContext('billing_count', 1)
+        ->assertContext('billingCount', 1)
         ->assertState('active')
         ->advanceTimers(Timer::days(31))
-        ->assertContext('billing_count', 2);
+        ->assertContext('billingCount', 2);
 });

@@ -27,7 +27,7 @@ it('fires only the source state exit actions when transitioning out of a 3-level
     TestMachine::define([
         'id'      => 'deep_exit_ordering',
         'initial' => 'level_one.level_two.level_three',
-        'context' => ['action_log' => []],
+        'context' => ['actionLog' => []],
         'states'  => [
             'level_one' => [
                 'exit'   => 'exitLevelOneAction',
@@ -53,24 +53,24 @@ it('fires only the source state exit actions when transitioning out of a 3-level
     ], behavior: [
         'actions' => [
             'exitLevelOneAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:level_one']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:level_one']);
             },
             'exitLevelTwoAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:level_two']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:level_two']);
             },
             'exitLevelThreeAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:level_three']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:level_three']);
             },
             'entryTargetAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:target_state']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:target_state']);
             },
         ],
     ])
         ->assertState('level_one.level_two.level_three')
-        ->assertContext('action_log', [])
+        ->assertContext('actionLog', [])
         ->send('GO')
         ->assertState('target_state')
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             // EventMachine only exits the source state (where the transition is defined).
             // Ancestor states (level_two, level_one) do NOT receive exit actions.
             'exit:level_three',
@@ -86,7 +86,7 @@ it('fires entry actions only on the resolved leaf when entering a deep hierarchy
     TestMachine::define([
         'id'      => 'deep_entry_compound',
         'initial' => 'start',
-        'context' => ['action_log' => []],
+        'context' => ['actionLog' => []],
         'states'  => [
             'start' => [
                 'on' => [
@@ -112,21 +112,21 @@ it('fires entry actions only on the resolved leaf when entering a deep hierarchy
     ], behavior: [
         'actions' => [
             'entryLevelOneAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:level_one']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:level_one']);
             },
             'entryLevelTwoAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:level_two']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:level_two']);
             },
             'entryLevelThreeAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:level_three']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:level_three']);
             },
         ],
     ])
         ->assertState('start')
-        ->assertContext('action_log', [])
+        ->assertContext('actionLog', [])
         ->send('GO')
         ->assertState('level_one.level_two.level_three')
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             // The main transition() method pre-resolves compound targets to the deepest
             // initial leaf via findInitialStateDefinition(). enterState() then receives
             // the leaf directly, so only the leaf's entry actions run.
@@ -143,7 +143,7 @@ it('fires entry actions only on the leaf when targeting a deeply nested state di
     TestMachine::define([
         'id'      => 'deep_entry_leaf',
         'initial' => 'start',
-        'context' => ['action_log' => []],
+        'context' => ['actionLog' => []],
         'states'  => [
             'start' => [
                 'on' => [
@@ -169,21 +169,21 @@ it('fires entry actions only on the leaf when targeting a deeply nested state di
     ], behavior: [
         'actions' => [
             'entryLevelOneAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:level_one']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:level_one']);
             },
             'entryLevelTwoAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:level_two']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:level_two']);
             },
             'entryLevelThreeAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:level_three']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:level_three']);
             },
         ],
     ])
         ->assertState('start')
-        ->assertContext('action_log', [])
+        ->assertContext('actionLog', [])
         ->send('GO')
         ->assertState('level_one.level_two.level_three')
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             // Explicit leaf target resolves directly to the leaf state definition.
             // Only the leaf's entry actions run — same behavior as compound target.
             'entry:level_three',
@@ -198,7 +198,7 @@ it('maintains correct action ordering for a full round-trip through a deep hiera
     TestMachine::define([
         'id'      => 'deep_roundtrip',
         'initial' => 'outside',
-        'context' => ['action_log' => []],
+        'context' => ['actionLog' => []],
         'states'  => [
             'outside' => [
                 'exit' => 'exitOutsideAction',
@@ -233,36 +233,36 @@ it('maintains correct action ordering for a full round-trip through a deep hiera
     ], behavior: [
         'actions' => [
             'exitOutsideAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:outside']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:outside']);
             },
             'entryLevelOneAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:level_one']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:level_one']);
             },
             'exitLevelOneAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:level_one']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:level_one']);
             },
             'entryLevelTwoAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:level_two']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:level_two']);
             },
             'exitLevelTwoAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:level_two']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:level_two']);
             },
             'entryLevelThreeAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:level_three']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:level_three']);
             },
             'exitLevelThreeAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:level_three']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:level_three']);
             },
             'entryDoneAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:done']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:done']);
             },
         ],
     ])
         ->assertState('outside')
-        ->assertContext('action_log', [])
+        ->assertContext('actionLog', [])
         ->send('ENTER_DEEP')
         ->assertState('level_one.level_two.level_three')
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             // Exit: only source state (outside) exit runs
             // Entry: only resolved leaf (level_three) entry runs
             'exit:outside',
@@ -270,7 +270,7 @@ it('maintains correct action ordering for a full round-trip through a deep hiera
         ])
         ->send('LEAVE_DEEP')
         ->assertState('done')
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             // Previous actions preserved
             'exit:outside',
             'entry:level_three',
@@ -289,7 +289,7 @@ it('fires ancestor exit actions when the transition is defined on an ancestor st
     TestMachine::define([
         'id'      => 'deep_ancestor_exit',
         'initial' => 'level_one.level_two.level_three',
-        'context' => ['action_log' => []],
+        'context' => ['actionLog' => []],
         'states'  => [
             'level_one' => [
                 'exit' => 'exitLevelOneAction',
@@ -316,24 +316,24 @@ it('fires ancestor exit actions when the transition is defined on an ancestor st
     ], behavior: [
         'actions' => [
             'exitLevelOneAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:level_one']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:level_one']);
             },
             'exitLevelTwoAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:level_two']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:level_two']);
             },
             'exitLevelThreeAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:level_three']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:level_three']);
             },
             'entryTargetAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:target_state']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:target_state']);
             },
         ],
     ])
         ->assertState('level_one.level_two.level_three')
-        ->assertContext('action_log', [])
+        ->assertContext('actionLog', [])
         ->send('GO')
         ->assertState('target_state')
-        ->assertContext('action_log', [
+        ->assertContext('actionLog', [
             // When the event bubbles up and the transition is defined on level_one,
             // the source of the transition is level_one, so only level_one's exit runs.
             // Descendant exit actions (level_two, level_three) are NOT invoked.

@@ -183,7 +183,7 @@ test('overlap rejection error message contains removal instructions', function (
 // ═══════════════════════════════════════════════════════════════
 
 test('ForwardContext.childContext is the child ContextManager', function (): void {
-    $childCtx   = new ContextManager(['card_last4' => '4242', 'status' => 'ok']);
+    $childCtx   = new ContextManager(['cardLast4' => '4242', 'status' => 'ok']);
     $childDef   = ForwardChildEndpointMachine::definition();
     $childState = State::forTesting(
         context: $childCtx,
@@ -193,11 +193,11 @@ test('ForwardContext.childContext is the child ContextManager', function (): voi
     $fc = new ForwardContext(childContext: $childCtx, childState: $childState);
 
     expect($fc->childContext)->toBe($childCtx)
-        ->and($fc->childContext->get('card_last4'))->toBe('4242');
+        ->and($fc->childContext->get('cardLast4'))->toBe('4242');
 });
 
 test('ForwardContext.childState exposes child state value', function (): void {
-    $childCtx   = new ContextManager(['order_id' => 1, 'card_last4' => null, 'status' => 'pending']);
+    $childCtx   = new ContextManager(['orderId' => 1, 'cardLast4' => null, 'status' => 'pending']);
     $childDef   = ForwardChildEndpointMachine::definition();
     $childState = State::forTesting(
         context: $childCtx,
@@ -211,7 +211,7 @@ test('ForwardContext.childState exposes child state value', function (): void {
 });
 
 test('ForwardContext can carry a child state in final state', function (): void {
-    $childCtx   = new ContextManager(['order_id' => 99, 'card_last4' => '1111', 'status' => 'charged']);
+    $childCtx   = new ContextManager(['orderId' => 99, 'cardLast4' => '1111', 'status' => 'charged']);
     $childDef   = ForwardChildEndpointMachine::definition();
     $childState = State::forTesting(
         context: $childCtx,
@@ -293,7 +293,7 @@ test('forward events are filtered by child current state', function (): void {
 
     // Create child already in awaiting_confirmation (not initial state)
     $childMachine = ForwardChildEndpointMachine::create();
-    $childMachine->send(['type' => 'PROVIDE_CARD', 'payload' => ['card_number' => '4111111111111111']]);
+    $childMachine->send(['type' => 'PROVIDE_CARD', 'payload' => ['cardNumber' => '4111111111111111']]);
     $childRootId = $childMachine->state->history->first()->root_event_id;
 
     expect($childMachine->state->currentStateDefinition->id)

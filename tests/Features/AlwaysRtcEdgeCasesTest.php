@@ -20,7 +20,7 @@ it('@always chain cascading to compound final triggers parent @done', function (
             'id'      => 'always_chain_compound_done',
             'initial' => 'wrapper',
             'context' => [
-                'action_log' => [],
+                'actionLog' => [],
             ],
             'states' => [
                 'wrapper' => [
@@ -54,16 +54,16 @@ it('@always chain cascading to compound final triggers parent @done', function (
         behavior: [
             'actions' => [
                 'logStepOneAction' => function (ContextManager $context): void {
-                    $context->set('action_log', [...$context->get('action_log'), 'entry:step_one']);
+                    $context->set('actionLog', [...$context->get('actionLog'), 'entry:step_one']);
                 },
                 'logStepTwoAction' => function (ContextManager $context): void {
-                    $context->set('action_log', [...$context->get('action_log'), 'entry:step_two']);
+                    $context->set('actionLog', [...$context->get('actionLog'), 'entry:step_two']);
                 },
                 'logStepFinalAction' => function (ContextManager $context): void {
-                    $context->set('action_log', [...$context->get('action_log'), 'entry:step_final']);
+                    $context->set('actionLog', [...$context->get('actionLog'), 'entry:step_final']);
                 },
                 'logCompletedAction' => function (ContextManager $context): void {
-                    $context->set('action_log', [...$context->get('action_log'), 'entry:completed']);
+                    $context->set('actionLog', [...$context->get('actionLog'), 'entry:completed']);
                 },
             ],
         ],
@@ -76,7 +76,7 @@ it('@always chain cascading to compound final triggers parent @done', function (
     expect($state->value)->toBe(['always_chain_compound_done.completed']);
 
     // All entry actions should have fired in order
-    expect($state->context->get('action_log'))->toBe([
+    expect($state->context->get('actionLog'))->toBe([
         'entry:step_one',
         'entry:step_two',
         'entry:step_final',
@@ -96,7 +96,7 @@ it('processes event raised during initial state entry in RTC order', function ()
             'id'      => 'initial_entry_raise',
             'initial' => 'start',
             'context' => [
-                'execution_order' => [],
+                'executionOrder' => [],
             ],
             'states' => [
                 'start' => [
@@ -124,7 +124,7 @@ it('processes event raised during initial state entry in RTC order', function ()
     expect($state->value)->toBe(['initial_entry_raise.handled']);
 
     // RTC order: both entry actions complete BEFORE the raised event is processed
-    expect($state->context->get('execution_order'))->toBe([
+    expect($state->context->get('executionOrder'))->toBe([
         'initial_entry',           // 1. First entry action runs and raises event
         'initial_entry_complete',  // 2. Second entry action completes (entry finishes)
         'raised_event_handled',    // 3. Raised event processed AFTER entry completes

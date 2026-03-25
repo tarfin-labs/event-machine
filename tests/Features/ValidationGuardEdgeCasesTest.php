@@ -47,7 +47,7 @@ it('does not trigger @fail transition when ValidationGuard rejects', function ()
 
     // Machine must stay in 'processing' — not moved to 'failed'
     expect($instance->state->currentStateDefinition->key)->toBe('processing');
-    expect($instance->state->context->get('fail_reached'))->toBeFalse();
+    expect($instance->state->context->get('failReached'))->toBeFalse();
 });
 
 // endregion

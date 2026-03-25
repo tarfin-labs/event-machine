@@ -153,7 +153,7 @@ test('it parses full array forward with result and contextKeys', function (): vo
         ->and($fwd->parentEventType)->toBe('CONFIRM_PAYMENT')
         ->and($fwd->childEventType)->toBe('CONFIRM_PAYMENT')
         ->and($fwd->resultBehavior)->toBe(PaymentStepResult::class)
-        ->and($fwd->contextKeys)->toBe(['card_last4', 'status'])
+        ->and($fwd->contextKeys)->toBe(['cardLast4', 'status'])
         ->and($fwd->statusCode)->toBe(200);
 });
 
@@ -214,7 +214,7 @@ test('it parses full array forward with ALL keys simultaneously', function (): v
         ->and($fwd->middleware)->toBe(['throttle:10'])
         ->and($fwd->actionClass)->toBe(ForwardEndpointAction::class)
         ->and($fwd->resultBehavior)->toBe(PaymentStepResult::class)
-        ->and($fwd->contextKeys)->toBe(['card_last4'])
+        ->and($fwd->contextKeys)->toBe(['cardLast4'])
         ->and($fwd->statusCode)->toBe(202)
         ->and($fwd->availableEvents)->toBeFalse();
 });
@@ -311,7 +311,7 @@ test('it parses Format 1 + Format 2 + Format 3 in same forward array', function 
                         'CANCEL_ORDER'    => 'ABORT',                            // Format 2: rename
                         'CONFIRM_PAYMENT' => [                                // Format 3: full config
                             'result'      => PaymentStepResult::class,
-                            'contextKeys' => ['card_last4'],
+                            'contextKeys' => ['cardLast4'],
                             'status'      => 201,
                         ],
                     ],
@@ -351,7 +351,7 @@ test('it parses Format 1 + Format 2 + Format 3 in same forward array', function 
     expect($full->parentEventType)->toBe('CONFIRM_PAYMENT')
         ->and($full->childEventType)->toBe('CONFIRM_PAYMENT')
         ->and($full->resultBehavior)->toBe(PaymentStepResult::class)
-        ->and($full->contextKeys)->toBe(['card_last4'])
+        ->and($full->contextKeys)->toBe(['cardLast4'])
         ->and($full->statusCode)->toBe(201);
 });
 
@@ -566,7 +566,7 @@ test('it existing forward behavior unchanged for Format 1 and Format 2', functio
     expect($confirmPayment->parentEventType)->toBe('CONFIRM_PAYMENT')
         ->and($confirmPayment->childEventType)->toBe('CONFIRM_PAYMENT')
         ->and($confirmPayment->resultBehavior)->toBe(PaymentStepResult::class)
-        ->and($confirmPayment->contextKeys)->toBe(['card_last4', 'status'])
+        ->and($confirmPayment->contextKeys)->toBe(['cardLast4', 'status'])
         ->and($confirmPayment->statusCode)->toBe(200);
 });
 

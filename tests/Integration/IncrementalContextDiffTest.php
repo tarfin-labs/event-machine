@@ -25,13 +25,13 @@ it('applies incremental context diffs in chronological order on restore', functi
     $restoredContext = $restoredMachine->state->context;
 
     // key_a was set to 'updated_a_1' by GO1, then overwritten to 'updated_a_2' by GO2
-    expect($restoredContext->get('key_a'))->toBe('updated_a_2');
+    expect($restoredContext->get('keyA'))->toBe('updated_a_2');
 
     // key_b was set to 'updated_b' by GO2
-    expect($restoredContext->get('key_b'))->toBe('updated_b');
+    expect($restoredContext->get('keyB'))->toBe('updated_b');
 
     // key_c was never modified — should retain initial value
-    expect($restoredContext->get('key_c'))->toBe('initial_c');
+    expect($restoredContext->get('keyC'))->toBe('initial_c');
 
     // Restored state value should match original
     expect($restoredMachine->state->value)->toEqual($finalState->value);

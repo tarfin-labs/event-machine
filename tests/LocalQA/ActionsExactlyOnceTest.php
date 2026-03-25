@@ -32,8 +32,8 @@ it('LocalQA: entry/exit actions execute exactly once per transition under concur
     $rootEventId = $machine->state->history->first()->root_event_id;
 
     // Verify initial state: entry action ran once for idle
-    expect($machine->state->context->get('entry_count'))->toBe(1);
-    expect($machine->state->context->get('exit_count'))->toBe(0);
+    expect($machine->state->context->get('entryCount'))->toBe(1);
+    expect($machine->state->context->get('exitCount'))->toBe(0);
 
     // Dispatch 3 sequential transitions via Horizon:
     // idle → processing (PROCESS) → idle (COMPLETE) → processing (PROCESS)
@@ -59,7 +59,7 @@ it('LocalQA: entry/exit actions execute exactly once per transition under concur
         $restored = E2EActionCounterMachine::create(state: $rootEventId);
 
         // After PROCESS → COMPLETE → PROCESS, should be in processing with entry_count=4
-        return $restored->state->context->get('entry_count') >= 4;
+        return $restored->state->context->get('entryCount') >= 4;
     }, timeoutSeconds: 45, description: 'all 3 sequential transitions processed (entry_count >= 4)');
 
     expect($settled)->toBeTrue('Machine did not process all 3 events');
@@ -68,10 +68,10 @@ it('LocalQA: entry/exit actions execute exactly once per transition under concur
     $restored = E2EActionCounterMachine::create(state: $rootEventId);
 
     // 4 entries: idle(initial) + processing(1st) + idle(return) + processing(2nd)
-    expect($restored->state->context->get('entry_count'))->toBe(4);
+    expect($restored->state->context->get('entryCount'))->toBe(4);
 
     // 3 exits: idle→processing + processing→idle + idle→processing
-    expect($restored->state->context->get('exit_count'))->toBe(3);
+    expect($restored->state->context->get('exitCount'))->toBe(3);
 
     // Verify via MachineEvent count — each entry action produces an internal event
     $entryEvents = MachineEvent::query()
@@ -128,10 +128,10 @@ it('LocalQA: rapid concurrent sends to same machine — action count matches eve
     $restored = E2EActionCounterMachine::create(state: $rootEventId);
 
     // 3 entries: idle(initial) + processing(PROCESS) + completed(FINISH)
-    expect($restored->state->context->get('entry_count'))->toBe(3);
+    expect($restored->state->context->get('entryCount'))->toBe(3);
 
     // 2 exits: idle→processing + processing→completed
-    expect($restored->state->context->get('exit_count'))->toBe(2);
+    expect($restored->state->context->get('exitCount'))->toBe(2);
 
     // Final state
     expect($restored->state->currentStateDefinition->id)->toBe('e2e_action_counter.completed');

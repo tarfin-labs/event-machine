@@ -41,7 +41,7 @@ it('LocalQA: queued entry listener completes via Horizon (ThrowOnceAction retry)
 
     // Assert: context was set by the action (on successful execution)
     $restored = ListenerRetryMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('listener_ran'))->toBeTrue();
+    expect($restored->state->context->get('listenerRan'))->toBeTrue();
 });
 
 it('LocalQA: queued exit listener runs via Horizon when leaving state', function (): void {
@@ -63,7 +63,7 @@ it('LocalQA: queued exit listener runs via Horizon when leaving state', function
 
     // Assert: exit action's context modifications persisted
     $restored = ListenerExitOnlyMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('exit_listener_ran'))->toBeTrue();
+    expect($restored->state->context->get('exitListenerRan'))->toBeTrue();
 });
 
 it('LocalQA: queued transition listener runs via Horizon', function (): void {
@@ -84,5 +84,5 @@ it('LocalQA: queued transition listener runs via Horizon', function (): void {
 
     // Assert: transition listener ran after state change
     $restored = ListenerTransitionOnlyMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('transition_listener_ran'))->toBeTrue();
+    expect($restored->state->context->get('transitionListenerRan'))->toBeTrue();
 });

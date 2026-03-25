@@ -32,16 +32,16 @@ test('hasMissingContext returns null for empty required context', function (): v
 
     // Test with non-empty requiredContext
     $behaviorWithRequirements = new class() extends InvokableBehavior {
-        public static array $requiredContext = ['user_id' => 'string'];
+        public static array $requiredContext = ['userId' => 'string'];
 
         public function __invoke(): void {}
     };
 
     // Should return the missing key when context is missing
-    expect($behaviorWithRequirements::hasMissingContext($contextManager))->toBe('user_id');
+    expect($behaviorWithRequirements::hasMissingContext($contextManager))->toBe('userId');
 
     // Should return null when context has required data
-    $contextWithData = new ContextManager(['user_id' => '123']);
+    $contextWithData = new ContextManager(['userId' => '123']);
     expect($behaviorWithRequirements::hasMissingContext($contextWithData))->toBeNull();
 });
 

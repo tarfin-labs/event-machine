@@ -42,8 +42,8 @@ it('LocalQA: parallel region timeout fires @fail when region stalls', function (
     $ready = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = SlowRegionParallelMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('region_a_done') === true
-            && $restored->state->context->get('region_b_done') === true;
+        return $restored->state->context->get('regionADone') === true
+            && $restored->state->context->get('regionBDone') === true;
     }, timeoutSeconds: 60, description: 'parallel region timeout: waiting for entry actions');
 
     expect($ready)->toBeTrue('Region entry actions did not complete');
@@ -75,8 +75,8 @@ it('LocalQA: region timeout is no-op when all regions complete before timeout', 
     $ready = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('region_a_result') !== null
-            && $restored->state->context->get('region_b_result') !== null;
+        return $restored->state->context->get('regionAResult') !== null
+            && $restored->state->context->get('regionBResult') !== null;
     }, timeoutSeconds: 60);
 
     expect($ready)->toBeTrue('Regions not ready');

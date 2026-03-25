@@ -19,10 +19,10 @@ test('it resolves conditional @done in async mode with null EventBehavior', func
         'id'      => 'test_async_done',
         'initial' => 'processing',
         'context' => [
-            'inventory_result'  => 'success',
-            'payment_result'    => 'success',
-            'approval_logged'   => false,
-            'reviewer_notified' => false,
+            'inventoryResult'  => 'success',
+            'paymentResult'    => 'success',
+            'approvalLogged'   => false,
+            'reviewerNotified' => false,
         ],
         'states' => [
             'processing' => [
@@ -73,9 +73,9 @@ test('it handles null EventBehavior with synthetic event on guard failure', func
         'id'      => 'test_async_fallback',
         'initial' => 'processing',
         'context' => [
-            'inventory_result'  => null,
-            'payment_result'    => null,
-            'reviewer_notified' => false,
+            'inventoryResult'  => null,
+            'paymentResult'    => null,
+            'reviewerNotified' => false,
         ],
         'states' => [
             'processing' => [
@@ -124,8 +124,8 @@ test('it resolves conditional @fail in async timeout with null EventBehavior', f
         'id'      => 'test_async_fail',
         'initial' => 'processing',
         'context' => [
-            'retry_count' => 5,
-            'alert_sent'  => false,
+            'retryCount' => 5,
+            'alertSent'  => false,
         ],
         'states' => [
             'processing' => [
@@ -166,5 +166,5 @@ test('it resolves conditional @fail in async timeout with null EventBehavior', f
 
     expect($state->value)->toBe(['test_async_fail.failed'])
         ->and(SendAlertAction::wasExecuted())->toBeTrue()
-        ->and($state->context->get('alert_sent'))->toBeTrue();
+        ->and($state->context->get('alertSent'))->toBeTrue();
 });

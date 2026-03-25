@@ -21,8 +21,8 @@ test('internal raised events take priority over external events (SCXML test421)'
             'id'      => 'internal_priority',
             'initial' => 'parallel_parent',
             'context' => [
-                'raise_action_ran'    => false,
-                'internal_transition' => false,
+                'raiseActionRan'     => false,
+                'internalTransition' => false,
             ],
             'states' => [
                 'parallel_parent' => [
@@ -56,7 +56,7 @@ test('internal raised events take priority over external events (SCXML test421)'
         behavior: [
             'actions' => [
                 'logInternalAction' => function (ContextManager $context): void {
-                    $context->set('internal_transition', true);
+                    $context->set('internalTransition', true);
                 },
             ],
         ]
@@ -65,8 +65,8 @@ test('internal raised events take priority over external events (SCXML test421)'
     $state = $definition->getInitialState();
 
     // Internal event should have been processed during initialization
-    expect($state->context->get('raise_action_ran'))->toBeTrue();
-    expect($state->context->get('internal_transition'))->toBeTrue();
+    expect($state->context->get('raiseActionRan'))->toBeTrue();
+    expect($state->context->get('internalTransition'))->toBeTrue();
 
     // Region A should be in step_2_a (transitioned by raised internal event)
     expect($state->value)->toContain('internal_priority.parallel_parent.region_a.step_2_a');
@@ -89,7 +89,7 @@ test('each dispatched job processes its raised events before releasing lock', fu
 
     // Verify context was updated (entry action ran successfully)
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
     expect($restored->state->isInParallelState())->toBeTrue();
 });
 

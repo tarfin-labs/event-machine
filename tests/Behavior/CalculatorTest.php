@@ -16,8 +16,8 @@ class PriceCalculator extends CalculatorBehavior
     public function __invoke(ContextManager $context): void
     {
         $quantity  = $context->get('quantity');
-        $unitPrice = $context->get('unit_price');
-        $context->set('total_price', $quantity * $unitPrice);
+        $unitPrice = $context->get('unitPrice');
+        $context->set('totalPrice', $quantity * $unitPrice);
     }
 }
 
@@ -25,7 +25,7 @@ class MinimumGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
     {
-        return $context->get('total_price') >= 100;
+        return $context->get('totalPrice') >= 100;
     }
 }
 
@@ -33,10 +33,10 @@ class ApplyDiscountAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $totalPrice = $context->get('total_price');
+        $totalPrice = $context->get('totalPrice');
         $finalPrice = (int) ($totalPrice * 0.9); // 10% discount
 
-        $context->set('final_price', $finalPrice);
+        $context->set('finalPrice', $finalPrice);
     }
 }
 
@@ -46,8 +46,8 @@ test('calculator can set context values that guards and actions can use', functi
         'config' => [
             'initial' => 'start',
             'context' => [
-                'quantity'   => 10,
-                'unit_price' => 15,
+                'quantity'  => 10,
+                'unitPrice' => 15,
             ],
             'states' => [
                 'start' => [
@@ -69,8 +69,8 @@ test('calculator can set context values that guards and actions can use', functi
     $state = $machine->send(['type' => 'PROCESS']);
 
     // 3. Assert
-    expect($state->context->get('total_price'))->toBe(150);
-    expect($state->context->get('final_price'))->toBe(135);
+    expect($state->context->get('totalPrice'))->toBe(150);
+    expect($state->context->get('finalPrice'))->toBe(135);
     expect($state->matches('processed'))->toBeTrue();
 });
 

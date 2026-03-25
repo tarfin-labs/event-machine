@@ -27,7 +27,7 @@ it('parallel @fail only fires in the region that invoked the failed child, sibli
             'id'      => 'parallel_isolated_fail',
             'initial' => 'processing',
             'context' => [
-                'region_a_error' => null,
+                'regionAError' => null,
             ],
             'states' => [
                 'processing' => [
@@ -67,7 +67,7 @@ it('parallel @fail only fires in the region that invoked the failed child, sibli
         behavior: [
             'actions' => [
                 'captureRegionAErrorAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                    $ctx->set('region_a_error', $event->payload['error_message'] ?? 'unknown');
+                    $ctx->set('regionAError', $event->payload['error_message'] ?? 'unknown');
                 },
             ],
         ],
@@ -80,5 +80,5 @@ it('parallel @fail only fires in the region that invoked the failed child, sibli
     // - region_b: child succeeded → @done → region_b_done (final)
     // Both regions reached final states → parallel @done fires → completed
     expect($state->value)->toBe(['parallel_isolated_fail.completed'])
-        ->and($state->context->get('region_a_error'))->toBe('Payment gateway down');
+        ->and($state->context->get('regionAError'))->toBe('Payment gateway down');
 });

@@ -15,7 +15,7 @@ it('parent listen.entry fires on delegation state and @done target (sync child)'
         config: [
             'id'      => 'listen_parent_sync',
             'initial' => 'idle',
-            'context' => ['entry_log' => []],
+            'context' => ['entryLog' => []],
             'listen'  => [
                 'entry' => 'logEntryAction',
             ],
@@ -31,7 +31,7 @@ it('parent listen.entry fires on delegation state and @done target (sync child)'
         behavior: [
             'actions' => [
                 'logEntryAction' => function (ContextManager $context): void {
-                    $context->set('entry_log', [...$context->get('entry_log'), 'parent_entry']);
+                    $context->set('entryLog', [...$context->get('entryLog'), 'parent_entry']);
                 },
             ],
         ],
@@ -39,12 +39,12 @@ it('parent listen.entry fires on delegation state and @done target (sync child)'
 
     $state = $parentDef->getInitialState();
     // Init: listen.entry fires on 'idle'
-    expect($state->context->get('entry_log'))->toBe(['parent_entry']);
+    expect($state->context->get('entryLog'))->toBe(['parent_entry']);
 
     $state = $parentDef->transition(['type' => 'START'], $state);
     // START → delegating (listen.entry) → child runs sync (immediate done) → @done → completed (listen.entry)
     // Total: idle + delegating + completed = 3 entries
-    expect(count($state->context->get('entry_log')))->toBe(3);
+    expect(count($state->context->get('entryLog')))->toBe(3);
 });
 
 it('parent listen does NOT fire on child machine internal state changes', function (): void {
@@ -52,7 +52,7 @@ it('parent listen does NOT fire on child machine internal state changes', functi
         config: [
             'id'      => 'listen_isolation',
             'initial' => 'idle',
-            'context' => ['parent_entry_count' => 0],
+            'context' => ['parentEntryCount' => 0],
             'listen'  => [
                 'entry' => 'countAction',
             ],
@@ -68,20 +68,20 @@ it('parent listen does NOT fire on child machine internal state changes', functi
         behavior: [
             'actions' => [
                 'countAction' => function (ContextManager $context): void {
-                    $context->set('parent_entry_count', $context->get('parent_entry_count') + 1);
+                    $context->set('parentEntryCount', $context->get('parentEntryCount') + 1);
                 },
             ],
         ],
     );
 
     $state = $parentDef->getInitialState();
-    expect($state->context->get('parent_entry_count'))->toBe(1); // idle
+    expect($state->context->get('parentEntryCount'))->toBe(1); // idle
 
     $state = $parentDef->transition(['type' => 'START'], $state);
     // Child goes step_1 → step_2 → done (3 internal state changes)
     // Parent only sees: delegating entry + completed entry = 2 more = total 3
     // If parent listen fired on child states, count would be higher (5+)
-    expect($state->context->get('parent_entry_count'))->toBe(3);
+    expect($state->context->get('parentEntryCount'))->toBe(3);
 });
 
 // endregion
@@ -93,7 +93,7 @@ it('child machine own listen fires independently of parent', function (): void {
         config: [
             'id'      => 'parent_child_own_listen',
             'initial' => 'idle',
-            'context' => ['parent_listen_count' => 0],
+            'context' => ['parentListenCount' => 0],
             'listen'  => [
                 'entry' => 'parentCountAction',
             ],
@@ -109,19 +109,19 @@ it('child machine own listen fires independently of parent', function (): void {
         behavior: [
             'actions' => [
                 'parentCountAction' => function (ContextManager $context): void {
-                    $context->set('parent_listen_count', $context->get('parent_listen_count') + 1);
+                    $context->set('parentListenCount', $context->get('parentListenCount') + 1);
                 },
             ],
         ],
     );
 
     $state = $parentDef->getInitialState();
-    expect($state->context->get('parent_listen_count'))->toBe(1); // idle
+    expect($state->context->get('parentListenCount'))->toBe(1); // idle
 
     $state = $parentDef->transition(['type' => 'START'], $state);
     // Parent: idle(1) + delegating(2) + completed(3) = 3
     // Child's own listener fires inside child but doesn't affect parent context
-    expect($state->context->get('parent_listen_count'))->toBe(3);
+    expect($state->context->get('parentListenCount'))->toBe(3);
 });
 
 // endregion
@@ -175,7 +175,7 @@ it('listen.transition fires for delegation transition', function (): void {
         config: [
             'id'      => 'listen_trans_deleg',
             'initial' => 'idle',
-            'context' => ['transition_count' => 0],
+            'context' => ['transitionCount' => 0],
             'listen'  => [
                 'transition' => 'countTransitionAction',
             ],
@@ -191,18 +191,18 @@ it('listen.transition fires for delegation transition', function (): void {
         behavior: [
             'actions' => [
                 'countTransitionAction' => function (ContextManager $context): void {
-                    $context->set('transition_count', $context->get('transition_count') + 1);
+                    $context->set('transitionCount', $context->get('transitionCount') + 1);
                 },
             ],
         ],
     );
 
     $state = $parentDef->getInitialState();
-    expect($state->context->get('transition_count'))->toBe(0);
+    expect($state->context->get('transitionCount'))->toBe(0);
 
     $state = $parentDef->transition(['type' => 'START'], $state);
     // START triggers transition → listener fires at least once
-    expect($state->context->get('transition_count'))->toBeGreaterThanOrEqual(1);
+    expect($state->context->get('transitionCount'))->toBeGreaterThanOrEqual(1);
 });
 
 // endregion

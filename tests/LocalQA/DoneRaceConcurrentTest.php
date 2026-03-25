@@ -51,8 +51,8 @@ it('LocalQA: parallel dispatch @done fires exactly once when regions complete si
     expect($restored->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
 
     // Both regions should have run their entry actions
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 
     // Exactly ONE @done event should be recorded — not two
     $doneEvents = MachineEvent::query()

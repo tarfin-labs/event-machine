@@ -251,8 +251,8 @@ test('done event ordering works with parallel dispatch (sequential fallback)', f
     $machine = ParallelDispatchMachine::create();
 
     // Both entry actions ran
-    expect($machine->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($machine->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($machine->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($machine->state->context->get('regionBResult'))->toBe('processed_by_b');
 
     // Transition to final
     $machine->send('REGION_A_DONE');

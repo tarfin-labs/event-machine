@@ -28,7 +28,7 @@ class PersistenceFidelityAlwaysChainMachine extends Machine
                 'id'      => 'pf_always_chain',
                 'initial' => 'idle',
                 'context' => [
-                    'captured_triggering_type' => null,
+                    'capturedTriggeringType' => null,
                 ],
                 'states' => [
                     'idle' => [
@@ -57,7 +57,7 @@ class PersistenceFidelityAlwaysChainMachine extends Machine
             behavior: [
                 'actions' => [
                     'captureAction' => function (ContextManager $context, EventBehavior $event): void {
-                        $context->set('captured_triggering_type', $event->type);
+                        $context->set('capturedTriggeringType', $event->type);
                     },
                 ],
             ],
@@ -74,7 +74,7 @@ class PersistenceFidelityPayloadMachine extends Machine
                 'id'      => 'pf_payload',
                 'initial' => 'idle',
                 'context' => [
-                    'received_payload' => null,
+                    'receivedPayload' => null,
                 ],
                 'states' => [
                     'idle' => [
@@ -93,7 +93,7 @@ class PersistenceFidelityPayloadMachine extends Machine
             behavior: [
                 'actions' => [
                     'capturePayloadAction' => function (ContextManager $context, EventBehavior $event): void {
-                        $context->set('received_payload', $event->payload);
+                        $context->set('receivedPayload', $event->payload);
                     },
                 ],
             ],
@@ -285,14 +285,14 @@ it('preserves triggering event type through @always chain after persist and rest
     expect($machine->state->value)->toBe(['pf_always_chain.done']);
 
     // The action on the @always transition should have captured the original SUBMIT event
-    expect($machine->state->context->get('captured_triggering_type'))->toBe('SUBMIT');
+    expect($machine->state->context->get('capturedTriggeringType'))->toBe('SUBMIT');
 
     // Now persist and restore
     $rootEventId = $machine->state->history->first()->root_event_id;
     $restored    = PersistenceFidelityAlwaysChainMachine::create(state: $rootEventId);
 
     // Context should still show SUBMIT as the captured triggering event type
-    expect($restored->state->context->get('captured_triggering_type'))->toBe('SUBMIT');
+    expect($restored->state->context->get('capturedTriggeringType'))->toBe('SUBMIT');
 
     // State should match
     expect($restored->state->value)->toBe(['pf_always_chain.done']);
@@ -333,13 +333,13 @@ it('preserves complex payload types through persist and restore', function (): v
     ]);
 
     // Verify payload was captured in context
-    expect($machine->state->context->get('received_payload'))->toBe($complexPayload);
+    expect($machine->state->context->get('receivedPayload'))->toBe($complexPayload);
 
     // Persist and restore
     $rootEventId = $machine->state->history->first()->root_event_id;
     $restored    = PersistenceFidelityPayloadMachine::create(state: $rootEventId);
 
-    $restoredPayload = $restored->state->context->get('received_payload');
+    $restoredPayload = $restored->state->context->get('receivedPayload');
 
     // Strict type checks on each value
     expect($restoredPayload['int_value'])->toBe(42)->toBeInt();

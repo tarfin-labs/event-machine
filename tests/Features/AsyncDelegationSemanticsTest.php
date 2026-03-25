@@ -37,7 +37,7 @@ test('xa1: raised event in entry exits delegating state — async child is never
             'id'      => 'xa1_always_skips',
             'initial' => 'idle',
             'context' => [
-                'execution_order' => [],
+                'executionOrder' => [],
             ],
             'states' => [
                 'idle' => [
@@ -119,7 +119,7 @@ test('xa3: sync child that reaches final immediately — parent processes @done 
         config: [
             'id'      => 'xa3_sync_always_final',
             'initial' => 'idle',
-            'context' => ['child_done' => false],
+            'context' => ['childDone' => false],
             'states'  => [
                 'idle' => [
                     'on' => ['START' => 'delegating'],
@@ -139,7 +139,7 @@ test('xa3: sync child that reaches final immediately — parent processes @done 
         behavior: [
             'actions' => [
                 'markDoneAction' => function (ContextManager $ctx): void {
-                    $ctx->set('child_done', true);
+                    $ctx->set('childDone', true);
                 },
             ],
         ],
@@ -150,7 +150,7 @@ test('xa3: sync child that reaches final immediately — parent processes @done 
     $state = $machine->transition(event: ['type' => 'START']);
 
     expect($state->matches('completed'))->toBeTrue()
-        ->and($state->context->get('child_done'))->toBeTrue();
+        ->and($state->context->get('childDone'))->toBeTrue();
 });
 
 // ============================================================
@@ -162,7 +162,7 @@ test('xa4: @done from child in parallel region is scoped to that region only', f
         config: [
             'id'      => 'xa4_done_scoped',
             'initial' => 'verifying',
-            'context' => ['region_a_done' => false, 'region_b_done' => false],
+            'context' => ['regionADone' => false, 'regionBDone' => false],
             'states'  => [
                 'verifying' => [
                     'type'   => 'parallel',
@@ -201,10 +201,10 @@ test('xa4: @done from child in parallel region is scoped to that region only', f
         behavior: [
             'actions' => [
                 'markRegionADoneAction' => function (ContextManager $ctx): void {
-                    $ctx->set('region_a_done', true);
+                    $ctx->set('regionADone', true);
                 },
                 'markRegionBDoneAction' => function (ContextManager $ctx): void {
-                    $ctx->set('region_b_done', true);
+                    $ctx->set('regionBDone', true);
                 },
             ],
         ],
@@ -215,8 +215,8 @@ test('xa4: @done from child in parallel region is scoped to that region only', f
     // After initialization: region_a child completes immediately via @done.
     // region_b is still at waiting_b (not final).
     // So the parallel state is NOT done yet — @done only fired in region_a.
-    expect($state->context->get('region_a_done'))->toBeTrue()
-        ->and($state->context->get('region_b_done'))->toBeFalse();
+    expect($state->context->get('regionADone'))->toBeTrue()
+        ->and($state->context->get('regionBDone'))->toBeFalse();
 
     // Machine should NOT be at all_done because region_b hasn't completed.
     expect(in_array('xa4_done_scoped.all_done', $state->value, true))->toBeFalse();
@@ -226,7 +226,7 @@ test('xa4: @done from child in parallel region is scoped to that region only', f
 
     // Now both regions are final => parallel @done fires => all_done
     expect($state->value)->toBe(['xa4_done_scoped.all_done'])
-        ->and($state->context->get('region_b_done'))->toBeTrue();
+        ->and($state->context->get('regionBDone'))->toBeTrue();
 });
 
 // ============================================================
@@ -281,7 +281,7 @@ test('restore from DB does not replay entry actions', function (): void {
     $machine = EntryCounterMachine::create();
     $machine->send(['type' => 'GO']);
 
-    expect($machine->state->context->get('entry_count'))->toBe(1)
+    expect($machine->state->context->get('entryCount'))->toBe(1)
         ->and($machine->state->matches('active'))->toBeTrue();
 
     // 2. Persist to DB
@@ -291,6 +291,6 @@ test('restore from DB does not replay entry actions', function (): void {
     // 3. Restore from DB — this should NOT replay entry actions
     $restored = EntryCounterMachine::create(state: $rootEventId);
 
-    expect($restored->state->context->get('entry_count'))->toBe(1)
+    expect($restored->state->context->get('entryCount'))->toBe(1)
         ->and($restored->state->matches('active'))->toBeTrue();
 });

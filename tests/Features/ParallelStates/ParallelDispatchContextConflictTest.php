@@ -72,8 +72,8 @@ it('does not record context conflict when regions write to different keys', func
 
     // Both context values should be set
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });
 
 // ============================================================
@@ -112,7 +112,7 @@ it('records context conflict when second region overwrites scalar key set by fir
         ->first();
 
     expect($conflictEvent)->not->toBeNull();
-    expect($conflictEvent->payload['conflicted_keys'])->toContain('shared_scalar');
+    expect($conflictEvent->payload['conflicted_keys'])->toContain('sharedScalar');
     expect($conflictEvent->payload['region_id'])->toContain('region_b');
 });
 
@@ -153,7 +153,7 @@ it('conflict event payload lists all conflicted keys', function (): void {
     expect($conflictEvent->payload)->toHaveKeys(['region_id', 'conflicted_keys']);
     // shared_scalar is always conflicted; shared_array may or may not be depending on
     // whether array deep merge counts as conflict (it does — the existing value changed)
-    expect($conflictEvent->payload['conflicted_keys'])->toContain('shared_scalar');
+    expect($conflictEvent->payload['conflicted_keys'])->toContain('sharedScalar');
 });
 
 // ============================================================
@@ -214,7 +214,7 @@ it('LWW still applies — second region value wins despite conflict recording', 
     ))->handle();
 
     $restored = E2EContextConflictMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('shared_scalar'))->toBe('value_from_b');
+    expect($restored->state->context->get('sharedScalar'))->toBe('value_from_b');
 
     // Conflict IS recorded
     $conflictEvents = MachineEvent::where('root_event_id', $rootEventId)

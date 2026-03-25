@@ -57,7 +57,7 @@ it('LocalQA: rapid sequential sends all processed — none lost to lock contenti
 
     // Restore and verify all notes were sung
     $restored  = BurstChoirMachine::create(state: $rootEventId);
-    $notesSung = $restored->state->context->get('notes_sung');
+    $notesSung = $restored->state->context->get('notesSung');
 
     expect($notesSung)->toBeArray();
     expect($notesSung)->toHaveCount(4);
@@ -100,7 +100,7 @@ it('LocalQA: rapid sends with slight delays all processed correctly', function (
 
     // Verify all events were processed
     $restored  = BurstChoirMachine::create(state: $rootEventId);
-    $notesSung = $restored->state->context->get('notes_sung');
+    $notesSung = $restored->state->context->get('notesSung');
 
     expect($notesSung)->toHaveCount(4);
     expect($restored->state->matches('completed'))->toBeTrue();
@@ -151,7 +151,7 @@ it('LocalQA: multiple machines handle concurrent sends independently', function 
     // Verify each machine processed all 4 events
     foreach ($machines as $m) {
         $restored  = BurstChoirMachine::create(state: $m['rootEventId']);
-        $notesSung = $restored->state->context->get('notes_sung');
+        $notesSung = $restored->state->context->get('notesSung');
 
         expect($notesSung)->toHaveCount(4, "Machine {$m['rootEventId']} lost events");
         expect($restored->state->matches('completed'))->toBeTrue();

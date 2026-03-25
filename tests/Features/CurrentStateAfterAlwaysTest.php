@@ -22,7 +22,7 @@ it('machine_current_states shows final resting state after @always chain', funct
             'id'      => 'always_chain_cs',
             'initial' => 'idle',
             'context' => [
-                'chain_trace' => [],
+                'chainTrace' => [],
             ],
             'states' => [
                 'idle' => [
@@ -50,19 +50,19 @@ it('machine_current_states shows final resting state after @always chain', funct
         'behavior' => [
             'actions' => [
                 'traceAAction' => function (ContextManager $context): void {
-                    $trace   = $context->get('chain_trace');
+                    $trace   = $context->get('chainTrace');
                     $trace[] = 'A';
-                    $context->set('chain_trace', $trace);
+                    $context->set('chainTrace', $trace);
                 },
                 'traceBAction' => function (ContextManager $context): void {
-                    $trace   = $context->get('chain_trace');
+                    $trace   = $context->get('chainTrace');
                     $trace[] = 'B';
-                    $context->set('chain_trace', $trace);
+                    $context->set('chainTrace', $trace);
                 },
                 'traceCAction' => function (ContextManager $context): void {
-                    $trace   = $context->get('chain_trace');
+                    $trace   = $context->get('chainTrace');
                     $trace[] = 'C';
-                    $context->set('chain_trace', $trace);
+                    $context->set('chainTrace', $trace);
                 },
             ],
         ],
@@ -77,7 +77,7 @@ it('machine_current_states shows final resting state after @always chain', funct
     expect($machine->state->value)->toBe(['always_chain_cs.step_c']);
 
     // Verify chain_trace shows all states were visited in order
-    expect($machine->state->context->get('chain_trace'))->toBe(['A', 'B', 'C']);
+    expect($machine->state->context->get('chainTrace'))->toBe(['A', 'B', 'C']);
 
     // The critical assertion: MachineCurrentState record shows final resting state
     $currentState = MachineCurrentState::where('root_event_id', $rootEventId)->first();

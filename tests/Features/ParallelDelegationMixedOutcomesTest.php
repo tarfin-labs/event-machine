@@ -139,7 +139,7 @@ it('both parallel regions fail — parent still transitions via @done when both 
         config: [
             'id'      => 'mixed_parallel_both_fail',
             'initial' => 'verifying',
-            'context' => ['error_count' => 0],
+            'context' => ['errorCount' => 0],
             'states'  => [
                 'verifying' => [
                     'type'   => 'parallel',
@@ -183,7 +183,7 @@ it('both parallel regions fail — parent still transitions via @done when both 
         behavior: [
             'actions' => [
                 'incrementErrorAction' => function (ContextManager $ctx): void {
-                    $ctx->set('error_count', $ctx->get('error_count') + 1);
+                    $ctx->set('errorCount', $ctx->get('errorCount') + 1);
                 },
             ],
         ],
@@ -193,7 +193,7 @@ it('both parallel regions fail — parent still transitions via @done when both 
 
     // Both regions fail → both reach error final states → @done fires → completed.
     expect($state->value)->toBe(['mixed_parallel_both_fail.completed'])
-        ->and($state->context->get('error_count'))->toBe(2);
+        ->and($state->context->get('errorCount'))->toBe(2);
 });
 
 it('parallel region without @fail re-throws when child fails', function (): void {

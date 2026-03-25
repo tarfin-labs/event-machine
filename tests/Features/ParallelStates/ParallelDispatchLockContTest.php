@@ -37,8 +37,8 @@ it('both jobs finishing sequentially succeed with consistent state', function ()
 
     // Both results merged
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });
 
 it('external event sent after jobs complete transitions correctly', function (): void {

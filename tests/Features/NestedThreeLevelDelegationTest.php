@@ -130,9 +130,9 @@ it('async three-level: startingAt processing then simulateChildDone', function (
     Queue::fake();
 
     ThreeLevelParentMachine::startingAt(stateId: 'processing')
-        ->simulateChildDone(MiddleChildMachine::class, result: ['payment_id' => 'pay_nested'])
+        ->simulateChildDone(MiddleChildMachine::class, result: ['paymentId' => 'pay_nested'])
         ->assertState('completed')
-        ->assertContext('result', ['payment_id' => 'pay_nested']);
+        ->assertContext('result', ['paymentId' => 'pay_nested']);
 });
 
 it('async parent correctly routes @done with result data from nested chain', function (): void {

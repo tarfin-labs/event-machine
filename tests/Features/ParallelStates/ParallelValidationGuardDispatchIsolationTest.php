@@ -21,8 +21,8 @@ it('throws MachineValidationException and leaves sibling region state untouched'
     expect($stateValue)->toContain('vg_dispatch_isolation.collecting.region_without_guard.idle');
 
     // Context should be at initial values
-    expect($machine->state->context->get('guarded_region_entered'))->toBeFalse();
-    expect($machine->state->context->get('sibling_region_entered'))->toBeFalse();
+    expect($machine->state->context->get('guardedRegionEntered'))->toBeFalse();
+    expect($machine->state->context->get('siblingRegionEntered'))->toBeFalse();
 
     // Send event that triggers ValidationGuard failure in one region
     try {
@@ -39,8 +39,8 @@ it('throws MachineValidationException and leaves sibling region state untouched'
     expect($stateValue)->toContain('vg_dispatch_isolation.collecting.region_without_guard.idle');
 
     // Neither region's entry actions should have executed
-    expect($machine->state->context->get('guarded_region_entered'))->toBeFalse();
-    expect($machine->state->context->get('sibling_region_entered'))->toBeFalse();
+    expect($machine->state->context->get('guardedRegionEntered'))->toBeFalse();
+    expect($machine->state->context->get('siblingRegionEntered'))->toBeFalse();
 
     // Machine should NOT have advanced to completed
     expect($machine->state->currentStateDefinition->id)->not->toBe('vg_dispatch_isolation.completed');
@@ -80,8 +80,8 @@ it('sibling region transitions normally after a prior validation guard rejection
     expect($machine->state->currentStateDefinition->id)->toBe('vg_dispatch_isolation.completed');
 
     // Both regions' entry actions should have run exactly once
-    expect($machine->state->context->get('guarded_region_entered'))->toBeTrue();
-    expect($machine->state->context->get('sibling_region_entered'))->toBeTrue();
+    expect($machine->state->context->get('guardedRegionEntered'))->toBeTrue();
+    expect($machine->state->context->get('siblingRegionEntered'))->toBeTrue();
 });
 
 it('MachineValidationException is thrown via TestMachine fluent API', function (): void {
@@ -108,6 +108,6 @@ it('multiple consecutive validation guard failures do not accumulate side effect
     expect($stateValue)->toContain('vg_dispatch_isolation.collecting.region_without_guard.idle');
 
     // Context must remain pristine — no accumulated side effects
-    expect($machine->state->context->get('guarded_region_entered'))->toBeFalse();
-    expect($machine->state->context->get('sibling_region_entered'))->toBeFalse();
+    expect($machine->state->context->get('guardedRegionEntered'))->toBeFalse();
+    expect($machine->state->context->get('siblingRegionEntered'))->toBeFalse();
 });

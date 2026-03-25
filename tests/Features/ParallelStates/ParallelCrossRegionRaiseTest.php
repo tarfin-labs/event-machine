@@ -12,8 +12,8 @@ test('raised event in one region triggers transition in sibling region (sync mod
             'id'      => 'cross_region_raise',
             'initial' => 'active',
             'context' => [
-                'region_a_entered'  => false,
-                'region_b_notified' => false,
+                'regionAEntered'  => false,
+                'regionBNotified' => false,
             ],
             'states' => [
                 'active' => [
@@ -52,7 +52,7 @@ test('raised event in one region triggers transition in sibling region (sync mod
         behavior: [
             'actions' => [
                 'markNotifiedAction' => function (ContextManager $ctx): void {
-                    $ctx->set('region_b_notified', true);
+                    $ctx->set('regionBNotified', true);
                 },
             ],
         ],
@@ -62,8 +62,8 @@ test('raised event in one region triggers transition in sibling region (sync mod
 
     // Region A's entry action raised NOTIFY
     // NOTIFY should propagate to region B, transitioning it from waiting to received
-    expect($state->context->get('region_a_entered'))->toBeTrue();
-    expect($state->context->get('region_b_notified'))->toBeTrue();
+    expect($state->context->get('regionAEntered'))->toBeTrue();
+    expect($state->context->get('regionBNotified'))->toBeTrue();
     expect($state->matches('active.region_a.notified'))->toBeTrue();
     expect($state->matches('active.region_b.received'))->toBeTrue();
 });
@@ -74,7 +74,7 @@ test('raised event only affects regions that handle it', function (): void {
             'id'      => 'selective_cross_raise',
             'initial' => 'active',
             'context' => [
-                'region_a_entered' => false,
+                'regionAEntered' => false,
             ],
             'states' => [
                 'active' => [
@@ -133,8 +133,8 @@ test('context changes from raise action are visible across regions', function ()
             'id'      => 'context_cross_raise',
             'initial' => 'active',
             'context' => [
-                'region_a_entered'     => false,
-                'region_b_saw_context' => false,
+                'regionAEntered'    => false,
+                'regionBSawContext' => false,
             ],
             'states' => [
                 'active' => [
@@ -175,7 +175,7 @@ test('context changes from raise action are visible across regions', function ()
                 'checkContextAction' => function (ContextManager $ctx): void {
                     // Region A's entry action set region_a_entered = true before raising
                     // That context change should be visible here
-                    $ctx->set('region_b_saw_context', $ctx->get('region_a_entered') === true);
+                    $ctx->set('regionBSawContext', $ctx->get('regionAEntered') === true);
                 },
             ],
         ],
@@ -183,8 +183,8 @@ test('context changes from raise action are visible across regions', function ()
 
     $state = $definition->getInitialState();
 
-    expect($state->context->get('region_a_entered'))->toBeTrue();
-    expect($state->context->get('region_b_saw_context'))->toBeTrue();
+    expect($state->context->get('regionAEntered'))->toBeTrue();
+    expect($state->context->get('regionBSawContext'))->toBeTrue();
     expect($state->matches('active.region_a.done'))->toBeTrue();
     expect($state->matches('active.region_b.done'))->toBeTrue();
 });

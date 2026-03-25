@@ -137,7 +137,7 @@ it('multi-branch guarded after: guard pass goes to first branch', function (): v
         config: [
             'id'      => 'mb_guard',
             'initial' => 'waiting',
-            'context' => ['is_expired' => true],
+            'context' => ['isExpired' => true],
             'states'  => [
                 'waiting' => [
                     'on' => [
@@ -154,7 +154,7 @@ it('multi-branch guarded after: guard pass goes to first branch', function (): v
         ],
         behavior: [
             'guards' => [
-                'isExpiredGuard' => fn (ContextManager $ctx): bool => $ctx->get('is_expired'),
+                'isExpiredGuard' => fn (ContextManager $ctx): bool => $ctx->get('isExpired'),
             ],
         ],
     );
@@ -170,7 +170,7 @@ it('multi-branch guarded after: guard fail goes to fallback branch', function ()
         config: [
             'id'      => 'mb_fallback',
             'initial' => 'waiting',
-            'context' => ['is_expired' => false],
+            'context' => ['isExpired' => false],
             'states'  => [
                 'waiting' => [
                     'on' => [
@@ -187,7 +187,7 @@ it('multi-branch guarded after: guard fail goes to fallback branch', function ()
         ],
         behavior: [
             'guards' => [
-                'isExpiredGuard' => fn (ContextManager $ctx): bool => $ctx->get('is_expired'),
+                'isExpiredGuard' => fn (ContextManager $ctx): bool => $ctx->get('isExpired'),
             ],
         ],
     );

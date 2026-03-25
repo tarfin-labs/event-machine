@@ -79,6 +79,6 @@ it('ParallelRegionJob uses blocking lock mode (timeout>0)', function (): void {
 
     // Both completed successfully (no exception = blocking lock worked)
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });

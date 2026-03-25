@@ -19,7 +19,7 @@ it('preserves event payload in @always action', function (): void {
         'payload' => ['tckn' => '12345678901'],
     ]);
 
-    expect($machine->state->context->get('captured_payload'))
+    expect($machine->state->context->get('capturedPayload'))
         ->toBe(['tckn' => '12345678901']);
 });
 
@@ -35,7 +35,7 @@ it('preserves event payload through chained @always states', function (): void {
     expect($machine->state->value)->toBe(['always_chain.verification']);
 
     // Payload should be captured by action on first @always transition
-    expect($machine->state->context->get('captured_payload'))
+    expect($machine->state->context->get('capturedPayload'))
         ->toBe(['tckn' => '12345678901', 'phone' => '5551234567']);
 });
 
@@ -44,7 +44,7 @@ it('provides original event to guard on @always transition', function (): void {
 
     $machine->send(['type' => 'SUBMIT', 'payload' => ['data' => 'test']]);
 
-    expect($machine->state->context->get('guard_event_type'))
+    expect($machine->state->context->get('guardEventType'))
         ->toBe('SUBMIT');
 });
 
@@ -53,7 +53,7 @@ it('provides original event to calculator on @always transition', function (): v
 
     $machine->send(['type' => 'SUBMIT', 'payload' => ['amount' => 100]]);
 
-    expect($machine->state->context->get('calculator_payload'))
+    expect($machine->state->context->get('calculatorPayload'))
         ->toBe(['amount' => 100]);
 });
 
@@ -63,7 +63,7 @@ it('provides original event to entry action of @always target state', function (
     $machine->send(['type' => 'SUBMIT']);
 
     // Entry action on eligibility (target of first @always) captures event type
-    expect($machine->state->context->get('entry_event_type'))
+    expect($machine->state->context->get('entryEventType'))
         ->toBe('SUBMIT');
 });
 
@@ -76,7 +76,7 @@ it('preserves actor from original event through @always chain', function (): voi
         'actor'   => 42,
     ]);
 
-    expect($machine->state->context->get('captured_actor'))
+    expect($machine->state->context->get('capturedActor'))
         ->toBe(42);
 });
 
@@ -85,7 +85,7 @@ it('preserves event type as original type, not @always', function (): void {
 
     $machine->send(['type' => 'SUBMIT']);
 
-    expect($machine->state->context->get('captured_event_type'))
+    expect($machine->state->context->get('capturedEventType'))
         ->toBe('SUBMIT');
 });
 
@@ -97,7 +97,7 @@ it('provides triggering event via parameter injection, not via currentEventBehav
     $machine->send(['type' => 'SUBMIT']);
 
     // Parameter injection provides the original event
-    expect($machine->state->context->get('captured_event_type'))->toBe('SUBMIT');
+    expect($machine->state->context->get('capturedEventType'))->toBe('SUBMIT');
 
     // $state->currentEventBehavior is NOT guaranteed to be the triggering event —
     // it tracks internal events during action execution. This is by design.
@@ -126,7 +126,7 @@ it('handles init @always with no triggering event — behaviors receive @always 
 
     // No triggering event exists at init, so the synthetic @always event is injected
     // (triggeringEvent is null → effectiveEvent falls back to the @always event)
-    expect($machine->state->context->get('init_event_type'))->toBe('@always');
+    expect($machine->state->context->get('initEventType'))->toBe('@always');
 });
 
 it('preserves raised event through @always chain', function (): void {
@@ -138,7 +138,7 @@ it('preserves raised event through @always chain', function (): void {
     expect($machine->state->value)->toBe(['raise_always.done']);
 
     // @always action should receive the PROCEED event (raised by entry action)
-    expect($machine->state->context->get('raised_event_type'))->toBe('PROCEED');
+    expect($machine->state->context->get('raisedEventType'))->toBe('PROCEED');
 });
 
 it('preserves timer @after event through @always chain', function (): void {
@@ -147,15 +147,15 @@ it('preserves timer @after event through @always chain', function (): void {
     // Simulate timer dispatch — timer sends TIMEOUT as a normal event
     $machine->send([
         'type'    => 'TIMEOUT',
-        'payload' => ['expired_at' => '2026-03-20'],
+        'payload' => ['expiredAt' => '2026-03-20'],
     ]);
 
     expect($machine->state->value)->toBe(['timer_after_always.done']);
 
     // @always action should receive the original TIMEOUT event
-    expect($machine->state->context->get('timer_event_type'))->toBe('TIMEOUT');
-    expect($machine->state->context->get('timer_event_payload'))
-        ->toBe(['expired_at' => '2026-03-20']);
+    expect($machine->state->context->get('timerEventType'))->toBe('TIMEOUT');
+    expect($machine->state->context->get('timerEventPayload'))
+        ->toBe(['expiredAt' => '2026-03-20']);
 });
 
 it('preserves timer @every event through @always chain', function (): void {
@@ -170,8 +170,8 @@ it('preserves timer @every event through @always chain', function (): void {
     expect($machine->state->value)->toBe(['timer_every_always.billed']);
 
     // @always action should receive the original BILLING event
-    expect($machine->state->context->get('billing_event_type'))->toBe('BILLING');
-    expect($machine->state->context->get('billing_event_payload'))
+    expect($machine->state->context->get('billingEventType'))->toBe('BILLING');
+    expect($machine->state->context->get('billingEventPayload'))
         ->toBe(['cycle' => 1, 'amount' => 99]);
 });
 
@@ -189,5 +189,5 @@ it('fires @always after compound @done — fixed', function (): void {
     expect($machine->state->value)->toBe(['compound_done_always.completed']);
 
     // @always action received the original event
-    expect($machine->state->context->get('done_event_type'))->not->toBeNull();
+    expect($machine->state->context->get('doneEventType'))->not->toBeNull();
 });

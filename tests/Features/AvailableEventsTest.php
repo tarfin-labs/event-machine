@@ -445,7 +445,7 @@ test('it returns both forward and parent on-events together', function (): void 
     // Create child and advance to awaiting_confirmation so both PROVIDE_CARD
     // and CONFIRM_PAYMENT are visible
     $childMachine = ForwardChildEndpointMachine::create();
-    $childMachine->send(['type' => 'PROVIDE_CARD', 'payload' => ['card_number' => '4111111111111111']]);
+    $childMachine->send(['type' => 'PROVIDE_CARD', 'payload' => ['cardNumber' => '4111111111111111']]);
     $childRootId = $childMachine->state->history->first()->root_event_id;
 
     // Child is now in awaiting_confirmation
@@ -490,7 +490,7 @@ test('forward events reflect child current state not initial state', function ()
 
     // Create child machine and advance past awaiting_card
     $childMachine = ForwardChildEndpointMachine::create();
-    $childMachine->send(['type' => 'PROVIDE_CARD', 'payload' => ['card_number' => '4242424242424242']]);
+    $childMachine->send(['type' => 'PROVIDE_CARD', 'payload' => ['cardNumber' => '4242424242424242']]);
     $childRootId = $childMachine->state->history->first()->root_event_id;
 
     $childRecord->update([

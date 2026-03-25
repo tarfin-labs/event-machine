@@ -20,9 +20,9 @@ test('calculator sets context key that subsequent action reads in same transitio
         'config' => [
             'initial' => 'start',
             'context' => [
-                'raw_price' => 200,
-                'tax_rate'  => 0.18,
-                'total'     => null,
+                'rawPrice' => 200,
+                'taxRate'  => 0.18,
+                'total'    => null,
             ],
             'states' => [
                 'start' => [
@@ -40,8 +40,8 @@ test('calculator sets context key that subsequent action reads in same transitio
         'behavior' => [
             'calculators' => [
                 'computeTotalCalculator' => function (ContextManager $ctx): void {
-                    $price   = $ctx->get('raw_price');
-                    $taxRate = $ctx->get('tax_rate');
+                    $price   = $ctx->get('rawPrice');
+                    $taxRate = $ctx->get('taxRate');
                     $ctx->set('total', $price + (int) ($price * $taxRate));
                 },
             ],
@@ -125,7 +125,7 @@ test('calculator sets context from event payload visible to action', function ()
         'config' => [
             'initial' => 'start',
             'context' => [
-                'computed_label' => null,
+                'computedLabel' => null,
             ],
             'states' => [
                 'start' => [
@@ -145,12 +145,12 @@ test('calculator sets context from event payload visible to action', function ()
                 'buildLabelCalculator' => function (ContextManager $ctx, EventBehavior $event): void {
                     $prefix = $event->payload['prefix'] ?? 'ITEM';
                     $number = $event->payload['number'] ?? 0;
-                    $ctx->set('computed_label', $prefix.'-'.$number);
+                    $ctx->set('computedLabel', $prefix.'-'.$number);
                 },
             ],
             'actions' => [
                 'captureLabelAction' => function (ContextManager $ctx) use (&$actionSawComputed): void {
-                    $actionSawComputed = $ctx->get('computed_label');
+                    $actionSawComputed = $ctx->get('computedLabel');
                 },
             ],
         ],
@@ -161,6 +161,6 @@ test('calculator sets context from event payload visible to action', function ()
         'payload' => ['prefix' => 'ORD', 'number' => 42],
     ]);
 
-    expect($state->context->get('computed_label'))->toBe('ORD-42');
+    expect($state->context->get('computedLabel'))->toBe('ORD-42');
     expect($actionSawComputed)->toBe('ORD-42');
 });

@@ -18,7 +18,7 @@ test('@always transitions are evaluated before raised events', function (): void
             'id'      => 'always_before_raise',
             'initial' => 'idle',
             'context' => [
-                'execution_order' => [],
+                'executionOrder' => [],
             ],
             'states' => [
                 'idle' => [
@@ -57,7 +57,7 @@ test('@always transitions are evaluated before raised events', function (): void
     // Then the raised NOTIFY event is processed from B (not A).
     expect($state->matches('notified_from_B'))->toBeTrue();
 
-    expect($state->context->get('execution_order'))->toBe([
+    expect($state->context->get('executionOrder'))->toBe([
         'A_entry_raise_NOTIFY',   // 1. Entry action on A runs and raises NOTIFY
         'B_entry',                // 2. @always fires: machine moves to B, B's entry runs
         'NOTIFY_handled_in_B',    // 3. Raised NOTIFY is processed from B (not A)

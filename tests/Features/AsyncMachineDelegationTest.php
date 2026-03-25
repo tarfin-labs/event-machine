@@ -61,11 +61,11 @@ it('passes resolved child context to ChildMachineJob', function (): void {
     Queue::fake();
 
     $machine = AsyncParentMachine::create();
-    $machine->state->context->set('order_id', 'ORD-789');
+    $machine->state->context->set('orderId', 'ORD-789');
     $machine->send(['type' => 'START']);
 
     Queue::assertPushed(ChildMachineJob::class, function (ChildMachineJob $job): bool {
-        return $job->childContext === ['order_id' => 'ORD-789'];
+        return $job->childContext === ['orderId' => 'ORD-789'];
     });
 });
 

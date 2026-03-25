@@ -11,7 +11,7 @@ it('external self-transition triggers both exit and entry actions', function ():
     TestMachine::define([
         'id'      => 'self_transition',
         'initial' => 'active',
-        'context' => ['action_log' => []],
+        'context' => ['actionLog' => []],
         'states'  => [
             'active' => [
                 'entry' => 'appendEntryAction',
@@ -24,20 +24,20 @@ it('external self-transition triggers both exit and entry actions', function ():
     ], behavior: [
         'actions' => [
             'appendEntryAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:active']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:active']);
             },
             'appendExitAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:active']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:active']);
             },
         ],
     ])
         // Initial entry fires the entry action
         ->assertState('active')
-        ->assertContext('action_log', ['entry:active'])
+        ->assertContext('actionLog', ['entry:active'])
         // Send REFRESH: external self-transition should fire exit then entry
         ->send('REFRESH')
         ->assertState('active')
-        ->assertContext('action_log', ['entry:active', 'exit:active', 'entry:active']);
+        ->assertContext('actionLog', ['entry:active', 'exit:active', 'entry:active']);
 });
 
 // === Targetless (Internal) Transition ===
@@ -48,7 +48,7 @@ it('targetless transition skips both exit and entry actions (SCXML semantics)', 
     TestMachine::define([
         'id'      => 'internal_transition',
         'initial' => 'active',
-        'context' => ['action_log' => []],
+        'context' => ['actionLog' => []],
         'states'  => [
             'active' => [
                 'entry' => 'appendEntryAction',
@@ -63,21 +63,21 @@ it('targetless transition skips both exit and entry actions (SCXML semantics)', 
     ], behavior: [
         'actions' => [
             'appendEntryAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'entry:active']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'entry:active']);
             },
             'appendExitAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'exit:active']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'exit:active']);
             },
             'appendTickAction' => function (ContextManager $context): void {
-                $context->set('action_log', [...$context->get('action_log'), 'action:tick']);
+                $context->set('actionLog', [...$context->get('actionLog'), 'action:tick']);
             },
         ],
     ])
         // Initial entry fires the entry action
         ->assertState('active')
-        ->assertContext('action_log', ['entry:active'])
+        ->assertContext('actionLog', ['entry:active'])
         // Send TICK: targetless transition fires ONLY transition action — no exit, no entry
         ->send('TICK')
         ->assertState('active')
-        ->assertContext('action_log', ['entry:active', 'action:tick']);
+        ->assertContext('actionLog', ['entry:active', 'action:tick']);
 });

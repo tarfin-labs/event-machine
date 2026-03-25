@@ -16,7 +16,7 @@ test('it constructs with all properties', function (): void {
         method: 'PUT',
         actionClass: 'App\\Actions\\StoreCard',
         resultBehavior: 'cardResultBehavior',
-        contextKeys: ['card_last4', 'status'],
+        contextKeys: ['cardLast4', 'status'],
         statusCode: 201,
         middleware: ['auth', 'throttle'],
         availableEvents: true,
@@ -30,7 +30,7 @@ test('it constructs with all properties', function (): void {
         ->and($definition->method)->toBe('PUT')
         ->and($definition->actionClass)->toBe('App\\Actions\\StoreCard')
         ->and($definition->resultBehavior)->toBe('cardResultBehavior')
-        ->and($definition->contextKeys)->toBe(['card_last4', 'status'])
+        ->and($definition->contextKeys)->toBe(['cardLast4', 'status'])
         ->and($definition->statusCode)->toBe(201)
         ->and($definition->middleware)->toBe(['auth', 'throttle'])
         ->and($definition->availableEvents)->toBeTrue();

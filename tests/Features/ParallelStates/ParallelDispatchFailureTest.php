@@ -33,8 +33,8 @@ it('single region job failure leaves machine in parallel state when no onFail', 
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
 
     expect($restored->state->isInParallelState())->toBeTrue();
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBeNull();
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBeNull();
 });
 
 it('job failure does NOT corrupt other region state', function (): void {
@@ -54,7 +54,7 @@ it('job failure does NOT corrupt other region state', function (): void {
 
     // Verify A's context persisted
     $afterA = ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($afterA->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($afterA->state->context->get('regionAResult'))->toBe('processed_by_a');
 
     // Region B fails
     $jobB = new ParallelRegionJob(
@@ -68,7 +68,7 @@ it('job failure does NOT corrupt other region state', function (): void {
     // Machine transitioned to error, but region A's context is preserved
     $restored = ParallelDispatchWithFailMachine::create(state: $rootEventId);
     expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
 });
 
 it('all region jobs fail leaves machine in error state with onFail', function (): void {

@@ -20,8 +20,8 @@ it('dispatch mode correctly defers entry actions when enabled', function (): voi
     $machine->persist();
 
     // In dispatch mode, entry actions are deferred
-    expect($machine->state->context->get('region_a_result'))->toBeNull();
-    expect($machine->state->context->get('region_b_result'))->toBeNull();
+    expect($machine->state->context->get('regionAResult'))->toBeNull();
+    expect($machine->state->context->get('regionBResult'))->toBeNull();
     expect($machine->definition->pendingParallelDispatches)->toHaveCount(2);
 });
 
@@ -31,8 +31,8 @@ it('sequential mode runs entry actions inline', function (): void {
     $machine = ParallelDispatchMachine::create();
 
     // In sequential mode, entry actions run immediately
-    expect($machine->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($machine->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($machine->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($machine->state->context->get('regionBResult'))->toBe('processed_by_b');
     expect($machine->definition->pendingParallelDispatches)->toBe([]);
 });
 

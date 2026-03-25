@@ -23,7 +23,7 @@ test('@always with context-flag guard fires when sibling region sets context', f
         config: [
             'id'      => 'cross_state_in',
             'initial' => 'processing',
-            'context' => ['documents_verified' => false],
+            'context' => ['documentsVerified' => false],
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
@@ -64,10 +64,10 @@ test('@always with context-flag guard fires when sibling region sets context', f
         ],
         behavior: [
             'guards' => [
-                'isDocumentsVerifiedGuard' => fn (ContextManager $ctx): bool => $ctx->get('documents_verified') === true,
+                'isDocumentsVerifiedGuard' => fn (ContextManager $ctx): bool => $ctx->get('documentsVerified') === true,
             ],
             'actions' => [
-                'markDocumentsVerifiedAction' => fn (ContextManager $ctx) => $ctx->set('documents_verified', true),
+                'markDocumentsVerifiedAction' => fn (ContextManager $ctx) => $ctx->set('documentsVerified', true),
             ],
         ]
     );
@@ -159,7 +159,7 @@ test('bidirectional stateIn guards — both regions wait for each other via cont
         config: [
             'id'      => 'bidirectional',
             'initial' => 'processing',
-            'context' => ['a_ready' => false, 'b_ready' => false],
+            'context' => ['aReady' => false, 'bReady' => false],
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
@@ -214,12 +214,12 @@ test('bidirectional stateIn guards — both regions wait for each other via cont
         ],
         behavior: [
             'guards' => [
-                'isAReadyGuard' => fn (ContextManager $ctx): bool => $ctx->get('a_ready') === true,
-                'isBReadyGuard' => fn (ContextManager $ctx): bool => $ctx->get('b_ready') === true,
+                'isAReadyGuard' => fn (ContextManager $ctx): bool => $ctx->get('aReady') === true,
+                'isBReadyGuard' => fn (ContextManager $ctx): bool => $ctx->get('bReady') === true,
             ],
             'actions' => [
-                'setAReadyAction' => fn (ContextManager $ctx) => $ctx->set('a_ready', true),
-                'setBReadyAction' => fn (ContextManager $ctx) => $ctx->set('b_ready', true),
+                'setAReadyAction' => fn (ContextManager $ctx) => $ctx->set('aReady', true),
+                'setBReadyAction' => fn (ContextManager $ctx) => $ctx->set('bReady', true),
             ],
         ]
     );
