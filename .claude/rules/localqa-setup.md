@@ -166,4 +166,11 @@ After fix: when ChildMachineCompletionJob routes @done/@fail and the parent reac
 In parallel dispatch, `machine_events` may contain a transition event (e.g., `INVENTORY_CHECKED.finish`) but `machine_current_states` still shows the old state. This happens when concurrent `SendToMachineJob` or `ParallelRegionJob` overwrites the state after the transition was logged. Always wait for the **restored machine's state value array** or `MachineCurrentState`, not just event existence in `machine_events`.
 
 ### Concurrent SendToMachineJobs to same parallel machine cause lost-update
-Two `SendToMachineJob`s dispatched simultaneously to the same parallel machine can cause one event's state change to be lost. Both jobs restore from the same base state → apply their event → persist. The last to persist overwrites the first's changes. In tests, always **wait for the first event to fully commit** (check `MachineCurrentState` or restored state) before dispatching the second event. This is a known product-level limitation of parallel dispatch locking.
+Two `SendToMachineJob`s dispatched simultaneously to the same parallel machine can cause one event's state change to be lost. Both jobs restore from the same base state → apply their event → persist. The last to persist overwrites the first's changes. In tests, always **wait for the first event to fully commit** (check `MachineCurrentState` or restored state) before dispatching the second event. `Machine::send()` now acquires a lock for ALL async queues (not just parallel_dispatch) — with `release(1)` retry on contention.
+
+### Machine::send() lock strategy (Solution B)
+`Machine::send()` acquires a lock when `queue.default !== 'sync' OR parallel_dispatch.enabled`. This covers:
+- **Production (redis/database queue)**: always locked — prevents concurrent mutation
+- **Unit tests (sync queue, parallel_dispatch=false)**: no lock — avoids re-entrant deadlocks
+- **Unit tests (sync queue, parallel_dispatch=true)**: locked — tests can verify lock behavior
+Re-entrant locking via `Machine::$heldLockIds` prevents deadlock in sync dispatch chains: `send() → ChildMachineJob → ChildMachineCompletionJob → send()` on same parent.
