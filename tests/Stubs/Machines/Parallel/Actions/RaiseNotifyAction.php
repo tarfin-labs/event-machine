@@ -11,7 +11,7 @@ class RaiseNotifyAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('region_a_entered', true);
+        $context->set('regionAEntered', true);
         $this->raise(['type' => 'NOTIFY']);
     }
 }

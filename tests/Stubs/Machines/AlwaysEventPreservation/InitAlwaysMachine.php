@@ -23,7 +23,7 @@ class InitAlwaysMachine extends Machine
                 'id'      => 'init_always',
                 'initial' => 'routing',
                 'context' => [
-                    'init_event_type' => 'not_called',
+                    'initEventType' => 'not_called',
                 ],
                 'states' => [
                     'routing' => [

@@ -11,8 +11,8 @@ class LogNotifyFromAAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $order   = $context->get('execution_order');
+        $order   = $context->get('executionOrder');
         $order[] = 'NOTIFY_handled_in_A';
-        $context->set('execution_order', $order);
+        $context->set('executionOrder', $order);
     }
 }

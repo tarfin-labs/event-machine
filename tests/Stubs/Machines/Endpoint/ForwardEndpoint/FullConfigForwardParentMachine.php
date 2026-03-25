@@ -19,7 +19,7 @@ class FullConfigForwardParentMachine extends Machine
             config: [
                 'id'      => 'full_config_forward_parent',
                 'initial' => 'idle',
-                'context' => ['order_id' => null],
+                'context' => ['orderId' => null],
                 'states'  => [
                     'idle' => [
                         'on' => ['START' => 'processing'],
@@ -27,7 +27,7 @@ class FullConfigForwardParentMachine extends Machine
                     'processing' => [
                         'machine' => ForwardChildEndpointMachine::class,
                         'queue'   => 'default',
-                        'with'    => ['order_id'],
+                        'with'    => ['orderId'],
                         'forward' => [
                             ProvideCardEvent::class => [
                                 'child_event'      => 'PROVIDE_CARD',
@@ -36,7 +36,7 @@ class FullConfigForwardParentMachine extends Machine
                                 'middleware'       => ['throttle:10'],
                                 'action'           => ForwardEndpointAction::class,
                                 'result'           => PaymentStepResult::class,
-                                'contextKeys'      => ['card_last4'],
+                                'contextKeys'      => ['cardLast4'],
                                 'status'           => 202,
                                 'available_events' => false,
                             ],

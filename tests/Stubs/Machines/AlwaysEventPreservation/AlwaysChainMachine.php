@@ -24,13 +24,13 @@ class AlwaysChainMachine extends Machine
                 'id'      => 'always_chain',
                 'initial' => 'idle',
                 'context' => [
-                    'captured_event_type'   => null,
-                    'captured_payload'      => null,
-                    'captured_actor'        => null,
-                    'guard_event_type'      => null,
-                    'calculator_payload'    => null,
-                    'entry_event_type'      => null,
-                    'current_behavior_type' => null,
+                    'capturedEventType'   => null,
+                    'capturedPayload'     => null,
+                    'capturedActor'       => null,
+                    'guardEventType'      => null,
+                    'calculatorPayload'   => null,
+                    'entryEventType'      => null,
+                    'currentBehaviorType' => null,
                 ],
                 'states' => [
                     'idle' => [

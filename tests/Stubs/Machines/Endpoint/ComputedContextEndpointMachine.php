@@ -48,7 +48,7 @@ class ComputedContextEndpointMachine extends Machine
             endpoints: [
                 'START',
                 'COMPLETE' => [
-                    'contextKeys' => ['count', 'is_count_even'],
+                    'contextKeys' => ['count', 'isCountEven'],
                 ],
             ],
         );

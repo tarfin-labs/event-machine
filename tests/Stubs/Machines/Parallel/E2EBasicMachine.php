@@ -25,9 +25,9 @@ class E2EBasicMachine extends Machine
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
-                    'order_id'        => null,
-                    'region_a_result' => null,
-                    'region_b_result' => null,
+                    'orderId'       => null,
+                    'regionAResult' => null,
+                    'regionBResult' => null,
                 ],
                 'states' => [
                     'processing' => [

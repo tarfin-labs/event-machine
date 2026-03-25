@@ -17,9 +17,9 @@ class IncrementalContextDiffMachine extends Machine
                 'id'      => 'incremental_context_diff',
                 'initial' => 'step1',
                 'context' => [
-                    'key_a' => 'initial_a',
-                    'key_b' => 'initial_b',
-                    'key_c' => 'initial_c',
+                    'keyA' => 'initial_a',
+                    'keyB' => 'initial_b',
+                    'keyC' => 'initial_c',
                 ],
                 'states' => [
                     'step1' => [
@@ -44,11 +44,11 @@ class IncrementalContextDiffMachine extends Machine
             behavior: [
                 'actions' => [
                     'setKeyA1Action' => function (ContextManager $context): void {
-                        $context->set('key_a', 'updated_a_1');
+                        $context->set('keyA', 'updated_a_1');
                     },
                     'setKeyBAndKeyA2Action' => function (ContextManager $context): void {
-                        $context->set('key_b', 'updated_b');
-                        $context->set('key_a', 'updated_a_2');
+                        $context->set('keyB', 'updated_b');
+                        $context->set('keyA', 'updated_a_2');
                     },
                 ],
             ],

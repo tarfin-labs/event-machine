@@ -15,7 +15,7 @@ class QueuedMarkerAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('queued_listener_ran', true);
-        $context->set('queued_listener_ran_at', now()->toISOString());
+        $context->set('queuedListenerRan', true);
+        $context->set('queuedListenerRanAt', now()->toISOString());
     }
 }

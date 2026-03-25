@@ -11,8 +11,8 @@ class LogRaisedEventHandledAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $log   = $context->get('execution_order');
+        $log   = $context->get('executionOrder');
         $log[] = 'raised_event_handled';
-        $context->set('execution_order', $log);
+        $context->set('executionOrder', $log);
     }
 }

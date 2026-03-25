@@ -10,7 +10,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessSharedK
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessSharedKeyBAction;
 
 /**
- * Both regions write to the same context keys (shared_scalar, shared_array).
+ * Both regions write to the same context keys (sharedScalar, sharedArray).
  * Tests context merge/conflict behavior (last-writer-wins for scalars,
  * deep merge for arrays with different keys).
  */
@@ -24,10 +24,10 @@ class E2EContextConflictMachine extends Machine
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
-                    'shared_scalar'  => null,
-                    'shared_array'   => [],
-                    'region_a_wrote' => null,
-                    'region_b_wrote' => null,
+                    'sharedScalar' => null,
+                    'sharedArray'  => [],
+                    'regionAWrote' => null,
+                    'regionBWrote' => null,
                 ],
                 'states' => [
                     'processing' => [

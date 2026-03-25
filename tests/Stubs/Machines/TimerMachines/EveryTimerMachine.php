@@ -22,7 +22,7 @@ class EveryTimerMachine extends Machine
                 'id'      => 'every_timer',
                 'initial' => 'active',
                 'context' => [
-                    'billing_count' => 0,
+                    'billingCount' => 0,
                 ],
                 'states' => [
                     'active' => [
@@ -37,7 +37,7 @@ class EveryTimerMachine extends Machine
             behavior: [
                 'actions' => [
                     'incrementBillingAction' => function (ContextManager $ctx): void {
-                        $ctx->set('billing_count', $ctx->get('billing_count') + 1);
+                        $ctx->set('billingCount', $ctx->get('billingCount') + 1);
                     },
                 ],
             ],

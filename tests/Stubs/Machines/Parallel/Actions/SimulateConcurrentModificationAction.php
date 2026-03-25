@@ -23,7 +23,7 @@ class SimulateConcurrentModificationAction extends ActionBehavior
     public function __invoke(ContextManager $context): void
     {
         if (static::$shouldModifyContext) {
-            $context->set('concurrent_result', 'processed');
+            $context->set('concurrentResult', 'processed');
         }
 
         if (static::$onExecute !== null) {

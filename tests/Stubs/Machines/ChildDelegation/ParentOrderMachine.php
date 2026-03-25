@@ -24,10 +24,10 @@ class ParentOrderMachine extends Machine
                 'id'      => 'parent_order',
                 'initial' => 'awaiting_payment',
                 'context' => [
-                    'order_id'     => null,
-                    'total_amount' => 0,
-                    'payment_id'   => null,
-                    'receipt_url'  => null,
+                    'orderId'     => null,
+                    'totalAmount' => 0,
+                    'paymentId'   => null,
+                    'receiptUrl'  => null,
                 ],
                 'states' => [
                     'awaiting_payment' => [
@@ -38,8 +38,8 @@ class ParentOrderMachine extends Machine
                     'processing_payment' => [
                         'machine' => ChildPaymentMachine::class,
                         'with'    => [
-                            'order_id',
-                            'amount' => 'total_amount',
+                            'orderId',
+                            'amount' => 'totalAmount',
                         ],
                         '@done' => [
                             'target'  => 'completed',
@@ -61,8 +61,8 @@ class ParentOrderMachine extends Machine
                         ContextManager $context,
                         EventBehavior $event
                     ): void {
-                        $context->set('payment_id', $event->payload['result']['payment_id'] ?? null);
-                        $context->set('receipt_url', $event->payload['result']['receipt_url'] ?? null);
+                        $context->set('paymentId', $event->payload['result']['paymentId'] ?? null);
+                        $context->set('receiptUrl', $event->payload['result']['receiptUrl'] ?? null);
                     },
                 ],
             ],

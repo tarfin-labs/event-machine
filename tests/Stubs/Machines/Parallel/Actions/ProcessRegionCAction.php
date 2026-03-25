@@ -11,7 +11,7 @@ class ProcessRegionCAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('region_c_result', 'processed_by_c');
+        $context->set('regionCResult', 'processed_by_c');
         $this->raise(['type' => 'REGION_C_PROCESSED']);
     }
 }

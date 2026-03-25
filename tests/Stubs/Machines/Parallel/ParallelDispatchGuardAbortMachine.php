@@ -19,8 +19,8 @@ class ParallelDispatchGuardAbortMachine extends Machine
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
-                    'concurrent_result' => null,
-                    'region_b_result'   => null,
+                    'concurrentResult' => null,
+                    'regionBResult'    => null,
                 ],
                 'states' => [
                     'processing' => [

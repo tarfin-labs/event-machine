@@ -25,7 +25,7 @@ class ForwardableChildMachine extends Machine
                 'id'      => 'forwardable_child',
                 'initial' => 'idle',
                 'context' => [
-                    'updated_value' => null,
+                    'updatedValue' => null,
                 ],
                 'states' => [
                     'idle' => [
@@ -50,7 +50,7 @@ class ForwardableChildMachine extends Machine
             behavior: [
                 'actions' => [
                     'captureUpdateAction' => function (ContextManager $ctx): void {
-                        $ctx->set('updated_value', 'received');
+                        $ctx->set('updatedValue', 'received');
                     },
                 ],
             ],

@@ -24,9 +24,9 @@ class AsyncParentMachine extends Machine
                 'id'      => 'async_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'order_id' => null,
-                    'result'   => null,
-                    'error'    => null,
+                    'orderId' => null,
+                    'result'  => null,
+                    'error'   => null,
                 ],
                 'states' => [
                     'idle' => [
@@ -37,7 +37,7 @@ class AsyncParentMachine extends Machine
                     ],
                     'processing' => [
                         'machine' => SimpleChildMachine::class,
-                        'with'    => ['order_id'],
+                        'with'    => ['orderId'],
                         'queue'   => 'child-queue',
                         'on'      => [
                             'CANCEL' => 'skipped',

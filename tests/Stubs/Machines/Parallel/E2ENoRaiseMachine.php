@@ -24,9 +24,9 @@ class E2ENoRaiseMachine extends Machine
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
-                    'region_a_context_set' => null,
-                    'region_a_pid'         => null,
-                    'region_b_result'      => null,
+                    'regionAContextSet' => null,
+                    'regionAPid'        => null,
+                    'regionBResult'     => null,
                 ],
                 'states' => [
                     'processing' => [

@@ -24,7 +24,7 @@ class E2ESingleEntryMachine extends Machine
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
-                    'region_a_result' => null,
+                    'regionAResult' => null,
                 ],
                 'states' => [
                     'processing' => [

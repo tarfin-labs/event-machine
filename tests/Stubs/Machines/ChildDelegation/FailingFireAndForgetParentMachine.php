@@ -21,7 +21,7 @@ class FailingFireAndForgetParentMachine extends Machine
                 'id'      => 'failing_ff_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'parent_ok' => true,
+                    'parentOk' => true,
                 ],
                 'states' => [
                     'idle' => [

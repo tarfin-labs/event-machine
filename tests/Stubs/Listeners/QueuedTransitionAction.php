@@ -14,6 +14,6 @@ class QueuedTransitionAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('transition_listener_ran', true);
+        $context->set('transitionListenerRan', true);
     }
 }

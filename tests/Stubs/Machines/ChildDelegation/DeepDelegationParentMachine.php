@@ -21,7 +21,7 @@ class DeepDelegationParentMachine extends Machine
                 'id'      => 'deep_delegation_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'chain_completed' => false,
+                    'chainCompleted' => false,
                 ],
                 'states' => [
                     'idle' => [
@@ -43,7 +43,7 @@ class DeepDelegationParentMachine extends Machine
             behavior: [
                 'actions' => [
                     'markChainCompleteAction' => function (ContextManager $ctx): void {
-                        $ctx->set('chain_completed', true);
+                        $ctx->set('chainCompleted', true);
                     },
                 ],
             ],

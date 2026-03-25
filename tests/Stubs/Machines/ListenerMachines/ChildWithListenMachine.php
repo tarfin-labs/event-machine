@@ -23,7 +23,7 @@ class ChildWithListenMachine extends Machine
             config: [
                 'id'      => 'child_with_listen',
                 'initial' => 'processing',
-                'context' => ['child_listen_count' => 0],
+                'context' => ['childListenCount' => 0],
                 'listen'  => [
                     'entry' => 'childCountAction',
                 ],
@@ -35,7 +35,7 @@ class ChildWithListenMachine extends Machine
             behavior: [
                 'actions' => [
                     'childCountAction' => function (ContextManager $context): void {
-                        $context->set('child_listen_count', $context->get('child_listen_count') + 1);
+                        $context->set('childListenCount', $context->get('childListenCount') + 1);
                     },
                 ],
             ],

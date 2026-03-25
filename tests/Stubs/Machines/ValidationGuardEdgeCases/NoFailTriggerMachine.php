@@ -18,7 +18,7 @@ class NoFailTriggerMachine extends Machine
                 'id'      => 'no_fail_trigger',
                 'initial' => 'processing',
                 'context' => [
-                    'fail_reached' => false,
+                    'failReached' => false,
                 ],
                 'states' => [
                     'processing' => [
@@ -43,7 +43,7 @@ class NoFailTriggerMachine extends Machine
                 ],
                 'actions' => [
                     'markFailAction' => function (ContextManager $context): void {
-                        $context->set('fail_reached', true);
+                        $context->set('failReached', true);
                     },
                 ],
             ],

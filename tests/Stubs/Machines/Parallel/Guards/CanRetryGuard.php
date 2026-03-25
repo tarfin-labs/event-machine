@@ -11,6 +11,6 @@ class CanRetryGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
     {
-        return $context->get('retry_count') < 3;
+        return $context->get('retryCount') < 3;
     }
 }

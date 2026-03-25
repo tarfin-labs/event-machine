@@ -26,8 +26,8 @@ class ValidationGuardDispatchIsolationMachine extends Machine
                 'id'      => 'vg_dispatch_isolation',
                 'initial' => 'collecting',
                 'context' => [
-                    'guarded_region_entered' => false,
-                    'sibling_region_entered' => false,
+                    'guardedRegionEntered' => false,
+                    'siblingRegionEntered' => false,
                 ],
                 'states' => [
                     'collecting' => [
@@ -82,10 +82,10 @@ class ValidationGuardDispatchIsolationMachine extends Machine
                 ],
                 'actions' => [
                     'markGuardedRegionEnteredAction' => function (ContextManager $context): void {
-                        $context->set('guarded_region_entered', true);
+                        $context->set('guardedRegionEntered', true);
                     },
                     'markSiblingRegionEnteredAction' => function (ContextManager $context): void {
-                        $context->set('sibling_region_entered', true);
+                        $context->set('siblingRegionEntered', true);
                     },
                 ],
             ],

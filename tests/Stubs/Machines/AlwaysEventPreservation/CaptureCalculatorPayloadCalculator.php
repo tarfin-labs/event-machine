@@ -15,6 +15,6 @@ class CaptureCalculatorPayloadCalculator extends CalculatorBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): void
     {
-        $context->set('calculator_payload', $event->payload);
+        $context->set('calculatorPayload', $event->payload);
     }
 }

@@ -15,6 +15,6 @@ class SyncMarkerAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('sync_listener_ran', true);
+        $context->set('syncListenerRan', true);
     }
 }
