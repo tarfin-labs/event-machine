@@ -116,7 +116,7 @@ it('LocalQA: stale lock does not block machine processing via Horizon', function
 
         // Machine should move beyond idle (START was processed)
         return $cs && !str_contains($cs->state_id, 'idle');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 30, description: 'machine processes START event after stale lock cleanup');
 
     expect($processed)->toBeTrue('Machine did not process event despite stale lock cleanup');
 
@@ -128,7 +128,7 @@ it('LocalQA: stale lock does not block machine processing via Horizon', function
             str_contains($cs->state_id, 'completed')
             || str_contains($cs->state_id, 'failed')
         );
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'machine completes after stale lock recovery');
 
     expect($completed)->toBeTrue('Machine did not complete after stale lock recovery');
 

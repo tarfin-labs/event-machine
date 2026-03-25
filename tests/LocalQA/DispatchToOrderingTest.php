@@ -44,7 +44,7 @@ it('LocalQA: multiple dispatchTo events are serialized via lock — no lost even
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'processing');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 30, description: 'machine reaches processing after START dispatch');
 
     expect($started)->toBeTrue('Machine did not reach processing state');
 
@@ -103,7 +103,7 @@ it('LocalQA: dispatchTo to multiple machines in parallel does not cross-contamin
 
         return $csA && str_contains($csA->state_id, 'processing')
             && $csB && str_contains($csB->state_id, 'processing');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 30, description: 'both machines reach processing without cross-contamination');
 
     expect($bothProcessed)->toBeTrue('Both machines did not reach processing state');
 

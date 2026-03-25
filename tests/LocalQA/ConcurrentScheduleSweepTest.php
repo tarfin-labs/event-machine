@@ -57,7 +57,7 @@ it('LocalQA: concurrent schedule sweeps do not duplicate events on same machine'
         }
 
         return true;
-    }, timeoutSeconds: 60);
+    }, timeoutSeconds: 60, description: 'all machines reach expired after concurrent schedule sweeps');
 
     expect($allProcessed)->toBeTrue('Not all machines processed after concurrent sweeps');
 

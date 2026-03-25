@@ -42,7 +42,7 @@ it('LocalQA: parallel dispatch @done fires exactly once when regions complete si
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'parallel machine reaches completed via single @done');
 
     expect($completed)->toBeTrue('Machine did not reach completed state after both regions finished');
 
@@ -98,7 +98,7 @@ it('LocalQA: 5 concurrent parallel machines each fire @done exactly once', funct
         }
 
         return true;
-    }, timeoutSeconds: 60);
+    }, timeoutSeconds: 60, description: 'all 5 concurrent parallel machines complete');
 
     expect($allCompleted)->toBeTrue('Not all machines completed');
 

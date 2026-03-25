@@ -46,7 +46,7 @@ it('LocalQA: both parallel regions fail simultaneously — single @fail transiti
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'failed');
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'machine reaches failed state after both regions fail');
 
     expect($failed)->toBeTrue('Machine did not reach failed state after both regions failed');
 
@@ -89,7 +89,7 @@ it('LocalQA: parallel region scalar context overwrite — last writer wins under
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'context conflict machine completes (scalar overwrite test)');
 
     expect($completed)->toBeTrue('Context conflict machine did not complete');
 
@@ -134,7 +134,7 @@ it('LocalQA: parallel region context merge preserves both regions changes under 
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'context conflict machine completes (deep merge test)');
 
     expect($completed)->toBeTrue('Context conflict machine did not complete');
 

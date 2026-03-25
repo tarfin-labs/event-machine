@@ -59,7 +59,7 @@ it('LocalQA: concurrent sends both succeed in sequence via lock serialization', 
             || str_contains($cs->state_id, 'skipped')
             || str_contains($cs->state_id, 'failed')
         );
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'machine settles in final state after two sequential sends');
 
     expect($settled)->toBeTrue('Machine did not settle after two sequential sends');
 
@@ -99,7 +99,7 @@ it('LocalQA: send during parallel region execution throws MachineAlreadyRunningE
 
         return $restored->state->context->get('region_a_result') !== null
             || $restored->state->context->get('region_b_result') !== null;
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'parallel regions start processing');
 
     expect($regionsRunning)->toBeTrue('Parallel regions did not start');
 
@@ -131,7 +131,7 @@ it('LocalQA: send during parallel region execution throws MachineAlreadyRunningE
     // No stale locks after everything settles
     $locksCleaned = LocalQATestCase::waitFor(function () use ($rootEventId) {
         return DB::table('machine_locks')->where('root_event_id', $rootEventId)->count() === 0;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 30, description: 'stale locks cleaned after parallel region + send');
 
     expect($locksCleaned)->toBeTrue('Stale locks remain after parallel region + send');
 });

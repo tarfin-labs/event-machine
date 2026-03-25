@@ -51,7 +51,7 @@ it('LocalQA: parallel dispatch regions start from same context snapshot', functi
         $regionB  = $restored->state->context->get('region_b_result');
 
         return $regionA !== null && $regionB !== null;
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'both parallel dispatch regions produce results');
 
     expect($completed)->toBeTrue('Parallel dispatch regions did not complete');
 

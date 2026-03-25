@@ -51,7 +51,7 @@ it('LocalQA: rapid sequential sends all processed — none lost to lock contenti
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 60);
+    }, timeoutSeconds: 60, description: 'rapid sequential sends all reach completed — no lost events');
 
     expect($settled)->toBeTrue('Machine did not reach completed state — events may have been lost');
 
@@ -94,7 +94,7 @@ it('LocalQA: rapid sends with slight delays all processed correctly', function (
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 60);
+    }, timeoutSeconds: 60, description: 'delayed sends all reach completed');
 
     expect($settled)->toBeTrue('Machine did not reach completed state with delayed sends');
 
@@ -144,7 +144,7 @@ it('LocalQA: multiple machines handle concurrent sends independently', function 
         }
 
         return true;
-    }, timeoutSeconds: 60);
+    }, timeoutSeconds: 60, description: 'all 3 machines complete with interleaved concurrent sends');
 
     expect($allCompleted)->toBeTrue('Not all 3 machines reached completed state');
 

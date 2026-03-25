@@ -49,7 +49,7 @@ it('LocalQA: 4 burst events all processed in sequence via lock serialization (ch
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 60);
+    }, timeoutSeconds: 60, description: 'burst choir machine completes all 4 events');
 
     expect($completed)->toBeTrue('Burst choir did not complete — events may have been lost or deadlocked');
 
@@ -102,7 +102,7 @@ it('LocalQA: burst events on multiple machines do not interfere (choir isolation
         }
 
         return true;
-    }, timeoutSeconds: 60);
+    }, timeoutSeconds: 60, description: 'all 3 choir machines complete without interference');
 
     expect($allCompleted)->toBeTrue('Not all choir machines completed — cross-machine interference');
 

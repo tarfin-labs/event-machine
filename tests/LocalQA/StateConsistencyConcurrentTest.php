@@ -118,7 +118,7 @@ it('LocalQA: restored state is always a valid known state during concurrent proc
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'machine reaches completed during state consistency polling');
 
     expect($completed)->toBeTrue('Machine did not reach completed state');
 
@@ -201,7 +201,7 @@ it('LocalQA: parallel state value consistency — no partial region state during
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 45, description: 'parallel machine completes after region events sent');
 
     expect($completed)->toBeTrue('Machine did not reach completed state');
 

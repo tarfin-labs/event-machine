@@ -36,7 +36,7 @@ it('LocalQA: late child completion after parent timeout does not crash or corrup
         return DB::table('machine_children')
             ->where('parent_root_event_id', $rootEventId)
             ->exists();
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 30, description: 'child machine dispatched from parent');
 
     expect($childCreated)->toBeTrue('Child machine was not dispatched');
 
