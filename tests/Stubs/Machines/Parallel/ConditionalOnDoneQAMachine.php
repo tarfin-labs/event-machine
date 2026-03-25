@@ -27,10 +27,10 @@ class ConditionalOnDoneQAMachine extends Machine
                 'initial'        => 'idle',
                 'should_persist' => true,
                 'context'        => [
-                    'inventory_result'  => null,
-                    'payment_result'    => null,
-                    'approval_logged'   => false,
-                    'reviewer_notified' => false,
+                    'inventoryResult'  => null,
+                    'paymentResult'    => null,
+                    'approvalLogged'   => false,
+                    'reviewerNotified' => false,
                 ],
                 'states' => [
                     'idle' => [

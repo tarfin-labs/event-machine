@@ -14,6 +14,6 @@ class QueuedExitAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('exit_listener_ran', true);
+        $context->set('exitListenerRan', true);
     }
 }

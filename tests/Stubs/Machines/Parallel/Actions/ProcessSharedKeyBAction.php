@@ -16,9 +16,9 @@ class ProcessSharedKeyBAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('shared_scalar', 'value_from_b');
-        $context->set('shared_array', ['from_b' => true, 'score' => 92]);
-        $context->set('region_b_wrote', true);
+        $context->set('sharedScalar', 'value_from_b');
+        $context->set('sharedArray', ['from_b' => true, 'score' => 92]);
+        $context->set('regionBWrote', true);
         $this->raise(['type' => 'REGION_B_PROCESSED']);
     }
 }

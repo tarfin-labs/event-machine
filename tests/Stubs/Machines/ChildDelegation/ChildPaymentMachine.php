@@ -24,10 +24,10 @@ class ChildPaymentMachine extends Machine
                 'id'      => 'child_payment',
                 'initial' => 'processing',
                 'context' => [
-                    'order_id'    => null,
-                    'amount'      => 0,
-                    'payment_id'  => null,
-                    'receipt_url' => null,
+                    'orderId'    => null,
+                    'amount'     => 0,
+                    'paymentId'  => null,
+                    'receiptUrl' => null,
                 ],
                 'states' => [
                     'processing' => [
@@ -40,9 +40,9 @@ class ChildPaymentMachine extends Machine
                         'type'   => 'final',
                         'result' => function (ContextManager $context): array {
                             return [
-                                'payment_id'  => $context->get('payment_id'),
-                                'receipt_url' => $context->get('receipt_url'),
-                                'amount'      => $context->get('amount'),
+                                'paymentId'  => $context->get('paymentId'),
+                                'receiptUrl' => $context->get('receiptUrl'),
+                                'amount'     => $context->get('amount'),
                             ];
                         },
                     ],
@@ -54,8 +54,8 @@ class ChildPaymentMachine extends Machine
             behavior: [
                 'actions' => [
                     'processPaymentAction' => function (ContextManager $context): void {
-                        $context->set('payment_id', 'pay_'.uniqid());
-                        $context->set('receipt_url', 'https://example.com/receipt/'.uniqid());
+                        $context->set('paymentId', 'pay_'.uniqid());
+                        $context->set('receiptUrl', 'https://example.com/receipt/'.uniqid());
                     },
                 ],
             ],

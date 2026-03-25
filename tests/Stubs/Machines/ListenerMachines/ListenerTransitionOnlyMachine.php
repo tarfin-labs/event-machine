@@ -22,7 +22,7 @@ class ListenerTransitionOnlyMachine extends Machine
                 'id'      => 'listener_transition_only',
                 'initial' => 'idle',
                 'context' => [
-                    'transition_listener_ran' => false,
+                    'transitionListenerRan' => false,
                 ],
                 'listen' => [
                     'transition' => [

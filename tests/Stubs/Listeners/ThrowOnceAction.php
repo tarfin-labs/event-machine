@@ -25,6 +25,6 @@ class ThrowOnceAction extends ActionBehavior
             throw new RuntimeException('Intentional first-call failure for testing');
         }
 
-        $context->set('listener_ran', true);
+        $context->set('listenerRan', true);
     }
 }

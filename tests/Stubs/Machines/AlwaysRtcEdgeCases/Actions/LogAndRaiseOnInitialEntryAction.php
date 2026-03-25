@@ -11,9 +11,9 @@ class LogAndRaiseOnInitialEntryAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $log   = $context->get('execution_order');
+        $log   = $context->get('executionOrder');
         $log[] = 'initial_entry';
-        $context->set('execution_order', $log);
+        $context->set('executionOrder', $log);
 
         $this->raise(['type' => 'RAISED_FROM_ENTRY']);
     }

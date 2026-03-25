@@ -21,8 +21,8 @@ class ContextMutatingChildMachine extends Machine
                 'id'      => 'mutating_child',
                 'initial' => 'working',
                 'context' => [
-                    'order_id' => null,
-                    'extra'    => null,
+                    'orderId' => null,
+                    'extra'   => null,
                 ],
                 'states' => [
                     'working' => [
@@ -35,7 +35,7 @@ class ContextMutatingChildMachine extends Machine
             behavior: [
                 'actions' => [
                     'mutateAction' => function (ContextManager $ctx): void {
-                        $ctx->set('order_id', 'CHANGED_BY_CHILD');
+                        $ctx->set('orderId', 'CHANGED_BY_CHILD');
                         $ctx->set('extra', 'child_added_this');
                     },
                 ],

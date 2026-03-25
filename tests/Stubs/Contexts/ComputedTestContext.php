@@ -18,8 +18,8 @@ class ComputedTestContext extends ContextManager
     protected function computedContext(): array
     {
         return [
-            'is_count_even' => $this->count % 2 === 0,
-            'display_label' => "Item #{$this->count} ({$this->status})",
+            'isCountEven'  => $this->count % 2 === 0,
+            'displayLabel' => "Item #{$this->count} ({$this->status})",
         ];
     }
 }

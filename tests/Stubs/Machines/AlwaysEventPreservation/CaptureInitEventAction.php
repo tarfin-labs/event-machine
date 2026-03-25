@@ -15,6 +15,6 @@ class CaptureInitEventAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, ?EventBehavior $event = null): void
     {
-        $context->set('init_event_type', $event?->type);
+        $context->set('initEventType', $event?->type);
     }
 }

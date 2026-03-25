@@ -26,7 +26,7 @@ class ForwardParentEndpointMachine extends Machine
                 'id'      => 'forward_endpoint_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'order_id' => null,
+                    'orderId' => null,
                 ],
                 'states' => [
                     'idle' => [
@@ -35,12 +35,12 @@ class ForwardParentEndpointMachine extends Machine
                     'processing' => [
                         'machine' => ForwardChildEndpointMachine::class,
                         'queue'   => 'default',
-                        'with'    => ['order_id'],
+                        'with'    => ['orderId'],
                         'forward' => [
                             'PROVIDE_CARD',
                             'CONFIRM_PAYMENT' => [
                                 'result'      => PaymentStepResult::class,
-                                'contextKeys' => ['card_last4', 'status'],
+                                'contextKeys' => ['cardLast4', 'status'],
                                 'status'      => 200,
                             ],
                         ],
@@ -75,9 +75,9 @@ class PaymentStepResult extends ResultBehavior
     public function __invoke(ContextManager $context, ForwardContext $forwardContext): array
     {
         return [
-            'order_id'   => $context->get('order_id'),
-            'card_last4' => $forwardContext->childContext->get('card_last4'),
-            'child_step' => $forwardContext->childState->value[0] ?? null,
+            'orderId'   => $context->get('orderId'),
+            'cardLast4' => $forwardContext->childContext->get('cardLast4'),
+            'childStep' => $forwardContext->childState->value[0] ?? null,
         ];
     }
 }

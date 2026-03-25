@@ -15,6 +15,6 @@ class CaptureRaisedEventAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): void
     {
-        $context->set('raised_event_type', $event->type);
+        $context->set('raisedEventType', $event->type);
     }
 }

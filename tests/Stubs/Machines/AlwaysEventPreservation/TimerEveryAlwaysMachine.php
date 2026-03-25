@@ -24,8 +24,8 @@ class TimerEveryAlwaysMachine extends Machine
                 'id'      => 'timer_every_always',
                 'initial' => 'active',
                 'context' => [
-                    'billing_event_type'    => null,
-                    'billing_event_payload' => null,
+                    'billingEventType'    => null,
+                    'billingEventPayload' => null,
                 ],
                 'states' => [
                     'active' => [

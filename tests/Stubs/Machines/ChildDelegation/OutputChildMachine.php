@@ -20,14 +20,14 @@ class OutputChildMachine extends Machine
                 'id'      => 'output_child',
                 'initial' => 'done',
                 'context' => [
-                    'payment_id'           => 'pay_xyz',
-                    'status'               => 'approved',
-                    'internal_retry_count' => 3,
+                    'paymentId'          => 'pay_xyz',
+                    'status'             => 'approved',
+                    'internalRetryCount' => 3,
                 ],
                 'states' => [
                     'done' => [
                         'type'   => 'final',
-                        'output' => ['payment_id', 'status'],
+                        'output' => ['paymentId', 'status'],
                     ],
                 ],
             ],

@@ -22,8 +22,8 @@ class ListenerExitTransitionMachine extends Machine
                 'id'      => 'listener_exit_transition',
                 'initial' => 'idle',
                 'context' => [
-                    'exit_listener_ran'       => false,
-                    'transition_listener_ran' => false,
+                    'exitListenerRan'       => false,
+                    'transitionListenerRan' => false,
                 ],
                 'listen' => [
                     'exit' => [

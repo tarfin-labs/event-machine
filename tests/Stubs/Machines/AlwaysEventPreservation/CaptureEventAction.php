@@ -15,8 +15,8 @@ class CaptureEventAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): void
     {
-        $context->set('captured_event_type', $event->type);
-        $context->set('captured_payload', $event->payload);
-        $context->set('captured_actor', $event->actor($context));
+        $context->set('capturedEventType', $event->type);
+        $context->set('capturedPayload', $event->payload);
+        $context->set('capturedActor', $event->actor($context));
     }
 }

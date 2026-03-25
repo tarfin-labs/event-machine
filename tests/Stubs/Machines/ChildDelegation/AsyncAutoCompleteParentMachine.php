@@ -25,9 +25,9 @@ class AsyncAutoCompleteParentMachine extends Machine
                 'id'      => 'async_auto_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'order_id' => null,
-                    'result'   => null,
-                    'error'    => null,
+                    'orderId' => null,
+                    'result'  => null,
+                    'error'   => null,
                 ],
                 'states' => [
                     'idle' => [
@@ -38,7 +38,7 @@ class AsyncAutoCompleteParentMachine extends Machine
                     ],
                     'processing' => [
                         'machine' => ImmediateChildMachine::class,
-                        'with'    => ['order_id'],
+                        'with'    => ['orderId'],
                         'queue'   => 'child-queue',
                         'on'      => [
                             'CANCEL' => 'skipped',

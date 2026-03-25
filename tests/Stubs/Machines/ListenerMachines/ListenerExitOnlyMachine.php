@@ -22,7 +22,7 @@ class ListenerExitOnlyMachine extends Machine
                 'id'      => 'listener_exit_only',
                 'initial' => 'idle',
                 'context' => [
-                    'exit_listener_ran' => false,
+                    'exitListenerRan' => false,
                 ],
                 'listen' => [
                     'exit' => [

@@ -26,8 +26,8 @@ class SlowRegionParallelMachine extends Machine
                 'initial'        => 'idle',
                 'should_persist' => true,
                 'context'        => [
-                    'region_a_done' => false,
-                    'region_b_done' => false,
+                    'regionADone' => false,
+                    'regionBDone' => false,
                 ],
                 'states' => [
                     'idle' => [
@@ -71,11 +71,11 @@ class SlowRegionParallelMachine extends Machine
             behavior: [
                 'actions' => [
                     'markRegionAAction' => function (ContextManager $ctx): void {
-                        $ctx->set('region_a_done', true);
+                        $ctx->set('regionADone', true);
                     },
                     'markRegionBAction' => function (ContextManager $ctx): void {
                         // Only sets context, does NOT raise any event → region B stalls
-                        $ctx->set('region_b_done', true);
+                        $ctx->set('regionBDone', true);
                     },
                 ],
             ],

@@ -22,7 +22,7 @@ class EveryWithMaxMachine extends Machine
                 'id'      => 'every_max',
                 'initial' => 'retrying',
                 'context' => [
-                    'retry_count' => 0,
+                    'retryCount' => 0,
                 ],
                 'states' => [
                     'retrying' => [
@@ -39,7 +39,7 @@ class EveryWithMaxMachine extends Machine
             behavior: [
                 'actions' => [
                     'incrementRetryAction' => function (ContextManager $ctx): void {
-                        $ctx->set('retry_count', $ctx->get('retry_count') + 1);
+                        $ctx->set('retryCount', $ctx->get('retryCount') + 1);
                     },
                 ],
             ],

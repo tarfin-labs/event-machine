@@ -25,9 +25,9 @@ class E2EActionCounterMachine extends Machine
                 'initial'        => 'idle',
                 'should_persist' => true,
                 'context'        => [
-                    'entry_count' => 0,
-                    'exit_count'  => 0,
-                    'event_log'   => [],
+                    'entryCount' => 0,
+                    'exitCount'  => 0,
+                    'eventLog'   => [],
                 ],
                 'states' => [
                     'idle' => [
@@ -54,10 +54,10 @@ class E2EActionCounterMachine extends Machine
             behavior: [
                 'actions' => [
                     'incrementEntryAction' => function (ContextManager $context): void {
-                        $context->set('entry_count', $context->get('entry_count') + 1);
+                        $context->set('entryCount', $context->get('entryCount') + 1);
                     },
                     'incrementExitAction' => function (ContextManager $context): void {
-                        $context->set('exit_count', $context->get('exit_count') + 1);
+                        $context->set('exitCount', $context->get('exitCount') + 1);
                     },
                 ],
             ],

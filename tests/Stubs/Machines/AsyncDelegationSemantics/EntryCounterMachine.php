@@ -21,7 +21,7 @@ class EntryCounterMachine extends Machine
                 'id'      => 'entry_counter',
                 'initial' => 'idle',
                 'context' => [
-                    'entry_count' => 0,
+                    'entryCount' => 0,
                 ],
                 'states' => [
                     'idle' => [
@@ -39,7 +39,7 @@ class EntryCounterMachine extends Machine
             behavior: [
                 'actions' => [
                     'incrementAction' => function (ContextManager $ctx): void {
-                        $ctx->set('entry_count', $ctx->get('entry_count') + 1);
+                        $ctx->set('entryCount', $ctx->get('entryCount') + 1);
                     },
                 ],
             ],

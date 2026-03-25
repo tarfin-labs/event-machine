@@ -24,8 +24,8 @@ class JobActorParentMachine extends Machine
                 'id'      => 'job_actor_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'order_id'   => 'ord_001',
-                    'payment_id' => null,
+                    'orderId'   => 'ord_001',
+                    'paymentId' => null,
                 ],
                 'states' => [
                     'idle' => [
@@ -33,7 +33,7 @@ class JobActorParentMachine extends Machine
                     ],
                     'processing' => [
                         'job'   => SuccessfulTestJob::class,
-                        'with'  => ['order_id'],
+                        'with'  => ['orderId'],
                         'queue' => 'default',
                         '@done' => [
                             'target'  => 'completed',
@@ -48,7 +48,7 @@ class JobActorParentMachine extends Machine
             behavior: [
                 'actions' => [
                     'capturePaymentAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                        $ctx->set('payment_id', $event->payload['output']['payment_id'] ?? null);
+                        $ctx->set('paymentId', $event->payload['output']['paymentId'] ?? null);
                     },
                 ],
             ],

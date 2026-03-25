@@ -15,7 +15,7 @@ class CaptureGuardEventGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): bool
     {
-        $context->set('guard_event_type', $event->type);
+        $context->set('guardEventType', $event->type);
 
         return true;
     }

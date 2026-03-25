@@ -26,9 +26,9 @@ class ListenerLifecycleMachine extends Machine
                 'id'      => 'listener_lifecycle',
                 'initial' => 'idle',
                 'context' => [
-                    'listener_ran'            => false,
-                    'exit_listener_ran'       => false,
-                    'transition_listener_ran' => false,
+                    'listenerRan'           => false,
+                    'exitListenerRan'       => false,
+                    'transitionListenerRan' => false,
                 ],
                 'listen' => [
                     'entry' => [

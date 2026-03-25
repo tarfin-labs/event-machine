@@ -17,7 +17,7 @@ class OrderMachine extends Machine
             config: [
                 'initial' => 'idle',
                 'context' => [
-                    'items_count' => 0,
+                    'itemsCount' => 0,
                 ],
                 'states' => [
                     'idle' => [
@@ -36,17 +36,17 @@ class OrderMachine extends Machine
             behavior: [
                 'calculators' => [
                     'calculateOrderTotalCalculator' => function (ContextManager $context): void {
-                        $context->items_count *= 10;
+                        $context->itemsCount *= 10;
                     },
                 ],
                 'guards' => [
                     'validateOrderGuard' => function (ContextManager $context): bool {
-                        return $context->get('items_count') > 0;
+                        return $context->get('itemsCount') > 0;
                     },
                 ],
                 'actions' => [
                     'createOrderAction' => function (ContextManager $context): void {
-                        $context->set('order_created', true);
+                        $context->set('orderCreated', true);
                     },
                 ],
                 'events' => [

@@ -15,8 +15,8 @@ class SetContextWithoutRaiseAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('region_a_context_set', 'yes_but_no_raise');
-        $context->set('region_a_pid', getmypid());
+        $context->set('regionAContextSet', 'yes_but_no_raise');
+        $context->set('regionAPid', getmypid());
         // Deliberately: NO $this->raise() call
     }
 }

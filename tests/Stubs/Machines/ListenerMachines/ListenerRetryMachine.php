@@ -21,7 +21,7 @@ class ListenerRetryMachine extends Machine
                 'id'      => 'listener_retry',
                 'initial' => 'idle',
                 'context' => [
-                    'listener_ran' => false,
+                    'listenerRan' => false,
                 ],
                 'listen' => [
                     'entry' => [

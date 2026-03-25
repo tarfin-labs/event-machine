@@ -16,9 +16,9 @@ class SendToTargetAction extends ActionBehavior
     public function __invoke(ContextManager $ctx): void
     {
         $this->sendTo(
-            machineClass: $ctx->get('target_class') ?? AsyncParentMachine::class,
-            rootEventId: $ctx->get('target_root_event_id') ?? 'fake-root-event-id',
-            event: ['type' => $ctx->get('event_type') ?? 'PING', 'payload' => []],
+            machineClass: $ctx->get('targetClass') ?? AsyncParentMachine::class,
+            rootEventId: $ctx->get('targetRootEventId') ?? 'fake-root-event-id',
+            event: ['type' => $ctx->get('eventType') ?? 'PING', 'payload' => []],
         );
     }
 }

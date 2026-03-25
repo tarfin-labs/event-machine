@@ -15,6 +15,6 @@ class CaptureCurrentEventBehaviorAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, State $state): void
     {
-        $context->set('current_behavior_type', $state->currentEventBehavior?->type);
+        $context->set('currentBehaviorType', $state->currentEventBehavior?->type);
     }
 }

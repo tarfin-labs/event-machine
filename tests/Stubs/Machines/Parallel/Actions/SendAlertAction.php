@@ -14,7 +14,7 @@ class SendAlertAction extends ActionBehavior
     public function __invoke(ContextManager $context): void
     {
         self::$executed = true;
-        $context->set('alert_sent', true);
+        $context->set('alertSent', true);
     }
 
     public static function wasExecuted(): bool

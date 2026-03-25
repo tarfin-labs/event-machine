@@ -21,7 +21,7 @@ class AfterTimerMachine extends Machine
                 'id'      => 'after_timer',
                 'initial' => 'awaiting_payment',
                 'context' => [
-                    'order_id' => null,
+                    'orderId' => null,
                 ],
                 'states' => [
                     'awaiting_payment' => [

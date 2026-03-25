@@ -22,7 +22,7 @@ class DispatchToParentParentMachine extends Machine
                 'id'      => 'dispatch_to_parent_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'child_progress' => null,
+                    'childProgress' => null,
                 ],
                 'states' => [
                     'idle' => [
@@ -47,7 +47,7 @@ class DispatchToParentParentMachine extends Machine
             behavior: [
                 'actions' => [
                     'captureProgressAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                        $ctx->set('child_progress', $event->payload['progress'] ?? null);
+                        $ctx->set('childProgress', $event->payload['progress'] ?? null);
                     },
                 ],
             ],

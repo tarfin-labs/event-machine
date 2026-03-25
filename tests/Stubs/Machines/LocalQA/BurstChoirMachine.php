@@ -26,7 +26,7 @@ class BurstChoirMachine extends Machine
                 'id'      => 'burst_choir',
                 'initial' => 'idle',
                 'context' => [
-                    'notes_sung' => [],
+                    'notesSung' => [],
                 ],
                 'states' => [
                     'idle' => [
@@ -67,9 +67,9 @@ class BurstChoirMachine extends Machine
             behavior: [
                 'actions' => [
                     'recordNoteAction' => function (ContextManager $context, EventBehavior $event): void {
-                        $notes   = $context->get('notes_sung');
+                        $notes   = $context->get('notesSung');
                         $notes[] = $event->type;
-                        $context->set('notes_sung', $notes);
+                        $context->set('notesSung', $notes);
                     },
                 ],
             ],
