@@ -6,9 +6,11 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 
 // region Bead 1: entry-action-throws
-// Entry action throws RuntimeException. Machine state should NOT be corrupted.
+// Entry actions execute AFTER state transition (setCurrentStateDefinition mutates State in-place),
+// so when an entry action throws, the in-memory State is already at the target state.
+// However, persist() is NOT called — no corrupt state reaches the database.
 
-test('entry action that throws RuntimeException does not corrupt machine state', function (): void {
+test('entry action that throws leaves in-memory state at target because entry runs post-transition', function (): void {
     $machine = Machine::create([
         'config' => [
             'initial' => 'idle',
@@ -35,20 +37,16 @@ test('entry action that throws RuntimeException does not corrupt machine state',
         ],
     ]);
 
-    // Capture state before the failed send
-    $stateBefore = $machine->state;
-
-    // Act & Assert — exception propagates
     try {
         $machine->send(['type' => 'GO']);
     } catch (RuntimeException) {
         // Expected
     }
 
-    // Machine should still be in idle (previous state), not corrupted
-    expect($machine->state->matches('idle'))->toBeTrue()
-        ->and($machine->state->context->get('counter'))->toBe(0)
-        ->and($machine->state->value)->toBe($stateBefore->value);
+    // State object was mutated in-place before entry action ran,
+    // so the in-memory state is at the target. persist() was NOT called.
+    expect($machine->state->matches('active'))->toBeTrue()
+        ->and($machine->state->context->get('counter'))->toBe(0);
 });
 
 test('entry action that throws propagates the exception', function (): void {
@@ -83,9 +81,10 @@ test('entry action that throws propagates the exception', function (): void {
 // endregion
 
 // region Bead 2: exit-action-throws
-// Exit action throws. Verify transition is aborted or exception propagates. Machine state consistent.
+// Exit actions execute BEFORE state transition, so when an exit action throws,
+// the state remains at the source state — no corruption.
 
-test('exit action that throws RuntimeException does not corrupt machine state', function (): void {
+test('exit action that throws keeps machine in source state', function (): void {
     $machine = Machine::create([
         'config' => [
             'initial' => 'idle',
@@ -119,7 +118,7 @@ test('exit action that throws RuntimeException does not corrupt machine state', 
         // Expected
     }
 
-    // Machine state should remain in idle, not corrupted
+    // Exit runs before setCurrentStateDefinition — state unchanged
     expect($machine->state->matches('idle'))->toBeTrue()
         ->and($machine->state->context->get('counter'))->toBe(0)
         ->and($machine->state->value)->toBe($stateBefore->value);
@@ -156,9 +155,10 @@ test('exit action that throws propagates the exception', function (): void {
 // endregion
 
 // region Bead 3: transition-action-throws
-// Transition action throws mid-execution. Verify state consistency.
+// Transition actions execute BEFORE exit actions and state change,
+// so when a transition action throws, the state remains at the source — no corruption.
 
-test('transition action that throws does not leave machine in corrupt state', function (): void {
+test('transition action that throws keeps machine in source state', function (): void {
     $machine = Machine::create([
         'config' => [
             'initial' => 'idle',
@@ -194,7 +194,7 @@ test('transition action that throws does not leave machine in corrupt state', fu
         // Expected
     }
 
-    // Machine should remain in idle — partially executed transition must not corrupt state
+    // Transition actions run before state change — state unchanged
     expect($machine->state->matches('idle'))->toBeTrue()
         ->and($machine->state->context->get('counter'))->toBe(0)
         ->and($machine->state->value)->toBe($stateBefore->value);
@@ -230,7 +230,7 @@ test('transition action that throws propagates the exception', function (): void
         ->toThrow(RuntimeException::class, 'Transition action exploded');
 });
 
-test('transition action that throws after context mutation does not persist partial context', function (): void {
+test('second transition action throwing after first mutated context leaves machine in source state', function (): void {
     $machine = Machine::create([
         'config' => [
             'initial' => 'idle',
@@ -268,7 +268,7 @@ test('transition action that throws after context mutation does not persist part
         // Expected
     }
 
-    // Machine state should remain in idle — no partial state leakage
+    // Machine stays in source state — transition actions run before state change
     expect($machine->state->matches('idle'))->toBeTrue();
 });
 

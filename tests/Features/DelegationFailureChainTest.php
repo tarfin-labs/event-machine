@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FailingChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\MidLevelNoFailMachine;
 
 // ============================================================
 // Delegation Failure Chain Tests (XState Pass 4)
@@ -16,35 +16,11 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildM
 // ─── Test 1: Grandparent fail chain ────────────────────────────
 
 it('propagates @fail through 3-level delegation chain from grandchild to grandparent', function (): void {
-    // Grandchild: fails on entry (FailingChildMachine throws RuntimeException)
-    // Mid-child: delegates to grandchild, has @fail → mid_failed (final)
-    // On mid-child failure at entry (child throws), mid propagates its own RuntimeException
-    // Actually, mid-child delegates to FailingChildMachine and has @fail handler → goes to mid_failed
-    // But mid_failed is a final state, so mid-child completes normally via @done.
-    // We need mid-child to also throw — or NOT have @fail so it re-throws.
+    // Chain: Grandparent → MidLevelNoFailMachine → FailingChildMachine (throws)
+    // MidLevelNoFailMachine has no @fail, so RuntimeException re-throws through it.
+    // Grandparent catches via its own @fail handler.
 
-    // Strategy: mid-child does NOT handle @fail, so grandchild's exception re-throws through mid-child.
-    // Then parent catches it via its own @fail.
-
-    // Mid-level machine class (defined inline via definition)
-    $midDefinition = MachineDefinition::define(
-        config: [
-            'id'      => 'mid_child',
-            'initial' => 'delegating',
-            'context' => [],
-            'states'  => [
-                'delegating' => [
-                    'machine' => FailingChildMachine::class,
-                    '@done'   => 'completed',
-                    // No @fail → exception re-throws
-                ],
-                'completed' => ['type' => 'final'],
-            ],
-        ],
-    );
-
-    // Parent machine
-    $parentDefinition = MachineDefinition::define(
+    $grandparentDefinition = MachineDefinition::define(
         config: [
             'id'      => 'grandparent',
             'initial' => 'idle',
@@ -52,7 +28,7 @@ it('propagates @fail through 3-level delegation chain from grandchild to grandpa
             'states'  => [
                 'idle'       => ['on' => ['START' => 'delegating']],
                 'delegating' => [
-                    'machine' => FailingChildMachine::class, // Will use mid_child below
+                    'machine' => MidLevelNoFailMachine::class,
                     '@done'   => 'completed',
                     '@fail'   => [
                         'target'  => 'failed',
@@ -72,24 +48,12 @@ it('propagates @fail through 3-level delegation chain from grandchild to grandpa
         ],
     );
 
-    // Test the 3-level chain: We need a real mid-level machine class.
-    // Since we can't define a Machine subclass inline, we'll test the concept:
-    // Parent → FailingChildMachine (which fails) → @fail propagates to parent.
-    // For the true 3-level test, we simulate with two levels of delegation.
+    $state = $grandparentDefinition->getInitialState();
+    $state = $grandparentDefinition->transition(event: ['type' => 'START'], state: $state);
 
-    // Level 1: mid-child delegates to FailingChildMachine without @fail → re-throws
-    $midState = $midDefinition->getInitialState();
-    // The mid-child enters 'delegating' which invokes FailingChildMachine.
-    // Since no @fail, the RuntimeException propagates up.
-    expect(fn () => $midDefinition->getInitialState())
-        ->toThrow(RuntimeException::class, 'Payment gateway down');
-
-    // Level 2: parent with @fail catches the failure
-    $parentState = $parentDefinition->getInitialState();
-    $parentState = $parentDefinition->transition(event: ['type' => 'START'], state: $parentState);
-
-    expect($parentState->value)->toBe(['grandparent.failed'])
-        ->and($parentState->context->get('error'))->toBe('Payment gateway down');
+    // Grandparent caught the failure that propagated through mid-level
+    expect($state->value)->toBe(['grandparent.failed'])
+        ->and($state->context->get('error'))->toBe('Payment gateway down');
 });
 
 // ─── Test 2: Handled vs unhandled fail ─────────────────────────

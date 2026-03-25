@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\LocalQA;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 /**
@@ -65,7 +66,7 @@ class BurstChoirMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'recordNoteAction' => function (ContextManager $context, \Tarfinlabs\EventMachine\Behavior\EventBehavior $event): void {
+                    'recordNoteAction' => function (ContextManager $context, EventBehavior $event): void {
                         $notes   = $context->get('notes_sung');
                         $notes[] = $event->type;
                         $context->set('notes_sung', $notes);
