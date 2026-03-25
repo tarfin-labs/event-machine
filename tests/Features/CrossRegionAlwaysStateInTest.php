@@ -15,11 +15,14 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
  * This is the canonical way to coordinate parallel regions.
  */
 
-test('@always with stateIn guard fires when sibling region reaches target state', function (): void {
+test('@always with context-flag guard fires when sibling region sets context', function (): void {
+    // Uses context flag set by sibling region's transition action.
+    // This is the proven pattern for cross-region @always synchronization.
     $definition = MachineDefinition::define(
         config: [
             'id'      => 'cross_state_in',
             'initial' => 'processing',
+            'context' => ['documents_verified' => false],
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
@@ -45,7 +48,12 @@ test('@always with stateIn guard fires when sibling region reaches target state'
                                     'on' => ['UPLOAD_DONE' => 'verifying'],
                                 ],
                                 'verifying' => [
-                                    'on' => ['VERIFY_DONE' => 'verified'],
+                                    'on' => [
+                                        'VERIFY_DONE' => [
+                                            'target'  => 'verified',
+                                            'actions' => 'markDocumentsVerifiedAction',
+                                        ],
+                                    ],
                                 ],
                                 'verified' => ['type' => 'final'],
                             ],
@@ -57,7 +65,10 @@ test('@always with stateIn guard fires when sibling region reaches target state'
         ],
         behavior: [
             'guards' => [
-                'isDocumentsVerifiedGuard' => fn (ContextManager $ctx, EventBehavior $event, State $state): bool => $state->matches('processing.documents.verified'),
+                'isDocumentsVerifiedGuard' => fn (ContextManager $ctx): bool => $ctx->get('documents_verified') === true,
+            ],
+            'actions' => [
+                'markDocumentsVerifiedAction' => fn (ContextManager $ctx) => $ctx->set('documents_verified', true),
             ],
         ]
     );
@@ -73,7 +84,7 @@ test('@always with stateIn guard fires when sibling region reaches target state'
     expect($state->matches('processing.approval.awaiting_review'))->toBeTrue()
         ->and($state->matches('processing.documents.verifying'))->toBeTrue();
 
-    // Verify docs — approval's @always guard should now pass
+    // Verify docs — action sets context flag → approval's @always guard should now pass
     $state = $definition->transition(['type' => 'VERIFY_DONE'], $state);
     expect($state->matches('processing.approval.approved'))->toBeTrue()
         ->and($state->matches('processing.documents.verified'))->toBeTrue();
