@@ -99,7 +99,7 @@ pkill -9 -f horizon
 | Horizon only processes `default` queue | `config/horizon.php` only lists `default` | Add `child-queue` to queue array |
 | Multiple old Horizon instances | Previous sessions left orphans | `pkill -9 -f horizon` before starting |
 | Horizon auto-scales to 1 worker | `minProcesses=1` default | Set `minProcesses=4` in `config/horizon.php` |
-| waitFor timeout in full suite | 30s too short under Horizon load | Use 60s+ for all waitFor, 90s for heavy tests |
+| waitFor timeout in full suite | default was 45s, too short under Horizon load | Default is now 60s. Use 90s for heavy tests (deep delegation, parallel chains) |
 | Wrong context key in waitFor | Machine uses `retry_count` not `billing_count` | Always verify context key name from machine stub |
 
 ## Rules
@@ -127,7 +127,7 @@ Timer fire_count is written by the artisan command. Machine context is updated b
 Running `cleanTables()` in `afterEach` adds 500ms+ per test (quiet period wait). With 68 tests, this adds 34+ seconds. Since tests are already isolated by `root_event_id`, afterEach cleanup provides no benefit.
 
 ### Horizon minProcesses prevents flakiness
-Auto-scaling can reduce workers to 1, causing queue backlog. Set `minProcesses=4` to maintain baseline throughput during the full test suite.
+Auto-scaling can reduce workers to 1, causing queue backlog. Set `minProcesses=4` (minimum) for small suites, `minProcesses=8` for 80+ test suites.
 
 ### Negative assertions require sleep — document why
 When verifying something does NOT happen (timer does NOT fire, parent does NOT receive completion), `waitFor` can't help — you can't wait for absence. Use `sleep(1)` with a comment explaining the negative assertion. Keep sleep duration minimal (1s).
@@ -137,3 +137,24 @@ When verifying something does NOT happen (timer does NOT fire, parent does NOT r
 
 ### Use `run-qa.sh` for automated lifecycle
 `bash tests/LocalQA/run-qa.sh` handles: preflight checks → kill orphan Horizon → FLUSHALL → start Horizon → run tests → cleanup. No manual steps needed.
+
+### Parallel dispatch requires `should_persist` + idle→parallel transition
+ParallelRegionJobs are only dispatched when entry actions exist AND the machine **transitions into** a parallel state. Starting directly in a parallel state (`initial => processing`) does NOT dispatch ParallelRegionJobs. Always:
+1. Add `'should_persist' => true` to machine config
+2. Start from `idle` state and transition via event (e.g., `START => processing`)
+3. Ensure regions have entry actions (no-op actions are fine)
+
+### Static counters in stub actions pollute Horizon workers
+ThrowOnceAction (and similar stubs with `static` counters) persist across jobs in the same Horizon worker process. `beforeEach` resets in the test process, NOT in the worker. Fix: use **separate machine stubs** for tests that depend on specific counter states, so each machine class gets its own fresh counter lifecycle.
+
+### dispatchToParent is transient-only (not persisted)
+`ContextManager::setMachineIdentity()` stores parent identity in `$internalParentRootEventId` — transient properties NOT in the data array. Parent identity is set AFTER `start()` in `ChildMachineJob`, so:
+- Entry actions during initial `start()` CANNOT use `dispatchToParent`
+- After child is persisted and restored via `SendToMachineJob`, parent identity is LOST
+- `dispatchToParent` only works reliably from code that runs during `ChildMachineJob::handle()` AFTER `setMachineIdentity()` and BEFORE `persist()`
+
+### Event type naming uses dot-notation, not enum names
+Internal events use the pattern `{machine}.parallel.{placeholder}.region.timeout`, NOT `PARALLEL_REGION_TIMEOUT`. When querying `machine_events`, use `LIKE '%region.timeout%'` not `LIKE '%PARALLEL_REGION_TIMEOUT%'`.
+
+### ChildMachineCompletionJob propagates deep delegation chains
+After fix: when ChildMachineCompletionJob routes @done/@fail and the parent reaches a final state, it checks if the parent is itself a managed child and dispatches another ChildMachineCompletionJob to the grandparent. This enables Parent→Child→Grandchild async chains.
