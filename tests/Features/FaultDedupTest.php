@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 // ═══════════════════════════════════════════════════════════════
 //  Bead 2: Failed transition action produces exactly one failure
@@ -12,8 +13,8 @@ use Tarfinlabs\EventMachine\Models\MachineEvent;
 // ═══════════════════════════════════════════════════════════════
 
 it('records exactly one transition fail event when action throws', function (): void {
-    $machine = Machine::create([
-        'config' => [
+    $definition = MachineDefinition::define(
+        config: [
             'id'      => 'fault_dedup',
             'initial' => 'idle',
             'context' => [
@@ -31,15 +32,16 @@ it('records exactly one transition fail event when action throws', function (): 
                 'processing' => [],
             ],
         ],
-        'behavior' => [
+        behavior: [
             'actions' => [
                 'explodingAction' => function (): void {
                     throw new RuntimeException('Action exploded');
                 },
             ],
         ],
-    ]);
+    );
 
+    $machine = Machine::create($definition);
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
@@ -50,9 +52,9 @@ it('records exactly one transition fail event when action throws', function (): 
         // Expected
     }
 
-    // Second attempt (simulating retry) — action still throws
+    // Second attempt (simulating retry) — restore and try again
     try {
-        $restored = Machine::create(state: $rootEventId);
+        $restored = Machine::create($definition, state: $rootEventId);
         $restored->send(['type' => 'PROCESS']);
     } catch (RuntimeException) {
         // Expected
@@ -69,14 +71,14 @@ it('records exactly one transition fail event when action throws', function (): 
         ->and($failEvents)->toBeGreaterThanOrEqual(0);
 
     // Machine state should still be idle — the transition never completed
-    $finalMachine = Machine::create(state: $rootEventId);
+    $finalMachine = Machine::create($definition, state: $rootEventId);
     expect($finalMachine->state->matches('idle'))->toBeTrue()
         ->and($finalMachine->state->context->get('value'))->toBe('untouched');
 });
 
 it('single failed send produces at most one error event per transition attempt', function (): void {
-    $machine = Machine::create([
-        'config' => [
+    $definition = MachineDefinition::define(
+        config: [
             'id'      => 'fault_dedup_single',
             'initial' => 'idle',
             'context' => [],
@@ -92,15 +94,16 @@ it('single failed send produces at most one error event per transition attempt',
                 'exploded' => [],
             ],
         ],
-        'behavior' => [
+        behavior: [
             'actions' => [
                 'throwAction' => function (): void {
                     throw new RuntimeException('Single boom');
                 },
             ],
         ],
-    ]);
+    );
 
+    $machine = Machine::create($definition);
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 

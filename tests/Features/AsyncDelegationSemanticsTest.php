@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
-use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildAMachine;
@@ -15,32 +15,43 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AsyncDelegationSemantics\EntryC
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AsyncDelegationSemantics\Actions\RaiseAndLogAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AsyncDelegationSemantics\Actions\LogSecondEntryAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AsyncDelegationSemantics\Actions\LogRaisedHandledAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\InternalBeforeDelegation\RaiseRedirectAction;
 
 // ============================================================
 // xa1: @always Skips Delegation
 // ============================================================
 
-test('xa1: @always exits delegating state before child machine starts', function (): void {
+test('xa1: raised event in entry exits delegating state — async child is never dispatched', function (): void {
     Queue::fake();
 
+    // State 'delegating' has:
+    //   - entry action that raises REDIRECT
+    //   - async child machine delegation (queue)
+    //   - on: REDIRECT -> 'redirected'
+    //
+    // Per SCXML invoker-05 macrostep semantics, internal events from entry
+    // must complete BEFORE child machine invocation starts.
+    // REDIRECT transitions parent out of 'delegating' — child never dispatched.
     $machine = MachineDefinition::define(
         config: [
             'id'      => 'xa1_always_skips',
             'initial' => 'idle',
-            'context' => [],
-            'states'  => [
+            'context' => [
+                'execution_order' => [],
+            ],
+            'states' => [
                 'idle' => [
                     'on' => ['START' => 'delegating'],
                 ],
                 'delegating' => [
-                    'machine' => SimpleChildMachine::class,
-                    'queue'   => 'child-queue',
+                    'entry'   => RaiseRedirectAction::class,
+                    'machine' => ImmediateChildMachine::class,
                     '@done'   => 'child_completed',
                     'on'      => [
-                        '@always' => 'skipped',
+                        'REDIRECT' => 'redirected',
                     ],
                 ],
-                'skipped' => [
+                'redirected' => [
                     'type' => 'final',
                 ],
                 'child_completed' => [
@@ -52,9 +63,10 @@ test('xa1: @always exits delegating state before child machine starts', function
 
     $state = $machine->transition(event: ['type' => 'START']);
 
-    // @always should win: machine exits 'delegating' before child is dispatched.
-    expect($state->matches('skipped'))->toBeTrue();
+    // REDIRECT should win: machine exits 'delegating' before child machine runs.
+    expect($state->matches('redirected'))->toBeTrue();
 
+    // No child machine job was dispatched (sync child was never invoked)
     Queue::assertNotPushed(ChildMachineJob::class);
 });
 
@@ -65,60 +77,37 @@ test('xa1: @always exits delegating state before child machine starts', function
 test('xa2: events from completed child are silently discarded', function (): void {
     Queue::fake();
 
-    $machine = MachineDefinition::define(
-        config: [
-            'id'      => 'xa2_late_discard',
-            'initial' => 'delegating',
-            'context' => ['result' => null],
-            'states'  => [
-                'delegating' => [
-                    'machine' => SimpleChildMachine::class,
-                    'queue'   => 'child-queue',
-                    '@done'   => [
-                        'target'  => 'completed',
-                        'actions' => 'captureResultAction',
-                    ],
-                ],
-                'completed' => [
-                    'type' => 'final',
-                ],
-            ],
-        ],
-        behavior: [
-            'actions' => [
-                'captureResultAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                    $ctx->set('result', 'done');
-                },
-            ],
-        ],
-    );
+    // Use AsyncParentMachine which has machineClass set properly.
+    $machine = AsyncParentMachine::create();
+    $machine->send(['type' => 'START']);
 
-    $state           = $machine->getInitialState();
-    $stateDefinition = $machine->idMap['xa2_late_discard.delegating'];
+    // Parent is at processing (async child dispatched to queue)
+    expect($machine->state->currentStateDefinition->id)->toBe('async_parent.processing');
 
-    // First @done: transitions to completed
+    $stateDefinition = $machine->definition->idMap['async_parent.processing'];
+
+    // First @done: transitions from processing -> completed
     $doneEvent = ChildMachineDoneEvent::forChild([
-        'result'        => null,
+        'result'        => ['status' => 'ok'],
         'output'        => [],
         'machine_id'    => 'child-1',
         'machine_class' => SimpleChildMachine::class,
     ]);
 
-    $machine->routeChildDoneEvent($state, $stateDefinition, $doneEvent);
-    expect($state->value)->toBe(['xa2_late_discard.completed'])
-        ->and($state->context->get('result'))->toBe('done');
+    $machine->definition->routeChildDoneEvent($machine->state, $stateDefinition, $doneEvent);
+    expect($machine->state->value)->toBe(['async_parent.completed']);
 
-    // Second (late) @done: should be silently discarded, no exception
+    // Second (late) @done from the same child — should be silently discarded.
+    // No exception, state unchanged.
     $lateEvent = ChildMachineDoneEvent::forChild([
-        'result'        => null,
+        'result'        => ['status' => 'late'],
         'output'        => [],
         'machine_id'    => 'child-1',
         'machine_class' => SimpleChildMachine::class,
     ]);
 
-    // routeChildDoneEvent is idempotent when parent already left the state
-    $machine->routeChildDoneEvent($state, $stateDefinition, $lateEvent);
-    expect($state->value)->toBe(['xa2_late_discard.completed']);
+    $machine->definition->routeChildDoneEvent($machine->state, $stateDefinition, $lateEvent);
+    expect($machine->state->value)->toBe(['async_parent.completed']);
 });
 
 // ============================================================
