@@ -189,6 +189,46 @@ In machine configuration, raised event targets use the same `SCREAMING_SNAKE_CAS
 ],
 ```
 
+### Event Payloads
+
+Event payload keys are **business data** — use `camelCase`, same as context keys:
+
+```php no_run
+class PaymentReceivedEvent extends EventBehavior
+{
+    public ?array $payload = [
+        'transactionId' => null,    // camelCase
+        'amountPaid'    => null,    // camelCase
+        'paymentMethod' => null,    // camelCase
+    ];
+}
+```
+
+When sending events with inline payloads:
+
+```php ignore
+// raise() with payload
+$this->raise('PAYMENT_PROCESSED', [
+    'transactionId' => $txId,       // camelCase
+    'gatewayRef'    => $ref,        // camelCase
+]);
+
+// send() with payload
+$machine->send([
+    'type'    => 'ORDER_SUBMITTED',
+    'payload' => [
+        'orderId'     => $order->id,    // camelCase
+        'totalAmount' => $order->total,  // camelCase
+    ],
+]);
+
+// sendTo() / dispatchTo() with payload
+$this->sendTo(TargetMachine::class, $rootEventId, [
+    'type'    => 'STATUS_UPDATED',
+    'payload' => ['newStatus' => 'approved'],  // camelCase
+]);
+```
+
 ::: tip Why Past Tense?
 Events describe facts — something that already occurred. Using past tense (`OrderSubmitted`) instead of imperative (`SubmitOrder`) makes the intent clear and avoids confusion with commands or actions.
 :::
