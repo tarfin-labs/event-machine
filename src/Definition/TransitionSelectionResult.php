@@ -7,8 +7,10 @@ namespace Tarfinlabs\EventMachine\Definition;
 /**
  * Result of selectTransitions() for parallel state event routing.
  *
- * Distinguishes "no handler exists" (branches=[], flag=false)
- * from "handler exists but ValidationGuardBehavior failed" (branches=[], flag=true).
+ * Distinguishes three cases when branches is empty:
+ * - "no handler exists" (both flags false)
+ * - "handler exists but ValidationGuardBehavior failed" (hadValidationGuardFailure=true)
+ * - "handler exists but regular guard/calculator failed" (hadRegularGuardFailure=true)
  */
 final readonly class TransitionSelectionResult
 {
@@ -16,5 +18,6 @@ final readonly class TransitionSelectionResult
         /** @var TransitionBranch[] */
         public array $branches,
         public bool $hadValidationGuardFailure,
+        public bool $hadRegularGuardFailure = false,
     ) {}
 }
