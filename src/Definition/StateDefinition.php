@@ -666,10 +666,15 @@ class StateDefinition
      */
     public function runExitActions(State $state): void
     {
+        // In parallel states, $state->currentStateDefinition points to the parallel ancestor,
+        // not the region's atomic state. Use $this->route for the actual state being exited.
+        // In non-parallel states, $state->currentStateDefinition IS the correct leaf state.
+        $route = $state->isInParallelState() ? $this->route : $state->currentStateDefinition->route;
+
         // Record state exit start event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_EXIT_START,
-            placeholder: $state->currentStateDefinition->route,
+            placeholder: $route,
         );
 
         foreach ($this->exit as $action) {
@@ -683,7 +688,7 @@ class StateDefinition
         // Record state exit finish event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_EXIT_FINISH,
-            placeholder: $state->currentStateDefinition->route,
+            placeholder: $route,
         );
     }
 
@@ -694,10 +699,14 @@ class StateDefinition
      */
     public function runEntryActions(State $state, ?EventBehavior $eventBehavior = null): void
     {
+        // In parallel states, $state->currentStateDefinition points to the parallel ancestor,
+        // not the region's atomic state. Use $this->route for the actual state being entered.
+        $route = $state->isInParallelState() ? $this->route : $state->currentStateDefinition->route;
+
         // Record state entry start event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_ENTRY_START,
-            placeholder: $state->currentStateDefinition->route,
+            placeholder: $route,
         );
 
         foreach ($this->entry as $action) {
@@ -711,7 +720,7 @@ class StateDefinition
         // Record state entry finish event
         $state->setInternalEventBehavior(
             type: InternalEvent::STATE_ENTRY_FINISH,
-            placeholder: $state->currentStateDefinition->route,
+            placeholder: $route,
         );
     }
 
