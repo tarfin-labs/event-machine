@@ -55,8 +55,8 @@ test('#1 — both required query params reach event payload', function (): void 
 
     $context = $response->json('data.context.data');
 
-    expect($context['dealer_code'])->toBe('ABC123')
-        ->and($context['plate_number'])->toBe('34XY');
+    expect($context['dealerCode'])->toBe('ABC123')
+        ->and($context['plateNumber'])->toBe('34XY');
 });
 
 test('#2 — missing one required param returns 422', function (): void {
@@ -92,8 +92,8 @@ test('#5 — explicit payload[] syntax not double-wrapped', function (): void {
 
     $context = $response->json('data.context.data');
 
-    expect($context['dealer_code'])->toBe('ABC123')
-        ->and($context['plate_number'])->toBe('34XY');
+    expect($context['dealerCode'])->toBe('ABC123')
+        ->and($context['plateNumber'])->toBe('34XY');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -113,7 +113,7 @@ test('#7 — GET with no validation rules stores query params in context', funct
 
     $context = $response->json('data.context.data');
 
-    expect($context['ping_payload'])->toBe(['foo' => 'bar', 'baz' => 'qux']);
+    expect($context['pingPayload'])->toBe(['foo' => 'bar', 'baz' => 'qux']);
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -134,8 +134,8 @@ test('#8 — machineId-bound GET endpoint works after create', function (): void
     $data = $response->json('data');
 
     expect($data['value'])->toContain('get_endpoint.done')
-        ->and($data['context']['data']['dealer_code'])->toBe('ABC123')
-        ->and($data['context']['data']['plate_number'])->toBe('34XY');
+        ->and($data['context']['data']['dealerCode'])->toBe('ABC123')
+        ->and($data['context']['data']['plateNumber'])->toBe('34XY');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -159,7 +159,7 @@ test('#9 — forwarded GET validates child event and reaches child', function ()
 
     $childContext = $response->json('data.child.context');
 
-    expect($childContext['data']['child_param'])->toBe('hello');
+    expect($childContext['data']['childParam'])->toBe('hello');
 });
 
 test('#10 — forwarded GET missing required child param returns 422', function (): void {
@@ -190,7 +190,7 @@ test('#11 — numeric string passes string validation rule', function (): void {
 
     $context = $response->json('data.context.data');
 
-    expect($context['dealer_code'])->toBe('12345');
+    expect($context['dealerCode'])->toBe('12345');
 });
 
 test('#12 — empty string converted to null by ConvertEmptyStringsToNull middleware', function (): void {
@@ -207,7 +207,7 @@ test('#13 — array-style query params preserved in payload', function (): void 
 
     $context = $response->json('data.context.data');
 
-    expect($context['ping_payload']['items'])->toBe(['a', 'b']);
+    expect($context['pingPayload']['items'])->toBe(['a', 'b']);
 });
 
 test('#14 — type in query param does not override event type', function (): void {

@@ -18,7 +18,7 @@ class GetForwardChildMachine extends Machine
                 'id'      => 'get_forward_child',
                 'initial' => 'idle',
                 'context' => [
-                    'child_param' => null,
+                    'childParam' => null,
                 ],
                 'states' => [
                     'idle' => [
@@ -38,7 +38,7 @@ class GetForwardChildMachine extends Machine
                 ],
                 'calculators' => [
                     'storeChildParamCalculator' => function (ContextManager $ctx, EventBehavior $event): void {
-                        $ctx->set('child_param', $event->payload['child_param'] ?? null);
+                        $ctx->set('childParam', $event->payload['child_param'] ?? null);
                     },
                 ],
             ],

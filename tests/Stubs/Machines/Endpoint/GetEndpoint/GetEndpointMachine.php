@@ -17,8 +17,8 @@ class GetEndpointMachine extends Machine
                 'initial'        => 'idle',
                 'should_persist' => true,
                 'context'        => [
-                    'dealer_code'  => null,
-                    'plate_number' => null,
+                    'dealerCode'  => null,
+                    'plateNumber' => null,
                 ],
                 'states' => [
                     'idle' => [
