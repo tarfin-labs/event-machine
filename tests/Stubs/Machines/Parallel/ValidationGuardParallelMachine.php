@@ -23,8 +23,15 @@ class ValidationGuardParallelMachine extends Machine
                 ],
                 'states' => [
                     'collecting' => [
-                        'type'   => 'parallel',
-                        '@done'  => 'completed',
+                        'type'  => 'parallel',
+                        '@done' => 'completed',
+                        'on'    => [
+                            // Escape transition at parallel level with regular guard (always fails)
+                            'ESCAPE_WITH_GUARD' => [
+                                'target' => 'completed',
+                                'guards' => AlwaysFailGuard::class,
+                            ],
+                        ],
                         'states' => [
                             'data_entry' => [
                                 'initial' => 'awaiting_input',
