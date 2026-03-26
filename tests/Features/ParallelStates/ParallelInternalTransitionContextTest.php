@@ -118,4 +118,4 @@ it('parallel state does NOT exit/enter for internal region transitions', functio
     expect($parallelExitEvents)->toBeEmpty(
         'Parallel state should NOT exit/enter for transitions within a child region'
     );
-})->todo('parallel state fires spurious exit/entry — cosmetic event naming issue, not context loss');
+});
