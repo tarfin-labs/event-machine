@@ -417,7 +417,7 @@ When a `ValidationGuardBehavior` fails inside a parallel state region, the behav
 
 | Guard Type | Failure in Parallel | Result |
 |-----------|-------------------|--------|
-| `GuardBehavior` | Region treated as "didn't handle event" | Event bubbles, may throw `NoTransitionDefinitionFoundException` |
+| `GuardBehavior` | Graceful failure — same as non-parallel | `TRANSITION_FAIL` recorded, machine stays in current state |
 | `ValidationGuardBehavior` | **Entire parallel transition blocked** | Machine stays in current state, `MachineValidationException` thrown |
 
 A validation guard failure in **any** region blocks **all** regions from transitioning. This is intentional — validation rejection is atomic. The error message propagates as a 422 response through endpoints.
