@@ -1083,6 +1083,7 @@ class MachineDefinition
         $transitions               = [];
         $seen                      = [];
         $hadValidationGuardFailure = false;
+        $hadRegularGuardFailure    = false;
 
         foreach ($this->getActiveAtomicStates($state) as $atomicState) {
             $transitionDef = $this->findTransitionDefinitionOrNull($atomicState, $eventBehavior);
@@ -1102,11 +1103,13 @@ class MachineDefinition
                     $transitions[] = $branch;
                 } elseif ($this->transitionHasValidationGuard($transitionDef)) {
                     $hadValidationGuardFailure = true;
+                } else {
+                    $hadRegularGuardFailure = true;
                 }
             }
         }
 
-        return new TransitionSelectionResult($transitions, $hadValidationGuardFailure);
+        return new TransitionSelectionResult($transitions, $hadValidationGuardFailure, $hadRegularGuardFailure);
     }
 
     /**
@@ -2662,6 +2665,18 @@ class MachineDefinition
         // In that case, return the current state without transitioning.
         if ($transitions === []) {
             if ($eventBehavior->type === TransitionProperty::Always->value) {
+                return $state;
+            }
+
+            // Transition was found but regular guard/calculator failed — graceful failure.
+            // Matches non-parallel behavior: record TRANSITION_FAIL and return current state
+            // instead of throwing NoTransitionDefinitionFoundException.
+            if ($result->hadRegularGuardFailure) {
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::TRANSITION_FAIL,
+                    placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
+                );
+
                 return $state;
             }
 
