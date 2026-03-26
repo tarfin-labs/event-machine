@@ -92,7 +92,7 @@ class PaymentInput extends MachineInput
 ```
 
 **Resolution rules:**
-- `PaymentInput::class` → auto-resolve: match constructor params to parent context keys (snake_case ↔ camelCase mapping)
+- `PaymentInput::class` → auto-resolve: match constructor params to parent context keys (camelCase throughout)
 - `Closure` → manual mapping, full control
 - `['order_id', 'amount']` → legacy array format (current `with` behavior, kept for simple cases)
 

@@ -46,9 +46,19 @@ The distinction is not "array vs class" but "config vs data":
 - **PHP PSR-1**: Properties SHOULD use camelCase
 - **XState v5**: Context uses camelCase (`{ orderId: '', totalAmount: 0 }`)
 - **SCXML W3C examples**: camelCase (`<data id="eventStamp"/>`)
-- **Spatie Laravel Data**: camelCase properties, auto-mapped to snake_case for serialization
+- **Google/AWS APIs**: camelCase for JSON payloads
 
 No state machine spec dictates a convention — they follow the host language. PHP says camelCase.
+
+### End-to-End Efficiency
+
+In a Vue + Laravel + EventMachine stack, camelCase flows naturally without conversion:
+
+```
+Vue (camelCase) → API request (camelCase) → EventMachine context (camelCase) → DB JSON (camelCase) → API response (camelCase) → Vue (camelCase)
+```
+
+Zero transformations. The alternative (snake_case at API/DB boundary) introduces 4-5 unnecessary conversions per request — data is born camelCase in Vue, converted to snake_case for transport, converted back to camelCase in PHP, converted again for DB, and reversed on the way back. This overhead exists only for historical convention compliance (Rails/Django era), not for technical necessity.
 
 ---
 
