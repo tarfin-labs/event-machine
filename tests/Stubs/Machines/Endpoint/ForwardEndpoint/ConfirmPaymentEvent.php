@@ -8,11 +8,6 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
 class ConfirmPaymentEvent extends EventBehavior
 {
-    public static function getType(): string
-    {
-        return 'CONFIRM_PAYMENT';
-    }
-
     public static function rules(): array
     {
         return [

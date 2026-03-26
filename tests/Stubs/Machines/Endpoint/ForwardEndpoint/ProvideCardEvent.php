@@ -8,11 +8,6 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
 class ProvideCardEvent extends EventBehavior
 {
-    public static function getType(): string
-    {
-        return 'PROVIDE_CARD';
-    }
-
     public static function rules(): array
     {
         return [

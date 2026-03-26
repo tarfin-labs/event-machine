@@ -119,6 +119,14 @@ SubmitEvent::class,
 ],
 ```
 
+```php ignore
+// GET endpoint — query params wrapped into payload automatically
+'STATUS_REQUESTED' => [
+    'uri'    => '/status',
+    'method' => 'GET',
+],
+```
+
 **4. Event class key — use class instead of type string:**
 
 ```php ignore
@@ -136,12 +144,55 @@ All four formats can be mixed freely in the same `endpoints` array.
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `uri` | `string` | Auto-generated | URI path for the endpoint |
-| `method` | `string` | `'POST'` | HTTP method |
+| `method` | `string` | `'POST'` | HTTP method. For `GET`, query parameters are automatically normalized into `payload` — see [GET Endpoints](#get-endpoints) |
 | `action` | `string` | `null` | `MachineEndpointAction` subclass FQCN |
 | `result` | `string` | `null` | ResultBehavior inline key or FQCN |
 | `middleware` | `array` | `[]` | Per-event middleware (additive) |
 | `status` | `int` | `200` | HTTP status code |
 | `available_events` | `bool` | `true` | Include `available_events` in the default response |
+
+### GET Endpoints
+
+When an endpoint uses `'method' => 'GET'`, request data comes from query parameters instead of a JSON body. EventMachine automatically wraps query parameters into the `payload` key so your validation rules work the same way for both GET and POST:
+
+```
+GET /status?dealer_code=ABC123&plate_number=34XY
+```
+
+The query parameters are normalized to:
+
+```php
+['payload' => ['dealer_code' => 'ABC123', 'plate_number' => '34XY']]
+```
+
+This means your `EventBehavior` validation rules target `payload.*` regardless of HTTP method:
+
+<!-- doctest-attr: ignore -->
+```php
+class StatusRequestedEvent extends EventBehavior
+{
+    public static function getType(): string
+    {
+        return 'STATUS_REQUESTED';
+    }
+
+    public static function rules(): array
+    {
+        return [
+            'payload.dealer_code'  => ['required', 'string'],
+            'payload.plate_number' => ['required', 'string'],
+        ];
+    }
+}
+```
+
+**When to use GET endpoints:** Read-only queries, status lookups, and search endpoints where data is passed via query parameters.
+
+::: tip Query Parameter Types
+Query parameter values are always strings. Use validation rules like `'numeric'` or `'integer'` when you need numeric values — Laravel's validator handles string-to-number coercion.
+:::
+
+If a GET request explicitly uses the `payload[]` bracket syntax (`?payload[key]=value`), the automatic wrapping is skipped to avoid double-nesting.
 
 ### URI Auto-Generation
 

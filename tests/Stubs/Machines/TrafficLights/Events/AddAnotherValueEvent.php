@@ -14,8 +14,4 @@ class AddAnotherValueEvent extends EventBehavior
         parent::__construct();
     }
 
-    public static function getType(): string
-    {
-        return 'ADD_ANOTHER_VALUE';
-    }
 }
