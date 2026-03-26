@@ -12,7 +12,7 @@ class StoreStatusCalculator extends CalculatorBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): void
     {
-        $context->set('dealer_code', $event->payload['dealer_code'] ?? null);
-        $context->set('plate_number', $event->payload['plate_number'] ?? null);
+        $context->set('dealerCode', $event->payload['dealer_code'] ?? null);
+        $context->set('plateNumber', $event->payload['plate_number'] ?? null);
     }
 }

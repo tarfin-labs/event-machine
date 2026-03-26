@@ -1193,7 +1193,7 @@ class CardSubmittedResult extends ResultBehavior
         return [
             'orderId'     => $context->get('orderId'),
             'cardStatus'  => $forwardContext->childContext->get('status'),
-            'child_state' => $forwardContext->childState->value,
+            'childState' => $forwardContext->childState->value,
         ];
     }
 }
@@ -1309,7 +1309,7 @@ it('accepts event via endpoint', function (): void {
     $order = Order::create(['status' => 'pending']);
 
     $response = $this->postJson("/orders/{$order->id}/submit", [
-        'payment_method' => 'card',
+        'paymentMethod' => 'card',
     ]);
 
     $response->assertOk()

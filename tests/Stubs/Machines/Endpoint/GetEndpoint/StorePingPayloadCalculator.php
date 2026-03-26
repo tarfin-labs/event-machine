@@ -12,6 +12,6 @@ class StorePingPayloadCalculator extends CalculatorBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): void
     {
-        $context->set('ping_payload', $event->payload);
+        $context->set('pingPayload', $event->payload);
     }
 }

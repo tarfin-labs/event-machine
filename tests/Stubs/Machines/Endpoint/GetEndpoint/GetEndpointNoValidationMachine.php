@@ -16,7 +16,7 @@ class GetEndpointNoValidationMachine extends Machine
                 'id'      => 'get_endpoint_no_validation',
                 'initial' => 'idle',
                 'context' => [
-                    'ping_payload' => null,
+                    'pingPayload' => null,
                 ],
                 'states' => [
                     'idle' => [
