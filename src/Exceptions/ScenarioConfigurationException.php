@@ -14,4 +14,11 @@ class ScenarioConfigurationException extends RuntimeException
             "Machine mismatch in scenario chain: {$childScenario} targets {$childMachine} but its parent {$parentScenario} targets {$parentMachine}. All scenarios in a composition chain must target the same machine.",
         );
     }
+
+    public static function midFlightWithParent(string $scenarioClass): self
+    {
+        return new self(
+            "Mid-flight scenarios cannot use parent(): {$scenarioClass} defines both from() and parent(). Use composition (parent) for new machines, or mid-flight (from + playOn) for existing machines — not both.",
+        );
+    }
 }
