@@ -318,6 +318,54 @@ For parallel states, `value` contains multiple active state paths and each avail
 }
 ```
 
+## Scenario Integration
+
+When `MACHINE_SCENARIOS_ENABLED=true`, two additional features are available in endpoint responses.
+
+### `available_scenarios` in Response
+
+Similar to `available_events`, the response includes `available_scenarios` — a list of scenarios that can be played from the machine's current state (after the transition):
+
+<!-- doctest-attr: ignore -->
+```json
+{
+    "data": {
+        "machine_id": "01JARX5Z8KQVN...",
+        "value": ["order.awaiting_payment"],
+        "context": { "..." },
+        "available_events": [
+            { "type": "PAYMENT_RECEIVED", "source": "parent" }
+        ],
+        "available_scenarios": [
+            {
+                "slug": "order-from-payment-to-shipped",
+                "description": "Fast-forward from payment to shipped",
+                "from": "awaiting_payment"
+            }
+        ]
+    }
+}
+```
+
+When scenarios are disabled, the `available_scenarios` key is omitted entirely — zero overhead.
+
+### Scenario Continuation via `scenario` Field
+
+Include a `scenario` field in any event request to automatically play a scenario after the event:
+
+<!-- doctest-attr: ignore -->
+```json
+{
+    "type": "PAYMENT_RECEIVED",
+    "payload": { "transaction_id": "TXN-001" },
+    "scenario": "order-from-shipping-to-delivered"
+}
+```
+
+The event processes normally first, then the scenario plays from the resulting state — all in a single request. When scenarios are disabled, the `scenario` field is silently ignored.
+
+See [Scenarios — Endpoint Integration](/advanced/scenarios#endpoint-integration) for full details.
+
 ## Custom Responses with ResultBehavior
 
 Override the default response by referencing a `ResultBehavior` in your endpoint definition. This reuses the existing behavior system — no new concepts needed.
