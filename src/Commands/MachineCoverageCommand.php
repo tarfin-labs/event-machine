@@ -15,7 +15,7 @@ class MachineCoverageCommand extends Command
         {machine : The Machine class path or FQCN}
         {--json : Output as JSON}
         {--min= : Minimum coverage percentage (exit code 1 if below)}
-        {--from= : Path to coverage JSON file}';
+        {--from= : Path to coverage directory or JSON file}';
     protected $description = 'Report path coverage for a machine definition';
 
     public function handle(): int
@@ -39,17 +39,30 @@ class MachineCoverageCommand extends Command
             return self::FAILURE;
         }
 
-        // Load coverage data
-        $fromFile = $this->option('from') ?? storage_path('framework/testing/machine-path-coverage.json');
+        // Load coverage data — supports both directory (parallel workers) and single file
+        $from = $this->option('from') ?? PathCoverageTracker::getExportDirectory();
 
-        if (!file_exists($fromFile)) {
-            $this->error("Coverage file not found: {$fromFile}");
-            $this->line('Run your test suite first to generate coverage data.');
+        if (is_dir($from)) {
+            // Directory mode: merge all coverage_*.json files from parallel workers
+            $files = glob($from.'/coverage_*.json');
+
+            if ($files === false || $files === []) {
+                $this->error("No coverage files found in: {$from}");
+                $this->line('Run your test suite with TracksPathCoverage trait first.');
+
+                return self::FAILURE;
+            }
+
+            PathCoverageTracker::importFromDirectory($from);
+        } elseif (file_exists($from)) {
+            // Single file mode (legacy / manual export)
+            PathCoverageTracker::importFromFile($from);
+        } else {
+            $this->error("Coverage path not found: {$from}");
+            $this->line('Run your test suite with TracksPathCoverage trait first.');
 
             return self::FAILURE;
         }
-
-        PathCoverageTracker::importFromFile($fromFile);
 
         // Enumerate paths and build report
         $definition  = $machinePath::definition();

@@ -149,17 +149,27 @@ This produces a complete list of all possible paths grouped by type: HAPPY, FAIL
 
 ### Tracking Coverage in Tests
 
-Enable the `PathCoverageTracker` to record which paths tests exercise:
+Add the `TracksPathCoverage` trait to your test suite. It automatically enables the tracker, cleans stale data, and exports coverage when the process exits:
 
 <!-- doctest-attr: ignore -->
 ```php
-use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
+// In tests/Pest.php:
+use Tarfinlabs\EventMachine\Testing\TracksPathCoverage;
 
-beforeEach(fn () => PathCoverageTracker::enable());
-afterEach(fn () => PathCoverageTracker::reset());
+uses(TracksPathCoverage::class)->in('Feature', 'Unit');
+
+// Or in a PHPUnit base TestCase:
+use Tarfinlabs\EventMachine\Testing\TracksPathCoverage;
+
+abstract class TestCase extends BaseTestCase
+{
+    use TracksPathCoverage;
+}
 ```
 
-The tracker records state transitions automatically through `TestMachine`. Paths are completed when `assertFinished()` or `assertState()` (on a FINAL state) is called.
+The trait works with both PHPUnit and Pest, including parallel test runners (Paratest). Each worker writes a separate coverage file; the `machine:coverage` command merges them automatically.
+
+The tracker records state transitions through `TestMachine`. Paths are completed when `assertFinished()` or `assertState()` (on a FINAL state) is called.
 
 ### Coverage Assertions
 
