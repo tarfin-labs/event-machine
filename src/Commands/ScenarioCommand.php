@@ -14,6 +14,7 @@ class ScenarioCommand extends Command
         {scenario? : The scenario class name to play}
         {--list : List all available scenarios}
         {--machine= : Filter scenarios by machine class (used with --list)}
+        {--machine-id= : Play scenario on an existing machine (mid-flight)}
         {--param=* : Parameter overrides in key:value format}';
     protected $description = 'Play or list machine scenarios';
 
@@ -102,11 +103,18 @@ class ScenarioCommand extends Command
         /** @var MachineScenario $instance */
         $instance = new $scenarioClass();
 
+        $machineId = $this->option('machine-id');
+
         $this->newLine();
         $this->line(" ┌─ Scenario: <fg=cyan;options=bold>{$scenarioName}</> ─");
         $this->line(' │ Machine:     '.class_basename($instance->getMachine()));
         $this->line(" │ Description: {$instance->getDescription()}");
+        $this->line(' │ From:        '.($instance->getFrom() ?? '— (new machine)'));
         $this->line(' │ Parent:      '.($instance->getParent() ? class_basename($instance->getParent()) : '—'));
+
+        if ($machineId !== null) {
+            $this->line(" │ Machine ID:  <fg=yellow>{$machineId}</> (mid-flight)");
+        }
 
         if ($params !== []) {
             $paramStr = collect($params)->map(fn (mixed $v, string $k): string => "{$k}={$v}")->implode(', ');
@@ -117,7 +125,9 @@ class ScenarioCommand extends Command
         $this->line(' │ Playing scenario...');
 
         try {
-            $result = $scenarioClass::play($params);
+            $result = $machineId !== null
+                ? $scenarioClass::playOn($machineId, $params)
+                : $scenarioClass::play($params);
 
             $this->line(' ├'.str_repeat('─', 60));
             $this->line(" │ <fg=green>✓</> Done! Machine is now at: <fg=cyan;options=bold>{$result->currentState}</>");
