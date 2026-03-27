@@ -1,4 +1,4 @@
-# Constructor Parameters for Behaviors
+# Named Parameters for Behaviors
 
 **Status:** Draft
 **Date:** 2026-03-28
@@ -36,57 +36,99 @@ class IsAmountInRangeGuard extends GuardBehavior
 
 ---
 
+## Design Principle
+
+Machine definitions have always been **pure data** — strings, arrays, class references. No `new`, no object instantiation. This property enables:
+- XState JSON export (`machine:xstate`)
+- Machine definition caching (`machine:cache`)
+- Static validation (`machine:validate-config`)
+- Config-driven architecture (definitions from DB, file, API)
+
+The solution must preserve this property. **No `new Class()` in definitions.**
+
+---
+
 ## Solution
 
-Support pre-constructed behavior instances using PHP 8 constructor promotion and named arguments:
+Named parameter array syntax — extends the existing parameter injection system:
 
 ```php
-'guards' => new IsAmountInRangeGuard(min: 100, max: 10000),
+// Config — pure data (array with class reference + named params)
+'guards' => [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
 ```
 
 ```php
+// Guard — framework injects both runtime deps AND config params into __invoke
 class IsAmountInRangeGuard extends GuardBehavior
 {
-    public function __construct(            // ← Configuration (from machine definition)
-        private readonly int $min,
-        private readonly int $max = PHP_INT_MAX,
-    ) {}
-
-    public function __invoke(               // ← Runtime injection (from framework)
-        ContextManager $ctx,
-    ): bool {
-        return $ctx->get('amount') >= $this->min
-            && $ctx->get('amount') <= $this->max;
+    public function __invoke(ContextManager $ctx, int $min, int $max): bool
+    {
+        return $ctx->get('amount') >= $min
+            && $ctx->get('amount') <= $max;
     }
 }
 ```
 
-**Separation of concerns:**
-- `__construct` = static configuration (what the behavior is parameterized with)
-- `__invoke` = runtime dependencies (what the framework injects: context, event, state)
+Framework resolves `__invoke` parameters:
+1. `ContextManager $ctx` → type match → inject from framework
+2. `int $min` → no type match → look up `'min'` in config params → inject `100`
+3. `int $max` → no type match → look up `'max'` in config params → inject `10000`
+
+This is a natural extension of the existing DI system. The `__invoke` signature already mixes framework-provided and config-provided params (`array $args`). This just makes config params named and typed.
 
 ---
 
 ## Syntax
 
+### Single parameterized behavior
+
 ```php
-// Single parameterized guard — object instance
-'guards' => new IsAmountInRangeGuard(min: 100, max: 10000),
+// Named params (new — preferred)
+'guards' => [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
 
-// Multiple guards — mixed instances and class references
-'guards' => [
-    new IsAmountInRangeGuard(min: 100, max: 10000),
-    HasBalanceGuard::class,
-],
+// String args (old — deprecated)
+'guards' => 'isAmountInRangeGuard:100,10000',
 
-// Parameterless — unchanged
+// Parameterless (unchanged)
 'guards' => HasBalanceGuard::class,
 
-// Inline closure — unchanged
+// Inline closure (unchanged)
 'guards' => fn (ContextManager $ctx): bool => $ctx->get('amount') > 100,
 ```
 
-No ambiguity: `instanceof InvokableBehavior` = pre-constructed instance, `string` = class reference or inline key.
+### Multiple behaviors
+
+```php
+// Multiple — each element is its own definition
+'guards' => [
+    [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
+    HasBalanceGuard::class,
+],
+```
+
+### Disambiguation rule
+
+| First element | String keys present | Interpretation |
+|---------------|-------------------|----------------|
+| `string` | No | List of behavior references |
+| `string` | Yes | Single parameterized behavior |
+| `array` | — | List of behaviors (each can be parameterized) |
+| `Closure` | — | Single inline behavior |
+
+```php
+// List of guards (all numeric keys, all strings)
+'guards' => [IsAmountAboveGuard::class, HasBalanceGuard::class],
+
+// Single parameterized guard (has string keys)
+'guards' => [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
+
+// Mixed list (first element is array)
+'guards' => [
+    [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
+    HasBalanceGuard::class,
+    'isActiveGuard',
+],
+```
 
 ---
 
@@ -94,21 +136,21 @@ No ambiguity: `instanceof InvokableBehavior` = pre-constructed instance, `string
 
 ```php
 // Actions
-'actions' => new SendNotificationAction(channel: 'sms', template: 'payment_received'),
+'actions' => [SendNotificationAction::class, 'channel' => 'sms'],
 
 // Guards
-'guards' => new IsAmountInRangeGuard(min: 100, max: 10000),
+'guards' => [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
 
 // Calculators
-'calculators' => new ApplyDiscountCalculator(rate: 0.15),
+'calculators' => [ApplyDiscountCalculator::class, 'rate' => 0.15],
 
 // Entry/Exit
-'entry' => new LogStateTransitionAction(level: 'info'),
+'entry' => [LogStateTransitionAction::class, 'level' => 'info'],
 
 // Transition actions
 'SUBMIT' => [
     'target'  => 'processing',
-    'actions' => new ValidateAndStoreAction(strict: true),
+    'actions' => [ValidateAndStoreAction::class, 'strict' => true],
 ],
 ```
 
@@ -119,16 +161,18 @@ No ambiguity: `instanceof InvokableBehavior` = pre-constructed instance, `string
 The old `:arg1,arg2` syntax continues to work but is deprecated:
 
 ```php
-// Deprecated — still works, will emit deprecation notice in v10
+// Deprecated — still works
 'guards' => 'isAmountInRangeGuard:100,10000'
 
 // Preferred
-'guards' => new IsAmountInRangeGuard(min: 100, max: 10000),
+'guards' => [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
 ```
+
+Behaviors that use `array $args` type-hint continue receiving the old positional array. New named params are injected by matching `__invoke` parameter names — no `array $args` needed.
 
 ### Migration path
 
-1. **v9**: Both syntaxes work. Old syntax emits no warning (soft deprecation — documented only).
+1. **v9**: Both syntaxes work. Old syntax documented as deprecated (no runtime warning).
 2. **v10**: Old syntax emits runtime deprecation notice.
 3. **v11**: Old syntax removed.
 
@@ -136,15 +180,44 @@ The old `:arg1,arg2` syntax continues to work but is deprecated:
 
 ## Implementation
 
-The behavior resolution pipeline needs one addition: if the definition is already an `InvokableBehavior` instance, use it directly instead of resolving from the behavior registry.
+Extend `InvokableBehavior::injectInvokableBehaviorParameters()`:
 
 ```php
-// In getInvokableBehavior() or equivalent:
-if ($behaviorDefinition instanceof InvokableBehavior) {
-    return $behaviorDefinition;  // Already constructed
-}
+// Current: known types → framework, `array` → positional args
+// New: known types → framework, named scalars → match from config params
 
-// Existing resolution: string key → lookup in behavior array → instantiate
+foreach ($reflectionParams as $parameter) {
+    $value = match (true) {
+        // Existing: framework-provided (ContextManager, EventBehavior, State, etc.)
+        is_a($typeName, ContextManager::class, true) => $state->context,
+        is_a($typeName, EventBehavior::class, true)  => $eventBehavior,
+        $state instanceof $typeName                   => $state,
+
+        // Existing: positional args (deprecated path)
+        $typeName === 'array'                         => $actionArguments,
+
+        // New: named config params
+        $configParams !== null
+            && array_key_exists($parameter->getName(), $configParams)
+                                                      => $configParams[$parameter->getName()],
+
+        // Default value
+        $parameter->isDefaultValueAvailable()         => $parameter->getDefaultValue(),
+
+        default                                       => null,
+    };
+}
+```
+
+### Parsing: extract config params from definition
+
+```php
+// [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000]
+// → class = IsAmountInRangeGuard::class
+// → configParams = ['min' => 100, 'max' => 10000]
+
+$class = array_shift($definition);  // first element = class reference
+$configParams = $definition;         // rest = named params (string keys only)
 ```
 
 ### Affected resolution points
@@ -152,26 +225,37 @@ if ($behaviorDefinition instanceof InvokableBehavior) {
 - `TransitionDefinition`: guard, action, calculator resolution
 - `MachineDefinition::runAction()`: action resolution
 - `StateDefinition`: entry/exit action resolution
-- `MachineDefinition`: listener resolution
 
 ### Testing/Faking
 
-`fakingAllGuards()`, `fakingAllActions()` etc. intercept by class name. Pre-constructed instances should be interceptable via `get_class($instance)`.
+No change needed. Behaviors are still resolved by class name. Config params don't affect faking — faked behaviors skip `__invoke` entirely.
 
 ### XState Export
 
-Pre-constructed instances export as `{ "type": "ClassName", "params": { "min": 100, "max": 10000 } }` — matching XState v5's parameterized action format.
+Named params export naturally:
+
+```json
+{
+  "actions": {
+    "type": "IsAmountInRangeGuard",
+    "params": { "min": 100, "max": 10000 }
+  }
+}
+```
+
+This matches XState v5's parameterized action format.
 
 ---
 
 ## Benefits
 
-| Aspect | Old (`:args`) | New (`new Class(...)`) |
-|--------|--------------|----------------------|
+| Aspect | Old (`:args`) | New (named array) |
+|--------|--------------|-------------------|
 | Type safety | All strings | Native PHP types |
-| IDE autocomplete | None | Full constructor params |
-| Named parameters | No (`$args[0]`) | Yes (`min: 100`) |
-| Default values | Manual | PHP defaults |
-| Validation | Runtime only | Constructor enforced |
-| Complex values | Impossible | Arrays, objects, enums |
-| Responsibility | `__invoke` does both config + runtime | Constructor = config, `__invoke` = runtime |
+| Named parameters | No (`$args[0]`) | Yes (`'min' => 100`) |
+| Default values | Manual | PHP parameter defaults |
+| Complex values | Impossible | Arrays, enums, any PHP value |
+| Definition is data | Yes | Yes (preserved) |
+| Serializable | Yes | Yes |
+| XState export | Limited | Full (with params) |
+| IDE autocomplete | None | Class reference navigable |
