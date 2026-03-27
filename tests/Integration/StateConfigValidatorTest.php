@@ -19,20 +19,21 @@ test('validates root level configuration keys', function (): void {
         'another_invalid' => 'value',
     ]))->toThrow(
         exception: InvalidArgumentException::class,
-        exceptionMessage: 'Invalid root level configuration keys: invalid_key, another_invalid. Allowed keys are: id, version, initial, status_events, context, states, on, type, meta, entry, exit, description, should_persist, delimiter'
+        exceptionMessage: 'Invalid root level configuration keys: invalid_key, another_invalid. Allowed keys are: id, version, initial, status_events, context, states, on, type, meta, entry, exit, description, scenarios_enabled, should_persist, delimiter'
     );
 });
 
 test('accepts valid root level configuration', function (): void {
     // HINT: This test should contain all possible root level configuration keys
     expect(fn () => MachineDefinition::define([
-        'id'             => 'machine',
-        'version'        => '1.0.0',
-        'initial'        => 'state_a',
-        'context'        => ['some' => 'data'],
-        'should_persist' => true,
-        'delimiter'      => '.',
-        'states'         => [
+        'id'                => 'machine',
+        'version'           => '1.0.0',
+        'initial'           => 'state_a',
+        'context'           => ['some' => 'data'],
+        'scenarios_enabled' => true,
+        'should_persist'    => true,
+        'delimiter'         => '.',
+        'states'            => [
             'state_a' => [],
         ],
     ]))->not->toThrow(exception: InvalidArgumentException::class);
