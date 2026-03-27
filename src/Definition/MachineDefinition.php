@@ -2963,7 +2963,7 @@ class MachineDefinition
         }
 
         // Centralized entry protocol (or just state enter event + transition listeners for targetless)
-        if ($targetStateDefinition !== null) {
+        if ($targetStateDefinition instanceof StateDefinition) {
             // processPostEntry: false — transition() has its own @always/event queue handling below
             $this->enterState($newState, $targetStateDefinition, $eventBehavior, fireTransitionListeners: true, processPostEntry: false);
         } else {
