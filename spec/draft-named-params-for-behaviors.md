@@ -13,7 +13,7 @@ Behaviors (guards, actions, calculators) that need configuration parameters use 
 'guards' => 'isAmountInRangeGuard:100,10000'
 ```
 
-The guard receives these as an untyped array:
+The guard receives these as an untyped positional array:
 
 ```php
 class IsAmountInRangeGuard extends GuardBehavior
@@ -29,36 +29,24 @@ class IsAmountInRangeGuard extends GuardBehavior
 **Problems:**
 - All arguments are strings — manual casting required
 - Positional only — `$args[0]` says nothing about what it is
-- No IDE autocomplete or navigation
+- No IDE navigation to see what params a behavior accepts
 - Comma in values is impossible (JSON, arrays)
 - No default values
-- No validation at definition time
-
----
-
-## Design Principle
-
-Machine definitions have always been **pure data** — strings, arrays, class references. No `new`, no object instantiation. This property enables:
-- XState JSON export (`machine:xstate`)
-- Machine definition caching (`machine:cache`)
-- Static validation (`machine:validate-config`)
-- Config-driven architecture (definitions from DB, file, API)
-
-The solution must preserve this property. **No `new Class()` in definitions.**
+- No validation — missing or extra args silently ignored
 
 ---
 
 ## Solution
 
-Named parameter array syntax — extends the existing parameter injection system:
+Array syntax with named parameters, resolved via the existing `__invoke` parameter injection system:
 
 ```php
-// Config — pure data (array with class reference + named params)
+// Config
 'guards' => [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
 ```
 
 ```php
-// Guard — framework injects both runtime deps AND config params into __invoke
+// Guard
 class IsAmountInRangeGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $ctx, int $min, int $max): bool
@@ -69,12 +57,12 @@ class IsAmountInRangeGuard extends GuardBehavior
 }
 ```
 
-Framework resolves `__invoke` parameters:
-1. `ContextManager $ctx` → type match → inject from framework
-2. `int $min` → no type match → look up `'min'` in config params → inject `100`
-3. `int $max` → no type match → look up `'max'` in config params → inject `10000`
+Framework resolves `__invoke` parameters by type first, then by name:
+1. `ContextManager $ctx` → known type → inject from framework
+2. `int $min` → unknown type → match `'min'` from config params → inject `100`
+3. `int $max` → unknown type → match `'max'` from config params → inject `10000`
 
-This is a natural extension of the existing DI system. The `__invoke` signature already mixes framework-provided and config-provided params (`array $args`). This just makes config params named and typed.
+Definition remains **pure data** (strings, arrays, primitives) — serializable, cacheable, XState-exportable.
 
 ---
 
@@ -83,167 +71,184 @@ This is a natural extension of the existing DI system. The `__invoke` signature 
 ### Single parameterized behavior
 
 ```php
-// Named params (new — preferred)
+// Class reference with named params
 'guards' => [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
 
-// String args (old — deprecated)
-'guards' => 'isAmountInRangeGuard:100,10000',
+// Inline key with named params
+'guards' => ['isAmountInRangeGuard', 'min' => 100, 'max' => 10000],
+```
 
-// Parameterless (unchanged)
+### Parameterless behavior (unchanged)
+
+```php
 'guards' => HasBalanceGuard::class,
+'guards' => 'hasBalanceGuard',
+```
 
-// Inline closure (unchanged)
+### Inline closure (unchanged)
+
+```php
 'guards' => fn (ContextManager $ctx): bool => $ctx->get('amount') > 100,
 ```
 
 ### Multiple behaviors
 
 ```php
-// Multiple — each element is its own definition
+// All parameterless
+'guards' => [HasBalanceGuard::class, IsActiveGuard::class],
+
+// Mixed — wrap parameterized ones in their own array
 'guards' => [
     [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
     HasBalanceGuard::class,
 ],
 ```
 
-### Disambiguation rule
-
-| First element | String keys present | Interpretation |
-|---------------|-------------------|----------------|
-| `string` | No | List of behavior references |
-| `string` | Yes | Single parameterized behavior |
-| `array` | — | List of behaviors (each can be parameterized) |
-| `Closure` | — | Single inline behavior |
+### Old syntax (deprecated)
 
 ```php
-// List of guards (all numeric keys, all strings)
-'guards' => [IsAmountAboveGuard::class, HasBalanceGuard::class],
+'guards' => 'isAmountInRangeGuard:100,10000'
+```
 
-// Single parameterized guard (has string keys)
+Still works. Behaviors using `array $args` type-hint continue receiving positional string array.
+
+---
+
+## Disambiguation
+
+When `guards`/`actions`/`calculators` receives an array, the framework must distinguish "list of behaviors" from "single parameterized behavior."
+
+**Rule: if the array has any string keys, it is a single parameterized behavior. Otherwise, it is a list.**
+
+| Array shape | Interpretation |
+|-------------|----------------|
+| `[Class::class, 'min' => 100]` | Single behavior with params (has string keys) |
+| `[ClassA::class, ClassB::class]` | List of two behaviors (all numeric keys) |
+| `[[ClassA::class, 'x' => 1], ClassB::class]` | List — first element is array (parameterized), second is plain |
+
+Edge cases:
+- `[Class::class]` — list with one element (numeric key only). Equivalent to just `Class::class`.
+- `[]` — empty list, no behaviors. No-op.
+
+---
+
+## Applies To All Behavior Keys
+
+```php
+// Transition guards
 'guards' => [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
 
-// Mixed list (first element is array)
-'guards' => [
-    [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
-    HasBalanceGuard::class,
-    'isActiveGuard',
+// Transition actions
+'actions' => [SendNotificationAction::class, 'channel' => 'sms'],
+
+// Transition calculators
+'calculators' => [ApplyDiscountCalculator::class, 'rate' => 0.15],
+
+// Entry / exit actions
+'entry' => [LogTransitionAction::class, 'level' => 'info'],
+
+// Full transition example
+'SUBMIT' => [
+    'target'  => 'processing',
+    'guards'  => [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
+    'actions' => SendEmailAction::class,
 ],
 ```
 
 ---
 
-## Applies To All Behaviors
+## Error Handling
 
-```php
-// Actions
-'actions' => [SendNotificationAction::class, 'channel' => 'sms'],
+**Missing required param:** If `__invoke` declares `int $min` but config has no `'min'` key and there is no default value, the framework throws `MissingBehaviorParameterException` at invocation time with a clear message:
 
-// Guards
-'guards' => [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
-
-// Calculators
-'calculators' => [ApplyDiscountCalculator::class, 'rate' => 0.15],
-
-// Entry/Exit
-'entry' => [LogStateTransitionAction::class, 'level' => 'info'],
-
-// Transition actions
-'SUBMIT' => [
-    'target'  => 'processing',
-    'actions' => [ValidateAndStoreAction::class, 'strict' => true],
-],
 ```
+IsAmountInRangeGuard requires parameter 'min' (int) but it was not provided in the definition.
+```
+
+**Extra config params:** Params in config that don't match any `__invoke` parameter are silently ignored.
+
+**Type mismatch:** PHP's native type coercion applies. `'min' => '100'` injected into `int $min` works (PHP coerces). `'min' => 'abc'` into `int $min` throws `TypeError`.
 
 ---
 
 ## Backward Compatibility
 
-The old `:arg1,arg2` syntax continues to work but is deprecated:
+Old `:arg1,arg2` syntax is deprecated but continues to work:
 
 ```php
-// Deprecated — still works
+// Deprecated
 'guards' => 'isAmountInRangeGuard:100,10000'
 
 // Preferred
 'guards' => [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000],
 ```
 
-Behaviors that use `array $args` type-hint continue receiving the old positional array. New named params are injected by matching `__invoke` parameter names — no `array $args` needed.
-
-### Migration path
-
-1. **v9**: Both syntaxes work. Old syntax documented as deprecated (no runtime warning).
-2. **v10**: Old syntax emits runtime deprecation notice.
-3. **v11**: Old syntax removed.
+Both syntaxes coexist. No removal timeline set — deprecation is documentation-only for now.
 
 ---
 
 ## Implementation
 
-Extend `InvokableBehavior::injectInvokableBehaviorParameters()`:
+### 1. Parsing — extract class and config params from definition
+
+Where behavior definitions are resolved (guards, actions, calculators, entry/exit), detect the new array format:
 
 ```php
-// Current: known types → framework, `array` → positional args
-// New: known types → framework, named scalars → match from config params
+// Input: [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000]
+// Detection: is_array($definition) && has string keys
 
-foreach ($reflectionParams as $parameter) {
-    $value = match (true) {
-        // Existing: framework-provided (ContextManager, EventBehavior, State, etc.)
-        is_a($typeName, ContextManager::class, true) => $state->context,
-        is_a($typeName, EventBehavior::class, true)  => $eventBehavior,
-        $state instanceof $typeName                   => $state,
-
-        // Existing: positional args (deprecated path)
-        $typeName === 'array'                         => $actionArguments,
-
-        // New: named config params
-        $configParams !== null
-            && array_key_exists($parameter->getName(), $configParams)
-                                                      => $configParams[$parameter->getName()],
-
-        // Default value
-        $parameter->isDefaultValueAvailable()         => $parameter->getDefaultValue(),
-
-        default                                       => null,
-    };
-}
+$configParams = array_filter($definition, fn ($k) => is_string($k), ARRAY_FILTER_USE_KEY);
+$class = $definition[0];  // first numeric element = class reference or inline key
 ```
 
-### Parsing: extract config params from definition
+### 2. Injection — extend `injectInvokableBehaviorParameters()`
+
+Add `?array $configParams = null` parameter. After known-type matching, match remaining params by name:
 
 ```php
-// [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000]
-// → class = IsAmountInRangeGuard::class
-// → configParams = ['min' => 100, 'max' => 10000]
+$value = match (true) {
+    // Existing: framework-provided
+    is_a($typeName, ContextManager::class, true) => $state->context,
+    is_a($typeName, EventBehavior::class, true)  => $eventBehavior,
+    $state instanceof $typeName                   => $state,
+    is_a($state->history, $typeName)              => $state->history,
 
-$class = array_shift($definition);  // first element = class reference
-$configParams = $definition;         // rest = named params (string keys only)
+    // Existing: positional args (deprecated `:arg` path)
+    $typeName === 'array' && $actionArguments !== null => $actionArguments,
+
+    // New: named config params — match by parameter name
+    $configParams !== null
+        && array_key_exists($parameter->getName(), $configParams)
+        => $configParams[$parameter->getName()],
+
+    // Default value from __invoke signature
+    $parameter->isDefaultValueAvailable() => $parameter->getDefaultValue(),
+
+    default => null,
+};
 ```
 
-### Affected resolution points
+### 3. Affected resolution points
 
-- `TransitionDefinition`: guard, action, calculator resolution
-- `MachineDefinition::runAction()`: action resolution
-- `StateDefinition`: entry/exit action resolution
+- `TransitionDefinition::resolveGuards()` — guard resolution
+- `TransitionDefinition::resolveCalculators()` — calculator resolution
+- `TransitionBranch::runActions()` — transition action resolution
+- `MachineDefinition::runAction()` — entry/exit/listener action resolution
 
-### Testing/Faking
+### 4. Testing/Faking
 
-No change needed. Behaviors are still resolved by class name. Config params don't affect faking — faked behaviors skip `__invoke` entirely.
+Faking system (`fakingAllGuards`, `fakingAllActions`, etc.) currently checks behavior definitions by string comparison. Needs to handle array definitions: extract class name from `$definition[0]` when `is_array($definition)`.
 
-### XState Export
+### 5. XState Export
 
-Named params export naturally:
+Named params map to XState v5's parameterized action format:
 
 ```json
 {
-  "actions": {
-    "type": "IsAmountInRangeGuard",
-    "params": { "min": 100, "max": 10000 }
-  }
+  "type": "IsAmountInRangeGuard",
+  "params": { "min": 100, "max": 10000 }
 }
 ```
-
-This matches XState v5's parameterized action format.
 
 ---
 
@@ -253,9 +258,9 @@ This matches XState v5's parameterized action format.
 |--------|--------------|-------------------|
 | Type safety | All strings | Native PHP types |
 | Named parameters | No (`$args[0]`) | Yes (`'min' => 100`) |
-| Default values | Manual | PHP parameter defaults |
+| Default values | Manual in behavior | PHP parameter defaults |
 | Complex values | Impossible | Arrays, enums, any PHP value |
 | Definition is data | Yes | Yes (preserved) |
 | Serializable | Yes | Yes |
-| XState export | Limited | Full (with params) |
-| IDE autocomplete | None | Class reference navigable |
+| XState export | Positional only | Named params in JSON |
+| Error messages | Silent null | `MissingBehaviorParameterException` |
