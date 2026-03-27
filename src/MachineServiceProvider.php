@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine;
 
-use Illuminate\Routing\Router;
 use Spatie\LaravelPackageTools\Package;
 use Illuminate\Console\Scheduling\Schedule;
 use Tarfinlabs\EventMachine\Enums\TimerResolution;
@@ -15,7 +14,6 @@ use Tarfinlabs\EventMachine\Commands\TimerStatusCommand;
 use Tarfinlabs\EventMachine\Commands\ExportXStateCommand;
 use Tarfinlabs\EventMachine\Commands\MachineCacheCommand;
 use Tarfinlabs\EventMachine\Commands\MachineClearCommand;
-use Tarfinlabs\EventMachine\Scenarios\ScenarioController;
 use Tarfinlabs\EventMachine\Commands\ArchiveEventsCommand;
 use Tarfinlabs\EventMachine\Commands\ArchiveStatusCommand;
 use Tarfinlabs\EventMachine\Commands\ProcessTimersCommand;
@@ -71,11 +69,6 @@ class MachineServiceProvider extends PackageServiceProvider
     {
         parent::boot();
 
-        // Register scenario HTTP routes when enabled
-        if (config('machine.scenarios.enabled', false)) {
-            $this->registerScenarioRoutes();
-        }
-
         // Auto-register timer sweep commands with Laravel Scheduler
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
             $this->registerTimerSweeps($schedule);
@@ -109,18 +102,5 @@ class MachineServiceProvider extends PackageServiceProvider
                 ->withoutOverlapping()
                 ->runInBackground();
         }
-    }
-
-    /**
-     * Register HTTP routes for scenario endpoints.
-     */
-    protected function registerScenarioRoutes(): void
-    {
-        $this->app['router']->group(['prefix' => 'machine/scenarios'], function (Router $router): void {
-            $router->get('/', [ScenarioController::class, 'list']);
-            $router->post('/{scenario}', [ScenarioController::class, 'play']);
-            $router->post('/{scenario}/{machineId}', [ScenarioController::class, 'playOn']);
-            $router->get('/{scenario}/describe', [ScenarioController::class, 'describe']);
-        });
     }
 }
