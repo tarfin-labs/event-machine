@@ -119,6 +119,7 @@ class MachineServiceProvider extends PackageServiceProvider
         $this->app['router']->group(['prefix' => 'machine/scenarios'], function (Router $router): void {
             $router->get('/', [ScenarioController::class, 'list']);
             $router->post('/{scenario}', [ScenarioController::class, 'play']);
+            $router->post('/{scenario}/{machineId}', [ScenarioController::class, 'playOn']);
             $router->get('/{scenario}/describe', [ScenarioController::class, 'describe']);
         });
     }
