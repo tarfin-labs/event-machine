@@ -16,7 +16,8 @@ class ScenarioController extends Controller
      */
     public function play(string $scenario, Request $request): JsonResponse
     {
-        $scenarioClass = $this->resolveScenarioClass($scenario);
+        $machineClass  = $request->route()->defaults['_machine_class'] ?? null;
+        $scenarioClass = $this->resolveScenarioClass($scenario, $machineClass);
 
         if ($scenarioClass === null) {
             return response()->json(['error' => "Scenario '{$scenario}' not found."], 404);
@@ -41,7 +42,8 @@ class ScenarioController extends Controller
      */
     public function playOn(string $scenario, string $machineId, Request $request): JsonResponse
     {
-        $scenarioClass = $this->resolveScenarioClass($scenario);
+        $machineClass  = $request->route()->defaults['_machine_class'] ?? null;
+        $scenarioClass = $this->resolveScenarioClass($scenario, $machineClass);
 
         if ($scenarioClass === null) {
             return response()->json(['error' => "Scenario '{$scenario}' not found."], 404);
@@ -62,13 +64,19 @@ class ScenarioController extends Controller
     }
 
     /**
-     * List all available scenarios grouped by machine.
+     * List scenarios — scoped to machine when _machine_class is set via route defaults.
      */
-    public function list(): JsonResponse
+    public function list(Request $request): JsonResponse
     {
+        $machineClass = $request->route()->defaults['_machine_class'] ?? null;
+
+        $scenarios = $machineClass !== null
+            ? ScenarioDiscovery::forMachine($machineClass)
+            : ScenarioDiscovery::discover();
+
         $grouped = [];
 
-        foreach (ScenarioDiscovery::discover() as $scenarioClass) {
+        foreach ($scenarios as $scenarioClass) {
             /** @var MachineScenario $instance */
             $instance = new $scenarioClass();
             $machine  = class_basename($instance->getMachine());
@@ -89,9 +97,10 @@ class ScenarioController extends Controller
     /**
      * Describe a specific scenario.
      */
-    public function describe(string $scenario): JsonResponse
+    public function describe(string $scenario, Request $request): JsonResponse
     {
-        $scenarioClass = $this->resolveScenarioClass($scenario);
+        $machineClass  = $request->route()->defaults['_machine_class'] ?? null;
+        $scenarioClass = $this->resolveScenarioClass($scenario, $machineClass);
 
         if ($scenarioClass === null) {
             return response()->json(['error' => "Scenario '{$scenario}' not found."], 404);
@@ -113,9 +122,13 @@ class ScenarioController extends Controller
     /**
      * @return class-string<MachineScenario>|null
      */
-    private function resolveScenarioClass(string $slug): ?string
+    private function resolveScenarioClass(string $slug, ?string $machineClass = null): ?string
     {
-        foreach (ScenarioDiscovery::discover() as $class) {
+        $scenarios = $machineClass !== null
+            ? ScenarioDiscovery::forMachine($machineClass)
+            : ScenarioDiscovery::discover();
+
+        foreach ($scenarios as $class) {
             if ($this->classToSlug(class_basename($class)) === $slug) {
                 return $class;
             }
