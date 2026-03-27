@@ -4,10 +4,64 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Scenarios;
 
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
 
 class ScenarioDiscovery
 {
+    /**
+     * Find scenarios available for a machine at a given state.
+     *
+     * Returns scenarios where machine() matches and from() matches the current state.
+     *
+     * @return array<int, array{slug: string, description: string, from: string}>
+     */
+    public static function forMachineAtState(string $machineClass, string $currentState): array
+    {
+        $scenarios = [];
+
+        foreach (self::discover() as $scenarioClass) {
+            /** @var MachineScenario $instance */
+            $instance = new $scenarioClass();
+
+            if ($instance->getMachine() !== $machineClass) {
+                continue;
+            }
+
+            $from = $instance->getFrom();
+            if ($from !== null && $from === $currentState) {
+                $scenarios[] = [
+                    'slug'        => Str::kebab(class_basename($scenarioClass)),
+                    'description' => $instance->getDescription(),
+                    'from'        => $from,
+                ];
+            }
+        }
+
+        return $scenarios;
+    }
+
+    /**
+     * Find all scenarios for a machine class (regardless of state).
+     *
+     * @return array<int, class-string<MachineScenario>>
+     */
+    public static function forMachine(string $machineClass): array
+    {
+        $scenarios = [];
+
+        foreach (self::discover() as $scenarioClass) {
+            /** @var MachineScenario $instance */
+            $instance = new $scenarioClass();
+
+            if ($instance->getMachine() === $machineClass) {
+                $scenarios[] = $scenarioClass;
+            }
+        }
+
+        return $scenarios;
+    }
+
     /**
      * Discover all MachineScenario subclasses from the configured path.
      * Uses cache if available (from machine:scenario-cache).
