@@ -14,15 +14,16 @@
 8. [Parametrization](#8-parametrization)
 9. [Composition — Extending Scenarios](#9-composition--extending-scenarios)
 10. [Mid-Flight Scenarios — Playing on Existing Machines](#10-mid-flight-scenarios--playing-on-existing-machines)
-11. [Child Machine Scenarios](#11-child-machine-scenarios)
-12. [Async Dispatch, Timers & Job Actors](#12-async-dispatch-timers--job-actors)
-13. [ScenarioPlayer — Runtime Engine](#13-scenarioplayer--runtime-engine)
-14. [Environment Gating](#14-environment-gating)
-15. [Execution: Artisan Command & HTTP Endpoint](#15-execution-artisan-command--http-endpoint)
-16. [Discovery & Registration](#16-discovery--registration)
-17. [What NOT to Include](#17-what-not-to-include)
-18. [Migration: Removing the Old Scenario System](#18-migration-removing-the-old-scenario-system)
-19. [Implementation Checklist](#19-implementation-checklist)
+11. [Endpoint Integration — Scenario-Aware Responses](#11-endpoint-integration--scenario-aware-responses)
+12. [Child Machine Scenarios](#12-child-machine-scenarios)
+13. [Async Dispatch, Timers & Job Actors](#13-async-dispatch-timers--job-actors)
+14. [ScenarioPlayer — Runtime Engine](#14-scenarioplayer--runtime-engine)
+15. [Environment Gating](#15-environment-gating)
+16. [Execution: Artisan Command & HTTP Endpoint](#16-execution-artisan-command--http-endpoint)
+17. [Discovery & Registration](#17-discovery--registration)
+18. [What NOT to Include](#18-what-not-to-include)
+19. [Migration: Removing the Old Scenario System](#19-migration-removing-the-old-scenario-system)
+20. [Implementation Checklist](#20-implementation-checklist)
 
 ---
 
@@ -837,7 +838,133 @@ Both are valid. A `CarSaleAtDataCollection` scenario could use either approach d
 
 ---
 
-## 11. Child Machine Scenarios
+## 11. Endpoint Integration — Scenario-Aware Responses
+
+### Problem
+
+QA uses the existing frontend in staging. They interact with the machine through its HTTP endpoints. They need to:
+1. See which scenarios are available from the **current state** (after a transition)
+2. Send a normal event AND attach a scenario to fast-forward the remaining states
+
+Both should work through the **existing endpoint infrastructure** — no separate scenario endpoints needed.
+
+### `available_scenarios` in Endpoint Response
+
+Just like `available_events` shows which events the machine accepts from its current state, `available_scenarios` shows which scenarios can be played from the current state.
+
+**Timing:** Both `available_events` and `available_scenarios` reflect the state **after** the transition — not the state before. The `$state` object returned by `$machine->send()` is used for both.
+
+**Discovery:** When `MACHINE_SCENARIOS_ENABLED=true`, `MachineController::buildResponse()` queries `ScenarioDiscovery` for scenarios where `machine()` matches the current machine class AND `from()` matches the current state.
+
+**Response format:**
+
+```json
+{
+  "data": {
+    "machine_id": "evt_01HXYZ...",
+    "value": "checking_protocol",
+    "context": { "..." },
+    "available_events": ["PROTOCOL_PASSED", "PROTOCOL_FAILED"],
+    "available_scenarios": [
+      {
+        "slug": "from-protocol-to-approved",
+        "description": "Fast-forward from protocol check to approved",
+        "from": "checking_protocol"
+      },
+      {
+        "slug": "from-protocol-to-rejected",
+        "description": "Fast-forward from protocol check to rejected",
+        "from": "checking_protocol"
+      }
+    ]
+  }
+}
+```
+
+When `MACHINE_SCENARIOS_ENABLED=false`, the `available_scenarios` key is omitted entirely — zero overhead.
+
+### Sending Events with Scenario Continuation
+
+The `scenario` field can be added to any event request. When present (and scenarios are enabled), the event is processed normally first, then the scenario plays from the resulting state.
+
+**Request:**
+
+```http
+POST /orders/{orderId}/protocol-passed
+Content-Type: application/json
+
+{
+  "type": "PROTOCOL_PASSED",
+  "payload": { "protocol_id": "PRT-001" },
+  "scenario": "from-data-collection-to-approved"
+}
+```
+
+**Flow inside `MachineController::executeEndpoint()`:**
+
+```
+1. $state = $machine->send(event: $event)
+   → Machine transitions: checking_protocol → data_collection
+
+2. Detect 'scenario' field in request + MACHINE_SCENARIOS_ENABLED=true
+
+3. Resolve scenario class from slug
+   → CarSaleFromDataCollectionToApproved
+
+4. Validate scenario.from() === $state->currentStateDefinition->key
+   → 'data_collection' === 'data_collection' ✓
+
+5. ScenarioPlayer->play($scenario, $params, machineId: $rootEventId)
+   → Replays steps: VEHICLE_SUBMITTED, PAYMENT_SELECTED, ...
+   → Machine arrives at: approved
+
+6. Response uses final state (after scenario replay)
+   → value: 'approved'
+   → available_events: ['...']
+   → available_scenarios: [scenarios with from='approved']
+```
+
+**Error cases:**
+
+| Error | Behavior |
+|-------|----------|
+| `scenario` field present but `MACHINE_SCENARIOS_ENABLED=false` | Field silently ignored — normal event processing only |
+| Scenario slug not found | Return 422 with error message |
+| Scenario `from()` doesn't match post-transition state | Return 422: "Scenario expects state 'X' but machine is at 'Y' after event" |
+| Scenario step fails during replay | Return 422 with `ScenarioFailedException` details |
+
+### Endpoint Registration via `MachineRouter::register()`
+
+Scenario endpoint registration moves from `MachineServiceProvider` (global) into `MachineRouter::register()` (per-machine). When `MACHINE_SCENARIOS_ENABLED=true`, `MachineRouter` also registers per-machine scenario routes under the machine's prefix:
+
+```
+# Existing machine endpoints
+POST /orders/create
+POST /orders/{orderId}/submit
+POST /orders/{orderId}/protocol-passed
+
+# Auto-registered scenario endpoints (when scenarios exist for this machine)
+GET  /orders/scenarios                                → list this machine's scenarios
+POST /orders/scenarios/{slug}                         → play (new machine)
+POST /orders/scenarios/{slug}/{machineId}             → play on existing machine (mid-flight)
+GET  /orders/scenarios/{slug}/describe                → scenario details
+```
+
+**No global `/machine/scenarios/` route** — each machine owns its scenario endpoints under its own prefix. If a machine has no `MachineRouter::register()` call, it has no scenario endpoints.
+
+### Design Decisions
+
+| Decision | Why |
+|----------|-----|
+| `available_scenarios` reflects post-transition state | Same semantics as `available_events` — tells the frontend "what can I do NEXT from here" |
+| `scenario` field in event request, not query param | Consistent with `type` and `payload` — all in one JSON body |
+| Scenario `from()` validated against post-transition state | The event does its job first, then the scenario continues. Prevents invalid scenario activation. |
+| Silent ignore when disabled | Frontend can always send `scenario` field — production simply ignores it |
+| Per-machine scenario routes via `MachineRouter` | Follows EventMachine convention: everything lives under the machine's endpoint prefix |
+
+---
+
+## 12. Child Machine Scenarios
 
 When a parent machine delegates to a child machine (via `machine` key on a state), the child scenario:
 
@@ -874,7 +1001,7 @@ After both children: parent's parallel @done guard passes → 'checking_protocol
 
 ---
 
-## 12. Async Dispatch, Timers & Job Actors
+## 13. Async Dispatch, Timers & Job Actors
 
 ### Child Machine Dispatch (`machine` key)
 
@@ -950,7 +1077,7 @@ After the scenario completes and the machine is at the target state, timers for 
 
 ---
 
-## 13. ScenarioPlayer — Runtime Engine
+## 14. ScenarioPlayer — Runtime Engine
 
 **Location:** `src/Scenarios/ScenarioPlayer.php`
 
@@ -1017,7 +1144,7 @@ play(scenario, params, machineId?)
 
 ---
 
-## 14. Environment Gating
+## 15. Environment Gating
 
 **Config addition to `config/machine.php`:**
 
@@ -1039,7 +1166,7 @@ play(scenario, params, machineId?)
 
 ---
 
-## 15. Execution: Artisan Command & HTTP Endpoint
+## 16. Execution: Artisan Command & HTTP Endpoint
 
 ### Artisan Command
 
@@ -1170,7 +1297,7 @@ Content-Type: application/json
 
 ---
 
-## 16. Discovery & Registration
+## 17. Discovery & Registration
 
 Scenario classes are discovered via directory scanning (similar to Laravel's event discovery):
 
@@ -1193,7 +1320,7 @@ app/Machines/Scenarios/
 
 ---
 
-## 17. What NOT to Include
+## 18. What NOT to Include
 
 | Feature | Why excluded |
 |---------|-------------|
@@ -1208,7 +1335,7 @@ app/Machines/Scenarios/
 
 ---
 
-## 18. Migration: Removing the Old Scenario System
+## 19. Migration: Removing the Old Scenario System
 
 ### Files to Modify
 
@@ -1242,7 +1369,7 @@ app/Machines/Scenarios/
 
 ---
 
-## 19. Implementation Checklist
+## 20. Implementation Checklist
 
 ### Phase 1: Foundation
 
@@ -1287,20 +1414,28 @@ app/Machines/Scenarios/
 - [ ] Timer suspension during replay (`scenario.timers_disabled` flag)
 - [ ] Timer re-registration for final state after replay completes
 
-### Phase 3: Execution Interfaces
+### Phase 3: Endpoint Integration
+
+- [ ] `MachineController::buildResponse()` — add `available_scenarios` to response (post-transition state, gated by config)
+- [ ] `ScenarioDiscovery::forMachineAtState()` — query scenarios by machine class + from() state
+- [ ] `MachineController::executeEndpoint()` — detect `scenario` field in request, play scenario after event
+- [ ] `MachineRouter::register()` — register per-machine scenario routes when scenarios enabled
+- [ ] Remove global `/machine/scenarios/` route from `MachineServiceProvider`
+- [ ] `ScenarioController` — receive machine class from route defaults (per-machine context)
+
+### Phase 4: Execution Interfaces
 
 - [ ] `src/Commands/ScenarioCommand.php` (play + list)
-- [ ] `src/Scenarios/ScenarioController.php` (play, list, describe)
-- [ ] Route registration in `MachineServiceProvider` (gated by config)
+- [ ] `src/Scenarios/ScenarioController.php` (play, list, describe, playOn)
 - [ ] `src/Commands/ScenarioCacheCommand.php`
 
-### Phase 4: Remove Old Scenario System
+### Phase 5: Remove Old Scenario System
 
 - [ ] Remove code from `MachineDefinition`, `EventBehavior`, `TestMachine`, `StateConfigValidator`
 - [ ] Delete old scenario stubs, tests, docs
 - [ ] Update all documentation cross-references
 
-### Phase 5: Testing & Documentation
+### Phase 6: Testing
 
 - [ ] Test stubs: example scenarios for TrafficLights or similar package test machine
 - [ ] `tests/Features/Scenarios/ScenarioPlayTest.php` — basic play, params, models, stubs
@@ -1313,12 +1448,18 @@ app/Machines/Scenarios/
 - [ ] `tests/Features/Scenarios/ScenarioHttpTest.php` — HTTP endpoints including mid-flight route
 - [ ] `tests/Features/Scenarios/ScenarioGatingTest.php` — disabled environment
 - [ ] `tests/Features/Scenarios/ScenarioErrorTest.php` — failure cases
-- [ ] `docs/advanced/scenarios.md` (new — replaces old)
+- [ ] `tests/Features/Scenarios/ScenarioEndpointIntegrationTest.php` — available_scenarios in response, scenario field in event request, post-transition state filtering, disabled gating
+- [ ] `tests/Features/Scenarios/ScenarioPerMachineRoutesTest.php` — per-machine route registration via MachineRouter, multiple machines
+
+### Phase 7: Documentation
+
+- [ ] `docs/advanced/scenarios.md` — update with endpoint integration section (available_scenarios, scenario field)
+- [ ] `docs/laravel-integration/endpoints.md` — document available_scenarios response field and scenario request field
+- [ ] `docs/laravel-integration/artisan-commands.md` — update scenario commands
 - [ ] `docs/testing/overview.md` — update decision table with scenario layer
-- [ ] `docs/artisan-commands.md` — add scenario commands
 - [ ] DocTest attributes on all code blocks
 
-### Phase 6: Quality Gate
+### Phase 8: Quality Gate
 
 - [ ] `composer pint && composer rector`
 - [ ] `composer test`
