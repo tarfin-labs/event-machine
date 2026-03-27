@@ -93,6 +93,9 @@ class MachineDefinition
     /** The initial state definition for this machine definition. */
     public ?StateDefinition $initialStateDefinition = null;
 
+    /** @deprecated Use the new MachineScenario system instead. Will be removed in next major version. */
+    public bool $scenariosEnabled = false;
+
     /** machine-based variable that determines whether to persist the state change. */
     public bool $shouldPersist = true;
 
@@ -132,11 +135,15 @@ class MachineDefinition
         public ?array $behavior,
         public string $id,
         public ?string $version,
+        /** @deprecated Use the new MachineScenario system instead. */
+        public ?array $scenarios = null,
         private readonly ?array $endpoints = null,
         private readonly ?array $schedules = null,
         public string $delimiter = self::STATE_DELIMITER,
     ) {
         StateConfigValidator::validate($config);
+
+        $this->scenariosEnabled = isset($this->config['scenarios_enabled']) && $this->config['scenarios_enabled'] === true;
 
         $this->shouldPersist = $this->config['should_persist'] ?? $this->shouldPersist;
 
@@ -153,6 +160,10 @@ class MachineDefinition
         $this->root = $this->createRootStateDefinition($config);
 
         $this->parseListenConfig($config);
+
+        if ($this->scenariosEnabled) {
+            $this->createScenarioStateDefinitions();
+        }
 
         $this->root->initializeTransitions();
 
@@ -330,6 +341,8 @@ class MachineDefinition
     public static function define(
         ?array $config = null,
         ?array $behavior = null,
+        /* @deprecated Use the new MachineScenario system instead. */
+        ?array $scenarios = null,
         ?array $endpoints = null,
         ?array $schedules = null,
     ): self {
@@ -338,6 +351,7 @@ class MachineDefinition
             behavior: array_merge(self::initializeEmptyBehavior(), $behavior ?? []),
             id: $config['id'] ?? self::DEFAULT_ID,
             version: $config['version'] ?? null,
+            scenarios: $scenarios,
             endpoints: $endpoints,
             schedules: $schedules,
             delimiter: $config['delimiter'] ?? self::STATE_DELIMITER,
@@ -387,6 +401,54 @@ class MachineDefinition
     }
 
     /**
+     * @deprecated Use the new MachineScenario system instead. Will be removed in next major version.
+     */
+    protected function createScenarioStateDefinitions(): void
+    {
+        if ($this->scenarios !== null && $this->scenarios !== []) {
+            foreach ($this->scenarios as $name => $scenarios) {
+                $parentStateDefinition = reset($this->idMap);
+                $state                 = new StateDefinition(
+                    config: ['states' => $scenarios],
+                    options: [
+                        'parent'  => $parentStateDefinition,
+                        'machine' => $this,
+                        'key'     => $name,
+                    ]
+                );
+
+                $state->initializeTransitions();
+            }
+        }
+    }
+
+    /**
+     * @deprecated Use the new MachineScenario system instead. Will be removed in next major version.
+     *
+     * @return State|null The scenario state if scenario is enabled and found, otherwise returns the current state.
+     */
+    public function getScenarioStateIfAvailable(State $state, EventBehavior|array|null $eventBehavior = null): ?State
+    {
+        if ($this->scenariosEnabled === false) {
+            return $state;
+        }
+
+        if ($eventBehavior !== null) {
+            $eventBehavior = $this->initializeEvent($eventBehavior, $state);
+            if ($eventBehavior->getScenario() !== null) {
+                $state->context->set('scenarioType', $eventBehavior->getScenario());
+            }
+        }
+
+        $scenarioStateKey = str_replace($this->id, $this->id.$this->delimiter.$state->context->get('scenarioType'), $state->currentStateDefinition->id);
+        if (isset($this->idMap[$scenarioStateKey]) && $state->context->has('scenarioType')) {
+            return $state->setCurrentStateDefinition(stateDefinition: $this->idMap[$scenarioStateKey]);
+        }
+
+        return $state;
+    }
+
+    /**
      * Build the initial state for the machine.
      *
      * For parallel states, enters all regions simultaneously.
@@ -424,6 +486,9 @@ class MachineDefinition
                 finishEvent: InternalEvent::MACHINE_ENTRY_FINISH,
             );
         }
+
+        // @deprecated — old scenario system: swap state definition if scenarioType is in event
+        $initialState = $this->getScenarioStateIfAvailable(state: $initialState, eventBehavior: $event ?? null);
 
         // Handle parallel state initialization - enter all regions
         if ($this->initialStateDefinition->type === StateDefinitionType::PARALLEL) {
@@ -2828,11 +2893,14 @@ class MachineDefinition
             $state = $this->getInitialState(event: $event);
         }
 
-        $currentStateDefinition = $this->getCurrentStateDefinition($state);
-
         // Initialize the event and validate it
         $eventBehavior = $this->initializeEvent($event, $state);
         $eventBehavior->selfValidate();
+
+        // @deprecated — old scenario system
+        $state = $this->getScenarioStateIfAvailable(state: $state, eventBehavior: $event);
+
+        $currentStateDefinition = $this->getCurrentStateDefinition($state);
 
         // Track the triggering event for @always chains.
         // For real events: store as triggeringEvent and set as currentEventBehavior.
@@ -3018,6 +3086,9 @@ class MachineDefinition
                 placeholder: $state->currentStateDefinition->route,
             );
         }
+
+        // @deprecated — old scenario system
+        $newState = $this->getScenarioStateIfAvailable(state: $newState, eventBehavior: $eventBehavior);
 
         return $newState;
     }
