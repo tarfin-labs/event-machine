@@ -6,6 +6,8 @@ namespace Tarfinlabs\EventMachine\Routing;
 
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Route;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioController;
 
 /**
  * Registers Laravel routes for machine endpoints.
@@ -303,6 +305,28 @@ class MachineRouter
                         ->name("{$namePrefix}.".strtolower($eventType))
                         ->middleware($fwdEndpoint->middleware)
                         ->setDefaults($fwdDefaults);
+                }
+
+                // Register per-machine scenario routes when scenarios are enabled
+                if (config('machine.scenarios.enabled', false) && ScenarioDiscovery::forMachine($machineClass) !== []) {
+                    Route::prefix('scenarios')
+                        ->group(function () use ($machineClass, $namePrefix): void {
+                            Route::get('/', [ScenarioController::class, 'list'])
+                                ->name("{$namePrefix}.scenarios.list")
+                                ->setDefaults(['_machine_class' => $machineClass]);
+
+                            Route::post('/{scenario}', [ScenarioController::class, 'play'])
+                                ->name("{$namePrefix}.scenarios.play")
+                                ->setDefaults(['_machine_class' => $machineClass]);
+
+                            Route::post('/{scenario}/{machineId}', [ScenarioController::class, 'playOn'])
+                                ->name("{$namePrefix}.scenarios.play-on")
+                                ->setDefaults(['_machine_class' => $machineClass]);
+
+                            Route::get('/{scenario}/describe', [ScenarioController::class, 'describe'])
+                                ->name("{$namePrefix}.scenarios.describe")
+                                ->setDefaults(['_machine_class' => $machineClass]);
+                        });
                 }
             });
     }
