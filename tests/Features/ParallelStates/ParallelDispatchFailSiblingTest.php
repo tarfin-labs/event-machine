@@ -44,7 +44,7 @@ it('@fail cancels sibling job that has not started yet', function (): void {
     // Region B entry action never ran (context not updated)
     $final = ParallelDispatchWithFailMachine::create(state: $rootEventId);
     expect($final->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
-    expect($final->state->context->get('region_b_result'))->toBeNull();
+    expect($final->state->context->get('regionBResult'))->toBeNull();
 });
 
 it('@fail cancels sibling job that finished entry action', function (): void {

@@ -212,7 +212,10 @@ class TransitionDefinition
                 return $branch;
             }
 
-            $guardsPassed = true;
+            // Snapshot context data before guard evaluation so that
+            // side-effects from a failing guard do not leak.
+            $contextDataBeforeGuards = $state->context->data;
+            $guardsPassed            = true;
             foreach ($branch->guards as $guardDefinition) {
                 [$guardDefinition, $guardArguments] = array_pad(explode(':', (string) $guardDefinition, 2), 2, null);
                 $guardArguments                     = $guardArguments === null ? [] : explode(',', $guardArguments);
@@ -280,6 +283,10 @@ class TransitionDefinition
             if ($guardsPassed) {
                 return $branch;
             }
+
+            // Guards failed — restore context to pre-guard snapshot
+            // so that guard side-effects do not leak into later branches.
+            $state->context->data = $contextDataBeforeGuards;
         }
 
         return null;

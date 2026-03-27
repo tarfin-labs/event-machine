@@ -15,8 +15,8 @@ test('sync parallel with @always in region preserves triggering event in entry a
             'id'      => 'parallel_always_event',
             'initial' => 'idle',
             'context' => [
-                'region_a_event_type'    => null,
-                'region_a_event_payload' => null,
+                'regionAEventType'    => null,
+                'regionAEventPayload' => null,
             ],
             'states' => [
                 'idle' => [
@@ -54,8 +54,8 @@ test('sync parallel with @always in region preserves triggering event in entry a
         behavior: [
             'actions' => [
                 'captureRegionAEventAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                    $ctx->set('region_a_event_type', $event->type);
-                    $ctx->set('region_a_event_payload', $event->payload);
+                    $ctx->set('regionAEventType', $event->type);
+                    $ctx->set('regionAEventPayload', $event->payload);
                 },
             ],
         ]
@@ -65,12 +65,12 @@ test('sync parallel with @always in region preserves triggering event in entry a
 
     $state = $definition->transition([
         'type'    => 'START',
-        'payload' => ['order_id' => 42],
+        'payload' => ['orderId' => 42],
     ], $state);
 
     // @always action in region_a should receive the original START event
-    expect($state->context->get('region_a_event_type'))->toBe('START');
-    expect($state->context->get('region_a_event_payload'))->toBe(['order_id' => 42]);
+    expect($state->context->get('regionAEventType'))->toBe('START');
+    expect($state->context->get('regionAEventPayload'))->toBe(['orderId' => 42]);
 });
 
 test('async parallel dispatch loses transient triggering event — no regression', function (): void {
@@ -113,8 +113,8 @@ test('cross-region @always guard receives triggering event', function (): void {
             'id'      => 'cross_region_event',
             'initial' => 'idle',
             'context' => [
-                'guard_received_event_type'    => null,
-                'guard_received_event_payload' => null,
+                'guardReceivedEventType'    => null,
+                'guardReceivedEventPayload' => null,
             ],
             'states' => [
                 'idle' => [
@@ -151,8 +151,8 @@ test('cross-region @always guard receives triggering event', function (): void {
         behavior: [
             'guards' => [
                 'captureAndPassGuard' => function (ContextManager $ctx, EventBehavior $event, State $state): bool {
-                    $ctx->set('guard_received_event_type', $event->type);
-                    $ctx->set('guard_received_event_payload', $event->payload);
+                    $ctx->set('guardReceivedEventType', $event->type);
+                    $ctx->set('guardReceivedEventPayload', $event->payload);
 
                     // Only pass if region_b is ready (cross-region check)
                     return $state->matches('processing.region_b.ready');
@@ -169,8 +169,8 @@ test('cross-region @always guard receives triggering event', function (): void {
     ], $state);
 
     // Guard should have received the original SUBMIT event, not @always
-    expect($state->context->get('guard_received_event_type'))->toBe('SUBMIT');
-    expect($state->context->get('guard_received_event_payload'))
+    expect($state->context->get('guardReceivedEventType'))->toBe('SUBMIT');
+    expect($state->context->get('guardReceivedEventPayload'))
         ->toBe(['tckn' => '12345678901']);
 
     // Both regions done → @done fires → completed

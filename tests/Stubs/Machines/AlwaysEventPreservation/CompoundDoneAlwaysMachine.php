@@ -23,8 +23,8 @@ class CompoundDoneAlwaysMachine extends Machine
                 'id'      => 'compound_done_always',
                 'initial' => 'verification',
                 'context' => [
-                    'done_event_type'    => null,
-                    'done_event_payload' => null,
+                    'doneEventType'    => null,
+                    'doneEventPayload' => null,
                 ],
                 'states' => [
                     'verification' => [

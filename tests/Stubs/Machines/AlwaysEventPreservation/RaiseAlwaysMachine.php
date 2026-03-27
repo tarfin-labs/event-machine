@@ -21,7 +21,7 @@ class RaiseAlwaysMachine extends Machine
                 'id'      => 'raise_always',
                 'initial' => 'idle',
                 'context' => [
-                    'raised_event_type' => null,
+                    'raisedEventType' => null,
                 ],
                 'states' => [
                     'idle' => [

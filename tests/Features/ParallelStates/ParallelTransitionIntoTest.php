@@ -35,8 +35,8 @@ it('runs region entry actions when transitioning into parallel state', function 
     $machine->send(['type' => 'START_PROCESSING']);
 
     // Entry actions should have set context values
-    expect($machine->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($machine->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($machine->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($machine->state->context->get('regionBResult'))->toBe('processed_by_b');
 });
 
 // ============================================================
@@ -50,8 +50,8 @@ it('populates pending dispatches when transitioning into parallel state with dis
     $machine->send(['type' => 'START_PROCESSING']);
 
     // In dispatch mode, entry actions should NOT have run (they are dispatched)
-    expect($machine->state->context->get('region_a_result'))->toBeNull();
-    expect($machine->state->context->get('region_b_result'))->toBeNull();
+    expect($machine->state->context->get('regionAResult'))->toBeNull();
+    expect($machine->state->context->get('regionBResult'))->toBeNull();
 
     // Machine should be in parallel state
     expect($machine->state->isInParallelState())->toBeTrue();
@@ -101,6 +101,6 @@ it('persists and restores after transitioning into parallel state', function ():
     expect($restored->state->isInParallelState())->toBeTrue();
     expect($restored->state->matches('processing.region_a.working'))->toBeTrue();
     expect($restored->state->matches('processing.region_b.working'))->toBeTrue();
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });

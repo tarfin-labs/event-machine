@@ -17,6 +17,89 @@ EventMachine evolved rapidly from v1 to v7 with a small team. Maintaining multip
 Each section below has step-by-step migration instructions with before/after examples. For multi-version jumps (e.g., v3 → v7), follow each guide in sequence. No data migration is required between any versions — the `machine_events` table format has not changed since v1.
 :::
 
+## From 8.5.4 to 8.6.0
+
+### Computed Context in API Responses
+
+Custom context classes can now expose computed values in endpoint responses by overriding `computedContext()`. These values are included in API responses but **not** persisted to the database.
+
+**New methods on `ContextManager`:**
+
+<!-- doctest-attr: ignore -->
+```php
+class OrderContext extends ContextManager
+{
+    public function __construct(
+        public array $items = [],
+        public float $total = 0.0,
+    ) {
+        parent::__construct();
+    }
+
+    protected function computedContext(): array
+    {
+        return [
+            'itemCount' => count($this->items),
+            'isEmpty'   => empty($this->items),
+        ];
+    }
+}
+```
+
+The computed values appear in endpoint responses and `State::toArray()`, but are excluded from `machine_events` persistence. See [Exposing Computed Values](https://eventmachine.dev/advanced/custom-context#exposing-computed-values-in-api-responses) for details.
+
+**No action required** — this is a purely additive feature. Existing context classes without `computedContext()` are unaffected.
+
+## From 8.5.2 to 8.5.3
+
+### processPostEntryTransitions Centralized into enterState()
+
+`processPostEntryTransitions()` is now called internally by `enterState()` — individual callers no longer need to call it separately.
+
+**If you subclass `MachineDefinition`** and call `processPostEntryTransitions()` directly, remove those calls. `enterState()` handles it automatically via the `processPostEntry` parameter (default `true`).
+
+**If you don't subclass `MachineDefinition`**, no action needed.
+
+### Dispatch Mode Parallel @done Fix
+
+Entry actions that called `$this->raise()` on states entered via parallel `@done` in async/dispatch mode were silently lost. The event was queued but never processed. This is now fixed — raised events are processed in all code paths.
+
+## From 8.5.3 to 8.5.4
+
+### ResultBehavior Now Receives the Original Event
+
+`Machine::result()` and `MachineController::resolveAndRunResult()` previously passed the last internal event (with NULL payload) to `ResultBehavior`. They now pass `$state->triggeringEvent` — the original external event with full payload.
+
+**Before (broken):**
+
+<!-- doctest-attr: ignore -->
+```php
+class CustomerDetailResult extends ResultBehavior
+{
+    public function __invoke(ContextManager $context, EventBehavior $event): array
+    {
+        // $event->payload was NULL — it was an internal event
+        return ['tckn' => $event->payload['tckn']]; // ❌ crash
+    }
+}
+```
+
+**After (fixed):**
+
+<!-- doctest-attr: ignore -->
+```php
+class CustomerDetailResult extends ResultBehavior
+{
+    public function __invoke(ContextManager $context, EventBehavior $event): array
+    {
+        // $event is now the original triggering event with full payload
+        return ['tckn' => $event->payload['tckn']]; // ✅ works
+    }
+}
+```
+
+**If you were working around NULL payloads** (e.g., reading from context instead of event), you can now read directly from the event.
+
 ## From 8.4.x to 8.5.0
 
 ### Testing Entry Point Simplification
@@ -220,7 +303,7 @@ A state can now invoke a child machine via the `machine` key. The child runs its
 ```php
 'processing_payment' => [
     'machine' => PaymentMachine::class,
-    'with'    => ['order_id', 'total_amount'],
+    'with'    => ['orderId', 'totalAmount'],
     '@done'   => 'shipping',
     '@fail'   => 'payment_failed',
 ],
@@ -293,13 +376,13 @@ Short-circuit child machines in tests — no child actually runs:
 ```php
 use Tarfinlabs\EventMachine\Actor\Machine;
 
-PaymentMachine::fake(result: ['payment_id' => 'pay_123']);
+PaymentMachine::fake(result: ['paymentId' => 'pay_123']);
 
 $machine = OrderWorkflowMachine::create();
 $machine->send(['type' => 'START']);
 
 PaymentMachine::assertInvoked();
-PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
+PaymentMachine::assertInvokedWith(['orderId' => 'ORD-1']);
 
 Machine::resetMachineFakes();
 ```
@@ -524,7 +607,7 @@ class PaymentFlowMachine extends Machine
             config: [
                 'id'      => 'payment_flow',
                 'initial' => 'collecting',
-                'context' => ['order_id' => null],
+                'context' => ['orderId' => null],
                 'states'  => [
                     'collecting' => [
                         'on' => ['START' => 'processing'],
@@ -562,7 +645,7 @@ class PaymentFlowMachine extends Machine
             config: [
                 'id'      => 'payment_flow',
                 'initial' => 'collecting',
-                'context' => ['order_id' => null],
+                'context' => ['orderId' => null],
                 'states'  => [
                     'collecting' => [
                         'on' => ['START' => 'processing'],
@@ -602,7 +685,7 @@ class PaymentFlowMachine extends Machine
             config: [
                 'id'      => 'payment_flow',
                 'initial' => 'collecting',
-                'context' => ['order_id' => null],
+                'context' => ['orderId' => null],
                 'states'  => [
                     'collecting' => [
                         'on' => ['START' => 'processing'],
@@ -643,7 +726,7 @@ class PaymentFlowMachine extends Machine
             config: [
                 'id'      => 'payment_flow',
                 'initial' => 'collecting',
-                'context' => ['order_id' => null],
+                'context' => ['orderId' => null],
                 'states'  => [
                     'collecting' => [
                         'on' => ['START' => 'processing'],
@@ -700,7 +783,7 @@ Forwarded endpoint responses now include both parent and child state:
     "data": {
         "machine_id": "root-event-id",
         "value": ["payment_flow.processing"],
-        "context": { "order_id": 1 }
+        "context": { "orderId": 1 }
     }
 }
 ```

@@ -15,7 +15,7 @@ class CaptureBillingEventAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): void
     {
-        $context->set('billing_event_type', $event->type);
-        $context->set('billing_event_payload', $event->payload);
+        $context->set('billingEventType', $event->type);
+        $context->set('billingEventPayload', $event->payload);
     }
 }

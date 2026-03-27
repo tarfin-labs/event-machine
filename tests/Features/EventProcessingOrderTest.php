@@ -16,7 +16,7 @@ test('entry actions execute before raised events', function (): void {
             'id'      => 'test',
             'initial' => 'A',
             'context' => [
-                'execution_order' => [],
+                'executionOrder' => [],
             ],
             'states' => [
                 'A' => [
@@ -45,7 +45,7 @@ test('entry actions execute before raised events', function (): void {
 
     $state = $machine->transition(event: ['type' => 'GO']);
 
-    expect($state->context->get('execution_order'))->toBe([
+    expect($state->context->get('executionOrder'))->toBe([
         'transition_action',    // 1. Transition action runs first
         'B_entry',              // 2. Target state entry runs second (before raised event!)
         'next_transition',      // 3. Raised event's transition action runs third
@@ -93,7 +93,7 @@ test('multiple entry actions complete in order', function (): void {
             'id'      => 'test',
             'initial' => 'idle',
             'context' => [
-                'execution_order' => [],
+                'executionOrder' => [],
             ],
             'states' => [
                 'idle' => [
@@ -109,19 +109,19 @@ test('multiple entry actions complete in order', function (): void {
         behavior: [
             'actions' => [
                 'firstEntryAction' => function (ContextManager $context): void {
-                    $order   = $context->get('execution_order');
+                    $order   = $context->get('executionOrder');
                     $order[] = 'first_entry';
-                    $context->set('execution_order', $order);
+                    $context->set('executionOrder', $order);
                 },
                 'secondEntryAction' => function (ContextManager $context): void {
-                    $order   = $context->get('execution_order');
+                    $order   = $context->get('executionOrder');
                     $order[] = 'second_entry';
-                    $context->set('execution_order', $order);
+                    $context->set('executionOrder', $order);
                 },
                 'thirdEntryAction' => function (ContextManager $context): void {
-                    $order   = $context->get('execution_order');
+                    $order   = $context->get('executionOrder');
                     $order[] = 'third_entry';
-                    $context->set('execution_order', $order);
+                    $context->set('executionOrder', $order);
                 },
             ],
         ],
@@ -129,7 +129,7 @@ test('multiple entry actions complete in order', function (): void {
 
     $state = $machine->transition(event: ['type' => 'START']);
 
-    expect($state->context->get('execution_order'))->toBe([
+    expect($state->context->get('executionOrder'))->toBe([
         'first_entry',
         'second_entry',
         'third_entry',
@@ -179,7 +179,7 @@ test('exit actions execute before entry actions', function (): void {
             'id'      => 'test',
             'initial' => 'A',
             'context' => [
-                'execution_order' => [],
+                'executionOrder' => [],
             ],
             'states' => [
                 'A' => [
@@ -199,19 +199,19 @@ test('exit actions execute before entry actions', function (): void {
         behavior: [
             'actions' => [
                 'exitAAction' => function (ContextManager $context): void {
-                    $order   = $context->get('execution_order');
+                    $order   = $context->get('executionOrder');
                     $order[] = 'exit_A';
-                    $context->set('execution_order', $order);
+                    $context->set('executionOrder', $order);
                 },
                 'transitionAction' => function (ContextManager $context): void {
-                    $order   = $context->get('execution_order');
+                    $order   = $context->get('executionOrder');
                     $order[] = 'transition_action';
-                    $context->set('execution_order', $order);
+                    $context->set('executionOrder', $order);
                 },
                 'entryBAction' => function (ContextManager $context): void {
-                    $order   = $context->get('execution_order');
+                    $order   = $context->get('executionOrder');
                     $order[] = 'entry_B';
-                    $context->set('execution_order', $order);
+                    $context->set('executionOrder', $order);
                 },
             ],
         ],
@@ -219,9 +219,9 @@ test('exit actions execute before entry actions', function (): void {
 
     $state = $machine->transition(event: ['type' => 'GO']);
 
-    expect($state->context->get('execution_order'))->toBe([
-        'transition_action',
+    expect($state->context->get('executionOrder'))->toBe([
         'exit_A',
+        'transition_action',
         'entry_B',
     ]);
 });

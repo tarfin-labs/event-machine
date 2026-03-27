@@ -110,6 +110,39 @@ class ProcessOrderAction extends ActionBehavior
 }
 ```
 
+## Union Types for Event Parameters
+
+When a behavior handles multiple event types (e.g., the same action wired to different transitions), use PHP 8 union types in the `__invoke` signature:
+
+<!-- doctest-attr: no_run -->
+```php
+class StoreVehicleInfoAction extends ActionBehavior
+{
+    public function __invoke(
+        CarSalesContext $context,
+        VehicleAndPricingSubmittedEvent|VehicleEditRequestedEvent $event,
+    ): void {
+        // Both events share vehicleId in their payload
+        $vehicleId = $event->data('vehicleId');
+
+        // Discriminate when needed
+        if ($event instanceof VehicleEditRequestedEvent) {
+            $context->set('is_edit', true);
+        }
+    }
+}
+```
+
+The injection system resolves the first matching type in the union — if the actual event is a subclass of any union member, it matches.
+
+::: tip When to use union types vs base EventBehavior
+**Union types** — when the behavior handles 2-3 specific event types and needs their typed payloads.
+
+**Base `EventBehavior`** — when the behavior handles many event types (5+) or doesn't need the event at all. Entry actions on states reachable from many transitions often fall into this category.
+
+**Optional parameter** (`?EventBehavior $event = null`) — for actions on `@always` transitions where the initial state has no triggering event.
+:::
+
 ## Guard with Dependencies
 
 ```php
@@ -370,7 +403,7 @@ it('processes order with mocked services', function () {
     $state = State::forTesting(['items' => [['id' => 1]]]);
     ProcessOrderAction::runWithState($state);
 
-    expect($state->context->get('order_id'))->toBe('order-123');
+    expect($state->context->get('orderId'))->toBe('order-123');
 });
 ```
 

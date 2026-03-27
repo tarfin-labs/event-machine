@@ -372,7 +372,7 @@ it('maps machine key to XState invoke with src, input, onDone, onError', functio
 
     // with → invoke.input
     expect($invoke)->toHaveKey('input');
-    expect($invoke['input'])->toBe(['order_id' => 'order_id']);
+    expect($invoke['input'])->toBe(['orderId' => 'orderId']);
 
     // @done → invoke.onDone
     expect($invoke)->toHaveKey('onDone');

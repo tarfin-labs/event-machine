@@ -30,8 +30,8 @@ class ParallelCompletionMachine extends Machine
                 'id'      => 'parallel_completion',
                 'initial' => 'processing',
                 'context' => [
-                    'payment_status'   => null,
-                    'inventory_status' => null,
+                    'paymentStatus'   => null,
+                    'inventoryStatus' => null,
                 ],
                 'states' => [
                     'processing' => [

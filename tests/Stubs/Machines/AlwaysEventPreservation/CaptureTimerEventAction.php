@@ -15,7 +15,7 @@ class CaptureTimerEventAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): void
     {
-        $context->set('timer_event_type', $event->type);
-        $context->set('timer_event_payload', $event->payload);
+        $context->set('timerEventType', $event->type);
+        $context->set('timerEventPayload', $event->payload);
     }
 }

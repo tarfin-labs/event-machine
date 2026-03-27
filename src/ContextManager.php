@@ -212,6 +212,33 @@ class ContextManager extends Data
 
     // endregion
 
+    // region Computed Context
+
+    /**
+     * Define computed key-value pairs derived from context data.
+     *
+     * Override in subclasses to expose calculated values in API responses.
+     * These are NOT persisted to the database — they are recomputed on every response.
+     *
+     * @return array<string, mixed>
+     */
+    protected function computedContext(): array
+    {
+        return [];
+    }
+
+    /**
+     * Serialize context for API responses, including computed values.
+     *
+     * @return array<string, mixed>
+     */
+    public function toResponseArray(): array
+    {
+        return array_merge($this->toArray(), $this->computedContext());
+    }
+
+    // endregion
+
     // region Magic Setup
 
     /**

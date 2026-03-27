@@ -23,10 +23,10 @@ class InlineBehaviorMachine extends Machine
                 'context' => [
                     'count'      => 0,
                     'processed'  => false,
-                    'guard_ran'  => false,
+                    'guardRan'   => false,
                     'calculated' => false,
-                    'entry_ran'  => false,
-                    'exit_ran'   => false,
+                    'entryRan'   => false,
+                    'exitRan'    => false,
                 ],
                 'states' => [
                     'idle' => [
@@ -64,8 +64,8 @@ class InlineBehaviorMachine extends Machine
             behavior: [
                 'actions' => [
                     'processAction' => fn (ContextManager $context) => $context->set('processed', true),
-                    'entryAction'   => fn (ContextManager $context) => $context->set('entry_ran', true),
-                    'exitAction'    => fn (ContextManager $context) => $context->set('exit_ran', true),
+                    'entryAction'   => fn (ContextManager $context) => $context->set('entryRan', true),
+                    'exitAction'    => fn (ContextManager $context) => $context->set('exitRan', true),
                 ],
                 'guards' => [
                     'isAllowedGuard' => fn (State $state): bool => $state->context->get('count') >= 0,

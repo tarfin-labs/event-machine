@@ -9,10 +9,7 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
 
 class SubmitOrderEvent extends EventBehavior
 {
-    public static function getType(): string
-    {
-        return 'SUBMIT_ORDER';
-    }
+    // getType() auto-generates 'SUBMIT_ORDER' from class name — no override needed!
 }
 ```
 
@@ -178,12 +175,14 @@ class TransferEvent extends EventBehavior
 
 ### `type`
 
-The event identifier:
+The event identifier, **auto-derived** from the class name by stripping the `Event` suffix and converting to `SCREAMING_SNAKE_CASE`:
 
 ```php ignore
+// OrderSubmittedEvent → 'ORDER_SUBMITTED' (automatic)
+// Override only when auto-generation doesn't match:
 public static function getType(): string
 {
-    return 'ORDER_SUBMITTED';
+    return 'CUSTOM_TYPE';
 }
 ```
 
@@ -368,7 +367,7 @@ class TransferFundsEvent extends EventBehavior
     public function actor(ContextManager $context): mixed
     {
         return [
-            'user_id' => auth()->id(),
+            'userId' => auth()->id(),
             'ip' => request()->ip(),
         ];
     }

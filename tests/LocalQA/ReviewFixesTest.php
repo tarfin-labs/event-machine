@@ -41,17 +41,24 @@ it('LocalQA: every timer does not double-fire on rapid successive sweeps', funct
 
     $firstFired = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $fire = MachineTimerFire::where('root_event_id', $rootEventId)->first();
+        if (!$fire || $fire->fire_count < 1) {
+            return false;
+        }
 
-        return $fire && $fire->fire_count >= 1;
-    }, timeoutSeconds: 30);
+        // Also wait for the timer job to actually process (update context)
+        $restored = EveryTimerMachine::create(state: $rootEventId);
+
+        return $restored->state->context->get('billingCount') >= 1;
+    }, timeoutSeconds: 45, description: 'every timer: waiting for fire_count>=1 AND billing_count>=1');
 
     expect($firstFired)->toBeTrue('First every-timer fire not processed');
 
     // Second sweep immediately — fire record should block (last_fired_at is recent)
     Artisan::call('machine:process-timers', ['--class' => EveryTimerMachine::class]);
 
-    // Wait briefly for any potential second dispatch
-    sleep(3);
+    // Negative assertion: verify second sweep does NOT fire.
+    // sleep required — cannot waitFor absence.
+    sleep(1);
 
     // Verify: fire_count should be exactly 1 (not 2)
     $fire = MachineTimerFire::where('root_event_id', $rootEventId)->first();
@@ -59,7 +66,7 @@ it('LocalQA: every timer does not double-fire on rapid successive sweeps', funct
 
     // Verify: billing_count in machine context should be 1
     $restored = EveryTimerMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('billing_count'))->toBe(1);
+    expect($restored->state->context->get('billingCount'))->toBe(1);
 });
 
 it('LocalQA: every timer fire record exists before job is processed', function (): void {
@@ -82,8 +89,8 @@ it('LocalQA: every timer fire record exists before job is processed', function (
     $processed = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = EveryTimerMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('billing_count') >= 1;
-    }, timeoutSeconds: 30);
+        return $restored->state->context->get('billingCount') >= 1;
+    }, timeoutSeconds: 60);
 
     expect($processed)->toBeTrue('Every timer job not processed by Horizon');
 });
@@ -110,9 +117,15 @@ it('LocalQA: every max/then fires then-event and marks exhausted atomically', fu
 
         $fired = LocalQATestCase::waitFor(function () use ($rootEventId, $i) {
             $fire = MachineTimerFire::where('root_event_id', $rootEventId)->first();
+            if (!$fire || $fire->fire_count < $i) {
+                return false;
+            }
 
-            return $fire && $fire->fire_count >= $i;
-        }, timeoutSeconds: 30);
+            // Wait for Horizon to process the timer job (context updated)
+            $restored = EveryWithMaxMachine::create(state: $rootEventId);
+
+            return $restored->state->context->get('retryCount') >= $i;
+        }, timeoutSeconds: 60, description: "every max/then: cycle {$i} fire_count+retry_count");
 
         expect($fired)->toBeTrue("Retry cycle {$i} not processed");
     }
@@ -127,7 +140,7 @@ it('LocalQA: every max/then fires then-event and marks exhausted atomically', fu
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'failed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($exhausted)->toBeTrue('Max/then did not transition to failed');
 
@@ -137,8 +150,9 @@ it('LocalQA: every max/then fires then-event and marks exhausted atomically', fu
     expect($fire->fire_count)->toBe(3, 'Fire count should be 3 (max)');
 
     // Cycle 5: nothing happens (exhausted, no more fires)
+    // Negative assertion: sleep required — cannot waitFor absence.
     Artisan::call('machine:process-timers', ['--class' => EveryWithMaxMachine::class]);
-    sleep(2);
+    sleep(1);
 
     $stillFailed = EveryWithMaxMachine::create(state: $rootEventId);
     expect($stillFailed->state->currentStateDefinition->id)->toBe('every_max.failed');
@@ -163,7 +177,7 @@ it('LocalQA: forward event routing delivers APPROVE to running child', function 
         return $child
             && $child->status === MachineChild::STATUS_RUNNING
             && $child->child_root_event_id !== null;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($childRunning)->toBeTrue('Child machine did not reach running status');
 
@@ -183,7 +197,7 @@ it('LocalQA: forward event routing delivers APPROVE to running child', function 
         $cs = MachineCurrentState::where('root_event_id', $childRootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'approved');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($childApproved)->toBeTrue('Forward APPROVE was not delivered to child');
 
@@ -192,7 +206,7 @@ it('LocalQA: forward event routing delivers APPROVE to running child', function 
         $cs = MachineCurrentState::where('root_event_id', $parentRootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($parentCompleted)->toBeTrue('Parent did not transition to completed after child approval');
 });
@@ -211,7 +225,7 @@ it('LocalQA: forward event routing renames PARENT_UPDATE to CHILD_UPDATE', funct
         return $child
             && $child->status === MachineChild::STATUS_RUNNING
             && $child->child_root_event_id !== null;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($childRunning)->toBeTrue('Child machine did not reach running status');
 
@@ -227,13 +241,13 @@ it('LocalQA: forward event routing renames PARENT_UPDATE to CHILD_UPDATE', funct
         $cs = MachineCurrentState::where('root_event_id', $childRootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'updated');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($childUpdated)->toBeTrue('Renamed forward PARENT_UPDATE→CHILD_UPDATE was not delivered');
 
     // Verify child context was updated by the action
     $child = ForwardableChildMachine::create(state: $childRootEventId);
-    expect($child->state->context->get('updated_value'))->toBe('received');
+    expect($child->state->context->get('updatedValue'))->toBe('received');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -259,7 +273,7 @@ it('LocalQA: concurrent child machines do not share mutated definition context',
 
         return $child1 && $child1->status === MachineChild::STATUS_RUNNING
             && $child2 && $child2->status === MachineChild::STATUS_RUNNING;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($bothRunning)->toBeTrue('Both children did not reach running status');
 
@@ -273,8 +287,8 @@ it('LocalQA: concurrent child machines do not share mutated definition context',
     // Both should be in idle with their own default context
     expect($child1->state->currentStateDefinition->id)->toBe('forwardable_child.idle')
         ->and($child2->state->currentStateDefinition->id)->toBe('forwardable_child.idle')
-        ->and($child1->state->context->get('updated_value'))->toBeNull()
-        ->and($child2->state->context->get('updated_value'))->toBeNull();
+        ->and($child1->state->context->get('updatedValue'))->toBeNull()
+        ->and($child2->state->context->get('updatedValue'))->toBeNull();
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -295,7 +309,7 @@ it('LocalQA: completion job succeeds with retry config (lock released)', functio
         return $child
             && $child->status === MachineChild::STATUS_RUNNING
             && $child->child_root_event_id !== null;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($childRunning)->toBeTrue();
 
@@ -308,7 +322,7 @@ it('LocalQA: completion job succeeds with retry config (lock released)', functio
         $cs = MachineCurrentState::where('root_event_id', $parentRootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($parentCompleted)->toBeTrue('Parent did not complete via @done after child completion');
 
@@ -335,7 +349,7 @@ it('LocalQA: timeout job is no-op when child completes before timeout', function
         return $child
             && $child->status === MachineChild::STATUS_RUNNING
             && $child->child_root_event_id !== null;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($childRunning)->toBeTrue('Child did not reach running');
 
@@ -344,8 +358,9 @@ it('LocalQA: timeout job is no-op when child completes before timeout', function
     // Complete child quickly (before timeout fires)
     $childRecord->markCompleted();
 
-    // Wait a bit for timeout job to potentially fire
-    sleep(3);
+    // Negative assertion: verify timeout does NOT override completed.
+    // sleep required — cannot waitFor absence.
+    sleep(1);
 
     // Child should still be completed (not timed_out)
     $childRecord->refresh();

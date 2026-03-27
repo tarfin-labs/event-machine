@@ -60,7 +60,7 @@ it('parent machine handles progress event on its on map', function (): void {
                 'id'      => 'progress_parent',
                 'initial' => 'processing',
                 'context' => [
-                    'progress_percent' => 0,
+                    'progressPercent' => 0,
                 ],
                 'states' => [
                     'processing' => [
@@ -77,7 +77,7 @@ it('parent machine handles progress event on its on map', function (): void {
             behavior: [
                 'actions' => [
                     'updateProgressAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                        $ctx->set('progress_percent', $event->payload['percent'] ?? 0);
+                        $ctx->set('progressPercent', $event->payload['percent'] ?? 0);
                     },
                 ],
             ],
@@ -96,7 +96,7 @@ it('parent machine handles progress event on its on map', function (): void {
     ]);
 
     expect($parentMachine->state->currentStateDefinition->id)->toBe('progress_parent.processing')
-        ->and($parentMachine->state->context->get('progress_percent'))->toBe(25);
+        ->and($parentMachine->state->context->get('progressPercent'))->toBe(25);
 
     // Send another progress update
     $parentMachine->send([
@@ -104,7 +104,7 @@ it('parent machine handles progress event on its on map', function (): void {
         'payload' => ['percent' => 75],
     ]);
 
-    expect($parentMachine->state->context->get('progress_percent'))->toBe(75);
+    expect($parentMachine->state->context->get('progressPercent'))->toBe(75);
 
     // Finally complete
     $parentMachine->send(['type' => 'DONE']);

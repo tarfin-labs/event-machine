@@ -51,7 +51,7 @@ it('can set and get context manager data for context class', function (): void {
 it('returns null for non-existent keys', function (): void {
     $context = new ContextManager();
 
-    expect($context->get(key: 'non_existent_key'))->toBeNull();
+    expect($context->get(key: 'nonExistentKey'))->toBeNull();
 });
 
 it('can check if a key exists', function (): void {
@@ -59,7 +59,7 @@ it('can check if a key exists', function (): void {
     $context->set(key: 'key1', value: 'value1');
 
     expect($context->has(key: 'key1'))->toBeTrue();
-    expect($context->has(key: 'non_existent_key'))->toBeFalse();
+    expect($context->has(key: 'nonExistentKey'))->toBeFalse();
 });
 
 it('can check if a key exists for context class', function (): void {
@@ -106,21 +106,21 @@ it('can handle edge cases with empty keys and values', function (): void {
     $context = new ContextManager();
 
     $context->set(key: '', value: 'empty_key_value');
-    $context->set(key: 'empty_value_key', value: '');
+    $context->set(key: 'emptyValueKey', value: '');
 
     expect($context->get(key: ''))->toBe('empty_key_value');
-    expect($context->get(key: 'empty_value_key'))->toBe('');
+    expect($context->get(key: 'emptyValueKey'))->toBe('');
 
     expect($context->has(key: ''))->toBeTrue();
-    expect($context->has(key: 'empty_value_key'))->toBeTrue();
+    expect($context->has(key: 'emptyValueKey'))->toBeTrue();
 
     $context->remove(key: '');
     expect($context->has(key: ''))->toBeFalse();
-    expect($context->has(key: 'empty_value_key'))->toBeTrue();
+    expect($context->has(key: 'emptyValueKey'))->toBeTrue();
 
     $contextArray = $context->toArray();
     expect($contextArray)->toHaveCount(1);
-    expect($contextArray['data']['empty_value_key'])->toBe('');
+    expect($contextArray['data']['emptyValueKey'])->toBe('');
 });
 
 test('TrafficLightsMachine transitions between states using EventMachine', function (): void {
@@ -146,7 +146,7 @@ it('has magic methods', function (): void {
     expect($machine->state->context->key)->toBe('value2');
 
     expect(isset($machine->state->context->key))->toBe(true);
-    expect(isset($machine->state->context->not_existing_key))->toBe(false);
+    expect(isset($machine->state->context->notExistingKey))->toBe(false);
 });
 
 it('can check existence by its type', function (): void {

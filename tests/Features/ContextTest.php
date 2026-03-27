@@ -198,7 +198,7 @@ test('context values can be required for guards and actions inside machine', fun
     $machineDefinition = MachineDefinition::define(config: [
         'context' => [
             'counts' => [
-                'odd_count' => null,
+                'oddCount' => null,
             ],
         ],
         'states' => [
@@ -221,12 +221,12 @@ test('context values can be required for guards and actions inside machine', fun
     expect(fn () => $machineDefinition->transition(event: ['type' => 'EVENT']))
         ->toThrow(
             exception: MissingMachineContextException::class,
-            exceptionMessage: '`counts.odd_count` is missing in context.',
+            exceptionMessage: '`counts.oddCount` is missing in context.',
         );
 
     expect(fn () => $machineDefinition->transition(event: ['type' => 'EVENT2']))
         ->toThrow(
             exception: MissingMachineContextException::class,
-            exceptionMessage: '`counts.odd_count` is missing in context.',
+            exceptionMessage: '`counts.oddCount` is missing in context.',
         );
 });

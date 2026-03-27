@@ -105,8 +105,8 @@ For job actors, pass the **job class** (not the machine class):
 
 <!-- doctest-attr: ignore -->
 ```php
-// ✅ Entry actions see order_id = 'ORD-1'
-OrderMachine::test(context: ['order_id' => 'ORD-1'])
+// ✅ Entry actions see orderId = 'ORD-1'
+OrderMachine::test(context: ['orderId' => 'ORD-1'])
     ->assertContextHas('order_loaded');
 ```
 

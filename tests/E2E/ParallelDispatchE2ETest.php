@@ -60,8 +60,8 @@ it('completes full parallel lifecycle via dispatch', function (): void {
     $restored = E2EBasicMachine::create(state: $rootEventId);
 
     expect($restored->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });
 
 it('completes three-region parallel lifecycle via dispatch', function (): void {
@@ -74,9 +74,9 @@ it('completes three-region parallel lifecycle via dispatch', function (): void {
     $restored = E2EThreeRegionMachine::create(state: $rootEventId);
 
     expect($restored->state->currentStateDefinition->id)->toBe('e2e_three_region.completed');
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
-    expect($restored->state->context->get('region_c_result'))->toBe('processed_by_c');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionCResult'))->toBe('processed_by_c');
 });
 
 it('handles region that raises event to auto-complete alongside region that does not', function (): void {
@@ -90,9 +90,9 @@ it('handles region that raises event to auto-complete alongside region that does
     $restored = ParallelDispatchWithRaiseMachine::create(state: $rootEventId);
 
     // Region A: entry action raised REGION_A_PROCESSED → transitioned to finished
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
     // Region B: entry action set context but no raise → stays at working, no auto-complete
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
     // onDone should NOT have fired (region_b not at final)
     expect($restored->state->currentStateDefinition->id)->not->toBe('parallel_dispatch_with_raise.completed');
 });
@@ -123,8 +123,8 @@ it('returns consistent state on multiple restores after lifecycle completes', fu
 
     expect($restored1->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
     expect($restored2->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
-    expect($restored1->state->context->get('region_a_result'))
-        ->toBe($restored2->state->context->get('region_a_result'));
+    expect($restored1->state->context->get('regionAResult'))
+        ->toBe($restored2->state->context->get('regionAResult'));
 });
 
 // ============================================================
@@ -141,10 +141,10 @@ it('merges scalar context from parallel regions correctly', function (): void {
     $restored = E2EBasicMachine::create(state: $rootEventId);
 
     // Both regions wrote to different scalar context keys — both should exist
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
     // Neither should have overwritten the other
-    expect($restored->state->context->get('region_a_result'))->not->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->not->toBe('processed_by_b');
 });
 
 it('merges deep nested context from parallel regions', function (): void {
@@ -168,24 +168,24 @@ it('merges deep nested context from parallel regions', function (): void {
 });
 
 it('preserves context keys not written by any job', function (): void {
-    // E2EBasicMachine has 'order_id' in config (initial=null).
+    // E2EBasicMachine has 'orderId' in config (initial=null).
     // No region job writes to it — it should remain null after lifecycle.
     $machine = E2EBasicMachine::create();
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
     // Verify order_id is in initial context
-    expect($machine->state->context->get('order_id'))->toBeNull();
+    expect($machine->state->context->get('orderId'))->toBeNull();
 
     $machine->dispatchPendingParallelJobs();
 
     $restored = E2EBasicMachine::create(state: $rootEventId);
 
     // order_id should remain null — jobs only write region_a/b_result
-    expect($restored->state->context->get('order_id'))->toBeNull();
+    expect($restored->state->context->get('orderId'))->toBeNull();
     // Region results should be set by their respective jobs
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });
 
 it('second job sees first job context changes via fresh DB load', function (): void {
@@ -202,8 +202,8 @@ it('second job sees first job context changes via fresh DB load', function (): v
 
     // Both context keys must be present — proves diff-based merge works
     // (if Job B had overwritten, region_a_result would be null)
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });
 
 // ============================================================
@@ -252,8 +252,8 @@ it('multiple raised events in single job are processed in sequence', function ()
     expect($restored->state->currentStateDefinition->id)->toBe('e2e_multi_raise.completed');
 
     // Context set by Region A's multi-raise action should be preserved
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });
 
 it('entry action that sets context without raising event keeps region at initial', function (): void {
@@ -268,8 +268,8 @@ it('entry action that sets context without raising event keeps region at initial
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
 
     // Context was written by entry actions (proves jobs ran)
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 
     // But onDone should NOT have fired — regions are still at initial, not final
     expect($restored->state->currentStateDefinition->id)->not->toBe('parallel_dispatch.completed');
@@ -302,8 +302,8 @@ it('documents that chained parallel onDone transitions to second phase but does 
     $restored = E2EChainedMachine::create(state: $rootEventId);
 
     // Phase one context should be set (proves phase one jobs ran)
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 
     // Machine should have transitioned to phase_two (onDone fired)
     // State constructor's updateMachineValueFromState() expands parallel value on restore
@@ -314,8 +314,8 @@ it('documents that chained parallel onDone transitions to second phase but does 
 
     // Phase two context should NOT be set — enterParallelState() was never called
     // so no jobs dispatched, no region entry actions ran
-    expect($restored->state->context->get('region_c_result'))->toBeNull();
-    expect($restored->state->context->get('region_d_result'))->toBeNull();
+    expect($restored->state->context->get('regionCResult'))->toBeNull();
+    expect($restored->state->context->get('regionDResult'))->toBeNull();
 });
 
 it('documents that pendingParallelDispatches is empty after chained onDone', function (): void {
@@ -399,9 +399,9 @@ it('does not set context from failing region action', function (): void {
     $restored = E2EFailMachine::create(state: $rootEventId);
 
     // Region A threw before setting context — should be null
-    expect($restored->state->context->get('region_a_result'))->toBeNull();
+    expect($restored->state->context->get('regionAResult'))->toBeNull();
     // Region B never ran (sync driver: A dispatched first, threw, B skipped)
-    expect($restored->state->context->get('region_b_result'))->toBeNull();
+    expect($restored->state->context->get('regionBResult'))->toBeNull();
 });
 
 it('prevents subsequent region jobs from running after onFail transition', function (): void {
@@ -422,7 +422,7 @@ it('prevents subsequent region jobs from running after onFail transition', funct
 
     // Machine is at error (non-parallel) — Region B never ran
     expect($restored->state->currentStateDefinition->id)->toBe('e2e_fail.failed');
-    expect($restored->state->context->get('region_b_result'))->toBeNull();
+    expect($restored->state->context->get('regionBResult'))->toBeNull();
     // Only 1 dispatch happened (A), not 2 — exception interrupted the loop
     // This is implicit: B's context being null proves it never executed
 });
@@ -451,8 +451,8 @@ it('dispatches regions with entry actions and runs inline region without', funct
 
     // All regions completed → onDone fired
     expect($restored->state->currentStateDefinition->id)->toBe('e2e_mixed.completed');
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });
 
 it('falls back to sequential mode when only one region has entry actions', function (): void {
@@ -520,8 +520,8 @@ it('skips job when machine has already left parallel state (pre-lock guard)', fu
 
     // Verify machine state unchanged — region_a was already at finished
     $afterReplay = ParallelDispatchWithRaiseMachine::create(state: $rootEventId);
-    expect($afterReplay->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($afterReplay->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($afterReplay->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($afterReplay->state->context->get('regionBResult'))->toBe('processed_by_b');
 });
 
 it('is idempotent when same job runs twice (under-lock guard)', function (): void {
@@ -545,8 +545,8 @@ it('is idempotent when same job runs twice (under-lock guard)', function (): voi
 
     $restored = E2EBasicMachine::create(state: $rootEventId);
     expect($restored->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });
 
 it('completes parallel lifecycle when jobs run sequentially via sync driver', function (): void {
@@ -564,8 +564,8 @@ it('completes parallel lifecycle when jobs run sequentially via sync driver', fu
     expect($restored->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
 
     // Proves fresh-load pattern works: Job B saw Job A's changes
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });
 
 // ============================================================
@@ -651,8 +651,8 @@ it('can fully restore machine state after parallel lifecycle completes', functio
     expect($restored2->state->currentStateDefinition->id)->toBe('e2e_basic.completed');
 
     // Context should match across restores
-    expect($restored1->state->context->get('region_a_result'))
-        ->toBe($restored2->state->context->get('region_a_result'))
+    expect($restored1->state->context->get('regionAResult'))
+        ->toBe($restored2->state->context->get('regionAResult'))
         ->toBe('processed_by_a');
 });
 
@@ -699,9 +699,9 @@ it('persists incremental context changes correctly per job', function (): void {
     // Last event's context should contain both region results
     // (incremental merge builds up to complete context at the end)
     $restored = E2EBasicMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
-    expect($restored->state->context->get('order_id'))->toBeNull();
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
+    expect($restored->state->context->get('orderId'))->toBeNull();
 });
 
 // ============================================================
@@ -764,8 +764,8 @@ it('validates config requires should_persist and Machine subclass for dispatch',
             'initial'        => 'processing',
             'should_persist' => true,
             'context'        => [
-                'region_a_result' => null,
-                'region_b_result' => null,
+                'regionAResult' => null,
+                'regionBResult' => null,
             ],
             'states' => [
                 'processing' => [
@@ -831,11 +831,11 @@ it('stays stuck in parallel state when region entry action does not raise event'
     expect(count($restored->state->value))->toBeGreaterThan(1);
 
     // Region A's context was applied (even without raise)
-    expect($restored->state->context->get('region_a_context_set'))->toBe('yes_but_no_raise');
-    expect($restored->state->context->get('region_a_pid'))->not->toBeNull();
+    expect($restored->state->context->get('regionAContextSet'))->toBe('yes_but_no_raise');
+    expect($restored->state->context->get('regionAPid'))->not->toBeNull();
 
     // Region B completed normally
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 
     // Value shows: working (stuck) + finished (completed)
     $hasWorkingA  = collect($restored->state->value)->contains(fn ($v) => str_contains($v, 'working'));
@@ -889,11 +889,11 @@ it('handles scalar context conflict with last-writer-wins', function (): void {
     expect($restored->state->currentStateDefinition->id)->toBe('e2e_context_conflict.completed');
 
     // Both regions executed
-    expect($restored->state->context->get('region_a_wrote'))->toBeTrue();
-    expect($restored->state->context->get('region_b_wrote'))->toBeTrue();
+    expect($restored->state->context->get('regionAWrote'))->toBeTrue();
+    expect($restored->state->context->get('regionBWrote'))->toBeTrue();
 
     // Scalar: one of the values wins (last-writer-wins, deterministic per run)
-    $sharedScalar = $restored->state->context->get('shared_scalar');
+    $sharedScalar = $restored->state->context->get('sharedScalar');
     expect($sharedScalar)->toBeIn(['value_from_a', 'value_from_b']);
 });
 
@@ -905,7 +905,7 @@ it('deep merges array context from parallel regions preserving different keys', 
     $machine->dispatchPendingParallelJobs();
 
     $restored    = E2EContextConflictMachine::create(state: $rootEventId);
-    $sharedArray = $restored->state->context->get('shared_array');
+    $sharedArray = $restored->state->context->get('sharedArray');
 
     // Both from_a and from_b keys survive (different keys → deep merge)
     expect($sharedArray['from_a'])->toBeTrue();
@@ -945,8 +945,8 @@ it('handles dual region failure with single onFail transition', function (): voi
     expect($restored->state->currentStateDefinition->id)->toBe('e2e_both_fail.failed');
 
     // Neither region's result set
-    expect($restored->state->context->get('region_a_result'))->toBeNull();
-    expect($restored->state->context->get('region_b_result'))->toBeNull();
+    expect($restored->state->context->get('regionAResult'))->toBeNull();
+    expect($restored->state->context->get('regionBResult'))->toBeNull();
 });
 
 it('records exactly one PARALLEL_FAIL event when both regions fail', function (): void {
@@ -1014,8 +1014,8 @@ it('isolates parallel dispatch between different machine instances', function ()
     expect($rootA)->not->toBe($rootB);
 
     // Context isolation
-    expect($restoredA->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restoredB->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restoredA->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restoredB->state->context->get('regionAResult'))->toBe('processed_by_a');
 
     // Event isolation: same count per instance
     $eventsA = MachineEvent::where('root_event_id', $rootA)->count();

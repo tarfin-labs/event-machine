@@ -30,7 +30,7 @@ it('sends event to a target machine synchronously via sendTo', function (): void
         {
             $this->sendTo(
                 machineClass: SimpleChildMachine::class,
-                rootEventId: $ctx->get('target_root_event_id'),
+                rootEventId: $ctx->get('targetRootEventId'),
                 event: ['type' => 'COMPLETE'],
             );
         }
@@ -38,7 +38,7 @@ it('sends event to a target machine synchronously via sendTo', function (): void
 
     // Execute the action (simulates being called within a machine)
     $action->__invoke(ContextManager::validateAndCreate([
-        'data' => ['target_root_event_id' => $rootEventId],
+        'data' => ['targetRootEventId' => $rootEventId],
     ]));
 
     // Verify: target machine received the event and transitioned

@@ -31,7 +31,7 @@ it('calls payment gateway with correct amount', function () {
     $state = State::forTesting(['amount' => 100]);
     ProcessPaymentAction::runWithState($state);
 
-    expect($state->context->get('transaction_id'))->toBe('txn_123');
+    expect($state->context->get('transactionId'))->toBe('txn_123');
 });
 ```
 
@@ -48,7 +48,7 @@ it('processes payment in the full machine', function () {
     OrderMachine::test(['amount' => 100])
         ->send('PROCESS_PAYMENT')
         ->assertState('paid')
-        ->assertContext('transaction_id', 'txn_456');
+        ->assertContext('transactionId', 'txn_456');
 });
 ```
 

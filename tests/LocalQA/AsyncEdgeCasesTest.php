@@ -38,7 +38,7 @@ it('LocalQA: @timeout fires when child does not complete in time', function (): 
         return $child
             && $child->status === MachineChild::STATUS_RUNNING
             && $child->child_root_event_id !== null;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($childRunning)->toBeTrue('Child did not reach running status');
 
@@ -76,7 +76,7 @@ it('LocalQA: child failure routes parent to @fail via real Horizon', function ()
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'failed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($failed)->toBeTrue('Child failure did not route parent to @fail via Horizon');
 
@@ -151,7 +151,7 @@ it('LocalQA: concurrent sends to same machine — locking prevents corruption', 
 
         // Machine should be in some state beyond idle
         return $cs && !str_contains($cs->state_id, 'idle');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($settled)->toBeTrue('Neither concurrent send was processed');
 

@@ -48,18 +48,18 @@ it('advanceTimers with every timer fires event and stays in state', function ():
         ->assertState('active')
         ->advanceTimers(Timer::days(31))
         ->assertState('active')
-        ->assertContext('billing_count', 1);
+        ->assertContext('billingCount', 1);
 });
 
 it('advanceTimers with every fires multiple times', function (): void {
     $test = EveryTimerMachine::test()
         ->assertState('active')
         ->advanceTimers(Timer::days(31))
-        ->assertContext('billing_count', 1);
+        ->assertContext('billingCount', 1);
 
     // Second advance
     $test->advanceTimers(Timer::days(31))
-        ->assertContext('billing_count', 2);
+        ->assertContext('billingCount', 2);
 });
 
 it('advanceTimers works in-memory when persistence is off', function (): void {
@@ -156,9 +156,9 @@ it('full lifecycle: every timer runs billing cycles', function (): void {
         ->assertHasTimer('BILLING')
         ->advanceTimers(Timer::days(31))
         ->assertState('active')
-        ->assertContext('billing_count', 1)
+        ->assertContext('billingCount', 1)
         ->advanceTimers(Timer::days(31))
-        ->assertContext('billing_count', 2);
+        ->assertContext('billingCount', 2);
 });
 
 it('full lifecycle: every with max triggers then event', function (): void {

@@ -34,7 +34,7 @@ it('fires exit listener before state exit', function (): void {
     TestMachine::define([
         'id'      => 'listen_exit',
         'initial' => 'idle',
-        'context' => ['exit_listened' => false],
+        'context' => ['exitListened' => false],
         'listen'  => [
             'exit' => 'exitListenerAction',
         ],
@@ -45,13 +45,13 @@ it('fires exit listener before state exit', function (): void {
     ], behavior: [
         'actions' => [
             'exitListenerAction' => function (ContextManager $context): void {
-                $context->set('exit_listened', true);
+                $context->set('exitListened', true);
             },
         ],
     ])
-        ->assertContext('exit_listened', false)
+        ->assertContext('exitListened', false)
         ->send('GO')
-        ->assertContext('exit_listened', true);
+        ->assertContext('exitListened', true);
 });
 
 it('runs multiple listeners in order', function (): void {
@@ -83,7 +83,7 @@ it('skips listeners on transient states', function (): void {
     TestMachine::define([
         'id'      => 'listen_transient',
         'initial' => 'routing',
-        'context' => ['entry_count' => 0],
+        'context' => ['entryCount' => 0],
         'listen'  => [
             'entry' => 'countEntryAction',
         ],
@@ -97,19 +97,19 @@ it('skips listeners on transient states', function (): void {
     ], behavior: [
         'actions' => [
             'countEntryAction' => function (ContextManager $context): void {
-                $context->set('entry_count', $context->get('entry_count') + 1);
+                $context->set('entryCount', $context->get('entryCount') + 1);
             },
         ],
     ])
     // routing is transient — listener skipped. active gets listener = 1
-        ->assertContext('entry_count', 1);
+        ->assertContext('entryCount', 1);
 });
 
 it('listener sees post-entry context', function (): void {
     TestMachine::define([
         'id'      => 'listen_post_entry',
         'initial' => 'idle',
-        'context' => ['value' => 'initial', 'seen_by_listener' => ''],
+        'context' => ['value' => 'initial', 'seenByListener' => ''],
         'listen'  => [
             'entry' => 'listenerAction',
         ],
@@ -126,11 +126,11 @@ it('listener sees post-entry context', function (): void {
                 $context->set('value', 'modified');
             },
             'listenerAction' => function (ContextManager $context): void {
-                $context->set('seen_by_listener', $context->get('value'));
+                $context->set('seenByListener', $context->get('value'));
             },
         ],
     ])
-        ->assertContext('seen_by_listener', 'modified');
+        ->assertContext('seenByListener', 'modified');
 });
 
 it('runs state entry actions before listener', function (): void {
@@ -165,7 +165,7 @@ it('fires listener on initial state', function (): void {
     TestMachine::define([
         'id'      => 'listen_init',
         'initial' => 'idle',
-        'context' => ['init_listened' => false],
+        'context' => ['initListened' => false],
         'listen'  => [
             'entry' => 'listenerAction',
         ],
@@ -176,18 +176,18 @@ it('fires listener on initial state', function (): void {
     ], behavior: [
         'actions' => [
             'listenerAction' => function (ContextManager $context): void {
-                $context->set('init_listened', true);
+                $context->set('initListened', true);
             },
         ],
     ])
-        ->assertContext('init_listened', true);
+        ->assertContext('initListened', true);
 });
 
 it('fires entry listener on final state entry', function (): void {
     TestMachine::define([
         'id'      => 'listen_final',
         'initial' => 'idle',
-        'context' => ['final_entered' => false],
+        'context' => ['finalEntered' => false],
         'listen'  => [
             'entry' => 'listenerAction',
         ],
@@ -198,19 +198,19 @@ it('fires entry listener on final state entry', function (): void {
     ], behavior: [
         'actions' => [
             'listenerAction' => function (ContextManager $context): void {
-                $context->set('final_entered', true);
+                $context->set('finalEntered', true);
             },
         ],
     ])
         ->send('GO')
-        ->assertContext('final_entered', true);
+        ->assertContext('finalEntered', true);
 });
 
 it('does not fire exit listener on final states', function (): void {
     TestMachine::define([
         'id'      => 'listen_no_final_exit',
         'initial' => 'idle',
-        'context' => ['exit_count' => 0],
+        'context' => ['exitCount' => 0],
         'listen'  => [
             'exit' => 'exitListenerAction',
         ],
@@ -221,20 +221,20 @@ it('does not fire exit listener on final states', function (): void {
     ], behavior: [
         'actions' => [
             'exitListenerAction' => function (ContextManager $context): void {
-                $context->set('exit_count', $context->get('exit_count') + 1);
+                $context->set('exitCount', $context->get('exitCount') + 1);
             },
         ],
     ])
         ->send('GO')
     // exit fires leaving idle (1), but NOT on final state done
-        ->assertContext('exit_count', 1);
+        ->assertContext('exitCount', 1);
 });
 
 it('does not fire listeners on guard-blocked transitions', function (): void {
     TestMachine::define([
         'id'      => 'listen_guard_block',
         'initial' => 'idle',
-        'context' => ['entry_count' => 0],
+        'context' => ['entryCount' => 0],
         'listen'  => [
             'entry' => 'countAction',
         ],
@@ -252,7 +252,7 @@ it('does not fire listeners on guard-blocked transitions', function (): void {
     ], behavior: [
         'actions' => [
             'countAction' => function (ContextManager $context): void {
-                $context->set('entry_count', $context->get('entry_count') + 1);
+                $context->set('entryCount', $context->get('entryCount') + 1);
             },
         ],
         'guards' => [
@@ -262,9 +262,9 @@ it('does not fire listeners on guard-blocked transitions', function (): void {
         ],
     ])
     // initial state fires listener (1), guard blocks GO, no more listeners
-        ->assertContext('entry_count', 1)
+        ->assertContext('entryCount', 1)
         ->send('GO')
-        ->assertContext('entry_count', 1);
+        ->assertContext('entryCount', 1);
 });
 
 it('works without any listeners defined', function (): void {
@@ -316,7 +316,7 @@ it('fires listener on each non-transient state in multiple transitions', functio
     TestMachine::define([
         'id'      => 'listen_multi_trans',
         'initial' => 'a',
-        'context' => ['entry_count' => 0],
+        'context' => ['entryCount' => 0],
         'listen'  => [
             'entry' => 'countAction',
         ],
@@ -328,15 +328,15 @@ it('fires listener on each non-transient state in multiple transitions', functio
     ], behavior: [
         'actions' => [
             'countAction' => function (ContextManager $context): void {
-                $context->set('entry_count', $context->get('entry_count') + 1);
+                $context->set('entryCount', $context->get('entryCount') + 1);
             },
         ],
     ])
-        ->assertContext('entry_count', 1) // a
+        ->assertContext('entryCount', 1) // a
         ->send('NEXT')
-        ->assertContext('entry_count', 2) // b
+        ->assertContext('entryCount', 2) // b
         ->send('NEXT')
-        ->assertContext('entry_count', 3); // c
+        ->assertContext('entryCount', 3); // c
 });
 
 // endregion
@@ -347,7 +347,7 @@ it('fires transition listener after successful transition', function (): void {
     TestMachine::define([
         'id'      => 'listen_transition',
         'initial' => 'a',
-        'context' => ['transition_count' => 0],
+        'context' => ['transitionCount' => 0],
         'listen'  => [
             'transition' => 'transitionAction',
         ],
@@ -358,22 +358,22 @@ it('fires transition listener after successful transition', function (): void {
     ], behavior: [
         'actions' => [
             'transitionAction' => function (ContextManager $context): void {
-                $context->set('transition_count', $context->get('transition_count') + 1);
+                $context->set('transitionCount', $context->get('transitionCount') + 1);
             },
         ],
     ])
     // Init: no transition listener (no event triggered)
-        ->assertContext('transition_count', 0)
+        ->assertContext('transitionCount', 0)
         ->send('GO')
     // a→b: transition listener fires
-        ->assertContext('transition_count', 1);
+        ->assertContext('transitionCount', 1);
 });
 
 it('fires transition listener on targetless transitions but not entry/exit', function (): void {
     TestMachine::define([
         'id'      => 'listen_targetless',
         'initial' => 'idle',
-        'context' => ['entry_count' => 0, 'exit_count' => 0, 'transition_count' => 0],
+        'context' => ['entryCount' => 0, 'exitCount' => 0, 'transitionCount' => 0],
         'listen'  => [
             'entry'      => 'entryAction',
             'exit'       => 'exitAction',
@@ -393,23 +393,23 @@ it('fires transition listener on targetless transitions but not entry/exit', fun
     ], behavior: [
         'actions' => [
             'entryAction' => function (ContextManager $context): void {
-                $context->set('entry_count', $context->get('entry_count') + 1);
+                $context->set('entryCount', $context->get('entryCount') + 1);
             },
             'exitAction' => function (ContextManager $context): void {
-                $context->set('exit_count', $context->get('exit_count') + 1);
+                $context->set('exitCount', $context->get('exitCount') + 1);
             },
             'transitionAction' => function (ContextManager $context): void {
-                $context->set('transition_count', $context->get('transition_count') + 1);
+                $context->set('transitionCount', $context->get('transitionCount') + 1);
             },
             'noopAction' => function (): void {},
         ],
     ])
-        ->assertContext('entry_count', 1)      // init
-        ->assertContext('transition_count', 0)  // no transition on init
+        ->assertContext('entryCount', 1)      // init
+        ->assertContext('transitionCount', 0)  // no transition on init
         ->send('UPDATE')
-        ->assertContext('entry_count', 1)      // no entry (targetless)
-        ->assertContext('exit_count', 0)       // no exit (targetless)
-        ->assertContext('transition_count', 1); // transition fires!
+        ->assertContext('entryCount', 1)      // no entry (targetless)
+        ->assertContext('exitCount', 0)       // no exit (targetless)
+        ->assertContext('transitionCount', 1); // transition fires!
 });
 
 it('fires all three listeners on self-transition', function (): void {
@@ -449,7 +449,7 @@ it('does not fire transition listener on transient states', function (): void {
     TestMachine::define([
         'id'      => 'listen_trans_transient',
         'initial' => 'a',
-        'context' => ['transition_count' => 0],
+        'context' => ['transitionCount' => 0],
         'listen'  => [
             'transition' => 'transitionAction',
         ],
@@ -461,13 +461,13 @@ it('does not fire transition listener on transient states', function (): void {
     ], behavior: [
         'actions' => [
             'transitionAction' => function (ContextManager $context): void {
-                $context->set('transition_count', $context->get('transition_count') + 1);
+                $context->set('transitionCount', $context->get('transitionCount') + 1);
             },
         ],
     ])
         ->send('GO')
     // routing is transient — transition listener fires on b (final resting state)
-        ->assertContext('transition_count', 1);
+        ->assertContext('transitionCount', 1);
 });
 
 it('fires entry before transition listener', function (): void {
@@ -502,7 +502,7 @@ it('does not fire transition listener on init', function (): void {
     TestMachine::define([
         'id'      => 'listen_no_trans_init',
         'initial' => 'idle',
-        'context' => ['transition_count' => 0],
+        'context' => ['transitionCount' => 0],
         'listen'  => [
             'transition' => 'transitionAction',
         ],
@@ -513,11 +513,11 @@ it('does not fire transition listener on init', function (): void {
     ], behavior: [
         'actions' => [
             'transitionAction' => function (ContextManager $context): void {
-                $context->set('transition_count', $context->get('transition_count') + 1);
+                $context->set('transitionCount', $context->get('transitionCount') + 1);
             },
         ],
     ])
-        ->assertContext('transition_count', 0);
+        ->assertContext('transitionCount', 0);
 });
 
 // endregion
@@ -529,7 +529,7 @@ it('fires entry listeners on parallel state and each region', function (): void 
         config: [
             'id'      => 'listen_parallel',
             'initial' => 'processing',
-            'context' => ['entry_count' => 0],
+            'context' => ['entryCount' => 0],
             'listen'  => [
                 'entry' => 'countAction',
             ],
@@ -556,7 +556,7 @@ it('fires entry listeners on parallel state and each region', function (): void 
         behavior: [
             'actions' => [
                 'countAction' => function (ContextManager $context): void {
-                    $context->set('entry_count', $context->get('entry_count') + 1);
+                    $context->set('entryCount', $context->get('entryCount') + 1);
                 },
             ],
         ],
@@ -565,7 +565,7 @@ it('fires entry listeners on parallel state and each region', function (): void 
     $state = $definition->getInitialState();
 
     // parallel state entry + 2 regions = 3
-    expect($state->context->get('entry_count'))->toBe(3);
+    expect($state->context->get('entryCount'))->toBe(3);
 });
 
 // endregion
@@ -626,7 +626,7 @@ it('runs sync listener inline and records queued dispatch event', function (): v
     $machine = TestMachine::define([
         'id'      => 'listen_mixed',
         'initial' => 'idle',
-        'context' => ['sync_ran' => false],
+        'context' => ['syncRan' => false],
         'listen'  => [
             'entry' => [
                 'syncAction',
@@ -640,13 +640,13 @@ it('runs sync listener inline and records queued dispatch event', function (): v
     ], behavior: [
         'actions' => [
             'syncAction' => function (ContextManager $context): void {
-                $context->set('sync_ran', true);
+                $context->set('syncRan', true);
             },
             'queuedAction' => function (): void {},
         ],
     ]);
 
-    $machine->assertContext('sync_ran', true);
+    $machine->assertContext('syncRan', true);
 
     $types = $machine->machine()->state->history->pluck('type')->toArray();
 

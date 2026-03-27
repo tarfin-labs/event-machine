@@ -8,15 +8,10 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 
 class ProvideCardEvent extends EventBehavior
 {
-    public static function getType(): string
-    {
-        return 'PROVIDE_CARD';
-    }
-
     public static function rules(): array
     {
         return [
-            'payload.card_number' => ['required', 'string', 'min:13', 'max:19'],
+            'payload.cardNumber' => ['required', 'string', 'min:13', 'max:19'],
         ];
     }
 }

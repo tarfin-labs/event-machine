@@ -22,13 +22,13 @@ class OrderWorkflowMachine extends Machine
                 'id'      => 'order_workflow',
                 'initial' => 'validating',
                 'context' => [
-                    'order_id'       => null,
-                    'payment_result' => null,
+                    'orderId'       => null,
+                    'paymentResult' => null,
                 ],
                 'states' => [
                     'validating' => [
                         'machine' => ValidationMachine::class,
-                        'with'    => ['order_id'],
+                        'with'    => ['orderId'],
                         '@done'   => [
                             'target'  => 'processing_payment',
                             'actions' => 'storeValidationResultAction',
@@ -37,7 +37,7 @@ class OrderWorkflowMachine extends Machine
                     ],
                     'processing_payment' => [
                         'machine' => PaymentMachine::class,
-                        'with'    => ['order_id'],
+                        'with'    => ['orderId'],
                         '@done'   => 'completed',
                         '@fail'   => 'payment_failed',
                     ],
@@ -51,7 +51,7 @@ class OrderWorkflowMachine extends Machine
 }
 ```
 
-**Reads as:** "`validating` state delegates to `ValidationMachine`. Passes `order_id` to the child. When the child completes, stores the validation result and transitions to `processing_payment`."
+**Reads as:** "`validating` state delegates to `ValidationMachine`. Passes `orderId` to the child. When the child completes, stores the validation result and transitions to `processing_payment`."
 
 ## Config Reference
 
@@ -75,19 +75,19 @@ The `with` key controls what data flows from parent context to child context. Th
 <!-- doctest-attr: ignore -->
 ```php
 // Format 1: Same-named keys
-'with' => ['order_id', 'total_amount'],
-// Child context receives: { order_id: ..., total_amount: ... }
+'with' => ['orderId', 'totalAmount'],
+// Child context receives: { orderId: ..., totalAmount: ... }
 
 // Format 2: Key mapping (child_key => parent_key)
 'with' => [
-    'id'     => 'order_id',        // child sees 'id', parent has 'order_id'
-    'amount' => 'total_amount',    // child sees 'amount', parent has 'total_amount'
+    'id'     => 'orderId',        // child sees 'id', parent has 'orderId'
+    'amount' => 'totalAmount',    // child sees 'amount', parent has 'totalAmount'
 ],
 
 // Format 3: Dynamic (closure)
 'with' => fn (ContextManager $ctx) => [
-    'order_id' => $ctx->get('order_id'),
-    'amount'   => $ctx->get('total_amount') * 100,
+    'orderId' => $ctx->get('orderId'),
+    'amount'  => $ctx->get('totalAmount') * 100,
 ],
 ```
 
@@ -123,7 +123,7 @@ When a child machine has multiple final states with different meanings, use `@do
 ```php
 'verifying' => [
     'machine' => VerificationMachine::class,
-    'with'    => ['applicant_id'],
+    'with'    => ['applicantId'],
 
     '@done.approved' => 'processing',
     '@done.rejected' => 'declined',
@@ -219,7 +219,7 @@ The state spawns the child on entry and continues functioning normally with its 
 ```php
 'suspended' => [
     'machine' => AuditMachine::class,
-    'with'    => ['user_id'],
+    'with'    => ['userId'],
     'queue'   => 'background',
     // No @done → fire-and-forget
     'on' => ['REACTIVATE' => 'active'],
@@ -236,7 +236,7 @@ Use `@always` to immediately transition after spawning the child:
 ```php
 'dispatching_audit' => [
     'machine' => AuditMachine::class,
-    'with'    => ['user_id'],
+    'with'    => ['userId'],
     'queue'   => 'background',
     'on'      => ['@always' => 'suspended'],
 ],
@@ -250,7 +250,7 @@ Alternatively, use `target` for an explicit fire-and-forget transition (consiste
 ```php
 'dispatching_audit' => [
     'machine' => AuditMachine::class,
-    'with'    => ['user_id'],
+    'with'    => ['userId'],
     'queue'   => 'background',
     'target'  => 'suspended',
 ],
@@ -305,6 +305,34 @@ Forward parent events to the running child machine. Useful when the child needs 
 ],
 ```
 
+## Delegation Timing
+
+Child machine invocation is **deferred** until after the macrostep completes. When a state with a `machine` key is entered, the following sequence applies:
+
+1. **Entry actions** run on the target state
+2. **Entry listeners** fire
+3. **Raised events** from entry actions are drained (if any exist, `@always` transitions and internal events are processed first)
+4. **If the state changed** during step 3: delegation is **skipped** -- the machine already left the delegating state
+5. **If the state is unchanged:** `handleMachineInvoke()` runs (sync inline or async dispatch)
+
+This means an entry action can `raise()` an event that transitions the machine away from the delegating state, effectively preventing child machine creation. This is by design -- it follows SCXML invoker-05 macrostep semantics.
+
+### Practical Implication
+
+```php ignore
+'validating' => [
+    'entry'   => 'checkCacheAction',      // May raise CACHE_HIT
+    'machine' => ValidationMachine::class,
+    'with'    => ['orderId'],
+    '@done'   => 'processing',
+    'on'      => [
+        'CACHE_HIT' => 'processing',      // Bypasses delegation entirely
+    ],
+],
+```
+
+If `checkCacheAction` raises `CACHE_HIT`, the machine transitions to `processing` before `ValidationMachine` is ever started.
+
 ## Delegation Inside Parallel States
 
 The `machine` key works at any state level, including within parallel regions. Each region runs its own child machine. The region's `@done` fires when its child completes. The parallel state's `@done` fires when **all** regions reach final.
@@ -320,7 +348,7 @@ Use `Machine::fake()` to short-circuit child machines in tests:
 use Tarfinlabs\EventMachine\Actor\Machine;
 
 // Fake a child machine to return a specific result
-PaymentMachine::fake(result: ['payment_id' => 'pay_123']);
+PaymentMachine::fake(result: ['paymentId' => 'pay_123']);
 
 // Run the parent machine — child is short-circuited
 $machine = OrderWorkflowMachine::create();
@@ -329,7 +357,7 @@ $machine->send(['type' => 'START']);
 // Assert the child was invoked
 PaymentMachine::assertInvoked();
 PaymentMachine::assertInvokedTimes(1);
-PaymentMachine::assertInvokedWith(['order_id' => 'ORD-1']);
+PaymentMachine::assertInvokedWith(['orderId' => 'ORD-1']);
 PaymentMachine::assertNotInvoked(); // or verify it was NOT invoked
 
 // Fake a failure

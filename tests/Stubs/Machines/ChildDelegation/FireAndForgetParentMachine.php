@@ -22,7 +22,7 @@ class FireAndForgetParentMachine extends Machine
                 'id'      => 'ff_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'order_id' => null,
+                    'orderId' => null,
                 ],
                 'states' => [
                     'idle' => [
@@ -30,7 +30,7 @@ class FireAndForgetParentMachine extends Machine
                     ],
                     'processing' => [
                         'machine' => ImmediateChildMachine::class,
-                        'with'    => ['order_id'],
+                        'with'    => ['orderId'],
                         'queue'   => 'child-queue',
                         // No @done → fire-and-forget, stay in state
                         'on' => [

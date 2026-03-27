@@ -21,7 +21,7 @@ $config = [ // [!code hide]
 // Anti-pattern: parent passes its own state to child
 'awaiting_payment' => [
     'machine' => 'PaymentMachine',
-    'with'    => ['order_id', 'order_total', 'order_status'],  // ← parent state leaked
+    'with'    => ['orderId', 'orderTotal', 'orderStatus'],  // ← parent state leaked
     '@done'   => 'shipping',
     '@fail'   => 'failed',
 ],
@@ -38,7 +38,7 @@ class CapturePaymentAction extends ActionBehavior
     public function __invoke(ContextManager $context): void
     {
         // Child uses parent's order_status — tight coupling
-        if ($context->get('order_status') === 'cancelled') {
+        if ($context->get('orderStatus') === 'cancelled') {
             return;
         }
 
@@ -58,7 +58,7 @@ $config = [ // [!code hide]
 // Parent handles cancellation — child only knows about payment
 'awaiting_payment' => [
     'machine' => 'PaymentMachine',
-    'with'    => ['order_id', 'order_total'],  // only payment-relevant data
+    'with'    => ['orderId', 'orderTotal'],  // only payment-relevant data
     'on'      => ['ORDER_CANCELLED' => 'cancelled'],
     '@done'   => 'shipped',
     '@fail'   => 'failed',
@@ -92,7 +92,7 @@ When a child has only one final state, the parent cannot distinguish between dif
 // Parent: no way to route differently
 'processing_credit' => [
     'machine' => CreditCheckMachine::class,
-    'with'    => ['applicant_id'],
+    'with'    => ['applicantId'],
     '@done'   => 'credit_decision',  // always same target, must read context
 ],
 ```
@@ -134,7 +134,7 @@ $config = [ // [!code hide]
     ],
     'bureau_unavailable' => [
         'type'   => 'final',
-        'output' => ['error_code'],
+        'output' => ['errorCode'],
     ],
 ],
 ]; // [!code hide]
@@ -204,7 +204,7 @@ $config = [ // [!code hide]
             ],
         ],
     ],
-    'verified' => ['type' => 'final', 'output' => ['verification_id']],
+    'verified' => ['type' => 'final', 'output' => ['verificationId']],
     'rejected' => ['type' => 'final', 'output' => ['rejection_reason']],
     'failed'   => ['type' => 'final', 'output' => ['failure_reason']],
 ],
@@ -248,7 +248,7 @@ class HandlePaymentReceivedAction extends ActionBehavior
         // Order machine reaching past PaymentMachine to FraudCheckMachine
         $this->sendTo(
             machineClass: 'App\\Machines\\FraudCheckMachine',
-            rootEventId: $context->get('fraud_check_id'),
+            rootEventId: $context->get('fraudCheckId'),
             event: ['type' => 'FRAUD_DATA_SUBMITTED', 'payload' => ['amount' => $context->get('amount')]],
         );
     }
@@ -266,7 +266,7 @@ PaymentMachine owns the fraud check as its child. The parent (OrderWorkflow) del
 // PaymentMachine owns the fraud check as its child
 'processing' => [
     'machine'                    => FraudCheckMachine::class,
-    'with'                       => ['transaction_id', 'amount'],
+    'with'                       => ['transactionId', 'amount'],
     '@done.clean'                => 'capturing',
     '@done.flagged'              => 'awaiting_manual_review',
     '@fail'                      => 'failed',

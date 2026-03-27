@@ -114,7 +114,7 @@ it('fires every timer on interval', function (): void {
     $machine = TestMachine::define([
         'id'      => 'every_test',
         'initial' => 'polling',
-        'context' => ['poll_count' => 0],
+        'context' => ['pollCount' => 0],
         'states'  => [
             'polling' => [
                 'on' => [
@@ -129,23 +129,23 @@ it('fires every timer on interval', function (): void {
     ], behavior: [
         'actions' => [
             'incrementAction' => function (ContextManager $context): void {
-                $context->set('poll_count', $context->get('poll_count') + 1);
+                $context->set('pollCount', $context->get('pollCount') + 1);
             },
         ],
     ]);
 
     $machine
         ->advanceTimers(Timer::seconds(61))
-        ->assertContext('poll_count', 1)
+        ->assertContext('pollCount', 1)
         ->advanceTimers(Timer::seconds(61))
-        ->assertContext('poll_count', 2);
+        ->assertContext('pollCount', 2);
 });
 
 it('respects every timer max count', function (): void {
     $machine = TestMachine::define([
         'id'      => 'max_test',
         'initial' => 'retrying',
-        'context' => ['retry_count' => 0],
+        'context' => ['retryCount' => 0],
         'states'  => [
             'retrying' => [
                 'on' => [
@@ -161,27 +161,27 @@ it('respects every timer max count', function (): void {
     ], behavior: [
         'actions' => [
             'incrementAction' => function (ContextManager $context): void {
-                $context->set('retry_count', $context->get('retry_count') + 1);
+                $context->set('retryCount', $context->get('retryCount') + 1);
             },
         ],
     ]);
 
     $machine
         ->advanceTimers(Timer::seconds(11))
-        ->assertContext('retry_count', 1)
+        ->assertContext('retryCount', 1)
         ->advanceTimers(Timer::seconds(11))
-        ->assertContext('retry_count', 2)
+        ->assertContext('retryCount', 2)
         ->advanceTimers(Timer::seconds(11))
-        ->assertContext('retry_count', 3)
+        ->assertContext('retryCount', 3)
         ->advanceTimers(Timer::seconds(11))
-        ->assertContext('retry_count', 3); // exhausted, no more fires
+        ->assertContext('retryCount', 3); // exhausted, no more fires
 });
 
 it('sends then-event after every timer max reached', function (): void {
     TestMachine::define([
         'id'      => 'then_test',
         'initial' => 'retrying',
-        'context' => ['retry_count' => 0],
+        'context' => ['retryCount' => 0],
         'states'  => [
             'retrying' => [
                 'on' => [
@@ -200,14 +200,14 @@ it('sends then-event after every timer max reached', function (): void {
     ], behavior: [
         'actions' => [
             'incrementAction' => function (ContextManager $context): void {
-                $context->set('retry_count', $context->get('retry_count') + 1);
+                $context->set('retryCount', $context->get('retryCount') + 1);
             },
         ],
     ])
         ->advanceTimers(Timer::seconds(11))
-        ->assertContext('retry_count', 1)
+        ->assertContext('retryCount', 1)
         ->advanceTimers(Timer::seconds(11))
-        ->assertContext('retry_count', 2)
+        ->assertContext('retryCount', 2)
         ->advanceTimers(Timer::seconds(11))
         ->assertState('failed');
 });
@@ -383,7 +383,7 @@ it('works with withContext and advanceTimers', function (): void {
     TestMachine::define([
         'id'      => 'with_context_test',
         'initial' => 'active',
-        'context' => ['user_id' => 42],
+        'context' => ['userId' => 42],
         'states'  => [
             'active' => [
                 'on' => [
@@ -396,7 +396,7 @@ it('works with withContext and advanceTimers', function (): void {
             'timed_out' => ['type' => 'final'],
         ],
     ])
-        ->assertContext('user_id', 42)
+        ->assertContext('userId', 42)
         ->advanceTimers(Timer::minutes(31))
         ->assertState('timed_out');
 });

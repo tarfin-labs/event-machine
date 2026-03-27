@@ -19,7 +19,7 @@ it('region entry action raises single event → captured and processed', functio
     // Sequential mode: entry action raises REGION_A_PROCESSED → auto-transitions to finished
     $machine = ParallelDispatchWithRaiseMachine::create();
 
-    expect($machine->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($machine->state->context->get('regionAResult'))->toBe('processed_by_a');
     // Region A should have transitioned to finished via raised event
     expect($machine->state->value)->toContain('parallel_dispatch_with_raise.processing.region_a.finished');
 });
@@ -40,7 +40,7 @@ it('region entry action raises event in dispatch mode → processed by job', fun
     ))->handle();
 
     $restored = ParallelDispatchWithRaiseMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
     // Raised event should have transitioned region A to finished
     expect($restored->state->value)->toContain('parallel_dispatch_with_raise.processing.region_a.finished');
 });
@@ -61,7 +61,7 @@ it('region entry action raises NO events → context-only update works', functio
     ))->handle();
 
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
     // Region stays at initial (no raised event to transition)
     expect($restored->state->value)->toContain('parallel_dispatch.processing.region_a.working');
 });
@@ -97,6 +97,6 @@ it('two regions raise different events → each job processes its own', function
     expect($restored->state->value)->toContain('parallel_dispatch_with_raise.processing.region_b.working');
 
     // Both contexts merged
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });

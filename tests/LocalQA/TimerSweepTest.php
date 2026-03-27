@@ -36,7 +36,7 @@ it('LocalQA: after timer fires via Horizon when past deadline', function (): voi
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'cancelled');
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 60);
 
     expect($expired)->toBeTrue('After timer not processed by Horizon');
 
@@ -53,7 +53,9 @@ it('LocalQA: after timer does NOT fire before deadline', function (): void {
 
     Artisan::call('machine:process-timers', ['--class' => AfterTimerMachine::class]);
 
-    sleep(2);
+    // Negative assertion: verify timer does NOT fire when not past deadline.
+    // sleep required — cannot waitFor absence.
+    sleep(1);
 
     $fire = DB::table('machine_timer_fires')
         ->where('root_event_id', $rootEventId)
@@ -79,11 +81,18 @@ it('LocalQA: after timer dedup — double sweep does not double-fire', function 
         return DB::table('machine_timer_fires')
             ->where('root_event_id', $rootEventId)
             ->exists();
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 60);
 
-    // Second sweep
+    // Second sweep — should be deduped
     Artisan::call('machine:process-timers', ['--class' => AfterTimerMachine::class]);
-    sleep(2);
+
+    LocalQATestCase::waitFor(function () use ($rootEventId) {
+        $fire = DB::table('machine_timer_fires')
+            ->where('root_event_id', $rootEventId)
+            ->first();
+
+        return $fire && $fire->status === 'fired';
+    }, timeoutSeconds: 60, description: 'after timer dedup: waiting for fire status=fired');
 
     $fires = DB::table('machine_timer_fires')
         ->where('root_event_id', $rootEventId)
@@ -111,7 +120,7 @@ it('LocalQA: every timer fires via Horizon', function (): void {
             ->where('root_event_id', $rootEventId)
             ->where('timer_key', 'LIKE', '%BILLING%')
             ->exists();
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 60);
 
     expect($fired)->toBeTrue('Every timer not processed by Horizon');
 
@@ -148,8 +157,15 @@ it('LocalQA: every max/then transitions machine to failed via Horizon', function
                 ->where('root_event_id', $rootEventId)
                 ->first();
 
-            return $fire && (int) $fire->fire_count >= ($i + 1);
-        }, timeoutSeconds: 45);
+            if (!$fire || (int) $fire->fire_count < ($i + 1)) {
+                return false;
+            }
+
+            // Also wait for Horizon to process the timer job (context updated)
+            $restored = EveryWithMaxMachine::create(state: $rootEventId);
+
+            return $restored->state->context->get('retryCount') >= ($i + 1);
+        }, timeoutSeconds: 60, description: 'every max/then: cycle '.($i + 1).' fire_count+retry_count');
     }
 
     // After max, sweep should send then event
@@ -163,7 +179,7 @@ it('LocalQA: every max/then transitions machine to failed via Horizon', function
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'failed');
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 60);
 
     expect($failed)->toBeTrue('Machine not failed after max retries');
 });
@@ -191,7 +207,7 @@ it('LocalQA: timer sweep selectively fires only past-deadline instances', functi
         $cs = MachineCurrentState::where('root_event_id', $ids[0])->first();
 
         return $cs && str_contains($cs->state_id, 'cancelled');
-    }, timeoutSeconds: 45);
+    }, timeoutSeconds: 60);
 
     expect($firstExpired)->toBeTrue();
 

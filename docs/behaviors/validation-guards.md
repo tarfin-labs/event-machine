@@ -410,3 +410,49 @@ $this->errorMessage = sprintf(
 ::: tip Detailed Guide
 For comprehensive design guidelines with Do/Don't examples, see [Guard Design](/best-practices/guard-design).
 :::
+
+## Parallel States {#parallel-states}
+
+When a `ValidationGuardBehavior` fails inside a parallel state region, the behavior differs from regular guards:
+
+| Guard Type | Failure in Parallel | Result |
+|-----------|-------------------|--------|
+| `GuardBehavior` | Graceful failure — same as non-parallel | `TRANSITION_FAIL` recorded, machine stays in current state |
+| `ValidationGuardBehavior` | **Entire parallel transition blocked** | Machine stays in current state, `MachineValidationException` thrown |
+
+A validation guard failure in **any** region blocks **all** regions from transitioning. This is intentional — validation rejection is atomic. The error message propagates as a 422 response through endpoints.
+
+```php no_run
+'data_collection' => [
+    'type' => 'parallel',
+    'states' => [
+        'vehicle_info' => [
+            'initial' => 'awaiting',
+            'states' => [
+                'awaiting' => [
+                    'on' => [
+                        VehicleSubmittedEvent::class => [
+                            'target' => 'received',
+                            // If this guard fails, ALL regions stay — 422 returned
+                            'guards' => IsVinValidGuard::class,
+                        ],
+                    ],
+                ],
+                'received' => ['type' => 'final'],
+            ],
+        ],
+        'documents' => [
+            // This region is also blocked if IsVinValidGuard fails
+            // ...
+        ],
+    ],
+],
+```
+
+### Dispatch Mode Limitation
+
+In dispatch mode (`parallel_dispatch.enabled = true`), each region runs as a separate queue job. Validation guard failures in dispatched regions:
+- Region doesn't transition (guard failure recorded in history)
+- Error does **not** propagate to the HTTP response (async execution)
+
+If synchronous validation feedback is needed, validate before entering the parallel state.

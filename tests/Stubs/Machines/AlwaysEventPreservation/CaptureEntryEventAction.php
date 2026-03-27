@@ -15,6 +15,6 @@ class CaptureEntryEventAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): void
     {
-        $context->set('entry_event_type', $event->type);
+        $context->set('entryEventType', $event->type);
     }
 }

@@ -13,6 +13,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
+use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
 /**
@@ -59,6 +60,11 @@ class SendToMachineJob implements ShouldQueue
                 'root_event_id' => $this->rootEventId,
                 'event'         => $this->event,
             ]);
+        } catch (MachineAlreadyRunningException) {
+            // Another job holds the lock for this machine. Release back to queue
+            // with a short delay so the current holder can finish and release the lock.
+            // Without this, all retry attempts fire instantly and exhaust tries.
+            $this->release(1);
         } catch (NoTransitionDefinitionFoundException) {
             Log::warning('SendToMachineJob: failed to deliver event, target machine cannot handle it in current state.', [
                 'machine_class' => $this->machineClass,

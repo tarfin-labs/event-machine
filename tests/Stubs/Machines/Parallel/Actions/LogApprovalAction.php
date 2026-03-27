@@ -14,7 +14,7 @@ class LogApprovalAction extends ActionBehavior
     public function __invoke(ContextManager $context): void
     {
         self::$executed = true;
-        $context->set('approval_logged', true);
+        $context->set('approvalLogged', true);
     }
 
     public static function wasExecuted(): bool

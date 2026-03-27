@@ -320,11 +320,41 @@ class ValidPayloadGuard extends GuardBehavior
 }
 ```
 
-## Guard Execution Order
+## Guard Purity Guarantee
 
-1. **Calculators** run first (modify context)
-2. **Guards** evaluate using updated context
-3. If all guards pass, **Actions** execute
+EventMachine enforces guard purity at runtime. Before evaluating guards on each transition branch, the engine **snapshots the context data**. If any guard in the branch fails, the context is **restored to the snapshot**, ensuring that side-effects from a failing guard do not leak into subsequent branch evaluations or into machine state.
+
+This is a runtime safety net, not just a convention. Even if a guard accidentally mutates context, the mutation is rolled back when the guard returns `false`.
+
+### How It Works
+
+1. Engine snapshots `context.data` before the first guard in a branch
+2. Guards evaluate in order (short-circuit on first failure)
+3. **If all pass:** snapshot is discarded, context changes are kept
+4. **If any fails:** context is restored to the snapshot before trying the next branch
+
+### Comparison With Other Implementations
+
+| Feature | EventMachine | XState | SCXML |
+|---------|-------------|--------|-------|
+| Guard purity | Enforced at runtime (snapshot/restore) | Convention only | Convention only |
+| Context rollback on guard failure | Yes, automatic | No | No |
+| Side-effect leakage between branches | Prevented | Possible | Possible |
+| Calculators before guards | Yes (first-class concept) | No equivalent | No equivalent |
+
+::: tip Why This Matters
+In multi-branch transitions, guards from branch 1 that fail could pollute context for branch 2's evaluation. EventMachine prevents this entirely. You get deterministic branching regardless of guard implementation quality.
+:::
+
+## Guard Evaluation Order
+
+Evaluation follows a **first-match-wins** strategy across branches, with **calculators before guards** within each branch:
+
+1. **Calculators** run first on the branch -- they update context values that guards will read
+2. **Guards** evaluate in array order -- all must pass (AND logic) with short-circuit on first failure
+3. If all guards pass, the branch is selected (**first match wins**)
+4. If any guard fails, context is restored and the next branch is tried
+5. If no branch passes, no transition fires
 
 ```mermaid
 sequenceDiagram
@@ -337,9 +367,10 @@ sequenceDiagram
     Guard->>Guard: Check hasMinimumTotal
     Guard->>Guard: Check hasValidPayment
     alt All guards pass
-        Guard->>Action: Proceed
+        Guard->>Action: Proceed (first match wins)
     else Any guard fails
-        Guard-->>Calc: Stop (no transition)
+        Guard-->>Guard: Restore context snapshot
+        Note over Guard: Try next branch...
     end
 ```
 
@@ -423,7 +454,7 @@ it('checks permission via auth service', function () {
         ->shouldReceive('can')->with('user-1', 'submit_order')
         ->andReturn(true);
 
-    $state = State::forTesting(['user_id' => 'user-1']);
+    $state = State::forTesting(['userId' => 'user-1']);
     expect(HasPermissionGuard::runWithState($state))->toBeTrue();
 });
 ```

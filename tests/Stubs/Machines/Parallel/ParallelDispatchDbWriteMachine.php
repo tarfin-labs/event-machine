@@ -36,8 +36,8 @@ class ParallelDispatchDbWriteMachine extends Machine
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
-                    'region_a_result' => null,
-                    'region_b_result' => null,
+                    'regionAResult' => null,
+                    'regionBResult' => null,
                 ],
                 'states' => [
                     'processing' => [

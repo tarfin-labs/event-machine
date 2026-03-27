@@ -47,9 +47,8 @@ it('send() does not dispatch pending parallel jobs when persist fails', function
         // Expected — persist fails because machine_events table is dropped
     }
 
-    // 5. BUG: In current code, dispatchPendingParallelJobs() runs in finally{} even
-    //    though persist failed, dispatching jobs to a ghost state (DB has old state).
-    //    After Fix A, no jobs should be dispatched.
+    // 5. Fixed: $shouldDispatch guard in Machine::send() prevents dispatch after persist failure.
+    //    dispatchPendingParallelJobs() runs in finally{} but $shouldDispatch stays false.
     Bus::assertNotDispatched(ParallelRegionJob::class);
 
     // 6. pendingParallelDispatches should be cleared regardless
@@ -95,10 +94,7 @@ it('ParallelRegionJob critical section runs inside a DB transaction', function (
         initialStateId: 'parallel_dispatch_db_write.processing.region_a.working',
     ))->handle();
 
-    // 5. BUG: In current code, the INSERT runs without an explicit transaction
-    //    from ParallelRegionJob (transactionLevel = 1, only from RefreshDatabase).
-    //    After Fix B, it should be inside an explicit DB::transaction()
-    //    (transactionLevel >= 2), making it atomic with persist().
+    // 5. Fixed: ParallelRegionJob critical section now runs inside DB::transaction().
     //    Level 1 = RefreshDatabase wrapper, Level 2 = our explicit transaction.
     expect($transactionLevelDuringInsert)->toBeGreaterThanOrEqual(2);
 
@@ -106,7 +102,7 @@ it('ParallelRegionJob critical section runs inside a DB transaction', function (
     expect(DB::table('test_side_effects')->count())->toBe(1);
 
     $restored = ParallelDispatchDbWriteMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
 
     // Clean up
     Schema::drop('test_side_effects');

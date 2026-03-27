@@ -29,7 +29,7 @@ it('completed region context preserved when sibling fails', function (): void {
 
     // Verify B's context persisted
     $afterB = ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($afterB->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($afterB->state->context->get('regionBResult'))->toBe('processed_by_b');
 
     // Region A fails → @fail fires
     $jobA = new ParallelRegionJob(
@@ -45,7 +45,7 @@ it('completed region context preserved when sibling fails', function (): void {
     expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
 
     // Region B's context is preserved despite Region A's failure
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });
 
 it('both regions complete context then one fails → all context preserved', function (): void {
@@ -72,8 +72,8 @@ it('both regions complete context then one fails → all context preserved', fun
 
     // Both contexts set
     $afterBoth = ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($afterBoth->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($afterBoth->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($afterBoth->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($afterBoth->state->context->get('regionBResult'))->toBe('processed_by_b');
 
     // Now simulate a later failure (e.g., from a subsequent transition job)
     $failJob = new ParallelRegionJob(
@@ -88,6 +88,6 @@ it('both regions complete context then one fails → all context preserved', fun
     expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
 
     // Both region contexts preserved
-    expect($restored->state->context->get('region_a_result'))->toBe('processed_by_a');
-    expect($restored->state->context->get('region_b_result'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
 });

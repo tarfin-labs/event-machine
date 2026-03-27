@@ -196,6 +196,121 @@ class CartContext extends ContextManager
 ],
 ```
 
+### Exposing Computed Values in API Responses
+
+By default, computed methods are only available in PHP — in guards, actions, calculators, and ResultBehavior. They do **not** appear in endpoint JSON responses, because `toArray()` only serializes properties.
+
+Override `computedContext()` to declare which computed values should be included in API responses:
+
+<!-- doctest-attr: ignore -->
+```php
+class CartContext extends ContextManager
+{
+    public function __construct(
+        public array $items = [],
+        public float $discountPercent = 0,
+        public string $shippingMethod = 'standard',
+    ) {
+        parent::__construct();
+    }
+
+    public function subtotal(): float { /* ... */ }
+    public function total(): float { /* ... */ }
+    public function isEmpty(): bool { return empty($this->items); }
+
+    protected function computedContext(): array
+    {
+        return [
+            'subtotal'  => $this->subtotal(),
+            'total'     => $this->total(),
+            'isEmpty'   => $this->isEmpty(),
+            'itemCount' => count($this->items),
+        ];
+    }
+}
+```
+
+Now the endpoint response includes computed values alongside regular properties:
+
+```json
+{
+  "context": {
+    "items": [...],
+    "discountPercent": 10,
+    "shippingMethod": "express",
+    "subtotal": 99.99,
+    "total": 104.98,
+    "isEmpty": false,
+    "itemCount": 3
+  }
+}
+```
+
+::: info Not Persisted
+Computed values are **not** stored in the database — they are recomputed fresh on every API response. This keeps the `machine_events` table clean and avoids stale derived data.
+:::
+
+::: tip contextKeys Filtering
+Computed keys respect `contextKeys` filtering on endpoints. If an endpoint specifies `contextKeys: ['total', 'itemCount']`, only those keys appear — both regular and computed.
+:::
+
+## Context Interfaces for Shared Behaviors
+
+When a behavior is reused across multiple machines with different context classes, avoid coupling the behavior to specific context types with union types. Instead, define a PHP interface:
+
+<!-- doctest-attr: no_run -->
+```php
+interface HasFarmer
+{
+    public function farmer(): Farmer;
+}
+
+interface HasTckn
+{
+    public function tckn(): string;
+}
+```
+
+Implement the interface in each context class:
+
+<!-- doctest-attr: no_run -->
+```php
+class CarSalesContext extends ContextManager implements HasFarmer, HasTckn
+{
+    // ...
+    public function farmer(): Farmer { return $this->farmer; }
+    public function tckn(): string { return $this->tckn; }
+}
+
+class FindeksContext extends ContextManager implements HasFarmer, HasTckn
+{
+    // ...
+    public function farmer(): Farmer { return $this->farmer; }
+    public function tckn(): string { return $this->tckn; }
+}
+```
+
+Now the shared behavior type-hints the interface — no coupling to specific machines:
+
+<!-- doctest-attr: no_run -->
+```php
+class VerifyIdentityAction extends ActionBehavior
+{
+    public function __invoke(HasTckn $context): void
+    {
+        $tckn = $context->tckn(); // IDE autocompletion, static analysis ✓
+    }
+}
+```
+
+This scales cleanly: adding a new machine that uses `VerifyIdentityAction` only requires the new context to implement `HasTckn`. The behavior class never changes.
+
+::: tip When to use interfaces vs union types
+**Interfaces** — when the behavior only needs a few shared properties and is reused across 2+ machines. Scales indefinitely.
+
+**Union types** (`CarSalesContext|FindeksContext`) — when the behavior needs access to machine-specific properties that differ between contexts. Acceptable for 2-3 types.
+:::
+
 ## Model Transformers
 
 Handle Eloquent models in context:

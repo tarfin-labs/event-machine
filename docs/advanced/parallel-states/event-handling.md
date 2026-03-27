@@ -508,7 +508,7 @@ use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 $definition = MachineDefinition::define([ // [!code hide]
     'id' => 'order', // [!code hide]
     'initial' => 'processing', // [!code hide]
-    'context' => ['retry_count' => 0], // [!code hide]
+    'context' => ['retryCount' => 0], // [!code hide]
     'states' => [ // [!code hide]
 'processing' => [
     'type'   => 'parallel',
@@ -1021,6 +1021,18 @@ When transitioning into a nested parallel state, entry actions fire in order:
 ::: tip Parallel Dispatch Timing
 With [Parallel Dispatch](./parallel-dispatch) enabled, entry actions for each region run as concurrent queue jobs instead of sequentially. This changes the execution model: entry actions no longer share an in-memory context during execution. Each job snapshots context before running, computes a diff after, and merges under a database lock. Regions should write to **separate context keys** — if two regions write to the same key, a `PARALLEL_CONTEXT_CONFLICT` event is recorded and the last writer wins. If a region's entry action does not call `$this->raise()`, a `PARALLEL_REGION_STALLED` event is recorded as an audit trail.
 :::
+
+## Guards in Parallel States
+
+### Regular Guards
+
+When a regular `GuardBehavior` fails in a parallel state, the machine stays in its current state — identical to non-parallel behavior. A `GUARD_FAIL` and `TRANSITION_FAIL` event are recorded in history. This applies to both region-level transitions and escape transitions (parallel-level or root-level `on:` handlers reached via bubbling).
+
+### Validation Guards
+
+When a `ValidationGuardBehavior` fails in any region, the entire parallel transition is blocked — no region transitions. A `MachineValidationException` is thrown (422 via endpoints). This atomic rejection prevents partial state updates across regions.
+
+See [Validation Guards → Parallel States](/behaviors/validation-guards#parallel-states) for details and examples.
 
 ::: tip Testing
 For testing event handling in parallel states, see [Parallel Testing](/testing/parallel-testing).

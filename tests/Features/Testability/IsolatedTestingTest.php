@@ -65,7 +65,7 @@ it('returns false from matchesAll() when currentStateDefinition is null', functi
 // ─── runWithState() — eventQueue capture ─────────────────────
 
 it('captures raised events via runWithState', function (): void {
-    $state = State::forTesting(['execution_order' => []]);
+    $state = State::forTesting(['executionOrder' => []]);
 
     $result = TransitionActionWithRaise::runWithState($state);
 

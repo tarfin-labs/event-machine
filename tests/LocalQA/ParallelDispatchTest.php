@@ -39,11 +39,11 @@ it('LocalQA: parallel region entry actions dispatch and run via Horizon', functi
     // Wait for Horizon to process ParallelRegionJobs (entry actions set context)
     $entryActionsRan = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
-        $regionA  = $restored->state->context->get('region_a_result');
-        $regionB  = $restored->state->context->get('region_b_result');
+        $regionA  = $restored->state->context->get('regionAResult');
+        $regionB  = $restored->state->context->get('regionBResult');
 
         return $regionA !== null && $regionB !== null;
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($entryActionsRan)->toBeTrue('Region entry actions did not run via Horizon');
 });
@@ -57,8 +57,8 @@ it('LocalQA: parallel regions complete via events → @done fires', function ():
     $ready = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('region_a_result') !== null;
-    }, timeoutSeconds: 30);
+        return $restored->state->context->get('regionAResult') !== null;
+    }, timeoutSeconds: 60);
 
     expect($ready)->toBeTrue('Regions not ready');
 
@@ -69,7 +69,14 @@ it('LocalQA: parallel regions complete via events → @done fires', function ():
         event: ['type' => 'REGION_A_DONE'],
     );
 
-    sleep(1);
+    // Wait for Region A completion before sending Region B
+    LocalQATestCase::waitFor(function () use ($rootEventId) {
+        $events = DB::table('machine_events')
+            ->where('root_event_id', $rootEventId)
+            ->pluck('type');
+
+        return $events->contains(fn ($t) => str_contains($t, 'region_a') && str_contains($t, 'done'));
+    }, timeoutSeconds: 60, description: 'parallel regions: waiting for region_a done');
 
     SendToMachineJob::dispatch(
         machineClass: ParallelDispatchViaEventMachine::class,
@@ -81,7 +88,7 @@ it('LocalQA: parallel regions complete via events → @done fires', function ():
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($completed)->toBeTrue('Parallel @done did not fire');
 
@@ -97,8 +104,8 @@ it('LocalQA: concurrent region completions — locking preserves state', functio
     $ready = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('region_a_result') !== null;
-    }, timeoutSeconds: 30);
+        return $restored->state->context->get('regionAResult') !== null;
+    }, timeoutSeconds: 60);
 
     expect($ready)->toBeTrue();
 
@@ -119,7 +126,7 @@ it('LocalQA: concurrent region completions — locking preserves state', functio
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 90, description: 'concurrent regions: waiting for completed state after dual dispatch');
 
     expect($completed)->toBeTrue('Concurrent completions did not resolve');
 

@@ -139,7 +139,7 @@ class PaymentReceivedEvent extends EventBehavior
     public function getPayload(): array
     {
         return [
-            'transaction_id' => $this->data['transaction_id'],
+            'transactionId' => $this->data['transactionId'],
             'amount'         => $this->data['amount'],
             'currency'       => $this->data['currency'],
         ];

@@ -11,7 +11,7 @@ it('runs root entry actions on machine initialization', function (): void {
     TestMachine::define([
         'id'      => 'root_entry_test',
         'initial' => 'idle',
-        'context' => ['root_entered' => false],
+        'context' => ['rootEntered' => false],
         'entry'   => 'markRootEntryAction',
         'states'  => [
             'idle' => [
@@ -22,11 +22,11 @@ it('runs root entry actions on machine initialization', function (): void {
     ], behavior: [
         'actions' => [
             'markRootEntryAction' => function (ContextManager $context): void {
-                $context->set('root_entered', true);
+                $context->set('rootEntered', true);
             },
         ],
     ])
-        ->assertContext('root_entered', true)
+        ->assertContext('rootEntered', true)
         ->assertState('idle');
 });
 
@@ -64,7 +64,7 @@ it('runs root exit actions when machine reaches final state', function (): void 
     TestMachine::define([
         'id'      => 'root_exit_test',
         'initial' => 'idle',
-        'context' => ['root_exited' => false],
+        'context' => ['rootExited' => false],
         'exit'    => 'markRootExitAction',
         'states'  => [
             'idle' => [
@@ -75,21 +75,21 @@ it('runs root exit actions when machine reaches final state', function (): void 
     ], behavior: [
         'actions' => [
             'markRootExitAction' => function (ContextManager $context): void {
-                $context->set('root_exited', true);
+                $context->set('rootExited', true);
             },
         ],
     ])
-        ->assertContext('root_exited', false)
+        ->assertContext('rootExited', false)
         ->send('FINISH')
         ->assertState('done')
-        ->assertContext('root_exited', true);
+        ->assertContext('rootExited', true);
 });
 
 it('runs root exit before MACHINE_FINISH when initial state is final', function (): void {
     TestMachine::define([
         'id'      => 'immediate_final_test',
         'initial' => 'done',
-        'context' => ['root_entered' => false, 'root_exited' => false],
+        'context' => ['rootEntered' => false, 'rootExited' => false],
         'entry'   => 'markEntryAction',
         'exit'    => 'markExitAction',
         'states'  => [
@@ -98,15 +98,15 @@ it('runs root exit before MACHINE_FINISH when initial state is final', function 
     ], behavior: [
         'actions' => [
             'markEntryAction' => function (ContextManager $context): void {
-                $context->set('root_entered', true);
+                $context->set('rootEntered', true);
             },
             'markExitAction' => function (ContextManager $context): void {
-                $context->set('root_exited', true);
+                $context->set('rootExited', true);
             },
         ],
     ])
-        ->assertContext('root_entered', true)
-        ->assertContext('root_exited', true);
+        ->assertContext('rootEntered', true)
+        ->assertContext('rootExited', true);
 });
 
 // endregion
@@ -134,7 +134,7 @@ it('does not run root entry on subsequent transitions', function (): void {
     TestMachine::define([
         'id'      => 'once_only_test',
         'initial' => 'a',
-        'context' => ['root_entry_count' => 0],
+        'context' => ['rootEntryCount' => 0],
         'entry'   => 'countRootEntryAction',
         'states'  => [
             'a' => ['on' => ['NEXT' => 'b']],
@@ -144,15 +144,15 @@ it('does not run root entry on subsequent transitions', function (): void {
     ], behavior: [
         'actions' => [
             'countRootEntryAction' => function (ContextManager $context): void {
-                $context->set('root_entry_count', $context->get('root_entry_count') + 1);
+                $context->set('rootEntryCount', $context->get('rootEntryCount') + 1);
             },
         ],
     ])
-        ->assertContext('root_entry_count', 1)
+        ->assertContext('rootEntryCount', 1)
         ->send('NEXT')
-        ->assertContext('root_entry_count', 1)
+        ->assertContext('rootEntryCount', 1)
         ->send('NEXT')
-        ->assertContext('root_entry_count', 1);
+        ->assertContext('rootEntryCount', 1);
 });
 
 // endregion

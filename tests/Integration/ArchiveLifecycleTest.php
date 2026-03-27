@@ -300,7 +300,7 @@ describe('Archive Lifecycle', function (): void {
             'source'          => SourceType::INTERNAL,
             'type'            => 'START',
             'payload'         => ['large_data' => str_repeat('test_payload_', 100)],
-            'context'         => ['large_context' => str_repeat('context_data_', 100)],
+            'context'         => ['largeContext' => str_repeat('context_data_', 100)],
             'meta'            => null,
             'version'         => 1,
         ]);

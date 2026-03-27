@@ -20,20 +20,20 @@ class OrderWorkflowMachine extends Machine
                 'id'      => 'order_workflow',
                 'initial' => 'validating',
                 'context' => [
-                    'order_id'       => null,
-                    'total_amount'   => 0,
-                    'payment_result' => null,
+                    'orderId'       => null,
+                    'totalAmount'   => 0,
+                    'paymentResult' => null,
                 ],
                 'states' => [
                     'validating' => [
                         'machine' => ValidationMachine::class,
-                        'with'    => ['order_id'],
+                        'with'    => ['orderId'],
                         '@done'   => 'processing_payment',
                         '@fail'   => 'validation_failed',
                     ],
                     'processing_payment' => [
                         'machine' => PaymentMachine::class,
-                        'with'    => ['order_id', 'total_amount'],
+                        'with'    => ['orderId', 'totalAmount'],
                         'queue'   => 'payments',
                         '@done'   => [
                             'target'  => 'shipping',
@@ -43,7 +43,7 @@ class OrderWorkflowMachine extends Machine
                     ],
                     'shipping' => [
                         'machine' => ShippingMachine::class,
-                        'with'    => ['order_id'],
+                        'with'    => ['orderId'],
                         '@done'   => 'completed',
                         '@fail'   => 'shipping_failed',
                     ],
@@ -73,7 +73,7 @@ When a child machine has multiple outcomes, use `@done.{state}` for declarative 
 ```php
 'credit_check' => [
     'machine' => CreditCheckMachine::class,
-    'with'    => ['applicant_id', 'loan_amount'],
+    'with'    => ['applicantId', 'loanAmount'],
 
     '@done.approved'       => 'disbursement',
     '@done.manual_review'  => 'underwriting',
@@ -128,14 +128,14 @@ class BookingMachine extends Machine
                 'id'      => 'booking',
                 'initial' => 'reserving_flight',
                 'context' => [
-                    'booking_id'  => null,
-                    'flight_ref'  => null,
-                    'hotel_ref'   => null,
+                    'bookingId'  => null,
+                    'flightRef'  => null,
+                    'hotelRef'   => null,
                 ],
                 'states' => [
                     'reserving_flight' => [
                         'machine' => FlightReservationMachine::class,
-                        'with'    => ['booking_id'],
+                        'with'    => ['bookingId'],
                         '@done'   => [
                             'target'  => 'reserving_hotel',
                             'actions' => 'storeFlightRefAction',
@@ -144,7 +144,7 @@ class BookingMachine extends Machine
                     ],
                     'reserving_hotel' => [
                         'machine' => HotelReservationMachine::class,
-                        'with'    => ['booking_id'],
+                        'with'    => ['bookingId'],
                         '@done'   => [
                             'target'  => 'confirmed',
                             'actions' => 'storeHotelRefAction',
@@ -154,7 +154,7 @@ class BookingMachine extends Machine
                     ],
                     'cancelling_flight' => [
                         'machine' => FlightCancellationMachine::class,
-                        'with'    => ['flight_ref'],
+                        'with'    => ['flightRef'],
                         '@done'   => 'failed',
                         '@fail'   => 'failed',
                     ],
@@ -185,7 +185,7 @@ Combine parallel states with machine delegation to run multiple child machines c
             'states'  => [
                 'charging' => [
                     'machine' => PaymentMachine::class,
-                    'with'    => ['order_id', 'total_amount'],
+                    'with'    => ['orderId', 'totalAmount'],
                     '@done'   => 'charged',
                 ],
                 'charged' => ['type' => 'final'],
@@ -196,7 +196,7 @@ Combine parallel states with machine delegation to run multiple child machines c
             'states'  => [
                 'reserving' => [
                     'machine' => InventoryMachine::class,
-                    'with'    => ['order_id'],
+                    'with'    => ['orderId'],
                     '@done'   => 'reserved',
                 ],
                 'reserved' => ['type' => 'final'],
@@ -261,7 +261,7 @@ Omit `@done` to make a machine delegation fire-and-forget. The parent stays in t
 ```php
 'suspended' => [
     'machine' => AuditMachine::class,
-    'with'    => ['user_id'],
+    'with'    => ['userId'],
     'queue'   => 'background',
     // No @done → fire-and-forget
     'on' => ['REACTIVATE' => 'active'],
@@ -276,7 +276,7 @@ Use `@always` or `target` to spawn and immediately move to the next state:
 ```php
 'dispatching_audit' => [
     'machine' => AuditMachine::class,
-    'with'    => ['user_id'],
+    'with'    => ['userId'],
     'queue'   => 'background',
     'on'      => ['@always' => 'suspended'],
 ],
@@ -290,7 +290,7 @@ For single-step async operations:
 ```php
 'logging' => [
     'job'    => AuditLogJob::class,
-    'with'   => ['action', 'user_id'],
+    'with'   => ['action', 'userId'],
     'target' => 'next_state',
 ],
 ```
@@ -350,8 +350,8 @@ class LoanApplicationMachine extends Machine
                 'id'      => 'loan_application',
                 'initial' => 'collecting_info',
                 'context' => [
-                    'applicant_id'      => null,
-                    'loan_amount'       => 0,
+                    'applicantId'       => null,
+                    'loanAmount'        => 0,
                     'verification_result' => null,
                 ],
                 'states' => [
@@ -360,7 +360,7 @@ class LoanApplicationMachine extends Machine
                     ],
                     'identity_verification' => [
                         'machine' => IdentityVerificationMachine::class,
-                        'with'    => ['applicant_id'],
+                        'with'    => ['applicantId'],
                         'queue'   => 'verification',
                         'forward' => [
                             'UPLOAD_DOCUMENT',
@@ -499,7 +499,7 @@ Each forwarded request:
 ```php
 // Fake multiple children for sequential orchestration
 ValidationMachine::fake(result: ['is_valid' => true]);
-PaymentMachine::fake(result: ['payment_id' => 'pay_1'], finalState: 'approved');
+PaymentMachine::fake(result: ['paymentId' => 'pay_1'], finalState: 'approved');
 
 OrderWorkflowMachine::test()
     ->send('START')

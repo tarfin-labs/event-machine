@@ -14,12 +14,12 @@ Each region should own its own context keys. If two regions write to the same ke
 // Do: separate keys per region
 
 'context' => [
-    'payment_status'  => null,
-    'payment_id'      => null,
-    'shipping_status' => null,
-    'tracking_id'     => null,
-    'document_status' => null,
-    'document_url'    => null,
+    'paymentStatus'  => null,
+    'paymentId'      => null,
+    'shippingStatus' => null,
+    'trackingId'     => null,
+    'documentStatus' => null,
+    'documentUrl'    => null,
 ],
 ```
 
@@ -144,7 +144,7 @@ There is no guarantee that `payment`'s entry action runs before `notification`'s
 
 Last-writer-wins. You cannot predict which value `status` holds.
 
-**Fix:** Use namespaced keys: `payment_status` and `shipping_status`.
+**Fix:** Use namespaced keys: `paymentStatus` and `shippingStatus`.
 
 ## Anti-Pattern: Using Parallel for Sequential Phases
 
@@ -226,9 +226,9 @@ The guard re-evaluates whenever any region transitions, so the waiting region au
 'id'      => 'order_workflow',
 'initial' => 'fulfillment',
 'context' => [
-    'order_id'        => null,
-    'payment_id'      => null,
-    'tracking_id'     => null,
+    'orderId'        => null,
+    'paymentId'      => null,
+    'trackingId'     => null,
     'documents_ready' => false,
 ],
 'states' => [
@@ -279,7 +279,7 @@ Payment, shipping, and document generation proceed independently. The order is `
 
 1. **Regions must be independent.** No shared mutable state, no execution order assumptions.
 
-2. **Separate context keys per region.** `payment_status` and `shipping_status`, never a shared `status`.
+2. **Separate context keys per region.** `paymentStatus` and `shippingStatus`, never a shared `status`.
 
 3. **Let `@done` synchronise.** Do not manually check if siblings are done -- that is what `@done` is for.
 

@@ -25,9 +25,9 @@ class E2EDeepContextMachine extends Machine
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
-                    'report'          => [],
-                    'region_a_result' => null,
-                    'region_b_result' => null,
+                    'report'        => [],
+                    'regionAResult' => null,
+                    'regionBResult' => null,
                 ],
                 'states' => [
                     'processing' => [

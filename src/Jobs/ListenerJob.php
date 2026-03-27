@@ -11,6 +11,8 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
+use Tarfinlabs\EventMachine\Locks\MachineLockManager;
+use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
 
 /**
  * Queue job that executes a queued listener action on a worker.
@@ -37,23 +39,50 @@ class ListenerJob implements ShouldQueue
             return;
         }
 
-        $machine = $this->machineClass::create(state: $this->rootEventId);
+        // Acquire lock to prevent concurrent ListenerJobs from overwriting
+        // each other's context changes (lost-update). This happens when
+        // exit + transition listeners dispatch simultaneously for the same machine.
+        // Re-entrant check: in sync queue mode, send() may already hold the lock.
+        $alreadyLocked = isset(Machine::$heldLockIds[$this->rootEventId]);
+        $lockHandle    = null;
 
-        $machine->state->setInternalEventBehavior(
-            type: InternalEvent::LISTEN_QUEUE_STARTED,
-            placeholder: $this->actionClass,
-        );
+        if (!$alreadyLocked) {
+            try {
+                $lockHandle = MachineLockManager::acquire(
+                    rootEventId: $this->rootEventId,
+                    timeout: 10,
+                    ttl: 30,
+                    context: 'listener_job:'.class_basename($this->actionClass),
+                );
+            } catch (MachineLockTimeoutException) {
+                // Another job holds the lock — release back to queue with delay.
+                $this->release(2);
 
-        $machine->definition->runAction(
-            actionDefinition: $this->actionClass,
-            state: $machine->state,
-        );
+                return;
+            }
+        }
 
-        $machine->state->setInternalEventBehavior(
-            type: InternalEvent::LISTEN_QUEUE_COMPLETED,
-            placeholder: $this->actionClass,
-        );
+        try {
+            $machine = $this->machineClass::create(state: $this->rootEventId);
 
-        $machine->persist();
+            $machine->state->setInternalEventBehavior(
+                type: InternalEvent::LISTEN_QUEUE_STARTED,
+                placeholder: $this->actionClass,
+            );
+
+            $machine->definition->runAction(
+                actionDefinition: $this->actionClass,
+                state: $machine->state,
+            );
+
+            $machine->state->setInternalEventBehavior(
+                type: InternalEvent::LISTEN_QUEUE_COMPLETED,
+                placeholder: $this->actionClass,
+            );
+
+            $machine->persist();
+        } finally {
+            $lockHandle->release();
+        }
     }
 }

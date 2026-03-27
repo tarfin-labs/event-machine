@@ -67,7 +67,7 @@ describe('Archive Edge Cases', function (): void {
                     'source'          => SourceType::INTERNAL,
                     'type'            => 'test.null',
                     'payload'         => ['value' => null, 'nested' => ['also_null' => null]],
-                    'context'         => ['nullable_field' => null],
+                    'context'         => ['nullableField' => null],
                     'meta'            => ['debug' => null],
                     'version'         => 1,
                 ]),
@@ -78,7 +78,7 @@ describe('Archive Edge Cases', function (): void {
 
             expect($restored->first()->payload['value'])->toBeNull();
             expect($restored->first()->payload['nested']['also_null'])->toBeNull();
-            expect($restored->first()->context['nullable_field'])->toBeNull();
+            expect($restored->first()->context['nullableField'])->toBeNull();
             expect($restored->first()->meta['debug'])->toBeNull();
         });
 

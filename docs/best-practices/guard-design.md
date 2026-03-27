@@ -30,7 +30,7 @@ class IsPaymentValidGuard extends GuardBehavior
     public function __invoke(ContextManager $context): bool
     {
         // BAD: network failure changes guard result
-        $response = Http::get("https://api.payment.com/verify/{$context->get('payment_id')}");
+        $response = Http::get("https://api.payment.com/verify/{$context->get('paymentId')}");
 
         return $response->json('status') === 'valid';
     }
@@ -51,8 +51,8 @@ class VerifyPaymentAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $response = Http::get("https://api.payment.com/verify/{$context->get('payment_id')}");
-        $context->set('payment_status', $response->json('status'));
+        $response = Http::get("https://api.payment.com/verify/{$context->get('paymentId')}");
+        $context->set('paymentStatus', $response->json('status'));
     }
 }
 
@@ -61,7 +61,7 @@ class IsPaymentValidGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
     {
-        return $context->get('payment_status') === 'valid';
+        return $context->get('paymentStatus') === 'valid';
     }
 }
 ```
@@ -157,7 +157,7 @@ class IsPaymentValidGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
     {
-        return $context->get('payment_status') === 'valid';
+        return $context->get('paymentStatus') === 'valid';
     }
 }
 ```
@@ -185,18 +185,46 @@ class IsRetryAllowedGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
     {
-        return $context->get('retry_count') < 3;
+        return $context->get('retryCount') < 3;
     }
 }
 ```
 
 All three read context, compare, and return a boolean. No side effects. No external calls. Easy to test with `State::forTesting()`.
 
+## Runtime Purity Enforcement
+
+EventMachine does not just recommend guard purity -- it enforces it at runtime. Before evaluating guards on a transition branch, the engine snapshots the context. If any guard fails, the context is restored to the snapshot. This prevents side-effect leakage between branches in multi-path transitions.
+
+However, this is a safety net, not a license to write impure guards. The snapshot/restore mechanism catches accidental context mutation but cannot undo external side effects (network calls, database writes, file I/O). Those escape the safety net entirely.
+
+### Why API Calls in Guards Are Dangerous
+
+An API call in a guard creates three problems:
+
+1. **Non-determinism.** Network failures, timeouts, and rate limits change the guard's result for reasons unrelated to business logic. The machine silently takes the wrong path.
+2. **Performance.** Guards may be evaluated multiple times during multi-branch resolution. Each evaluation repeats the API call.
+3. **Untestable.** `State::forTesting()` and `runWithState()` cannot exercise network-dependent guards without mocking infrastructure.
+
+The fix is always the same: move the external call to an **action** in a preceding state, store the result in context, and let the guard read the stored value.
+
+### Calculator vs Guard: Division of Responsibility
+
+| Responsibility | Calculator | Guard |
+|---------------|-----------|-------|
+| Compute derived values | Yes | No |
+| Mutate context | Yes (designed for it) | No (rolled back on failure) |
+| Make yes/no decisions | No | Yes |
+| Call external services | No (use actions) | No (use actions) |
+| Run before guards | Yes (always) | N/A |
+
+If you find a guard doing computation before checking a condition, split it: put the computation in a calculator, put the check in the guard. The calculator runs once; the guard reads the result.
+
 ## Guidelines
 
 1. **Pure, always.** Same inputs, same output. If you need external data, fetch it in an action first.
 
-2. **No context mutation.** Use calculators for computation, actions for side effects. Guards only read.
+2. **No context mutation.** Use calculators for computation, actions for side effects. Guards only read. EventMachine will roll back accidental mutations via snapshot/restore, but relying on this is a code smell.
 
 3. **Use boolean prefixes.** `Is`, `Has`, `Can`, `Should` -- these make the guard's purpose self-documenting.
 

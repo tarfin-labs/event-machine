@@ -188,7 +188,7 @@ class OrderSubmittedEventBuilder extends EventBuilder
         return [
             'type'    => OrderSubmittedEvent::getType(),
             'payload' => [
-                'customer_id' => $this->faker->uuid(),
+                'customerId' => $this->faker->uuid(),
                 'amount'      => $this->faker->numberBetween(100, 10000),
                 'currency'    => 'TRY',
             ],
@@ -207,7 +207,7 @@ class OrderSubmittedEventBuilder extends EventBuilder
             $items = [];
             foreach (range(1, $count) as $i) {
                 $items[] = [
-                    'product_id' => Product::factory()->create()->id,
+                    'productId' => Product::factory()->create()->id,
                     'quantity'   => random_int(1, 10),
                 ];
             }
@@ -339,18 +339,18 @@ use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 
 // Only provide the data you care about — identity fields are defaulted
 $event = ChildMachineDoneEvent::forTesting(['result' => ['statusCode' => 3]]);
-$state = State::forTesting(['attempt_count' => 2], currentEventBehavior: $event);
+$state = State::forTesting(['attemptCount' => 2], currentEventBehavior: $event);
 expect(IsStatusSuccessGuard::runWithState($state))->toBeTrue();
 
 // Fail event for error-handling guards
-$event = ChildMachineFailEvent::forTesting(['error_message' => 'Gateway timeout']);
+$event = ChildMachineFailEvent::forTesting(['errorMessage' => 'Gateway timeout']);
 $state = State::forTesting([], currentEventBehavior: $event);
 expect(IsRetryableErrorGuard::runWithState($state))->toBeTrue();
 
 // With final state (for @done.{state} routing guards)
 $event = ChildMachineDoneEvent::forTesting([
     'result'      => ['status' => 'ok'],
-    'final_state' => 'approved',
+    'finalState' => 'approved',
 ]);
 
 // Zero config — all defaults (machine_id: 'test', machine_class: 'TestMachine')

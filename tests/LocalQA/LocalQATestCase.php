@@ -59,6 +59,23 @@ class LocalQATestCase extends Orchestra
      */
     public static function cleanTables(): void
     {
+        // 1. Drain pending + delayed queues (stop NEW jobs from being picked up).
+        // Do NOT delete reserved — those are in-flight, workers will finish them.
+        $redis  = app('redis');
+        $prefix = config('database.redis.options.prefix', 'laravel_database_');
+
+        foreach (['default', 'child-queue'] as $queue) {
+            $redis->del("{$prefix}queues:{$queue}");          // pending
+            $redis->del("{$prefix}queues:{$queue}:delayed");  // delayed (timers, afterCommit)
+            $redis->del("{$prefix}queues:{$queue}:notify");   // notification channel
+        }
+
+        // 2. Wait for in-flight (reserved) jobs to finish naturally.
+        // Workers that already picked up a job will complete it and remove from reserved.
+        // We must wait for reserved=0 before truncating tables.
+        static::waitForIdleWorkers($redis, $prefix);
+
+        // 3. Now safe to truncate — no workers are writing to these tables
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         DB::table('machine_events')->truncate();
         DB::table('machine_current_states')->truncate();
@@ -76,32 +93,67 @@ class LocalQATestCase extends Orchestra
         }
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+    }
 
-        // Drain Redis queues — delete queue lists but keep Horizon metadata intact.
-        // This prevents leftover jobs from previous tests from processing against
-        // new test data (different root_event_ids).
-        $redis  = app('redis');
-        $prefix = config('database.redis.options.prefix', 'laravel_database_');
+    /**
+     * Wait until Horizon workers have no reserved (in-flight) jobs AND
+     * a short quiet period has elapsed (no new completions).
+     *
+     * After draining pending/delayed queues, workers may still be processing
+     * previously-reserved jobs. A completing job can dispatch NEW jobs
+     * (e.g., ChildMachineCompletionJob), so we must wait for the entire
+     * chain to settle — not just the current reserved set.
+     *
+     * Strategy: wait for reserved=0 AND no new machine_events written
+     * for 500ms (the chain has fully settled).
+     */
+    private static function waitForIdleWorkers($redis, string $prefix, int $timeoutSeconds = 15): void
+    {
+        $start     = time();
+        $quietMs   = 0;
+        $lastCount = DB::table('machine_events')->count();
 
-        foreach (['default', 'child-queue'] as $queue) {
-            $redis->del("{$prefix}queues:{$queue}");
-            $redis->del("{$prefix}queues:{$queue}:delayed");
-            $redis->del("{$prefix}queues:{$queue}:reserved");
-            $redis->del("{$prefix}queues:{$queue}:notify");
+        while (time() - $start < $timeoutSeconds) {
+            usleep(100_000); // 100ms
+
+            // Check reserved jobs across all queues
+            $totalReserved = 0;
+            foreach (['default', 'child-queue'] as $queue) {
+                $totalReserved += (int) $redis->zcard("{$prefix}queues:{$queue}:reserved");
+            }
+
+            $currentCount = DB::table('machine_events')->count();
+
+            if ($totalReserved === 0 && $currentCount === $lastCount) {
+                $quietMs += 100;
+                if ($quietMs >= 500) {
+                    return; // 500ms quiet — chain settled
+                }
+            } else {
+                $quietMs   = 0;
+                $lastCount = $currentCount;
+            }
         }
     }
 
     /**
      * Poll DB until condition is true or timeout.
      */
-    public static function waitFor(callable $condition, int $timeoutSeconds = 30, int $intervalMs = 250): bool
-    {
-        $start = time();
+    public static function waitFor(
+        callable $condition,
+        int $timeoutSeconds = 60,
+        string $description = '',
+    ): bool {
+        $start      = time();
+        $intervalMs = 100;
+
         while (time() - $start < $timeoutSeconds) {
             if ($condition()) {
                 return true;
             }
+
             usleep($intervalMs * 1000);
+            $intervalMs = min((int) ($intervalMs * 1.5), 1000);
         }
 
         return false;

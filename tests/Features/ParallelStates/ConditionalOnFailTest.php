@@ -58,8 +58,8 @@ test('it transitions to first matching guard branch on @fail', function (): void
         'id'      => 'test_fail_guard',
         'initial' => 'processing',
         'context' => [
-            'retry_count' => 0,
-            'alert_sent'  => false,
+            'retryCount' => 0,
+            'alertSent'  => false,
         ],
         'states' => [
             'processing' => [
@@ -99,7 +99,7 @@ test('it transitions to first matching guard branch on @fail', function (): void
     $state         = $definition->processParallelOnFail($parallelState, $state);
 
     expect($state->value)->toBe(['test_fail_guard.retrying'])
-        ->and($state->context->get('retry_count'))->toBe(1)
+        ->and($state->context->get('retryCount'))->toBe(1)
         ->and(SendAlertAction::wasExecuted())->toBeFalse();
 });
 
@@ -111,8 +111,8 @@ test('it falls through to default branch on @fail', function (): void {
         'id'      => 'test_fail_fallback',
         'initial' => 'processing',
         'context' => [
-            'retry_count' => 5,
-            'alert_sent'  => false,
+            'retryCount' => 5,
+            'alertSent'  => false,
         ],
         'states' => [
             'processing' => [
@@ -153,7 +153,7 @@ test('it falls through to default branch on @fail', function (): void {
 
     expect($state->value)->toBe(['test_fail_fallback.failed'])
         ->and(SendAlertAction::wasExecuted())->toBeTrue()
-        ->and($state->context->get('alert_sent'))->toBeTrue();
+        ->and($state->context->get('alertSent'))->toBeTrue();
 });
 
 // Test 16: @fail — all guards fail, no default → machine stays
@@ -162,7 +162,7 @@ test('it aborts @fail when all guards fail and no default', function (): void {
         'id'      => 'test_fail_abort',
         'initial' => 'processing',
         'context' => [
-            'retry_count' => 5,
+            'retryCount' => 5,
         ],
         'states' => [
             'processing' => [
@@ -216,7 +216,7 @@ test('it runs branch actions BEFORE exit on @fail', function (): void {
             'id'      => 'test_fail_before_exit',
             'initial' => 'processing',
             'context' => [
-                'retry_count' => 5,
+                'retryCount' => 5,
             ],
             'states' => [
                 'processing' => [
@@ -278,8 +278,8 @@ test('it works with canRetry pattern across multiple fail invocations', function
         'id'      => 'test_retry_pattern',
         'initial' => 'processing',
         'context' => [
-            'retry_count' => 2,
-            'alert_sent'  => false,
+            'retryCount' => 2,
+            'alertSent'  => false,
         ],
         'states' => [
             'processing' => [
@@ -319,12 +319,12 @@ test('it works with canRetry pattern across multiple fail invocations', function
     $state         = $definition->processParallelOnFail($parallelState, $state);
 
     expect($state->value)->toBe(['test_retry_pattern.retrying'])
-        ->and($state->context->get('retry_count'))->toBe(3);
+        ->and($state->context->get('retryCount'))->toBe(3);
 
     // Reset state to simulate another fail (retry_count is now 3)
     // Create fresh initial state but with updated context
     $state2 = $definition->getInitialState();
-    $state2->context->set('retry_count', 3);
+    $state2->context->set('retryCount', 3);
 
     SendAlertAction::reset();
     $state2 = $definition->processParallelOnFail($parallelState, $state2);
@@ -345,7 +345,7 @@ test('ConditionalOnFailMachine @fail with guard pass via Machine::create', funct
     $state         = $machine->definition->processParallelOnFail($parallelState, $machine->state);
 
     expect($state->value)->toBe(['conditional_on_fail.retrying'])
-        ->and($state->context->get('retry_count'))->toBe(1)
+        ->and($state->context->get('retryCount'))->toBe(1)
         ->and(SendAlertAction::wasExecuted())->toBeFalse();
 });
 
@@ -354,7 +354,7 @@ test('ConditionalOnFailMachine @fail with guard fail via Machine::create', funct
     SendAlertAction::reset();
 
     $machine = ConditionalOnFailMachine::create();
-    $machine->state->context->set('retry_count', 5);
+    $machine->state->context->set('retryCount', 5);
 
     // retry_count=5 >= 3, CanRetryGuard fails → falls through to SendAlertAction
     $parallelState = $machine->definition->idMap['conditional_on_fail.processing'];
@@ -362,7 +362,7 @@ test('ConditionalOnFailMachine @fail with guard fail via Machine::create', funct
 
     expect($state->value)->toBe(['conditional_on_fail.failed'])
         ->and(SendAlertAction::wasExecuted())->toBeTrue()
-        ->and($state->context->get('alert_sent'))->toBeTrue();
+        ->and($state->context->get('alertSent'))->toBeTrue();
 });
 
 // Test 21: ConditionalOnFailMachine — @done path via Machine::send (all regions succeed)

@@ -14,7 +14,7 @@ class NotifyReviewerAction extends ActionBehavior
     public function __invoke(ContextManager $context): void
     {
         self::$executed = true;
-        $context->set('reviewer_notified', true);
+        $context->set('reviewerNotified', true);
     }
 
     public static function wasExecuted(): bool

@@ -21,16 +21,16 @@ class ResultChildMachine extends Machine
                 'id'      => 'result_child',
                 'initial' => 'done',
                 'context' => [
-                    'status'     => 'approved',
-                    'payment_id' => 'pay_abc',
+                    'status'    => 'approved',
+                    'paymentId' => 'pay_abc',
                 ],
                 'states' => [
                     'done' => [
                         'type'   => 'final',
                         'result' => function (ContextManager $ctx): array {
                             return [
-                                'status'     => $ctx->get('status'),
-                                'payment_id' => $ctx->get('payment_id'),
+                                'status'    => $ctx->get('status'),
+                                'paymentId' => $ctx->get('paymentId'),
                             ];
                         },
                     ],

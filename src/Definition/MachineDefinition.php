@@ -31,6 +31,7 @@ use Tarfinlabs\EventMachine\Analysis\PathEnumerationResult;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Routing\ForwardedEndpointDefinition;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidEndpointDefinitionException;
@@ -1077,12 +1078,14 @@ class MachineDefinition
      * @param  EventBehavior  $eventBehavior  The event behavior.
      * @param  State  $state  The current state.
      *
-     * @return array<TransitionBranch> Array of valid transition branches.
+     * @return TransitionSelectionResult Contains valid branches and whether a ValidationGuardBehavior failed.
      */
-    protected function selectTransitions(EventBehavior $eventBehavior, State $state): array
+    protected function selectTransitions(EventBehavior $eventBehavior, State $state): TransitionSelectionResult
     {
-        $transitions = [];
-        $seen        = [];
+        $transitions               = [];
+        $seen                      = [];
+        $hadValidationGuardFailure = false;
+        $hadRegularGuardFailure    = false;
 
         foreach ($this->getActiveAtomicStates($state) as $atomicState) {
             $transitionDef = $this->findTransitionDefinitionOrNull($atomicState, $eventBehavior);
@@ -1100,11 +1103,44 @@ class MachineDefinition
 
                 if ($branch instanceof TransitionBranch) {
                     $transitions[] = $branch;
+                } elseif ($this->transitionHasValidationGuard($transitionDef)) {
+                    $hadValidationGuardFailure = true;
+                } else {
+                    $hadRegularGuardFailure = true;
                 }
             }
         }
 
-        return $transitions;
+        return new TransitionSelectionResult($transitions, $hadValidationGuardFailure, $hadRegularGuardFailure);
+    }
+
+    /**
+     * Check if any branch of a transition definition has a ValidationGuardBehavior guard.
+     *
+     * Guard definitions come in two forms (matching getInvokableBehavior resolution):
+     * - FQCN: IsVinValidValidationGuard::class → is_subclass_of directly
+     * - String key: 'isVinValid' → look up in behavior registry, then is_subclass_of
+     */
+    private function transitionHasValidationGuard(TransitionDefinition $transitionDef): bool
+    {
+        foreach ($transitionDef->branches as $branch) {
+            foreach ($branch->guards ?? [] as $guardDefinition) {
+                $baseName = explode(':', (string) $guardDefinition, 2)[0];
+
+                // FQCN: class directly extends ValidationGuardBehavior
+                if (is_subclass_of($baseName, ValidationGuardBehavior::class)) {
+                    return true;
+                }
+
+                // String key: resolve from behavior registry
+                $guardClass = $this->behavior[BehaviorType::Guard->value][$baseName] ?? null;
+                if (is_string($guardClass) && is_subclass_of($guardClass, ValidationGuardBehavior::class)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -1176,6 +1212,26 @@ class MachineDefinition
         // Run transition listeners (only for event-driven transitions, not initial entry)
         if ($fireTransitionListeners) {
             $this->runTransitionListeners($state, $eventBehavior);
+        }
+
+        // SCXML invoker-05 macrostep semantics: raised events from entry actions
+        // must complete BEFORE child machine invocation starts.
+        // If they cause a state change, delegation is skipped entirely.
+        if ($this->eventQueue->isNotEmpty()) {
+            if ($processPostEntry && count($state->value) <= 1) {
+                $stateBeforePostEntry = $state->currentStateDefinition->id;
+                $this->processPostEntryTransitions($state, $eventBehavior);
+
+                // If raised events caused a state change, skip delegation and onDone
+                if ($state->currentStateDefinition->id !== $stateBeforePostEntry) {
+                    return;
+                }
+            } else {
+                // processPostEntry: false — caller (transition()) will handle the
+                // event queue. Return early so delegation is deferred until after
+                // internal events are resolved by the caller.
+                return;
+            }
         }
 
         // Handle machine delegation (sync child machines)
@@ -2588,7 +2644,22 @@ class MachineDefinition
     protected function transitionParallelState(State $state, EventBehavior $eventBehavior, int $recursionDepth = 0): State
     {
         // Find transitions for all active atomic states
-        $transitions = $this->selectTransitions($eventBehavior, $state);
+        $result      = $this->selectTransitions($eventBehavior, $state);
+        $transitions = $result->branches;
+
+        // Validation guard failure blocks entire parallel transition.
+        // Excluded for @always — automatic transitions have no HTTP caller.
+        // Machine::handleValidationGuards() will scan history and throw MachineValidationException.
+        if ($result->hadValidationGuardFailure
+            && $eventBehavior->type !== TransitionProperty::Always->value
+        ) {
+            $state->setInternalEventBehavior(
+                type: InternalEvent::TRANSITION_FAIL,
+                placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
+            );
+
+            return $state;
+        }
 
         // If no transitions found for a real event, throw exception.
         // For @always transitions, guard failure is expected (e.g., cross-region
@@ -2596,6 +2667,18 @@ class MachineDefinition
         // In that case, return the current state without transitioning.
         if ($transitions === []) {
             if ($eventBehavior->type === TransitionProperty::Always->value) {
+                return $state;
+            }
+
+            // Transition was found but regular guard/calculator failed — graceful failure.
+            // Matches non-parallel behavior: record TRANSITION_FAIL and return current state
+            // instead of throwing NoTransitionDefinitionFoundException.
+            if ($result->hadRegularGuardFailure) {
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::TRANSITION_FAIL,
+                    placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
+                );
+
                 return $state;
             }
 
@@ -2666,12 +2749,20 @@ class MachineDefinition
                 ?? $transitionBranch->target
                 ?? $sourceState;
 
-            // Execute transition actions
+            // Exit protocol — only for targeted transitions (SCXML: targetless = no exit/entry)
+            if ($transitionBranch->target instanceof StateDefinition) {
+                // Run exit listeners then exit actions for the source state
+                $this->runExitListeners($state);
+                $sourceState->runExitActions($state);
+            }
+
+            // Execute transition actions (SCXML order: exit → transition → entry)
             $transitionBranch->runActions($state, $eventBehavior);
 
-            // Run exit listeners then exit actions for the source state
-            $this->runExitListeners($state);
-            $sourceState->runExitActions($state);
+            // Targetless transitions: no state update, no entry actions
+            if (!$transitionBranch->target instanceof StateDefinition) {
+                continue;
+            }
 
             // Update the state value for this region immediately
             // This ensures entry actions and subsequent events see the correct value
@@ -2891,30 +2982,31 @@ class MachineDefinition
         // If a target state definition is defined, find its initial state definition
         $targetStateDefinition = $transitionBranch->target?->findInitialStateDefinition() ?? $transitionBranch->target;
 
-        // Execute actions associated with the transition
+        // Exit protocol — only for targeted transitions (SCXML: targetless = no exit/entry)
+        if ($targetStateDefinition instanceof StateDefinition) {
+            // Run exit listeners before state exit actions
+            $this->runExitListeners($state);
+
+            // Execute exit actions for the current state definition
+            $transitionBranch->transitionDefinition->source->runExitActions($state);
+
+            // Cancel active children when leaving a state with machine delegation
+            $this->cleanupActiveChildren($state, $transitionBranch->transitionDefinition->source);
+
+            // Record state exit event
+            $state->setInternalEventBehavior(
+                type: InternalEvent::STATE_EXIT,
+                placeholder: $state->currentStateDefinition->route,
+            );
+        }
+
+        // Execute actions associated with the transition (SCXML order: exit → transition → entry)
         $transitionBranch->runActions($state, $eventBehavior);
 
-        // Record transition start finish
+        // Record transition finish
         $state->setInternalEventBehavior(
             type: InternalEvent::TRANSITION_FINISH,
             placeholder: "{$state->currentStateDefinition->route}.{$eventBehavior->type}",
-        );
-
-        // Run exit listeners before state exit actions (only for targeted transitions)
-        if ($targetStateDefinition instanceof StateDefinition) {
-            $this->runExitListeners($state);
-        }
-
-        // Execute exit actions for the current state definition
-        $transitionBranch->transitionDefinition->source->runExitActions($state);
-
-        // Cancel active children when leaving a state with machine delegation
-        $this->cleanupActiveChildren($state, $transitionBranch->transitionDefinition->source);
-
-        // Record state exit event
-        $state->setInternalEventBehavior(
-            type: InternalEvent::STATE_EXIT,
-            placeholder: $state->currentStateDefinition->route,
         );
 
         // Set the new state, or keep the current state if no target state definition is defined

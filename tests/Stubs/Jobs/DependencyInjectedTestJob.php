@@ -17,6 +17,6 @@ class DependencyInjectedTestJob implements ReturnsResult
 
     public function result(): array
     {
-        return ['service_result' => $this->serviceResult];
+        return ['serviceResult' => $this->serviceResult];
     }
 }

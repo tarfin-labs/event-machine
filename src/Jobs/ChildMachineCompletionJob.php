@@ -11,7 +11,10 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
+use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 
@@ -83,13 +86,22 @@ class ChildMachineCompletionJob implements ShouldQueue
             return;
         }
 
-        // 3. Acquire lock for parent state mutation
-        $lockHandle = MachineLockManager::acquire(
-            rootEventId: $this->parentRootEventId,
-            timeout: 30,
-            ttl: 60,
-            context: 'child_machine_completion',
-        );
+        // 3. Acquire lock for parent state mutation.
+        //    Re-entrant check: in sync queue mode, send() on the parent may already
+        //    hold the lock (send → transition → ChildMachineJob → ChildMachineCompletionJob).
+        $alreadyLocked = isset(Machine::$heldLockIds[$this->parentRootEventId]);
+        $lockHandle    = null;
+
+        if (!$alreadyLocked) {
+            $lockHandle = MachineLockManager::acquire(
+                rootEventId: $this->parentRootEventId,
+                timeout: 30,
+                ttl: 60,
+                context: 'child_machine_completion',
+            );
+        }
+
+        $shouldPropagate = false;
 
         try {
             // 4. Re-check under lock (double-guard pattern)
@@ -181,8 +193,53 @@ class ChildMachineCompletionJob implements ShouldQueue
 
             // 6. Persist parent state
             $freshParent->persist();
+
+            // 7. Chain propagation: if the parent just reached a final state
+            // and is itself a managed child, dispatch completion to grandparent.
+            $shouldPropagate = $freshParent->state->currentStateDefinition->type === StateDefinitionType::FINAL;
         } finally {
             $lockHandle?->release();
         }
+
+        if ($shouldPropagate) {
+            $this->propagateChainCompletion($freshParent);
+        }
+    }
+
+    /**
+     * If this machine is itself a managed child and just reached a final state,
+     * dispatch a ChildMachineCompletionJob to route @done/@fail to its own parent.
+     *
+     * This enables deep delegation chains: Parent → Child → Grandchild → ...
+     */
+    protected function propagateChainCompletion(Machine $machine): void
+    {
+        $rootEventId = $machine->state->history->first()->root_event_id;
+
+        $childRecord = MachineChild::where('child_root_event_id', $rootEventId)
+            ->where('status', MachineChild::STATUS_RUNNING)
+            ->first();
+
+        if ($childRecord === null) {
+            return;
+        }
+
+        $childRecord->markCompleted();
+
+        dispatch(new self(
+            parentRootEventId: $childRecord->parent_root_event_id,
+            parentMachineClass: $childRecord->parent_machine_class,
+            parentStateId: $childRecord->parent_state_id,
+            childMachineClass: $childRecord->child_machine_class,
+            childRootEventId: $rootEventId,
+            success: true,
+            result: $machine->result(),
+            childContextData: $machine->state->context->data,
+            outputData: MachineDefinition::resolveChildOutput(
+                $machine->state->currentStateDefinition,
+                $machine->state->context,
+            ),
+            childFinalState: $machine->state->currentStateDefinition->key,
+        ));
     }
 }

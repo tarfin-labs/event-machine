@@ -109,7 +109,7 @@ it('Machine::result() preserves payload through entry actions', function (): voi
                         'type'   => 'final',
                         'entry'  => 'markProcessedAction',
                         'result' => fn (EventBehavior $event, ContextManager $ctx): array => [
-                            'order_id'  => $event->payload['order_id'] ?? null,
+                            'orderId'   => $event->payload['orderId'] ?? null,
                             'processed' => $ctx->get('processed'),
                         ],
                     ],
@@ -125,12 +125,12 @@ it('Machine::result() preserves payload through entry actions', function (): voi
         ),
     );
 
-    $machine->send(['type' => 'PROCESS', 'payload' => ['order_id' => 'ORD-42']]);
+    $machine->send(['type' => 'PROCESS', 'payload' => ['orderId' => 'ORD-42']]);
 
     $result = $machine->result();
 
     // Entry action ran (processed=true), but event payload is still the original PROCESS event
-    expect($result['order_id'])->toBe('ORD-42')
+    expect($result['orderId'])->toBe('ORD-42')
         ->and($result['processed'])->toBeTrue();
 });
 

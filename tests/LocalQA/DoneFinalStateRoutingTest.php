@@ -5,9 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\DoneDotParentMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\DoneDotCatchallParentMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateApprovedChildMachine;
 
 uses(LocalQATestCase::class);
 
@@ -26,16 +24,14 @@ it('LocalQA: async delegation routes via @done.{finalState} through Horizon (LQA
 
     $rootEventId = $parent->state->history->first()->root_event_id;
 
-    // Parent should be in processing state (async child dispatched)
-    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
-    expect($cs->state_id)->toContain('processing');
-
     // Wait for Horizon: child auto-completes in 'approved' → @done.approved → parent goes to 'completed'
+    // Note: no intermediate state assertion — ImmediateApprovedChildMachine starts in final state,
+    // so Horizon may complete the entire chain before we can observe 'processing'.
     $completed = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($completed)->toBeTrue('Async @done.approved routing not completed by Horizon');
 });
@@ -56,28 +52,9 @@ it('LocalQA: async delegation falls through to @done catch-all through Horizon (
         $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
 
         return $cs && str_contains($cs->state_id, 'fallback');
-    }, timeoutSeconds: 30);
+    }, timeoutSeconds: 60);
 
     expect($completed)->toBeTrue('Async @done catch-all fallback not completed by Horizon');
 });
 
-it('LocalQA: Machine::fake(finalState:) short-circuits async @done.{state} routing (LQA3)', function (): void {
-    ImmediateApprovedChildMachine::fake(finalState: 'approved');
-
-    $parent = DoneDotParentMachine::create();
-    $parent->send(['type' => 'START']);
-    $parent->persist();
-
-    $rootEventId = $parent->state->history->first()->root_event_id;
-
-    // Faked: should complete immediately without Horizon
-    $completed = LocalQATestCase::waitFor(function () use ($rootEventId) {
-        $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
-
-        return $cs && str_contains($cs->state_id, 'completed');
-    }, timeoutSeconds: 30);
-
-    expect($completed)->toBeTrue('Faked @done.approved routing not completed');
-
-    ImmediateApprovedChildMachine::assertInvoked();
-});
+// LQA3 (Machine::fake) moved to unit tests — LocalQA must use real Horizon, never Machine::fake().

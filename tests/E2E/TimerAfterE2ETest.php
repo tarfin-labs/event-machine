@@ -128,7 +128,7 @@ it('E2E: @after with guarded multi-branch transition via real pipeline', functio
         config: [
             'id'      => 'guarded_e2e',
             'initial' => 'waiting',
-            'context' => ['is_expired' => true],
+            'context' => ['isExpired' => true],
             'states'  => [
                 'waiting' => [
                     'on' => [
@@ -145,7 +145,7 @@ it('E2E: @after with guarded multi-branch transition via real pipeline', functio
         ],
         behavior: [
             'guards' => [
-                'isExpiredGuard' => fn (ContextManager $ctx): bool => $ctx->get('is_expired'),
+                'isExpiredGuard' => fn (ContextManager $ctx): bool => $ctx->get('isExpired'),
             ],
         ],
     );

@@ -11,6 +11,6 @@ class IncrementRetryAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('retry_count', $context->get('retry_count') + 1);
+        $context->set('retryCount', $context->get('retryCount') + 1);
     }
 }

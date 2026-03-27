@@ -24,9 +24,9 @@ class ListenerQueuedMachine extends Machine
                 'id'      => 'listener_queued',
                 'initial' => 'idle',
                 'context' => [
-                    'sync_listener_ran'      => false,
-                    'queued_listener_ran'    => false,
-                    'queued_listener_ran_at' => null,
+                    'syncListenerRan'     => false,
+                    'queuedListenerRan'   => false,
+                    'queuedListenerRanAt' => null,
                 ],
                 'listen' => [
                     'entry' => [

@@ -24,9 +24,9 @@ class ForwardChildEndpointMachine extends Machine
                 'id'      => 'forward_endpoint_child',
                 'initial' => 'awaiting_card',
                 'context' => [
-                    'order_id'   => null,
-                    'card_last4' => null,
-                    'status'     => 'pending',
+                    'orderId'   => null,
+                    'cardLast4' => null,
+                    'status'    => 'pending',
                 ],
                 'states' => [
                     'awaiting_card' => [
@@ -55,8 +55,8 @@ class ForwardChildEndpointMachine extends Machine
                 ],
                 'actions' => [
                     'storeCardAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                        $cardNumber = $event->payload['card_number'] ?? '';
-                        $ctx->set('card_last4', substr($cardNumber, -4));
+                        $cardNumber = $event->payload['cardNumber'] ?? '';
+                        $ctx->set('cardLast4', substr($cardNumber, -4));
                         $ctx->set('status', 'card_provided');
                     },
                 ],

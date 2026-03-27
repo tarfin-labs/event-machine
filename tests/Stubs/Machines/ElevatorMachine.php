@@ -14,8 +14,8 @@ class ElevatorMachine extends Machine
         return MachineDefinition::define(config: [
             'initial' => 'state_b',
             'context' => [
-                'model_a' => null,
-                'value'   => 4,
+                'modelA' => null,
+                'value'  => 4,
             ],
             'states' => [
                 'state_a' => [

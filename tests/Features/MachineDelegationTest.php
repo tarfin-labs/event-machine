@@ -56,15 +56,15 @@ it('transfers context to child via with array (same-name format)', function (): 
             'id'      => 'parent_with',
             'initial' => 'start',
             'context' => [
-                'order_id'          => 'ORD-123',
-                'amount'            => 5000,
-                'received_order_id' => null,
+                'orderId'         => 'ORD-123',
+                'amount'          => 5000,
+                'receivedOrderId' => null,
             ],
             'states' => [
                 'start'      => ['on' => ['GO' => 'processing']],
                 'processing' => [
                     'machine' => ChildPaymentMachine::class,
-                    'with'    => ['order_id', 'amount'],
+                    'with'    => ['orderId', 'amount'],
                     '@done'   => [
                         'target'  => 'done',
                         'actions' => 'captureResultAction',
@@ -76,7 +76,7 @@ it('transfers context to child via with array (same-name format)', function (): 
         behavior: [
             'actions' => [
                 'captureResultAction' => function (ContextManager $context, EventBehavior $event): void {
-                    $context->set('received_order_id', $event->payload['output']['order_id'] ?? null);
+                    $context->set('receivedOrderId', $event->payload['output']['orderId'] ?? null);
                 },
             ],
         ],
@@ -86,7 +86,7 @@ it('transfers context to child via with array (same-name format)', function (): 
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
 
     expect($state->value)->toBe(['parent_with.done'])
-        ->and($state->context->get('received_order_id'))->toBe('ORD-123');
+        ->and($state->context->get('receivedOrderId'))->toBe('ORD-123');
 });
 
 it('transfers context to child via with key mapping format', function (): void {
@@ -95,14 +95,14 @@ it('transfers context to child via with key mapping format', function (): void {
             'id'      => 'parent_mapped',
             'initial' => 'start',
             'context' => [
-                'total_price'     => 9999,
-                'child_got_price' => null,
+                'totalPrice'    => 9999,
+                'childGotPrice' => null,
             ],
             'states' => [
                 'start'      => ['on' => ['GO' => 'processing']],
                 'processing' => [
                     'machine' => ChildPaymentMachine::class,
-                    'with'    => ['amount' => 'total_price'],
+                    'with'    => ['amount' => 'totalPrice'],
                     '@done'   => [
                         'target'  => 'done',
                         'actions' => 'storeAction',
@@ -114,7 +114,7 @@ it('transfers context to child via with key mapping format', function (): void {
         behavior: [
             'actions' => [
                 'storeAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                    $ctx->set('child_got_price', $event->payload['result']['amount'] ?? null);
+                    $ctx->set('childGotPrice', $event->payload['result']['amount'] ?? null);
                 },
             ],
         ],
@@ -124,7 +124,7 @@ it('transfers context to child via with key mapping format', function (): void {
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
 
     expect($state->value)->toBe(['parent_mapped.done'])
-        ->and($state->context->get('child_got_price'))->toBe(9999);
+        ->and($state->context->get('childGotPrice'))->toBe(9999);
 });
 
 it('routes to @fail when child machine throws exception', function (): void {
@@ -276,13 +276,13 @@ it('child context changes do not affect parent context', function (): void {
             'id'      => 'isolation_parent',
             'initial' => 'idle',
             'context' => [
-                'order_id' => 'ORIGINAL',
+                'orderId' => 'ORIGINAL',
             ],
             'states' => [
                 'idle'       => ['on' => ['GO' => 'processing']],
                 'processing' => [
                     'machine' => ContextMutatingChildMachine::class,
-                    'with'    => ['order_id'],
+                    'with'    => ['orderId'],
                     '@done'   => 'done',
                 ],
                 'done' => ['type' => 'final'],
@@ -294,7 +294,7 @@ it('child context changes do not affect parent context', function (): void {
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
 
     // Parent's order_id must be untouched
-    expect($state->context->get('order_id'))->toBe('ORIGINAL');
+    expect($state->context->get('orderId'))->toBe('ORIGINAL');
 });
 
 it('parent state value does not include child states', function (): void {
@@ -457,8 +457,8 @@ it('ChildMachineDoneEvent has typed accessors', function (): void {
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
 
     expect($receivedEvent)->toBeInstanceOf(ChildMachineDoneEvent::class)
-        ->and($receivedEvent->result('payment_id'))->toBe('pay_abc')
-        ->and($receivedEvent->output('payment_id'))->toBe('pay_abc')
+        ->and($receivedEvent->result('paymentId'))->toBe('pay_abc')
+        ->and($receivedEvent->output('paymentId'))->toBe('pay_abc')
         ->and($receivedEvent->childMachineClass())->toBe(ResultChildMachine::class);
 });
 
@@ -499,10 +499,10 @@ it('output key filters child context to only specified keys', function (): void 
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
 
     expect($receivedEvent)->toBeInstanceOf(ChildMachineDoneEvent::class)
-        ->and($receivedEvent->output('payment_id'))->toBe('pay_xyz')
+        ->and($receivedEvent->output('paymentId'))->toBe('pay_xyz')
         ->and($receivedEvent->output('status'))->toBe('approved')
         ->and($receivedEvent->output('internal_retry_count'))->toBeNull() // not exposed
-        ->and($receivedEvent->output())->toBe(['payment_id' => 'pay_xyz', 'status' => 'approved']);
+        ->and($receivedEvent->output())->toBe(['paymentId' => 'pay_xyz', 'status' => 'approved']);
 });
 
 it('output falls back to full context when no output key defined', function (): void {
@@ -542,7 +542,7 @@ it('output falls back to full context when no output key defined', function (): 
     // ResultChildMachine has no output key → full context returned (payment_id, status)
     expect($receivedEvent)->toBeInstanceOf(ChildMachineDoneEvent::class)
         ->and($receivedEvent->output())->toBeArray()
-        ->and($receivedEvent->output('payment_id'))->toBe('pay_abc')
+        ->and($receivedEvent->output('paymentId'))->toBe('pay_abc')
         ->and($receivedEvent->output('status'))->toBe('approved');
 });
 
@@ -651,7 +651,7 @@ it('@done.{state} supports config with actions (T2)', function (): void {
 
     $machine = MachineDefinition::define(
         config: [
-            'id'     => 'action_parent', 'initial' => 'idle', 'context' => ['child_decision' => null],
+            'id'     => 'action_parent', 'initial' => 'idle', 'context' => ['childDecision' => null],
             'states' => [
                 'idle'       => ['on' => ['GO' => 'delegating']],
                 'delegating' => [
@@ -664,7 +664,7 @@ it('@done.{state} supports config with actions (T2)', function (): void {
         behavior: [
             'actions' => [
                 'storeDecisionAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedFinalState): void {
-                    $ctx->set('child_decision', $event->output('decision'));
+                    $ctx->set('childDecision', $event->output('decision'));
                     $capturedFinalState = $event->finalState();
                 },
             ],
@@ -675,7 +675,7 @@ it('@done.{state} supports config with actions (T2)', function (): void {
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
 
     expect($state->value)->toBe(['action_parent.completed'])
-        ->and($state->context->get('child_decision'))->toBe('yes')
+        ->and($state->context->get('childDecision'))->toBe('yes')
         ->and($capturedFinalState)->toBe('approved');
 });
 
@@ -728,14 +728,14 @@ it('uses ParentOrderMachine stub for full lifecycle', function (): void {
     $machine = ParentOrderMachine::create();
 
     // Set context values before sending event
-    $machine->state->context->set('order_id', 'ORD-456');
-    $machine->state->context->set('total_amount', 7500);
+    $machine->state->context->set('orderId', 'ORD-456');
+    $machine->state->context->set('totalAmount', 7500);
 
     $state = $machine->send(['type' => 'START_PAYMENT']);
 
     expect($state->currentStateDefinition->id)->toBe('parent_order.completed')
-        ->and($state->context->get('payment_id'))->not->toBeNull()
-        ->and($state->context->get('receipt_url'))->not->toBeNull();
+        ->and($state->context->get('paymentId'))->not->toBeNull()
+        ->and($state->context->get('receiptUrl'))->not->toBeNull();
 });
 
 // ============================================================

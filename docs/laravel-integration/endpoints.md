@@ -119,6 +119,14 @@ SubmitEvent::class,
 ],
 ```
 
+```php ignore
+// GET endpoint — query params wrapped into payload automatically
+'STATUS_REQUESTED' => [
+    'uri'    => '/status',
+    'method' => 'GET',
+],
+```
+
 **4. Event class key — use class instead of type string:**
 
 ```php ignore
@@ -136,12 +144,55 @@ All four formats can be mixed freely in the same `endpoints` array.
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `uri` | `string` | Auto-generated | URI path for the endpoint |
-| `method` | `string` | `'POST'` | HTTP method |
+| `method` | `string` | `'POST'` | HTTP method. For `GET`, query parameters are automatically normalized into `payload` — see [GET Endpoints](#get-endpoints) |
 | `action` | `string` | `null` | `MachineEndpointAction` subclass FQCN |
 | `result` | `string` | `null` | ResultBehavior inline key or FQCN |
 | `middleware` | `array` | `[]` | Per-event middleware (additive) |
 | `status` | `int` | `200` | HTTP status code |
 | `available_events` | `bool` | `true` | Include `available_events` in the default response |
+
+### GET Endpoints
+
+When an endpoint uses `'method' => 'GET'`, request data comes from query parameters instead of a JSON body. EventMachine automatically wraps query parameters into the `payload` key so your validation rules work the same way for both GET and POST:
+
+```
+GET /status?dealer_code=ABC123&plate_number=34XY
+```
+
+The query parameters are normalized to:
+
+```php
+['payload' => ['dealer_code' => 'ABC123', 'plate_number' => '34XY']]
+```
+
+This means your `EventBehavior` validation rules target `payload.*` regardless of HTTP method:
+
+<!-- doctest-attr: ignore -->
+```php
+class StatusRequestedEvent extends EventBehavior
+{
+    public static function getType(): string
+    {
+        return 'STATUS_REQUESTED';
+    }
+
+    public static function rules(): array
+    {
+        return [
+            'payload.dealer_code'  => ['required', 'string'],
+            'payload.plate_number' => ['required', 'string'],
+        ];
+    }
+}
+```
+
+**When to use GET endpoints:** Read-only queries, status lookups, and search endpoints where data is passed via query parameters.
+
+::: tip Query Parameter Types
+Query parameter values are always strings. Use validation rules like `'numeric'` or `'integer'` when you need numeric values — Laravel's validator handles string-to-number coercion.
+:::
+
+If a GET request explicitly uses the `payload[]` bracket syntax (`?payload[key]=value`), the automatic wrapping is skipped to avoid double-nesting.
 
 ### URI Auto-Generation
 
@@ -228,8 +279,8 @@ When no `result` is specified, the endpoint returns the machine state as JSON:
         "machine_id": "01JARX5Z8KQVN...",
         "value": ["submitted"],
         "context": {
-            "total_amount": 15000,
-            "customer_email": "user@example.com"
+            "totalAmount": 15000,
+            "customerEmail": "user@example.com"
         },
         "available_events": [
             { "type": "APPROVE", "source": "parent" },
@@ -238,6 +289,8 @@ When no `result` is specified, the endpoint returns the machine state as JSON:
     }
 }
 ```
+
+If your context class overrides `computedContext()`, computed values are automatically included in the `context` object alongside regular properties. See [Exposing Computed Values](/advanced/custom-context#exposing-computed-values-in-api-responses) for details.
 
 The `available_events` array uses HATEOAS-style discoverability — the response tells the consumer which events the machine can accept in its current state. Each entry includes a `type` (the event name to send) and a `source` (`parent` for direct events, `forward` for forwarded child events). See the [Available Events](./available-events) page for full details.
 
@@ -283,7 +336,7 @@ class OrderDetailEndpointResult extends ResultBehavior
             'id'     => $order->id,
             'status' => $order->status,
             'items'  => $order->items->toArray(),
-            'total'  => $context->get('total_amount'),
+            'total'  => $context->get('totalAmount'),
         ];
     }
 }
@@ -323,7 +376,7 @@ class InvoiceEndpointResult extends ResultBehavior
     public function __invoke(ContextManager $context): array
     {
         return $this->invoices->generateSummary(
-            $context->get('order_id'),
+            $context->get('orderId'),
         );
     }
 }
@@ -443,7 +496,7 @@ The create endpoint:
         "machine_id": "01JARX5Z8KQVN...",
         "value": ["idle"],
         "context": {
-            "total_amount": 0,
+            "totalAmount": 0,
             "items": []
         }
     }
@@ -1000,7 +1053,7 @@ You can also use an `EventBehavior` class reference:
         'middleware'        => ['auth:customer'],   // optional — additive
         'action'           => CardEndpointAction::class,   // optional — parent-level action
         'result'           => 'cardSubmittedResult',       // optional — ResultBehavior key or FQCN
-        'contextKeys'      => ['card_token', 'last_four'], // optional — filter child context keys
+        'contextKeys'      => ['cardToken', 'lastFour'], // optional — filter child context keys
         'status'           => 200,                 // optional — default: 200
         'available_events' => true,                // optional — include available_events in response
     ],
@@ -1035,13 +1088,13 @@ class OrderMachine extends Machine
             config: [
                 'id'      => 'order',
                 'initial' => 'created',
-                'context' => ['order_id' => null],
+                'context' => ['orderId' => null],
                 'states'  => [
                     'created' => ['on' => ['SUBMIT' => 'processing_payment']],
                     'processing_payment' => [
                         'machine'  => PaymentMachine::class,
                         'queue'    => 'payments',
-                        'with'     => ['order_id'],
+                        'with'     => ['orderId'],
                         'forward'  => ['PROVIDE_CARD', 'CANCEL_ORDER' => 'ABORT'],
                         'on'       => [
                             '@done' => 'paid',
@@ -1080,8 +1133,8 @@ When no `result` is specified, forwarded endpoints return both parent and child 
         "child": {
             "value": ["awaiting_verification"],
             "context": {
-                "card_token": "tok_abc123",
-                "last_four": "4242"
+                "cardToken": "tok_abc123",
+                "lastFour": "4242"
             }
         }
     }
@@ -1138,9 +1191,9 @@ class CardSubmittedResult extends ResultBehavior
     public function __invoke(ContextManager $context, ForwardContext $forwardContext): array
     {
         return [
-            'order_id'    => $context->get('order_id'),
-            'card_status' => $forwardContext->childContext->get('status'),
-            'child_state' => $forwardContext->childState->value,
+            'orderId'     => $context->get('orderId'),
+            'cardStatus'  => $forwardContext->childContext->get('status'),
+            'childState' => $forwardContext->childState->value,
         ];
     }
 }
@@ -1256,7 +1309,7 @@ it('accepts event via endpoint', function (): void {
     $order = Order::create(['status' => 'pending']);
 
     $response = $this->postJson("/orders/{$order->id}/submit", [
-        'payment_method' => 'card',
+        'paymentMethod' => 'card',
     ]);
 
     $response->assertOk()

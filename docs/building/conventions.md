@@ -20,8 +20,8 @@ Consistent naming makes your state machines easier to read, maintain, and debug.
 | Context class | PascalCase | `{Domain}Context` | `OrderWorkflowContext` |
 | Timer event | SCREAMING_SNAKE_CASE | Same as event types | `ORDER_EXPIRED`, `BILLING` |
 | `then` event | SCREAMING_SNAKE_CASE | Same as event types | `MAX_RETRIES` |
-| Context keys (array) | snake_case | `{descriptive_name}` | `total_amount` |
-| Context properties (typed) | camelCase | `$descriptiveName` | `$totalAmount` |
+| Context keys | camelCase | `$descriptiveName` | `totalAmount` |
+| Event payload keys | camelCase | `$descriptiveName` | `transactionId` |
 | Config keys | snake_case | `{descriptive_name}` | `should_persist` |
 | Inline behavior key | camelCase | `{descriptiveName}{Type}` | `sendEmailAction` |
 | Scenario name | snake_case | `{descriptive_name}` | `express_checkout` |
@@ -108,20 +108,33 @@ class DocumentsUploadedEvent extends EventBehavior { ... }
 class ItemAddedToCartEvent extends EventBehavior { ... }
 ```
 
-The `getType()` method should return the event type in `SCREAMING_SNAKE_CASE`, derived from the full class meaning — not abbreviated:
+The `getType()` method is **automatically derived** from the class name — strip the `Event` suffix, convert to `SCREAMING_SNAKE_CASE`. You don't need to implement it:
 
 ```php no_run
 class OrderSubmittedEvent extends EventBehavior
 {
-    public function getType(): string
+    // getType() auto-generates 'ORDER_SUBMITTED' — no override needed!
+}
+```
+
+Override `getType()` only when the auto-generated type doesn't match your needs (e.g., legacy compatibility):
+
+```php no_run
+class CallerEvent extends EventBehavior
+{
+    public static function getType(): string
     {
-        return 'ORDER_SUBMITTED';
+        return 'TEST_EVENT'; // explicit override
     }
 }
 ```
 
 ::: danger Avoid Abbreviations
 Don't abbreviate event types. Use `ORDER_SUBMITTED` instead of `ORD_SUB` or `OS`. Abbreviated types are cryptic and make debugging harder.
+:::
+
+::: warning Don't prefix event types with the machine name
+Event types should describe **what happened**, not which machine they belong to. The `machine_id` column and internal event format already carry machine identity. Use `ADDRESS_INFO_EDIT_REQUESTED`, not `CAR_SALES_ADDRESS_INFO_EDIT_REQUESTED`.
 :::
 
 ### Event Types in Configuration
@@ -138,10 +151,10 @@ When referencing events as string keys in the machine config, use `SCREAMING_SNA
 
 ### Multi-Word Events
 
-For events with multiple words, ensure every word is clearly separated:
+For events with multiple words, the auto-generation handles separation correctly:
 
-| Class Name | `getType()` |
-|------------|-------------|
+| Class Name | Auto-generated `getType()` |
+|------------|---------------------------|
 | `OrderSubmittedEvent` | `ORDER_SUBMITTED` |
 | `PaymentMethodUpdatedEvent` | `PAYMENT_METHOD_UPDATED` |
 | `UserEmailVerifiedEvent` | `USER_EMAIL_VERIFIED` |
@@ -162,7 +175,7 @@ class ProcessPaymentAction extends ActionBehavior
     {
         // ... process payment ...
 
-        $this->raise('PAYMENT_PROCESSED', ['transaction_id' => $txId]);
+        $this->raise('PAYMENT_PROCESSED', ['transactionId' => $txId]);
     }
 }
 ```
@@ -174,6 +187,46 @@ In machine configuration, raised event targets use the same `SCREAMING_SNAKE_CAS
     'PAYMENT_PROCESSED'   => 'paid',
     'VALIDATION_COMPLETED' => 'verified',
 ],
+```
+
+### Event Payloads
+
+Event payload keys are **business data** — use `camelCase`, same as context keys:
+
+```php no_run
+class PaymentReceivedEvent extends EventBehavior
+{
+    public ?array $payload = [
+        'transactionId' => null,    // camelCase
+        'amountPaid'    => null,    // camelCase
+        'paymentMethod' => null,    // camelCase
+    ];
+}
+```
+
+When sending events with inline payloads:
+
+```php ignore
+// raise() with payload
+$this->raise('PAYMENT_PROCESSED', [
+    'transactionId' => $txId,       // camelCase
+    'gatewayRef'    => $ref,        // camelCase
+]);
+
+// send() with payload
+$machine->send([
+    'type'    => 'ORDER_SUBMITTED',
+    'payload' => [
+        'orderId'     => $order->id,    // camelCase
+        'totalAmount' => $order->total,  // camelCase
+    ],
+]);
+
+// sendTo() / dispatchTo() with payload
+$this->sendTo(TargetMachine::class, $rootEventId, [
+    'type'    => 'STATUS_UPDATED',
+    'payload' => ['newStatus' => 'approved'],  // camelCase
+]);
 ```
 
 ::: tip Why Past Tense?
@@ -665,30 +718,53 @@ protected $casts = [
 
 The `_mre` suffix makes it clear that the column stores a machine root event reference, not a plain string or JSON field.
 
-## Context
+## Context and Business Data
 
-### Array Context Keys
+### The Core Rule: Config vs Data
 
-When defining context as an inline array, use `snake_case`:
+EventMachine has two kinds of string keys, each with its own convention:
+
+| Kind | Convention | Where | Example |
+|------|-----------|-------|---------|
+| **Framework config** | `snake_case` | `config:` block, Laravel settings | `should_persist`, `initial` |
+| **Business data** | `camelCase` | Context, payloads, input, output | `totalAmount`, `orderId` |
+
+The distinction: **"Are you configuring the framework, or carrying business data?"**
 
 ```php ignore
-'context' => [
-    'total_amount'     => 0,
-    'items_count'      => 0,
-    'customer_email'   => null,
-    'retry_count'      => 0,
-    'last_error_code'  => null,
-    'is_priority'      => false,
-],
+MachineDefinition::define(
+    config: [
+        'id'             => 'order_workflow',     // config → snake_case
+        'should_persist' => true,                 // config → snake_case
+        'initial'        => 'idle',               // config → snake_case
+        'context'        => [
+            'totalAmount'   => 0,                 // business data → camelCase
+            'customerEmail' => null,              // business data → camelCase
+        ],
+    ],
+);
 ```
 
-### Typed Context Classes
+### Context Keys — camelCase
 
-When using a custom `ContextManager` subclass, properties follow **PHP convention** — `camelCase`:
+Both inline array keys and typed class properties use `camelCase`:
+
+```php ignore
+// Inline array context
+'context' => [
+    'totalAmount'    => 0,
+    'itemsCount'     => 0,
+    'customerEmail'  => null,
+    'retryCount'     => 0,
+    'lastErrorCode'  => null,
+    'isPriority'     => false,
+],
+```
 
 ```php
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
+// Typed context class — same camelCase convention
 class OrderWorkflowContext extends ContextManager
 {
     public int $totalAmount = 0;
@@ -700,9 +776,38 @@ class OrderWorkflowContext extends ContextManager
 }
 ```
 
-::: info Why Two Different Styles?
-Array keys use `snake_case` to match PHP array and Laravel conventions. Typed class properties use `camelCase` to match PHP's object property conventions. This distinction is intentional — each follows the standard of its own context.
-:::
+### Event Payloads — camelCase
+
+When raising events or passing payloads between machines, use `camelCase` for data keys:
+
+```php ignore
+// raise() payload
+$this->raise('PAYMENT_PROCESSED', ['transactionId' => $txId]);
+
+// sendTo() payload
+$this->sendTo(TargetMachine::class, $rootEventId, [
+    'type'    => 'UPDATE_STATUS',
+    'payload' => ['newStatus' => 'approved'],
+]);
+```
+
+### Child Delegation Data — camelCase
+
+Data flowing between parent and child machines uses `camelCase`:
+
+```php ignore
+// Parent → Child (input)
+'delegating' => [
+    'machine' => PaymentMachine::class,
+    'with'    => ['orderId', 'totalAmount'],
+],
+
+// Child → Parent (output on final state)
+'completed' => [
+    'type'   => 'final',
+    'output' => ['paymentId', 'transactionRef'],
+],
+```
 
 ### What to Avoid
 
@@ -713,9 +818,13 @@ Array keys use `snake_case` to match PHP array and Laravel conventions. Typed cl
 'cnt'           // → 'count'
 
 // Don't use generic names
-'data'          // → 'order_data' or a specific key
-'value'         // → 'payment_value' or a specific key
-'status'        // → 'payment_status' (machine state handles status)
+'data'          // → 'orderData' or a specific key
+'value'         // → 'paymentValue' or a specific key
+'status'        // → 'paymentStatus' (machine state handles status)
+
+// Don't use snake_case for business data
+'total_amount'  // → 'totalAmount'
+'order_id'      // → 'orderId'
 ```
 
 ## Scenarios
@@ -961,7 +1070,7 @@ The key principles behind these conventions:
 2. **States are conditions** — adjectives or participles, passing the "is" test (`processing`, not `process`)
 3. **Actions are verbs** — describing what the machine does (`SendNotification`, not `Notification`)
 4. **Guards are questions** — boolean predicates with `is`/`has`/`can`/`should` prefix (`IsPaymentValid`, not `PaymentValid`)
-5. **Context keys match their container** — `snake_case` in arrays, `camelCase` in typed classes
+5. **Business data is camelCase, config is snake_case** — context keys, payloads, input/output use `camelCase`; framework config keys use `snake_case`
 6. **Inline keys include the type suffix** — `'sendEmailAction'` not `'sendEmail'` for clarity
 7. **Suffixes prevent ambiguity** — `Event`, `Action`, `Guard`, `Calculator`, `Result` suffixes on class names make the role immediately clear
 8. **Consistency over cleverness** — pick one pattern and apply it everywhere

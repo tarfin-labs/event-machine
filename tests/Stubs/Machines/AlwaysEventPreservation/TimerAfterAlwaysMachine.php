@@ -24,8 +24,8 @@ class TimerAfterAlwaysMachine extends Machine
                 'id'      => 'timer_after_always',
                 'initial' => 'waiting',
                 'context' => [
-                    'timer_event_type'    => null,
-                    'timer_event_payload' => null,
+                    'timerEventType'    => null,
+                    'timerEventPayload' => null,
                 ],
                 'states' => [
                     'waiting' => [

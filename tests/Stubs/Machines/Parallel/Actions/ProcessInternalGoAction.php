@@ -11,7 +11,7 @@ class ProcessInternalGoAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('raise_action_ran', true);
+        $context->set('raiseActionRan', true);
         $this->raise(['type' => 'INTERNAL_GO']);
     }
 }
