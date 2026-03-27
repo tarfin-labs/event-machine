@@ -15,8 +15,11 @@ use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use Tarfinlabs\EventMachine\Definition\StateDefinition;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioFailedException;
 use Tarfinlabs\EventMachine\Exceptions\ScenariosDisabledException;
+use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioConfigurationException;
 
 class ScenarioPlayer
@@ -133,7 +136,7 @@ class ScenarioPlayer
                             stepIndex: $index,
                             eventType: $step->eventType,
                             currentState: $machine?->state?->currentStateDefinition?->key ?? 'unknown',
-                            rejectionReason: $e->getMessage(),
+                            rejectionReason: $this->enrichErrorMessage($e, $machine),
                         );
                     }
                 }
@@ -384,5 +387,84 @@ class ScenarioPlayer
         }
 
         $this->originalBindings = [];
+    }
+
+    /**
+     * Enrich error messages with requiredContext hints when a behavior fails
+     * due to missing context — helps scenario authors understand what context
+     * keys (models, calculated values) their scenario needs to provide.
+     */
+    private function enrichErrorMessage(\Throwable $e, ?Machine $machine): string
+    {
+        if (!$e instanceof MissingMachineContextException || !$machine instanceof Machine) {
+            return $e->getMessage();
+        }
+
+        $currentState = $machine->state->currentStateDefinition;
+        $hints        = [];
+
+        // Collect requiredContext from all behaviors reachable from current state
+        $this->collectRequiredContextHints($machine, $currentState, $hints);
+
+        if ($hints === []) {
+            return $e->getMessage();
+        }
+
+        $hintLines = [];
+        foreach ($hints as $behaviorClass => $contextKeys) {
+            $keys = implode(', ', array_map(
+                fn (string $key, string $type): string => "{$key} ({$type})",
+                array_keys($contextKeys),
+                array_values($contextKeys),
+            ));
+            $hintLines[] = '  → '.class_basename($behaviorClass).': '.$keys;
+        }
+
+        return $e->getMessage()."\n\nRequired context for behaviors at this state:\n".implode("\n", $hintLines);
+    }
+
+    /**
+     * Collect requiredContext from guards, actions, and calculators reachable from the given state.
+     */
+    private function collectRequiredContextHints(Machine $machine, StateDefinition $stateDefinition, array &$hints): void
+    {
+        $definition = $machine->definition;
+
+        if ($stateDefinition->transitionDefinitions === null) {
+            return;
+        }
+
+        foreach ($stateDefinition->transitionDefinitions as $transition) {
+            foreach ($transition->branches as $branch) {
+                foreach ($branch->guards ?? [] as $guardKey) {
+                    $this->addBehaviorHint($definition, 'guards', $guardKey, $hints);
+                }
+
+                foreach ($branch->actions ?? [] as $actionKey) {
+                    $this->addBehaviorHint($definition, 'actions', $actionKey, $hints);
+                }
+
+                foreach ($branch->calculators ?? [] as $calcKey) {
+                    $this->addBehaviorHint($definition, 'calculators', $calcKey, $hints);
+                }
+            }
+        }
+
+        foreach ($stateDefinition->entry ?? [] as $actionKey) {
+            $this->addBehaviorHint($definition, 'actions', $actionKey, $hints);
+        }
+    }
+
+    private function addBehaviorHint(MachineDefinition $definition, string $behaviorType, string $key, array &$hints): void
+    {
+        $behaviorClass = $definition->behavior[$behaviorType][$key] ?? $key;
+
+        if (!is_string($behaviorClass) || !class_exists($behaviorClass)) {
+            return;
+        }
+
+        if (property_exists($behaviorClass, 'requiredContext') && $behaviorClass::$requiredContext !== []) {
+            $hints[$behaviorClass] = $behaviorClass::$requiredContext;
+        }
     }
 }
