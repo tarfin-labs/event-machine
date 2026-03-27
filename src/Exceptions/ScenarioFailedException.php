@@ -27,4 +27,14 @@ class ScenarioFailedException extends RuntimeException
 
         parent::__construct($message);
     }
+
+    public static function stateMismatch(string $expected, string $actual): self
+    {
+        return new self(
+            stepIndex: -1,
+            eventType: 'mid-flight-validation',
+            currentState: $actual,
+            rejectionReason: "Expected machine to be in state '{$expected}', but found '{$actual}'",
+        );
+    }
 }
