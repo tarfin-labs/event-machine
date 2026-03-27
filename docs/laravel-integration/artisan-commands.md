@@ -377,11 +377,19 @@ php artisan machine:scenario --list
 # List scenarios for a specific machine
 php artisan machine:scenario --list --machine=OrderMachine
 
-# Play a scenario
+# Play a scenario (creates new machine)
 php artisan machine:scenario OrderReadyForPayment
 
 # Play with parameter overrides
 php artisan machine:scenario OrderReadyForPayment --param="amount:5000" --param="customer_name:Test"
+
+# Mid-flight: play scenario on an existing machine
+php artisan machine:scenario OrderFromPaymentToShipped --machine-id=evt_01HXYZ...
+
+# Mid-flight with parameter overrides
+php artisan machine:scenario OrderFromPaymentToShipped \
+    --machine-id=evt_01HXYZ... \
+    --param="tracking_number:TRK-001"
 ```
 
 ### Options
@@ -390,6 +398,7 @@ php artisan machine:scenario OrderReadyForPayment --param="amount:5000" --param=
 |--------|-------------|
 | `--list` | List all available scenarios |
 | `--machine=` | Filter by machine class name (used with `--list`) |
+| `--machine-id=` | Play scenario on an existing machine (mid-flight). The scenario's `from()` state is validated. |
 | `--param=*` | Parameter overrides in `key:value` format |
 
 ## machine:scenario-cache
