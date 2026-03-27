@@ -109,7 +109,7 @@ class ScenarioCommand extends Command
         $this->line(' │ Parent:      '.($instance->getParent() ? class_basename($instance->getParent()) : '—'));
 
         if ($params !== []) {
-            $paramStr = collect($params)->map(fn ($v, $k): string => "{$k}={$v}")->implode(', ');
+            $paramStr = collect($params)->map(fn (mixed $v, string $k): string => "{$k}={$v}")->implode(', ');
             $this->line(" │ Parameters:  {$paramStr}");
         }
 
