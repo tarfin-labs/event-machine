@@ -125,7 +125,7 @@ class MachineQueryBuilder
             return $this;
         }
 
-        $this->query->whereNotIn('root_event_id', function ($sub) use ($finalStateIds): void {
+        $this->query->whereNotIn('root_event_id', function (Builder|\Illuminate\Database\Query\Builder $sub) use ($finalStateIds): void {
             $sub->select('root_event_id')
                 ->from('machine_current_states')
                 ->where('machine_class', $this->machineClass)
