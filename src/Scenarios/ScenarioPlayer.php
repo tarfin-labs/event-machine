@@ -251,9 +251,20 @@ class ScenarioPlayer
         $this->createModels($childScenario);
 
         // Replay child steps against the child machine
+        // If child_root_event_id is null, ChildMachineJob was intercepted by Bus::fake —
+        // create the child machine ourselves and update the tracking record
         /** @var class-string<Machine> $childMachineClass */
         $childMachineClass = $childScenario->getMachine();
-        $childMachine      = $childMachineClass::create(state: $childRecord->child_root_event_id);
+
+        if ($childRecord->child_root_event_id === null) {
+            $childMachine = $childMachineClass::create();
+            $childMachine->persist();
+            $childRootEventId                 = $childMachine->state->history->first()->root_event_id;
+            $childRecord->child_root_event_id = $childRootEventId;
+            $childRecord->save();
+        } else {
+            $childMachine = $childMachineClass::create(state: $childRecord->child_root_event_id);
+        }
 
         $childStepsExecuted = 0;
         foreach ($childScenario->getSteps() as $childStep) {
