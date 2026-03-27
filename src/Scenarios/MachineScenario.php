@@ -35,6 +35,16 @@ abstract class MachineScenario
     }
 
     /**
+     * Expected starting state for mid-flight scenarios.
+     * When set, playOn() validates the machine is in this state before replaying.
+     * When null (default), the scenario creates a new machine from initial state.
+     */
+    protected function from(): ?string
+    {
+        return null;
+    }
+
+    /**
      * Default parameters — overridable at runtime via play(['key' => 'value']).
      */
     protected function defaults(): array
@@ -127,6 +137,17 @@ abstract class MachineScenario
         return resolve(ScenarioPlayer::class)->play($scenario, $params);
     }
 
+    /**
+     * Play this scenario on an existing machine instance (mid-flight).
+     * Validates from() state if defined.
+     */
+    public static function playOn(string $machineId, array $params = []): ScenarioResult
+    {
+        $scenario = new static();
+
+        return resolve(ScenarioPlayer::class)->play($scenario, $params, machineId: $machineId);
+    }
+
     // ─── Introspection (used by artisan --list, HTTP describe) ──────
 
     public function getMachine(): string
@@ -142,6 +163,11 @@ abstract class MachineScenario
     public function getParent(): ?string
     {
         return $this->parent();
+    }
+
+    public function getFrom(): ?string
+    {
+        return $this->from();
     }
 
     public function getDefaults(): array
