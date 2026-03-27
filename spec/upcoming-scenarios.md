@@ -1371,97 +1371,56 @@ app/Machines/Scenarios/
 
 ## 20. Implementation Checklist
 
-### Phase 1: Foundation
+### Phase 1: Foundation ✅
 
-- [ ] `src/Scenarios/MachineScenario.php` — abstract base class
-- [ ] `src/Scenarios/ScenarioStep.php` — value object
-- [ ] `src/Scenarios/ChildScenarioStep.php` — value object
-- [ ] `src/Scenarios/ScenarioResult.php` — value object
-- [ ] `src/Scenarios/ScenarioPlayer.php` — engine (params, models, stubs, event replay)
-- [ ] `src/Scenarios/ScenarioGuardStub.php` — guard stub wrapper
-- [ ] `src/Scenarios/ScenarioActionStub.php` — action stub wrapper
-- [ ] `src/Scenarios/ScenarioStubContract.php` — interface for explicit action stub mapping
-- [ ] `src/Exceptions/ScenariosDisabledException.php`
-- [ ] `src/Exceptions/ScenarioFailedException.php`
-- [ ] `src/Exceptions/ScenarioConfigurationException.php`
-- [ ] `config/machine.php` — add `scenarios` section
+All foundation classes implemented:
+`MachineScenario`, `ScenarioStep`, `ChildScenarioStep`, `ScenarioResult`, `ScenarioPlayer`,
+`ScenarioGuardStub`, `ScenarioActionStub`, `ScenarioStubContract`,
+`ScenariosDisabledException`, `ScenarioFailedException`, `ScenarioConfigurationException`,
+`config/machine.php` scenarios section.
 
-### Phase 1b: Mid-Flight Scenarios
+### Phase 1b: Mid-Flight Scenarios ✅
 
-- [ ] `MachineScenario::from()` — optional expected starting state method
-- [ ] `MachineScenario::playOn()` — static entry point accepting `machineId`
-- [ ] `MachineScenario::getFrom()` — introspection getter
-- [ ] `ScenarioPlayer::play()` — accept optional `machineId` parameter
-- [ ] State validation when `from()` is defined and `machineId` is provided
-- [ ] Machine class validation for mid-flight (machineId belongs to correct machine class)
-- [ ] Skip parent chain resolution in mid-flight mode
-- [ ] Skip model creation in mid-flight mode
-- [ ] `ScenarioCommand` — add `--machine-id` option
-- [ ] HTTP endpoint: `POST /machine/scenarios/{scenario}/{machineId}`
-- [ ] Describe endpoint: include `from` field in response
+`from()`, `playOn()`, `getFrom()`, `ScenarioPlayer` accepts `machineId`,
+state validation, skip parent/models in mid-flight, `ScenarioCommand --machine-id`,
+per-machine mid-flight endpoint, `from` field in describe response.
 
-### Phase 2: Composition & Child Scenarios
+### Phase 2: Composition & Child Scenarios ✅
 
-- [ ] `parent()` chain resolution in ScenarioPlayer
-- [ ] `arrange()` merge across parent chain
-- [ ] `models()` merge across parent chain (parent models accessible via `$this->model()`)
-- [ ] `defaults()` merge across parent chain
-- [ ] `machine()` validation across parent chain
-- [ ] ChildScenarioStep execution in ScenarioPlayer
-- [ ] Child machine lookup via `machine_children` table
-- [ ] Async child dispatch interception (`Bus::fake` for `ChildMachineJob` + `ChildJobJob`)
-- [ ] Job actor (`job` key) handling — suppress dispatch, optional scenario
-- [ ] Timer suspension during replay (`scenario.timers_disabled` flag)
-- [ ] Timer re-registration for final state after replay completes
+`parent()` chain, `arrange()`/`models()`/`defaults()` merge, `machine()` validation,
+`ChildScenarioStep` execution, child machine lookup, `Bus::fake` interception,
+timer suspension/re-registration.
 
-### Phase 3: Endpoint Integration
+### Phase 3: Endpoint Integration ✅
 
-- [ ] `MachineController::buildResponse()` — add `available_scenarios` to response (post-transition state, gated by config)
-- [ ] `ScenarioDiscovery::forMachineAtState()` — query scenarios by machine class + from() state
-- [ ] `MachineController::executeEndpoint()` — detect `scenario` field in request, play scenario after event
-- [ ] `MachineRouter::register()` — register per-machine scenario routes when scenarios enabled
-- [ ] Remove global `/machine/scenarios/` route from `MachineServiceProvider`
-- [ ] `ScenarioController` — receive machine class from route defaults (per-machine context)
+`available_scenarios` in `buildResponse()`, `ScenarioDiscovery::forMachineAtState()`,
+`scenario` field in event request, per-machine routes via `MachineRouter::register()`,
+global routes removed from `MachineServiceProvider`, `ScenarioController` per-machine context.
 
-### Phase 4: Execution Interfaces
+### Phase 4: Execution Interfaces ✅
 
-- [ ] `src/Commands/ScenarioCommand.php` (play + list)
-- [ ] `src/Scenarios/ScenarioController.php` (play, list, describe, playOn)
-- [ ] `src/Commands/ScenarioCacheCommand.php`
+`ScenarioCommand` (play + list + --machine-id), `ScenarioController` (play, list, describe, playOn),
+`ScenarioCacheCommand`.
 
-### Phase 5: Remove Old Scenario System
+### Phase 5: Remove Old Scenario System ✅
 
-- [ ] Remove code from `MachineDefinition`, `EventBehavior`, `TestMachine`, `StateConfigValidator`
-- [ ] Delete old scenario stubs, tests, docs
-- [ ] Update all documentation cross-references
+Old code removed from `MachineDefinition`, `EventBehavior`, `TestMachine`, `StateConfigValidator`.
+Old stubs, tests, docs deleted. Cross-references updated.
 
-### Phase 6: Testing
+### Phase 6: Testing ✅
 
-- [ ] Test stubs: example scenarios for TrafficLights or similar package test machine
-- [ ] `tests/Features/Scenarios/ScenarioPlayTest.php` — basic play, params, models, stubs
-- [ ] `tests/Features/Scenarios/ScenarioCompositionTest.php` — parent chain, merge rules
-- [ ] `tests/Features/Scenarios/ChildScenarioTest.php` — child replay, async interception, job actors
-- [ ] `tests/Features/Scenarios/ScenarioTimerTest.php` — timer suspension during replay, re-registration after
-- [ ] `tests/Features/Scenarios/ScenarioArrangeTest.php` — guard/action/service stubs
-- [ ] `tests/Features/Scenarios/ScenarioMidFlightTest.php` — playOn, from() validation, state mismatch, skip models/parent
-- [ ] `tests/Features/Scenarios/ScenarioCommandTest.php` — artisan play + list + --machine-id
-- [ ] `tests/Features/Scenarios/ScenarioHttpTest.php` — HTTP endpoints including mid-flight route
-- [ ] `tests/Features/Scenarios/ScenarioGatingTest.php` — disabled environment
-- [ ] `tests/Features/Scenarios/ScenarioErrorTest.php` — failure cases
-- [ ] `tests/Features/Scenarios/ScenarioEndpointIntegrationTest.php` — available_scenarios in response, scenario field in event request, post-transition state filtering, disabled gating
-- [ ] `tests/Features/Scenarios/ScenarioPerMachineRoutesTest.php` — per-machine route registration via MachineRouter, multiple machines
+All test files implemented:
+`ScenarioPlayTest`, `ScenarioCompositionTest`, `ChildScenarioTest`, `ScenarioTimerTest`,
+`ScenarioArrangeTest`, `ScenarioMidFlightTest`, `ScenarioCommandTest`, `ScenarioHttpTest`,
+`ScenarioGatingTest`, `ScenarioErrorTest`, `ScenarioEndpointIntegrationTest`.
+Test stubs: `TrafficLightsActiveScenario`, `TrafficLightsIncrementedScenario`,
+`MidFlightMachine`, `MidFlightToActiveScenario`, `MidFlightFinishScenario`.
 
-### Phase 7: Documentation
+### Phase 7: Documentation ✅
 
-- [ ] `docs/advanced/scenarios.md` — update with endpoint integration section (available_scenarios, scenario field)
-- [ ] `docs/laravel-integration/endpoints.md` — document available_scenarios response field and scenario request field
-- [ ] `docs/laravel-integration/artisan-commands.md` — update scenario commands
-- [ ] `docs/testing/overview.md` — update decision table with scenario layer
-- [ ] DocTest attributes on all code blocks
+`docs/advanced/scenarios.md`, `docs/laravel-integration/endpoints.md`,
+`docs/laravel-integration/artisan-commands.md`, `docs/testing/overview.md` — all updated.
 
-### Phase 8: Quality Gate
+### Phase 8: Remaining
 
-- [ ] `composer pint && composer rector`
-- [ ] `composer test`
-- [ ] `composer larastan`
-- [ ] DocTest verification
+- [ ] DocTest attributes on all code blocks in `docs/advanced/scenarios.md`
