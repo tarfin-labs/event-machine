@@ -130,6 +130,10 @@ Edge cases:
 - `[Class::class]` — list with one element (numeric key only). Equivalent to just `Class::class`.
 - `[]` — empty list, no behaviors. No-op.
 
+Invalid formats (throw `InvalidBehaviorDefinitionException`):
+- `['min' => 100, 'max' => 200]` — string keys but no class reference at position `[0]`.
+- `[ClassA::class, ClassB::class, 'min' => 100]` — mixed list and params. Ambiguous: wrap the parameterized one in its own array instead.
+
 ---
 
 ## Applies To All Behavior Keys
@@ -159,7 +163,7 @@ Edge cases:
 
 ## Error Handling
 
-**Missing required param:** If `__invoke` declares `int $min` but config has no `'min'` key and there is no default value, the framework throws `MissingBehaviorParameterException` at invocation time with a clear message:
+**Missing required param:** If `__invoke` declares `int $min` but config has no `'min'` key and there is no default value, the framework throws `MissingBehaviorParameterException`:
 
 ```
 IsAmountInRangeGuard requires parameter 'min' (int) but it was not provided in the definition.
@@ -168,6 +172,8 @@ IsAmountInRangeGuard requires parameter 'min' (int) but it was not provided in t
 **Extra config params:** Params in config that don't match any `__invoke` parameter are silently ignored.
 
 **Type mismatch:** PHP's native type coercion applies. `'min' => '100'` injected into `int $min` works (PHP coerces). `'min' => 'abc'` into `int $min` throws `TypeError`.
+
+**Definition-time validation:** `machine:validate-config` should catch missing params, invalid formats, and type mismatches before runtime. Invocation-time errors are the fallback for configs that bypass static validation.
 
 ---
 
