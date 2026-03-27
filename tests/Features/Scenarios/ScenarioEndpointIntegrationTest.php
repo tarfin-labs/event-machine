@@ -111,3 +111,30 @@ it('ignores scenario field when scenarios are disabled', function (): void {
     // Machine should be at 'active' — scenario was ignored
     expect($data['value'])->toContain('mid_flight.active');
 });
+
+it('returns 422 for invalid scenario slug in event request', function (): void {
+    $createResponse = $this->postJson('/api/mid-flight/create');
+    $machineId      = $createResponse->json('data.machine_id');
+
+    $response = $this->postJson("/api/mid-flight/{$machineId}/activate", [
+        'type'     => 'ACTIVATE',
+        'scenario' => 'nonexistent-scenario',
+    ]);
+
+    $response->assertStatus(422);
+});
+
+it('returns 422 when scenario from() does not match post-transition state', function (): void {
+    $createResponse = $this->postJson('/api/mid-flight/create');
+    $machineId      = $createResponse->json('data.machine_id');
+
+    // Send ACTIVATE then try FINISH with a scenario that expects 'active' but machine will be at 'done'
+    $this->postJson("/api/mid-flight/{$machineId}/activate", ['type' => 'ACTIVATE']);
+
+    $response = $this->postJson("/api/mid-flight/{$machineId}/finish", [
+        'type'     => 'FINISH',
+        'scenario' => 'mid-flight-finish-scenario', // from()='active' but state will be 'done'
+    ]);
+
+    $response->assertStatus(422);
+});
