@@ -12,7 +12,7 @@ use Illuminate\Routing\Controller;
 class ScenarioController extends Controller
 {
     /**
-     * Play a scenario and return the result as JSON.
+     * Play a scenario on a new machine.
      */
     public function play(string $scenario, Request $request): JsonResponse
     {
@@ -27,16 +27,32 @@ class ScenarioController extends Controller
         try {
             $result = $scenarioClass::play($params);
 
+            return $this->scenarioResultResponse($scenarioClass, $result);
+        } catch (\Throwable $e) {
             return response()->json([
-                'scenario'       => class_basename($scenarioClass),
-                'machine'        => class_basename((new $scenarioClass())->getMachine()),
-                'machine_id'     => $result->machineId,
-                'current_state'  => $result->currentState,
-                'root_event_id'  => $result->rootEventId,
-                'models'         => $result->models,
-                'steps_executed' => $result->stepsExecuted,
-                'duration_ms'    => round($result->duration, 1),
-            ]);
+                'error' => $e->getMessage(),
+                'type'  => class_basename($e),
+            ], 422);
+        }
+    }
+
+    /**
+     * Play a scenario on an existing machine (mid-flight).
+     */
+    public function playOn(string $scenario, string $machineId, Request $request): JsonResponse
+    {
+        $scenarioClass = $this->resolveScenarioClass($scenario);
+
+        if ($scenarioClass === null) {
+            return response()->json(['error' => "Scenario '{$scenario}' not found."], 404);
+        }
+
+        $params = $request->input('params', []);
+
+        try {
+            $result = $scenarioClass::playOn($machineId, $params);
+
+            return $this->scenarioResultResponse($scenarioClass, $result);
         } catch (\Throwable $e) {
             return response()->json([
                 'error' => $e->getMessage(),
@@ -61,6 +77,7 @@ class ScenarioController extends Controller
                 'class'       => class_basename($scenarioClass),
                 'slug'        => $this->classToSlug(class_basename($scenarioClass)),
                 'description' => $instance->getDescription(),
+                'from'        => $instance->getFrom(),
                 'parent'      => $instance->getParent() ? class_basename($instance->getParent()) : null,
                 'defaults'    => $instance->getDefaults(),
             ];
@@ -87,6 +104,7 @@ class ScenarioController extends Controller
             'class'       => class_basename($scenarioClass),
             'machine'     => class_basename($instance->getMachine()),
             'description' => $instance->getDescription(),
+            'from'        => $instance->getFrom(),
             'parent'      => $instance->getParent() ? class_basename($instance->getParent()) : null,
             'defaults'    => $instance->getDefaults(),
         ]);
@@ -104,6 +122,23 @@ class ScenarioController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * @param  class-string<MachineScenario>  $scenarioClass
+     */
+    private function scenarioResultResponse(string $scenarioClass, ScenarioResult $result): JsonResponse
+    {
+        return response()->json([
+            'scenario'       => class_basename($scenarioClass),
+            'machine'        => class_basename((new $scenarioClass())->getMachine()),
+            'machine_id'     => $result->machineId,
+            'current_state'  => $result->currentState,
+            'root_event_id'  => $result->rootEventId,
+            'models'         => $result->models,
+            'steps_executed' => $result->stepsExecuted,
+            'duration_ms'    => round($result->duration, 1),
+        ]);
     }
 
     private function classToSlug(string $className): string
