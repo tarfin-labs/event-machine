@@ -127,6 +127,14 @@ abstract class EventBehavior extends Data
     }
 
     /**
+     * @deprecated Use the new MachineScenario system instead. Will be removed in next major version.
+     */
+    public function getScenario(): ?string
+    {
+        return $this->payload['scenarioType'] ?? null;
+    }
+
+    /**
      * Indicates if the validator should stop on the first rule failure.
      *
      * @return bool Returns true by default.
