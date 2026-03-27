@@ -163,6 +163,88 @@ protected function models(): array
 
 Access models in steps via `$this->model('name')`.
 
+## Mid-Flight Scenarios
+
+Sometimes a machine is already running — a QA tester walked through the first few states via the real UI and now wants to fast-forward the rest. Mid-flight scenarios continue from an existing machine instead of creating a new one.
+
+### Declaring the Expected State
+
+Use `from()` to declare which state the machine must be in before the scenario replays:
+
+<!-- doctest-attr: ignore -->
+```php
+class OrderFromPaymentToShipped extends MachineScenario
+{
+    protected function machine(): string
+    {
+        return OrderMachine::class;
+    }
+
+    protected function description(): string
+    {
+        return 'Fast-forward from awaiting payment to shipped';
+    }
+
+    protected function from(): ?string
+    {
+        return 'awaiting_payment';
+    }
+
+    protected function steps(): array
+    {
+        return [
+            $this->send('PAYMENT_RECEIVED'),
+            $this->send('ORDER_SHIPPED'),
+        ];
+    }
+}
+```
+
+### Playing on an Existing Machine
+
+Use `playOn()` instead of `play()`:
+
+<!-- doctest-attr: ignore -->
+```php
+// From code
+$result = OrderFromPaymentToShipped::playOn(machineId: $existingRootEventId);
+
+// $result->currentState === 'shipped'
+```
+
+### `play()` vs `playOn()`
+
+| Method | Machine | `from()` | `parent()` | `models()` |
+|--------|---------|----------|------------|------------|
+| `play()` | Creates new | Ignored | Resolved | Created |
+| `playOn(machineId)` | Restores existing | Validated | Ignored | Skipped |
+
+When `playOn()` is called:
+- The machine is restored from the given `machineId`
+- If `from()` is defined, the current state is validated — throws `ScenarioFailedException` on mismatch
+- `parent()` is not used (the existing machine IS the starting point)
+- `models()` is skipped (models already exist from the real flow)
+- `arrange()` stubs still apply (external APIs still need stubbing)
+
+### Running Mid-Flight Scenarios
+
+```bash
+# Artisan
+php artisan machine:scenario OrderFromPaymentToShipped \
+    --machine-id=evt_01HXYZ...
+
+# With parameter overrides
+php artisan machine:scenario OrderFromPaymentToShipped \
+    --machine-id=evt_01HXYZ... \
+    --param="tracking_number:TRK-001"
+```
+
+HTTP endpoint:
+
+```
+POST /machine/scenarios/{slug}/{machineId}
+```
+
 ## Composition
 
 Scenarios can extend other scenarios via `parent()`:
@@ -240,24 +322,29 @@ php artisan machine:scenario OrderReadyForPayment --param="amount:5000"
 
 ### HTTP Endpoints
 
-When scenarios are enabled, three endpoints are registered:
+When scenarios are enabled, four endpoints are registered:
 
 ```
-GET    /machine/scenarios                      → List scenarios
-POST   /machine/scenarios/{slug}               → Play scenario
-GET    /machine/scenarios/{slug}/describe       → Scenario details
+GET    /machine/scenarios                           → List scenarios
+POST   /machine/scenarios/{slug}                    → Play scenario (new machine)
+POST   /machine/scenarios/{slug}/{machineId}        → Play scenario on existing machine (mid-flight)
+GET    /machine/scenarios/{slug}/describe            → Scenario details (includes from field)
 ```
 
 ### From Code
 
 <!-- doctest-attr: ignore -->
 ```php
+// New machine
 $result = OrderReadyForPayment::play(['amount' => 5000]);
+
+// Existing machine (mid-flight)
+$result = OrderFromPaymentToShipped::playOn(machineId: $rootEventId);
 
 $result->machineId;     // Machine ULID
 $result->rootEventId;   // Root event for state restoration
 $result->currentState;  // Current state name
-$result->models;        // Created models
+$result->models;        // Created models (empty for mid-flight)
 $result->stepsExecuted; // Number of steps played
 $result->duration;      // Execution time in ms
 $result->childResults;  // Results from child machine scenarios
@@ -270,8 +357,8 @@ Scenarios throw specific exceptions:
 | Exception | When |
 |-----------|------|
 | `ScenariosDisabledException` | Scenarios are not enabled (`MACHINE_SCENARIOS_ENABLED=false`) |
-| `ScenarioFailedException` | A step fails during replay (guard rejection, invalid event). Includes `stepIndex`, `eventType`, `currentState`, and `rejectionReason`. |
-| `ScenarioConfigurationException` | `machine()` mismatch in parent/child composition chain |
+| `ScenarioFailedException` | A step fails during replay (guard rejection, invalid event). Includes `stepIndex`, `eventType`, `currentState`, and `rejectionReason`. Also thrown when `from()` state doesn't match actual machine state in mid-flight mode. |
+| `ScenarioConfigurationException` | `machine()` mismatch in parent/child composition chain. Also thrown when a mid-flight scenario (`playOn()`) defines `parent()` — these are mutually exclusive. |
 
 ::: warning Production Safety
 Never enable scenarios in production. The `MACHINE_SCENARIOS_ENABLED` flag defaults to `false`. When disabled, scenario routes are not registered and `ScenarioPlayer::play()` throws immediately — zero runtime overhead.
