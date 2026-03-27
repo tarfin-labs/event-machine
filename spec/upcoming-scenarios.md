@@ -13,15 +13,16 @@
 7. [Steps & Models](#7-steps--models)
 8. [Parametrization](#8-parametrization)
 9. [Composition — Extending Scenarios](#9-composition--extending-scenarios)
-10. [Child Machine Scenarios](#10-child-machine-scenarios)
-11. [Async Dispatch, Timers & Job Actors](#11-async-dispatch-timers--job-actors)
-12. [ScenarioPlayer — Runtime Engine](#12-scenarioplayer--runtime-engine)
-13. [Environment Gating](#13-environment-gating)
-14. [Execution: Artisan Command & HTTP Endpoint](#14-execution-artisan-command--http-endpoint)
-15. [Discovery & Registration](#15-discovery--registration)
-16. [What NOT to Include](#16-what-not-to-include)
-17. [Migration: Removing the Old Scenario System](#17-migration-removing-the-old-scenario-system)
-18. [Implementation Checklist](#18-implementation-checklist)
+10. [Mid-Flight Scenarios — Playing on Existing Machines](#10-mid-flight-scenarios--playing-on-existing-machines)
+11. [Child Machine Scenarios](#11-child-machine-scenarios)
+12. [Async Dispatch, Timers & Job Actors](#12-async-dispatch-timers--job-actors)
+13. [ScenarioPlayer — Runtime Engine](#13-scenarioplayer--runtime-engine)
+14. [Environment Gating](#14-environment-gating)
+15. [Execution: Artisan Command & HTTP Endpoint](#15-execution-artisan-command--http-endpoint)
+16. [Discovery & Registration](#16-discovery--registration)
+17. [What NOT to Include](#17-what-not-to-include)
+18. [Migration: Removing the Old Scenario System](#18-migration-removing-the-old-scenario-system)
+19. [Implementation Checklist](#19-implementation-checklist)
 
 ---
 
@@ -89,6 +90,7 @@ MachineScenario (abstract)
 ├── machine(): string               → which machine this scenario is for
 ├── description(): string            → human-readable description
 ├── parent(): ?class-string          → parent scenario for composition
+├── from(): ?string                  → expected starting state (null = new machine)
 │
 ├── defaults(): array                → default parameters (overridable at runtime)
 ├── arrange(): array                 → stub definitions for guards/actions/services
@@ -98,7 +100,8 @@ MachineScenario (abstract)
 ├── param(key): mixed                → access resolved parameters
 ├── model(name): Model               → access created models
 │
-└── play(params): ScenarioResult     → static entry point
+├── play(params): ScenarioResult     → static entry point (new machine)
+└── playOn(machineId, params): ScenarioResult → static entry point (existing machine)
     │
     └── ScenarioPlayer (engine)
         ├── validateEnvironment()      → check scenarios enabled
@@ -150,6 +153,16 @@ abstract class MachineScenario
      * When set, the parent scenario plays first, then this scenario's steps continue.
      */
     protected function parent(): ?string
+    {
+        return null;
+    }
+
+    /**
+     * Expected starting state for mid-flight scenarios.
+     * When set, playOn() validates the machine is in this state before replaying.
+     * When null (default), the scenario creates a new machine from initial state.
+     */
+    protected function from(): ?string
     {
         return null;
     }
@@ -237,11 +250,23 @@ abstract class MachineScenario
         return app(ScenarioPlayer::class)->play($scenario, $params);
     }
 
+    /**
+     * Play this scenario on an existing machine instance (mid-flight).
+     * Validates from() state if defined.
+     */
+    public static function playOn(string $machineId, array $params = []): ScenarioResult
+    {
+        $scenario = new static();
+
+        return app(ScenarioPlayer::class)->play($scenario, $params, machineId: $machineId);
+    }
+
     // ─── Introspection (used by artisan --list, HTTP describe) ──────
 
     public function getMachine(): string { return $this->machine(); }
     public function getDescription(): string { return $this->description(); }
     public function getParent(): ?string { return $this->parent(); }
+    public function getFrom(): ?string { return $this->from(); }
     public function getDefaults(): array { return $this->defaults(); }
 }
 ```
@@ -255,6 +280,8 @@ abstract class MachineScenario
 | `hydrate()` + `addModel()` are public `@internal` | ScenarioPlayer must set params before `models()`/`steps()` are called. Marked `@internal` to discourage external use. |
 | `param()` fallback does NOT re-read `defaults()` | Params are merged once in `hydrate()`. Avoids repeated `defaults()` calls and surprising behavior. |
 | `play()` is static | Clean DX: `MyScenario::play()`. Instance is created internally. |
+| `playOn()` separate from `play()` | Explicit intent — `play()` creates new machine, `playOn()` continues existing. No ambiguous optional params. |
+| `from()` returns `?string` | `null` = scenario creates new machine. Non-null = mid-flight, validated when `machineId` provided. |
 | Introspection getters | Artisan command and HTTP endpoint need to read metadata without playing the scenario. |
 
 ---
@@ -680,7 +707,137 @@ class CarSaleApproved extends MachineScenario
 
 ---
 
-## 10. Child Machine Scenarios
+## 10. Mid-Flight Scenarios — Playing on Existing Machines
+
+### Use Case
+
+In staging, a QA tester is manually walking through a `CarSalesMachine`. They've reached `checking_protocol` through the real UI. Now they want to fast-forward to `approved` without manually filling 8 more forms:
+
+```php
+// Machine already exists and is at checking_protocol
+CarSaleFromProtocolToApproved::playOn(machineId: 'evt_01HXYZ...');
+```
+
+### The `from()` Method
+
+Scenarios that operate on existing machines declare their expected starting state:
+
+```php
+class CarSaleFromProtocolToApproved extends MachineScenario
+{
+    protected function machine(): string { return CarSalesMachine::class; }
+    protected function description(): string { return 'Fast-forward from protocol check to approved'; }
+
+    protected function from(): ?string
+    {
+        return 'checking_protocol';  // machine must be in this state
+    }
+
+    protected function arrange(): array
+    {
+        return [
+            CheckProtocolAction::class => ['protocol_eligible' => true],
+        ];
+    }
+
+    protected function steps(): array
+    {
+        return [
+            $this->send('PROTOCOL_PASSED'),
+            $this->send('VEHICLE_SUBMITTED', ['plate' => '34ABC123']),
+            $this->send('PAYMENT_SELECTED', ['term' => 12]),
+            // ... more steps to reach approved
+        ];
+    }
+}
+```
+
+### ScenarioPlayer Changes
+
+`ScenarioPlayer::play()` accepts an optional `machineId` parameter:
+
+```php
+public function play(MachineScenario $scenario, array $params = [], ?string $machineId = null): ScenarioResult
+```
+
+When `machineId` is provided:
+
+1. **Restore the machine** — `$machineClass::create(state: $machineId)` (existing EventMachine pattern)
+2. **Validate `from()` state** — if `$scenario->getFrom()` is set, check `$machine->state->currentStateDefinition->key === $from`. Throw `ScenarioFailedException` on mismatch.
+3. **Skip parent chain** — mid-flight scenarios don't use `parent()`. The existing machine IS the starting point.
+4. **Skip model creation** — models already exist in the database (created during the real flow).
+5. **Register stubs** — `arrange()` stubs still apply (external APIs need stubbing).
+6. **Replay steps** — same as normal scenario flow.
+
+### `play()` vs `playOn()` Decision Matrix
+
+| Method | Machine | `from()` | `parent()` | `models()` |
+|--------|---------|----------|------------|------------|
+| `play()` | Creates new | Ignored | Resolved | Created |
+| `playOn(machineId)` | Restores existing | Validated | Ignored | Skipped |
+
+### Artisan Command
+
+```bash
+# Mid-flight: play scenario on existing machine
+php artisan machine:scenario CarSaleFromProtocolToApproved \
+    --machine-id=evt_01HXYZ...
+
+# With parameter overrides
+php artisan machine:scenario CarSaleFromProtocolToApproved \
+    --machine-id=evt_01HXYZ... \
+    --param="farmer_tckn:99887766655"
+```
+
+### HTTP Endpoint
+
+Per-machine scenario endpoints are auto-registered via discovery when `scenarios_enabled=true`:
+
+```
+# New machine (same as before)
+POST /machine/scenarios/{scenario}
+
+# Existing machine (mid-flight)
+POST /machine/scenarios/{scenario}/{machineId}
+```
+
+**Request:**
+
+```http
+POST /machine/scenarios/car-sale-from-protocol-to-approved/evt_01HXYZ...
+Content-Type: application/json
+
+{
+    "params": {
+        "farmer_tckn": "99887766655"
+    }
+}
+```
+
+### Error Cases
+
+| Error | When | Exception |
+|-------|------|-----------|
+| Machine not found | `machineId` doesn't exist | `ScenarioFailedException` |
+| State mismatch | Machine is at `awaiting_payment` but `from()` says `checking_protocol` | `ScenarioFailedException` with message: "Expected machine to be in state 'checking_protocol', but found 'awaiting_payment'" |
+| Machine class mismatch | `machineId` belongs to `FindeksMachine` but scenario targets `CarSalesMachine` | `ScenarioConfigurationException` |
+| `from()` set but `play()` called | Developer used `play()` instead of `playOn()` | Works — `from()` is only validated when `machineId` is provided |
+| `parent()` set with `playOn()` | Conflicting: both parent chain and existing machine | `ScenarioConfigurationException`: "Mid-flight scenarios cannot use parent()" |
+
+### Composition vs Mid-Flight
+
+These are two different patterns for the same problem — "start from a known state":
+
+| Pattern | How it gets to the starting state | When to use |
+|---------|----------------------------------|-------------|
+| **Composition** (`parent()`) | Replays parent scenario's steps | Reproducible, no pre-existing machine needed |
+| **Mid-Flight** (`from()` + `playOn()`) | Machine already exists | QA/staging, machine arrived at state through real UI usage |
+
+Both are valid. A `CarSaleAtDataCollection` scenario could use either approach depending on context.
+
+---
+
+## 11. Child Machine Scenarios
 
 When a parent machine delegates to a child machine (via `machine` key on a state), the child scenario:
 
@@ -717,7 +874,7 @@ After both children: parent's parallel @done guard passes → 'checking_protocol
 
 ---
 
-## 11. Async Dispatch, Timers & Job Actors
+## 12. Async Dispatch, Timers & Job Actors
 
 ### Child Machine Dispatch (`machine` key)
 
@@ -793,25 +950,29 @@ After the scenario completes and the machine is at the target state, timers for 
 
 ---
 
-## 12. ScenarioPlayer — Runtime Engine
+## 13. ScenarioPlayer — Runtime Engine
 
 **Location:** `src/Scenarios/ScenarioPlayer.php`
 
 ```
-play(scenario, params)
+play(scenario, params, machineId?)
 │
 ├── 1. Validate environment (scenarios enabled?)
 │     └── Throw ScenariosDisabledException if not
 │
-├── 2. Resolve parent chain
-│     └── If scenario.parent() is set:
-│         ├── Recursively play parent scenario first
-│         └── Get parent's ScenarioResult (machine instance, models)
+├── 2. Determine mode: new machine or mid-flight
+│     ├── machineId provided → mid-flight mode
+│     │   ├── Restore machine from machineId
+│     │   ├── Validate from() state if defined
+│     │   ├── Validate machine class matches scenario.machine()
+│     │   └── Skip parent chain and model creation
+│     └── machineId null → new machine mode
+│         └── Resolve parent chain if scenario.parent() is set
 │
 ├── 3. Hydrate scenario
 │     └── scenario.hydrate(mergedParams, parentModels)
 │
-├── 4. Create models
+├── 4. Create models (skipped in mid-flight mode)
 │     ├── Call scenario.models()
 │     ├── For each: Factory::create() or invoke callable
 │     └── scenario.addModel(name, instance) after each creation
@@ -822,6 +983,7 @@ play(scenario, params)
 │     └── App::bind() or App::instance() for each
 │
 ├── 6. Create or continue machine
+│     ├── Mid-flight → already restored in step 2
 │     ├── No parent → Machine::create() with first send()
 │     └── Has parent → continue parent's machine instance
 │
@@ -855,7 +1017,7 @@ play(scenario, params)
 
 ---
 
-## 13. Environment Gating
+## 14. Environment Gating
 
 **Config addition to `config/machine.php`:**
 
@@ -877,7 +1039,7 @@ play(scenario, params)
 
 ---
 
-## 14. Execution: Artisan Command & HTTP Endpoint
+## 15. Execution: Artisan Command & HTTP Endpoint
 
 ### Artisan Command
 
@@ -890,13 +1052,22 @@ php artisan machine:scenario --list
 # List scenarios for a specific machine
 php artisan machine:scenario --list --machine=CarSalesMachine
 
-# Play a scenario
+# Play a scenario (new machine)
 php artisan machine:scenario CarSaleAtProtocolCheck
 
 # Play with parameter overrides
 php artisan machine:scenario CarSaleAtProtocolCheck \
     --param="farmer_tckn:99887766655" \
     --param="amount:25000000"
+
+# Mid-flight: play scenario on existing machine
+php artisan machine:scenario CarSaleFromProtocolToApproved \
+    --machine-id=evt_01HXYZ...
+
+# Mid-flight with parameter overrides
+php artisan machine:scenario CarSaleFromProtocolToApproved \
+    --machine-id=evt_01HXYZ... \
+    --param="farmer_tckn:99887766655"
 ```
 
 **Play output:**
@@ -958,9 +1129,10 @@ php artisan machine:scenario CarSaleAtProtocolCheck \
 **Route registration:** Handled by `MachineServiceProvider` when scenarios are enabled.
 
 ```
-POST   /machine/scenarios/{scenario}          → Play scenario
-GET    /machine/scenarios                     → List available scenarios
-GET    /machine/scenarios/{scenario}/describe  → Scenario details (params, description, parent)
+POST   /machine/scenarios/{scenario}                → Play scenario (new machine)
+POST   /machine/scenarios/{scenario}/{machineId}    → Play scenario on existing machine (mid-flight)
+GET    /machine/scenarios                           → List available scenarios
+GET    /machine/scenarios/{scenario}/describe        → Scenario details (params, description, from, parent)
 ```
 
 **Request/Response:**
@@ -998,7 +1170,7 @@ Content-Type: application/json
 
 ---
 
-## 15. Discovery & Registration
+## 16. Discovery & Registration
 
 Scenario classes are discovered via directory scanning (similar to Laravel's event discovery):
 
@@ -1021,7 +1193,7 @@ app/Machines/Scenarios/
 
 ---
 
-## 16. What NOT to Include
+## 17. What NOT to Include
 
 | Feature | Why excluded |
 |---------|-------------|
@@ -1036,7 +1208,7 @@ app/Machines/Scenarios/
 
 ---
 
-## 17. Migration: Removing the Old Scenario System
+## 18. Migration: Removing the Old Scenario System
 
 ### Files to Modify
 
@@ -1070,7 +1242,7 @@ app/Machines/Scenarios/
 
 ---
 
-## 18. Implementation Checklist
+## 19. Implementation Checklist
 
 ### Phase 1: Foundation
 
@@ -1086,6 +1258,20 @@ app/Machines/Scenarios/
 - [ ] `src/Exceptions/ScenarioFailedException.php`
 - [ ] `src/Exceptions/ScenarioConfigurationException.php`
 - [ ] `config/machine.php` — add `scenarios` section
+
+### Phase 1b: Mid-Flight Scenarios
+
+- [ ] `MachineScenario::from()` — optional expected starting state method
+- [ ] `MachineScenario::playOn()` — static entry point accepting `machineId`
+- [ ] `MachineScenario::getFrom()` — introspection getter
+- [ ] `ScenarioPlayer::play()` — accept optional `machineId` parameter
+- [ ] State validation when `from()` is defined and `machineId` is provided
+- [ ] Machine class validation for mid-flight (machineId belongs to correct machine class)
+- [ ] Skip parent chain resolution in mid-flight mode
+- [ ] Skip model creation in mid-flight mode
+- [ ] `ScenarioCommand` — add `--machine-id` option
+- [ ] HTTP endpoint: `POST /machine/scenarios/{scenario}/{machineId}`
+- [ ] Describe endpoint: include `from` field in response
 
 ### Phase 2: Composition & Child Scenarios
 
@@ -1122,8 +1308,9 @@ app/Machines/Scenarios/
 - [ ] `tests/Features/Scenarios/ChildScenarioTest.php` — child replay, async interception, job actors
 - [ ] `tests/Features/Scenarios/ScenarioTimerTest.php` — timer suspension during replay, re-registration after
 - [ ] `tests/Features/Scenarios/ScenarioArrangeTest.php` — guard/action/service stubs
-- [ ] `tests/Features/Scenarios/ScenarioCommandTest.php` — artisan play + list
-- [ ] `tests/Features/Scenarios/ScenarioHttpTest.php` — HTTP endpoints
+- [ ] `tests/Features/Scenarios/ScenarioMidFlightTest.php` — playOn, from() validation, state mismatch, skip models/parent
+- [ ] `tests/Features/Scenarios/ScenarioCommandTest.php` — artisan play + list + --machine-id
+- [ ] `tests/Features/Scenarios/ScenarioHttpTest.php` — HTTP endpoints including mid-flight route
 - [ ] `tests/Features/Scenarios/ScenarioGatingTest.php` — disabled environment
 - [ ] `tests/Features/Scenarios/ScenarioErrorTest.php` — failure cases
 - [ ] `docs/advanced/scenarios.md` (new — replaces old)
