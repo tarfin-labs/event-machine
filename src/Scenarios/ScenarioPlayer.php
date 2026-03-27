@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Jobs\ChildJobJob;
+use Illuminate\Contracts\Foundation\Application;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -288,7 +289,7 @@ class ScenarioPlayer
     {
         $this->originalBindings[$guardClass] = App::bound($guardClass);
 
-        App::bind($guardClass, fn ($app, $params): ScenarioGuardStub => new ScenarioGuardStub(
+        App::bind($guardClass, fn (Application $app, array $params): ScenarioGuardStub => new ScenarioGuardStub(
             returnValue: $returnValue,
             eventQueue: $params['eventQueue'] ?? null,
         ));
@@ -301,7 +302,7 @@ class ScenarioPlayer
     {
         $this->originalBindings[$actionClass] = App::bound($actionClass);
 
-        App::bind($actionClass, fn ($app, $params): ScenarioActionStub => new ScenarioActionStub(
+        App::bind($actionClass, fn (Application $app, array $params): ScenarioActionStub => new ScenarioActionStub(
             originalClass: $actionClass,
             stubData: $stubData,
             eventQueue: $params['eventQueue'] ?? null,
