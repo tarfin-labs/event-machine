@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine;
 
+use Illuminate\Routing\Router;
 use Spatie\LaravelPackageTools\Package;
 use Illuminate\Console\Scheduling\Schedule;
 use Tarfinlabs\EventMachine\Enums\TimerResolution;
@@ -115,7 +116,7 @@ class MachineServiceProvider extends PackageServiceProvider
      */
     protected function registerScenarioRoutes(): void
     {
-        $this->app['router']->group(['prefix' => 'machine/scenarios'], function ($router): void {
+        $this->app['router']->group(['prefix' => 'machine/scenarios'], function (Router $router): void {
             $router->get('/', [ScenarioController::class, 'list']);
             $router->post('/{scenario}', [ScenarioController::class, 'play']);
             $router->get('/{scenario}/describe', [ScenarioController::class, 'describe']);
