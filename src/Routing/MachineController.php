@@ -270,7 +270,11 @@ class MachineController extends Controller
         $rootEventId = $state->history->first()?->root_event_id;
         $params      = $request->input('scenarioParams', []);
 
-        $result = $scenarioClass::playOn($rootEventId, $params);
+        try {
+            $result = $scenarioClass::playOn($rootEventId, $params);
+        } catch (\Throwable $e) {
+            abort(422, $e->getMessage());
+        }
 
         // Restore the machine to get the updated state after scenario replay
         $restoredMachineClass = $machineClass ?? $machine::class;
