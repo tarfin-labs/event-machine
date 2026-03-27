@@ -26,31 +26,41 @@ class ScenarioPlayer
 
     /**
      * Play a scenario with optional parameter overrides.
+     *
+     * @param  string|null  $machineId  When provided, restores an existing machine (mid-flight mode).
      */
-    public function play(MachineScenario $scenario, array $params = []): ScenarioResult
+    public function play(MachineScenario $scenario, array $params = [], ?string $machineId = null): ScenarioResult
     {
         $startTime = microtime(true);
+        $midFlight = $machineId !== null;
 
         // 1. Validate environment
         $this->validateEnvironment();
 
-        // 2. Resolve parent chain
+        // 2. Validate mid-flight constraints
+        if ($midFlight && $scenario->getParent() !== null) {
+            throw ScenarioConfigurationException::midFlightWithParent($scenario::class);
+        }
+
+        // 3. Resolve parent chain (skipped in mid-flight mode)
         $parentResult = null;
-        if ($scenario->getParent() !== null) {
+        if (!$midFlight && $scenario->getParent() !== null) {
             $parentResult = $this->resolveParentChain($scenario, $params);
         }
 
-        // 3. Hydrate scenario
+        // 4. Hydrate scenario
         $parentModels = $parentResult?->models ?? [];
         $scenario->hydrate($params, $parentModels);
 
-        // 4. Create models
-        $this->createModels($scenario);
+        // 5. Create models (skipped in mid-flight mode — models already exist)
+        if (!$midFlight) {
+            $this->createModels($scenario);
+        }
 
-        // 5. Register stubs
+        // 6. Register stubs
         $this->registerStubs($scenario);
 
-        // 6. Intercept async dispatch & suspend timers
+        // 7. Intercept async dispatch & suspend timers
         $originalDispatcher   = resolve(Dispatcher::class);
         $childMachineJobClass = ChildMachineJob::class;
         $childJobJobClass     = ChildJobJob::class;
@@ -60,10 +70,28 @@ class ScenarioPlayer
         }
         app()->instance('scenario.timers_disabled', true);
 
-        // 7. Replay steps
+        // 8. Replay steps
         $machine       = null;
         $stepsExecuted = 0;
         $childResults  = [];
+
+        // Mid-flight: restore existing machine and validate from() state
+        if ($midFlight) {
+            /** @var class-string<Machine> $machineClass */
+            $machineClass = $scenario->getMachine();
+            $machine      = $machineClass::create(state: $machineId);
+
+            $expectedState = $scenario->getFrom();
+            if ($expectedState !== null) {
+                $actualState = $machine->state->currentStateDefinition->key;
+                if ($actualState !== $expectedState) {
+                    throw ScenarioFailedException::stateMismatch(
+                        expected: $expectedState,
+                        actual: $actualState,
+                    );
+                }
+            }
+        }
 
         try {
             $steps = $scenario->getSteps();
@@ -111,7 +139,7 @@ class ScenarioPlayer
                 }
             }
         } finally {
-            // 8. Cleanup stubs, restore dispatcher, remove timer flag
+            // 9. Cleanup stubs, restore dispatcher, remove timer flag
             $this->cleanupStubs();
 
             if ($jobsToFake !== []) {
@@ -121,14 +149,14 @@ class ScenarioPlayer
             app()->forgetInstance('scenario.timers_disabled');
         }
 
-        // 9. Build result
+        // 10. Build result
         $duration = (microtime(true) - $startTime) * 1000;
 
         return new ScenarioResult(
             machineId: $machine?->state?->history?->first()?->root_event_id ?? '',
             rootEventId: $machine?->state?->history?->first()?->root_event_id ?? '',
             currentState: $machine?->state?->currentStateDefinition?->key ?? '',
-            models: array_merge($parentModels, $scenario->getCreatedModels()),
+            models: $midFlight ? [] : array_merge($parentModels, $scenario->getCreatedModels()),
             stepsExecuted: $stepsExecuted,
             duration: $duration,
             childResults: $childResults,
