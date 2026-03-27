@@ -387,6 +387,16 @@ class TestMachine
     }
 
     /**
+     * @deprecated Use the new MachineScenario system instead. Will be removed in next major version.
+     */
+    public function withScenario(string $scenarioName): self
+    {
+        $this->machine->state->context->set('scenarioType', $scenarioName);
+
+        return $this;
+    }
+
+    /**
      * Disable persistence for this test.
      */
     public function withoutPersistence(): self
