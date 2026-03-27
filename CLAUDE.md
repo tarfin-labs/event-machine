@@ -28,6 +28,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `php artisan machine:clear` - Clear machine discovery cache
 - `php artisan machine:archive-events` - Archive old machine events (fan-out, `--dry-run`, `--sync`, `--dispatch-limit`)
 - `php artisan machine:archive-status` - Show archive stats, restore via `--restore=<rootEventId>`
+- `php artisan machine:scenario` - Play or list scenarios (`--list`, `--machine=`, `--machine-id=`, `--param=`). Requires `MACHINE_SCENARIOS_ENABLED=true`.
+- `php artisan machine:scenario-cache` - Cache scenario class discovery for production-like staging
 
 ### Local QA Testing
 - `composer test:localqa` - Run local QA tests (requires MySQL + Redis + Horizon)
