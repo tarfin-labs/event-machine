@@ -239,10 +239,13 @@ php artisan machine:scenario OrderFromPaymentToShipped \
     --param="tracking_number:TRK-001"
 ```
 
-HTTP endpoint:
+HTTP endpoint (under the machine's route prefix):
 
 ```
-POST /machine/scenarios/{slug}/{machineId}
+POST {prefix}/scenarios/{slug}/{machineId}
+
+# Example (if machine registered at /api/orders):
+POST /api/orders/scenarios/order-from-payment-to-shipped/evt_01HXYZ...
 ```
 
 ## Composition
@@ -322,14 +325,27 @@ php artisan machine:scenario OrderReadyForPayment --param="amount:5000"
 
 ### HTTP Endpoints
 
-When scenarios are enabled, four endpoints are registered:
+Scenario routes are registered **per-machine** under each machine's prefix via `MachineRouter::register()`. When `MACHINE_SCENARIOS_ENABLED=true` and the machine has scenarios, four routes are auto-registered:
 
 ```
-GET    /machine/scenarios                           → List scenarios
-POST   /machine/scenarios/{slug}                    → Play scenario (new machine)
-POST   /machine/scenarios/{slug}/{machineId}        → Play scenario on existing machine (mid-flight)
-GET    /machine/scenarios/{slug}/describe            → Scenario details (includes from field)
+GET    {prefix}/scenarios                           → List this machine's scenarios
+POST   {prefix}/scenarios/{slug}                    → Play scenario (new machine)
+POST   {prefix}/scenarios/{slug}/{machineId}        → Play on existing machine (mid-flight)
+GET    {prefix}/scenarios/{slug}/describe            → Scenario details (includes from field)
 ```
+
+Example (if machine registered at `/api/orders`):
+
+```
+GET    /api/orders/scenarios
+POST   /api/orders/scenarios/order-ready-for-payment
+POST   /api/orders/scenarios/order-ready-for-payment/evt_01HXYZ...
+GET    /api/orders/scenarios/order-ready-for-payment/describe
+```
+
+::: info No Global Routes
+There are no global `/machine/scenarios/` routes. Each machine owns its scenario endpoints under its own prefix. If a machine has no `MachineRouter::register()` call, it has no scenario endpoints.
+:::
 
 ### From Code
 
@@ -349,6 +365,57 @@ $result->stepsExecuted; // Number of steps played
 $result->duration;      // Execution time in ms
 $result->childResults;  // Results from child machine scenarios
 ```
+
+## Endpoint Integration
+
+When scenarios are enabled, two features integrate scenarios with your regular machine endpoints.
+
+### `available_scenarios` in Response
+
+After any successful event transition, the response includes `available_scenarios` — a list of scenarios that can be played from the machine's **current state** (after the transition). This mirrors `available_events` which lists events the machine accepts.
+
+```json
+{
+  "data": {
+    "machine_id": "evt_01HXYZ...",
+    "value": ["order.awaiting_payment"],
+    "context": { "..." },
+    "available_events": [
+      { "type": "PAYMENT_RECEIVED", "source": "parent" }
+    ],
+    "available_scenarios": [
+      {
+        "slug": "order-from-payment-to-shipped",
+        "description": "Fast-forward from payment to shipped",
+        "from": "awaiting_payment"
+      }
+    ]
+  }
+}
+```
+
+When `MACHINE_SCENARIOS_ENABLED=false`, the `available_scenarios` key is omitted entirely.
+
+### Scenario Continuation via `scenario` Field
+
+When sending an event, include a `scenario` field to automatically play a scenario after the event:
+
+```http
+POST /api/orders/{orderId}/payment-received
+Content-Type: application/json
+
+{
+  "type": "PAYMENT_RECEIVED",
+  "payload": { "transaction_id": "TXN-001" },
+  "scenario": "order-from-shipping-to-delivered"
+}
+```
+
+The event processes normally first (machine transitions to the next state), then the scenario plays from the resulting state. Both complete in a single request.
+
+- If `MACHINE_SCENARIOS_ENABLED=false`, the `scenario` field is silently ignored
+- If the scenario's `from()` doesn't match the post-transition state, a 422 error is returned
+- Use `scenarioParams` to pass parameter overrides to the scenario
 
 ## Error Handling
 
