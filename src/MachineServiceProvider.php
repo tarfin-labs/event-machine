@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine;
 use Spatie\LaravelPackageTools\Package;
 use Illuminate\Console\Scheduling\Schedule;
 use Tarfinlabs\EventMachine\Enums\TimerResolution;
+use Tarfinlabs\EventMachine\Commands\DiagramCommand;
 use Tarfinlabs\EventMachine\Support\MachineDiscovery;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tarfinlabs\EventMachine\Commands\TimerStatusCommand;
@@ -58,7 +59,8 @@ class MachineServiceProvider extends PackageServiceProvider
             ->hasCommand(TimerStatusCommand::class)
             ->hasCommand(MachineCacheCommand::class)
             ->hasCommand(MachineClearCommand::class)
-            ->hasCommand(ProcessScheduledCommand::class);
+            ->hasCommand(ProcessScheduledCommand::class)
+            ->hasCommand(DiagramCommand::class);
     }
 
     public function boot(): void

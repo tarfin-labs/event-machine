@@ -1,0 +1,2028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventMachine Diagram</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+    --bg: #1a1a2e; --bg-secondary: #16213e; --bg-tertiary: #1e2a45;
+    --border: #2a2a4a; --text: #e0e0e0; --text-muted: #6a6a8a;
+    --accent: #a0c4ff; --canvas-bg: #1a1a2e;
+    --state-atomic: #1e3a5f; --state-atomic-border: #4a90d9;
+    --state-compound: #1a1a2e; --state-compound-border: #5a5a7a;
+    --state-parallel-bg: #2a1e0a; --state-parallel-border: #cc8833;
+    --state-final: #1a3a1a; --state-final-border: #4caf50;
+    --state-invoke: #2a1a3a; --state-invoke-border: #9c27b0;
+    --machine-bg: #12122a; --machine-header: #1e1e3a; --machine-border: #4a4a6a;
+    --edge-color: #5a5a7a; --label-bg: rgba(26,26,46,0.85);
+}
+body.light-theme {
+    --bg: #f5f5f5; --bg-secondary: #ffffff; --bg-tertiary: #eef2f7;
+    --border: #d0d0d0; --text: #1a1a2e; --text-muted: #6a6a8a;
+    --accent: #1565c0; --canvas-bg: #fafafa;
+    --state-atomic: #e3f2fd; --state-atomic-border: #1976d2;
+    --state-compound: #f5f5f5; --state-compound-border: #9e9e9e;
+    --state-parallel-bg: #fff8e1; --state-parallel-border: #f57c00;
+    --state-final: #e8f5e9; --state-final-border: #388e3c;
+    --state-invoke: #f3e5f5; --state-invoke-border: #7b1fa2;
+    --machine-bg: #ffffff; --machine-header: #e8eaf6; --machine-border: #9e9e9e;
+    --edge-color: #757575; --label-bg: rgba(255,255,255,0.9);
+}
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+}
+
+#header {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    z-index: 100;
+}
+
+#header h1 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+#header .controls {
+    display: flex;
+    gap: 8px;
+}
+
+#header button {
+    background: var(--bg-tertiary);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+#header button:hover {
+    background: #3a3a5a;
+    color: #fff;
+}
+
+#main {
+    display: flex;
+    height: calc(100vh - 44px);
+}
+
+#sidebar {
+    width: 260px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 12px;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+#sidebar h2 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin: 12px 0 6px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #2a2a4a;
+}
+
+#sidebar h2:first-child { margin-top: 0; }
+
+.sidebar-section { margin-bottom: 8px; }
+
+.context-item, .behavior-item {
+    padding: 3px 6px;
+    border-radius: 3px;
+    margin: 2px 0;
+    cursor: default;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.context-item { background: var(--bg-tertiary); }
+.context-key { color: #a0c4ff; }
+.context-type { color: #6a6a8a; font-size: 10px; }
+.context-value { color: #808080; font-size: 10px; }
+
+.behavior-item { background: var(--bg-tertiary); cursor: pointer; }
+.behavior-item:hover { background: var(--border); }
+.behavior-name { color: #c0d0ff; }
+.behavior-badge {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+.badge-action { background: #1a3a2a; color: #4caf50; }
+.badge-guard { background: #3a3a1a; color: #ffc107; }
+.badge-calculator { background: #3a1a2a; color: #e91e63; }
+.badge-event { background: #1a2a3a; color: #2196f3; }
+.badge-inline { background: #2a2a2a; color: #888; font-size: 8px; }
+
+#canvas-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+#diagram-svg {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+}
+
+#diagram-svg:active { cursor: grabbing; }
+
+/* State nodes */
+.state-node rect {
+    rx: 8;
+    ry: 8;
+    stroke-width: 1.5;
+    transition: all 0.15s;
+}
+.state-node:hover rect {
+    stroke-width: 2.5;
+    filter: brightness(1.1);
+}
+
+.state-node text {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 12px;
+    fill: #e0e0e0;
+    pointer-events: none;
+}
+
+.state-label {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.state-detail {
+    font-size: 10px;
+    fill: #8888aa !important;
+}
+
+/* State types */
+.state-atomic rect { fill: #1e3a5f; stroke: #4a90d9; }
+.state-compound rect { fill: #1a1a2e; stroke: #5a5a7a; }
+.state-parallel rect { fill: #2a1e0a; stroke: #cc8833; stroke-dasharray: 6 3; }
+.state-final rect { fill: #1a3a1a; stroke: #4caf50; }
+.state-invoke rect { fill: #2a1a3a; stroke: #9c27b0; }
+
+.state-final .final-inner {
+    fill: none;
+    stroke: #4caf50;
+    stroke-width: 1.5;
+}
+
+/* Initial state indicator */
+.initial-indicator circle { fill: #e0e0e0; }
+.initial-indicator line { stroke: #e0e0e0; stroke-width: 1.5; }
+
+/* Transition edges */
+.transition-edge path {
+    fill: none;
+    stroke: #5a5a7a;
+    stroke-width: 1.5;
+    transition: all 0.15s;
+}
+.transition-edge:hover path {
+    stroke: #a0a0c0;
+    stroke-width: 2.5;
+}
+
+.transition-edge marker path { fill: #5a5a7a; }
+
+.transition-label {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+    fill: #a0a0c0;
+}
+
+.event-name { font-weight: 600; fill: #c0d0ff; }
+.guard-label { fill: #ffc107; }
+.action-label { fill: #4caf50; font-size: 10px; }
+
+/* Transition types */
+.transition-always path { stroke-dasharray: 6 3; stroke: #6a6a8a; }
+.transition-done path { stroke: #4caf50; stroke-width: 2; }
+.transition-fail path { stroke: #f44336; stroke-width: 2; }
+.transition-timeout path { stroke: #ff9800; stroke-dasharray: 3 3; }
+.transition-delegation path { stroke: #9c27b0; stroke-width: 2.5; stroke-dasharray: 8 4; }
+
+/* Machine container */
+.machine-collapsed rect:first-child { opacity: 0.7; }
+.machine-collapsed:hover rect:first-child { opacity: 1; }
+
+/* Detail panel */
+#detail-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    font-size: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    z-index: 50;
+}
+
+#detail-panel.active { display: block; }
+
+#detail-panel h3 {
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 8px;
+}
+
+#detail-panel .detail-row {
+    margin: 4px 0;
+    display: flex;
+    gap: 8px;
+}
+
+#detail-panel .detail-key {
+    color: #6a6a8a;
+    min-width: 100px;
+}
+
+#detail-panel .detail-value { color: #c0c0c0; }
+
+/* Zoom indicator */
+/* Highlight usages */
+.highlight-usage rect { stroke: #ffeb3b !important; stroke-width: 3 !important; }
+.highlight-usage path { stroke: #ffeb3b !important; stroke-width: 3 !important; }
+.active-behavior { background: #3a3a1a !important; border-left: 3px solid #ffeb3b; }
+
+/* Hover highlight */
+.hover-highlight path { stroke: #64b5f6 !important; stroke-width: 3 !important; }
+.hover-highlight text, .hover-highlight tspan { fill: #64b5f6 !important; }
+
+#zoom-indicator {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    background: rgba(22, 33, 62, 0.9);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #6a6a8a;
+    z-index: 50;
+}
+
+/* Keyboard shortcut hints */
+#shortcut-hint {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    background: rgba(22, 33, 62, 0.9);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #4a4a6a;
+    z-index: 50;
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+    <h1 id="title">EventMachine Diagram</h1>
+    <div class="controls">
+        <button id="btn-collapse-all" onclick="collapseAll()" style="display:none">Collapse All</button>
+        <button id="btn-expand-all" onclick="expandAll()" style="display:none">Expand All</button>
+        <button onclick="fitToScreen()">Fit</button>
+        <button onclick="zoomIn()">+</button>
+        <button onclick="zoomOut()">-</button>
+        <button onclick="exportSvg()">SVG</button>
+        <button onclick="toggleTheme()">Theme</button>
+        <button onclick="toggleSidebar()">Sidebar</button>
+    </div>
+</div>
+
+<div id="main">
+    <div id="sidebar">
+        <div id="context-section">
+            <h2>Context</h2>
+            <div id="context-list"></div>
+        </div>
+        <div id="behaviors-section">
+            <div id="actions-section">
+                <h2>Actions</h2>
+                <div id="actions-list"></div>
+            </div>
+            <div id="guards-section">
+                <h2>Guards</h2>
+                <div id="guards-list"></div>
+            </div>
+            <div id="calculators-section">
+                <h2>Calculators</h2>
+                <div id="calculators-list"></div>
+            </div>
+            <div id="events-section">
+                <h2>Events</h2>
+                <div id="events-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <svg id="diagram-svg">
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#5a5a7a"/>
+                </marker>
+                <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#4caf50"/>
+                </marker>
+                <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#f44336"/>
+                </marker>
+                <marker id="arrowhead-orange" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#ff9800"/>
+                </marker>
+                <marker id="arrowhead-purple" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#9c27b0"/>
+                </marker>
+            </defs>
+            <g id="diagram-root"></g>
+        </svg>
+        <div id="zoom-indicator">100%</div>
+        <div id="shortcut-hint">F: fit | +/-: zoom | T: theme | S: sidebar | Esc: close | 0: reset</div>
+    </div>
+</div>
+
+<div id="detail-panel">
+    <h3 id="detail-title">Select a state or transition</h3>
+    <div id="detail-content"></div>
+</div>
+
+<script>
+/* __MACHINE_DATA__ */
+</script>
+
+<script>
+// ============================================================
+// ELK.js — inlined by DiagramCommand for offline support
+// ============================================================
+/* __ELK_JS__ */
+
+async function loadELK() {
+    // ELK is set as window.ELK by the inlined elk.bundled.js
+    if (typeof ELK === 'undefined') {
+        console.error('ELK.js not loaded. Make sure this file was generated by machine:diagram command.');
+    }
+}
+
+// ============================================================
+// SVG Pan/Zoom (minimal d3-zoom replacement for iteration 1)
+// ============================================================
+class PanZoom {
+    constructor(svgEl, contentEl) {
+        this.svg = svgEl;
+        this.content = contentEl;
+        this.transform = { x: 0, y: 0, k: 1 };
+        this.isPanning = false;
+        this.startPoint = { x: 0, y: 0 };
+
+        this.svg.addEventListener('wheel', this.onWheel.bind(this), { passive: false });
+        this.svg.addEventListener('mousedown', this.onMouseDown.bind(this));
+        this.svg.addEventListener('mousemove', this.onMouseMove.bind(this));
+        this.svg.addEventListener('mouseup', this.onMouseUp.bind(this));
+        this.svg.addEventListener('mouseleave', this.onMouseUp.bind(this));
+    }
+
+    onWheel(e) {
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.1 : 0.9;
+        const rect = this.svg.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        // Zoom towards mouse position
+        this.transform.x = mx - (mx - this.transform.x) * factor;
+        this.transform.y = my - (my - this.transform.y) * factor;
+        this.transform.k *= factor;
+
+        // Clamp zoom
+        this.transform.k = Math.max(0.1, Math.min(5, this.transform.k));
+        this.apply();
+    }
+
+    onMouseDown(e) {
+        if (e.button !== 0) return;
+        this.isPanning = true;
+        this.hasMoved = false;
+        this.mouseStart = { x: e.clientX, y: e.clientY };
+        this.startPoint = { x: e.clientX - this.transform.x, y: e.clientY - this.transform.y };
+        this.svg.style.cursor = 'grabbing';
+    }
+
+    onMouseMove(e) {
+        if (!this.isPanning) return;
+        const dx = e.clientX - this.mouseStart.x;
+        const dy = e.clientY - this.mouseStart.y;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) this.hasMoved = true;
+        this.transform.x = e.clientX - this.startPoint.x;
+        this.transform.y = e.clientY - this.startPoint.y;
+        this.apply();
+    }
+
+    onMouseUp() {
+        this.isPanning = false;
+        this.svg.style.cursor = 'grab';
+    }
+
+    // Returns true if the last mousedown→mouseup was a drag (not a click)
+    wasDrag() { return this.hasMoved; }
+
+    apply() {
+        this.content.setAttribute('transform',
+            `translate(${this.transform.x},${this.transform.y}) scale(${this.transform.k})`);
+        document.getElementById('zoom-indicator').textContent = Math.round(this.transform.k * 100) + '%';
+    }
+
+    fitToContent(bbox, padding = 40) {
+        const svgRect = this.svg.getBoundingClientRect();
+        const scaleX = (svgRect.width - padding * 2) / bbox.width;
+        const scaleY = (svgRect.height - padding * 2) / bbox.height;
+        const scale = Math.min(scaleX, scaleY, 2); // max 200%
+
+        this.transform.k = scale;
+        this.transform.x = (svgRect.width - bbox.width * scale) / 2 - bbox.x * scale;
+        this.transform.y = (svgRect.height - bbox.height * scale) / 2 - bbox.y * scale;
+        this.apply();
+    }
+
+    zoomBy(factor) {
+        const rect = this.svg.getBoundingClientRect();
+        const cx = rect.width / 2;
+        const cy = rect.height / 2;
+        this.transform.x = cx - (cx - this.transform.x) * factor;
+        this.transform.y = cy - (cy - this.transform.y) * factor;
+        this.transform.k *= factor;
+        this.transform.k = Math.max(0.1, Math.min(5, this.transform.k));
+        this.apply();
+    }
+}
+
+// ============================================================
+// Node/Edge metadata store — ELK chokes on complex objects in properties
+// ============================================================
+const nodeMetadata = {};
+const edgeMetadata = {};
+
+function storeNodeMeta(id, meta) { nodeMetadata[id] = meta; }
+function getNodeMeta(id) { return nodeMetadata[id] || {}; }
+function storeEdgeMeta(id, meta) { edgeMetadata[id] = meta; }
+function getEdgeMeta(id) { return edgeMetadata[id] || {}; }
+
+// ============================================================
+// XState JSON → ELK Graph Transformer
+// ============================================================
+function xstateToElk(machineJson) {
+    const elkGraph = {
+        id: 'root',
+        layoutOptions: {
+            'elk.algorithm': 'layered',
+            'elk.direction': 'DOWN',
+            'elk.spacing.nodeNode': '30',
+            'elk.layered.spacing.nodeNodeBetweenLayers': '50',
+            'elk.edgeRouting': 'SPLINES',
+            'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+            'elk.padding': '[top=20,left=20,bottom=20,right=20]',
+        },
+        children: [],
+        edges: [],
+    };
+
+    // Build nodes from states
+    const states = machineJson.states || {};
+    const stateNames = Object.keys(states);
+
+    stateNames.forEach(stateName => {
+        const stateDef = states[stateName];
+        const node = buildStateNode(machineJson.id, stateName, stateDef, machineJson.initial);
+        elkGraph.children.push(node);
+    });
+
+    // Build edges from transitions
+    stateNames.forEach(stateName => {
+        const stateDef = states[stateName];
+        const edges = buildEdgesFromState(machineJson.id, stateName, stateDef);
+        elkGraph.edges.push(...edges);
+    });
+
+    return elkGraph;
+}
+
+function buildStateNode(machineId, stateName, stateDef, initialState) {
+    const isInitial = stateName === initialState;
+    const isFinal = stateDef.type === 'final';
+    const isParallel = stateDef.type === 'parallel';
+    const hasInvoke = !!stateDef.invoke;
+    const isCompound = !!stateDef.states && !isParallel;
+
+    // Collect self-transitions (events with no target or actions-only)
+    const selfTransitions = [];
+    const on = stateDef.on || {};
+    Object.entries(on).forEach(([eventName, transition]) => {
+        const branches = normalizeTransition(transition);
+        branches.forEach(branch => {
+            if (!branch.target) {
+                selfTransitions.push({ event: eventName, ...branch });
+            }
+        });
+    });
+
+    // Calculate node size based on content
+    let width = Math.max(160, stateName.length * 9 + 40);
+    let height = 44;
+
+    // Extra height for entry/exit actions
+    const entryActions = stateDef.entry || [];
+    const exitActions = stateDef.exit || [];
+    if (entryActions.length > 0) height += 16;
+    if (exitActions.length > 0) height += 16;
+    if (hasInvoke) {
+        height += 16; // invoke src line
+        const invokeMeta = stateDef.invoke?.meta?.eventMachine || {};
+        if (stateDef.invoke?.input && Object.keys(stateDef.invoke.input).length > 0) height += 14; // with mapping
+        if (invokeMeta.queue || invokeMeta.timeout) height += 13; // queue/timeout info
+        // Ensure width fits invoke src name
+        const srcName = stateDef.invoke?.src || '';
+        width = Math.max(width, srcName.length * 8 + 80);
+    }
+
+    // Extra height for self-transitions shown inside state
+    if (selfTransitions.length > 0) {
+        height += 4; // separator line space
+        height += selfTransitions.length * 15;
+        // Ensure width fits event labels
+        selfTransitions.forEach(st => {
+            const label = formatTransitionLabel(st.event, st);
+            width = Math.max(width, label.length * 7 + 30);
+        });
+    }
+
+    const nodeId = `${machineId}.${stateName}`;
+    const nodeType = isFinal ? 'final' : isParallel ? 'parallel' : hasInvoke ? 'invoke' : isCompound ? 'compound' : 'atomic';
+
+    // Store complex data externally — ELK only gets simple layout properties
+    storeNodeMeta(nodeId, {
+        type: nodeType,
+        isInitial: isInitial,
+        stateDef: stateDef,
+        stateName: stateName,
+        selfTransitions: selfTransitions,
+    });
+
+    const node = {
+        id: nodeId,
+        width: width,
+        height: height,
+        labels: [{ text: stateName }],
+    };
+
+    // If compound or parallel, add children
+    if (stateDef.states) {
+        node.children = [];
+        node.edges = [];
+        node.layoutOptions = {
+            'elk.algorithm': 'layered',
+            'elk.direction': 'DOWN',
+            'elk.spacing.nodeNode': '20',
+            'elk.layered.spacing.nodeNodeBetweenLayers': '40',
+            'elk.padding': '[top=40,left=15,bottom=15,right=15]',
+        };
+
+        const childStates = Object.keys(stateDef.states);
+        const childInitial = stateDef.initial || childStates[0];
+
+        childStates.forEach(childName => {
+            const childDef = stateDef.states[childName];
+            const childNode = buildStateNode(`${machineId}.${stateName}`, childName, childDef, childInitial);
+            node.children.push(childNode);
+        });
+
+        // Child edges
+        childStates.forEach(childName => {
+            const childDef = stateDef.states[childName];
+            const childEdges = buildEdgesFromState(`${machineId}.${stateName}`, childName, childDef);
+            node.edges.push(...childEdges);
+        });
+
+        // Expand size for compound nodes
+        node.width = Math.max(width, 200);
+        node.height = Math.max(height, 100);
+    }
+
+    return node;
+}
+
+let edgeCounter = 0;
+
+function createEdge(sources, targets, labelText, meta) {
+    const id = `edge_${edgeCounter++}`;
+    storeEdgeMeta(id, meta);
+    return {
+        id: id,
+        sources: sources,
+        targets: targets,
+        labels: [{
+            text: labelText,
+            width: Math.max(labelText.length * 6.5 + 16, 60),
+            height: 16,
+        }],
+    };
+}
+
+function buildEdgesFromState(parentId, stateName, stateDef) {
+    const edges = [];
+    const on = stateDef.on || {};
+
+    Object.entries(on).forEach(([eventName, transition]) => {
+        const branches = normalizeTransition(transition);
+        branches.forEach(branch => {
+            if (branch.target) {
+                // Resolve target — could be relative
+                const targetId = resolveTargetId(parentId, branch.target);
+                const fullLabel = formatTransitionLabel(eventName, branch);
+                edges.push(createEdge(
+                    [`${parentId}.${stateName}`], [targetId], fullLabel,
+                    { eventName, guard: branch.guard || null, actions: branch.actions || [], calculators: branch.meta?.eventMachine?.calculators || [], type: 'event' }
+                ));
+            }
+        });
+    });
+
+    // Always transitions
+    if (stateDef.always) {
+        const branches = normalizeTransition(stateDef.always);
+        branches.forEach(branch => {
+            if (branch.target) {
+                const targetId = resolveTargetId(parentId, branch.target);
+                const label = formatTransitionLabel('@always', branch);
+                edges.push(createEdge(
+                    [`${parentId}.${stateName}`], [targetId], label,
+                    { eventName: '@always', guard: branch.guard || null, actions: branch.actions || [], type: 'always' }
+                ));
+            }
+        });
+    }
+
+    // invoke.onDone
+    if (stateDef.invoke?.onDone) {
+        const branches = normalizeTransition(stateDef.invoke.onDone);
+        branches.forEach(branch => {
+            if (branch.target) {
+                const targetId = resolveTargetId(parentId, branch.target);
+                const label = formatTransitionLabel('@done', branch);
+                edges.push(createEdge([`${parentId}.${stateName}`], [targetId], label,
+                    { eventName: '@done', guard: branch.guard || null, actions: branch.actions || [], type: 'done' }));
+            }
+        });
+    }
+
+    // invoke.onError
+    if (stateDef.invoke?.onError) {
+        const branches = normalizeTransition(stateDef.invoke.onError);
+        branches.forEach(branch => {
+            if (branch.target) {
+                const targetId = resolveTargetId(parentId, branch.target);
+                const label = formatTransitionLabel('@fail', branch);
+                edges.push(createEdge([`${parentId}.${stateName}`], [targetId], label,
+                    { eventName: '@fail', guard: branch.guard || null, actions: branch.actions || [], type: 'fail' }));
+            }
+        });
+    }
+
+    // onDone (compound state completion)
+    if (stateDef.onDone) {
+        const branches = normalizeTransition(stateDef.onDone);
+        branches.forEach(branch => {
+            if (branch.target) {
+                const targetId = resolveTargetId(parentId, branch.target);
+                const label = formatTransitionLabel('@done', branch);
+                edges.push(createEdge([`${parentId}.${stateName}`], [targetId], label,
+                    { eventName: '@done', guard: branch.guard || null, actions: branch.actions || [], type: 'done' }));
+            }
+        });
+    }
+
+    // after (timer transitions)
+    if (stateDef.after) {
+        Object.entries(stateDef.after).forEach(([delay, transition]) => {
+            const branches = normalizeTransition(transition);
+            branches.forEach(branch => {
+                if (branch.target) {
+                    const targetId = resolveTargetId(parentId, branch.target);
+                    const delayLabel = formatDelay(parseInt(delay));
+                    const label = `\u23F1 after ${delayLabel}`;
+                    edges.push(createEdge([`${parentId}.${stateName}`], [targetId], label,
+                        { eventName: label, guard: branch.guard || null, actions: branch.actions || [], type: 'timeout' }));
+                }
+            });
+        });
+    }
+
+    // @timeout from state meta (EventMachine-specific)
+    const onTimeout = stateDef.meta?.eventMachine?.onTimeout;
+    if (onTimeout) {
+        const branches = normalizeTransition(onTimeout);
+        branches.forEach(branch => {
+            if (branch.target) {
+                const targetId = resolveTargetId(parentId, branch.target);
+                const label = formatTransitionLabel('@timeout', branch);
+                edges.push(createEdge([`${parentId}.${stateName}`], [targetId], `\u23F1 ${label}`,
+                    { eventName: '@timeout', guard: branch.guard || null, actions: branch.actions || [], type: 'timeout' }));
+            }
+        });
+    }
+
+    return edges;
+}
+
+function normalizeTransition(transition) {
+    if (typeof transition === 'string') {
+        return [{ target: transition }];
+    }
+    if (Array.isArray(transition)) {
+        return transition.map(t => typeof t === 'string' ? { target: t } : t);
+    }
+    if (typeof transition === 'object') {
+        return [transition];
+    }
+    return [];
+}
+
+function resolveTargetId(parentId, target) {
+    if (target.startsWith('#')) {
+        // Absolute reference
+        return target.substring(1);
+    }
+    if (target.startsWith('.')) {
+        // Child reference
+        return `${parentId}.${target.substring(1)}`;
+    }
+    // Sibling reference
+    return `${parentId}.${target}`;
+}
+
+function formatTransitionLabel(eventName, branch) {
+    let label = eventName;
+    if (branch.guard) {
+        const guardName = typeof branch.guard === 'object'
+            ? (branch.guard.guards ? branch.guard.guards.join(' & ') : (branch.guard.type === 'and' ? branch.guard.guards?.join(' & ') : JSON.stringify(branch.guard)))
+            : branch.guard;
+        label += ` [${guardName}]`;
+    }
+    // Calculators (from meta.eventMachine.calculators)
+    const calcs = branch.meta?.eventMachine?.calculators || [];
+    if (calcs.length > 0) {
+        label += ` calc(${calcs.slice(0, 2).join(', ')}${calcs.length > 2 ? '...' : ''})`;
+    }
+    if (branch.actions && branch.actions.length > 0) {
+        const actionNames = branch.actions.slice(0, 2).join(', ');
+        label += ` / ${actionNames}`;
+        if (branch.actions.length > 2) label += '...';
+    }
+    return label;
+}
+
+function formatDelay(ms) {
+    if (ms >= 86400000) return `${Math.round(ms / 86400000)}d`;
+    if (ms >= 3600000) return `${Math.round(ms / 3600000)}h`;
+    if (ms >= 60000) return `${Math.round(ms / 60000)}m`;
+    if (ms >= 1000) return `${Math.round(ms / 1000)}s`;
+    return `${ms}ms`;
+}
+
+// ============================================================
+// SVG Renderer — ELK output → SVG elements
+// ============================================================
+function renderElkGraph(elkResult, svgGroup) {
+    // Clear existing content
+    svgGroup.innerHTML = '';
+
+    // Add background rect for pan detection
+    const bgRect = createSvgElement('rect', {
+        class: 'background-rect',
+        x: -10000, y: -10000, width: 20000, height: 20000,
+        fill: 'transparent',
+    });
+    svgGroup.appendChild(bgRect);
+
+    // Render nodes recursively
+    renderNodes(elkResult.children || [], svgGroup, 0, 0);
+
+    // Render edges
+    renderEdges(elkResult.edges || [], svgGroup, 0, 0);
+}
+
+function renderNodes(nodes, parent, offsetX, offsetY) {
+    nodes.forEach(node => {
+        const x = (node.x || 0) + offsetX;
+        const y = (node.y || 0) + offsetY;
+        const w = node.width || 100;
+        const h = node.height || 50;
+        const props = getNodeMeta(node.id);
+        const type = props.type || 'atomic';
+        const stateDef = props.stateDef || {};
+
+        const group = createSvgElement('g', {
+            class: `state-node state-${type}`,
+            'data-state-id': node.id,
+            'data-state-name': props.stateName || node.id,
+        });
+
+        // Main rect
+        const rect = createSvgElement('rect', {
+            x: x, y: y, width: w, height: h,
+        });
+        group.appendChild(rect);
+
+        // Final state inner circle
+        if (type === 'final') {
+            const innerRect = createSvgElement('rect', {
+                class: 'final-inner',
+                x: x + 4, y: y + 4,
+                width: w - 8, height: h - 8,
+                rx: 6, ry: 6,
+            });
+            group.appendChild(innerRect);
+        }
+
+        // State name label
+        const labelY = y + 18;
+        const label = createSvgElement('text', {
+            x: x + w / 2, y: labelY,
+            'text-anchor': 'middle',
+            class: 'state-label',
+        });
+        label.textContent = props.stateName || node.id;
+        group.appendChild(label);
+
+        // Entry actions
+        const entryActions = stateDef.entry || [];
+        if (entryActions.length > 0) {
+            const entryText = createSvgElement('text', {
+                x: x + w / 2, y: labelY + 16,
+                'text-anchor': 'middle',
+                class: 'state-detail',
+            });
+            entryText.textContent = `entry / ${entryActions.join(', ')}`;
+            group.appendChild(entryText);
+        }
+
+        // Invoke badge — shows src, with mapping, fire-and-forget, queue, timeout
+        if (stateDef.invoke) {
+            let invokeY = labelY + (entryActions.length > 0 ? 32 : 16);
+            const invokeMeta = stateDef.invoke.meta?.eventMachine || {};
+            const isFireAndForget = invokeMeta.fireAndForget === true;
+
+            // Invoke src line
+            const invokeText = createSvgElement('text', {
+                x: x + w / 2, y: invokeY,
+                'text-anchor': 'middle',
+                class: 'state-detail',
+            });
+            const srcSpan = createSvgElement('tspan', { fill: '#ce93d8', 'font-weight': '600' });
+            srcSpan.textContent = isFireAndForget ? `\u2197 ${stateDef.invoke.src}` : `\u2B22 ${stateDef.invoke.src}`;
+            invokeText.appendChild(srcSpan);
+
+            // Fire-and-forget badge
+            if (isFireAndForget) {
+                const ffSpan = createSvgElement('tspan', { fill: '#ff9800', 'font-size': '9px' });
+                ffSpan.textContent = ' (fire & forget)';
+                invokeText.appendChild(ffSpan);
+            }
+            group.appendChild(invokeText);
+            invokeY += 14;
+
+            // with/input mapping
+            if (stateDef.invoke.input && Object.keys(stateDef.invoke.input).length > 0) {
+                const withText = createSvgElement('text', {
+                    x: x + w / 2, y: invokeY,
+                    'text-anchor': 'middle',
+                    'font-size': '9px',
+                });
+                const withLabel = createSvgElement('tspan', { fill: '#7a7a9a' });
+                withLabel.textContent = 'with: ';
+                withText.appendChild(withLabel);
+                const mappings = Object.entries(stateDef.invoke.input)
+                    .map(([k, v]) => k === v ? k : `${k}\u2190${v}`)
+                    .join(', ');
+                const withValues = createSvgElement('tspan', { fill: '#a0c4ff', 'font-size': '9px' });
+                withValues.textContent = mappings;
+                withText.appendChild(withValues);
+                group.appendChild(withText);
+                invokeY += 13;
+            }
+
+            // Queue + timeout info
+            const infoParts = [];
+            if (invokeMeta.queue) infoParts.push(`queue: ${invokeMeta.queue}`);
+            if (invokeMeta.timeout) infoParts.push(`timeout: ${invokeMeta.timeout}s`);
+            if (infoParts.length > 0) {
+                const infoText = createSvgElement('text', {
+                    x: x + w / 2, y: invokeY,
+                    'text-anchor': 'middle',
+                    'font-size': '9px',
+                    fill: '#5a5a7a',
+                });
+                infoText.textContent = infoParts.join(' | ');
+                group.appendChild(infoText);
+            }
+        }
+
+        // Self-transitions (events without target) — shown inside state box
+        const selfTransitions = props.selfTransitions || [];
+        if (selfTransitions.length > 0) {
+            // Calculate Y position after entry actions and invoke
+            let stY = labelY + 16;
+            if (entryActions.length > 0) stY += 16;
+            if (stateDef.invoke) stY += 16;
+
+            // Separator line
+            const sepLine = createSvgElement('line', {
+                x1: x + 8, y1: stY - 4,
+                x2: x + w - 8, y2: stY - 4,
+                stroke: '#3a3a5a', 'stroke-width': 0.5,
+            });
+            group.appendChild(sepLine);
+
+            selfTransitions.forEach((st, idx) => {
+                const stText = createSvgElement('text', {
+                    x: x + 10, y: stY + idx * 15 + 8,
+                    class: 'state-detail',
+                    'font-size': '10px',
+                });
+
+                // Color-coded: event name in blue, guard in yellow, actions in green
+                const eventSpan = createSvgElement('tspan', { fill: '#a0c4ff', 'font-weight': '600' });
+                eventSpan.textContent = st.event;
+                stText.appendChild(eventSpan);
+
+                if (st.guard) {
+                    const gName = typeof st.guard === 'object' ? (st.guard.guards?.join(' & ') || '') : st.guard;
+                    const guardSpan = createSvgElement('tspan', { fill: '#ffc107' });
+                    guardSpan.textContent = ` [${gName}]`;
+                    stText.appendChild(guardSpan);
+                }
+
+                if (st.actions?.length) {
+                    const aNames = st.actions.slice(0, 2).join(', ');
+                    const suffix = st.actions.length > 2 ? '...' : '';
+                    const actionSpan = createSvgElement('tspan', { fill: '#66bb6a', 'font-size': '9px' });
+                    actionSpan.textContent = ` / ${aNames}${suffix}`;
+                    stText.appendChild(actionSpan);
+                }
+
+                group.appendChild(stText);
+            });
+        }
+
+        // Exit actions
+        const exitActions = stateDef.exit || [];
+        if (exitActions.length > 0) {
+            const exitText = createSvgElement('text', {
+                x: x + w / 2, y: y + h - 8,
+                'text-anchor': 'middle',
+                class: 'state-detail',
+            });
+            exitText.textContent = `exit / ${exitActions.join(', ')}`;
+            group.appendChild(exitText);
+        }
+
+        // Initial state indicator
+        if (props.isInitial) {
+            const indicatorGroup = createSvgElement('g', { class: 'initial-indicator' });
+            const circle = createSvgElement('circle', {
+                cx: x - 15, cy: y + h / 2, r: 5,
+            });
+            const line = createSvgElement('line', {
+                x1: x - 10, y1: y + h / 2,
+                x2: x - 2, y2: y + h / 2,
+            });
+            indicatorGroup.appendChild(circle);
+            indicatorGroup.appendChild(line);
+            group.appendChild(indicatorGroup);
+        }
+
+        // Parallel state: header label
+        if (type === 'parallel') {
+            const parallelBadge = createSvgElement('text', {
+                x: x + w / 2, y: y + 14,
+                'text-anchor': 'middle',
+                'font-size': '10px',
+                fill: '#cc8833',
+            });
+            parallelBadge.textContent = `\u2016 ${props.stateName} (parallel)`;
+            group.appendChild(parallelBadge);
+        }
+
+        // Compound state: header label with bg
+        if (type === 'compound') {
+            const compHeader = createSvgElement('rect', {
+                x: x, y: y, width: w, height: 28,
+                rx: 8, ry: 8, fill: '#252540', stroke: 'none',
+            });
+            group.insertBefore(compHeader, group.children[1]); // After main rect
+        }
+
+        // Click handler (ignore drags)
+        group.addEventListener('click', (e) => {
+            if (panZoom?.wasDrag()) return;
+            e.stopPropagation();
+            showStateDetail(node);
+        });
+
+        parent.appendChild(group);
+
+        // Render children (compound/parallel states)
+        if (node.children && node.children.length > 0) {
+            renderNodes(node.children, parent, x, y);
+            // Also render child edges
+            if (node.edges) {
+                renderEdges(node.edges, parent, x, y);
+            }
+
+            // Parallel region separators
+            if (type === 'parallel' && node.children.length > 1) {
+                for (let i = 0; i < node.children.length - 1; i++) {
+                    const child = node.children[i];
+                    const childX = (child.x || 0) + x;
+                    const childY = (child.y || 0) + y;
+                    const childH = child.height || 50;
+
+                    // Horizontal dashed line between regions
+                    const sepY = childY + childH + 10;
+                    const regionSep = createSvgElement('line', {
+                        x1: x + 10, y1: sepY,
+                        x2: x + w - 10, y2: sepY,
+                        stroke: '#cc8833', 'stroke-width': 1,
+                        'stroke-dasharray': '6 4',
+                        opacity: 0.5,
+                    });
+                    parent.appendChild(regionSep);
+                }
+            }
+        }
+    });
+}
+
+function renderEdges(edges, parent, offsetX, offsetY) {
+    edges.forEach(edge => {
+        const props = getEdgeMeta(edge.id);
+        const type = props.type || 'event';
+
+        const group = createSvgElement('g', {
+            class: `transition-edge transition-${type}`,
+            'data-edge-id': edge.id,
+        });
+
+        // Build path from sections
+        if (edge.sections) {
+            edge.sections.forEach(section => {
+                const points = [section.startPoint, ...(section.bendPoints || []), section.endPoint];
+                const pathD = buildSmoothPath(points, offsetX, offsetY);
+
+                const markerMap = {
+                    'done': 'url(#arrowhead-green)',
+                    'fail': 'url(#arrowhead-red)',
+                    'timeout': 'url(#arrowhead-orange)',
+                    'delegation': 'url(#arrowhead-purple)',
+                };
+
+                const path = createSvgElement('path', {
+                    d: pathD,
+                    'marker-end': markerMap[type] || 'url(#arrowhead)',
+                });
+                group.appendChild(path);
+            });
+        }
+
+        // Edge labels — color-coded using tspan
+        if (edge.labels) {
+            edge.labels.forEach(label => {
+                if (label.x !== undefined && label.y !== undefined) {
+                    const lx = (label.x || 0) + offsetX + (label.width || 0) / 2;
+                    const ly = (label.y || 0) + offsetY + 12;
+
+                    // Add background rect for readability
+                    const labelText = label.text || '';
+                    const bgPad = 4;
+                    const estWidth = labelText.length * 6.5 + bgPad * 2;
+                    const labelBg = createSvgElement('rect', {
+                        x: lx - estWidth / 2, y: ly - 12,
+                        width: estWidth, height: 16,
+                        rx: 3, ry: 3,
+                        fill: '#1a1a2e', opacity: 0.85,
+                    });
+                    group.appendChild(labelBg);
+
+                    const text = createSvgElement('text', {
+                        x: lx, y: ly,
+                        'text-anchor': 'middle',
+                        class: 'transition-label',
+                        'font-size': '11px',
+                    });
+
+                    // Parse and color-code the label parts
+                    const eventName = props.eventName || '';
+                    const guard = props.guard;
+                    const actions = props.actions || [];
+
+                    // Determine colors based on transition type
+                    const typeColorMap = {
+                        'done': '#4caf50', 'fail': '#f44336',
+                        'timeout': '#ff9800', 'always': '#9e9e9e',
+                    };
+                    const eventColor = typeColorMap[type] || '#c0d0ff';
+
+                    // Event name tspan
+                    const eventSpan = createSvgElement('tspan', { fill: eventColor, 'font-weight': '600' });
+                    eventSpan.textContent = eventName;
+                    text.appendChild(eventSpan);
+
+                    // Guard tspan
+                    if (guard) {
+                        const guardName = typeof guard === 'object'
+                            ? (guard.guards ? guard.guards.join(' & ') : JSON.stringify(guard))
+                            : guard;
+                        const guardSpan = createSvgElement('tspan', { fill: '#ffc107' });
+                        guardSpan.textContent = ` [${guardName}]`;
+                        text.appendChild(guardSpan);
+                    }
+
+                    // Calculators tspan (from meta)
+                    const calcs = props.calculators || [];
+                    if (calcs.length > 0) {
+                        const calcNames = calcs.slice(0, 2).join(', ');
+                        const calcSuffix = calcs.length > 2 ? '...' : '';
+                        const calcSpan = createSvgElement('tspan', { fill: '#e91e63', 'font-size': '10px' });
+                        calcSpan.textContent = ` calc(${calcNames}${calcSuffix})`;
+                        text.appendChild(calcSpan);
+                    }
+
+                    // Actions tspan
+                    if (actions.length > 0) {
+                        const actionNames = actions.slice(0, 2).join(', ');
+                        const suffix = actions.length > 2 ? '...' : '';
+                        const actionSpan = createSvgElement('tspan', { fill: '#66bb6a', 'font-size': '10px' });
+                        actionSpan.textContent = ` / ${actionNames}${suffix}`;
+                        text.appendChild(actionSpan);
+                    }
+
+                    group.appendChild(text);
+                }
+            });
+        }
+
+        // Click handler (ignore drags)
+        group.addEventListener('click', (e) => {
+            if (panZoom?.wasDrag()) return;
+            e.stopPropagation();
+            showTransitionDetail(edge);
+        });
+
+        parent.appendChild(group);
+    });
+}
+
+function buildSmoothPath(points, offsetX, offsetY) {
+    if (points.length === 0) return '';
+
+    const pts = points.map(p => ({ x: p.x + offsetX, y: p.y + offsetY }));
+
+    if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y}`;
+    if (pts.length === 2) return `M ${pts[0].x} ${pts[0].y} L ${pts[1].x} ${pts[1].y}`;
+
+    // Build a smooth curve through all points
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) {
+        const prev = pts[i - 1];
+        const curr = pts[i];
+        const midX = (prev.x + curr.x) / 2;
+        const midY = (prev.y + curr.y) / 2;
+        d += ` Q ${prev.x} ${prev.y} ${midX} ${midY}`;
+    }
+    // Final segment to last point
+    const last = pts[pts.length - 1];
+    d += ` L ${last.x} ${last.y}`;
+
+    return d;
+}
+
+function createSvgElement(tag, attrs) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attrs).forEach(([key, value]) => {
+        el.setAttribute(key, String(value));
+    });
+    return el;
+}
+
+// ============================================================
+// Detail Panel
+// ============================================================
+function showStateDetail(node) {
+    const panel = document.getElementById('detail-panel');
+    const title = document.getElementById('detail-title');
+    const content = document.getElementById('detail-content');
+    const props = getNodeMeta(node.id);
+    const stateDef = props.stateDef || {};
+
+    title.textContent = `State: ${props.stateName || node.id}`;
+
+    let html = `<div class="detail-row"><span class="detail-key">Type:</span><span class="detail-value">${props.type}</span></div>`;
+
+    if (stateDef.entry?.length) {
+        html += `<div class="detail-row"><span class="detail-key">Entry Actions:</span><span class="detail-value">${stateDef.entry.join(', ')}</span></div>`;
+    }
+    if (stateDef.exit?.length) {
+        html += `<div class="detail-row"><span class="detail-key">Exit Actions:</span><span class="detail-value">${stateDef.exit.join(', ')}</span></div>`;
+    }
+    if (stateDef.invoke) {
+        html += `<div class="detail-row"><span class="detail-key">Invoke:</span><span class="detail-value">${stateDef.invoke.src}</span></div>`;
+        if (stateDef.invoke.input) {
+            html += `<div class="detail-row"><span class="detail-key">Input Mapping:</span><span class="detail-value">${JSON.stringify(stateDef.invoke.input)}</span></div>`;
+        }
+    }
+
+    const events = Object.keys(stateDef.on || {});
+    if (events.length) {
+        html += `<div class="detail-row"><span class="detail-key">Events:</span><span class="detail-value">${events.join(', ')}</span></div>`;
+    }
+
+    // Self-transitions
+    const selfTrans = props.selfTransitions || [];
+    if (selfTrans.length > 0) {
+        const stLabels = selfTrans.map(st => formatTransitionLabel(st.event, st));
+        html += `<div class="detail-row"><span class="detail-key">Self-Transitions:</span><span class="detail-value">${stLabels.join('; ')}</span></div>`;
+    }
+
+    if (stateDef.after) {
+        const timers = Object.entries(stateDef.after).map(([d, t]) => `after ${formatDelay(parseInt(d))} → ${typeof t === 'string' ? t : t.target || '?'}`);
+        html += `<div class="detail-row"><span class="detail-key">Timers:</span><span class="detail-value">${timers.join('; ')}</span></div>`;
+    }
+
+    if (stateDef.meta?.eventMachine) {
+        const em = stateDef.meta.eventMachine;
+        if (em.onTimeout) {
+            html += `<div class="detail-row"><span class="detail-key">@timeout:</span><span class="detail-value">${JSON.stringify(em.onTimeout)}</span></div>`;
+        }
+        if (em.fireAndForget) {
+            html += `<div class="detail-row"><span class="detail-key">Fire & Forget:</span><span class="detail-value">Yes</span></div>`;
+        }
+    }
+
+    content.innerHTML = html;
+    panel.classList.add('active');
+}
+
+function showTransitionDetail(edge) {
+    const panel = document.getElementById('detail-panel');
+    const title = document.getElementById('detail-title');
+    const content = document.getElementById('detail-content');
+    const props = getEdgeMeta(edge.id);
+
+    title.textContent = `Transition: ${props.eventName || edge.id}`;
+
+    let html = `<div class="detail-row"><span class="detail-key">Type:</span><span class="detail-value">${props.type}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-key">From:</span><span class="detail-value">${edge.sources?.[0]}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-key">To:</span><span class="detail-value">${edge.targets?.[0]}</span></div>`;
+
+    if (props.guard) {
+        const guardStr = typeof props.guard === 'object'
+            ? (props.guard.guards ? props.guard.guards.join(' & ') : JSON.stringify(props.guard))
+            : props.guard;
+        html += `<div class="detail-row"><span class="detail-key">Guard:</span><span class="detail-value" style="color:#ffc107">${guardStr}</span></div>`;
+    }
+    if (props.calculators?.length) {
+        html += `<div class="detail-row"><span class="detail-key">Calculators:</span><span class="detail-value" style="color:#e91e63">${props.calculators.join(', ')}</span></div>`;
+    }
+    if (props.actions?.length) {
+        html += `<div class="detail-row"><span class="detail-key">Actions:</span><span class="detail-value" style="color:#66bb6a">${props.actions.join(', ')}</span></div>`;
+    }
+
+    content.innerHTML = html;
+    panel.classList.add('active');
+}
+
+function toggleDetail() {
+    document.getElementById('detail-panel').classList.toggle('active');
+}
+
+// ============================================================
+// Sidebar population
+// ============================================================
+function populateSidebar(machineJson) {
+    // Context
+    const contextList = document.getElementById('context-list');
+    const context = machineJson.context || {};
+    contextList.innerHTML = '';
+    Object.entries(context).forEach(([key, value]) => {
+        const div = document.createElement('div');
+        div.className = 'context-item';
+        const type = value === null ? 'null' : typeof value;
+        div.innerHTML = `<span class="context-key">${key}</span><span class="context-type">${type}</span>`;
+        if (value !== null && value !== undefined) {
+            div.innerHTML += `<span class="context-value">= ${JSON.stringify(value)}</span>`;
+        }
+        contextList.appendChild(div);
+    });
+
+    // Behaviors
+    const meta = machineJson.meta?.eventMachine || {};
+
+    populateBehaviorList('actions-list', meta.actions || {}, 'action');
+    populateBehaviorList('guards-list', meta.guards || {}, 'guard');
+    populateBehaviorList('calculators-list', meta.calculators || {}, 'calculator');
+    populateBehaviorList('events-list', meta.events || {}, 'event');
+}
+
+function populateBehaviorList(elementId, behaviors, type) {
+    const list = document.getElementById(elementId);
+    list.innerHTML = '';
+    const section = list.closest('[id$="-section"]');
+
+    if (Object.keys(behaviors).length === 0) {
+        if (section) section.style.display = 'none';
+        return;
+    }
+    if (section) section.style.display = 'block';
+
+    Object.entries(behaviors).forEach(([name, info]) => {
+        const div = document.createElement('div');
+        div.className = 'behavior-item';
+        let badges = `<span class="behavior-badge badge-${type}">${type}</span>`;
+        if (info.inline) badges += `<span class="behavior-badge badge-inline">inline</span>`;
+        if (info.requiredContext?.length) {
+            badges += `<span class="behavior-badge badge-inline" title="Required: ${info.requiredContext.join(', ')}">ctx</span>`;
+        }
+        div.innerHTML = `<span class="behavior-name">${name}</span><span>${badges}</span>`;
+        div.addEventListener('click', (e) => {
+            highlightBehavior(name, type);
+            // For events, show payload schema in detail panel
+            if (type === 'event' && info.payload) {
+                showEventPayloadDetail(name, info);
+            }
+        });
+        div.title = info.class ? `Class: ${info.class}` : 'Inline behavior';
+        list.appendChild(div);
+    });
+}
+
+function showEventPayloadDetail(eventName, eventInfo) {
+    const panel = document.getElementById('detail-panel');
+    const title = document.getElementById('detail-title');
+    const content = document.getElementById('detail-content');
+
+    title.textContent = `Event: ${eventName}`;
+
+    let html = '';
+    if (eventInfo.class) {
+        html += `<div class="detail-row"><span class="detail-key">Class:</span><span class="detail-value" style="color:#6a6a8a;font-size:11px">${eventInfo.class}</span></div>`;
+    }
+
+    const payload = eventInfo.payload || {};
+    if (Object.keys(payload).length > 0) {
+        html += `<div class="detail-row"><span class="detail-key" style="font-weight:600">Payload Schema:</span></div>`;
+        Object.entries(payload).forEach(([field, schema]) => {
+            const required = schema.required ? '<span style="color:#f44336;font-size:10px"> required</span>' : '<span style="color:#6a6a8a;font-size:10px"> optional</span>';
+            const typeColor = { string: '#4caf50', number: '#2196f3', boolean: '#ff9800', array: '#9c27b0' }[schema.type] || '#999';
+            html += `<div class="detail-row" style="padding-left:12px">`;
+            html += `<span class="detail-key" style="color:#a0c4ff">${field}</span>`;
+            html += `<span class="detail-value"><span style="color:${typeColor};font-weight:600">${schema.type}</span>${required}</span>`;
+            html += `</div>`;
+        });
+    } else {
+        html += `<div class="detail-row"><span class="detail-value" style="color:#6a6a8a">No payload schema defined</span></div>`;
+    }
+
+    content.innerHTML = html;
+    panel.classList.add('active');
+}
+
+// ============================================================
+// Global controls
+// ============================================================
+let panZoom = null;
+const collapsedMachines = new Set();
+
+async function toggleMachineCollapse(machineId) {
+    if (collapsedMachines.has(machineId)) {
+        collapsedMachines.delete(machineId);
+    } else {
+        collapsedMachines.add(machineId);
+    }
+    await reLayoutMulti();
+}
+
+async function collapseAll() {
+    MACHINES.forEach(m => collapsedMachines.add(m.json.id));
+    await reLayoutMulti();
+}
+
+async function expandAll() {
+    collapsedMachines.clear();
+    await reLayoutMulti();
+}
+
+async function reLayoutMulti() {
+    edgeCounter = 0; // Reset edge counter for fresh IDs
+    const elkGraph = xstateToElkMulti(MACHINES);
+    const elk = new ELK();
+    try {
+        const layoutResult = await elk.layout(elkGraph);
+        const svgGroup = document.getElementById('diagram-root');
+        svgGroup.innerHTML = '';
+
+        const bgRect = createSvgElement('rect', {
+            class: 'background-rect',
+            x: -10000, y: -10000, width: 20000, height: 20000,
+            fill: 'transparent',
+        });
+        svgGroup.appendChild(bgRect);
+
+        renderMachineContainers(layoutResult, svgGroup);
+        setTimeout(fitToScreen, 50);
+    } catch (err) {
+        console.error('Re-layout error:', err);
+    }
+}
+
+function fitToScreen() {
+    const root = document.getElementById('diagram-root');
+    const bbox = root.getBBox();
+    if (bbox.width > 0 && bbox.height > 0) {
+        panZoom.fitToContent(bbox);
+    }
+}
+
+function zoomIn() { panZoom?.zoomBy(1.2); }
+function zoomOut() { panZoom?.zoomBy(0.8); }
+
+// ============================================================
+// Multi-Machine ELK Graph Builder
+// ============================================================
+function xstateToElkMulti(machines) {
+    const elkGraph = {
+        id: 'root',
+        layoutOptions: {
+            'elk.algorithm': 'layered',
+            'elk.direction': 'RIGHT',
+            'elk.spacing.nodeNode': '60',
+            'elk.layered.spacing.nodeNodeBetweenLayers': '80',
+            'elk.edgeRouting': 'SPLINES',
+            'elk.padding': '[top=20,left=20,bottom=20,right=20]',
+        },
+        children: [],
+        edges: [],
+    };
+
+    // Build a map of class basename → machine id for inter-machine linking
+    const classToId = {};
+    machines.forEach(m => {
+        const className = m.class.split('\\').pop();
+        classToId[className] = m.json.id;
+    });
+
+    // Each machine becomes a compound node (or collapsed fixed-size node)
+    machines.forEach(machine => {
+        const mJson = machine.json;
+        const machineId = mJson.id;
+        const isCollapsed = collapsedMachines.has(machineId);
+        const states = mJson.states || {};
+        const stateNames = Object.keys(states);
+
+        if (isCollapsed) {
+            // Collapsed: fixed-size node with just the name
+            // Collect event names for port display
+            const inEvents = new Set();
+            const outEvents = new Set();
+            Object.values(states).forEach(sd => {
+                Object.keys(sd.on || {}).forEach(e => inEvents.add(e));
+                if (sd.invoke) {
+                    outEvents.add('@done');
+                    outEvents.add('@fail');
+                }
+            });
+
+            const portLines = [];
+            if (inEvents.size > 0) portLines.push(`IN: ${[...inEvents].slice(0, 4).join(', ')}${inEvents.size > 4 ? '...' : ''}`);
+            if (outEvents.size > 0) portLines.push(`OUT: ${[...outEvents].join(', ')}`);
+            portLines.push(`${stateNames.length} states`);
+
+            const collapsedHeight = 40 + portLines.length * 14;
+            const collapsedWidth = Math.max(180, machineId.length * 10 + 60);
+
+            storeNodeMeta(machineId, {
+                type: 'machine-collapsed',
+                machineJson: mJson,
+                machineClass: machine.class,
+                portLines: portLines,
+            });
+            elkGraph.children.push({
+                id: machineId,
+                width: collapsedWidth,
+                height: collapsedHeight,
+                labels: [{ text: machineId }],
+            });
+        } else {
+            // Expanded: full compound node with children
+            storeNodeMeta(machineId, {
+                type: 'machine-container',
+                machineJson: mJson,
+                machineClass: machine.class,
+            });
+            const machineNode = {
+                id: machineId,
+                labels: [{ text: machineId }],
+                layoutOptions: {
+                    'elk.algorithm': 'layered',
+                    'elk.direction': 'DOWN',
+                    'elk.spacing.nodeNode': '30',
+                    'elk.layered.spacing.nodeNodeBetweenLayers': '50',
+                    'elk.edgeRouting': 'SPLINES',
+                    'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+                    'elk.padding': '[top=45,left=20,bottom=20,right=20]',
+                },
+                children: [],
+                edges: [],
+            };
+
+            stateNames.forEach(stateName => {
+                const stateDef = states[stateName];
+                const node = buildStateNode(machineId, stateName, stateDef, mJson.initial);
+                machineNode.children.push(node);
+            });
+
+            stateNames.forEach(stateName => {
+                const stateDef = states[stateName];
+                const edges = buildEdgesFromState(machineId, stateName, stateDef);
+                machineNode.edges.push(...edges);
+            });
+
+            elkGraph.children.push(machineNode);
+        }
+    });
+
+    // Auto-detect inter-machine delegation edges
+    machines.forEach(machine => {
+        const mJson = machine.json;
+        const machineId = mJson.id;
+        const states = mJson.states || {};
+
+        Object.entries(states).forEach(([stateName, stateDef]) => {
+            if (stateDef.invoke?.src) {
+                const childSrc = stateDef.invoke.src;
+                // Check if this src matches another machine in the diagram
+                const targetMachineId = classToId[childSrc];
+                if (targetMachineId && targetMachineId !== machineId) {
+                    // Build with-mapping label
+                    const input = stateDef.invoke.input || {};
+                    const mappings = Object.entries(input)
+                        .map(([k, v]) => k === v ? k : `${k}\u2190${v}`)
+                        .join(', ');
+                    const label = mappings ? `with: ${mappings}` : 'delegates to';
+
+                    elkGraph.edges.push(createEdge(
+                        [`${machineId}.${stateName}`], [targetMachineId], label,
+                        { eventName: 'delegation', type: 'delegation' }
+                    ));
+                }
+            }
+        });
+    });
+
+    return elkGraph;
+}
+
+// ============================================================
+// Multi-Machine Sidebar
+// ============================================================
+function populateSidebarMulti(machines) {
+    const contextList = document.getElementById('context-list');
+    contextList.innerHTML = '';
+
+    // Merged context from all machines
+    machines.forEach(m => {
+        const mJson = m.json;
+        const context = mJson.context || {};
+        if (Object.keys(context).length === 0) return;
+
+        // Machine name header
+        const header = document.createElement('div');
+        header.style.cssText = 'color:#7a7a9a;font-size:10px;margin-top:6px;font-weight:600';
+        header.textContent = mJson.id;
+        contextList.appendChild(header);
+
+        Object.entries(context).forEach(([key, value]) => {
+            const div = document.createElement('div');
+            div.className = 'context-item';
+            const type = value === null ? 'null' : typeof value;
+            div.innerHTML = `<span class="context-key">${key}</span><span class="context-type">${type}</span>`;
+            if (value !== null && value !== undefined) {
+                div.innerHTML += `<span class="context-value">= ${JSON.stringify(value)}</span>`;
+            }
+            contextList.appendChild(div);
+        });
+    });
+
+    // Merged behaviors
+    const mergedBehaviors = { actions: {}, guards: {}, calculators: {}, events: {} };
+    machines.forEach(m => {
+        const meta = m.json.meta?.eventMachine || {};
+        ['actions', 'guards', 'calculators', 'events'].forEach(cat => {
+            Object.assign(mergedBehaviors[cat], meta[cat] || {});
+        });
+    });
+
+    populateBehaviorList('actions-list', mergedBehaviors.actions, 'action');
+    populateBehaviorList('guards-list', mergedBehaviors.guards, 'guard');
+    populateBehaviorList('calculators-list', mergedBehaviors.calculators, 'calculator');
+    populateBehaviorList('events-list', mergedBehaviors.events, 'event');
+}
+
+// ============================================================
+// Machine Container Rendering (for multi-machine view)
+// ============================================================
+function renderMachineContainers(elkResult, svgGroup) {
+    (elkResult.children || []).forEach(machineNode => {
+        const props = getNodeMeta(machineNode.id);
+        const isCollapsed = props.type === 'machine-collapsed';
+        const isContainer = props.type === 'machine-container';
+        if (!isCollapsed && !isContainer) return;
+
+        const x = machineNode.x || 0;
+        const y = machineNode.y || 0;
+        const w = machineNode.width || 300;
+        const h = machineNode.height || 200;
+
+        const group = createSvgElement('g', {
+            class: isCollapsed ? 'machine-container machine-collapsed' : 'machine-container',
+            'data-machine-id': machineNode.id,
+        });
+
+        // Machine background
+        const bg = createSvgElement('rect', {
+            x: x, y: y, width: w, height: h,
+            rx: 12, ry: 12,
+            fill: isCollapsed ? '#161630' : '#12122a',
+            stroke: isCollapsed ? '#5a5a8a' : '#4a4a6a',
+            'stroke-width': 2,
+        });
+        group.appendChild(bg);
+
+        // Header bar
+        const headerH = 36;
+        const headerBg = createSvgElement('rect', {
+            x: x, y: y, width: w, height: headerH,
+            rx: 12, ry: 12,
+            fill: '#1e1e3a', stroke: 'none',
+        });
+        group.appendChild(headerBg);
+        const headerFill = createSvgElement('rect', {
+            x: x, y: y + headerH - 12, width: w, height: 12,
+            fill: '#1e1e3a', stroke: 'none',
+        });
+        group.appendChild(headerFill);
+        const headerLine = createSvgElement('line', {
+            x1: x, y1: y + headerH, x2: x + w, y2: y + headerH,
+            stroke: '#4a4a6a', 'stroke-width': 1,
+        });
+        group.appendChild(headerLine);
+
+        // Collapse/expand indicator + machine name
+        const toggleIcon = isCollapsed ? '\u25B6' : '\u25BC'; // ▶ or ▼
+        const nameText = createSvgElement('text', {
+            x: x + 14, y: y + 23,
+            'font-size': '14px', 'font-weight': '700',
+            fill: '#a0c4ff',
+            style: 'cursor:pointer',
+        });
+        nameText.textContent = `${toggleIcon} ${machineNode.id}`;
+        group.appendChild(nameText);
+
+        // Click header to toggle collapse/expand
+        const headerClickArea = createSvgElement('rect', {
+            x: x, y: y, width: w, height: headerH,
+            fill: 'transparent', style: 'cursor:pointer',
+        });
+        headerClickArea.addEventListener('click', (e) => {
+            if (panZoom?.wasDrag()) return;
+            e.stopPropagation();
+            toggleMachineCollapse(machineNode.id);
+        });
+        group.appendChild(headerClickArea);
+
+        // If collapsed, show port summary
+        if (isCollapsed && props.portLines) {
+            props.portLines.forEach((line, idx) => {
+                const portText = createSvgElement('text', {
+                    x: x + 14, y: y + headerH + 16 + idx * 14,
+                    'font-size': '10px',
+                    fill: '#7a7a9a',
+                });
+                portText.textContent = line;
+                group.appendChild(portText);
+            });
+        }
+
+        svgGroup.appendChild(group);
+
+        // Render internal states only if expanded
+        if (isContainer) {
+            renderNodes(machineNode.children || [], svgGroup, x, y);
+            renderEdges(machineNode.edges || [], svgGroup, x, y);
+        }
+    });
+
+    // Render inter-machine delegation edges
+    renderEdges(elkResult.edges || [], svgGroup, 0, 0);
+}
+
+// ============================================================
+// Main initialization
+// ============================================================
+async function init() {
+    if (typeof MACHINES === 'undefined') {
+        console.error('No machine data found. This file should be generated by machine:diagram command.');
+        return;
+    }
+
+    await loadELK();
+
+    const isMulti = MACHINES.length > 1;
+
+    if (isMulti) {
+        // Multi-machine system view
+        const names = MACHINES.map(m => m.json.id || m.id).join(' + ');
+        document.getElementById('title').textContent = `EventMachine System: ${names}`;
+        document.getElementById('btn-collapse-all').style.display = '';
+        document.getElementById('btn-expand-all').style.display = '';
+        populateSidebarMulti(MACHINES);
+
+        const elkGraph = xstateToElkMulti(MACHINES);
+        const elk = new ELK();
+
+        try {
+            const layoutResult = await elk.layout(elkGraph);
+            const svgGroup = document.getElementById('diagram-root');
+            svgGroup.innerHTML = '';
+
+            // Background
+            const bgRect = createSvgElement('rect', {
+                class: 'background-rect',
+                x: -10000, y: -10000, width: 20000, height: 20000,
+                fill: 'transparent',
+            });
+            svgGroup.appendChild(bgRect);
+
+            renderMachineContainers(layoutResult, svgGroup);
+
+            const svg = document.getElementById('diagram-svg');
+            panZoom = new PanZoom(svg, svgGroup);
+            setTimeout(fitToScreen, 100);
+        } catch (err) {
+            console.error('ELK layout error:', err);
+            document.getElementById('diagram-root').innerHTML =
+                `<text x="50" y="50" fill="red">Layout error: ${err.message}</text>`;
+        }
+    } else {
+        // Single machine view (existing behavior)
+        const machine = MACHINES[0];
+        const machineJson = machine.json;
+
+        document.getElementById('title').textContent = `EventMachine: ${machineJson.id || machine.id}`;
+        populateSidebar(machineJson);
+
+        const elkGraph = xstateToElk(machineJson);
+        const elk = new ELK();
+
+        try {
+            const layoutResult = await elk.layout(elkGraph);
+            const svgGroup = document.getElementById('diagram-root');
+            renderElkGraph(layoutResult, svgGroup);
+
+            const svg = document.getElementById('diagram-svg');
+            panZoom = new PanZoom(svg, svgGroup);
+            setTimeout(fitToScreen, 100);
+        } catch (err) {
+            console.error('ELK layout error:', err);
+            document.getElementById('diagram-root').innerHTML =
+                `<text x="50" y="50" fill="red">Layout error: ${err.message}</text>`;
+        }
+    }
+}
+
+// Close detail panel on background click
+document.getElementById('diagram-svg').addEventListener('click', (e) => {
+    if (panZoom?.wasDrag()) return;
+    if (e.target === e.currentTarget || e.target.classList.contains('background-rect')) {
+        document.getElementById('detail-panel').classList.remove('active');
+        clearHighlights();
+    }
+});
+
+// ============================================================
+// Keyboard Shortcuts
+// ============================================================
+document.addEventListener('keydown', (e) => {
+    switch (e.key) {
+        case 'Escape':
+            document.getElementById('detail-panel').classList.remove('active');
+            clearHighlights();
+            break;
+        case '+': case '=':
+            zoomIn();
+            break;
+        case '-':
+            zoomOut();
+            break;
+        case 'f': case 'F':
+            if (!e.ctrlKey && !e.metaKey) fitToScreen();
+            break;
+        case '0':
+            // Reset zoom to 100%
+            if (panZoom) {
+                panZoom.transform = { x: 0, y: 0, k: 1 };
+                panZoom.apply();
+            }
+            break;
+        case 't': case 'T':
+            if (!e.ctrlKey && !e.metaKey) toggleTheme();
+            break;
+        case 's': case 'S':
+            if (!e.ctrlKey && !e.metaKey) toggleSidebar();
+            break;
+    }
+});
+
+// ============================================================
+// Theme Toggle
+// ============================================================
+function toggleTheme() {
+    document.body.classList.toggle('light-theme');
+}
+
+// ============================================================
+// SVG Export
+// ============================================================
+function exportSvg() {
+    const svg = document.getElementById('diagram-svg');
+    const root = document.getElementById('diagram-root');
+    const bbox = root.getBBox();
+
+    // Create a clone with proper viewBox
+    const clone = svg.cloneNode(true);
+    const pad = 40;
+    clone.setAttribute('viewBox', `${bbox.x - pad} ${bbox.y - pad} ${bbox.width + pad * 2} ${bbox.height + pad * 2}`);
+    clone.setAttribute('width', bbox.width + pad * 2);
+    clone.setAttribute('height', bbox.height + pad * 2);
+
+    // Remove transform from root group (we use viewBox instead)
+    const cloneRoot = clone.querySelector('#diagram-root');
+    if (cloneRoot) cloneRoot.removeAttribute('transform');
+
+    // Add background
+    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bgRect.setAttribute('x', bbox.x - pad);
+    bgRect.setAttribute('y', bbox.y - pad);
+    bgRect.setAttribute('width', bbox.width + pad * 2);
+    bgRect.setAttribute('height', bbox.height + pad * 2);
+    bgRect.setAttribute('fill', getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim() || '#1a1a2e');
+    clone.insertBefore(bgRect, clone.firstChild.nextSibling); // After defs
+
+    // Serialize and download
+    const serializer = new XMLSerializer();
+    const svgStr = serializer.serializeToString(clone);
+    const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (document.getElementById('title').textContent || 'diagram') + '.svg';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// Sidebar Toggle
+// ============================================================
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.style.display = sidebar.style.display === 'none' ? '' : 'none';
+}
+
+// ============================================================
+// Hover Highlight — hover event name on transition → highlight all same-event transitions
+// ============================================================
+document.getElementById('diagram-svg').addEventListener('mouseover', (e) => {
+    const edge = e.target.closest('.transition-edge');
+    if (!edge) return;
+    const edgeId = edge.dataset.edgeId;
+    // Find the event name from tspan or text
+    const tspan = edge.querySelector('tspan[font-weight="600"]');
+    if (!tspan) return;
+    const eventName = tspan.textContent.trim();
+    if (!eventName) return;
+
+    // Highlight all transitions with same event name
+    document.querySelectorAll('.transition-edge').forEach(other => {
+        const otherTspan = other.querySelector('tspan[font-weight="600"]');
+        if (otherTspan && otherTspan.textContent.trim() === eventName) {
+            other.classList.add('hover-highlight');
+        }
+    });
+});
+
+document.getElementById('diagram-svg').addEventListener('mouseout', (e) => {
+    const edge = e.target.closest('.transition-edge');
+    if (!edge) return;
+    document.querySelectorAll('.hover-highlight').forEach(el => {
+        el.classList.remove('hover-highlight');
+    });
+});
+
+// ============================================================
+// Behavior Highlight — click behavior in sidebar → highlight usages
+// ============================================================
+function highlightBehavior(name, type) {
+    clearHighlights();
+
+    // Find all state nodes that reference this behavior
+    document.querySelectorAll('.state-node').forEach(node => {
+        const stateId = node.dataset.stateId;
+        const stateName = node.dataset.stateName;
+        let matches = false;
+
+        // Check entry/exit actions
+        const texts = node.querySelectorAll('text');
+        texts.forEach(t => {
+            if (t.textContent.includes(name)) {
+                matches = true;
+            }
+        });
+
+        if (matches) {
+            node.classList.add('highlight-usage');
+        }
+    });
+
+    // Find all transition edges that reference this behavior
+    document.querySelectorAll('.transition-edge').forEach(edge => {
+        const texts = edge.querySelectorAll('text, tspan');
+        let matches = false;
+        texts.forEach(t => {
+            if (t.textContent.includes(name)) {
+                matches = true;
+            }
+        });
+
+        if (matches) {
+            edge.classList.add('highlight-usage');
+        }
+    });
+
+    // Highlight the clicked sidebar item
+    document.querySelectorAll('.behavior-item').forEach(item => {
+        item.classList.remove('active-behavior');
+    });
+    event?.currentTarget?.classList.add('active-behavior');
+}
+
+function clearHighlights() {
+    document.querySelectorAll('.highlight-usage').forEach(el => {
+        el.classList.remove('highlight-usage');
+    });
+    document.querySelectorAll('.active-behavior').forEach(el => {
+        el.classList.remove('active-behavior');
+    });
+}
+
+init();
+</script>
+</body>
+</html>
