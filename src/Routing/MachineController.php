@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Routing;
 
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
@@ -13,7 +14,9 @@ use Illuminate\Validation\ValidationException;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
@@ -84,7 +87,7 @@ class MachineController extends Controller
         $machine = $machineClass::create();
         $machine->persist();
 
-        return $this->buildResponse($machine->state, $machine, resultKey: null, statusCode: 201);
+        return $this->buildResponse($machine->state, $machine, resultKey: null, statusCode: 201, machineClass: $machineClass);
     }
 
     /**
@@ -99,11 +102,13 @@ class MachineController extends Controller
         return $this->executeEndpoint(
             machine: $machine,
             event: $event,
+            request: $request,
             actionClass: $defaults['_action_class'] ?? null,
             resultKey: $defaults['_result_behavior'] ?? null,
             statusCode: $defaults['_status_code'] ?? 200,
             contextKeys: $defaults['_context_keys'] ?? null,
             includeAvailableEvents: $defaults['_available_events'] ?? true,
+            machineClass: $defaults['_machine_class'] ?? null,
         );
     }
 
@@ -145,11 +150,13 @@ class MachineController extends Controller
     protected function executeEndpoint(
         Machine $machine,
         EventBehavior $event,
+        Request $request,
         ?string $actionClass,
         ?string $resultKey,
         int $statusCode,
         ?array $contextKeys = null,
         ?bool $includeAvailableEvents = true,
+        ?string $machineClass = null,
     ): JsonResponse {
         $action = $actionClass !== null
             ? resolve($actionClass)->withMachineContext($machine, $machine->state)
@@ -188,7 +195,11 @@ class MachineController extends Controller
         // Auto-dispatch completion if child reached final state and has a parent
         $this->dispatchChildCompletionIfFinal($machine, $state);
 
-        return $this->buildResponse($state, $machine, $resultKey, $statusCode, $contextKeys, $includeAvailableEvents);
+        // Scenario continuation: if 'scenario' field present and scenarios enabled,
+        // play the scenario from the post-transition state
+        $state = $this->maybePlayScenario($request, $machine, $state, $machineClass);
+
+        return $this->buildResponse($state, $machine, $resultKey, $statusCode, $contextKeys, $includeAvailableEvents, $machineClass);
     }
 
     /**
@@ -201,6 +212,7 @@ class MachineController extends Controller
         int $statusCode,
         ?array $contextKeys = null,
         ?bool $includeAvailableEvents = true,
+        ?string $machineClass = null,
     ): JsonResponse {
         if ($resultKey !== null) {
             $result = $this->resolveAndRunResult($resultKey, $state, $machine);
@@ -226,7 +238,60 @@ class MachineController extends Controller
             $response['available_events'] = $state->availableEvents();
         }
 
+        if (config('machine.scenarios.enabled', false) && $machineClass !== null) {
+            $response['available_scenarios'] = ScenarioDiscovery::forMachineAtState(
+                machineClass: $machineClass,
+                currentState: $state->currentStateDefinition->key,
+            );
+        }
+
         return response()->json(['data' => $response], $statusCode);
+    }
+
+    /**
+     * If the request contains a 'scenario' field and scenarios are enabled,
+     * play the scenario from the post-transition state.
+     */
+    protected function maybePlayScenario(Request $request, Machine $machine, State $state, ?string $machineClass = null): State
+    {
+        $scenarioSlug = $request->input('scenario');
+
+        if ($scenarioSlug === null || !config('machine.scenarios.enabled', false)) {
+            return $state;
+        }
+
+        $resolvedMachineClass = $machineClass ?? $machine::class;
+        $scenarioClass        = $this->resolveScenarioClassFromSlug($scenarioSlug, $resolvedMachineClass);
+
+        if ($scenarioClass === null) {
+            abort(422, "Scenario '{$scenarioSlug}' not found for machine ".class_basename($resolvedMachineClass).'.');
+        }
+
+        $rootEventId = $state->history->first()?->root_event_id;
+        $params      = $request->input('scenarioParams', []);
+
+        $result = $scenarioClass::playOn($rootEventId, $params);
+
+        // Restore the machine to get the updated state after scenario replay
+        $restoredMachineClass = $machineClass ?? $machine::class;
+
+        return $restoredMachineClass::create(state: $result->rootEventId)->state;
+    }
+
+    /**
+     * Resolve a scenario class from its kebab-case slug for a given machine.
+     *
+     * @return class-string<MachineScenario>|null
+     */
+    protected function resolveScenarioClassFromSlug(string $slug, string $machineClass): ?string
+    {
+        foreach (ScenarioDiscovery::forMachine($machineClass) as $scenarioClass) {
+            if (Str::kebab(class_basename($scenarioClass)) === $slug) {
+                return $scenarioClass;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -417,6 +482,14 @@ class MachineController extends Controller
 
         if ($includeAvailableEvents !== false) {
             $response['available_events'] = $state->availableEvents();
+        }
+
+        $forwardedMachineClass = $defaults['_machine_class'] ?? null;
+        if (config('machine.scenarios.enabled', false) && $forwardedMachineClass !== null) {
+            $response['available_scenarios'] = ScenarioDiscovery::forMachineAtState(
+                machineClass: $forwardedMachineClass,
+                currentState: $state->currentStateDefinition->key,
+            );
         }
 
         return response()->json(['data' => $response], $statusCode);
