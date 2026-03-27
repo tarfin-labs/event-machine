@@ -34,6 +34,16 @@ class MidFlightMachine extends Machine
                     'done' => ['type' => 'final'],
                 ],
             ],
+            behavior: [
+                'events' => [
+                    'ACTIVATE' => MidFlightActivateEvent::class,
+                    'FINISH'   => MidFlightFinishEvent::class,
+                ],
+            ],
+            endpoints: [
+                'ACTIVATE',
+                'FINISH',
+            ],
         );
     }
 }
