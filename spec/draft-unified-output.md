@@ -467,6 +467,14 @@ Each state's output behavior only computes what it needs. States that need prici
 | 13 | Rename `ResultBehavior` → `OutputBehavior` (keep `ResultBehavior` as deprecated alias) | `src/Behavior/` |
 | 14 | Deprecate `$machine->result()` — alias to `$machine->output()` | `src/Actor/Machine.php` |
 | 15 | Update `TestMachine` — add output assertions | `src/Testing/TestMachine.php` |
+| 16 | Refactor `ChildMachineCompletionJob` — remove `$result` constructor param, use only `$outputData` | `src/Jobs/ChildMachineCompletionJob.php` |
+| 17 | Refactor `ChildMachineJob` — stop passing `$machine->result()` to completion job, pass only `outputData` | `src/Jobs/ChildMachineJob.php` |
+| 18 | Refactor `routeChildDone` / `routeChildDoneEvent` — remove `'result'` field from ChildMachineDoneEvent payload, keep only `'output'` | `src/Definition/MachineDefinition.php` |
+| 19 | Deprecate `ChildMachineDoneEvent::result()` — alias to `output()` | `src/Behavior/ChildMachineDoneEvent.php` |
+| 20 | Update `TestMachine::simulateChildDone` — rename `$result` param to `$output` | `src/Testing/TestMachine.php` |
+| 21 | Update `ChildJobJob` — rename internal `$result` variable to `$output` for clarity | `src/Jobs/ChildJobJob.php` |
+| 22 | Update `StateConfigValidator` — validate `output` on forward endpoints, fire-and-forget validation unchanged | `src/StateConfigValidator.php` |
+| 23 | Update `MachineController` — child completion dispatch uses unified output | `src/Routing/MachineController.php` |
 
 ### Documentation (docs/)
 
@@ -579,6 +587,37 @@ $machine->output();
 // Array format still works for simple cases:
 'completed' => ['type' => 'final', 'output' => ['paymentId', 'status']],
 ```
+
+---
+
+## Feature Interactions
+
+Features analyzed for unified output impact:
+
+| Feature | Affected? | Detail |
+|---------|-----------|--------|
+| **Child delegation (sync)** | Yes | `routeChildDone` builds event with both `result` and `output` — unified to `output` only |
+| **Child delegation (async)** | Yes | `ChildMachineJob` passes `$machine->result()` separately — remove, use only `outputData` |
+| **ChildMachineCompletionJob** | Yes | Has separate `$result` and `$outputData` constructor params — unify to `$outputData` |
+| **ChildMachineDoneEvent** | Yes | Has both `result()` and `output()` accessors — deprecate `result()` |
+| **ChildMachineFailEvent** | No | Already uses `output()` only |
+| **Job actors (ChildJobJob)** | Cosmetic | Internal `$result` variable rename to `$output` for clarity |
+| **ReturnsResult contract** | No | Method name stays `result()` (job-level API, not machine config) |
+| **Parallel regions** | No | ParallelRegionJob doesn't touch output — completion flows through normal @done |
+| **processParallelOnDone** | No | Handles parallel state's own @done, not individual region outputs |
+| **Timers & schedules** | No | No output interaction |
+| **Listeners** | No | No output interaction |
+| **sendTo / dispatchTo** | No | Fire-and-forget event delivery, no output flow |
+| **dispatchToParent** | No | Sends events to parent, doesn't carry output |
+| **Machine::fake()** | No | Fakes behavior classes, not output definitions |
+| **simulateChildDone** | Yes | `$result` param → `$output` rename |
+| **simulateChildFail** | No | Already uses `$output` param |
+| **XState export** | No | Doesn't currently export result/output definitions |
+| **Machine discovery/cache** | No | Indexes timer configs, not output |
+| **Archive/restore** | No | Output definitions are stateless metadata on StateDefinition |
+| **ForwardContext** | No | Orthogonal — carries child state for injection into parent OutputBehavior |
+| **StateConfigValidator** | Yes | Validate `output` key in forward config, fire-and-forget check unchanged |
+| **resolveChildOutput()** | No | Already correctly implements unified output resolution |
 
 ---
 
@@ -722,7 +761,36 @@ None — all existing tests cover valid concepts that survive the rename. No tes
 - toResponseArray() fallback includes computedContext() values
 ```
 
-#### 11. Edge Cases
+#### 11. Async Delegation Output Flow
+
+```
+- ChildMachineJob passes outputData (not result) to ChildMachineCompletionJob
+- ChildMachineCompletionJob populates ChildMachineDoneEvent with output only (no result field)
+- ChildMachineDoneEvent::output() returns child's resolved output
+- ChildMachineDoneEvent::result() deprecated alias returns same as output()
+- ChildMachineFailEvent::output() returns child context at failure time
+- deep delegation chain (Parent→Child→Grandchild) propagates output correctly
+- job actor (ChildJobJob) passes ReturnsResult::result() as outputData
+```
+
+#### 12. Fire-and-Forget
+
+```
+- fire-and-forget delegation ignores child output (no @done handler)
+- output on fire-and-forget child's final state is valid but unused
+- StateConfigValidator still forbids output on fire-and-forget parent state (correct)
+```
+
+#### 13. TestMachine Faking
+
+```
+- simulateChildDone accepts $output param (renamed from $result)
+- simulateChildDone populates ChildMachineDoneEvent with output field
+- simulateChildFail passes $output correctly (already aligned)
+- Machine::fake result key maps to output
+```
+
+#### 14. Edge Cases
 
 ```
 - output defined on every state of a machine (full coverage)
@@ -731,4 +799,7 @@ None — all existing tests cover valid concepts that survive the rename. No tes
 - output behavior with no __invoke parameters (returns static data)
 - deeply nested compound state with output
 - state with both output and machine delegation (output applies before delegation)
+- hierarchical state: child state output overrides parent compound state output
+- @done.{finalState} routing — each final state's output is available in its own @done action
+- concurrent ChildMachineCompletionJobs for parallel child machines — each carries own output
 ```
