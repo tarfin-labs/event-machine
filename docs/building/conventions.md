@@ -14,7 +14,7 @@ Consistent naming makes your state machines easier to read, maintain, and debug.
 | Guard class | PascalCase | `{Prefix}{Condition}Guard` | `IsPaymentValidGuard` |
 | Validation Guard | PascalCase | `{Prefix}{Condition}ValidationGuard` | `IsAmountValidValidationGuard` |
 | Calculator class | PascalCase | `{Subject}{Noun}Calculator` | `OrderTotalCalculator` |
-| Result class | PascalCase | `{Subject}{Noun}Result` | `InvoiceSummaryResult` |
+| Output class | PascalCase | `{Subject}{Noun}Output` | `InvoiceSummaryOutput` |
 | Machine class | PascalCase | `{Domain}Machine` | `OrderWorkflowMachine` |
 | Machine ID | snake_case | `{domain_name}` | `order_workflow` |
 | Context class | PascalCase | `{Domain}Context` | `OrderWorkflowContext` |
@@ -658,9 +658,9 @@ Results compute the final output of a state machine. Name them with a **descript
 
 ```php ignore
 // Class name: {Subject}{Noun}Result — PascalCase
-class InvoiceSummaryResult extends ResultBehavior { ... }
-class OrderConfirmationResult extends ResultBehavior { ... }
-class RiskAssessmentResult extends ResultBehavior { ... }
+class InvoiceSummaryOutput extends OutputBehavior { ... }
+class OrderConfirmationOutput extends OutputBehavior { ... }
+class RiskAssessmentOutput extends OutputBehavior { ... }
 ```
 
 ## Machine Definition
@@ -918,17 +918,17 @@ Endpoint results customize the HTTP response. Name them with the **event-derived
 
 ```php ignore
 // Class name: {EventDerived}EndpointResult — PascalCase
-class GuarantorSavedEndpointResult extends ResultBehavior { ... }
-class ApprovedWithInitiativeEndpointResult extends ResultBehavior { ... }
-class PriceEndpointResult extends ResultBehavior { ... }
+class GuarantorSavedEndpointOutput extends OutputBehavior { ... }
+class ApprovedWithInitiativeEndpointOutput extends OutputBehavior { ... }
+class PriceEndpointOutput extends OutputBehavior { ... }
 ```
 
 Inline keys use camelCase and are referenced in the endpoint definition:
 
 ```php ignore
 'behavior' => [
-    'results' => [
-        'guarantorSavedEndpointResult' => GuarantorSavedEndpointResult::class,
+    'outputs' => [
+        'guarantorSavedEndpointOutput' => GuarantorSavedEndpointOutput::class,
     ],
 ],
 ```

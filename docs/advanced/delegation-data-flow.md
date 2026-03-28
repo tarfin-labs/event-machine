@@ -15,12 +15,11 @@ Parent Context
     │                                └── Child reaches final state
     │                                      │
     │                                      ├── 'output' filters (if defined)
-    │                                      └── ResultBehavior (if defined)
+    │                                      └── OutputBehavior (if defined)
     │
     ├── Available in @done event ◄───────┘
     │     {
-    │       result:        <ResultBehavior output>,
-    │       output:        <filtered context or full context>,
+    │       output:        <OutputBehavior output or filtered context>,
     │       machine_id:    <child's root_event_id>,
     │       machine_class: <child's FQCN>,
     │       final_state:   <child's final state key>,
@@ -86,8 +85,8 @@ class StorePaymentResultAction extends ActionBehavior
         $context->set('paymentId', $event->output('paymentId'));
         $context->set('status', $event->output('status'));
 
-        // ResultBehavior output from child (if defined)
-        $context->set('receipt', $event->result('receipt_url'));
+        // OutputBehavior output from child (if defined)
+        $context->set('receipt', $event->output('receipt_url'));
 
         // Child identity
         $childId    = $event->childMachineId();
@@ -101,8 +100,7 @@ class StorePaymentResultAction extends ActionBehavior
 
 | Accessor | Return Type | Description |
 |----------|-------------|-------------|
-| `output(?$key)` | `mixed` | Filtered output (or full context if no `output` key defined) |
-| `result(?$key)` | `mixed` | ResultBehavior output (if defined on final state) |
+| `output(?$key)` | `mixed` | Output data (filtered context, OutputBehavior output, or full context if no `output` key defined) |
 | `childMachineId()` | `string` | Child's `root_event_id` |
 | `childMachineClass()` | `string` | Child's FQCN |
 | `finalState()` | `?string` | The child's final state key name (e.g., `'approved'`). Used for `@done.{state}` routing. |
@@ -179,9 +177,9 @@ Forward Event (HTTP request)
     ├── Child transitions
     ├── Child State returned to parent
     └── Response built from parent + child State
-          ├── Default: { machine_id, value, child: { value, context } }
-          ├── contextKeys: filtered child.context
-          └── result: parent's ResultBehavior (ForwardContext injection)
+          ├── Default: { id, state, child: { state, output } }
+          ├── output (array): filtered child context
+          └── output (class): parent's OutputBehavior (ForwardContext injection)
 ```
 
 The default forward response shape:
@@ -189,11 +187,11 @@ The default forward response shape:
 ```json
 {
   "data": {
-    "machine_id": "evt_abc123",
-    "value": ["processing_payment"],
+    "id": "evt_abc123",
+    "state": ["processing_payment"],
     "child": {
-      "value": ["awaiting_confirmation"],
-      "context": {
+      "state": ["awaiting_confirmation"],
+      "output": {
         "cardLast4": "1111",
         "status": "card_provided"
       }
@@ -202,19 +200,19 @@ The default forward response shape:
 }
 ```
 
-When `contextKeys` is configured on the forward entry, only the specified keys from the child's context appear in the response. Without `contextKeys`, the full child context is returned.
+When `output` is configured as an array on the forward entry, only the specified keys from the child's context appear in the response. Without `output`, the full child context is returned.
 
-### Parent ResultBehavior with ForwardContext
+### Parent OutputBehavior with ForwardContext
 
-When a forward entry specifies a `result` key, the parent's `ResultBehavior` runs instead of the default response. The `ForwardContext` value object is injected, providing type-safe access to the child's `ContextManager` and `State`:
+When a forward entry specifies an `output` class, the parent's `OutputBehavior` runs instead of the default response. The `ForwardContext` value object is injected, providing type-safe access to the child's `ContextManager` and `State`:
 
 <!-- doctest-attr: no_run -->
 ```php
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Routing\ForwardContext;
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 
-class PaymentStepResult extends ResultBehavior
+class PaymentStepOutput extends OutputBehavior
 {
     public function __invoke(ContextManager $context, ForwardContext $forwardContext): array
     {
@@ -240,7 +238,7 @@ The `State::availableEvents()` method reflects both the parent's own `on` events
 
 ```json
 {
-  "available_events": [
+  "availableEvents": [
     { "type": "CANCEL", "source": "parent" },
     { "type": "PROVIDE_CARD", "source": "forward" },
     { "type": "CONFIRM_PAYMENT", "source": "forward" }
@@ -250,7 +248,7 @@ The `State::availableEvents()` method reflects both the parent's own `on` events
 
 Forward events only appear when the child's **current state** has a matching transition. After the child transitions (e.g., from `awaiting_card` to `awaiting_confirmation`), the available forward events update accordingly -- `PROVIDE_CARD` would disappear and only `CONFIRM_PAYMENT` would remain.
 
-Regular (non-forwarded) endpoints include `available_events` in the response by default. Forward endpoints do not include `available_events` in their default response shape. To get `available_events` from a forward endpoint, use a custom `ResultBehavior` with `ForwardContext` injection and call `$forwardContext->childState->availableEvents()`.
+Regular (non-forwarded) endpoints include `availableEvents` in the response by default. Forward endpoints do not include `availableEvents` in their default response shape. To get `availableEvents` from a forward endpoint, use a custom `OutputBehavior` with `ForwardContext` injection and call `$forwardContext->childState->availableEvents()`.
 
 ## Testing Data Flow
 

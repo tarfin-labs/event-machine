@@ -6,8 +6,8 @@ Only the **latest major version** receives bug fixes, new features, and security
 
 | Version | Status |
 |---------|--------|
-| **8.x** | **Active** — bug fixes, features, security |
-| 7.x and below | End of life — upgrade to latest |
+| **9.x** | **Active** — bug fixes, features, security |
+| 8.x and below | End of life — upgrade to latest |
 
 **Why only latest?**
 
@@ -16,6 +16,150 @@ EventMachine evolved rapidly from v1 to v7 with a small team. Maintaining multip
 ::: tip Upgrading from any version
 Each section below has step-by-step migration instructions with before/after examples. For multi-version jumps (e.g., v3 → v7), follow each guide in sequence. No data migration is required between any versions — the `machine_events` table format has not changed since v1.
 :::
+
+## From 8.x to 9.0
+
+### Unified Output — `result`/`contextKeys` → `output`
+
+v9 replaces three separate keywords (`result`, `contextKeys`, `results`) with a single unified `output` keyword. The type of the value determines the behavior:
+
+| Before (v8) | After (v9) | Effect |
+|-------------|------------|--------|
+| `'result' => MyResult::class` | `'output' => MyOutput::class` | OutputBehavior class computes response |
+| `'contextKeys' => ['a', 'b']` | `'output' => ['a', 'b']` | Array filters context keys |
+| `'results' => [...]` (behavior array) | `'outputs' => [...]` | Behavior registration key renamed |
+
+### Class Renames
+
+| Before (v8) | After (v9) |
+|-------------|------------|
+| `ResultBehavior` | `OutputBehavior` |
+| `{Name}Result` | `{Name}Output` |
+
+### Method Renames
+
+| Before (v8) | After (v9) |
+|-------------|------------|
+| `$machine->result()` | `$machine->output()` |
+| `assertResult($expected)` | `assertOutput($expected)` |
+| `ChildMachineDoneEvent::result()` | Removed — use `output()` only |
+
+### Response Envelope Changes
+
+The HTTP response envelope keys have been renamed for consistency:
+
+```json
+// BEFORE (v8)
+{
+    "data": {
+        "machine_id": "01JARX...",
+        "value": ["submitted"],
+        "context": { "totalAmount": 100 },
+        "available_events": [{ "type": "APPROVE", "source": "parent" }]
+    }
+}
+```
+
+```json
+// AFTER (v9)
+{
+    "data": {
+        "id": "01JARX...",
+        "state": ["submitted"],
+        "output": { "totalAmount": 100 },
+        "availableEvents": [{ "type": "APPROVE", "source": "parent" }]
+    }
+}
+```
+
+### Config Key Migration Examples
+
+**State definitions:**
+
+```php ignore
+// BEFORE (v8)
+'approved' => [
+    'type'   => 'final',
+    'result' => ApprovalResult::class,
+],
+
+// AFTER (v9)
+'approved' => [
+    'type'   => 'final',
+    'output' => ApprovalOutput::class,
+],
+```
+
+**Endpoint definitions:**
+
+```php ignore
+// BEFORE (v8)
+'GET_STATUS' => [
+    'result'     => OrderStatusResult::class,
+    'contextKeys' => ['totalAmount', 'currency'],
+],
+
+// AFTER (v9) — class form
+'GET_STATUS' => [
+    'output' => OrderStatusOutput::class,
+],
+
+// AFTER (v9) — array form (replaces contextKeys)
+'GET_PRICE' => [
+    'output' => ['totalAmount', 'currency'],
+],
+```
+
+**Behavior arrays:**
+
+```php ignore
+// BEFORE (v8)
+behavior: [
+    'results' => [
+        'orderResult' => OrderResult::class,
+    ],
+],
+
+// AFTER (v9)
+behavior: [
+    'outputs' => [
+        'orderOutput' => OrderOutput::class,
+    ],
+],
+```
+
+**Forward endpoint config:**
+
+```php ignore
+// BEFORE (v8)
+'forward' => [
+    'PROVIDE_CARD' => [
+        'result'     => CardSubmittedResult::class,
+        'contextKeys' => ['cardLast4'],
+    ],
+],
+
+// AFTER (v9)
+'forward' => [
+    'PROVIDE_CARD' => [
+        'output' => CardSubmittedOutput::class,
+    ],
+],
+```
+
+### Migration Checklist
+
+1. Rename all `ResultBehavior` subclasses to extend `OutputBehavior`
+2. Rename class files: `{Name}Result` → `{Name}Output`
+3. In machine definitions: `'result' =>` → `'output' =>` (states and endpoints)
+4. In machine definitions: `'contextKeys' =>` → `'output' => [...]` (array form)
+5. In behavior arrays: `'results' =>` → `'outputs' =>`
+6. In PHP code: `$machine->result()` → `$machine->output()`
+7. In tests: `assertResult()` → `assertOutput()`
+8. In tests: `ChildMachineDoneEvent::result()` → `ChildMachineDoneEvent::output()`
+9. Update API consumers for new response envelope keys (`id`, `state`, `output`, `availableEvents`)
+
+---
 
 ## From 8.5.4 to 8.6.0
 
@@ -66,15 +210,15 @@ Entry actions that called `$this->raise()` on states entered via parallel `@done
 
 ## From 8.5.3 to 8.5.4
 
-### ResultBehavior Now Receives the Original Event
+### OutputBehavior Now Receives the Original Event
 
-`Machine::result()` and `MachineController::resolveAndRunResult()` previously passed the last internal event (with NULL payload) to `ResultBehavior`. They now pass `$state->triggeringEvent` — the original external event with full payload.
+`$machine->output()` and `MachineController::resolveAndRunOutput()` previously passed the last internal event (with NULL payload) to `OutputBehavior`. They now pass `$state->triggeringEvent` — the original external event with full payload.
 
 **Before (broken):**
 
 <!-- doctest-attr: ignore -->
 ```php
-class CustomerDetailResult extends ResultBehavior
+class CustomerDetailOutput extends OutputBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): array
     {
@@ -88,7 +232,7 @@ class CustomerDetailResult extends ResultBehavior
 
 <!-- doctest-attr: ignore -->
 ```php
-class CustomerDetailResult extends ResultBehavior
+class CustomerDetailOutput extends OutputBehavior
 {
     public function __invoke(ContextManager $context, EventBehavior $event): array
     {
@@ -756,7 +900,7 @@ class PaymentFlowMachine extends Machine
 
 **4. Move customization to Format 3 (if needed):**
 
-If you had custom URI, middleware, or result behavior on the forwarded endpoint, move that configuration into the `forward` array using Format 3 (full config):
+If you had custom URI, middleware, or output behavior on the forwarded endpoint, move that configuration into the `forward` array using Format 3 (full config):
 
 ```php ignore
 // Format 3: full config for forward entries
@@ -765,9 +909,8 @@ If you had custom URI, middleware, or result behavior on the forwarded endpoint,
         'uri'        => '/custom-card-endpoint',
         'method'     => 'PUT',
         'action'     => CustomForwardAction::class,
-        'result'     => PaymentStepResult::class,
+        'output'     => PaymentStepOutput::class,
         'middleware'  => ['auth:sanctum'],
-        'contextKeys' => ['card_last4', 'status'],
         'status'     => 201,
     ],
 ],
@@ -781,9 +924,9 @@ Forwarded endpoint responses now include both parent and child state:
 // BEFORE — parent-only response
 {
     "data": {
-        "machine_id": "root-event-id",
-        "value": ["payment_flow.processing"],
-        "context": { "orderId": 1 }
+        "id": "root-event-id",
+        "state": ["payment_flow.processing"],
+        "output": { "orderId": 1 }
     }
 }
 ```
@@ -792,11 +935,11 @@ Forwarded endpoint responses now include both parent and child state:
 // AFTER — parent + child response
 {
     "data": {
-        "machine_id": "root-event-id",
-        "value": ["payment_flow.processing"],
+        "id": "root-event-id",
+        "state": ["payment_flow.processing"],
         "child": {
-            "value": ["payment_child.awaiting_confirmation"],
-            "context": { "card_last4": "4242" }
+            "state": ["payment_child.awaiting_confirmation"],
+            "output": { "card_last4": "4242" }
         }
     }
 }

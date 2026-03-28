@@ -24,9 +24,9 @@ public function submit(Request $request, Order $order): JsonResponse
     $state = $order->order_mre->send(event: $event);
 
     return response()->json(['data' => [
-        'machine_id' => $state->history->first()?->root_event_id,
-        'value'      => $state->value,
-        'context'    => $state->context->toArray(),
+        'id'    => $state->history->first()?->root_event_id,
+        'state' => $state->value,
+        'output' => $state->context->toArray(),
     ]]);
 }
 
@@ -113,7 +113,7 @@ SubmitEvent::class,
     'uri'        => '/approve',           // optional — auto-generated if omitted
     'method'     => 'PATCH',              // optional — default: POST
     'action'     => ApproveEndpointAction::class,  // optional
-    'result'     => 'approvalResult',     // optional — inline key or FQCN
+    'output'     => 'approvalOutput',     // optional — inline key or FQCN
     'middleware'  => ['auth:admin'],       // optional — additive
     'status'     => 200,                  // optional — default: 200
 ],
@@ -146,7 +146,7 @@ All four formats can be mixed freely in the same `endpoints` array.
 | `uri` | `string` | Auto-generated | URI path for the endpoint |
 | `method` | `string` | `'POST'` | HTTP method. For `GET`, query parameters are automatically normalized into `payload` — see [GET Endpoints](#get-endpoints) |
 | `action` | `string` | `null` | `MachineEndpointAction` subclass FQCN |
-| `result` | `string` | `null` | ResultBehavior inline key or FQCN |
+| `output` | `string` | `null` | OutputBehavior inline key or FQCN |
 | `middleware` | `array` | `[]` | Per-event middleware (additive) |
 | `status` | `int` | `200` | HTTP status code |
 | `available_events` | `bool` | `true` | Include `available_events` in the default response |
@@ -161,7 +161,7 @@ GET /status?dealer_code=ABC123&plate_number=34XY
 
 The query parameters are normalized to:
 
-```php
+```php ignore
 ['payload' => ['dealer_code' => 'ABC123', 'plate_number' => '34XY']]
 ```
 
@@ -266,23 +266,23 @@ Each endpoint is routed to a handler based on your `machineIdFor` and `modelFor`
 
 **handleMachineIdBound** loads the machine directly from a `root_event_id` parameter in the URL. Use this for events that happen before a model exists (e.g., the first step in a workflow).
 
-**handleStateless** creates a fresh machine for every request with no persistence. The machine processes the event, returns the result, and is garbage collected. Ideal for computation endpoints like price calculators.
+**handleStateless** creates a fresh machine for every request with no persistence. The machine processes the event, returns the output, and is garbage collected. Ideal for computation endpoints like price calculators.
 
 ## Default Response
 
-When no `result` is specified, the endpoint returns the machine state as JSON:
+When no `output` is specified, the endpoint returns the machine state as JSON:
 
 <!-- doctest-attr: ignore -->
 ```json
 {
     "data": {
-        "machine_id": "01JARX5Z8KQVN...",
-        "value": ["submitted"],
-        "context": {
+        "id": "01JARX5Z8KQVN...",
+        "state": ["submitted"],
+        "output": {
             "totalAmount": 15000,
             "customerEmail": "user@example.com"
         },
-        "available_events": [
+        "availableEvents": [
             { "type": "APPROVE", "source": "parent" },
             { "type": "CANCEL", "source": "parent" }
         ]
@@ -292,24 +292,24 @@ When no `result` is specified, the endpoint returns the machine state as JSON:
 
 If your context class overrides `computedContext()`, computed values are automatically included in the `context` object alongside regular properties. See [Exposing Computed Values](/advanced/custom-context#exposing-computed-values-in-api-responses) for details.
 
-The `available_events` array uses HATEOAS-style discoverability — the response tells the consumer which events the machine can accept in its current state. Each entry includes a `type` (the event name to send) and a `source` (`parent` for direct events, `forward` for forwarded child events). See the [Available Events](./available-events) page for full details.
+The `availableEvents` array uses HATEOAS-style discoverability — the response tells the consumer which events the machine can accept in its current state. Each entry includes a `type` (the event name to send) and a `source` (`parent` for direct events, `forward` for forwarded child events). See the [Available Events](./available-events) page for full details.
 
-By default `available_events` is included in every response. To opt out for a specific endpoint, set `available_events` to `false` in its array config.
+By default `availableEvents` is included in every response. To opt out for a specific endpoint, set `available_events` to `false` in its array config.
 
-For parallel states, `value` contains multiple active state paths and each available event includes a `region` key:
+For parallel states, `state` contains multiple active state paths and each available event includes a `region` key:
 
 <!-- doctest-attr: ignore -->
 ```json
 {
     "data": {
-        "machine_id": "01JARX5Z8KQVN...",
-        "value": [
+        "id": "01JARX5Z8KQVN...",
+        "state": [
             "fulfillment.payment.pending",
             "fulfillment.shipping.preparing",
             "fulfillment.documents.awaiting"
         ],
-        "context": {},
-        "available_events": [
+        "output": {},
+        "availableEvents": [
             { "type": "PAY", "source": "parent", "region": "payment" },
             { "type": "SHIP", "source": "parent", "region": "shipping" },
             { "type": "UPLOAD_DOC", "source": "parent", "region": "documents" }
@@ -318,15 +318,15 @@ For parallel states, `value` contains multiple active state paths and each avail
 }
 ```
 
-## Custom Responses with ResultBehavior
+## Custom Responses with OutputBehavior
 
-Override the default response by referencing a `ResultBehavior` in your endpoint definition. This reuses the existing behavior system — no new concepts needed.
+Override the default response by referencing an `OutputBehavior` in your endpoint definition. This reuses the existing behavior system — no new concepts needed.
 
 ```php no_run
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\ContextManager;
 
-class OrderDetailEndpointResult extends ResultBehavior
+class OrderDetailEndpointOutput extends OutputBehavior
 {
     public function __invoke(ContextManager $context): array
     {
@@ -342,32 +342,32 @@ class OrderDetailEndpointResult extends ResultBehavior
 }
 ```
 
-Reference the result in your endpoint definition by inline key or FQCN:
+Reference the output in your endpoint definition by inline key or FQCN:
 
 <!-- doctest-attr: ignore -->
 ```php
-// By inline key (must be registered in behavior.results)
+// By inline key (must be registered in behavior.outputs)
 'ORDER_SUBMITTED' => [
-    'result' => 'orderDetailEndpointResult',
+    'output' => 'orderDetailEndpointOutput',
 ],
 
 // By FQCN (resolved directly)
 'ORDER_SUBMITTED' => [
-    'result' => OrderDetailEndpointResult::class,
+    'output' => OrderDetailEndpointOutput::class,
 ],
 ```
 
-::: tip Reusing ResultBehavior
-Endpoint results extend the same `ResultBehavior` base class used by `Machine::result()`. If you already have a result behavior for your machine, you can reference it directly in your endpoint definition — no duplication needed.
+::: tip Reusing OutputBehavior
+Endpoint outputs extend the same `OutputBehavior` base class used by `$machine->output()`. If you already have an output behavior for your machine, you can reference it directly in your endpoint definition — no duplication needed.
 :::
 
 The `__invoke()` method supports dependency injection. You can type-hint `ContextManager`, `State`, or any service from Laravel's container:
 
 ```php no_run
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\ContextManager;
 
-class InvoiceEndpointResult extends ResultBehavior
+class InvoiceEndpointOutput extends OutputBehavior
 {
     public function __construct(
         private InvoiceService $invoices,
@@ -410,7 +410,7 @@ HTTP Request
 +-- === action.after() ===
 |       $this->state = post-transition state
 |
-+-- ResultBehavior (if defined) or State::toArray()
++-- OutputBehavior (if defined) or State::toArray()
 |
 +-- JSON Response
 ```
@@ -493,9 +493,9 @@ The create endpoint:
 ```json
 {
     "data": {
-        "machine_id": "01JARX5Z8KQVN...",
-        "value": ["idle"],
-        "context": {
+        "id": "01JARX5Z8KQVN...",
+        "state": ["idle"],
+        "output": {
             "totalAmount": 0,
             "items": []
         }
@@ -503,7 +503,7 @@ The create endpoint:
 }
 ```
 
-Use the returned `machine_id` in subsequent requests to send events to this machine instance via `machineIdFor` endpoints.
+Use the returned `id` in subsequent requests to send events to this machine instance via `machineIdFor` endpoints.
 
 ## Route Registration Patterns
 
@@ -523,7 +523,7 @@ Forwarded routes from the `forward` config appear in the route table alongside e
 
 ### Pattern 1: Stateless
 
-For machines that don't need persistence (e.g., calculators, validators). Every request creates a fresh machine, processes the event, returns the result, and discards the machine. Omit both `machineIdFor` and `modelFor`:
+For machines that don't need persistence (e.g., calculators, validators). Every request creates a fresh machine, processes the event, returns the output, and discards the machine. Omit both `machineIdFor` and `modelFor`:
 
 ```php no_run
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -547,13 +547,13 @@ class PriceCalculatorMachine extends Machine
                 'events' => [
                     'CALCULATE' => CalculateEvent::class,
                 ],
-                'results' => [
-                    'priceEndpointResult' => PriceEndpointResult::class,
+                'outputs' => [
+                    'priceEndpointOutput' => PriceEndpointOutput::class,
                 ],
             ],
             endpoints: [
                 'CALCULATE' => [
-                    'result' => 'priceEndpointResult',
+                    'output' => 'priceEndpointOutput',
                 ],
             ],
         );
@@ -569,7 +569,7 @@ MachineRouter::register(PriceCalculatorMachine::class, [
     'prefix'     => 'calculator',
     'middleware'  => ['auth:api'],
 ]);
-// POST /calculator/calculate -> fresh machine -> send -> result -> GC
+// POST /calculator/calculate -> fresh machine -> send -> output -> GC
 ```
 
 ### Pattern 2: MachineId-Bound (Without Model)
@@ -851,21 +851,21 @@ app/MachineDefinitions/
     ├── Events/
     │   ├── OrderSubmittedEvent.php
     │   └── PaymentReceivedEvent.php
-    ├── Results/
-    │   └── OrderConfirmationResult.php
+    ├── Outputs/
+    │   └── OrderConfirmationOutput.php
     └── Endpoints/
         ├── Actions/
         │   ├── CancelEndpointAction.php
         │   └── StartEndpointAction.php
-        └── Results/
-            └── OrderDetailEndpointResult.php
+        └── Outputs/
+            └── OrderDetailEndpointOutput.php
 ```
 
-Machine-level behaviors (Actions, Guards, Events) live at the top level. Endpoint-specific actions and results live under `Endpoints/`. This separation makes it clear which classes handle HTTP concerns versus machine internals.
+Machine-level behaviors (Actions, Guards, Events) live at the top level. Endpoint-specific actions and outputs live under `Endpoints/`. This separation makes it clear which classes handle HTTP concerns versus machine internals.
 
 ## Complete Example
 
-Here is a full machine definition with endpoints, route registration, an endpoint action, and a custom result:
+Here is a full machine definition with endpoints, route registration, an endpoint action, and a custom output:
 
 ### Machine Definition
 
@@ -902,9 +902,9 @@ class ApplicationMachine extends Machine
                     'GUARANTOR_SAVED'          => GuarantorSavedEvent::class,
                     'APPROVED_WITH_INITIATIVE' => ApprovedWithInitiativeEvent::class,
                 ],
-                'results' => [
-                    'guarantorSavedEndpointResult'         => GuarantorSavedEndpointResult::class,
-                    'approvedWithInitiativeEndpointResult'  => ApprovedWithInitiativeEndpointResult::class,
+                'outputs' => [
+                    'guarantorSavedEndpointOutput'         => GuarantorSavedEndpointOutput::class,
+                    'approvedWithInitiativeEndpointOutput'  => ApprovedWithInitiativeEndpointOutput::class,
                 ],
             ],
             endpoints: [
@@ -916,12 +916,12 @@ class ApplicationMachine extends Machine
                     'action' => CancelEndpointAction::class,
                 ],
                 'GUARANTOR_SAVED' => [
-                    'result' => 'guarantorSavedEndpointResult',
+                    'output' => 'guarantorSavedEndpointOutput',
                 ],
                 'APPROVED_WITH_INITIATIVE' => [
                     'method'     => 'PATCH',
                     'middleware'  => ['auth:admin'],
-                    'result'     => 'approvedWithInitiativeEndpointResult',
+                    'output'     => 'approvedWithInitiativeEndpointOutput',
                 ],
             ],
         );
@@ -991,13 +991,13 @@ class StartEndpointAction extends MachineEndpointAction
 }
 ```
 
-### Endpoint Result
+### Endpoint Output
 
 ```php no_run
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\ContextManager;
 
-class GuarantorSavedEndpointResult extends ResultBehavior
+class GuarantorSavedEndpointOutput extends OutputBehavior
 {
     public function __invoke(ContextManager $context): array
     {
@@ -1052,8 +1052,7 @@ You can also use an `EventBehavior` class reference:
         'method'           => 'PATCH',             // optional — default: POST
         'middleware'        => ['auth:customer'],   // optional — additive
         'action'           => CardEndpointAction::class,   // optional — parent-level action
-        'result'           => 'cardSubmittedResult',       // optional — ResultBehavior key or FQCN
-        'contextKeys'      => ['cardToken', 'lastFour'], // optional — filter child context keys
+        'output'           => 'cardSubmittedOutput',       // optional — OutputBehavior key, FQCN, or array of context keys
         'status'           => 200,                 // optional — default: 200
         'available_events' => true,                // optional — include available_events in response
     ],
@@ -1069,8 +1068,7 @@ You can also use an `EventBehavior` class reference:
 | `method` | `string` | `'POST'` | HTTP method |
 | `middleware` | `array` | `[]` | Per-event middleware (additive) |
 | `action` | `string` | `null` | `MachineEndpointAction` subclass FQCN |
-| `result` | `string` | `null` | ResultBehavior inline key or FQCN |
-| `contextKeys` | `array` | `null` | Filter child context keys in default response |
+| `output` | `string\|array` | `null` | OutputBehavior inline key/FQCN, or array of context keys to filter |
 | `status` | `int` | `200` | HTTP status code |
 | `available_events` | `bool` | `null` | Include `available_events` in response |
 
@@ -1122,17 +1120,17 @@ In this example, `PROVIDE_CARD` and `CANCEL_ORDER` are automatically registered 
 
 ### Forwarded Endpoint Response
 
-When no `result` is specified, forwarded endpoints return both parent and child state:
+When no `output` is specified, forwarded endpoints return both parent and child state:
 
 <!-- doctest-attr: ignore -->
 ```json
 {
     "data": {
-        "machine_id": "01JARX5Z8KQVN...",
-        "value": ["processing_payment"],
+        "id": "01JARX5Z8KQVN...",
+        "state": ["processing_payment"],
         "child": {
-            "value": ["awaiting_verification"],
-            "context": {
+            "state": ["awaiting_verification"],
+            "output": {
                 "cardToken": "tok_abc123",
                 "lastFour": "4242"
             }
@@ -1141,7 +1139,7 @@ When no `result` is specified, forwarded endpoints return both parent and child 
 }
 ```
 
-Use `contextKeys` in Format 3 to filter which child context keys appear in the response. When `contextKeys` is `null` (the default), all child context keys are included.
+Use `output` with an array in Format 3 to filter which child context keys appear in the response. When `output` is `null` (the default), all child context keys are included.
 
 ### Route Registration for Forwarded Endpoints
 
@@ -1179,14 +1177,14 @@ Forwarded endpoints are included in [`only`/`except`](#endpoint-filtering) filte
 
 ## ForwardContext
 
-When a forwarded endpoint has a custom `ResultBehavior`, you often need access to the child machine's context and state. Type-hint `ForwardContext` in your result's `__invoke()` method to receive it automatically:
+When a forwarded endpoint has a custom `OutputBehavior`, you often need access to the child machine's context and state. Type-hint `ForwardContext` in your output's `__invoke()` method to receive it automatically:
 
 ```php no_run
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Routing\ForwardContext;
 
-class CardSubmittedResult extends ResultBehavior
+class CardSubmittedOutput extends OutputBehavior
 {
     public function __invoke(ContextManager $context, ForwardContext $forwardContext): array
     {
@@ -1252,18 +1250,18 @@ public function submit(Request $request, Order $order): JsonResponse
 ],
 ```
 
-### Step 4: Move Response Customization to ResultBehavior
+### Step 4: Move Response Customization to OutputBehavior
 
-If your controller returns something other than the default state JSON, create a `ResultBehavior`:
+If your controller returns something other than the default state JSON, create an `OutputBehavior`:
 
 <!-- doctest-attr: ignore -->
 ```php
 // Before: in controller
 return new OrderResource($order->refresh()->loadMissing('items'));
 
-// After: in ResultBehavior
+// After: in OutputBehavior
 'SUBMIT' => [
-    'result' => 'orderDetailEndpointResult',
+    'output' => 'orderDetailEndpointOutput',
 ],
 ```
 

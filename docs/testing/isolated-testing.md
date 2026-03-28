@@ -338,7 +338,7 @@ use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 
 // Only provide the data you care about — identity fields are defaulted
-$event = ChildMachineDoneEvent::forTesting(['result' => ['statusCode' => 3]]);
+$event = ChildMachineDoneEvent::forTesting(['output' => ['statusCode' => 3]]);
 $state = State::forTesting(['attemptCount' => 2], currentEventBehavior: $event);
 expect(IsStatusSuccessGuard::runWithState($state))->toBeTrue();
 

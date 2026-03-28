@@ -394,7 +394,7 @@ it('dispatches async event to target machine', function () {
 ```
 
 ::: tip
-For the full `Machine::fake()` API (`result`, `fail`, `error`, `finalState`) and assertion methods, see [Inter-Machine Testing](/testing/delegation-testing).
+For the full `Machine::fake()` API (`output`, `fail`, `error`, `finalState`) and assertion methods, see [Inter-Machine Testing](/testing/delegation-testing).
 :::
 
 ## Recipe: Controller Testing with Machine::fake()
@@ -469,7 +469,7 @@ it('forwards PROVIDE_CARD to child via parent endpoint', function (): void {
 });
 ```
 
-For full forward endpoint patterns including `contextKeys`, `result`, `available_events`, and `ForwardContext` injection, see [Inter-Machine Testing — Forward Endpoints](/testing/delegation-testing#testing-forward-endpoints).
+For full forward endpoint patterns including `output`, `availableEvents`, and `ForwardContext` injection, see [Inter-Machine Testing — Forward Endpoints](/testing/delegation-testing#testing-forward-endpoints).
 
 ## Recipe: Available Events Introspection
 
@@ -502,7 +502,7 @@ OrderMachine::test()
     ->assertState('completed');
 ```
 
-For the full pattern including catch-all fallback and result data, see [Inter-Machine Testing — Testing Per-Final-State Routing](/testing/delegation-testing#testing-per-final-state-routing).
+For the full pattern including catch-all fallback and output data, see [Inter-Machine Testing — Testing Per-Final-State Routing](/testing/delegation-testing#testing-per-final-state-routing).
 
 ## Recipe: Full Async Delegation Pipeline
 
@@ -587,7 +587,7 @@ it('handles different order sizes', function () {
 
 ## Recipe: Testing Managed Job Completion
 
-Test `@done` routing for a managed job actor without running the job. Use `Queue::fake()` to capture the dispatch, then `simulateChildDone()` to simulate the result:
+Test `@done` routing for a managed job actor without running the job. Use `Queue::fake()` to capture the dispatch, then `simulateChildDone()` to simulate the output:
 
 <!-- doctest-attr: no_run -->
 ```php
@@ -598,7 +598,7 @@ it('routes to completed after job finishes', function (): void {
         ->withoutPersistence()
         ->send('START_PAYMENT')
         ->assertState('charging')
-        ->simulateChildDone(ChargeCardJob::class, result: [
+        ->simulateChildDone(ChargeCardJob::class, output: [
             'transactionId' => 'txn_123',
             'amount'         => 5000,
         ])
@@ -686,8 +686,8 @@ it('verification parallel state completes when both children finish', function (
     )
     ->withoutPersistence()
     ->fakingAllActions()
-    ->fakingChild(VerificationMachine::class, result: [...], finalState: 'completed')
-    ->fakingChild(NotificationMachine::class, result: [...])
+    ->fakingChild(VerificationMachine::class, output: [...], finalState: 'completed')
+    ->fakingChild(NotificationMachine::class, output: [...])
     ->assertState('checking_protocol');
 });
 ```
@@ -742,7 +742,7 @@ it('compound @done triggers child delegation', function (): void {
         ->withoutPersistence()
         ->fakingAllActions()
         ->assertState('processing')  // compound @done already fired
-        ->simulateChildDone(PaymentMachine::class, result: ['paymentId' => 'pay_1'])
+        ->simulateChildDone(PaymentMachine::class, output: ['paymentId' => 'pay_1'])
         ->assertState('completed');
 });
 ```
@@ -763,7 +763,7 @@ it('parallel @fail fires when one region fails', function (): void {
     ShippingMachine::test(context: ['orderId' => 'ORD-1'])
         ->withoutPersistence()
         ->fakingAllActions()
-        ->fakingChild(WarehouseMachine::class, result: ['packed' => true])
+        ->fakingChild(WarehouseMachine::class, output: ['packed' => true])
         ->fakingChild(DeliveryMachine::class, fail: true, error: 'Address not found')
         ->assertState('shipping_failed');
 });
@@ -788,7 +788,7 @@ it('sync child completes immediately, async child via Horizon', function (): voi
     $test->assertRegionState('validation', 'completed');
 
     // Simulate async payment completion
-    $test->simulateChildDone(PaymentMachine::class, result: ['paymentId' => 'pay_1'])
+    $test->simulateChildDone(PaymentMachine::class, output: ['paymentId' => 'pay_1'])
         ->assertAllRegionsCompleted()
         ->assertState('fulfilled');
 });
@@ -846,7 +846,7 @@ it('child receives only with: keys, parent context unchanged', function (): void
     )
     ->withoutPersistence()
     ->fakingAllActions()
-    ->fakingChild(PaymentMachine::class, result: ['paymentId' => 'pay_1'])
+    ->fakingChild(PaymentMachine::class, output: ['paymentId' => 'pay_1'])
     ->assertState('completed')
     ->assertContext('customerName', 'John')  // parent context preserved
     ->assertChildInvokedWith(PaymentMachine::class, [

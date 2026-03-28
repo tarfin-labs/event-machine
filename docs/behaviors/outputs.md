@@ -1,15 +1,15 @@
-# Results
+# Outputs
 
-## Why Results Exist
+## Why Outputs Exist
 
 A state machine's **context** is its internal working memory — it accumulates data as transitions happen, actions fire, and calculators run. But context is a flat bag of everything the machine has ever needed: intermediate values, retry counters, error messages, IDs from external systems, flags for internal logic.
 
-**Results solve a different problem: what does this machine _produce_ as its output?**
+**Outputs solve a different problem: what does this machine _produce_ as its output?**
 
-Think of it like a function: the function has local variables (context), but its `return` value (result) is what the caller sees. Results transform internal state into a clean, purposeful output.
+Think of it like a function: the function has local variables (context), but its `return` value (output) is what the caller sees. Outputs transform internal state into a clean, purposeful output.
 
 ```
-Context (internal)              Result (output)
+Context (internal)              Output
 ├── orderId                     ├── orderId
 ├── retryCount          ──►     ├── total
 ├── lastError                   ├── status: 'completed'
@@ -22,89 +22,89 @@ Context (internal)              Result (output)
 └── internalFlags
 ```
 
-Without results, callers would need to know the machine's internal context structure — which keys exist, which are intermediate, which matter. Results provide a **contract** between the machine and its consumers.
+Without outputs, callers would need to know the machine's internal context structure — which keys exist, which are intermediate, which matter. Outputs provide a **contract** between the machine and its consumers.
 
-## Two Places Results Are Used
+## Two Places Outputs Are Used
 
-### 1. `Machine::result()` — Programmatic Output
+### 1. `$machine->output()` — Programmatic Output
 
-When code creates and runs a machine, `result()` returns the machine's output after it reaches a final state:
+When code creates and runs a machine, `output()` returns the machine's output after it reaches a final state:
 
 ```php no_run
 $machine = LoanApplicationMachine::create();
 $machine->send(['type' => 'SUBMIT', 'payload' => ['amount' => 50000]]);
 $machine->send(['type' => 'APPROVE']);
 
-$result = $machine->result();
+$output = $machine->output();
 // → ['applicationId' => 'LA-123', 'status' => 'approved', 'monthlyPayment' => 1450.00]
 ```
 
-The result is defined on the **final state**:
+The output is defined on the **final state**:
 
 ```php ignore
 'approved' => [
     'type'   => 'final',
-    'result' => ApprovalResult::class,
+    'output' => ApprovalOutput::class,
 ],
 ```
 
-`result()` returns `null` if the machine is not in a final state or if no result behavior is defined.
+`output()` returns `null` if the machine is not in a final state or if no output behavior is defined.
 
-### 2. Endpoint Results — HTTP Response Shaping
+### 2. Endpoint Outputs — HTTP Response Shaping
 
-Endpoints can define a result behavior that transforms context into an API response. This runs on **any state**, not just final states — the endpoint decides what to return for each request:
+Endpoints can define an output behavior that transforms context into an API response. This runs on **any state**, not just final states — the endpoint decides what to return for each request:
 
 ```php ignore
 endpoints: [
     'GET_STATUS' => [
         'uri'    => '/orders/{order}/status',
         'method' => 'GET',
-        'result' => OrderStatusResult::class,
+        'output' => OrderStatusOutput::class,
     ],
 ],
 ```
 
-When no `result` is specified, the endpoint returns the default state serialization (`toResponseArray()` + machine metadata). When `result` IS specified, only the result behavior's return value is sent — wrapped in `{ "data": ... }`.
+When no `output` is specified, the endpoint returns the default state serialization (`toResponseArray()` + machine metadata). When `output` IS specified, only the output behavior's return value is sent — wrapped in `{ "data": ... }`.
 
-This is the most common use of results in practice: **controlling what an API endpoint returns.**
+This is the most common use of outputs in practice: **controlling what an API endpoint returns.**
 
-## Result vs `contextKeys` vs `toResponseArray()`
+## Output vs `output` (array filter) vs `toResponseArray()`
 
 Three ways to control what data leaves the machine:
 
 | Mechanism | Where | What It Does | When to Use |
 |-----------|-------|-------------|-------------|
 | `toResponseArray()` | ContextManager override | Returns all context properties | Default — when context shape IS the response |
-| `contextKeys` | Endpoint config | Filters `toResponseArray()` to specific keys | Simple filtering — "only show these fields" |
-| `result` | Final state or endpoint | Runs a behavior that computes output | Computed values, formatting, external lookups, hiding internals |
+| `output` (array) | Endpoint config | Filters `toResponseArray()` to specific keys | Simple filtering — "only show these fields" |
+| `output` (class) | Final state or endpoint | Runs a behavior that computes output | Computed values, formatting, external lookups, hiding internals |
 
 ```php ignore
-// contextKeys — simple filter, no logic
+// output array — simple filter, no logic
 'GET_PRICE' => [
-    'uri'         => '/orders/{order}/price',
-    'method'      => 'GET',
-    'contextKeys' => ['totalAmount', 'currency', 'installmentOptions'],
+    'uri'    => '/orders/{order}/price',
+    'method' => 'GET',
+    'output' => ['totalAmount', 'currency', 'installmentOptions'],
 ],
 
-// result — computed output, full control
+// output class — computed output, full control
 'GET_SUMMARY' => [
     'uri'    => '/orders/{order}/summary',
     'method' => 'GET',
-    'result' => OrderSummaryResult::class,
+    'output' => OrderSummaryOutput::class,
 ],
 ```
 
-**Rule of thumb:** If you're just picking fields from context, use `contextKeys`. If you need to compute, format, combine, or look up external data, use a result.
+**Rule of thumb:** If you're just picking fields from context, use `output` with an array. If you need to compute, format, combine, or look up external data, use an output behavior class.
 
-## Writing a Result
+## Writing an Output
 
-### Basic Result
+### Basic Output
 
 ```php
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
-class OrderResultBehavior extends ResultBehavior
+class OrderOutputBehavior extends OutputBehavior
 {
     public function __invoke(ContextManager $context): array
     {
@@ -117,30 +117,30 @@ class OrderResultBehavior extends ResultBehavior
 }
 ```
 
-### Defining Results
+### Defining Outputs
 
-Three ways to attach a result — class reference, inline key, or inline closure:
+Three ways to attach an output — class reference, inline key, or inline closure:
 
 ```php ignore
 // 1. Direct class reference (preferred)
 'completed' => [
     'type'   => 'final',
-    'result' => OrderResultBehavior::class,
+    'output' => OrderOutputBehavior::class,
 ],
 
-// 2. Inline key — resolved from behavior.results
+// 2. Inline key — resolved from behavior.outputs
 'completed' => [
     'type'   => 'final',
-    'result' => 'orderResult',
+    'output' => 'orderOutput',
 ],
 // ...
-'results' => [
-    'orderResult' => OrderResultBehavior::class,
+'outputs' => [
+    'orderOutput' => OrderOutputBehavior::class,
 ],
 
 // 3. Inline closure
-'results' => [
-    'orderResult' => fn(ContextManager $ctx) => [
+'outputs' => [
+    'orderOutput' => fn(ContextManager $ctx) => [
         'orderId' => $ctx->orderId,
         'total'   => $ctx->total,
     ],
@@ -149,7 +149,7 @@ Three ways to attach a result — class reference, inline key, or inline closure
 
 ### Return Types
 
-Results can return any type — the return value of `$machine->result()` matches whatever your result behavior returns:
+Outputs can return any type — the return value of `$machine->output()` matches whatever your output behavior returns:
 
 ```php ignore
 public function __invoke(ContextManager $context): array { ... }   // Array (most common)
@@ -158,9 +158,9 @@ public function __invoke(ContextManager $context): int { ... }     // Scalar val
 public function __invoke(ContextManager $context): mixed { ... }   // Any type
 ```
 
-## Different Results for Different Final States
+## Different Outputs for Different Final States
 
-Each final state can have its own result behavior — the machine produces different output depending on how it ended:
+Each final state can have its own output behavior — the machine produces different output depending on how it ended:
 
 ```php ignore
 'states' => [
@@ -173,24 +173,24 @@ Each final state can have its own result behavior — the machine produces diffe
     ],
     'approved' => [
         'type'   => 'final',
-        'result' => ApprovalResult::class,
+        'output' => ApprovalOutput::class,
     ],
     'rejected' => [
         'type'   => 'final',
-        'result' => RejectionResult::class,
+        'output' => RejectionOutput::class,
     ],
     'cancelled' => [
         'type'   => 'final',
-        'result' => CancellationResult::class,
+        'output' => CancellationOutput::class,
     ],
 ],
 ```
 
-The caller doesn't need to check which final state the machine is in — `$machine->result()` returns the right shape automatically.
+The caller doesn't need to check which final state the machine is in — `$machine->output()` returns the right shape automatically.
 
 ## Parameter Injection
 
-Results use the same type-hint based parameter injection as actions, guards, and calculators. Available types:
+Outputs use the same type-hint based parameter injection as actions, guards, and calculators. Available types:
 
 | Type | What's Injected |
 |------|----------------|
@@ -201,12 +201,12 @@ Results use the same type-hint based parameter injection as actions, guards, and
 | `ForwardContext` | Child machine context (forwarded endpoints only) |
 
 ```php
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 use Tarfinlabs\EventMachine\Actor\State; // [!code hide]
 use Tarfinlabs\EventMachine\EventCollection; // [!code hide]
 
-class AuditableResult extends ResultBehavior
+class AuditableOutput extends OutputBehavior
 {
     public function __invoke(
         ContextManager $context,
@@ -226,10 +226,10 @@ class AuditableResult extends ResultBehavior
 
 ## Constructor Dependency Injection
 
-Results support Laravel's service container for constructor dependencies — external services, repositories, API clients:
+Outputs support Laravel's service container for constructor dependencies — external services, repositories, API clients:
 
 ```php no_run
-class OrderResultBehavior extends ResultBehavior
+class OrderOutputBehavior extends OutputBehavior
 {
     public function __construct(
         private readonly OrderService $orderService,
@@ -255,7 +255,7 @@ class OrderResultBehavior extends ResultBehavior
 ### Order Completion
 
 ```php no_run
-class OrderCompletedResult extends ResultBehavior
+class OrderCompletedOutput extends OutputBehavior
 {
     public function __invoke(ContextManager $context): array
     {
@@ -278,7 +278,7 @@ class OrderCompletedResult extends ResultBehavior
 ### Loan Approval vs Rejection
 
 ```php no_run
-class LoanApprovalResult extends ResultBehavior
+class LoanApprovalOutput extends OutputBehavior
 {
     public function __invoke(ContextManager $context): array
     {
@@ -302,7 +302,7 @@ class LoanApprovalResult extends ResultBehavior
     }
 }
 
-class LoanRejectionResult extends ResultBehavior
+class LoanRejectionOutput extends OutputBehavior
 {
     public function __invoke(ContextManager $context): array
     {
@@ -320,11 +320,11 @@ class LoanRejectionResult extends ResultBehavior
 ### Workflow with Audit Trail
 
 ```php
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 use Tarfinlabs\EventMachine\EventCollection; // [!code hide]
 
-class WorkflowCompletedResult extends ResultBehavior
+class WorkflowCompletedOutput extends OutputBehavior
 {
     public function __invoke(
         ContextManager $context,
@@ -348,7 +348,7 @@ class WorkflowCompletedResult extends ResultBehavior
 }
 ```
 
-## Testing Results
+## Testing Outputs
 
 ### Via Machine::test()
 
@@ -358,9 +358,9 @@ $test = OrderMachine::test(['orderId' => 'ord-123'])
     ->sendMany(['SUBMIT', 'PAY', 'SHIP', 'DELIVER'])
     ->assertFinished();
 
-$result = $test->machine()->result();
-expect($result)->toHaveKeys(['orderId', 'total', 'status']);
-expect($result['status'])->toBe('completed');
+$output = $test->machine()->output();
+expect($output)->toHaveKeys(['orderId', 'total', 'status']);
+expect($output['status'])->toBe('completed');
 ```
 
 ### Isolated — Direct Invocation
@@ -372,9 +372,9 @@ $state = State::forTesting([
     'total'   => 250,
 ]);
 
-$result = OrderResultBehavior::runWithState($state);
-expect($result['orderId'])->toBe('ord-123');
-expect($result['total'])->toBe(250);
+$output = OrderOutputBehavior::runWithState($state);
+expect($output['orderId'])->toBe('ord-123');
+expect($output['total'])->toBe(250);
 ```
 
 ### With Constructor DI
@@ -387,25 +387,25 @@ it('generates receipt via injected service', function () {
         ->andReturn(new Receipt(url: 'https://example.com/receipt/123'));
 
     $state  = State::forTesting(['orderId' => 'ord-123']);
-    $result = OrderResultBehavior::runWithState($state);
+    $output = OrderOutputBehavior::runWithState($state);
 
-    expect($result['receiptUrl'])->toBe('https://example.com/receipt/123');
+    expect($output['receiptUrl'])->toBe('https://example.com/receipt/123');
 });
 ```
 
 ::: tip Full Testing Guide
-See [TestMachine](/testing/test-machine) for `assertFinished()` and result access.
+See [TestMachine](/testing/test-machine) for `assertFinished()` and output access.
 :::
 
 ## Best Practices
 
-1. **Results are for consumers, context is for the machine.** Don't return raw context — shape the output for whoever calls `result()` or receives the endpoint response.
+1. **Outputs are for consumers, context is for the machine.** Don't return raw context — shape the output for whoever calls `output()` or receives the endpoint response.
 
-2. **Use `contextKeys` for simple filtering, results for computation.** If you're just picking fields, `contextKeys` is simpler. If you're computing, formatting, or combining data, use a result.
+2. **Use `output` array for simple filtering, output class for computation.** If you're just picking fields, an array is simpler. If you're computing, formatting, or combining data, use an output behavior class.
 
-3. **Different final states → different results.** Don't build one result that checks which state the machine is in. Define separate result behaviors per final state.
+3. **Different final states → different outputs.** Don't build one output that checks which state the machine is in. Define separate output behaviors per final state.
 
-4. **Keep results stateless.** Results should read from context and compute — not modify context or trigger side effects. That's what actions are for.
+4. **Keep outputs stateless.** Outputs should read from context and compute — not modify context or trigger side effects. That's what actions are for.
 
 5. **Handle missing data gracefully.** Context may not have all values if the machine took a non-happy path:
 

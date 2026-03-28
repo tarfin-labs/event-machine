@@ -23,7 +23,7 @@ Understanding the complete lifecycle of an EventMachine helps you build correct 
 │  4. PERSIST          5. RESTORE          6. FINAL STATE    │
 │  ──────────          ──────────          ─────────────     │
 │  Auto-saved          create(state: id)   Machine done      │
-│  to database                             Result computed    │
+│  to database                             Output computed    │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -271,13 +271,13 @@ When a machine reaches a final state:
 ```php
 'delivered' => [
     'type' => 'final',
-    'result' => 'computeDeliveryResult',
+    'output' => 'computeDeliveryOutput',
 ]
 ```
 
 What happens:
 1. Entry actions run (if any)
-2. Result behavior computes final output
+2. Output behavior computes final output
 3. Machine is "done" - no more transitions possible
 4. `machine.finish` internal event fires
 

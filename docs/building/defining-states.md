@@ -83,7 +83,7 @@ Terminal states that end the machine's execution:
 ```php ignore
 'completed' => [
     'type' => 'final',
-    'result' => 'calculateResultResult',  // Optional result behavior
+    'output' => 'calculateResultOutput',  // Optional output behavior
 ],
 ```
 
@@ -424,7 +424,7 @@ MachineDefinition::define(
             'published' => [
                 'type' => 'final',
                 'entry' => 'notifyPublishedAction',
-                'result' => 'getPublishedDocumentResult',
+                'output' => 'getPublishedDocumentOutput',
                 'meta' => [
                     'public' => true,
                 ],
@@ -445,8 +445,8 @@ MachineDefinition::define(
         'guards' => [
             'isApprovedGuard' => IsApprovedGuard::class,
         ],
-        'results' => [
-            'getPublishedDocumentResult' => GetPublishedDocumentResult::class,
+        'outputs' => [
+            'getPublishedDocumentOutput' => GetPublishedDocumentOutput::class,
         ],
     ],
 );
@@ -468,8 +468,8 @@ MachineDefinition::define(
     // State type
     'type' => 'final',                    // Only for terminal states
 
-    // Final state result
-    'result' => 'resultBehaviorNameResult',
+    // Final state output
+    'output' => 'outputBehaviorNameOutput',
 
     // Hierarchy
     'initial' => 'childStateName',        // Initial child state

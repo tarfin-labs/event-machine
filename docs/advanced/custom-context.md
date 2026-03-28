@@ -198,7 +198,7 @@ class CartContext extends ContextManager
 
 ### Exposing Computed Values in API Responses
 
-By default, computed methods are only available in PHP — in guards, actions, calculators, and ResultBehavior. They do **not** appear in endpoint JSON responses, because `toArray()` only serializes properties.
+By default, computed methods are only available in PHP — in guards, actions, calculators, and OutputBehavior. They do **not** appear in endpoint JSON responses, because `toArray()` only serializes properties.
 
 Override `computedContext()` to declare which computed values should be included in API responses:
 
@@ -234,7 +234,7 @@ Now the endpoint response includes computed values alongside regular properties:
 
 ```json
 {
-  "context": {
+  "output": {
     "items": [...],
     "discountPercent": 10,
     "shippingMethod": "express",
@@ -250,8 +250,8 @@ Now the endpoint response includes computed values alongside regular properties:
 Computed values are **not** stored in the database — they are recomputed fresh on every API response. This keeps the `machine_events` table clean and avoids stale derived data.
 :::
 
-::: tip contextKeys Filtering
-Computed keys respect `contextKeys` filtering on endpoints. If an endpoint specifies `contextKeys: ['total', 'itemCount']`, only those keys appear — both regular and computed.
+::: tip Output Filtering
+Computed keys respect `output` array filtering on endpoints. If an endpoint specifies `output: ['total', 'itemCount']`, only those keys appear — both regular and computed.
 :::
 
 ## Context Interfaces for Shared Behaviors

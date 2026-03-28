@@ -251,7 +251,7 @@ class NotifyShippingAction extends ActionBehavior {
 
 ## Fire-and-Forget Pattern
 
-Fire-and-forget means dispatching work without tracking the result. Use it for side effects where the parent doesn't care about the outcome.
+Fire-and-forget means dispatching work without tracking the output. Use it for side effects where the parent doesn't care about the outcome.
 
 ### Machine Delegation (stay in state)
 
@@ -319,7 +319,7 @@ class SendAlertAction extends ActionBehavior
 
 ### Choosing the Right Mechanism
 
-| Mechanism | Tracks Result | Parent Waits | Use Case |
+| Mechanism | Tracks Output | Parent Waits | Use Case |
 |-----------|--------------|-------------|----------|
 | `machine + queue` (no `@done`) | No | No | Stateful child (multiple states, webhooks) |
 | `job` + `target` | No | No | Single-step async (logging, notification) |
@@ -498,8 +498,8 @@ Each forwarded request:
 <!-- doctest-attr: ignore -->
 ```php
 // Fake multiple children for sequential orchestration
-ValidationMachine::fake(result: ['is_valid' => true]);
-PaymentMachine::fake(result: ['paymentId' => 'pay_1'], finalState: 'approved');
+ValidationMachine::fake(output: ['is_valid' => true]);
+PaymentMachine::fake(output: ['paymentId' => 'pay_1'], finalState: 'approved');
 
 OrderWorkflowMachine::test()
     ->send('START')

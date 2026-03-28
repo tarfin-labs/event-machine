@@ -32,7 +32,7 @@ No `@done`/`@fail` — the job is dispatched and the parent transitions immediat
 ],
 ```
 
-The parent does not track the job's result. If the job fails, it goes to Laravel's `failed_jobs` table.
+The parent does not track the job's output. If the job fails, it goes to Laravel's `failed_jobs` table.
 
 ## Returning Output
 
@@ -226,7 +226,7 @@ MyMachine::test()
     ->withoutPersistence()
     ->send('START')
     ->assertState('processing')
-    ->simulateChildDone(MyJob::class, result: ['status' => 'ok'])
+    ->simulateChildDone(MyJob::class, output: ['status' => 'ok'])
     ->assertState('completed');
 ```
 
@@ -238,7 +238,7 @@ This works because job actors and machine children share the same completion rou
 |------|------|
 | Verify job was dispatched | `Queue::fake()` + `Queue::assertPushed(ChildJobJob::class)` |
 | Verify dispatch data | `Queue::assertPushed(ChildJobJob::class, fn($job) => ...)` |
-| Test `@done` routing | `simulateChildDone(MyJob::class, result: [...])` |
+| Test `@done` routing | `simulateChildDone(MyJob::class, output: [...])` |
 | Test `@fail` routing | `simulateChildFail(MyJob::class, errorMessage: '...')` |
 | Test `@timeout` handling | `simulateChildTimeout(MyJob::class)` |
 | Full pipeline with Horizon | LocalQA tests |

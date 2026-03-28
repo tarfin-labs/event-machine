@@ -1,6 +1,6 @@
 # Introduction to Behaviors
 
-Behaviors are the building blocks for logic in EventMachine. They define how your machine responds to events, validates transitions, computes values, and produces results.
+Behaviors are the building blocks for logic in EventMachine. They define how your machine responds to events, validates transitions, computes values, and produces outputs.
 
 This section covers all behavior types in depth. If you're just getting started, read through [Actions](/behaviors/actions) and [Guards](/behaviors/guards) first - they're the most commonly used.
 
@@ -13,7 +13,7 @@ This section covers all behavior types in depth. If you're just getting started,
 | [Validation Guards](/behaviors/validation-guards) | Validate with error messages | `bool` |
 | [Calculators](/behaviors/calculators) | Compute values before guards | `void` |
 | [Event Behaviors](/behaviors/events) | Define event structure | Event data |
-| [Results](/behaviors/results) | Compute final state output | `mixed` |
+| [Outputs](/behaviors/outputs) | Compute final state output | `mixed` |
 
 ## Behavior Registration
 
@@ -37,8 +37,8 @@ MachineDefinition::define(
         'events' => [
             'SUBMIT' => SubmitEvent::class,
         ],
-        'results' => [
-            'getFinalResultResult' => FinalResultBehavior::class,
+        'outputs' => [
+            'getFinalResultOutput' => FinalOutputBehavior::class,
         ],
     ],
 );

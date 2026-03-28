@@ -209,12 +209,12 @@ class SubmitOrderEvent extends EventBehavior
 }
 ```
 
-## Result with Dependencies
+## Output with Dependencies
 
 ```php
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
-class OrderResultBehavior extends ResultBehavior
+class OrderOutputBehavior extends OutputBehavior
 {
     public function __construct(
         private readonly ReceiptGenerator $receipts,

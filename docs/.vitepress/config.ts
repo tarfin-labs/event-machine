@@ -116,7 +116,7 @@ export default withMermaid(
             { text: 'Validation Guards', link: '/behaviors/validation-guards' },
             { text: 'Calculators', link: '/behaviors/calculators' },
             { text: 'Events', link: '/behaviors/events' },
-            { text: 'Results', link: '/behaviors/results' },
+            { text: 'Outputs', link: '/behaviors/outputs' },
             { text: 'Dependency Injection', link: '/advanced/dependency-injection' }
           ]
         },

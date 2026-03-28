@@ -163,9 +163,9 @@ If a guard on `@done.approved` fails, resolution falls through to the `@done` ca
 When using `@done.{state}` without a `@done` catch-all, all child final states must be covered. Run `php artisan machine:validate` to verify — it throws if any child final state is uncovered.
 :::
 
-### Accessing Child Result Data
+### Accessing Child Output Data
 
-When `@done` fires, the event is a `ChildMachineDoneEvent` with typed accessors for `output()`, `result()`, `childMachineId()`, and `childMachineClass()`. When `@fail` fires, the event is a `ChildMachineFailEvent` with `errorMessage()`, `output()`, and identity accessors.
+When `@done` fires, the event is a `ChildMachineDoneEvent` with typed accessors for `output()`, `childMachineId()`, and `childMachineClass()`. When `@fail` fires, the event is a `ChildMachineFailEvent` with `errorMessage()`, `output()`, and identity accessors.
 
 See [Data Flow — `@done` Event](/advanced/delegation-data-flow#child-parent-the-done-event) and [Data Flow — `@fail` Event](/advanced/delegation-data-flow#child-parent-the-fail-event) for typed accessor examples.
 
@@ -209,7 +209,7 @@ Only meaningful in async mode. Fires when the child doesn't complete within the 
 
 ## Fire-and-Forget
 
-When you need to spawn a child machine without tracking its result, omit `@done`. The child runs independently — its completion or failure does not affect the parent.
+When you need to spawn a child machine without tracking its output, omit `@done`. The child runs independently — its completion or failure does not affect the parent.
 
 ### Stay in State (primary pattern)
 
@@ -286,7 +286,7 @@ By default, child machines run **synchronously** (inline). Add `queue` to run th
 
 **Sync vs Async:**
 - **Sync (default):** Child runs inline. Parent transitions to `@done` immediately after child completes. Simplest option.
-- **Async (queue):** Child runs on a queue worker. Parent stays in the delegating state until a `ChildMachineCompletionJob` arrives with the result.
+- **Async (queue):** Child runs on a queue worker. Parent stays in the delegating state until a `ChildMachineCompletionJob` arrives with the output.
 
 ## `forward` — Event Forwarding
 
@@ -347,8 +347,8 @@ Use `Machine::fake()` to short-circuit child machines in tests:
 ```php
 use Tarfinlabs\EventMachine\Actor\Machine;
 
-// Fake a child machine to return a specific result
-PaymentMachine::fake(result: ['paymentId' => 'pay_123']);
+// Fake a child machine to return a specific output
+PaymentMachine::fake(output: ['paymentId' => 'pay_123']);
 
 // Run the parent machine — child is short-circuited
 $machine = OrderWorkflowMachine::create();
@@ -368,7 +368,7 @@ Machine::resetMachineFakes();
 ```
 
 `Machine::fake()` options:
-- `result: array` — The result the child "returns" via `@done`
+- `output: array` — The output the child "returns" via `@done`
 - `fail: true` — Child triggers `@fail` instead of `@done`
 - `error: string` — Error message for `@fail`
 - `finalState: string` — The child's final state key — determines which `@done.{state}` route fires on the parent

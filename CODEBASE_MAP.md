@@ -40,7 +40,7 @@ graph TB
         GB[GuardBehavior]
         CB[CalculatorBehavior]
         EB[EventBehavior]
-        RB[ResultBehavior]
+        OB[OutputBehavior]
     end
 
     subgraph Jobs["src/Jobs"]
@@ -92,7 +92,7 @@ graph TB
 ```
 src/
   Actor/              Machine (runtime), State (snapshot)
-  Behavior/           InvokableBehavior, Action, Guard, Calculator, Event, Result
+  Behavior/           InvokableBehavior, Action, Guard, Calculator, Event, Output
   Casts/              MachineCast (Eloquent attribute)
   Commands/           9 artisan commands (timers, schedules, archive, xstate, cache, validate)
   Contracts/          ScheduleResolver, ReturnsResult, ProvidesFailureContext
@@ -148,7 +148,7 @@ database/             7 migration stubs
 | `TransitionDefinition.php` | Event-to-branches mapping with guard/calculator evaluation | ~3,000 |
 | `TransitionBranch.php` | One conditional path: target, guards, calculators, actions | ~1,500 |
 | `MachineInvokeDefinition.php` | Delegation config (machine/job/forward/with/queue) | ~1,500 |
-| `Machine.php` | Runtime executor — create/send/persist/restore/result/fake | ~8,000 |
+| `Machine.php` | Runtime executor — create/send/persist/restore/output/fake | ~8,000 |
 | `State.php` | Snapshot — value array, context, triggeringEvent, history | ~4,000 |
 | `ContextManager.php` | Key-value store with validation, computed methods, machine identity | ~3,000 |
 
@@ -157,7 +157,7 @@ database/             7 migration stubs
 Machine::create() → MachineDefinition::getInitialState() → State
 Machine::send()   → MachineDefinition::transition()       → State (mutated)
 Machine::persist() → MachineEvent::upsert() + syncCurrentStates()
-Machine::result()  → ResultBehavior via triggeringEvent
+Machine::output()  → OutputBehavior via triggeringEvent
 ```
 
 **Gotchas:**
@@ -177,7 +177,7 @@ Machine::result()  → ResultBehavior via triggeringEvent
 | `GuardBehavior` | `InvokableBehavior` | Boolean gate on transitions |
 | `ValidationGuardBehavior` | `GuardBehavior` | Guard with error message |
 | `CalculatorBehavior` | `InvokableBehavior` | Pre-compute before guards/actions |
-| `ResultBehavior` | `InvokableBehavior` | Final machine output |
+| `OutputBehavior` | `InvokableBehavior` | Final machine output |
 | `EventBehavior` | `Spatie\LaravelData\Data` | Event DTO (NOT in InvokableBehavior tree) |
 
 **Parameter injection** (`InvokableBehavior::injectInvokableBehaviorParameters`):
@@ -281,8 +281,8 @@ sequenceDiagram
     Machine->>DB: persist() → upsert machine_events + sync current_states
     Machine-->>App: State
 
-    App->>Machine: result()
-    Machine->>Machine: ResultBehavior(triggeringEvent)
+    App->>Machine: output()
+    Machine->>Machine: OutputBehavior(triggeringEvent)
     Machine-->>App: mixed
 ```
 

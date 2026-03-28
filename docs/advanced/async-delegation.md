@@ -70,7 +70,7 @@ OrderMachine::test()
 Queue::assertPushed(ChildMachineJob::class);
 
 // Test with faked child (sync short-circuit)
-PaymentMachine::fake(result: ['paymentId' => 'pay_123'], finalState: 'approved');
+PaymentMachine::fake(output: ['paymentId' => 'pay_123'], finalState: 'approved');
 OrderMachine::test()
     ->send('START_PAYMENT')
     ->assertState('completed');
@@ -247,7 +247,7 @@ class OrderMachine extends Machine
                         'forward' => [
                             'PROVIDE_CARD',                      // Format 1: forward as-is
                             'CONFIRM_PAYMENT' => [               // Format 3: with endpoint customization
-                                'contextKeys' => ['cardLast4', 'status'],
+                                'output' => ['cardLast4', 'status'],
                                 'status'      => 200,
                             ],
                         ],
@@ -366,8 +366,7 @@ Forward entries support the same endpoint customization keys as regular endpoint
         'method'           => 'PATCH',             // HTTP method (default: POST)
         'middleware'       => ['throttle:10'],      // Route middleware
         'action'           => CustomAction::class,  // Parent-level action lifecycle
-        'result'           => CustomResult::class,  // ResultBehavior (receives ForwardContext)
-        'contextKeys'      => ['cardLast4'],       // Filter child context in response
+        'output'           => CustomOutput::class,  // OutputBehavior (receives ForwardContext)
         'status'           => 202,                  // HTTP status code
         'available_events' => false,                // Suppress available_events in response
     ],

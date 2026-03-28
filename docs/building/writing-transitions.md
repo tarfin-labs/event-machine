@@ -473,7 +473,7 @@ MachineDefinition::define(
             ],
             'delivered' => [
                 'type' => 'final',
-                'result' => 'orderSummaryResult',
+                'output' => 'orderSummaryOutput',
             ],
             'cancelled' => [
                 'type' => 'final',
@@ -484,7 +484,7 @@ MachineDefinition::define(
         'actions' => [...],
         'guards' => [...],
         'calculators' => [...],
-        'results' => [...],
+        'outputs' => [...],
     ],
 );
 ```
