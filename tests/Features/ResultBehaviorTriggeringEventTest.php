@@ -9,7 +9,7 @@ use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 // ═══════════════════════════════════════════════════════════════
-//  ResultBehavior receives triggeringEvent, not internal events
+//  OutputBehavior receives triggeringEvent, not internal events
 // ═══════════════════════════════════════════════════════════════
 
 it('Machine::result() receives the original event payload, not internal event', function (): void {
@@ -23,7 +23,7 @@ it('Machine::result() receives the original event payload, not internal event', 
                     'idle' => ['on' => ['SUBMIT' => 'done']],
                     'done' => [
                         'type'   => 'final',
-                        'result' => fn (EventBehavior $event): array => $event->payload,
+                        'output' => fn (EventBehavior $event): array => $event->payload,
                     ],
                 ],
             ],
@@ -49,7 +49,7 @@ it('Machine::result() receives event type, not internal event type', function ()
                     'idle' => ['on' => ['COMPLETE' => 'done']],
                     'done' => [
                         'type'   => 'final',
-                        'result' => fn (EventBehavior $event): string => $event->type,
+                        'output' => fn (EventBehavior $event): string => $event->type,
                     ],
                 ],
             ],
@@ -73,7 +73,7 @@ it('Machine::result() works when no event was sent (initial final state)', funct
             'states'  => [
                 'done' => [
                     'type'   => 'final',
-                    'result' => fn (ContextManager $context, EventBehavior $event): array => [
+                    'output' => fn (ContextManager $context, EventBehavior $event): array => [
                         'value'      => $context->get('value'),
                         'event_type' => $event->type,
                     ],
@@ -108,7 +108,7 @@ it('Machine::result() preserves payload through entry actions', function (): voi
                     'done' => [
                         'type'   => 'final',
                         'entry'  => 'markProcessedAction',
-                        'result' => fn (EventBehavior $event, ContextManager $ctx): array => [
+                        'output' => fn (EventBehavior $event, ContextManager $ctx): array => [
                             'orderId'   => $event->payload['orderId'] ?? null,
                             'processed' => $ctx->get('processed'),
                         ],
@@ -148,7 +148,7 @@ it('Machine::result() preserves payload through @always chain', function (): voi
                     ],
                     'done' => [
                         'type'   => 'final',
-                        'result' => fn (EventBehavior $event): array => [
+                        'output' => fn (EventBehavior $event): array => [
                             'type'    => $event->type,
                             'payload' => $event->payload,
                         ],
@@ -179,7 +179,7 @@ it('Machine::result() receives the last triggering event in multi-step flow', fu
                     'step2' => ['on' => ['FINISH' => 'done']],
                     'done'  => [
                         'type'   => 'final',
-                        'result' => fn (EventBehavior $event): array => $event->payload,
+                        'output' => fn (EventBehavior $event): array => $event->payload,
                     ],
                 ],
             ],

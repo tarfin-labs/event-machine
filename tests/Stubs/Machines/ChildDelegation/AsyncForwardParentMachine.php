@@ -24,7 +24,7 @@ class AsyncForwardParentMachine extends Machine
                 'id'      => 'forward_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'result' => null,
+                    'output' => null,
                 ],
                 'states' => [
                     'idle' => [

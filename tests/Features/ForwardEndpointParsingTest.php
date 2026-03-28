@@ -307,9 +307,8 @@ test('it parses Format 1 + Format 2 + Format 3 in same forward array', function 
                         'PROVIDE_CARD',                                       // Format 1: plain
                         'CANCEL_ORDER'    => 'ABORT',                            // Format 2: rename
                         'CONFIRM_PAYMENT' => [                                // Format 3: full config
-                            'result'      => PaymentStepResult::class,
-                            'contextKeys' => ['cardLast4'],
-                            'status'      => 201,
+                            'output' => PaymentStepResult::class,
+                            'status' => 201,
                         ],
                     ],
                     '@done' => 'completed',

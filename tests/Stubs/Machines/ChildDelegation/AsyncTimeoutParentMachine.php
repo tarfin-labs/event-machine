@@ -23,7 +23,7 @@ class AsyncTimeoutParentMachine extends Machine
                 'id'      => 'timeout_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'result'  => null,
+                    'output'  => null,
                     'error'   => null,
                     'timeout' => false,
                 ],

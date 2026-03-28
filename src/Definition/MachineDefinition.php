@@ -223,7 +223,6 @@ class MachineDefinition
                 is_string($endpoint->output)
                 && !class_exists($endpoint->output)
                 && !isset($this->behavior['outputs'][$endpoint->output])
-                && !isset($this->behavior['results'][$endpoint->output])
             ) {
                 throw InvalidEndpointDefinitionException::undefinedResult($endpoint->output);
             }
@@ -346,16 +345,9 @@ class MachineDefinition
         ?array $endpoints = null,
         ?array $schedules = null,
     ): self {
-        // Normalize: accept both 'outputs' (v9) and 'results' (v8) — merge into 'outputs'
-        $normalizedBehavior = $behavior ?? [];
-        if (isset($normalizedBehavior['results']) && !isset($normalizedBehavior['outputs'])) {
-            $normalizedBehavior['outputs'] = $normalizedBehavior['results'];
-            unset($normalizedBehavior['results']);
-        }
-
         return new self(
             config: $config ?? null,
-            behavior: array_merge(self::initializeEmptyBehavior(), $normalizedBehavior),
+            behavior: array_merge(self::initializeEmptyBehavior(), $behavior ?? []),
             id: $config['id'] ?? self::DEFAULT_ID,
             version: $config['version'] ?? null,
             scenarios: $scenarios,

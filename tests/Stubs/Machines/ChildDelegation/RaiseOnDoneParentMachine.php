@@ -23,7 +23,7 @@ class RaiseOnDoneParentMachine extends Machine
                 'id'      => 'raise_on_done_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'result' => null,
+                    'output' => null,
                 ],
                 'states' => [
                     'idle' => [

@@ -96,7 +96,7 @@ it('toResponseArray does NOT include dynamic context keys — use typed ContextM
     //
     // This is expected behavior, not a bug. For endpoint responses:
     // - Use a typed ContextManager subclass with declared properties, OR
-    // - Use a ResultBehavior that reads via $context->get('key')
+    // - Use a OutputBehavior that reads via $context->get('key')
 
     $machine = AlwaysInParallelRegionMachine::create();
     $machine->send(['type' => 'START']);

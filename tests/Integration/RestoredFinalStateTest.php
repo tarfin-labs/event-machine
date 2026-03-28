@@ -34,7 +34,7 @@ it('restored machine at final state reports final type and result works', functi
                 ],
                 'completed' => [
                     'type'   => 'final',
-                    'result' => function (ContextManager $ctx): array {
+                    'output' => function (ContextManager $ctx): array {
                         return ['total' => $ctx->get('amount'), 'status' => 'done'];
                     },
                 ],

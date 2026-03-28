@@ -21,12 +21,12 @@ it('injects ContextManager into result behavior', function (): void {
             'states'  => [
                 'done' => [
                     'type'   => 'final',
-                    'result' => 'contextResult',
+                    'output' => 'contextResult',
                 ],
             ],
         ],
         behavior: [
-            'results' => [
+            'outputs' => [
                 'done' => fn (ContextManager $context): int => $context->get('value'),
             ],
         ],
@@ -63,12 +63,12 @@ it('injects EventBehavior into result behavior', function (): void {
                 'idle' => ['on' => ['FINISH' => 'done']],
                 'done' => [
                     'type'   => 'final',
-                    'result' => 'eventResult',
+                    'output' => 'eventResult',
                 ],
             ],
         ],
         behavior: [
-            'results' => [
+            'outputs' => [
                 'done' => fn (ContextManager $context, EventBehavior $event): bool => $event instanceof EventBehavior,
             ],
         ],
@@ -100,7 +100,7 @@ it('injects parameters regardless of order (reversed)', function (): void {
             ],
         ],
         behavior: [
-            'results' => [
+            'outputs' => [
                 // Reversed order: Event first, Context second
                 // Injection should resolve by type, not position
                 'done' => fn (EventBehavior $event, ContextManager $context): array => [
@@ -139,7 +139,7 @@ it('injects State into result behavior', function (): void {
             ],
         ],
         behavior: [
-            'results' => [
+            'outputs' => [
                 'done' => fn (ContextManager $context, State $state): array => $state->value,
             ],
         ],
@@ -169,7 +169,7 @@ it('works with no parameters', function (): void {
             ],
         ],
         behavior: [
-            'results' => [
+            'outputs' => [
                 'done' => fn (): string => 'hello',
             ],
         ],
@@ -202,7 +202,7 @@ it('Machine::result() uses injection for FQCN result class', function (): void {
                 'idle' => ['on' => ['GO' => 'done']],
                 'done' => [
                     'type'   => 'final',
-                    'result' => GreenResult::class,
+                    'output' => GreenResult::class,
                 ],
             ],
         ],
@@ -224,7 +224,7 @@ it('Machine::result() uses injection for closure result', function (): void {
             'states'  => [
                 'done' => [
                     'type'   => 'final',
-                    'result' => fn (ContextManager $context): int => $context->get('total'),
+                    'output' => fn (ContextManager $context): int => $context->get('total'),
                 ],
             ],
         ],

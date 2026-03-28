@@ -20,7 +20,7 @@ class StateConfigValidator
     private const ALLOWED_LISTEN_KEYS = ['entry', 'exit', 'transition'];
 
     private const ALLOWED_STATE_KEYS = [
-        'id', 'on', 'states', 'initial', 'type', 'meta', 'entry', 'exit', 'description', 'result', '@done', '@fail',
+        'id', 'on', 'states', 'initial', 'type', 'meta', 'entry', 'exit', 'description', 'output', '@done', '@fail',
         'machine', 'with', 'forward', 'queue', 'connection', '@timeout', 'retry', 'output',
         'job', 'target',
     ];
@@ -543,7 +543,7 @@ class StateConfigValidator
 
         // Validate Format 3 forward array entries
         if (!empty($stateConfig['forward'])) {
-            $allowedForwardKeys = ['child_event', 'uri', 'method', 'middleware', 'action', 'output', 'result', 'contextKeys', 'status', 'available_events'];
+            $allowedForwardKeys = ['child_event', 'uri', 'method', 'middleware', 'action', 'output', 'status', 'available_events'];
 
             foreach ($stateConfig['forward'] as $key => $value) {
                 if (is_string($key) && is_array($value)) {

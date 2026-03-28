@@ -1530,7 +1530,7 @@ it('V29: State::lastChildDoneRoute set by routeChildDoneEvent (direct routing te
 
     // Route a @done.approved event directly
     $doneEvent = ChildMachineDoneEvent::forChild([
-        'result'        => ['decision' => 'yes'],
+        'output'        => ['decision' => 'yes'],
         'output'        => ['decision' => 'yes'],
         'machine_id'    => '',
         'machine_class' => MultiOutcomeChildMachine::class,
@@ -1565,7 +1565,7 @@ it('V30: State::lastChildDoneRoute is null for catch-all @done', function (): vo
 
     // Route with an unknown finalState that doesn't match any @done.{state}
     $doneEvent = ChildMachineDoneEvent::forChild([
-        'result'        => [],
+        'output'        => [],
         'output'        => [],
         'machine_id'    => '',
         'machine_class' => MultiOutcomeChildMachine::class,

@@ -27,7 +27,7 @@ it('ignores @done after @timeout — parent stays in timed_out', function (): vo
             'id'      => 'done_after_timeout',
             'initial' => 'idle',
             'context' => [
-                'result'  => null,
+                'output'  => null,
                 'timeout' => false,
             ],
             'states' => [

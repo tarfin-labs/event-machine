@@ -26,7 +26,7 @@ class AsyncAutoCompleteParentMachine extends Machine
                 'initial' => 'idle',
                 'context' => [
                     'orderId' => null,
-                    'result'  => null,
+                    'output'  => null,
                     'error'   => null,
                 ],
                 'states' => [

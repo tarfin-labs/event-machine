@@ -24,7 +24,7 @@ class ThreeLevelParentMachine extends Machine
                 'id'      => 'three_level_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'result' => null,
+                    'output' => null,
                     'error'  => null,
                 ],
                 'states' => [

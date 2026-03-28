@@ -155,7 +155,7 @@ test('machineId-bound endpoints allow sequential transitions', function (): void
     expect($cancelResponse->json('data.state'))->toContain('test_endpoint.cancelled');
 });
 
-// ─── Endpoint with ResultBehavior ─────────────────────────────────────
+// ─── Endpoint with OutputBehavior ─────────────────────────────────────
 
 test('endpoint with result behavior returns custom response with custom status', function (): void {
     // Create machine and transition to 'started'

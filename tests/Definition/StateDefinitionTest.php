@@ -576,13 +576,13 @@ test('a machine can have outputs on final states', function (string $eventType):
                 ],
                 'yellow' => [
                     'type'   => 'final',
-                    'result' => function (): Carbon {
+                    'output' => function (): Carbon {
                         return now();
                     },
                 ],
                 'green' => [
                     'type'   => 'final',
-                    'result' => GreenResult::class,
+                    'output' => GreenResult::class,
                 ],
             ],
         ],

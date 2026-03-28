@@ -65,8 +65,7 @@ class EndpointDefinition
         $config ??= [];
         $uri = $config['uri'] ?? self::generateUri($eventType);
 
-        // Resolve output: 'output' (v9) > 'result' (v8 class ref) > 'contextKeys' (v8 array filter)
-        $output = $config['output'] ?? $config['result'] ?? $config['contextKeys'] ?? null;
+        $output = $config['output'] ?? null;
 
         return new self(
             eventType: $eventType,

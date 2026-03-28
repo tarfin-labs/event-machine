@@ -98,7 +98,7 @@ it('LocalQA: forward via HTTP endpoint delivers PROVIDE_CARD to async child', fu
     expect($childContext['data']['cardLast4'] ?? $childContext['cardLast4'] ?? null)->toBe('4242');
 });
 
-it('LocalQA: forward via HTTP with ResultBehavior returns custom response', function (): void {
+it('LocalQA: forward via HTTP with OutputBehavior returns custom response', function (): void {
     $machineId = createAndStartParent($this);
 
     // Step 1: Forward PROVIDE_CARD (no result, default response)
@@ -254,10 +254,10 @@ it('LocalQA: forward with custom URI + method + action works via real HTTP', fun
 });
 
 // ═══════════════════════════════════════════════════════════════
-//  P1: Parent ResultBehavior receives both parent and child context
+//  P1: Parent OutputBehavior receives both parent and child context
 // ═══════════════════════════════════════════════════════════════
 
-it('LocalQA: parent ResultBehavior receives both parent and child context via HTTP', function (): void {
+it('LocalQA: parent OutputBehavior receives both parent and child context via HTTP', function (): void {
     $machineId = createAndStartParent($this);
 
     // Forward PROVIDE_CARD → child stores card_last4

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint;
 
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 
-class TestEndpointResult extends ResultBehavior
+class TestEndpointResult extends OutputBehavior
 {
     public function __invoke(ContextManager $context): array
     {

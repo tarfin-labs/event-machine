@@ -38,7 +38,7 @@ class TestEndpointMachine extends Machine
                     'COMPLETE' => TestCompleteEvent::class,
                     'CANCEL'   => TestCancelEvent::class,
                 ],
-                'results' => [
+                'outputs' => [
                     'testEndpointResult' => TestEndpointResult::class,
                 ],
             ],
@@ -47,7 +47,7 @@ class TestEndpointMachine extends Machine
                     'action' => TestEndpointAction::class,
                 ],
                 'COMPLETE' => [
-                    'result' => 'testEndpointResult',
+                    'output' => 'testEndpointResult',
                     'status' => 201,
                 ],
                 TestCancelEvent::class,

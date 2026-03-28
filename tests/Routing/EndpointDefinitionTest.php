@@ -62,7 +62,7 @@ test('it creates an endpoint from array config with all options', function (): v
         'uri'        => '/custom-farmer',
         'method'     => 'PUT',
         'action'     => 'App\\Actions\\SaveFarmer',
-        'result'     => 'farmerResultBehavior',
+        'output'     => 'farmerResultBehavior',
         'middleware' => ['auth', 'throttle'],
         'status'     => 201,
     ]);

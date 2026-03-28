@@ -24,7 +24,7 @@ class AlwaysOnDoneParentMachine extends Machine
                 'id'      => 'always_on_done_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'result' => null,
+                    'output' => null,
                 ],
                 'states' => [
                     'idle' => [

@@ -182,7 +182,7 @@ class MachineInvokeDefinition
                 uri: $config['uri'] ?? EndpointDefinition::generateUri($parentEventType),
                 method: $config['method'] ?? 'POST',
                 actionClass: $config['action'] ?? null,
-                output: $config['output'] ?? $config['result'] ?? $config['contextKeys'] ?? null,
+                output: $config['output'] ?? null,
                 statusCode: $config['status'] ?? null,
                 middleware: $config['middleware'] ?? [],
                 availableEvents: $config['available_events'] ?? null,

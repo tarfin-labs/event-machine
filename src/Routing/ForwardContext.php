@@ -10,7 +10,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 /**
  * Type-safe wrapper that carries child machine state for forward endpoint injection.
  *
- * Type-hint this in a ResultBehavior's __invoke() to access the child's
+ * Type-hint this in an OutputBehavior's __invoke() to access the child's
  * context and state when processing a forwarded endpoint response.
  * Only available in forward endpoint context — not injected in regular endpoints.
  */

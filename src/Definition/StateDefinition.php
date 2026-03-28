@@ -246,15 +246,11 @@ class StateDefinition
     }
 
     /**
-     * Initialize the results for the current state.
-     *
-     * Registers the result/output behavior in the machine's behavior registry.
-     * Accepts both 'result' (v8 compat) and 'output' (v9) config keys.
-     * The 'output' key takes precedence if both are present.
+     * Initialize the output behavior for the current state in the behavior registry.
      */
     protected function initializeResults(): void
     {
-        $outputDef = $this->config['output'] ?? $this->config['result'] ?? null;
+        $outputDef = $this->config['output'] ?? null;
 
         if ($outputDef !== null) {
             $this->machine->behavior[BehaviorType::Output->value][$this->id] = $outputDef;

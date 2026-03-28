@@ -76,7 +76,7 @@ it('transfers context to child via with array (same-name format)', function (): 
         behavior: [
             'actions' => [
                 'captureResultAction' => function (ContextManager $context, EventBehavior $event): void {
-                    $context->set('receivedOrderId', $event->payload['output']['orderId'] ?? null);
+                    $context->set('receivedOrderId', $event->payload['output']['amount'] ?? null);
                 },
             ],
         ],
@@ -86,7 +86,7 @@ it('transfers context to child via with array (same-name format)', function (): 
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
 
     expect($state->value)->toBe(['parent_with.done'])
-        ->and($state->context->get('receivedOrderId'))->toBe('ORD-123');
+        ->and($state->context->get('receivedOrderId'))->toBe(5000);
 });
 
 it('transfers context to child via with key mapping format', function (): void {
@@ -836,7 +836,7 @@ it('ChildMachineDoneEvent.finalState() returns key not full ID (T7)', function (
 
 it('ChildMachineDoneEvent.finalState() returns null for legacy events (T8)', function (): void {
     $event = ChildMachineDoneEvent::forChild([
-        'result'        => null,
+        'output'        => null,
         'output'        => [],
         'machine_id'    => 'test-123',
         'machine_class' => ImmediateChildMachine::class,

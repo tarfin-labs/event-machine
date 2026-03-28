@@ -254,10 +254,10 @@ test('sequential forward events advance child through multiple states', function
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-//  Happy Path: ResultBehavior with ForwardContext
+//  Happy Path: OutputBehavior with ForwardContext
 // ═══════════════════════════════════════════════════════════════════════
 
-test('it runs parent ResultBehavior and returns custom response', function (): void {
+test('it runs parent OutputBehavior and returns custom response', function (): void {
     $machineId = createAndStartForwardMachine($this);
 
     // First forward PROVIDE_CARD to set up child state

@@ -9,7 +9,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 /**
- * Child machine with ResultBehavior that returns status from context.
+ * Child machine with OutputBehavior that returns status from context.
  * Immediately completes with a result.
  */
 class ResultChildMachine extends Machine
@@ -27,7 +27,7 @@ class ResultChildMachine extends Machine
                 'states' => [
                     'done' => [
                         'type'   => 'final',
-                        'result' => function (ContextManager $ctx): array {
+                        'output' => function (ContextManager $ctx): array {
                             return [
                                 'status'    => $ctx->get('status'),
                                 'paymentId' => $ctx->get('paymentId'),

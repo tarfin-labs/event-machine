@@ -235,9 +235,9 @@ class MachineController extends Controller
     }
 
     /**
-     * Resolve and run a ResultBehavior using the InvokableBehavior parameter injection pattern.
+     * Resolve and run a OutputBehavior using the InvokableBehavior parameter injection pattern.
      *
-     * When a ForwardContext is provided, it is injected into the ResultBehavior
+     * When a ForwardContext is provided, it is injected into the OutputBehavior
      * so it can access the child machine's state and context.
      */
     protected function resolveAndRunResult(
@@ -248,7 +248,7 @@ class MachineController extends Controller
     ): mixed {
         $resultClass = class_exists($resultKey)
             ? $resultKey
-            : ($machine->definition->behavior['outputs'][$resultKey] ?? $machine->definition->behavior['results'][$resultKey] ?? null);
+            : ($machine->definition->behavior['outputs'][$resultKey] ?? null);
 
         if ($resultClass === null) {
             throw new \RuntimeException("Result behavior '{$resultKey}' not found.");

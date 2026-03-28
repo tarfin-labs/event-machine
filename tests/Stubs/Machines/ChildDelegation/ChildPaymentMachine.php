@@ -13,7 +13,7 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
  *
  * Flow: processing → completed (final) via @always auto-transition.
  * Entry action sets payment_id and receipt_url, then auto-transitions.
- * Has a ResultBehavior that returns payment result data.
+ * Has a OutputBehavior that returns payment result data.
  */
 class ChildPaymentMachine extends Machine
 {
@@ -38,7 +38,7 @@ class ChildPaymentMachine extends Machine
                     ],
                     'completed' => [
                         'type'   => 'final',
-                        'result' => function (ContextManager $context): array {
+                        'output' => function (ContextManager $context): array {
                             return [
                                 'paymentId'  => $context->get('paymentId'),
                                 'receiptUrl' => $context->get('receiptUrl'),

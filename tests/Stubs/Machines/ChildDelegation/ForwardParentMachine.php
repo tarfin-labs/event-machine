@@ -27,7 +27,7 @@ class ForwardParentMachine extends Machine
                 'id'      => 'forward_parent_v2',
                 'initial' => 'idle',
                 'context' => [
-                    'result' => null,
+                    'output' => null,
                 ],
                 'states' => [
                     'idle' => [

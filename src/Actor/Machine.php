@@ -51,7 +51,7 @@ class Machine implements Castable, JsonSerializable, Stringable
     /** Whether parallel region jobs were dispatched to the queue in this lifecycle */
     public bool $dispatched = false;
 
-    /** @var array<class-string, array{result: mixed, output: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>, creations: list<array>, sends: list<array>}> Machine-level fakes for testing. */
+    /** @var array<class-string, array{output: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>, creations: list<array>, sends: list<array>}> Machine-level fakes for testing. */
     private static array $machineFakes = [];
 
     /**
@@ -178,7 +178,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         $machine->isFakedInstance           = true;
 
         $machine->state = new State(
-            context: new ContextManager(data: $fake['result'] ?? []),
+            context: new ContextManager(data: $fake['output'] ?? []),
             currentStateDefinition: null,
         );
 
@@ -795,7 +795,6 @@ class Machine implements Castable, JsonSerializable, Stringable
         ?string $finalState = null,
     ): void {
         self::$machineFakes[static::class] = [
-            'result'      => $result,
             'output'      => $output ?? $result,
             'fail'        => $fail,
             'error'       => $error,
@@ -817,7 +816,7 @@ class Machine implements Castable, JsonSerializable, Stringable
     /**
      * Get the fake configuration for a machine class.
      *
-     * @return array{result: mixed, output: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>, creations: list<array>, sends: list<array>}|null
+     * @return array{output: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>, creations: list<array>, sends: list<array>}|null
      */
     public static function getMachineFake(?string $class = null): ?array
     {
