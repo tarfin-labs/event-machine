@@ -162,6 +162,19 @@ class ExportXStateCommand extends Command
             $node['meta'] = $stateDefinition->meta;
         }
 
+        // Output — XState v5 only supports machine-level output, not per-state.
+        // Export per-state output as meta.output for EventMachine-specific tooling.
+        if ($stateDefinition->output !== null) {
+            $outputValue = match (true) {
+                is_array($stateDefinition->output)           => $stateDefinition->output,
+                is_string($stateDefinition->output)          => ['type' => class_basename($stateDefinition->output)],
+                $stateDefinition->output instanceof \Closure => '<inline closure>',
+            };
+
+            $node['meta'] ??= [];
+            $node['meta']['output'] = $outputValue;
+        }
+
         // Child states
         if ($stateDefinition->stateDefinitions !== null) {
             // Initial state (not for parallel)
