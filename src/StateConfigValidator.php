@@ -543,7 +543,7 @@ class StateConfigValidator
 
         // Validate Format 3 forward array entries
         if (!empty($stateConfig['forward'])) {
-            $allowedForwardKeys = ['child_event', 'uri', 'method', 'middleware', 'action', 'result', 'contextKeys', 'status', 'available_events'];
+            $allowedForwardKeys = ['child_event', 'uri', 'method', 'middleware', 'action', 'output', 'result', 'contextKeys', 'status', 'available_events'];
 
             foreach ($stateConfig['forward'] as $key => $value) {
                 if (is_string($key) && is_array($value)) {
