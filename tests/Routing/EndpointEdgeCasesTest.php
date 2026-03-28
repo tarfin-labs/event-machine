@@ -174,11 +174,11 @@ test('handleModelBound with empty parameterNames throws descriptive error', func
 // ═══════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════
-//  contextKeys filtering in default response
+//  output filtering in default response
 // ═══════════════════════════════════════════════════════════════
 
-test('endpoint with contextKeys filters response context', function (): void {
-    // Register route that passes _context_keys via defaults
+test('endpoint with output array filters response', function (): void {
+    // Register route that passes _output via defaults
     Route::post('/api/filtered/{machineId}/start', [MachineController::class, 'handleMachineIdBound'])
         ->defaults('_machine_class', TestEndpointMachine::class)
         ->defaults('_event_type', 'START')
@@ -195,15 +195,15 @@ test('endpoint with contextKeys filters response context', function (): void {
     $response->assertStatus(200);
     $context = $response->json('data.output');
 
-    // Context should only contain keys listed in _context_keys (empty because machine has no 'allowed_key')
+    // Context should only contain keys listed in _output (empty because machine has no 'allowed_key')
     expect($context)->toBe([]);
 });
 
-test('endpoint without contextKeys returns full context (backwards compat)', function (): void {
+test('endpoint without output returns full context via fallback', function (): void {
     $createResponse = $this->postJson('/api/edge/create');
     $machineId      = $createResponse->json('data.id');
 
-    // Use default START route (no _context_keys set)
+    // Use default START route (no _output set)
     $response = $this->postJson("/api/edge/{$machineId}/start");
 
     $response->assertStatus(200);

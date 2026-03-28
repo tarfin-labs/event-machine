@@ -62,7 +62,7 @@ test('it creates an endpoint from array config with all options', function (): v
         'uri'        => '/custom-farmer',
         'method'     => 'PUT',
         'action'     => 'App\\Actions\\SaveFarmer',
-        'output'     => 'farmerResultBehavior',
+        'output'     => 'farmerOutput',
         'middleware' => ['auth', 'throttle'],
         'status'     => 201,
     ]);
@@ -71,7 +71,7 @@ test('it creates an endpoint from array config with all options', function (): v
         ->and($endpoint->uri)->toBe('/custom-farmer')
         ->and($endpoint->method)->toBe('PUT')
         ->and($endpoint->actionClass)->toBe('App\\Actions\\SaveFarmer')
-        ->and($endpoint->output)->toBe('farmerResultBehavior')
+        ->and($endpoint->output)->toBe('farmerOutput')
         ->and($endpoint->middleware)->toBe(['auth', 'throttle'])
         ->and($endpoint->statusCode)->toBe(201);
 });

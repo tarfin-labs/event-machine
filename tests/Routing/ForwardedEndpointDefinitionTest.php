@@ -15,7 +15,7 @@ test('it constructs with all properties', function (): void {
         uri: '/forward/provide-card',
         method: 'PUT',
         actionClass: 'App\\Actions\\StoreCard',
-        output: 'cardResultBehavior',
+        output: 'cardOutput',
         statusCode: 201,
         middleware: ['auth', 'throttle'],
         availableEvents: true,
@@ -28,7 +28,7 @@ test('it constructs with all properties', function (): void {
         ->and($definition->uri)->toBe('/forward/provide-card')
         ->and($definition->method)->toBe('PUT')
         ->and($definition->actionClass)->toBe('App\\Actions\\StoreCard')
-        ->and($definition->output)->toBe('cardResultBehavior')
+        ->and($definition->output)->toBe('cardOutput')
         ->and($definition->statusCode)->toBe(201)
         ->and($definition->middleware)->toBe(['auth', 'throttle'])
         ->and($definition->availableEvents)->toBeTrue();
