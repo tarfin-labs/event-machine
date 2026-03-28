@@ -4,4 +4,4 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Behavior;
 
-abstract class ResultBehavior extends OutputBehavior {}
+abstract class OutputBehavior extends InvokableBehavior {}
