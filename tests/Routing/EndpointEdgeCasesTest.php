@@ -182,7 +182,7 @@ test('endpoint with contextKeys filters response context', function (): void {
     Route::post('/api/filtered/{machineId}/start', [MachineController::class, 'handleMachineIdBound'])
         ->defaults('_machine_class', TestEndpointMachine::class)
         ->defaults('_event_type', 'START')
-        ->defaults('_context_keys', ['allowed_key']);
+        ->defaults('_output', ['allowed_key']);
 
     Route::getRoutes()->refreshNameLookups();
     Route::getRoutes()->refreshActionLookups();

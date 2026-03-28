@@ -1779,7 +1779,6 @@ class MachineDefinition
                 childMachineClass: $childMachineClass,
                 childRootEventId: $childRecord->child_root_event_id,
                 success: true,
-                result: $childMachine->result(),
                 childContextData: $childMachine->state->context->data,
                 outputData: self::resolveChildOutput(
                     $childMachine->state->currentStateDefinition,
@@ -1825,7 +1824,7 @@ class MachineDefinition
      * If `output` is a Closure, calls it with the context manager.
      * If `output` is null, returns null (caller falls back to full context).
      */
-    public static function resolveChildOutput(StateDefinition $finalState, ContextManager $context): ?array
+    public static function resolveChildOutput(StateDefinition $finalState, ContextManager $context): mixed
     {
         if ($finalState->output === null) {
             return null;
@@ -1833,6 +1832,13 @@ class MachineDefinition
 
         if ($finalState->output instanceof \Closure) {
             return ($finalState->output)($context);
+        }
+
+        // String — OutputBehavior class reference. Resolve and invoke with context.
+        if (is_string($finalState->output)) {
+            $behavior = resolve($finalState->output);
+
+            return $behavior($context);
         }
 
         // Array of key names — filter context to those keys

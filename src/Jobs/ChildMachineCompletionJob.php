@@ -42,11 +42,10 @@ class ChildMachineCompletionJob implements ShouldQueue
      * @param  string  $childMachineClass  FQCN of the child machine.
      * @param  string|null  $childRootEventId  The child's root_event_id (null on pre-start failure).
      * @param  bool  $success  Whether the child completed successfully.
-     * @param  mixed  $result  The child's ResultBehavior output (for @done).
-     * @param  array  $childContextData  The child's final context data (for @done).
+     * @param  array  $childContextData  The child's final context data (for @done fallback).
      * @param  string|null  $errorMessage  Error message (for @fail).
      * @param  int|string|null  $errorCode  Error code from the exception (for @fail).
-     * @param  array|null  $outputData  The child's filtered output (from final state `output` key).
+     * @param  array|null  $outputData  The child's output (from final state `output` behavior or key filter).
      */
     public function __construct(
         public readonly string $parentRootEventId,
@@ -55,7 +54,6 @@ class ChildMachineCompletionJob implements ShouldQueue
         public readonly string $childMachineClass,
         public readonly ?string $childRootEventId = null,
         public readonly bool $success = true,
-        public readonly mixed $result = null,
         public readonly array $childContextData = [],
         public readonly ?string $errorMessage = null,
         public readonly int|string|null $errorCode = null,
@@ -135,7 +133,7 @@ class ChildMachineCompletionJob implements ShouldQueue
                 );
 
                 $doneEvent = ChildMachineDoneEvent::forChild([
-                    'output'        => $this->outputData ?? $this->result,
+                    'output'        => $this->outputData ?? $this->childContextData,
                     'machine_id'    => $this->childRootEventId ?? '',
                     'machine_class' => $this->childMachineClass,
                     'final_state'   => $this->childFinalState,
@@ -232,7 +230,6 @@ class ChildMachineCompletionJob implements ShouldQueue
             childMachineClass: $childRecord->child_machine_class,
             childRootEventId: $rootEventId,
             success: true,
-            result: $machine->result(),
             childContextData: $machine->state->context->data,
             outputData: MachineDefinition::resolveChildOutput(
                 $machine->state->currentStateDefinition,

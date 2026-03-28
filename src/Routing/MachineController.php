@@ -96,9 +96,9 @@ class MachineController extends Controller
 
         $event = $this->resolveEvent($machine, $defaults['_event_type'], $request);
 
-        $outputDef   = $defaults['_output'] ?? $defaults['_result_behavior'] ?? null;
+        $outputDef   = $defaults['_output'] ?? null;
         $resultKey   = is_string($outputDef) ? $outputDef : null;
-        $contextKeys = is_array($outputDef) ? $outputDef : ($defaults['_context_keys'] ?? null);
+        $contextKeys = is_array($outputDef) ? $outputDef : null;
 
         return $this->executeEndpoint(
             machine: $machine,
@@ -374,7 +374,7 @@ class MachineController extends Controller
      */
     protected function buildForwardedResponse(Machine $machine, State $state, array $defaults): JsonResponse
     {
-        $outputDef   = $defaults['_output'] ?? $defaults['_result_behavior'] ?? null;
+        $outputDef   = $defaults['_output'] ?? null;
         $resultKey   = is_string($outputDef) ? $outputDef : null;
         $contextKeys = is_array($outputDef) ? $outputDef : null;
         $statusCode  = $defaults['_status_code'] ?? 200;
@@ -465,7 +465,6 @@ class MachineController extends Controller
             childMachineClass: $childRecord->child_machine_class,
             childRootEventId: $rootEventId,
             success: true,
-            result: null,
             childContextData: $state->context->data,
             outputData: MachineDefinition::resolveChildOutput(
                 $state->currentStateDefinition,

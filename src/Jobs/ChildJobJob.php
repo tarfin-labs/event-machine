@@ -81,7 +81,6 @@ class ChildJobJob implements ShouldQueue
             childMachineClass: $this->jobClass,
             childRootEventId: null,
             success: true,
-            result: null,
             childContextData: [],
             outputData: $result,
         ));
