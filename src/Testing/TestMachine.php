@@ -1754,12 +1754,11 @@ class TestMachine
      * Simulate async child completion without real queues.
      *
      * Works for both machine delegation (`machine:` key) and job actors (`job:` key).
-     * The `result` parameter populates both `output()` and `result()` accessors,
-     * matching Machine::fake() behavior.
+     * The `output` parameter populates the `output()` accessor on ChildMachineDoneEvent.
      */
     public function simulateChildDone(
         string $childClass,
-        array $result = [],
+        array $output = [],
         ?string $finalState = null,
     ): self {
         $stateDefinition = $this->machine->state->currentStateDefinition;
@@ -1778,8 +1777,7 @@ class TestMachine
         );
 
         $doneEvent = ChildMachineDoneEvent::forChild([
-            'result'        => $result,
-            'output'        => $result,
+            'output'        => $output,
             'machine_id'    => '',
             'machine_class' => $childClass,
             'final_state'   => $finalState,
