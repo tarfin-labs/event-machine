@@ -224,7 +224,7 @@ class MachineDefinition
                 && !class_exists($endpoint->output)
                 && !isset($this->behavior['outputs'][$endpoint->output])
             ) {
-                throw InvalidEndpointDefinitionException::undefinedResult($endpoint->output);
+                throw InvalidEndpointDefinitionException::undefinedOutput($endpoint->output);
             }
 
             if (
