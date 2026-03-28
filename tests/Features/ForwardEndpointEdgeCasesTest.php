@@ -14,7 +14,7 @@ use Tarfinlabs\EventMachine\Routing\ForwardedEndpointDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\AbortEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ProvideCardEvent;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\PaymentStepResult;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\PaymentStepOutput;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ForwardEndpointAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\RenameForwardParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ForwardChildEndpointMachine;
@@ -476,7 +476,7 @@ test('ForwardedEndpointDefinition stores all constructor parameters correctly', 
         uri: '/custom-form',
         method: 'PUT',
         actionClass: ForwardEndpointAction::class,
-        output: PaymentStepResult::class,
+        output: PaymentStepOutput::class,
         statusCode: 201,
         middleware: ['auth', 'throttle:5'],
         availableEvents: true,
@@ -489,7 +489,7 @@ test('ForwardedEndpointDefinition stores all constructor parameters correctly', 
         ->and($fwd->uri)->toBe('/custom-form')
         ->and($fwd->method)->toBe('PUT')
         ->and($fwd->actionClass)->toBe(ForwardEndpointAction::class)
-        ->and($fwd->output)->toBe(PaymentStepResult::class)
+        ->and($fwd->output)->toBe(PaymentStepOutput::class)
         ->and($fwd->statusCode)->toBe(201)
         ->and($fwd->middleware)->toBe(['auth', 'throttle:5'])
         ->and($fwd->availableEvents)->toBeTrue();

@@ -35,7 +35,7 @@ class FullConfigForwardParentMachine extends Machine
                                 'method'           => 'PATCH',
                                 'middleware'       => ['throttle:10'],
                                 'action'           => ForwardEndpointAction::class,
-                                'output'           => PaymentStepResult::class,
+                                'output'           => PaymentStepOutput::class,
                                 'status'           => 202,
                                 'available_events' => false,
                             ],
@@ -52,7 +52,7 @@ class FullConfigForwardParentMachine extends Machine
                     'START' => TestStartEvent::class,
                 ],
                 'outputs' => [
-                    'paymentStepResult' => PaymentStepResult::class,
+                    'paymentStepOutput' => PaymentStepOutput::class,
                 ],
             ],
             endpoints: ['START'],

@@ -106,7 +106,7 @@ it('LocalQA: forward via HTTP with OutputBehavior returns custom response', func
         'payload' => ['cardNumber' => '4242424242424242'],
     ])->assertStatus(200);
 
-    // Step 2: Forward CONFIRM_PAYMENT (has result: PaymentStepResult)
+    // Step 2: Forward CONFIRM_PAYMENT (has result: PaymentStepOutput)
     $response = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
         'payload' => ['confirmationCode' => 'ABC123'],
     ]);
@@ -115,7 +115,7 @@ it('LocalQA: forward via HTTP with OutputBehavior returns custom response', func
 
     $data = $response->json('data');
 
-    // PaymentStepResult returns: order_id, card_last4, child_step
+    // PaymentStepOutput returns: order_id, card_last4, child_step
     expect($data)->toHaveKey('cardLast4')
         ->and($data['cardLast4'])->toBe('4242');
     expect($data)->toHaveKey('childStep');
@@ -265,7 +265,7 @@ it('LocalQA: parent OutputBehavior receives both parent and child context via HT
         'payload' => ['cardNumber' => '5555555555554444'],
     ])->assertStatus(200);
 
-    // Forward CONFIRM_PAYMENT (has result: PaymentStepResult using ForwardContext)
+    // Forward CONFIRM_PAYMENT (has result: PaymentStepOutput using ForwardContext)
     $response = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
         'payload' => ['confirmationCode' => 'CTX-TEST'],
     ]);
@@ -273,7 +273,7 @@ it('LocalQA: parent OutputBehavior receives both parent and child context via HT
     $response->assertStatus(200);
     $data = $response->json('data');
 
-    // PaymentStepResult reads parent context (order_id) and child context (card_last4)
+    // PaymentStepOutput reads parent context (order_id) and child context (card_last4)
     // order_id comes from parent context (default null)
     expect($data)->toHaveKey('orderId')
         ->and($data)->toHaveKey('cardLast4')
@@ -381,7 +381,7 @@ it('LocalQA: ForwardContext carries correct child data through real async flow',
         'payload' => ['cardNumber' => '9876543210987654'],
     ])->assertStatus(200);
 
-    // Forward CONFIRM_PAYMENT (uses PaymentStepResult with ForwardContext)
+    // Forward CONFIRM_PAYMENT (uses PaymentStepOutput with ForwardContext)
     $response = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
         'payload' => ['confirmationCode' => 'FC-VERIFY'],
     ]);

@@ -9,7 +9,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestNoEndpointMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\AbortEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ProvideCardEvent;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\PaymentStepResult;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\PaymentStepOutput;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ConfirmPaymentEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ForwardEndpointAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\FqcnForwardParentMachine;
@@ -147,11 +147,11 @@ test('it parses full array forward with result (now output)', function (): void 
 
     $fwd = $definition->forwardedEndpoints['CONFIRM_PAYMENT'];
 
-    // In v9, forward config 'result' is resolved as 'output' (class reference takes priority)
+    // output takes priority as class reference
     expect($fwd)->toBeInstanceOf(ForwardedEndpointDefinition::class)
         ->and($fwd->parentEventType)->toBe('CONFIRM_PAYMENT')
         ->and($fwd->childEventType)->toBe('CONFIRM_PAYMENT')
-        ->and($fwd->output)->toBe(PaymentStepResult::class)
+        ->and($fwd->output)->toBe(PaymentStepOutput::class)
         ->and($fwd->statusCode)->toBe(200);
 });
 
@@ -211,7 +211,7 @@ test('it parses full array forward with ALL keys simultaneously', function (): v
         ->and($fwd->method)->toBe('PATCH')
         ->and($fwd->middleware)->toBe(['throttle:10'])
         ->and($fwd->actionClass)->toBe(ForwardEndpointAction::class)
-        ->and($fwd->output)->toBe(PaymentStepResult::class)
+        ->and($fwd->output)->toBe(PaymentStepOutput::class)
         ->and($fwd->statusCode)->toBe(202)
         ->and($fwd->availableEvents)->toBeFalse();
 });
@@ -307,7 +307,7 @@ test('it parses Format 1 + Format 2 + Format 3 in same forward array', function 
                         'PROVIDE_CARD',                                       // Format 1: plain
                         'CANCEL_ORDER'    => 'ABORT',                            // Format 2: rename
                         'CONFIRM_PAYMENT' => [                                // Format 3: full config
-                            'output' => PaymentStepResult::class,
+                            'output' => PaymentStepOutput::class,
                             'status' => 201,
                         ],
                     ],
@@ -346,7 +346,7 @@ test('it parses Format 1 + Format 2 + Format 3 in same forward array', function 
     $full = $definition->forwardedEndpoints['CONFIRM_PAYMENT'];
     expect($full->parentEventType)->toBe('CONFIRM_PAYMENT')
         ->and($full->childEventType)->toBe('CONFIRM_PAYMENT')
-        ->and($full->output)->toBe(PaymentStepResult::class)
+        ->and($full->output)->toBe(PaymentStepOutput::class)
         ->and($full->statusCode)->toBe(201);
 });
 
@@ -556,11 +556,11 @@ test('it existing forward behavior unchanged for Format 1 and Format 2', functio
     expect($provideCard->parentEventType)->toBe('PROVIDE_CARD')
         ->and($provideCard->childEventType)->toBe('PROVIDE_CARD');
 
-    // Format 3 with result (now output)
+    // Format 3 with output
     $confirmPayment = $definition->forwardedEndpoints['CONFIRM_PAYMENT'];
     expect($confirmPayment->parentEventType)->toBe('CONFIRM_PAYMENT')
         ->and($confirmPayment->childEventType)->toBe('CONFIRM_PAYMENT')
-        ->and($confirmPayment->output)->toBe(PaymentStepResult::class)
+        ->and($confirmPayment->output)->toBe(PaymentStepOutput::class)
         ->and($confirmPayment->statusCode)->toBe(200);
 });
 

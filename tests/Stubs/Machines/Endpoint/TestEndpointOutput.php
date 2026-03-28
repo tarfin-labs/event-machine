@@ -7,7 +7,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 
-class TestEndpointResult extends OutputBehavior
+class TestEndpointOutput extends OutputBehavior
 {
     public function __invoke(ContextManager $context): array
     {

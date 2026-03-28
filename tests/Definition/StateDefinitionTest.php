@@ -8,7 +8,7 @@ use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Results\GreenResult;
+use Tarfinlabs\EventMachine\Tests\Stubs\Results\GreenOutput;
 
 // === StateDefinition Basic Tests ===
 
@@ -582,7 +582,7 @@ test('a machine can have outputs on final states', function (string $eventType):
                 ],
                 'green' => [
                     'type'   => 'final',
-                    'output' => GreenResult::class,
+                    'output' => GreenOutput::class,
                 ],
             ],
         ],

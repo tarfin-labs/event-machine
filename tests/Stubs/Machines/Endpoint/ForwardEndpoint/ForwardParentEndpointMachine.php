@@ -39,7 +39,7 @@ class ForwardParentEndpointMachine extends Machine
                         'forward' => [
                             'PROVIDE_CARD',
                             'CONFIRM_PAYMENT' => [
-                                'output' => PaymentStepResult::class,
+                                'output' => PaymentStepOutput::class,
                                 'status' => 200,
                             ],
                         ],
@@ -58,7 +58,7 @@ class ForwardParentEndpointMachine extends Machine
                     'CANCEL' => TestStartEvent::class,
                 ],
                 'outputs' => [
-                    'paymentStepResult' => PaymentStepResult::class,
+                    'paymentStepOutput' => PaymentStepOutput::class,
                 ],
             ],
             endpoints: [
@@ -69,7 +69,7 @@ class ForwardParentEndpointMachine extends Machine
     }
 }
 
-class PaymentStepResult extends OutputBehavior
+class PaymentStepOutput extends OutputBehavior
 {
     public function __invoke(ContextManager $context, ForwardContext $forwardContext): array
     {

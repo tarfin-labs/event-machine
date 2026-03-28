@@ -7,7 +7,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Results;
 use Illuminate\Support\Carbon;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 
-class GreenResult extends OutputBehavior
+class GreenOutput extends OutputBehavior
 {
     public function __invoke(): Carbon
     {

@@ -172,7 +172,7 @@ test('endpoint with result behavior returns custom response with custom status',
 
     $data = $response->json('data');
 
-    // TestEndpointResult returns ['custom' => true, 'output' => $context->toArray()] — now nested under data.output
+    // TestEndpointOutput returns ['custom' => true, 'output' => $context->toArray()] — now nested under data.output
     $output = $data['output'];
     expect($output)->toHaveKey('custom')
         ->and($output['custom'])->toBeTrue();

@@ -121,7 +121,7 @@ test('COMPLETE endpoint has result behavior and custom status', function (): voi
     $endpoint   = $definition->parsedEndpoints['COMPLETE'];
 
     expect($endpoint->eventType)->toBe('COMPLETE')
-        ->and($endpoint->output)->toBe('testEndpointResult')
+        ->and($endpoint->output)->toBe('testEndpointOutput')
         ->and($endpoint->statusCode)->toBe(201)
         ->and($endpoint->actionClass)->toBeNull()
         ->and($endpoint->uri)->toBe('/complete');

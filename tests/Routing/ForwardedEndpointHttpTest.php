@@ -236,7 +236,7 @@ test('sequential forward events advance child through multiple states', function
         ->toContain('forward_endpoint_child.awaiting_confirmation');
 
     // Step 2: CONFIRM_PAYMENT -> child moves to charged (final)
-    // CONFIRM_PAYMENT has result: PaymentStepResult, so response is custom
+    // CONFIRM_PAYMENT has result: PaymentStepOutput, so response is custom
     $confirmResponse = $this->postJson("/api/forward/{$machineId}/confirm-payment", [
         'payload' => ['confirmationCode' => 'CONF-001'],
     ]);
@@ -245,7 +245,7 @@ test('sequential forward events advance child through multiple states', function
 
     $data = $confirmResponse->json('data');
 
-    // PaymentStepResult returns custom keys — now nested under data.output
+    // PaymentStepOutput returns custom keys — now nested under data.output
     $output = $data['output'];
     expect($output)->toHaveKey('orderId')
         ->and($output)->toHaveKey('cardLast4')
@@ -265,7 +265,7 @@ test('it runs parent OutputBehavior and returns custom response', function (): v
         'payload' => ['cardNumber' => '5500000000000004'],
     ]);
 
-    // CONFIRM_PAYMENT has result: PaymentStepResult
+    // CONFIRM_PAYMENT has result: PaymentStepOutput
     $response = $this->postJson("/api/forward/{$machineId}/confirm-payment", [
         'payload' => ['confirmationCode' => 'CONF-ABC'],
     ]);
@@ -274,7 +274,7 @@ test('it runs parent OutputBehavior and returns custom response', function (): v
 
     $data = $response->json('data');
 
-    // PaymentStepResult reads parent context.order_id and child context.card_last4 — nested under output
+    // PaymentStepOutput reads parent context.order_id and child context.card_last4 — nested under output
     $output = $data['output'];
     expect($output)->toHaveKey('orderId')
         ->and($output)->toHaveKey('cardLast4')

@@ -269,7 +269,7 @@ it('assertFinished fails when not in final state', function (): void {
         ->toThrow(ExpectationFailedException::class);
 });
 
-it('asserts result value with assertResult', function (): void {
+it('asserts output value with assertOutput', function (): void {
     // Final state with no output behavior returns toResponseArray() fallback
     $test = TestMachine::define([
         'initial' => 'active',

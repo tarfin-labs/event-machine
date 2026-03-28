@@ -8,7 +8,7 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Results\GreenResult;
+use Tarfinlabs\EventMachine\Tests\Stubs\Results\GreenOutput;
 
 // region Core Injection
 
@@ -42,13 +42,13 @@ it('injects ContextManager into result behavior', function (): void {
 
     // Use Machine class directly
     $def            = $definition;
-    $resultBehavior = $def->behavior['outputs']['done'];
+    $outputBehavior = $def->behavior['outputs']['done'];
     $params         = InvokableBehavior::injectInvokableBehaviorParameters(
-        actionBehavior: $resultBehavior,
+        actionBehavior: $outputBehavior,
         state: $state,
         eventBehavior: $state->currentEventBehavior,
     );
-    $result = $resultBehavior(...$params);
+    $result = $outputBehavior(...$params);
 
     expect($result)->toBe(42);
 });
@@ -77,13 +77,13 @@ it('injects EventBehavior into result behavior', function (): void {
     $state = $definition->getInitialState();
     $state = $definition->transition(['type' => 'FINISH'], $state);
 
-    $resultBehavior = $definition->behavior['outputs']['done'];
+    $outputBehavior = $definition->behavior['outputs']['done'];
     $params         = InvokableBehavior::injectInvokableBehaviorParameters(
-        actionBehavior: $resultBehavior,
+        actionBehavior: $outputBehavior,
         state: $state,
         eventBehavior: $state->currentEventBehavior,
     );
-    $result = $resultBehavior(...$params);
+    $result = $outputBehavior(...$params);
 
     expect($result)->toBeTrue();
 });
@@ -114,13 +114,13 @@ it('injects parameters regardless of order (reversed)', function (): void {
     $state = $definition->getInitialState();
     $state = $definition->transition(['type' => 'DONE'], $state);
 
-    $resultBehavior = $definition->behavior['outputs']['done'];
+    $outputBehavior = $definition->behavior['outputs']['done'];
     $params         = InvokableBehavior::injectInvokableBehaviorParameters(
-        actionBehavior: $resultBehavior,
+        actionBehavior: $outputBehavior,
         state: $state,
         eventBehavior: $state->currentEventBehavior,
     );
-    $result = $resultBehavior(...$params);
+    $result = $outputBehavior(...$params);
 
     // Key assertion: event IS an EventBehavior (not ContextManager) even though it's the 1st param
     // And context IS a ContextManager (not EventBehavior) even though it's the 2nd param
@@ -147,13 +147,13 @@ it('injects State into result behavior', function (): void {
 
     $state = $definition->getInitialState();
 
-    $resultBehavior = $definition->behavior['outputs']['done'];
+    $outputBehavior = $definition->behavior['outputs']['done'];
     $params         = InvokableBehavior::injectInvokableBehaviorParameters(
-        actionBehavior: $resultBehavior,
+        actionBehavior: $outputBehavior,
         state: $state,
         eventBehavior: $state->currentEventBehavior,
     );
-    $result = $resultBehavior(...$params);
+    $result = $outputBehavior(...$params);
 
     expect($result)->toContain('result_state.done');
 });
@@ -177,13 +177,13 @@ it('works with no parameters', function (): void {
 
     $state = $definition->getInitialState();
 
-    $resultBehavior = $definition->behavior['outputs']['done'];
+    $outputBehavior = $definition->behavior['outputs']['done'];
     $params         = InvokableBehavior::injectInvokableBehaviorParameters(
-        actionBehavior: $resultBehavior,
+        actionBehavior: $outputBehavior,
         state: $state,
         eventBehavior: $state->currentEventBehavior,
     );
-    $result = $resultBehavior(...$params);
+    $result = $outputBehavior(...$params);
 
     expect($result)->toBe('hello');
 });
@@ -202,7 +202,7 @@ it('Machine::result() uses injection for FQCN result class', function (): void {
                 'idle' => ['on' => ['GO' => 'done']],
                 'done' => [
                     'type'   => 'final',
-                    'output' => GreenResult::class,
+                    'output' => GreenOutput::class,
                 ],
             ],
         ],
@@ -211,7 +211,7 @@ it('Machine::result() uses injection for FQCN result class', function (): void {
     $state = $definition->getInitialState();
     $state = $definition->transition(['type' => 'GO'], $state);
 
-    // GreenResult has __invoke(): Carbon — no params, should still work
+    // GreenOutput has __invoke(): Carbon — no params, should still work
     expect($state->currentStateDefinition->type)->toBe(StateDefinitionType::FINAL);
 });
 
@@ -234,13 +234,13 @@ it('Machine::result() uses injection for closure result', function (): void {
 
     // The result is registered under the full state ID
     $stateId        = $state->currentStateDefinition->id;
-    $resultBehavior = $definition->behavior['outputs'][$stateId];
+    $outputBehavior = $definition->behavior['outputs'][$stateId];
     $params         = InvokableBehavior::injectInvokableBehaviorParameters(
-        actionBehavior: $resultBehavior,
+        actionBehavior: $outputBehavior,
         state: $state,
         eventBehavior: $state->currentEventBehavior,
     );
-    $result = $resultBehavior(...$params);
+    $result = $outputBehavior(...$params);
 
     expect($result)->toBe(100);
 });

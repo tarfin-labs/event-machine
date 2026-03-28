@@ -365,7 +365,7 @@ test('route defaults include output and status code when set', function (): void
     $routes = Route::getRoutes();
     $route  = $routes->getByName('test_endpoint.complete');
 
-    expect($route->defaults['_output'])->toBe('testEndpointResult')
+    expect($route->defaults['_output'])->toBe('testEndpointOutput')
         ->and($route->defaults['_status_code'])->toBe(201);
 });
 
