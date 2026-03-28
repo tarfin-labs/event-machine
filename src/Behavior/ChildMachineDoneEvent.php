@@ -20,18 +20,6 @@ class ChildMachineDoneEvent extends EventBehavior
     }
 
     /**
-     * Get the child's ResultBehavior output.
-     *
-     * @param  string|null  $key  Dot-notation key to retrieve a specific value.
-     */
-    public function result(?string $key = null): mixed
-    {
-        $result = $this->payload['result'] ?? null;
-
-        return $key !== null ? data_get($result, $key) : $result;
-    }
-
-    /**
      * Get the child's output data.
      *
      * If the child machine defines an `output` key on its final state, returns
@@ -99,7 +87,6 @@ class ChildMachineDoneEvent extends EventBehavior
     public static function forTesting(array $attributes = []): static
     {
         return static::forChild(array_merge([
-            'result'        => [],
             'output'        => [],
             'machine_id'    => 'test',
             'machine_class' => 'TestMachine',

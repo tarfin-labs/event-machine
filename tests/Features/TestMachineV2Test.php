@@ -463,7 +463,7 @@ it('V18: simulateChildDone result data accessible via output and result', functi
             'actions' => [
                 'captureAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedOutput, &$capturedResult): void {
                     $capturedOutput = $event->output('paymentId');
-                    $capturedResult = $event->result('paymentId');
+                    $capturedResult = $event->output('paymentId');
                     $ctx->set('paymentId', $capturedOutput);
                 },
             ],

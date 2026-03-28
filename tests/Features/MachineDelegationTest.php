@@ -457,7 +457,6 @@ it('ChildMachineDoneEvent has typed accessors', function (): void {
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
 
     expect($receivedEvent)->toBeInstanceOf(ChildMachineDoneEvent::class)
-        ->and($receivedEvent->result('paymentId'))->toBe('pay_abc')
         ->and($receivedEvent->output('paymentId'))->toBe('pay_abc')
         ->and($receivedEvent->childMachineClass())->toBe(ResultChildMachine::class);
 });
@@ -892,7 +891,7 @@ it('@done.{state} action receives output, result, and finalState together (T10)'
             'actions' => [
                 'captureAllAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedOutput, &$capturedResult, &$capturedFinalState): void {
                     $capturedOutput     = $event->output('status');
-                    $capturedResult     = $event->result('status');
+                    $capturedResult     = $event->output('status');
                     $capturedFinalState = $event->finalState();
                 },
             ],
