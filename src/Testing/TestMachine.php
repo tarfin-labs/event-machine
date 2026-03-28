@@ -497,15 +497,42 @@ class TestMachine
         return $this;
     }
 
-    public function assertResult(mixed $expected): self
+    public function assertOutput(mixed $expected): self
     {
         Assert::assertSame(
             $expected,
-            $this->machine->result(),
-            'Machine result did not match expected value'
+            $this->machine->output(),
+            'Machine output did not match expected value'
         );
 
         return $this;
+    }
+
+    public function assertOutputHasKey(string $key): self
+    {
+        $output = $this->machine->output();
+        Assert::assertIsArray($output, 'Machine output is not an array');
+        Assert::assertArrayHasKey($key, $output, "Machine output does not have key '{$key}'");
+
+        return $this;
+    }
+
+    public function assertOutputEquals(string $key, mixed $value): self
+    {
+        $output = $this->machine->output();
+        Assert::assertIsArray($output, 'Machine output is not an array');
+        Assert::assertArrayHasKey($key, $output, "Machine output does not have key '{$key}'");
+        Assert::assertSame($value, $output[$key], "Machine output key '{$key}' did not match expected value");
+
+        return $this;
+    }
+
+    /**
+     * Alias for assertOutput(). Kept for backward compatibility.
+     */
+    public function assertResult(mixed $expected): self
+    {
+        return $this->assertOutput($expected);
     }
 
     // ═══════════════════════════════════════════
