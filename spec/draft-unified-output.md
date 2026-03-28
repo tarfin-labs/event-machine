@@ -150,7 +150,7 @@ Only the parallel state itself can define `output`. It has full context access (
 
 ### Transient States
 
-States with `@always` transitions are never observed by external consumers — the machine passes through them immediately. Defining output on transient states is unnecessary but not an error (it will never be read).
+States with `@always` transitions are never observed by external consumers — the machine passes through them immediately. Defining `output` on a transient state throws `InvalidOutputDefinitionException` at definition time. The output would never be read.
 
 ---
 
