@@ -14,7 +14,7 @@ Six separate mechanisms control what data leaves a machine:
 | `toResponseArray()` | Machine-wide | Serialize all context (+ computed properties) |
 | `contextKeys` | Endpoint | Filter toResponseArray() to specific keys |
 | `result` (endpoint) | Endpoint | Computed response via ResultBehavior |
-| `result` (final state) | Final state | Machine::result() output |
+| `result` (final state) | Final state | $machine->result() output |
 | `output` (final state) | Final state | Child → parent data transfer |
 | `availableEvents` | Endpoint | Sometimes included, sometimes not |
 
@@ -49,7 +49,7 @@ Replace `result`, `contextKeys`, and `output` with a single unified `output` key
 | `output` (child→parent on final) | `output` (same key, expanded scope) |
 | `ResultBehavior` | `OutputBehavior` |
 | `behavior.results` | `behavior.outputs` |
-| `Machine::result()` | `Machine::output()` |
+| `$machine->result()` | `$machine->output()` |
 | `{Name}Result` class convention | `{Name}Output` |
 
 ---
@@ -286,9 +286,9 @@ For OutputBehavior and closures, computed values from `computedContext()` are NO
 
 ---
 
-## `Machine::output()`
+## `$machine->output()`
 
-Replaces `Machine::result()`. Returns only the **output content** (not the envelope — that's an HTTP concern).
+Replaces `$machine->result()`. Returns only the **output content** (not the envelope — that's an HTTP concern).
 
 ```php
 $machine = CarSalesMachine::create(state: $rootEventId);
@@ -309,7 +309,7 @@ Resolution:
 1. Current state has `output`? → run it, return result
 2. No output defined? → return `toResponseArray()`
 
-`output => []` returns empty array (not null). Undefined output returns toResponseArray(). `Machine::output()` never returns null.
+`output => []` returns empty array (not null). Undefined output returns toResponseArray(). `$machine->output()` never returns null.
 
 Final state check is now explicit — not `output() !== null`:
 
@@ -371,7 +371,7 @@ Constructor DI for external services works the same way.
 | `result` (endpoint) | `output` (same position, different name) |
 | `output` (child→parent array filter) | Unified — child's `output` behavior serves parent too |
 | `ResultBehavior` | `OutputBehavior` |
-| `Machine::result()` | `Machine::output()` |
+| `$machine->result()` | `$machine->output()` |
 | Dual response shapes | Single envelope: `{machineId, state, availableEvents, output}` |
 
 ### What's Added
