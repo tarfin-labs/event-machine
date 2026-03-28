@@ -96,13 +96,17 @@ class MachineController extends Controller
 
         $event = $this->resolveEvent($machine, $defaults['_event_type'], $request);
 
+        $outputDef   = $defaults['_output'] ?? $defaults['_result_behavior'] ?? null;
+        $resultKey   = is_string($outputDef) ? $outputDef : null;
+        $contextKeys = is_array($outputDef) ? $outputDef : ($defaults['_context_keys'] ?? null);
+
         return $this->executeEndpoint(
             machine: $machine,
             event: $event,
             actionClass: $defaults['_action_class'] ?? null,
-            resultKey: $defaults['_result_behavior'] ?? null,
+            resultKey: $resultKey,
             statusCode: $defaults['_status_code'] ?? 200,
-            contextKeys: $defaults['_context_keys'] ?? null,
+            contextKeys: $contextKeys,
             includeAvailableEvents: $defaults['_available_events'] ?? true,
         );
     }
@@ -243,7 +247,7 @@ class MachineController extends Controller
     ): mixed {
         $resultClass = class_exists($resultKey)
             ? $resultKey
-            : ($machine->definition->behavior['results'][$resultKey] ?? null);
+            : ($machine->definition->behavior['outputs'][$resultKey] ?? $machine->definition->behavior['results'][$resultKey] ?? null);
 
         if ($resultClass === null) {
             throw new \RuntimeException("Result behavior '{$resultKey}' not found.");
@@ -369,8 +373,9 @@ class MachineController extends Controller
      */
     protected function buildForwardedResponse(Machine $machine, State $state, array $defaults): JsonResponse
     {
-        $resultKey   = $defaults['_result_behavior'] ?? null;
-        $contextKeys = $defaults['_context_keys'] ?? null;
+        $outputDef   = $defaults['_output'] ?? $defaults['_result_behavior'] ?? null;
+        $resultKey   = is_string($outputDef) ? $outputDef : null;
+        $contextKeys = is_array($outputDef) ? $outputDef : null;
         $statusCode  = $defaults['_status_code'] ?? 200;
 
         $childState = $state->getForwardedChildState();
@@ -455,7 +460,7 @@ class MachineController extends Controller
             childMachineClass: $childRecord->child_machine_class,
             childRootEventId: $rootEventId,
             success: true,
-            result: $machine->result(),
+            result: null,
             childContextData: $state->context->data,
             outputData: MachineDefinition::resolveChildOutput(
                 $state->currentStateDefinition,

@@ -246,9 +246,8 @@ class MachineRouter
                         '_machine_class'    => $machineClass,
                         '_event_type'       => $eventType,
                         '_action_class'     => $endpoint->actionClass,
-                        '_result_behavior'  => $endpoint->resultBehavior,
+                        '_output'           => $endpoint->output,
                         '_status_code'      => $endpoint->statusCode ?? 200,
-                        '_context_keys'     => $endpoint->contextKeys,
                         '_available_events' => $endpoint->availableEvents,
                     ];
 
@@ -285,8 +284,7 @@ class MachineRouter
                         '_child_machine_class' => $fwdEndpoint->childMachineClass,
                         '_child_event_class'   => $fwdEndpoint->childEventClass,
                         '_action_class'        => $fwdEndpoint->actionClass,
-                        '_result_behavior'     => $fwdEndpoint->resultBehavior,
-                        '_context_keys'        => $fwdEndpoint->contextKeys,
+                        '_output'              => $fwdEndpoint->output,
                         '_status_code'         => $fwdEndpoint->statusCode ?? 200,
                         '_available_events'    => $fwdEndpoint->availableEvents,
                     ];
