@@ -83,13 +83,13 @@ it('Machine::result() works when no event was sent (initial final state)', funct
     );
 
     $state          = $definition->getInitialState();
-    $resultBehavior = $definition->behavior['outputs']['result_no_event.done'];
+    $outputBehavior = $definition->behavior['outputs']['result_no_event.done'];
     $params         = InvokableBehavior::injectInvokableBehaviorParameters(
-        actionBehavior: $resultBehavior,
+        actionBehavior: $outputBehavior,
         state: $state,
         eventBehavior: $state->triggeringEvent ?? $state->currentEventBehavior,
     );
-    $result = $resultBehavior(...$params);
+    $result = $outputBehavior(...$params);
 
     // triggeringEvent is null → falls back to currentEventBehavior
     expect($result['value'])->toBe(99)
