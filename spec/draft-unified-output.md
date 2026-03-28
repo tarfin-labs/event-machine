@@ -202,10 +202,13 @@ endpoints: [
 ### Resolution Chain
 
 ```
-1. Endpoint has output?     → use it
-2. Current state has output? → use it
-3. Neither                   → toResponseArray()
+1. Endpoint has output?              → use it
+2. Current atomic state has output?  → use it
+3. Parent compound state has output? → use it (walk up hierarchy)
+4. None found                        → toResponseArray()
 ```
+
+Step 3 does NOT apply inside parallel states — only the parallel state itself can define output (see Parallel States section).
 
 `output => []` (empty array) is NOT the same as "not defined." Empty array means "return no context data" (metadata only). Not defined means fallback to toResponseArray().
 
@@ -333,9 +336,10 @@ CarSalesApplicationBroadcastEvent::dispatch(
 );
 ```
 
-Resolution:
-1. Current state has `output`? → run it, return result
-2. No output defined? → return `toResponseArray()`
+Resolution (same chain as endpoints, minus the endpoint step):
+1. Current atomic state has `output`? → run it
+2. Parent compound state has `output`? → run it (walk up hierarchy)
+3. None found → return `toResponseArray()`
 
 `output => []` returns empty array. Undefined output returns `toResponseArray()`. `$machine->output()` returns whatever the output behavior produces (including null if the behavior returns null). When no output is defined, returns `toResponseArray()` which is never null for context-backed machines.
 
@@ -765,7 +769,8 @@ None — all existing tests cover valid concepts that survive the rename. No tes
 - returns state output on final state
 - returns toResponseArray() when no output defined
 - returns empty array when output => []
-- never returns null
+- returns null when output behavior returns null
+- returns toResponseArray() (never null) when no output defined
 - works after persist + restore
 ```
 
@@ -864,7 +869,6 @@ None — all existing tests cover valid concepts that survive the rename. No tes
 - output behavior with no __invoke parameters (returns static data)
 - deeply nested compound state with output
 - state with both output and machine delegation (output applies before delegation)
-- hierarchical state: child state output overrides parent compound state output
 - @done.{finalState} routing — each final state's output is available in its own @done action
 - concurrent ChildMachineCompletionJobs for parallel child machines — each carries own output
 ```
