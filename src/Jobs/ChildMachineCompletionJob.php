@@ -135,8 +135,7 @@ class ChildMachineCompletionJob implements ShouldQueue
                 );
 
                 $doneEvent = ChildMachineDoneEvent::forChild([
-                    'result'        => $this->result,
-                    'output'        => $this->outputData,
+                    'output'        => $this->outputData ?? $this->result,
                     'machine_id'    => $this->childRootEventId ?? '',
                     'machine_class' => $this->childMachineClass,
                     'final_state'   => $this->childFinalState,
