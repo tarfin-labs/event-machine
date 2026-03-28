@@ -496,7 +496,7 @@ EventMachine accepts both verbose and shorthand forms for common configuration p
 // Verbose — with actions
 '@done' => [
     'target'  => 'completed',
-    'actions' => CaptureResultAction::class,
+    'actions' => CaptureOutputAction::class,
 ],
 
 // Per-final-state routing

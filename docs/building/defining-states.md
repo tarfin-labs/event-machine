@@ -31,7 +31,7 @@ Each state supports these properties:
 | `entry` | string\|array | Actions to run when entering |
 | `exit` | string\|array | Actions to run when leaving |
 | `type` | string | State type (`'final'` for terminal states) |
-| `result` | string | Result behavior for final states |
+| `output` | string|array | Output behavior or key filter |
 | `initial` | string | Initial child state (for compound states) |
 | `states` | array | Child state definitions (for compound states) |
 | `meta` | array | Custom metadata |
@@ -83,7 +83,7 @@ Terminal states that end the machine's execution:
 ```php ignore
 'completed' => [
     'type' => 'final',
-    'output' => 'calculateResultOutput',  // Optional output behavior
+    'output' => 'calculateOutput',  // Optional output behavior
 ],
 ```
 

@@ -368,12 +368,12 @@ Entry actions complete before `@always` transitions check:
 
 'actions' => [
     'performCheckAction' => function ($context) {
-        $context->checkResult = performCheck();
+        $context->checkData = performCheck();
     },
 ],
 
 'guards' => [
-    'checkPassedGuard' => fn($ctx) => $ctx->checkResult === 'success',
+    'checkPassedGuard' => fn($ctx) => $ctx->checkData === 'success',
 ],
 ```
 

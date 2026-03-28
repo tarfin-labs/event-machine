@@ -71,7 +71,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 
-class StoreEmailResultAction extends ActionBehavior
+class StoreEmailOutputAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, ChildMachineDoneEvent $event): void
     {

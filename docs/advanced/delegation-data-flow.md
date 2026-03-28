@@ -232,7 +232,7 @@ class PaymentStepOutput extends OutputBehavior
 | `childContext` | `ContextManager` | The child machine's context after processing the forwarded event |
 | `childState` | `State` | The child machine's full state (value, context, history) |
 
-### `available_events` in Response
+### `availableEvents` in Response
 
 The `State::availableEvents()` method reflects both the parent's own `on` events and the forward events that the child's current state accepts:
 

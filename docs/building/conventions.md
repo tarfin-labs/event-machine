@@ -28,8 +28,8 @@ Consistent naming makes your state machines easier to read, maintain, and debug.
 | Eloquent column | snake_case | `{domain}_mre` | `order_workflow_mre` |
 | Endpoint action class | PascalCase | `{DescriptiveName}EndpointAction` | `CancelEndpointAction` |
 | Endpoint action inline key | camelCase | `{descriptiveName}EndpointAction` | `cancelEndpointAction` |
-| Endpoint result class | PascalCase | `{EventDerived}EndpointResult` | `GuarantorSavedEndpointResult` |
-| Endpoint result inline key | camelCase | `{eventDerived}EndpointResult` | `guarantorSavedEndpointResult` |
+| Endpoint output class | PascalCase | `{EventDerived}EndpointOutput` | `GuarantorSavedEndpointOutput` |
+| Endpoint output inline key | camelCase | `{eventDerived}EndpointOutput` | `guarantorSavedEndpointOutput` |
 | Resolver class | PascalCase | `{Description}Resolver` | `ExpiredApplicationsResolver` |
 | Endpoint URI (auto) | kebab-case | from event type | `/farmer-saved` |
 | Route name (auto) | snake_case | from event type | `machines.application.farmer_saved` |
@@ -657,7 +657,7 @@ Inline keys:
 Results compute the final output of a state machine. Name them with a **descriptive noun** and a `Result` suffix.
 
 ```php ignore
-// Class name: {Subject}{Noun}Result — PascalCase
+// Class name: {Subject}{Noun}Output — PascalCase
 class InvoiceSummaryOutput extends OutputBehavior { ... }
 class OrderConfirmationOutput extends OutputBehavior { ... }
 class RiskAssessmentOutput extends OutputBehavior { ... }
@@ -912,12 +912,12 @@ Inline keys use camelCase:
 ],
 ```
 
-### Endpoint Result Classes
+### Endpoint Output Classes
 
 Endpoint results customize the HTTP response. Name them with the **event-derived name** and an `EndpointResult` suffix:
 
 ```php ignore
-// Class name: {EventDerived}EndpointResult — PascalCase
+// Class name: {EventDerived}EndpointOutput — PascalCase
 class GuarantorSavedEndpointOutput extends OutputBehavior { ... }
 class ApprovedWithInitiativeEndpointOutput extends OutputBehavior { ... }
 class PriceEndpointOutput extends OutputBehavior { ... }
@@ -958,7 +958,7 @@ MachineDefinition::define(
             'uri'        => '/submit',        // snake_case (kebab-case value)
             'method'     => 'POST',           // HTTP method
             'action'     => SubmitEndpointAction::class,
-            'result'     => 'orderSummaryResult',
+            'output' => 'orderSummaryOutput',
             'statusCode' => 201,              // camelCase (inherited from XState convention)
             'middleware'  => ['auth:api'],
         ],
@@ -1072,5 +1072,5 @@ The key principles behind these conventions:
 4. **Guards are questions** — boolean predicates with `is`/`has`/`can`/`should` prefix (`IsPaymentValid`, not `PaymentValid`)
 5. **Business data is camelCase, config is snake_case** — context keys, payloads, input/output use `camelCase`; framework config keys use `snake_case`
 6. **Inline keys include the type suffix** — `'sendEmailAction'` not `'sendEmail'` for clarity
-7. **Suffixes prevent ambiguity** — `Event`, `Action`, `Guard`, `Calculator`, `Result` suffixes on class names make the role immediately clear
+7. **Suffixes prevent ambiguity** — `Event`, `Action`, `Guard`, `Calculator`, `Output` suffixes on class names make the role immediately clear
 8. **Consistency over cleverness** — pick one pattern and apply it everywhere

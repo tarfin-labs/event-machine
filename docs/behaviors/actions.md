@@ -467,7 +467,7 @@ class ExternalApiAction extends ActionBehavior
     {
         try {
             $result = $this->api->call($context->data);
-            $context->apiResult = $result;
+            $context->apiData = $result;
         } catch (ApiException $e) {
             $context->apiError = $e->getMessage();
             $this->raise(['type' => 'API_ERROR']);

@@ -61,7 +61,7 @@ class ReportCompleteAction extends ActionBehavior
     {
         $this->sendToParent($context, [
             'type'    => 'CHILD_COMPLETE',
-            'payload' => ['result' => 'success'],
+            'payload' => ['status' => 'success'],
         ]);
     }
 }

@@ -38,7 +38,7 @@ MachineDefinition::define(
             'SUBMIT' => SubmitEvent::class,
         ],
         'outputs' => [
-            'getFinalResultOutput' => FinalOutputBehavior::class,
+            'getFinalOutput' => FinalOutputBehavior::class,
         ],
     ],
 );

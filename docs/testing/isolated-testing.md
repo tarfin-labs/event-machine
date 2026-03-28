@@ -100,7 +100,7 @@ Calculators run before guards to compute derived values. Unlike actions, they on
 ```php
 $state = State::forTesting(['count' => 10]);
 DoubleCountCalculator::runWithState($state);
-expect($state->context->get('result'))->toBe(20);
+expect($state->context->get('total'))->toBe(20);
 ```
 
 ### With EventBehavior
@@ -349,7 +349,7 @@ expect(IsRetryableErrorGuard::runWithState($state))->toBeTrue();
 
 // With final state (for @done.{state} routing guards)
 $event = ChildMachineDoneEvent::forTesting([
-    'result'      => ['status' => 'ok'],
+    'output'      => ['status' => 'ok'],
     'finalState' => 'approved',
 ]);
 

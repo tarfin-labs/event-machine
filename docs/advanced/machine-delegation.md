@@ -23,7 +23,7 @@ class OrderWorkflowMachine extends Machine
                 'initial' => 'validating',
                 'context' => [
                     'orderId'       => null,
-                    'paymentResult' => null,
+                    'paymentData' => null,
                 ],
                 'states' => [
                     'validating' => [
@@ -31,7 +31,7 @@ class OrderWorkflowMachine extends Machine
                         'with'    => ['orderId'],
                         '@done'   => [
                             'target'  => 'processing_payment',
-                            'actions' => 'storeValidationResultAction',
+                            'actions' => 'storeValidationOutputAction',
                         ],
                         '@fail' => 'validation_failed',
                     ],
@@ -105,7 +105,7 @@ When the child machine reaches a final state, the parent's `@done` transition fi
 // With actions
 '@done' => [
     'target'  => 'next_state',
-    'actions' => 'handleResultAction',
+    'actions' => 'handleOutputAction',
 ],
 
 // Multi-branch guarded fork

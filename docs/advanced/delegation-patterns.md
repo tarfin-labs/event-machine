@@ -22,7 +22,7 @@ class OrderWorkflowMachine extends Machine
                 'context' => [
                     'orderId'       => null,
                     'totalAmount'   => 0,
-                    'paymentResult' => null,
+                    'paymentData' => null,
                 ],
                 'states' => [
                     'validating' => [
@@ -368,7 +368,7 @@ class LoanApplicationMachine extends Machine
                         ],
                         '@done' => [
                             'target'  => 'underwriting',
-                            'actions' => 'storeVerificationResultAction',
+                            'actions' => 'storeVerificationOutputAction',
                         ],
                         '@fail' => 'verification_failed',
                         'on'    => ['CANCEL' => 'cancelled'],

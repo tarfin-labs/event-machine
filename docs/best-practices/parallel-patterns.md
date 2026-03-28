@@ -28,7 +28,7 @@ Each region should own its own context keys. If two regions write to the same ke
 
 'context' => [
     'status'  => null,   // Which region writes this?
-    'result'  => null,   // Payment result or shipping result?
+    'data'    => null,   // Payment data or shipping data?
 ],
 ```
 
