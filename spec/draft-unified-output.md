@@ -48,6 +48,7 @@ Replace `result`, `contextKeys`, and `output` with a single unified `output` key
 | `contextKeys` (endpoint/state) | `output => ['key1', 'key2']` |
 | `output` (child→parent on final) | `output` (same key, expanded scope) |
 | `ResultBehavior` | `OutputBehavior` |
+| `behavior.results` | `behavior.outputs` |
 | `Machine::result()` | `Machine::output()` |
 | `{Name}Result` class convention | `{Name}Output` |
 
@@ -126,6 +127,29 @@ Any state can define its output — not just final states:
 
 Each state answers: **"What do I look like to the outside world?"**
 
+### Parallel States
+
+When the machine is in a parallel state, `currentStateDefinition` points to the parallel state itself (not individual regions). The parallel state's output applies:
+
+```php
+'data_collection' => [
+    'type'   => 'parallel',
+    'output' => DataCollectionSummaryOutput::class,  // output for the whole parallel state
+    'states' => [
+        'retailer' => [...],
+        'customer' => [...],
+    ],
+],
+```
+
+The output behavior has access to the full context (written by all regions) and can compose data from all regions into a single response.
+
+If the parallel state has no output defined, `toResponseArray()` fallback applies.
+
+### Transient States
+
+States with `@always` transitions are never observed by external consumers — the machine passes through them immediately. Defining output on transient states is unnecessary but not an error (it will never be read).
+
 ---
 
 ## Endpoint Integration
@@ -148,10 +172,12 @@ endpoints: [
 ### Resolution Chain
 
 ```
-1. Endpoint has output?   → use it
-2. State has output?      → use it
-3. Neither                → toResponseArray()
+1. Endpoint has output?     → use it
+2. Current state has output? → use it
+3. Neither                   → toResponseArray()
 ```
+
+`output => []` (empty array) is NOT the same as "not defined." Empty array means "return no context data" (metadata only). Not defined means fallback to toResponseArray().
 
 ---
 
@@ -162,7 +188,8 @@ Always the same structure — no more two different shapes:
 ```json
 {
     "data": {
-        "machineId": "01ABC...",
+        "id": "01JQXYZ...",
+        "machineId": "car_sales",
         "state": ["car_sales.data_collection.retailer.awaiting_payment_options"],
         "availableEvents": ["PAYMENT_OPTIONS_SELECTED", "VEHICLE_EDIT_REQUESTED"],
         "output": {
@@ -177,33 +204,44 @@ Always the same structure — no more two different shapes:
 }
 ```
 
-`machineId`, `state`, `availableEvents` always present. `output` content varies by state.
+| Key | Value | Always present |
+|-----|-------|---------------|
+| `id` | Root event ID (machine instance identifier) | Yes |
+| `machineId` | Machine definition ID (e.g., `car_sales`) | Yes |
+| `state` | Current state value array | Yes |
+| `availableEvents` | Event types valid from current state | Yes |
+| `output` | State-specific data (varies per state) | Yes (empty `{}` when `output => []`) |
 
 ---
 
 ## Child Machine Integration
 
-Final state `output` serves both API consumers AND parent machines. The child defines ONE output; the parent picks what it needs:
+Final state `output` serves both API consumers AND parent machines. The child defines ONE output; the parent receives it via `ChildMachineDoneEvent`.
+
+### How it flows
+
+1. Child reaches final state → child's `output` behavior runs
+2. Output result is placed in `ChildMachineDoneEvent::payload['output']` (replaces the old filtered context array)
+3. Parent's `@done` action receives the event with the child's output
 
 ```php
-// Child machine
+// Child machine — defines what it produces
 'completed' => [
     'type'   => 'final',
     'output' => PaymentCompletedOutput::class,
-    // Returns: {paymentId, transactionRef, total, receiptUrl}
+    // Produces: {paymentId, transactionRef, total, receiptUrl}
 ],
 
-// Parent machine — receives child's output in @done action
+// Parent machine — receives child's output via event payload
 '@done' => [
     'target'  => 'shipped',
-    'actions' => function (ContextManager $ctx, array $childOutput): void {
-        $ctx->set('paymentId', $childOutput['paymentId']);
-        // Only takes what it needs from child's output
+    'actions' => function (ContextManager $ctx, EventBehavior $event): void {
+        $ctx->set('paymentId', $event->payload['output']['paymentId']);
     },
 ],
 ```
 
-With typed contracts:
+With typed contracts (future):
 
 ```php
 '@done' => [
@@ -237,31 +275,39 @@ class OrderContext extends ContextManager
 
 | Output format | Computed properties |
 |--------------|-------------------|
-| Not defined (fallback) | Included via toResponseArray() |
-| `['subtotal', 'total']` | Included — filters toResponseArray() which has computed values |
-| `OutputClass::class` | Available via `$ctx->computedContext()` or direct calculation |
-| `fn ($ctx) => [...]` | Available via `$ctx->computedContext()` or direct calculation |
+| Not defined (fallback) | Included — toResponseArray() merges computed values |
+| `['subtotal', 'total']` | Included — filters toResponseArray() which contains computed values |
+| `OutputClass::class` | Behavior must compute explicitly: `$ctx->subtotal + $ctx->tax` |
+| `fn ($ctx) => [...]` | Closure must compute explicitly: `$ctx->subtotal + $ctx->tax` |
+
+For OutputBehavior and closures, computed values from `computedContext()` are NOT automatically available as properties. The behavior has full access to the ContextManager and can calculate any derived values directly.
 
 ---
 
 ## `Machine::output()`
 
-Replaces `Machine::result()`. Works on **any state** with output defined:
+Replaces `Machine::result()`. Returns only the **output content** (not the envelope — that's an HTTP concern).
 
 ```php
 $machine = CarSalesMachine::create(state: $rootEventId);
-$currentOutput = $machine->output();  // state-aware output
+
+// Returns state-specific output content (array, object, or scalar)
+$currentOutput = $machine->output();
 
 // For broadcast
 CarSalesApplicationBroadcastEvent::dispatch(
     $machine->state->context->machineId(),
     $machine->state->value,
-    $machine->output(),           // state-aware
+    $machine->output(),           // state-aware content
     $machine->availableEvents(),  // always available
 );
 ```
 
-Resolution: state has output → run it. No output → `toResponseArray()`.
+Resolution:
+1. Current state has `output`? → run it, return result
+2. No output defined? → return `toResponseArray()`
+
+`output => []` returns empty array (not null). Undefined output returns toResponseArray(). `Machine::output()` never returns null.
 
 Final state check is now explicit — not `output() !== null`:
 
