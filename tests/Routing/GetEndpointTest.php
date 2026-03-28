@@ -53,7 +53,7 @@ test('#1 — both required query params reach event payload', function (): void 
 
     $response->assertStatus(200);
 
-    $context = $response->json('data.context.data');
+    $context = $response->json('data.output.data');
 
     expect($context['dealerCode'])->toBe('ABC123')
         ->and($context['plateNumber'])->toBe('34XY');
@@ -90,7 +90,7 @@ test('#5 — explicit payload[] syntax not double-wrapped', function (): void {
 
     $response->assertStatus(200);
 
-    $context = $response->json('data.context.data');
+    $context = $response->json('data.output.data');
 
     expect($context['dealerCode'])->toBe('ABC123')
         ->and($context['plateNumber'])->toBe('34XY');
@@ -111,7 +111,7 @@ test('#7 — GET with no validation rules stores query params in context', funct
 
     $response->assertStatus(200);
 
-    $context = $response->json('data.context.data');
+    $context = $response->json('data.output.data');
 
     expect($context['pingPayload'])->toBe(['foo' => 'bar', 'baz' => 'qux']);
 });
@@ -124,7 +124,7 @@ test('#8 — machineId-bound GET endpoint works after create', function (): void
     // Step 1: Create machine
     $createResponse = $this->postJson('/api/get-mid/create');
     $createResponse->assertStatus(201);
-    $machineId = $createResponse->json('data.machine_id');
+    $machineId = $createResponse->json('data.id');
 
     // Step 2: Send GET with machineId
     $response = $this->get("/api/get-mid/{$machineId}/status?dealer_code=ABC123&plate_number=34XY");
@@ -133,9 +133,9 @@ test('#8 — machineId-bound GET endpoint works after create', function (): void
 
     $data = $response->json('data');
 
-    expect($data['value'])->toContain('get_endpoint.done')
-        ->and($data['context']['data']['dealerCode'])->toBe('ABC123')
-        ->and($data['context']['data']['plateNumber'])->toBe('34XY');
+    expect($data['state'])->toContain('get_endpoint.done')
+        ->and($data['output']['data']['dealerCode'])->toBe('ABC123')
+        ->and($data['output']['data']['plateNumber'])->toBe('34XY');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -146,7 +146,7 @@ test('#9 — forwarded GET validates child event and reaches child', function ()
     // Step 1: Create parent
     $createResponse = $this->postJson('/api/get-fwd/create');
     $createResponse->assertStatus(201);
-    $machineId = $createResponse->json('data.machine_id');
+    $machineId = $createResponse->json('data.id');
 
     // Step 2: Transition parent to delegating state
     $startResponse = $this->postJson("/api/get-fwd/{$machineId}/start");
@@ -157,16 +157,16 @@ test('#9 — forwarded GET validates child event and reaches child', function ()
 
     $response->assertStatus(200);
 
-    $childContext = $response->json('data.child.context');
+    $childOutput = $response->json('data.child.output');
 
-    expect($childContext['data']['childParam'])->toBe('hello');
+    expect($childOutput['data']['childParam'])->toBe('hello');
 });
 
 test('#10 — forwarded GET missing required child param returns 422', function (): void {
     // Step 1: Create parent
     $createResponse = $this->postJson('/api/get-fwd/create');
     $createResponse->assertStatus(201);
-    $machineId = $createResponse->json('data.machine_id');
+    $machineId = $createResponse->json('data.id');
 
     // Step 2: Transition parent to delegating state
     $startResponse = $this->postJson("/api/get-fwd/{$machineId}/start");
@@ -188,7 +188,7 @@ test('#11 — numeric string passes string validation rule', function (): void {
 
     $response->assertStatus(200);
 
-    $context = $response->json('data.context.data');
+    $context = $response->json('data.output.data');
 
     expect($context['dealerCode'])->toBe('12345');
 });
@@ -205,7 +205,7 @@ test('#13 — array-style query params preserved in payload', function (): void 
 
     $response->assertStatus(200);
 
-    $context = $response->json('data.context.data');
+    $context = $response->json('data.output.data');
 
     expect($context['pingPayload']['items'])->toBe(['a', 'b']);
 });
@@ -218,5 +218,5 @@ test('#14 — type in query param does not override event type', function (): vo
     // Machine transitioned successfully — event type resolved from getType(), not query param
     $data = $response->json('data');
 
-    expect($data['value'])->toContain('get_endpoint.done');
+    expect($data['state'])->toContain('get_endpoint.done');
 });

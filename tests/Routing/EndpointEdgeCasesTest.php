@@ -74,7 +74,7 @@ test('onException returning JsonResponse prevents exception propagation', functi
 test('sending event not valid for current state returns 500', function (): void {
     // Create machine (idle state)
     $createResponse = $this->postJson('/api/edge/create');
-    $machineId      = $createResponse->json('data.machine_id');
+    $machineId      = $createResponse->json('data.id');
 
     // COMPLETE is not valid in 'idle' state (only START is)
     // Machine throws NoTransitionDefinitionFoundException
@@ -90,33 +90,33 @@ test('sending event not valid for current state returns 500', function (): void 
 test('full lifecycle via machineId-bound routes: create -> start -> complete', function (): void {
     // Create
     $createResponse = $this->postJson('/api/edge/create');
-    $machineId      = $createResponse->json('data.machine_id');
+    $machineId      = $createResponse->json('data.id');
 
     $createResponse->assertStatus(201);
-    expect($createResponse->json('data.value'))->toContain('test_endpoint.idle');
+    expect($createResponse->json('data.state'))->toContain('test_endpoint.idle');
 
     // idle -> started
     $startResponse = $this->postJson("/api/edge/{$machineId}/start");
     $startResponse->assertStatus(200);
-    expect($startResponse->json('data.value'))->toContain('test_endpoint.started');
-    expect($startResponse->json('data.machine_id'))->toBe($machineId);
+    expect($startResponse->json('data.state'))->toContain('test_endpoint.started');
+    expect($startResponse->json('data.id'))->toBe($machineId);
 
     // started -> completed (with result behavior, status 201)
     $completeResponse = $this->postJson("/api/edge/{$machineId}/complete");
     $completeResponse->assertStatus(201);
-    expect($completeResponse->json('data.custom'))->toBeTrue();
+    expect($completeResponse->json('data.output.custom'))->toBeTrue();
 });
 
 test('full lifecycle via machineId-bound routes: create -> start -> cancel', function (): void {
     $createResponse = $this->postJson('/api/edge/create');
-    $machineId      = $createResponse->json('data.machine_id');
+    $machineId      = $createResponse->json('data.id');
 
     $this->postJson("/api/edge/{$machineId}/start");
 
     // started -> cancelled
     $cancelResponse = $this->postJson("/api/edge/{$machineId}/cancel");
     $cancelResponse->assertStatus(200);
-    expect($cancelResponse->json('data.value'))->toContain('test_endpoint.cancelled');
+    expect($cancelResponse->json('data.state'))->toContain('test_endpoint.cancelled');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -125,7 +125,7 @@ test('full lifecycle via machineId-bound routes: create -> start -> cancel', fun
 
 test('endpoint action hooks fire on machineId-bound route', function (): void {
     $createResponse = $this->postJson('/api/edge/create');
-    $machineId      = $createResponse->json('data.machine_id');
+    $machineId      = $createResponse->json('data.id');
 
     expect(TestEndpointAction::$beforeCalled)->toBeFalse()
         ->and(TestEndpointAction::$afterCalled)->toBeFalse();
@@ -146,8 +146,8 @@ test('multiple create calls produce different machine instances', function (): v
     $response1 = $this->postJson('/api/edge/create');
     $response2 = $this->postJson('/api/edge/create');
 
-    $id1 = $response1->json('data.machine_id');
-    $id2 = $response2->json('data.machine_id');
+    $id1 = $response1->json('data.id');
+    $id2 = $response2->json('data.id');
 
     expect($id1)->not->toBe($id2);
 });
@@ -188,12 +188,12 @@ test('endpoint with contextKeys filters response context', function (): void {
     Route::getRoutes()->refreshActionLookups();
 
     $createResponse = $this->postJson('/api/edge/create');
-    $machineId      = $createResponse->json('data.machine_id');
+    $machineId      = $createResponse->json('data.id');
 
     $response = $this->postJson("/api/filtered/{$machineId}/start");
 
     $response->assertStatus(200);
-    $context = $response->json('data.context');
+    $context = $response->json('data.output');
 
     // Context should only contain keys listed in _context_keys (empty because machine has no 'allowed_key')
     expect($context)->toBe([]);
@@ -201,14 +201,14 @@ test('endpoint with contextKeys filters response context', function (): void {
 
 test('endpoint without contextKeys returns full context (backwards compat)', function (): void {
     $createResponse = $this->postJson('/api/edge/create');
-    $machineId      = $createResponse->json('data.machine_id');
+    $machineId      = $createResponse->json('data.id');
 
     // Use default START route (no _context_keys set)
     $response = $this->postJson("/api/edge/{$machineId}/start");
 
     $response->assertStatus(200);
-    // Should have 'data.context' key present (full context)
-    expect($response->json('data.context'))->toBeArray();
+    // Should have 'data.output' key present (full context)
+    expect($response->json('data.output'))->toBeArray();
 });
 
 test('resolveEvent with unknown event type returns 422', function (): void {
@@ -221,7 +221,7 @@ test('resolveEvent with unknown event type returns 422', function (): void {
     Route::getRoutes()->refreshActionLookups();
 
     $createResponse = $this->postJson('/api/edge/create');
-    $machineId      = $createResponse->json('data.machine_id');
+    $machineId      = $createResponse->json('data.id');
 
     $response = $this->postJson("/api/edge-bad/{$machineId}/bad-event");
 

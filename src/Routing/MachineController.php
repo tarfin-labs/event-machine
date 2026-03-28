@@ -196,7 +196,9 @@ class MachineController extends Controller
     }
 
     /**
-     * Build the JSON response — either from ResultBehavior or default State serialization.
+     * Build the JSON response with consistent envelope structure.
+     *
+     * Always returns: {data: {id, machineId, state, availableEvents, output}}
      */
     protected function buildResponse(
         State $state,
@@ -206,29 +208,28 @@ class MachineController extends Controller
         ?array $contextKeys = null,
         ?bool $includeAvailableEvents = true,
     ): JsonResponse {
-        if ($resultKey !== null) {
-            $result = $this->resolveAndRunResult($resultKey, $state, $machine);
-
-            return response()->json(['data' => $result], $statusCode);
-        }
-
         $rootEventId = $state->history->first()?->root_event_id;
-        $contextData = $state->context->toResponseArray();
 
-        // Filter context keys if specified in endpoint config
-        if ($contextKeys !== null) {
-            $contextData = array_intersect_key($contextData, array_flip($contextKeys));
+        // Resolve output data
+        if ($resultKey !== null) {
+            $outputData = $this->resolveAndRunResult($resultKey, $state, $machine);
+        } elseif ($contextKeys !== null) {
+            $contextData = array_merge(
+                is_array($state->context->data) ? $state->context->data : [],
+                $state->context->toResponseArray(),
+            );
+            $outputData = array_intersect_key($contextData, array_flip($contextKeys));
+        } else {
+            $outputData = $machine->output();
         }
 
         $response = [
-            'machine_id' => $rootEventId,
-            'value'      => $state->value,
-            'context'    => $contextData,
+            'id'              => $rootEventId,
+            'machineId'       => $state->currentStateDefinition->machine->id ?? null,
+            'state'           => $state->value,
+            'availableEvents' => $state->availableEvents(),
+            'output'          => $outputData,
         ];
-
-        if ($includeAvailableEvents !== false) {
-            $response['available_events'] = $state->availableEvents();
-        }
 
         return response()->json(['data' => $response], $statusCode);
     }
@@ -394,15 +395,25 @@ class MachineController extends Controller
                 forwardContext: $forwardContext,
             );
 
-            return response()->json(['data' => $result], $statusCode);
+            $rootEventId = $state->history->first()?->root_event_id;
+
+            return response()->json(['data' => [
+                'id'              => $rootEventId,
+                'machineId'       => $state->currentStateDefinition->machine->id ?? null,
+                'state'           => $state->value,
+                'availableEvents' => $state->availableEvents(),
+                'output'          => $result,
+            ]], $statusCode);
         }
 
-        // Default response: parent state + child state
+        // Default response: parent state + child output
         $rootEventId = $state->history->first()?->root_event_id;
 
         $response = [
-            'machine_id' => $rootEventId,
-            'value'      => $state->value,
+            'id'              => $rootEventId,
+            'machineId'       => $state->currentStateDefinition->machine->id ?? null,
+            'state'           => $state->value,
+            'availableEvents' => $state->availableEvents(),
         ];
 
         if ($childState instanceof State) {
@@ -413,15 +424,9 @@ class MachineController extends Controller
             }
 
             $response['child'] = [
-                'value'   => $childState->value,
-                'context' => $childContext,
+                'state'  => $childState->value,
+                'output' => $childContext,
             ];
-        }
-
-        $includeAvailableEvents = $defaults['_available_events'] ?? null;
-
-        if ($includeAvailableEvents !== false) {
-            $response['available_events'] = $state->availableEvents();
         }
 
         return response()->json(['data' => $response], $statusCode);
