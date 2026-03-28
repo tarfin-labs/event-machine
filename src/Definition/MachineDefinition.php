@@ -220,11 +220,12 @@ class MachineDefinition
             }
 
             if (
-                $endpoint->resultBehavior !== null
-                && !class_exists($endpoint->resultBehavior)
-                && !isset($this->behavior['results'][$endpoint->resultBehavior])
+                is_string($endpoint->output)
+                && !class_exists($endpoint->output)
+                && !isset($this->behavior['outputs'][$endpoint->output])
+                && !isset($this->behavior['results'][$endpoint->output])
             ) {
-                throw InvalidEndpointDefinitionException::undefinedResult($endpoint->resultBehavior);
+                throw InvalidEndpointDefinitionException::undefinedResult($endpoint->output);
             }
 
             if (
@@ -345,9 +346,16 @@ class MachineDefinition
         ?array $endpoints = null,
         ?array $schedules = null,
     ): self {
+        // Normalize: accept both 'outputs' (v9) and 'results' (v8) — merge into 'outputs'
+        $normalizedBehavior = $behavior ?? [];
+        if (isset($normalizedBehavior['results']) && !isset($normalizedBehavior['outputs'])) {
+            $normalizedBehavior['outputs'] = $normalizedBehavior['results'];
+            unset($normalizedBehavior['results']);
+        }
+
         return new self(
             config: $config ?? null,
-            behavior: array_merge(self::initializeEmptyBehavior(), $behavior ?? []),
+            behavior: array_merge(self::initializeEmptyBehavior(), $normalizedBehavior),
             id: $config['id'] ?? self::DEFAULT_ID,
             version: $config['version'] ?? null,
             scenarios: $scenarios,
@@ -1706,8 +1714,7 @@ class MachineDefinition
             );
 
             $doneEvent = ChildMachineDoneEvent::forChild([
-                'result'        => $fake['result'],
-                'output'        => $fake['result'] ?? [],
+                'output'        => $fake['output'] ?? [],
                 'machine_id'    => '',
                 'machine_class' => $childMachineClass,
                 'final_state'   => $fake['finalState'],
@@ -1802,7 +1809,6 @@ class MachineDefinition
         $childContext     = $childMachine->state->context->data;
 
         $doneEvent = ChildMachineDoneEvent::forChild([
-            'result'        => $childMachine->result(),
             'output'        => self::resolveChildOutput($childMachine->state->currentStateDefinition, $childMachine->state->context) ?? $childContext,
             'machine_id'    => $childRootEventId,
             'machine_class' => $childMachineClass,
