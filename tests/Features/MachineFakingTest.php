@@ -99,7 +99,7 @@ it('short-circuits async delegation when child is faked', function (): void {
     Queue::assertNothingPushed();
     expect($machine->state->currentStateDefinition->id)
         ->toBe('async_parent.completed')
-        ->and($machine->state->context->get('result'))
+        ->and($machine->state->context->get('childOutput'))
         ->toBe(['status' => 'ok']);
 });
 

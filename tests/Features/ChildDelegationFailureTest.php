@@ -54,7 +54,7 @@ it('ignores @done after @timeout — parent stays in timed_out', function (): vo
         behavior: [
             'actions' => [
                 'captureResultAction' => function (ContextManager $ctx): void {
-                    $ctx->set('result', 'child_completed');
+                    $ctx->set('childOutput', 'child_completed');
                 },
                 'captureTimeoutAction' => function (ContextManager $ctx): void {
                     $ctx->set('timeout', true);
@@ -82,7 +82,7 @@ it('ignores @done after @timeout — parent stays in timed_out', function (): vo
     // Parent stays in timed_out, result unchanged
     $testMachine
         ->assertState('timed_out')
-        ->assertContext('result', null);
+        ->assertContext('childOutput', null);
 });
 
 // ============================================================

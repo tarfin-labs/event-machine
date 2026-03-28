@@ -56,7 +56,7 @@ class AsyncTimeoutParentMachine extends Machine
             behavior: [
                 'actions' => [
                     'captureResultAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                        $ctx->set('result', $event->payload['output'] ?? null);
+                        $ctx->set('childOutput', $event->payload['output'] ?? null);
                     },
                     'captureErrorAction' => function (ContextManager $ctx, EventBehavior $event): void {
                         $ctx->set('error', $event->payload['error_message'] ?? 'unknown');

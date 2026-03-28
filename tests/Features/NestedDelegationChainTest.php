@@ -33,7 +33,7 @@ it('three-level chain: grandchild done propagates through child to parent', func
         ->assertState('processing')
         ->simulateChildDone(MiddleChildMachine::class, output: ['chain' => 'complete'])
         ->assertState('completed')
-        ->assertContext('result', ['chain' => 'complete']);
+        ->assertContext('childOutput', ['chain' => 'complete']);
 });
 
 it('three-level chain: grandchild failure propagates via child fail to parent', function (): void {
@@ -61,7 +61,7 @@ it('three-level chain: startingAt processing then simulateChildDone completes pa
     ThreeLevelParentMachine::startingAt(stateId: 'processing')
         ->simulateChildDone(MiddleChildMachine::class, output: ['level' => 3, 'data' => 'deep'])
         ->assertState('completed')
-        ->assertContext('result', ['level' => 3, 'data' => 'deep']);
+        ->assertContext('childOutput', ['level' => 3, 'data' => 'deep']);
 });
 
 it('three-level inline chain with custom machines and result propagation', function (): void {
