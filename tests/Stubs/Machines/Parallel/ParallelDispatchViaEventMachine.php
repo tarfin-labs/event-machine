@@ -6,8 +6,8 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionAResultAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBResultAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionAOutputAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBOutputAction;
 
 /**
  * Machine that starts at a non-parallel state and transitions
@@ -24,8 +24,8 @@ class ParallelDispatchViaEventMachine extends Machine
                 'initial'        => 'idle',
                 'should_persist' => true,
                 'context'        => [
-                    'regionAResult' => null,
-                    'regionBResult' => null,
+                    'regionAData' => null,
+                    'regionBData' => null,
                 ],
                 'states' => [
                     'idle' => [
@@ -39,7 +39,7 @@ class ParallelDispatchViaEventMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => SetRegionAResultAction::class,
+                                        'entry' => SetRegionAOutputAction::class,
                                         'on'    => ['REGION_A_DONE' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],
@@ -49,7 +49,7 @@ class ParallelDispatchViaEventMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => SetRegionBResultAction::class,
+                                        'entry' => SetRegionBOutputAction::class,
                                         'on'    => ['REGION_B_DONE' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],

@@ -37,8 +37,8 @@ it('LocalQA: guarded @done routes to approved when both regions succeed via Hori
     $ready = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = ConditionalOnDoneQAMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('inventoryResult') === 'success'
-            && $restored->state->context->get('paymentResult') === 'success';
+        return $restored->state->context->get('inventoryData') === 'success'
+            && $restored->state->context->get('paymentData') === 'success';
     }, timeoutSeconds: 60, description: 'conditional @done: waiting for region entry actions');
 
     expect($ready)->toBeTrue('Region entry actions did not complete');
@@ -89,8 +89,8 @@ it('LocalQA: guarded @done fallback to manual_review when guard fails', function
     $ready = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = ConditionalOnDoneFailMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('inventoryResult') === 'success'
-            && $restored->state->context->get('paymentResult') === 'failure';
+        return $restored->state->context->get('inventoryData') === 'success'
+            && $restored->state->context->get('paymentData') === 'failure';
     }, timeoutSeconds: 60, description: 'conditional @done fail: waiting for region entry actions');
 
     expect($ready)->toBeTrue('Region entry actions did not complete');

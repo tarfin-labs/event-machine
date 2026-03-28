@@ -11,7 +11,7 @@ class IsAllSucceededGuard extends GuardBehavior
 {
     public function __invoke(ContextManager $context): bool
     {
-        return $context->get('inventoryResult') === 'success'
-            && $context->get('paymentResult') === 'success';
+        return $context->get('inventoryData') === 'success'
+            && $context->get('paymentData') === 'success';
     }
 }

@@ -6,7 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBResultAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBOutputAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionAMultiStepAction;
 
 class ParallelDispatchMultiRaiseMachine extends Machine
@@ -19,8 +19,8 @@ class ParallelDispatchMultiRaiseMachine extends Machine
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
-                    'regionAResult' => null,
-                    'regionBResult' => null,
+                    'regionAData' => null,
+                    'regionBData' => null,
                 ],
                 'states' => [
                     'processing' => [
@@ -46,7 +46,7 @@ class ParallelDispatchMultiRaiseMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => SetRegionBResultAction::class,
+                                        'entry' => SetRegionBOutputAction::class,
                                         'on'    => ['REGION_B_DONE' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],

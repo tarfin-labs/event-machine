@@ -8,7 +8,7 @@ use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Results\GreenOutput;
+use Tarfinlabs\EventMachine\Tests\Stubs\Outputs\GreenOutput;
 
 // === StateDefinition Basic Tests ===
 

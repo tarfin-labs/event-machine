@@ -288,7 +288,7 @@ it('abort event preserves full context snapshot', function (): void {
     // Abort event should have the full context (unchanged, from fresh machine state)
     expect($abortEvent->context)->toBeArray();
     expect($abortEvent->context)->toHaveKey('data');
-    expect($abortEvent->context['data'])->toHaveKeys(['concurrentResult', 'regionBResult']);
+    expect($abortEvent->context['data'])->toHaveKeys(['concurrentResult', 'regionBData']);
 });
 
 // ============================================================

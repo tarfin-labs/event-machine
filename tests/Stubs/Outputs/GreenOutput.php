@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tarfinlabs\EventMachine\Tests\Stubs\Results;
+namespace Tarfinlabs\EventMachine\Tests\Stubs\Outputs;
 
 use Illuminate\Support\Carbon;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;

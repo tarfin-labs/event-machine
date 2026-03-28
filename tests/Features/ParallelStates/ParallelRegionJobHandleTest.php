@@ -35,7 +35,7 @@ it('reconstructs machine from rootEventId in handle()', function (): void {
 
     // Verify context was modified by entry action
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionAData'))->toBe('processed_by_a');
 });
 
 it('no-ops when machine is not in parallel state', function (): void {
@@ -80,7 +80,7 @@ it('no-ops when region not found in idMap', function (): void {
 
     // Context unchanged
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('regionAResult'))->toBeNull();
+    expect($restored->state->context->get('regionAData'))->toBeNull();
 });
 
 it('no-ops when region no longer at initial state', function (): void {
@@ -129,7 +129,7 @@ it('runs entry action and modifies context', function (): void {
     $job->handle();
 
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionAData'))->toBe('processed_by_a');
 });
 
 it('computeContextDiff detects added keys', function (): void {
@@ -202,8 +202,8 @@ it('both region jobs complete and context is merged', function (): void {
 
     // Both contexts should be merged
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
-    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAData'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBData'))->toBe('processed_by_b');
 });
 
 it('last job triggers onDone when all regions reach final via events', function (): void {
@@ -260,6 +260,6 @@ it('first job does not trigger onDone when only partially final', function (): v
     // Machine should still be in parallel state
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
     expect($restored->state->isInParallelState())->toBeTrue();
-    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
-    expect($restored->state->context->get('regionBResult'))->toBeNull();
+    expect($restored->state->context->get('regionAData'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBData'))->toBeNull();
 });

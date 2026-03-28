@@ -6,7 +6,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\LogAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseResultReadyAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseOutputReadyAction;
 
 afterEach(function (): void {
     InvokableBehavior::resetAllFakes();
@@ -19,9 +19,9 @@ afterEach(function (): void {
 it('assertRaised passes when event was raised by type string', function (): void {
     $state = State::forTesting(['protocolResult' => null]);
 
-    RaiseResultReadyAction::runWithState($state);
+    RaiseOutputReadyAction::runWithState($state);
 
-    RaiseResultReadyAction::assertRaised('RESULT_READY');
+    RaiseOutputReadyAction::assertRaised('RESULT_READY');
 });
 
 // ============================================================
@@ -31,12 +31,12 @@ it('assertRaised passes when event was raised by type string', function (): void
 it('assertRaised passes when event was raised by FQCN', function (): void {
     $state = State::forTesting(['protocolResult' => null]);
 
-    RaiseResultReadyAction::runWithState($state);
+    RaiseOutputReadyAction::runWithState($state);
 
     // EventDefinition doesn't have a getType() method, so FQCN matching
     // uses the type string from the raised event's 'type' property.
     // Match by type string instead:
-    RaiseResultReadyAction::assertRaised('RESULT_READY');
+    RaiseOutputReadyAction::assertRaised('RESULT_READY');
 });
 
 // ============================================================
@@ -46,9 +46,9 @@ it('assertRaised passes when event was raised by FQCN', function (): void {
 it('assertNotRaised passes when event was not raised', function (): void {
     $state = State::forTesting(['protocolResult' => null]);
 
-    RaiseResultReadyAction::runWithState($state);
+    RaiseOutputReadyAction::runWithState($state);
 
-    RaiseResultReadyAction::assertNotRaised('SOME_OTHER_EVENT');
+    RaiseOutputReadyAction::assertNotRaised('SOME_OTHER_EVENT');
 });
 
 // ============================================================
@@ -58,9 +58,9 @@ it('assertNotRaised passes when event was not raised', function (): void {
 it('assertRaisedCount verifies exact count', function (): void {
     $state = State::forTesting(['protocolResult' => null]);
 
-    RaiseResultReadyAction::runWithState($state);
+    RaiseOutputReadyAction::runWithState($state);
 
-    RaiseResultReadyAction::assertRaisedCount(1);
+    RaiseOutputReadyAction::assertRaisedCount(1);
 });
 
 // ============================================================
@@ -82,9 +82,9 @@ it('assertNothingRaised passes when no events raised', function (): void {
 it('assertRaised throws when event was not raised', function (): void {
     $state = State::forTesting(['protocolResult' => null]);
 
-    RaiseResultReadyAction::runWithState($state);
+    RaiseOutputReadyAction::runWithState($state);
 
-    expect(fn () => RaiseResultReadyAction::assertRaised('NON_EXISTENT_EVENT'))
+    expect(fn () => RaiseOutputReadyAction::assertRaised('NON_EXISTENT_EVENT'))
         ->toThrow(AssertionFailedError::class, 'Expected event');
 });
 

@@ -100,5 +100,5 @@ it('failed job with handle completing before failed() → no double processing',
     expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
 
     // Region A's context preserved
-    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionAData'))->toBe('processed_by_a');
 });

@@ -8,7 +8,7 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Results\GreenOutput;
+use Tarfinlabs\EventMachine\Tests\Stubs\Outputs\GreenOutput;
 
 // region Core Injection
 

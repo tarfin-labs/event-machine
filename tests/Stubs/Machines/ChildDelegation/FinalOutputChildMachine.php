@@ -12,7 +12,7 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
  * Child machine with OutputBehavior that returns status from context.
  * Immediately completes with a result.
  */
-class ResultChildMachine extends Machine
+class FinalOutputChildMachine extends Machine
 {
     public static function definition(): MachineDefinition
     {

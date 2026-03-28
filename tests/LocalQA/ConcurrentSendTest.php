@@ -97,8 +97,8 @@ it('LocalQA: send during parallel region execution throws MachineAlreadyRunningE
     $regionsRunning = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('regionAResult') !== null
-            || $restored->state->context->get('regionBResult') !== null;
+        return $restored->state->context->get('regionAData') !== null
+            || $restored->state->context->get('regionBData') !== null;
     }, timeoutSeconds: 45, description: 'parallel regions start processing');
 
     expect($regionsRunning)->toBeTrue('Parallel regions did not start');

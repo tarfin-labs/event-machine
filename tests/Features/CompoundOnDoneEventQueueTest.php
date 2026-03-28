@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\SuccessfulTestJob;
-use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseResultReadyAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseOutputReadyAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
 
 // ============================================================
@@ -48,7 +48,7 @@ it('processes raised events from entry actions after compound @done transition',
         ],
         behavior: [
             'actions' => [
-                'raiseResultAction' => RaiseResultReadyAction::class,
+                'raiseResultAction' => RaiseOutputReadyAction::class,
             ],
         ],
     );
@@ -200,7 +200,7 @@ it('processes raised events after parallel @done', function (): void {
         ],
         behavior: [
             'actions' => [
-                'raiseResultAction' => RaiseResultReadyAction::class,
+                'raiseResultAction' => RaiseOutputReadyAction::class,
             ],
         ],
     );

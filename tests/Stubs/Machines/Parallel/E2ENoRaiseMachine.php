@@ -26,7 +26,7 @@ class E2ENoRaiseMachine extends Machine
                 'context'        => [
                     'regionAContextSet' => null,
                     'regionAPid'        => null,
-                    'regionBResult'     => null,
+                    'regionBData'       => null,
                 ],
                 'states' => [
                     'processing' => [

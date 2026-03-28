@@ -47,8 +47,8 @@ it('LocalQA: parallel dispatch regions start from same context snapshot', functi
 
         // Machine should settle after regions complete
         $restored = ParallelDispatchMachine::create(state: $rootEventId);
-        $regionA  = $restored->state->context->get('regionAResult');
-        $regionB  = $restored->state->context->get('regionBResult');
+        $regionA  = $restored->state->context->get('regionAData');
+        $regionB  = $restored->state->context->get('regionBData');
 
         return $regionA !== null && $regionB !== null;
     }, timeoutSeconds: 45, description: 'both parallel dispatch regions produce results');
@@ -59,8 +59,8 @@ it('LocalQA: parallel dispatch regions start from same context snapshot', functi
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
 
     // Both regions should have produced results
-    expect($restored->state->context->get('regionAResult'))->not->toBeNull()
-        ->and($restored->state->context->get('regionBResult'))->not->toBeNull();
+    expect($restored->state->context->get('regionAData'))->not->toBeNull()
+        ->and($restored->state->context->get('regionBData'))->not->toBeNull();
 
     // No stale locks
     $locks = DB::table('machine_locks')->where('root_event_id', $rootEventId)->count();

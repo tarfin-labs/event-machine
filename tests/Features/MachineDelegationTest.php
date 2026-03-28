@@ -10,11 +10,11 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\OutputChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ParentOrderMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ResultChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ChildPaymentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FailingChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FinalOutputChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ContextMutatingChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateApprovedChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateRejectedChildMachine;
@@ -335,7 +335,7 @@ it('supports @done multi-branch guarded fork', function (): void {
             'states'  => [
                 'idle'       => ['on' => ['GO' => 'processing']],
                 'processing' => [
-                    'machine' => ResultChildMachine::class,
+                    'machine' => FinalOutputChildMachine::class,
                     '@done'   => [
                         ['target' => 'approved', 'guards' => 'isApprovedGuard'],
                         ['target' => 'review'],
@@ -435,7 +435,7 @@ it('ChildMachineDoneEvent has typed accessors', function (): void {
             'states'  => [
                 'idle'       => ['on' => ['GO' => 'processing']],
                 'processing' => [
-                    'machine' => ResultChildMachine::class,
+                    'machine' => FinalOutputChildMachine::class,
                     '@done'   => [
                         'target'  => 'done',
                         'actions' => 'captureEventAction',
@@ -458,7 +458,7 @@ it('ChildMachineDoneEvent has typed accessors', function (): void {
 
     expect($receivedEvent)->toBeInstanceOf(ChildMachineDoneEvent::class)
         ->and($receivedEvent->output('paymentId'))->toBe('pay_abc')
-        ->and($receivedEvent->childMachineClass())->toBe(ResultChildMachine::class);
+        ->and($receivedEvent->childMachineClass())->toBe(FinalOutputChildMachine::class);
 });
 
 // ─── Output Filtering ────────────────────────────────────────────
@@ -517,7 +517,7 @@ it('output falls back to full context when no output key defined', function (): 
                     'on' => ['GO' => 'processing'],
                 ],
                 'processing' => [
-                    'machine' => ResultChildMachine::class,
+                    'machine' => FinalOutputChildMachine::class,
                     '@done'   => [
                         'target'  => 'done',
                         'actions' => 'captureOutputAction',
@@ -538,7 +538,7 @@ it('output falls back to full context when no output key defined', function (): 
     $state = $machine->getInitialState();
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
 
-    // ResultChildMachine has no output key → full context returned (payment_id, status)
+    // FinalOutputChildMachine has no output key → full context returned (payment_id, status)
     expect($receivedEvent)->toBeInstanceOf(ChildMachineDoneEvent::class)
         ->and($receivedEvent->output())->toBeArray()
         ->and($receivedEvent->output('paymentId'))->toBe('pay_abc')
@@ -881,7 +881,7 @@ it('@done.{state} action receives output, result, and finalState together (T10)'
             'states' => [
                 'idle'       => ['on' => ['GO' => 'delegating']],
                 'delegating' => [
-                    'machine'    => ResultChildMachine::class,
+                    'machine'    => FinalOutputChildMachine::class,
                     '@done.done' => ['target' => 'completed', 'actions' => 'captureAllAction'],
                 ],
                 'completed' => ['type' => 'final'],

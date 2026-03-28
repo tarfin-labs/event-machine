@@ -7,10 +7,10 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 
-class SetRegionAResultAction extends ActionBehavior
+class SetRegionAOutputAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('regionAResult', 'processed_by_a');
+        $context->set('regionAData', 'processed_by_a');
     }
 }
