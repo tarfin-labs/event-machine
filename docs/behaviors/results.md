@@ -1,8 +1,104 @@
 # Results
 
-Results define the output of a state machine when it reaches a final state. They compute and return values based on the final context.
+## Why Results Exist
 
-## Basic Result
+A state machine's **context** is its internal working memory — it accumulates data as transitions happen, actions fire, and calculators run. But context is a flat bag of everything the machine has ever needed: intermediate values, retry counters, error messages, IDs from external systems, flags for internal logic.
+
+**Results solve a different problem: what does this machine _produce_ as its output?**
+
+Think of it like a function: the function has local variables (context), but its `return` value (result) is what the caller sees. Results transform internal state into a clean, purposeful output.
+
+```
+Context (internal)              Result (output)
+├── orderId                     ├── orderId
+├── retryCount          ──►     ├── total
+├── lastError                   ├── status: 'completed'
+├── items[]                     └── estimatedDelivery
+├── subtotal
+├── tax
+├── shipping
+├── total
+├── estimatedDelivery
+└── internalFlags
+```
+
+Without results, callers would need to know the machine's internal context structure — which keys exist, which are intermediate, which matter. Results provide a **contract** between the machine and its consumers.
+
+## Two Places Results Are Used
+
+### 1. `Machine::result()` — Programmatic Output
+
+When code creates and runs a machine, `result()` returns the machine's output after it reaches a final state:
+
+```php no_run
+$machine = LoanApplicationMachine::create();
+$machine->send(['type' => 'SUBMIT', 'payload' => ['amount' => 50000]]);
+$machine->send(['type' => 'APPROVE']);
+
+$result = $machine->result();
+// → ['applicationId' => 'LA-123', 'status' => 'approved', 'monthlyPayment' => 1450.00]
+```
+
+The result is defined on the **final state**:
+
+```php ignore
+'approved' => [
+    'type'   => 'final',
+    'result' => ApprovalResult::class,
+],
+```
+
+`result()` returns `null` if the machine is not in a final state or if no result behavior is defined.
+
+### 2. Endpoint Results — HTTP Response Shaping
+
+Endpoints can define a result behavior that transforms context into an API response. This runs on **any state**, not just final states — the endpoint decides what to return for each request:
+
+```php ignore
+endpoints: [
+    'GET_STATUS' => [
+        'uri'    => '/orders/{order}/status',
+        'method' => 'GET',
+        'result' => OrderStatusResult::class,
+    ],
+],
+```
+
+When no `result` is specified, the endpoint returns the default state serialization (`toResponseArray()` + machine metadata). When `result` IS specified, only the result behavior's return value is sent — wrapped in `{ "data": ... }`.
+
+This is the most common use of results in practice: **controlling what an API endpoint returns.**
+
+## Result vs `contextKeys` vs `toResponseArray()`
+
+Three ways to control what data leaves the machine:
+
+| Mechanism | Where | What It Does | When to Use |
+|-----------|-------|-------------|-------------|
+| `toResponseArray()` | ContextManager override | Returns all context properties | Default — when context shape IS the response |
+| `contextKeys` | Endpoint config | Filters `toResponseArray()` to specific keys | Simple filtering — "only show these fields" |
+| `result` | Final state or endpoint | Runs a behavior that computes output | Computed values, formatting, external lookups, hiding internals |
+
+```php ignore
+// contextKeys — simple filter, no logic
+'GET_PRICE' => [
+    'uri'         => '/orders/{order}/price',
+    'method'      => 'GET',
+    'contextKeys' => ['totalAmount', 'currency', 'installmentOptions'],
+],
+
+// result — computed output, full control
+'GET_SUMMARY' => [
+    'uri'    => '/orders/{order}/summary',
+    'method' => 'GET',
+    'result' => OrderSummaryResult::class,
+],
+```
+
+**Rule of thumb:** If you're just picking fields from context, use `contextKeys`. If you need to compute, format, combine, or look up external data, use a result.
+
+## Writing a Result
+
+### Basic Result
 
 ```php
 use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
@@ -21,50 +117,39 @@ class OrderResultBehavior extends ResultBehavior
 }
 ```
 
-## Defining Results
+### Defining Results
 
-### In State Configuration
-
-```php ignore
-'states' => [
-    'processing' => [
-        'on' => ['COMPLETE' => 'completed'],
-    ],
-    'completed' => [
-        'type' => 'final',
-        'result' => 'getOrderResultResult',
-    ],
-],
-
-// In behavior
-'results' => [
-    'getOrderResultResult' => OrderResultBehavior::class,
-],
-```
-
-### Direct Class Reference
+Three ways to attach a result — class reference, inline key, or inline closure:
 
 ```php ignore
+// 1. Direct class reference (preferred)
 'completed' => [
-    'type' => 'final',
+    'type'   => 'final',
     'result' => OrderResultBehavior::class,
 ],
-```
 
-### Inline Result
-
-```php ignore
+// 2. Inline key — resolved from behavior.results
+'completed' => [
+    'type'   => 'final',
+    'result' => 'orderResult',
+],
+// ...
 'results' => [
-    'getOrderResultResult' => fn(ContextManager $ctx) => [
+    'orderResult' => OrderResultBehavior::class,
+],
+
+// 3. Inline closure
+'results' => [
+    'orderResult' => fn(ContextManager $ctx) => [
         'orderId' => $ctx->orderId,
-        'total' => $ctx->total,
+        'total'   => $ctx->total,
     ],
 ],
 ```
 
 ### Return Types
 
-Results can return any type:
+Results can return any type — the return value of `$machine->result()` matches whatever your result behavior returns:
 
 ```php ignore
 public function __invoke(ContextManager $context): array { ... }   // Array (most common)
@@ -73,103 +158,47 @@ public function __invoke(ContextManager $context): int { ... }     // Scalar val
 public function __invoke(ContextManager $context): mixed { ... }   // Any type
 ```
 
-The return value of `$machine->result()` matches whatever your result behavior returns.
-
-## Accessing Results
-
-```php no_run
-$machine = OrderMachine::create();
-
-// Process to final state
-$machine->send(['type' => 'SUBMIT']);
-$machine->send(['type' => 'COMPLETE']);
-
-// Get result
-$result = $machine->result();
-
-// Result contains whatever the ResultBehavior returns
-echo $result['orderId'];
-echo $result['total'];
-```
-
-::: warning Result Availability
-`result()` only returns a value when the machine is in a **final state** with a `result` behavior defined. If called before reaching a final state, or if the final state has no result defined, it returns `null`.
-
-```php no_run
-// Safe pattern
-if ($machine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
-    $result = $machine->result();
-}
-```
-:::
-
-## When to Use Results
-
-Results are useful when you need to:
-
-1. **Format output** - Transform context into API responses or display formats
-2. **Compute derived values** - Calculate values from final state without modifying context
-3. **Different outputs per final state** - Return different data structures for success vs. failure states
-4. **Hide implementation details** - Expose only relevant data, not the entire context
-
-If you just need the context data as-is, access `$state->context` directly instead.
-
 ## Different Results for Different Final States
+
+Each final state can have its own result behavior — the machine produces different output depending on how it ended:
 
 ```php ignore
 'states' => [
     'processing' => [
         'on' => [
-            'COMPLETE' => 'success',
-            'CANCEL' => 'cancelled',
-            'FAIL' => 'failed',
+            'APPROVE' => 'approved',
+            'REJECT'  => 'rejected',
+            'CANCEL'  => 'cancelled',
         ],
     ],
-    'success' => [
-        'type' => 'final',
-        'result' => 'getSuccessResultResult',
+    'approved' => [
+        'type'   => 'final',
+        'result' => ApprovalResult::class,
+    ],
+    'rejected' => [
+        'type'   => 'final',
+        'result' => RejectionResult::class,
     ],
     'cancelled' => [
-        'type' => 'final',
-        'result' => 'getCancelledResultResult',
-    ],
-    'failed' => [
-        'type' => 'final',
-        'result' => 'getFailedResultResult',
-    ],
-],
-
-'results' => [
-    'getSuccessResultResult' => fn($ctx) => [
-        'status' => 'success',
-        'orderId' => $ctx->orderId,
-        'message' => 'Order completed successfully',
-    ],
-    'getCancelledResultResult' => fn($ctx) => [
-        'status' => 'cancelled',
-        'reason' => $ctx->cancellationReason,
-    ],
-    'getFailedResultResult' => fn($ctx) => [
-        'status' => 'failed',
-        'error' => $ctx->errorMessage,
-        'retryable' => true,
+        'type'   => 'final',
+        'result' => CancellationResult::class,
     ],
 ],
 ```
 
-## Result Parameters
+The caller doesn't need to check which final state the machine is in — `$machine->result()` returns the right shape automatically.
 
-Results use **type-hint based parameter injection** — the same system as actions, guards, and calculators. Parameter order doesn't matter; types are matched automatically.
+## Parameter Injection
 
-Available parameter types:
+Results use the same type-hint based parameter injection as actions, guards, and calculators. Available types:
 
 | Type | What's Injected |
 |------|----------------|
 | `ContextManager` (or subclass) | Machine context |
-| `EventBehavior` (or subclass) | Current event |
+| `EventBehavior` (or subclass) | The triggering event (the original external event, not internal lifecycle events) |
 | `State` | Current state object |
 | `EventCollection` | Full event history |
-| `array` | Behavior arguments (colon syntax) |
+| `ForwardContext` | Child machine context (forwarded endpoints only) |
 
 ```php
 use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
@@ -177,7 +206,7 @@ use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 use Tarfinlabs\EventMachine\Actor\State; // [!code hide]
 use Tarfinlabs\EventMachine\EventCollection; // [!code hide]
 
-class ComplexResultBehavior extends ResultBehavior
+class AuditableResult extends ResultBehavior
 {
     public function __invoke(
         ContextManager $context,
@@ -185,23 +214,19 @@ class ComplexResultBehavior extends ResultBehavior
         EventCollection $history,
     ): array {
         return [
-            'orderId' => $context->orderId,
-            'finalState' => $state->currentStateDefinition->id,
-            'eventCount' => $history->count(),
-            'duration' => $this->calculateDuration($history),
+            'orderId'        => $context->orderId,
+            'finalState'     => $state->currentStateDefinition->id,
+            'eventCount'     => $history->count(),
+            'processingTime' => $history->first()->created_at
+                ->diffForHumans($history->last()->created_at, true),
         ];
-    }
-
-    private function calculateDuration(EventCollection $history): int
-    {
-        $first = $history->first()->created_at;
-        $last = $history->last()->created_at;
-        return $first->diffInSeconds($last);
     }
 }
 ```
 
-## Dependency Injection
+## Constructor Dependency Injection
+
+Results support Laravel's service container for constructor dependencies — external services, repositories, API clients:
 
 ```php no_run
 class OrderResultBehavior extends ResultBehavior
@@ -213,12 +238,12 @@ class OrderResultBehavior extends ResultBehavior
 
     public function __invoke(ContextManager $context): array
     {
-        $order = $this->orderService->find($context->orderId);
+        $order   = $this->orderService->find($context->orderId);
         $receipt = $this->receiptGenerator->generate($order);
 
         return [
-            'order' => $order->toArray(),
-            'receiptUrl' => $receipt->url,
+            'order'       => $order->toArray(),
+            'receiptUrl'  => $receipt->url,
             'downloadUrl' => $receipt->downloadUrl,
         ];
     }
@@ -227,7 +252,7 @@ class OrderResultBehavior extends ResultBehavior
 
 ## Practical Examples
 
-### Order Completion Result
+### Order Completion
 
 ```php no_run
 class OrderCompletedResult extends ResultBehavior
@@ -235,49 +260,45 @@ class OrderCompletedResult extends ResultBehavior
     public function __invoke(ContextManager $context): array
     {
         return [
-            'orderId' => $context->orderId,
-            'orderNumber' => $context->orderNumber,
-            'items' => $context->items,
-            'subtotal' => $context->subtotal,
-            'tax' => $context->tax,
-            'shipping' => $context->shipping,
-            'total' => $context->total,
-            'status' => 'completed',
-            'completedAt' => now()->toIso8601String(),
+            'orderId'           => $context->orderId,
+            'orderNumber'       => $context->orderNumber,
+            'items'             => $context->items,
+            'subtotal'          => $context->subtotal,
+            'tax'               => $context->tax,
+            'shipping'          => $context->shipping,
+            'total'             => $context->total,
+            'status'            => 'completed',
+            'completedAt'       => now()->toIso8601String(),
             'estimatedDelivery' => $context->estimatedDelivery,
         ];
     }
 }
 ```
 
-### Loan Application Result
+### Loan Approval vs Rejection
 
 ```php no_run
 class LoanApprovalResult extends ResultBehavior
 {
     public function __invoke(ContextManager $context): array
     {
-        return [
-            'applicationId' => $context->applicationId,
-            'status' => 'approved',
-            'loanAmount' => $context->approvedAmount,
-            'interestRate' => $context->interestRate,
-            'termMonths' => $context->termMonths,
-            'monthlyPayment' => $this->calculateMonthlyPayment($context),
-            'approvedBy' => $context->approver,
-            'approvedAt' => now()->toIso8601String(),
-            'conditions' => $context->conditions ?? [],
-        ];
-    }
-
-    private function calculateMonthlyPayment(ContextManager $context): float
-    {
         $principal = $context->approvedAmount;
-        $rate = $context->interestRate / 12 / 100;
-        $months = $context->termMonths;
+        $rate      = $context->interestRate / 12 / 100;
+        $months    = $context->termMonths;
 
-        return $principal * ($rate * pow(1 + $rate, $months))
-            / (pow(1 + $rate, $months) - 1);
+        return [
+            'applicationId'  => $context->applicationId,
+            'status'         => 'approved',
+            'loanAmount'     => $principal,
+            'interestRate'   => $context->interestRate,
+            'termMonths'     => $months,
+            'monthlyPayment' => round(
+                $principal * ($rate * pow(1 + $rate, $months)) / (pow(1 + $rate, $months) - 1),
+                2
+            ),
+            'approvedAt'     => now()->toIso8601String(),
+            'conditions'     => $context->conditions ?? [],
+        ];
     }
 }
 
@@ -287,16 +308,16 @@ class LoanRejectionResult extends ResultBehavior
     {
         return [
             'applicationId' => $context->applicationId,
-            'status' => 'rejected',
-            'reasons' => $context->rejectionReasons,
-            'canReapply' => $context->canReapply,
-            'reapplyAfter' => $context->reapplyAfter,
+            'status'        => 'rejected',
+            'reasons'       => $context->rejectionReasons,
+            'canReapply'    => $context->canReapply,
+            'reapplyAfter'  => $context->reapplyAfter,
         ];
     }
 }
 ```
 
-### Workflow Result
+### Workflow with Audit Trail
 
 ```php
 use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
@@ -312,91 +333,19 @@ class WorkflowCompletedResult extends ResultBehavior
         $approvals = $history
             ->filter(fn($e) => $e->type === 'APPROVE')
             ->map(fn($e) => [
-                'approver' => $e->payload['approver'],
+                'approver'  => $e->payload['approver'],
                 'timestamp' => $e->created_at->toIso8601String(),
-                'comment' => $e->payload['comment'] ?? null,
+                'comment'   => $e->payload['comment'] ?? null,
             ]);
 
         return [
-            'requestId' => $context->requestId,
-            'status' => 'approved',
-            'approvals' => $approvals->toArray(),
+            'requestId'      => $context->requestId,
+            'status'         => 'approved',
+            'approvals'      => $approvals->toArray(),
             'totalApprovers' => $approvals->count(),
-            'processingTime' => $this->getProcessingTime($history),
         ];
     }
-
-    private function getProcessingTime(EventCollection $history): string
-    {
-        $start = $history->first()->created_at;
-        $end = $history->last()->created_at;
-        return $start->diffForHumans($end, true);
-    }
 }
-```
-
-### Quiz/Game Result
-
-```php
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior; // [!code hide]
-use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
-
-class QuizResultBehavior extends ResultBehavior
-{
-    public function __invoke(ContextManager $context): array
-    {
-        $total = count($context->questions);
-        $correct = $context->correctAnswers;
-        $percentage = ($correct / $total) * 100;
-
-        return [
-            'score' => $correct,
-            'total' => $total,
-            'percentage' => round($percentage, 2),
-            'grade' => $this->getGrade($percentage),
-            'passed' => $percentage >= 70,
-            'timeTaken' => $context->timeTaken,
-            'answers' => $context->answers,
-        ];
-    }
-
-    private function getGrade(float $percentage): string
-    {
-        return match (true) {
-            $percentage >= 90 => 'A',
-            $percentage >= 80 => 'B',
-            $percentage >= 70 => 'C',
-            $percentage >= 60 => 'D',
-            default => 'F',
-        };
-    }
-}
-```
-
-## Result Arguments
-
-Pass arguments to results:
-
-```php ignore
-'completed' => [
-    'type' => 'final',
-    'result' => 'formatResultResult:detailed',
-],
-
-'results' => [
-    'formatResultResult' => function (
-        ContextManager $context,
-        array $arguments,
-    ) {
-        $format = $arguments[0] ?? 'simple';
-
-        if ($format === 'detailed') {
-            return [...detailed result...];
-        }
-
-        return [...simple result...];
-    },
-],
 ```
 
 ## Testing Results
@@ -420,7 +369,7 @@ expect($result['status'])->toBe('completed');
 ```php
 $state = State::forTesting([
     'orderId' => 'ord-123',
-    'total' => 250,
+    'total'   => 250,
 ]);
 
 $result = OrderResultBehavior::runWithState($state);
@@ -437,7 +386,7 @@ it('generates receipt via injected service', function () {
         ->shouldReceive('generate')
         ->andReturn(new Receipt(url: 'https://example.com/receipt/123'));
 
-    $state = State::forTesting(['orderId' => 'ord-123']);
+    $state  = State::forTesting(['orderId' => 'ord-123']);
     $result = OrderResultBehavior::runWithState($state);
 
     expect($result['receiptUrl'])->toBe('https://example.com/receipt/123');
@@ -450,51 +399,20 @@ See [TestMachine](/testing/test-machine) for `assertFinished()` and result acces
 
 ## Best Practices
 
-### 1. Include All Relevant Data
+1. **Results are for consumers, context is for the machine.** Don't return raw context — shape the output for whoever calls `result()` or receives the endpoint response.
 
-```php ignore
-return [
-    'orderId' => $context->orderId,
-    'status' => 'completed',
-    'total' => $context->total,
-    'items' => $context->items,
-    'createdAt' => $context->createdAt,
-    'completedAt' => now()->toIso8601String(),
-];
-```
+2. **Use `contextKeys` for simple filtering, results for computation.** If you're just picking fields, `contextKeys` is simpler. If you're computing, formatting, or combining data, use a result.
 
-### 2. Format for API Response
+3. **Different final states → different results.** Don't build one result that checks which state the machine is in. Define separate result behaviors per final state.
 
-```php ignore
-return [
-    'data' => [
-        'id' => $context->orderId,
-        'attributes' => [...],
-    ],
-    'meta' => [
-        'processingTime' => $duration,
-    ],
-];
-```
+4. **Keep results stateless.** Results should read from context and compute — not modify context or trigger side effects. That's what actions are for.
 
-### 3. Handle Missing Data
+5. **Handle missing data gracefully.** Context may not have all values if the machine took a non-happy path:
 
 ```php ignore
 return [
     'orderId' => $context->orderId ?? 'unknown',
-    'total' => $context->total ?? 0,
-    'notes' => $context->notes ?? [],
+    'total'   => $context->total ?? 0,
+    'notes'   => $context->notes ?? [],
 ];
 ```
-
-### 4. Use Different Results for Different Outcomes
-
-```php ignore
-'success' => ['type' => 'final', 'result' => SuccessResult::class],
-'failed' => ['type' => 'final', 'result' => FailureResult::class],
-'cancelled' => ['type' => 'final', 'result' => CancelledResult::class],
-```
-
-::: tip Detailed Guide
-For comprehensive design guidelines with Do/Don't examples, see [Testing Strategy](/best-practices/testing-strategy).
-:::
