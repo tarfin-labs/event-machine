@@ -478,20 +478,45 @@ Each state's output behavior only computes what it needs. States that need prici
 
 ### Documentation (docs/)
 
-| Step | File | Change |
-|------|------|--------|
-| 1 | `docs/behaviors/results.md` | Rewrite → `docs/behaviors/outputs.md` (rename file) |
-| 2 | `docs/building/defining-states.md` | Add `output` to state definition reference |
-| 3 | `docs/building/configuration.md` | Add `output` to syntax shorthands, update behavior array (`results` → `outputs`) |
-| 4 | `docs/building/conventions.md` | Update naming: `{Name}Result` → `{Name}Output`, inline key convention |
-| 5 | `docs/laravel-integration/endpoints.md` | Replace `result`/`contextKeys` examples with `output` |
-| 6 | `docs/advanced/machine-delegation.md` | Replace `output` (child→parent) explanation with unified output |
-| 7 | `docs/advanced/async-delegation.md` | Same |
-| 8 | `docs/advanced/delegation-patterns.md` | Same |
-| 9 | `docs/testing/test-machine.md` | Update `result()` → `output()` examples |
-| 10 | `docs/testing/recipes.md` | Update result testing patterns |
-| 11 | `docs/testing/delegation-testing.md` | Update child output testing |
-| 12 | `docs/getting-started/upgrading.md` | **v9 upgrade guide** (see below) |
+#### High impact (50+ changes per file)
+
+| Step | File | Changes | Detail |
+|------|------|---------|--------|
+| 1 | `docs/laravel-integration/endpoints.md` | ~50 | `'result' =>` → `'output'`, `contextKeys` → `output => [...]`, `ResultBehavior` → `OutputBehavior`, `{Name}Result` → `{Name}Output`, response examples, 3 endpoint config tables |
+| 2 | `docs/behaviors/results.md` | ~40 | **Rename file** → `docs/behaviors/outputs.md`. Rewrite all `result` → `output`, `ResultBehavior` → `OutputBehavior`, `$machine->result()` → `$machine->output()`, all class names, behavior array `'results'` → `'outputs'` |
+
+#### Medium impact (10-20 changes per file)
+
+| Step | File | Changes | Detail |
+|------|------|---------|--------|
+| 3 | `docs/advanced/delegation-data-flow.md` | ~15 | `ChildMachineDoneEvent::result()` deprecation, `ResultBehavior` → `OutputBehavior`, `contextKeys` in forward config → `output`, `PaymentStepResult` → `PaymentStepOutput` |
+| 4 | `docs/getting-started/upgrading.md` | ~15 | Add v8→v9 upgrade section (keyword renames, class renames, response shape, new state-level output), update existing `result` references in older upgrade sections |
+| 5 | `docs/advanced/machine-delegation.md` | ~10 | `ChildMachineDoneEvent` accessor docs, `result()` deprecation note, `Machine::fake(result:)` test helper |
+| 6 | `docs/testing/test-machine.md` | ~10 | `assertResult()` → `assertOutput()`, `fakingChild(result:)` → `fakingChild(output:)` |
+
+#### Low impact (< 10 changes per file)
+
+| Step | File | Changes | Detail |
+|------|------|---------|--------|
+| 7 | `docs/building/configuration.md` | ~5 | Behavior array `'results' =>` → `'outputs' =>`; syntax shorthands section |
+| 8 | `docs/building/conventions.md` | ~5 | `{Name}Result` → `{Name}Output`, inline key `'invoiceSummaryResult'` → `'invoiceSummaryOutput'`, behavior table |
+| 9 | `docs/building/defining-states.md` | ~3 | Add `output` to state definition reference table, show output on non-final states |
+| 10 | `docs/behaviors/introduction.md` | ~3 | Behavior type table: "Results" → "Outputs", `'results' =>` → `'outputs' =>` |
+| 11 | `docs/advanced/dependency-injection.md` | ~3 | `ResultBehavior` → `OutputBehavior`, class rename example |
+| 12 | `docs/advanced/custom-context.md` | ~3 | `ResultBehavior` → `OutputBehavior`, `contextKeys` → `output` |
+| 13 | `docs/advanced/job-actors.md` | ~3 | `ChildMachineDoneEvent` accessor table, `result()` note |
+| 14 | `docs/laravel-integration/available-events.md` | ~2 | `ResultBehavior` → `OutputBehavior` references |
+| 15 | `docs/testing/recipes.md` | ~5 | Result testing patterns → output testing |
+| 16 | `docs/testing/delegation-testing.md` | ~5 | Child output testing patterns |
+| 17 | `docs/advanced/async-delegation.md` | ~5 | Child completion output flow |
+| 18 | `docs/advanced/delegation-patterns.md` | ~3 | Output in delegation patterns |
+
+#### Project root files
+
+| Step | File | Changes | Detail |
+|------|------|---------|--------|
+| 19 | `CLAUDE.md` | ~5 | `result()` → `output()`, `ResultBehavior` → `OutputBehavior`, behavior list |
+| 20 | `CODEBASE_MAP.md` | ~5 | Architecture diagram `RB[ResultBehavior]` → `OB[OutputBehavior]`, sequence diagram, behavior table |
 
 ### Upgrading Guide (`docs/getting-started/upgrading.md`)
 
