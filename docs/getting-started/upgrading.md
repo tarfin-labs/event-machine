@@ -147,6 +147,61 @@ behavior: [
 ],
 ```
 
+### New: State-Level Output (Any State)
+
+In v8, `result` only worked on final states. In v9, `output` works on **any state** — the machine can expose different data depending on its current state:
+
+```php ignore
+'states' => [
+    'awaiting_vehicle' => [
+        'output' => [],                              // metadata only (no context data)
+        'on'     => ['SUBMIT_VEHICLE' => 'pricing'],
+    ],
+    'pricing' => [
+        'output' => ['installmentOptions', 'total'], // filtered context
+        'on'     => ['SELECT_OPTION' => 'review'],
+    ],
+    'review' => [
+        'output' => CustomerReviewOutput::class,     // computed output
+        'on'     => ['SUBMIT' => 'completed'],
+    ],
+    'completed' => [
+        'type'   => 'final',
+        'output' => OrderCompletedOutput::class,
+    ],
+],
+```
+
+`$machine->output()` resolves the current state's output with hierarchical fallback:
+1. Current atomic state has `output`? → use it
+2. Parent compound state has `output`? → use it
+3. None → `toResponseArray()` fallback
+
+### New: Output Validation
+
+Defining `output` on invalid states throws `InvalidOutputDefinitionException` at definition time:
+
+- **Transient states** (`@always`) — never observed by consumers
+- **Parallel region states** — only the parallel state itself can define output
+
+### New: Consistent Response Envelope
+
+All endpoints now return the same structure — `availableEvents` is never lost:
+
+```json ignore
+{
+    "data": {
+        "id": "01JARX...",
+        "machineId": "order_workflow",
+        "state": ["submitted"],
+        "availableEvents": ["APPROVE", "REJECT"],
+        "output": { "totalAmount": 100 }
+    }
+}
+```
+
+Endpoints without a custom output use the current state's output (or `toResponseArray()` fallback). No need to define `output` on every endpoint — the state determines the response shape.
+
 ### Migration Checklist
 
 1. Rename all `ResultBehavior` subclasses to extend `OutputBehavior`
