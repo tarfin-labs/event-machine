@@ -67,7 +67,7 @@ it('transfers context to child via with array (same-name format)', function (): 
                     'with'    => ['orderId', 'amount'],
                     '@done'   => [
                         'target'  => 'done',
-                        'actions' => 'captureResultAction',
+                        'actions' => 'captureOutputAction',
                     ],
                 ],
                 'done' => ['type' => 'final'],
@@ -75,7 +75,7 @@ it('transfers context to child via with array (same-name format)', function (): 
         ],
         behavior: [
             'actions' => [
-                'captureResultAction' => function (ContextManager $context, EventBehavior $event): void {
+                'captureOutputAction' => function (ContextManager $context, EventBehavior $event): void {
                     $context->set('receivedOrderId', $event->payload['output']['amount'] ?? null);
                 },
             ],
@@ -872,7 +872,7 @@ it('@done.{state} coexists with @fail independently (T9)', function (): void {
 
 it('@done.{state} action receives output, result, and finalState together (T10)', function (): void {
     $capturedOutput     = null;
-    $capturedResult     = null;
+    $capturedOutput     = null;
     $capturedFinalState = null;
 
     $machine = MachineDefinition::define(
@@ -889,9 +889,8 @@ it('@done.{state} action receives output, result, and finalState together (T10)'
         ],
         behavior: [
             'actions' => [
-                'captureAllAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedOutput, &$capturedResult, &$capturedFinalState): void {
+                'captureAllAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedOutput, &$capturedFinalState): void {
                     $capturedOutput     = $event->output('status');
-                    $capturedResult     = $event->output('status');
                     $capturedFinalState = $event->finalState();
                 },
             ],
@@ -903,7 +902,6 @@ it('@done.{state} action receives output, result, and finalState together (T10)'
 
     expect($state->value)->toBe(['all_accessors.completed'])
         ->and($capturedOutput)->toBe('approved')
-        ->and($capturedResult)->toBe('approved')
         ->and($capturedFinalState)->toBe('done');
 });
 

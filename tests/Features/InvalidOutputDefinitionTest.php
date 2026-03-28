@@ -117,7 +117,7 @@ it('allows output on the parallel state itself', function (): void {
             'states'  => [
                 'processing' => [
                     'type'   => 'parallel',
-                    'output' => ['combinedResult'],
+                    'output' => ['combinedData'],
                     'states' => [
                         'region_a' => [
                             'initial' => 'idle',

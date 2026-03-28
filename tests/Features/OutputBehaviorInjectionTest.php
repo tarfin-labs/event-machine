@@ -21,7 +21,7 @@ it('injects ContextManager into result behavior', function (): void {
             'states'  => [
                 'done' => [
                     'type'   => 'final',
-                    'output' => 'contextResult',
+                    'output' => 'contextOutput',
                 ],
             ],
         ],
@@ -63,7 +63,7 @@ it('injects EventBehavior into result behavior', function (): void {
                 'idle' => ['on' => ['FINISH' => 'done']],
                 'done' => [
                     'type'   => 'final',
-                    'output' => 'eventResult',
+                    'output' => 'eventOutput',
                 ],
             ],
         ],

@@ -36,7 +36,7 @@ class RaiseOnDoneParentMachine extends Machine
                         'queue'   => 'child-queue',
                         '@done'   => [
                             'target'  => 'received',
-                            'actions' => 'captureResultAction',
+                            'actions' => 'captureOutputAction',
                         ],
                         '@fail' => [
                             'target' => 'failed',
@@ -54,7 +54,7 @@ class RaiseOnDoneParentMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'captureResultAction' => function (ContextManager $ctx): void {
+                    'captureOutputAction' => function (ContextManager $ctx): void {
                         // no-op: just transitions to target
                     },
                     'raiseNextAction' => RaiseNextAction::class,

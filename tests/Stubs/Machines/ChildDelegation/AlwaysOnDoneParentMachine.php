@@ -37,7 +37,7 @@ class AlwaysOnDoneParentMachine extends Machine
                         'queue'   => 'child-queue',
                         '@done'   => [
                             'target'  => 'routing',
-                            'actions' => 'captureResultAction',
+                            'actions' => 'captureOutputAction',
                         ],
                         '@fail' => [
                             'target' => 'failed',
@@ -54,7 +54,7 @@ class AlwaysOnDoneParentMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'captureResultAction' => function (ContextManager $ctx, EventBehavior $event): void {
+                    'captureOutputAction' => function (ContextManager $ctx, EventBehavior $event): void {
                         $ctx->set('childOutput', $event->payload['output'] ?? null);
                     },
                 ],

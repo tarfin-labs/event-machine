@@ -315,7 +315,7 @@ it('documents that chained parallel onDone transitions to second phase but does 
     // Phase two context should NOT be set — enterParallelState() was never called
     // so no jobs dispatched, no region entry actions ran
     expect($restored->state->context->get('regionCData'))->toBeNull();
-    expect($restored->state->context->get('regionDResult'))->toBeNull();
+    expect($restored->state->context->get('regionDData'))->toBeNull();
 });
 
 it('documents that pendingParallelDispatches is empty after chained onDone', function (): void {

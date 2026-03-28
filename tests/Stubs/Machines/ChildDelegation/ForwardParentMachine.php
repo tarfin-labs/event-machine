@@ -42,7 +42,7 @@ class ForwardParentMachine extends Machine
                         ],
                         '@done' => [
                             'target'  => 'completed',
-                            'actions' => 'captureResultAction',
+                            'actions' => 'captureOutputAction',
                         ],
                         '@fail' => 'failed',
                     ],
@@ -52,7 +52,7 @@ class ForwardParentMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'captureResultAction' => function (ContextManager $ctx, EventBehavior $event): void {
+                    'captureOutputAction' => function (ContextManager $ctx, EventBehavior $event): void {
                         $ctx->set('childOutput', $event->payload['output'] ?? null);
                     },
                 ],

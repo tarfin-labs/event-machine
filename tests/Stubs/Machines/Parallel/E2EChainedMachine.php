@@ -29,10 +29,10 @@ class E2EChainedMachine extends Machine
                 'initial'        => 'phase_one',
                 'should_persist' => true,
                 'context'        => [
-                    'regionAData'   => null,
-                    'regionBData'   => null,
-                    'regionCData'   => null,
-                    'regionDResult' => null,
+                    'regionAData' => null,
+                    'regionBData' => null,
+                    'regionCData' => null,
+                    'regionDData' => null,
                 ],
                 'states' => [
                     'phase_one' => [

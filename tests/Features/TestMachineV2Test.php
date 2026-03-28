@@ -437,7 +437,7 @@ it('V18: simulateChildDone result data accessible via output and result', functi
     Queue::fake();
 
     $capturedOutput = null;
-    $capturedResult = null;
+    $capturedOutput = null;
 
     $testMachine = TestMachine::define(
         config: [
@@ -461,9 +461,8 @@ it('V18: simulateChildDone result data accessible via output and result', functi
         ],
         behavior: [
             'actions' => [
-                'captureAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedOutput, &$capturedResult): void {
+                'captureAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedOutput): void {
                     $capturedOutput = $event->output('paymentId');
-                    $capturedResult = $event->output('paymentId');
                     $ctx->set('paymentId', $capturedOutput);
                 },
             ],
@@ -480,7 +479,7 @@ it('V18: simulateChildDone result data accessible via output and result', functi
         ->assertContext('paymentId', 'pay_v18');
 
     expect($capturedOutput)->toBe('pay_v18');
-    expect($capturedResult)->toBe('pay_v18');
+    expect($capturedOutput)->toBe('pay_v18');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -624,8 +623,8 @@ it('V18i: full job actor flow with multiple simulateChildDone calls', function (
             'id'      => 'v18i_machine',
             'initial' => 'step_one',
             'context' => [
-                'stepOneResult' => null,
-                'stepTwoResult' => null,
+                'stepOneData' => null,
+                'stepTwoData' => null,
             ],
             'states' => [
                 'step_one' => [
@@ -652,10 +651,10 @@ it('V18i: full job actor flow with multiple simulateChildDone calls', function (
         behavior: [
             'actions' => [
                 'captureStepOneAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                    $ctx->set('stepOneResult', $event->payload['output']['data'] ?? 'done');
+                    $ctx->set('stepOneData', $event->payload['output']['data'] ?? 'done');
                 },
                 'captureStepTwoAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                    $ctx->set('stepTwoResult', $event->payload['output']['data'] ?? 'done');
+                    $ctx->set('stepTwoData', $event->payload['output']['data'] ?? 'done');
                 },
             ],
         ],
@@ -665,7 +664,7 @@ it('V18i: full job actor flow with multiple simulateChildDone calls', function (
         ->assertState('step_one')
         ->simulateChildDone(SuccessfulTestJob::class, output: ['data' => 'phase_1'])
         ->assertState('step_two')
-        ->assertContext('stepOneResult', 'phase_1')
+        ->assertContext('stepOneData', 'phase_1')
         ->simulateChildFail(FailingTestJob::class, errorMessage: 'Step 2 crashed')
         ->assertState('failed');
 });

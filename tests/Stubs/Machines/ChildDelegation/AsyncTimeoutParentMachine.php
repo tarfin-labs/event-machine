@@ -36,7 +36,7 @@ class AsyncTimeoutParentMachine extends Machine
                         'queue'   => 'child-queue',
                         '@done'   => [
                             'target'  => 'completed',
-                            'actions' => 'captureResultAction',
+                            'actions' => 'captureOutputAction',
                         ],
                         '@fail' => [
                             'target'  => 'failed',
@@ -55,7 +55,7 @@ class AsyncTimeoutParentMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'captureResultAction' => function (ContextManager $ctx, EventBehavior $event): void {
+                    'captureOutputAction' => function (ContextManager $ctx, EventBehavior $event): void {
                         $ctx->set('childOutput', $event->payload['output'] ?? null);
                     },
                     'captureErrorAction' => function (ContextManager $ctx, EventBehavior $event): void {

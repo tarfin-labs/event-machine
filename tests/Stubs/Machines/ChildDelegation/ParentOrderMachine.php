@@ -43,7 +43,7 @@ class ParentOrderMachine extends Machine
                         ],
                         '@done' => [
                             'target'  => 'completed',
-                            'actions' => 'storePaymentResultAction',
+                            'actions' => 'storePaymentOutputAction',
                         ],
                         '@fail' => 'payment_failed',
                     ],
@@ -57,7 +57,7 @@ class ParentOrderMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'storePaymentResultAction' => function (
+                    'storePaymentOutputAction' => function (
                         ContextManager $context,
                         EventBehavior $event
                     ): void {

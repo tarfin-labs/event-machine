@@ -8,15 +8,15 @@ use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
 
 class DependencyInjectedTestJob implements ReturnsResult
 {
-    private string $serviceResult = '';
+    private string $serviceData = '';
 
     public function handle(ExternalServiceContract $service): void
     {
-        $this->serviceResult = $service->execute();
+        $this->serviceData = $service->execute();
     }
 
     public function result(): array
     {
-        return ['serviceResult' => $this->serviceResult];
+        return ['serviceData' => $this->serviceData];
     }
 }

@@ -11,7 +11,7 @@ class RaiseOutputReadyAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('protocolResult', 'decided');
+        $context->set('protocolData', 'decided');
 
         $this->raise([
             'type' => 'RESULT_READY',

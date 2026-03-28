@@ -17,7 +17,7 @@ afterEach(function (): void {
 // ============================================================
 
 it('assertRaised passes when event was raised by type string', function (): void {
-    $state = State::forTesting(['protocolResult' => null]);
+    $state = State::forTesting(['protocolData' => null]);
 
     RaiseOutputReadyAction::runWithState($state);
 
@@ -29,7 +29,7 @@ it('assertRaised passes when event was raised by type string', function (): void
 // ============================================================
 
 it('assertRaised passes when event was raised by FQCN', function (): void {
-    $state = State::forTesting(['protocolResult' => null]);
+    $state = State::forTesting(['protocolData' => null]);
 
     RaiseOutputReadyAction::runWithState($state);
 
@@ -44,7 +44,7 @@ it('assertRaised passes when event was raised by FQCN', function (): void {
 // ============================================================
 
 it('assertNotRaised passes when event was not raised', function (): void {
-    $state = State::forTesting(['protocolResult' => null]);
+    $state = State::forTesting(['protocolData' => null]);
 
     RaiseOutputReadyAction::runWithState($state);
 
@@ -56,7 +56,7 @@ it('assertNotRaised passes when event was not raised', function (): void {
 // ============================================================
 
 it('assertRaisedCount verifies exact count', function (): void {
-    $state = State::forTesting(['protocolResult' => null]);
+    $state = State::forTesting(['protocolData' => null]);
 
     RaiseOutputReadyAction::runWithState($state);
 
@@ -80,7 +80,7 @@ it('assertNothingRaised passes when no events raised', function (): void {
 // ============================================================
 
 it('assertRaised throws when event was not raised', function (): void {
-    $state = State::forTesting(['protocolResult' => null]);
+    $state = State::forTesting(['protocolData' => null]);
 
     RaiseOutputReadyAction::runWithState($state);
 

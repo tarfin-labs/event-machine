@@ -90,7 +90,7 @@ it('records parallel_dispatch_guard_abort event when machine exits parallel betw
     expect($abortEvent->type)->toContain('region.guard_abort');
     expect($abortEvent->payload['reason'])->toBe('machine left parallel state');
     expect($abortEvent->payload['work_was_discarded'])->toBeTrue();
-    expect($abortEvent->payload['discarded_context'])->toContain('concurrentResult');
+    expect($abortEvent->payload['discarded_context'])->toContain('concurrentData');
     expect($abortEvent->source->value)->toBe('internal');
 });
 
@@ -147,7 +147,7 @@ it('records parallel_dispatch_guard_abort event when region advances between act
     expect($abortEvent)->not->toBeNull();
     expect($abortEvent->payload['reason'])->toBe('region already advanced');
     expect($abortEvent->payload['work_was_discarded'])->toBeTrue();
-    expect($abortEvent->payload['discarded_context'])->toContain('concurrentResult');
+    expect($abortEvent->payload['discarded_context'])->toContain('concurrentData');
 });
 
 // ============================================================
@@ -288,7 +288,7 @@ it('abort event preserves full context snapshot', function (): void {
     // Abort event should have the full context (unchanged, from fresh machine state)
     expect($abortEvent->context)->toBeArray();
     expect($abortEvent->context)->toHaveKey('data');
-    expect($abortEvent->context['data'])->toHaveKeys(['concurrentResult', 'regionBData']);
+    expect($abortEvent->context['data'])->toHaveKeys(['concurrentData', 'regionBData']);
 });
 
 // ============================================================

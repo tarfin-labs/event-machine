@@ -39,7 +39,7 @@ it('ignores @done after @timeout — parent stays in timed_out', function (): vo
                     'queue'   => 'child-queue',
                     '@done'   => [
                         'target'  => 'completed',
-                        'actions' => 'captureResultAction',
+                        'actions' => 'captureOutputAction',
                     ],
                     '@timeout' => [
                         'target'  => 'timed_out',
@@ -53,7 +53,7 @@ it('ignores @done after @timeout — parent stays in timed_out', function (): vo
         ],
         behavior: [
             'actions' => [
-                'captureResultAction' => function (ContextManager $ctx): void {
+                'captureOutputAction' => function (ContextManager $ctx): void {
                     $ctx->set('childOutput', 'child_completed');
                 },
                 'captureTimeoutAction' => function (ContextManager $ctx): void {
