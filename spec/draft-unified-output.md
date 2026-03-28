@@ -144,7 +144,9 @@ When the machine is in a parallel state, `currentStateDefinition` points to the 
 
 The output behavior has access to the full context (written by all regions) and can compose data from all regions into a single response.
 
-If the parallel state has no output defined, `toResponseArray()` fallback applies.
+**Region and atomic state outputs are ignored while inside a parallel state.** Only the parallel state's own output applies. If the parallel state has no output defined, `toResponseArray()` fallback applies — region-level outputs are NOT merged.
+
+Why no merge? Multiple regions could return conflicting keys, partial data (one region final, another not), or unpredictable ordering. The parallel state's output behavior has full context access and composes explicitly — no ambiguity.
 
 ### Transient States
 
