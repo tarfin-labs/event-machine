@@ -442,4 +442,140 @@ Each state's output behavior only computes what it needs. States that need prici
 | `computedContext()` | Still works inside toResponseArray() |
 | Parameter injection | Same DI system |
 | Constructor DI | Same service container injection |
-| `Machine::availableEvents()` | Unchanged |
+| `$machine->availableEvents()` | Unchanged |
+
+---
+
+## Migration Plan
+
+### Framework (event-machine package)
+
+| Step | Change | Files |
+|------|--------|-------|
+| 1 | Add `OutputBehavior` base class (extends/aliases `ResultBehavior`) | `src/Behavior/OutputBehavior.php` |
+| 2 | Add `output` property to `StateDefinition` (all states, not just final) | `src/Definition/StateDefinition.php` |
+| 3 | Add definition-time validation: `output` on transient (`@always`) and parallel region states throws `InvalidOutputDefinitionException` | `src/Definition/StateDefinition.php`, `src/Exceptions/` |
+| 4 | Add `$machine->output()` method — resolves state output, falls back to `toResponseArray()` | `src/Actor/Machine.php` |
+| 5 | Update `MachineController::buildResponse()` — always return envelope `{id, machineId, state, availableEvents, output}` | `src/Routing/MachineController.php` |
+| 6 | Update endpoint resolution chain: endpoint output → state output → `toResponseArray()` | `src/Routing/MachineController.php` |
+| 7 | Update `EndpointDefinition` — accept `output` key (replace `result` and `contextKeys`) | `src/Routing/EndpointDefinition.php` |
+| 8 | Update `ForwardedEndpointDefinition` — accept `output` key (replace `contextKeys`) | `src/Routing/ForwardedEndpointDefinition.php` |
+| 9 | Update `ChildMachineDoneEvent` — populate `payload['output']` from child's output behavior | `src/Definition/MachineDefinition.php` |
+| 10 | Update behavior registry — `behavior.results` → `behavior.outputs` | `src/Definition/MachineDefinition.php` |
+| 11 | Update XState export — export `output` key per state | `src/Commands/ExportXStateCommand.php` |
+| 12 | Update `machine:validate-config` — validate output definitions | `src/Commands/ValidateConfigCommand.php` |
+| 13 | Rename `ResultBehavior` → `OutputBehavior` (keep `ResultBehavior` as deprecated alias) | `src/Behavior/` |
+| 14 | Deprecate `$machine->result()` — alias to `$machine->output()` | `src/Actor/Machine.php` |
+| 15 | Update `TestMachine` — add output assertions | `src/Testing/TestMachine.php` |
+
+### Documentation (docs/)
+
+| Step | File | Change |
+|------|------|--------|
+| 1 | `docs/behaviors/results.md` | Rewrite → `docs/behaviors/outputs.md` (rename file) |
+| 2 | `docs/building/defining-states.md` | Add `output` to state definition reference |
+| 3 | `docs/building/configuration.md` | Add `output` to syntax shorthands, update behavior array (`results` → `outputs`) |
+| 4 | `docs/building/conventions.md` | Update naming: `{Name}Result` → `{Name}Output`, inline key convention |
+| 5 | `docs/laravel-integration/endpoints.md` | Replace `result`/`contextKeys` examples with `output` |
+| 6 | `docs/advanced/machine-delegation.md` | Replace `output` (child→parent) explanation with unified output |
+| 7 | `docs/advanced/async-delegation.md` | Same |
+| 8 | `docs/advanced/delegation-patterns.md` | Same |
+| 9 | `docs/testing/test-machine.md` | Update `result()` → `output()` examples |
+| 10 | `docs/testing/recipes.md` | Update result testing patterns |
+| 11 | `docs/testing/delegation-testing.md` | Update child output testing |
+| 12 | `docs/getting-started/upgrading.md` | **v9 upgrade guide** (see below) |
+
+### Upgrading Guide (`docs/getting-started/upgrading.md`)
+
+The v8 → v9 section must cover:
+
+#### Keyword renames
+
+```php
+// States: result → output
+// Before (v8)
+'completed' => ['type' => 'final', 'result' => OrderResult::class],
+// After (v9)
+'completed' => ['type' => 'final', 'output' => OrderCompletedOutput::class],
+
+// Endpoints: result → output
+// Before (v8)
+'GET_STATUS' => ['uri' => '/status', 'result' => StatusResult::class],
+// After (v9)
+'GET_STATUS' => ['uri' => '/status', 'output' => StatusOutput::class],
+
+// Endpoints: contextKeys → output
+// Before (v8)
+'GET_PRICE' => ['uri' => '/price', 'contextKeys' => ['totalAmount', 'currency']],
+// After (v9)
+'GET_PRICE' => ['uri' => '/price', 'output' => ['totalAmount', 'currency']],
+
+// Forwarded endpoints: contextKeys → output
+// Before (v8)
+'forward' => [Event::class => ['uri' => '/x', 'contextKeys' => ['a', 'b']]],
+// After (v9)
+'forward' => [Event::class => ['uri' => '/x', 'output' => ['a', 'b']]],
+```
+
+#### Behavior registry
+
+```php
+// Before (v8)
+'behavior' => ['results' => ['orderResult' => OrderResult::class]],
+// After (v9)
+'behavior' => ['outputs' => ['orderOutput' => OrderCompletedOutput::class]],
+```
+
+#### Class renames
+
+```php
+// Before (v8)
+class OrderResult extends ResultBehavior { ... }
+// After (v9)
+class OrderCompletedOutput extends OutputBehavior { ... }
+```
+
+#### Method renames
+
+```php
+// Before (v8)
+$machine->result();
+// After (v9)
+$machine->output();
+```
+
+#### Response shape change
+
+```json
+// Before (v8) — without result
+{"data": {"id": "...", "machineId": "...", "state": [...], "context": {...}, "availableEvents": [...]}}
+// Before (v8) — with result (metadata lost!)
+{"data": {...result only...}}
+
+// After (v9) — always consistent
+{"data": {"id": "...", "machineId": "...", "state": [...], "availableEvents": [...], "output": {...}}}
+```
+
+**Key change:** `context` key in response replaced by `output`. Frontends consuming `response.data.context` must update to `response.data.output`.
+
+#### New: state-level output
+
+```php
+// v9 feature: define output per state (not just final states)
+'awaiting_payment' => [
+    'output' => ['installmentOptions', 'totalCashPrice'],
+    'on'     => [...],
+],
+```
+
+#### Child machine output
+
+```php
+// Before (v8) — separate output key for child→parent
+'completed' => ['type' => 'final', 'output' => ['paymentId', 'status']],
+
+// After (v9) — same key, but now accepts OutputBehavior too
+'completed' => ['type' => 'final', 'output' => PaymentCompletedOutput::class],
+// Array format still works for simple cases:
+'completed' => ['type' => 'final', 'output' => ['paymentId', 'status']],
+```
