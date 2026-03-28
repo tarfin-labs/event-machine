@@ -64,7 +64,7 @@ it('V1: fakingChild registers fake and returns self', function (): void {
 
     $result = $testMachine->fakingChild(
         childClass: ImmediateApprovedChildMachine::class,
-        result: ['decision' => 'yes'],
+        output: ['decision' => 'yes'],
     );
 
     expect($result)->toBe($testMachine);
@@ -90,7 +90,7 @@ it('V2: fakingChild is cleaned up by resetFakes', function (): void {
         ],
     );
 
-    $testMachine->fakingChild(ImmediateApprovedChildMachine::class, result: ['decision' => 'yes']);
+    $testMachine->fakingChild(ImmediateApprovedChildMachine::class, output: ['decision' => 'yes']);
     expect(ImmediateApprovedChildMachine::isMachineFaked())->toBeTrue();
 
     $testMachine->resetFakes();
@@ -117,8 +117,8 @@ it('V3: fakingChild with multiple children cleans all', function (): void {
     );
 
     $testMachine
-        ->fakingChild(ImmediateApprovedChildMachine::class, result: ['decision' => 'yes'])
-        ->fakingChild(ImmediateRejectedChildMachine::class, result: ['reason' => 'no']);
+        ->fakingChild(ImmediateApprovedChildMachine::class, output: ['decision' => 'yes'])
+        ->fakingChild(ImmediateRejectedChildMachine::class, output: ['reason' => 'no']);
 
     expect(ImmediateApprovedChildMachine::isMachineFaked())->toBeTrue();
     expect(ImmediateRejectedChildMachine::isMachineFaked())->toBeTrue();

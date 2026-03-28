@@ -782,20 +782,18 @@ class Machine implements Castable, JsonSerializable, Stringable
      *
      * Works for both sync and async delegation.
      *
-     * @param  array|null  $result  The fake result to return via @done.
      * @param  bool  $fail  Whether to trigger @fail instead of @done.
      * @param  string|null  $error  The error message for @fail.
      * @param  string|null  $finalState  The child's final state key — determines which `@done.{state}` route fires on the parent.
      */
     public static function fake(
-        ?array $result = null,
         ?array $output = null,
         bool $fail = false,
         ?string $error = null,
         ?string $finalState = null,
     ): void {
         self::$machineFakes[static::class] = [
-            'output'      => $output ?? $result,
+            'output'      => $output,
             'fail'        => $fail,
             'error'       => $error,
             'finalState'  => $finalState,
@@ -1206,14 +1204,6 @@ class Machine implements Castable, JsonSerializable, Stringable
 
         // String (class reference or inline key) or Closure → resolve via behavior system
         return $this->resolveOutputBehavior($output);
-    }
-
-    /**
-     * Alias for output(). Kept for backward compatibility.
-     */
-    public function result(): mixed
-    {
-        return $this->output();
     }
 
     // region Private Methods

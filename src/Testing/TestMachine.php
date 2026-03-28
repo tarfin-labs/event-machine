@@ -527,14 +527,6 @@ class TestMachine
         return $this;
     }
 
-    /**
-     * Alias for assertOutput(). Kept for backward compatibility.
-     */
-    public function assertResult(mixed $expected): self
-    {
-        return $this->assertOutput($expected);
-    }
-
     // ═══════════════════════════════════════════
     //  Context Assertions
     // ═══════════════════════════════════════════
@@ -1639,12 +1631,12 @@ class TestMachine
      */
     public function fakingChild(
         string $childClass,
-        ?array $result = null,
+        ?array $output = null,
         bool $fail = false,
         ?string $error = null,
         ?string $finalState = null,
     ): self {
-        $childClass::fake(result: $result, fail: $fail, error: $error, finalState: $finalState);
+        $childClass::fake(output: $output, fail: $fail, error: $error, finalState: $finalState);
         $this->fakedChildMachines[] = $childClass;
 
         return $this;

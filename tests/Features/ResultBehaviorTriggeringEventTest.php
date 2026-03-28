@@ -32,7 +32,7 @@ it('Machine::result() receives the original event payload, not internal event', 
 
     $machine->send(['type' => 'SUBMIT', 'payload' => ['tckn' => '12345678901', 'amount' => 500]]);
 
-    $result = $machine->result();
+    $result = $machine->output();
 
     expect($result)
         ->toBe(['tckn' => '12345678901', 'amount' => 500]);
@@ -58,7 +58,7 @@ it('Machine::result() receives event type, not internal event type', function ()
 
     $machine->send(['type' => 'COMPLETE']);
 
-    $result = $machine->result();
+    $result = $machine->output();
 
     // Should be the original event type, not an internal event like STATE_ENTRY_FINISH
     expect($result)->toBe('COMPLETE');
@@ -127,7 +127,7 @@ it('Machine::result() preserves payload through entry actions', function (): voi
 
     $machine->send(['type' => 'PROCESS', 'payload' => ['orderId' => 'ORD-42']]);
 
-    $result = $machine->result();
+    $result = $machine->output();
 
     // Entry action ran (processed=true), but event payload is still the original PROCESS event
     expect($result['orderId'])->toBe('ORD-42')
@@ -160,7 +160,7 @@ it('Machine::result() preserves payload through @always chain', function (): voi
 
     $machine->send(['type' => 'START', 'payload' => ['ref' => 'ABC']]);
 
-    $result = $machine->result();
+    $result = $machine->output();
 
     // Should receive the original START event, not @always
     expect($result['type'])->toBe('START')
@@ -189,7 +189,7 @@ it('Machine::result() receives the last triggering event in multi-step flow', fu
     $machine->send(['type' => 'NEXT']);
     $machine->send(['type' => 'FINISH', 'payload' => ['final_data' => true]]);
 
-    $result = $machine->result();
+    $result = $machine->output();
 
     // Should receive the FINISH event (last triggering event), not NEXT
     expect($result)->toBe(['final_data' => true]);

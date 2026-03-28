@@ -9,7 +9,6 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
 use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior;
 
 /**
@@ -23,7 +22,6 @@ enum BehaviorType: string
     case Guard      = 'guards';
     case Action     = 'actions';
     case Output     = 'outputs';
-    case Result     = 'results';
     case Event      = 'events';
     case Context    = 'context';
 
@@ -39,7 +37,6 @@ enum BehaviorType: string
             self::Guard      => GuardBehavior::class,
             self::Action     => ActionBehavior::class,
             self::Output     => OutputBehavior::class,
-            self::Result     => ResultBehavior::class,
             self::Event      => EventBehavior::class,
             self::Context    => ContextManager::class,
         };

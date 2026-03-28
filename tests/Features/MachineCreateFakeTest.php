@@ -389,7 +389,7 @@ it('F24: TestMachine::fakingChild() still works', function (): void {
 
     $result = $testMachine->fakingChild(
         childClass: ImmediateApprovedChildMachine::class,
-        result: ['decision' => 'yes'],
+        output: ['decision' => 'yes'],
     );
 
     expect($result)->toBe($testMachine)
