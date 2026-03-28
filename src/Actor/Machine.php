@@ -1108,40 +1108,110 @@ class Machine implements Castable, JsonSerializable, Stringable
      *
      * @return mixed The result of the state machine.
      */
-    public function result(): mixed
+    /**
+     * Get the state-aware output of the machine.
+     *
+     * Resolution chain:
+     * 1. Current atomic state has output → run it
+     * 2. Parent compound state has output → run it (walk up hierarchy)
+     * 3. None found → return toResponseArray()
+     *
+     * Works on ANY state, not just final states.
+     */
+    public function output(): mixed
     {
         $currentStateDefinition = $this->state->currentStateDefinition;
         $behaviorDefinition     = $this->definition->behavior[BehaviorType::Output->value];
 
-        if ($currentStateDefinition->type !== StateDefinitionType::FINAL) {
-            return null;
+        // Walk the hierarchy: current state → parent → grandparent...
+        $stateToCheck = $currentStateDefinition;
+
+        // For parallel states, check the parallel state itself first
+        if ($this->state->isInParallelState()) {
+            if (isset($behaviorDefinition[$currentStateDefinition->id])) {
+                return $this->resolveOutputBehavior($behaviorDefinition[$currentStateDefinition->id]);
+            }
+
+            // Parallel state output from config (not registered in behavior array)
+            if ($currentStateDefinition->output !== null) {
+                return $this->resolveOutputDefinition($currentStateDefinition->output);
+            }
+
+            return $this->state->context->toResponseArray();
         }
 
-        $id = $currentStateDefinition->id;
-        if (!isset($behaviorDefinition[$id])) {
-            return null;
+        // Non-parallel: check current atomic state, then walk up hierarchy
+        while ($stateToCheck instanceof StateDefinition) {
+            // Check behavior registry (registered via initializeResults for final states)
+            if (isset($behaviorDefinition[$stateToCheck->id])) {
+                return $this->resolveOutputBehavior($behaviorDefinition[$stateToCheck->id]);
+            }
+
+            // Check state config output (for non-final states)
+            if ($stateToCheck->output !== null) {
+                return $this->resolveOutputDefinition($stateToCheck->output);
+            }
+
+            $stateToCheck = $stateToCheck->parent;
         }
 
-        $resultBehavior = $behaviorDefinition[$id];
-        $arguments      = null;
+        // Fallback: toResponseArray()
+        return $this->state->context->toResponseArray();
+    }
 
-        if (!is_callable($resultBehavior)) {
-            if (str_contains((string) $resultBehavior, ':')) {
-                [$resultBehavior, $arguments] = explode(':', (string) $resultBehavior);
+    /**
+     * Resolve an output behavior (class reference, inline key, or callable).
+     */
+    private function resolveOutputBehavior(mixed $outputBehavior): mixed
+    {
+        $arguments = null;
+
+        if (!is_callable($outputBehavior)) {
+            if (str_contains((string) $outputBehavior, ':')) {
+                [$outputBehavior, $arguments] = explode(':', (string) $outputBehavior);
                 $arguments                    = explode(',', $arguments);
             }
 
-            $resultBehavior = resolve($resultBehavior);
+            $outputBehavior = resolve($outputBehavior);
         }
 
         $params = InvokableBehavior::injectInvokableBehaviorParameters(
-            actionBehavior: $resultBehavior,
+            actionBehavior: $outputBehavior,
             state: $this->state,
             eventBehavior: $this->state->triggeringEvent ?? $this->state->currentEventBehavior,
             actionArguments: $arguments,
         );
 
-        return $resultBehavior(...$params);
+        return $outputBehavior(...$params);
+    }
+
+    /**
+     * Resolve an output definition (array filter or callable).
+     */
+    private function resolveOutputDefinition(array|\Closure $output): mixed
+    {
+        // Array of strings → filter toResponseArray() by these keys
+        if (is_array($output)) {
+            if ($output === []) {
+                return [];
+            }
+
+            return array_intersect_key(
+                $this->state->context->toResponseArray(),
+                array_flip($output),
+            );
+        }
+
+        // Closure → invoke with parameter injection
+        return $this->resolveOutputBehavior($output);
+    }
+
+    /**
+     * Alias for output(). Kept for backward compatibility.
+     */
+    public function result(): mixed
+    {
+        return $this->output();
     }
 
     // region Private Methods
