@@ -579,3 +579,156 @@ $machine->output();
 // Array format still works for simple cases:
 'completed' => ['type' => 'final', 'output' => ['paymentId', 'status']],
 ```
+
+---
+
+## Test Plan
+
+### Tests Requiring UPDATE (~60 files)
+
+Keyword renames across existing tests — mechanical changes, no logic change:
+
+| Category | Files | Change |
+|----------|-------|--------|
+| `'result'` on states | ~15 stub machines | `'result' =>` → `'output' =>` |
+| `behavior['results']` | ~7 files | `'results' =>` → `'outputs' =>` |
+| `->result()` calls | 6 test files | `->result()` → `->output()` |
+| `ResultBehavior` extends | 3 stub classes | `extends ResultBehavior` → `extends OutputBehavior` |
+| `contextKeys` on endpoints | 5+ test files | `'contextKeys' =>` → `'output' =>` |
+| Response `'context'` assertions | 4 test files | `'context'` → `'output'` in response checks |
+| `ChildMachineDoneEvent` result key | 4 test files | `['result' => ...]` → `['output' => ...]` |
+| Stub Result classes | 3 files | Rename `GreenResult` → `GreenOutput`, etc. |
+
+**Key test files requiring update:**
+
+- `tests/Features/ResultBehaviorTriggeringEventTest.php` — 6 tests, all use `'result'` on states + `->result()` calls
+- `tests/Features/ResultBehaviorInjectionTest.php` — 10 tests, all use `behavior['results']` + `'result'` on states
+- `tests/Routing/MachineControllerTest.php` — response structure assertions (`'context'` → `'output'`)
+- `tests/Routing/EndpointDefinitionTest.php` — `'result'` → `'output'` in endpoint parsing
+- `tests/Routing/ForwardedEndpointHttpTest.php` — `contextKeys` → `output`, response structure
+- `tests/Routing/EndpointComputedContextTest.php` — `contextKeys` filtering → `output` array
+- `tests/Features/ForwardEndpointParsingTest.php` — 8 tests parsing `contextKeys` in forward config
+- `tests/Features/AsyncMachineDelegationTest.php` — child completion with result payload
+- `tests/Definition/StateDefinitionTest.php` — `'result'` on states + `->result()` call
+
+### Tests Requiring REMOVAL
+
+None — all existing tests cover valid concepts that survive the rename. No test becomes obsolete.
+
+### NEW Tests to Write
+
+#### 1. State-Level Output (Non-Final States)
+
+```
+- output on non-final atomic state works (returns filtered/computed output)
+- output on compound state works
+- output on non-final state accessible via $machine->output()
+- state without output returns toResponseArray() fallback
+```
+
+#### 2. Output Resolution Chain
+
+```
+- endpoint output overrides state output
+- state output used when endpoint has no output
+- toResponseArray() used when neither has output
+- endpoint output => [] returns empty, even if state has output
+- state output => [] returns empty, even if toResponseArray() has data
+```
+
+#### 3. InvalidOutputDefinitionException
+
+```
+- output on @always (transient) state throws at definition time
+- output on parallel region state throws at definition time
+- output on parallel region's child state throws at definition time
+- output on parallel state itself is allowed
+- machine:validate-config catches output on transient state
+- machine:validate-config catches output on parallel region
+- exception message includes state route for debugging
+```
+
+#### 4. Response Envelope
+
+```
+- every endpoint response has {id, machineId, state, availableEvents, output}
+- create endpoint includes envelope
+- stateless endpoint includes envelope
+- machineId-bound endpoint includes envelope
+- model-bound endpoint includes envelope
+- forwarded endpoint includes envelope
+- output with OutputBehavior class returns computed data in envelope
+- output with array filter returns filtered context in envelope
+- output with closure returns closure result in envelope
+- availableEvents is always present (never lost like v8 with result)
+```
+
+#### 5. $machine->output()
+
+```
+- returns state output on non-final state
+- returns state output on final state
+- returns toResponseArray() when no output defined
+- returns empty array when output => []
+- never returns null
+- works after persist + restore
+```
+
+#### 6. Child Machine Output Integration
+
+```
+- child final state output populates ChildMachineDoneEvent payload['output']
+- parent @done action receives child's OutputBehavior result
+- child with output => ['key1'] filters context for parent
+- child with output => OutputClass::class runs behavior for parent
+- child without output sends full context to parent (fallback)
+```
+
+#### 7. Parallel State Output
+
+```
+- parallel state with output returns that output
+- parallel state without output returns toResponseArray()
+- parallel region with output throws InvalidOutputDefinitionException
+- parallel region child with output throws InvalidOutputDefinitionException
+```
+
+#### 8. Forwarded Endpoint Output
+
+```
+- forwarded endpoint with output => ['k1'] filters child context
+- forwarded endpoint with output => OutputClass runs behavior
+- forwarded endpoint without output returns full child context
+- ForwardContext available in forwarded output behavior
+```
+
+#### 9. OutputBehavior
+
+```
+- OutputBehavior receives ContextManager via injection
+- OutputBehavior receives EventBehavior (triggering event)
+- OutputBehavior receives State
+- OutputBehavior receives EventCollection
+- OutputBehavior receives ForwardContext (forwarded endpoints)
+- OutputBehavior with constructor DI resolves from container
+- OutputBehavior return type can be array, object, scalar
+```
+
+#### 10. Computed Properties in Output
+
+```
+- output => ['computedKey'] includes computed value from computedContext()
+- OutputBehavior can access computed methods on typed ContextManager
+- toResponseArray() fallback includes computedContext() values
+```
+
+#### 11. Edge Cases
+
+```
+- output defined on every state of a machine (full coverage)
+- output behavior that returns null
+- output behavior that throws exception
+- output behavior with no __invoke parameters (returns static data)
+- deeply nested compound state with output
+- state with both output and machine delegation (output applies before delegation)
+```
