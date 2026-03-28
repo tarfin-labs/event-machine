@@ -13,9 +13,9 @@ class InvalidEndpointDefinitionException extends RuntimeException
         return new self("Endpoint references undefined event type `{$eventType}`. Ensure it is listed in the behavior 'events' array.");
     }
 
-    public static function undefinedResult(string $resultKey): self
+    public static function undefinedOutput(string $outputKey): self
     {
-        return new self("Endpoint references undefined output behavior `{$resultKey}`. Ensure it is listed in the behavior 'outputs' array or is a valid FQCN.");
+        return new self("Endpoint references undefined output behavior `{$outputKey}`. Ensure it is listed in the behavior 'outputs' array or is a valid FQCN.");
     }
 
     public static function invalidAction(string $actionClass): self
