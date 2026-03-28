@@ -359,6 +359,57 @@ Constructor DI for external services works the same way.
 
 ---
 
+## Forwarded Endpoint Output
+
+Forwarded endpoints (`forward` config on delegation states) also support `output` instead of `contextKeys`:
+
+```php
+// Old
+'forward' => [
+    ReportRequestedEvent::class => [
+        'uri'         => '/findeks/report-requested',
+        'contextKeys' => ['phones', 'maskedPhone', 'queryId'],
+    ],
+],
+
+// New
+'forward' => [
+    ReportRequestedEvent::class => [
+        'uri'    => '/findeks/report-requested',
+        'output' => ['phones', 'maskedPhone', 'queryId'],
+    ],
+],
+```
+
+Same resolution chain applies: forwarded endpoint `output` overrides child state's output.
+
+---
+
+## `toResponseArray()` Migration
+
+`toResponseArray()` remains as the fallback, but machines that override it with complex logic (DB queries, external lookups) should migrate to state-level output behaviors.
+
+### Problem: DB queries in toResponseArray()
+
+Some ContextManager subclasses perform DB queries inside `toResponseArray()` — loading related models, computing derived values. This runs on EVERY response regardless of state — wasteful when the current state only needs 2 fields from context.
+
+### Solution: State-level OutputBehavior
+
+Each state's output behavior only computes what it needs. States that need pricing data don't query customer tables. States that need customer data don't compute installment options. Each state pays only for what it returns.
+
+### `computedContext()` vs OutputBehavior
+
+`computedContext()` was designed for derived values but is unused in practice — `toResponseArray()` overrides absorbed its role. With state-level output, neither is needed as the primary mechanism:
+
+| Mechanism | When to use |
+|-----------|------------|
+| `output => ['key1', 'key2']` | Simple field selection from context |
+| `output => OutputClass::class` | Computed values, DB lookups, formatting |
+| `toResponseArray()` | Fallback only — avoid overriding in new code |
+| `computedContext()` | Deprecated in favor of OutputBehavior |
+
+---
+
 ## Summary
 
 ### What's Removed
