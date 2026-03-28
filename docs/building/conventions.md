@@ -44,12 +44,12 @@ Every element in EventMachine has two identities: its **PHP class name** and the
 | Guard | `IsPaymentValidGuard` | `isPaymentValidGuard` | `'isPaymentValidGuard'` |
 | Validation Guard | `IsAmountValidValidationGuard` | `isAmountValidValidationGuard` | `'isAmountValidValidationGuard'` |
 | Calculator | `OrderTotalCalculator` | `orderTotalCalculator` | `'orderTotalCalculator'` |
-| Result | `InvoiceSummaryResult` | `invoiceSummaryResult` | `'invoiceSummaryResult'` |
+| Output | `InvoiceSummaryOutput` | `invoiceSummaryOutput` | `'invoiceSummaryOutput'` |
 | Event | `OrderSubmittedEvent` | — | `'ORDER_SUBMITTED'` |
 | Machine | `OrderWorkflowMachine` | — | `'order_workflow'` |
 | Context | `OrderWorkflowContext` | — | — |
 | Endpoint Action | `CancelEndpointAction` | — | `CancelEndpointAction::class` |
-| Endpoint Result | `OrderDetailEndpointResult` | `orderDetailEndpointResult` | `'orderDetailEndpointResult'` |
+| Endpoint Output | `OrderDetailEndpointOutput` | `orderDetailEndpointOutput` | `'orderDetailEndpointOutput'` |
 
 The pattern is straightforward:
 
@@ -652,9 +652,9 @@ Inline keys:
 ],
 ```
 
-## Results
+## Outputs
 
-Results compute the final output of a state machine. Name them with a **descriptive noun** and a `Result` suffix.
+Outputs compute the final output of a state machine. Name them with a **descriptive noun** and an `Output` suffix.
 
 ```php ignore
 // Class name: {Subject}{Noun}Output — PascalCase
@@ -914,7 +914,7 @@ Inline keys use camelCase:
 
 ### Endpoint Output Classes
 
-Endpoint results customize the HTTP response. Name them with the **event-derived name** and an `EndpointResult` suffix:
+Endpoint outputs customize the HTTP response. Name them with the **event-derived name** and an `EndpointOutput` suffix:
 
 ```php ignore
 // Class name: {EventDerived}EndpointOutput — PascalCase
@@ -1042,14 +1042,14 @@ app/
         │   └── PaymentReceivedEvent.php
         ├── Calculators/
         │   └── OrderTotalCalculator.php
-        ├── Results/
-        │   └── OrderConfirmationResult.php
+        ├── Outputs/
+        │   └── OrderConfirmationOutput.php
         ├── Endpoints/
         │   ├── Actions/
         │   │   ├── CancelEndpointAction.php
         │   │   └── StartEndpointAction.php
-        │   └── Results/
-        │       └── OrderDetailEndpointResult.php
+        │   └── Outputs/
+        │       └── OrderDetailEndpointOutput.php
         └── Resolvers/
             └── ExpiredApplicationsResolver.php
 ```
