@@ -84,7 +84,7 @@ class MachineController extends Controller
         $machine = $machineClass::create();
         $machine->persist();
 
-        return $this->buildResponse($machine->state, $machine, resultKey: null, statusCode: 201);
+        return $this->buildResponse($machine->state, $machine, outputKey: null, statusCode: 201);
     }
 
     /**
@@ -96,17 +96,17 @@ class MachineController extends Controller
 
         $event = $this->resolveEvent($machine, $defaults['_event_type'], $request);
 
-        $outputDef   = $defaults['_output'] ?? null;
-        $resultKey   = is_string($outputDef) ? $outputDef : null;
-        $contextKeys = is_array($outputDef) ? $outputDef : null;
+        $outputDef  = $defaults['_output'] ?? null;
+        $outputKey  = is_string($outputDef) ? $outputDef : null;
+        $outputKeys = is_array($outputDef) ? $outputDef : null;
 
         return $this->executeEndpoint(
             machine: $machine,
             event: $event,
             actionClass: $defaults['_action_class'] ?? null,
-            resultKey: $resultKey,
+            outputKey: $outputKey,
             statusCode: $defaults['_status_code'] ?? 200,
-            contextKeys: $contextKeys,
+            outputKeys: $outputKeys,
             includeAvailableEvents: $defaults['_available_events'] ?? true,
         );
     }
@@ -150,9 +150,9 @@ class MachineController extends Controller
         Machine $machine,
         EventBehavior $event,
         ?string $actionClass,
-        ?string $resultKey,
+        ?string $outputKey,
         int $statusCode,
-        ?array $contextKeys = null,
+        ?array $outputKeys = null,
         ?bool $includeAvailableEvents = true,
     ): JsonResponse {
         $action = $actionClass !== null
@@ -192,7 +192,7 @@ class MachineController extends Controller
         // Auto-dispatch completion if child reached final state and has a parent
         $this->dispatchChildCompletionIfFinal($machine, $state);
 
-        return $this->buildResponse($state, $machine, $resultKey, $statusCode, $contextKeys, $includeAvailableEvents);
+        return $this->buildResponse($state, $machine, $outputKey, $statusCode, $outputKeys, $includeAvailableEvents);
     }
 
     /**
@@ -203,22 +203,22 @@ class MachineController extends Controller
     protected function buildResponse(
         State $state,
         Machine $machine,
-        ?string $resultKey,
+        ?string $outputKey,
         int $statusCode,
-        ?array $contextKeys = null,
+        ?array $outputKeys = null,
         ?bool $includeAvailableEvents = true,
     ): JsonResponse {
         $rootEventId = $state->history->first()?->root_event_id;
 
         // Resolve output data
-        if ($resultKey !== null) {
-            $outputData = $this->resolveAndRunResult($resultKey, $state, $machine);
-        } elseif ($contextKeys !== null) {
+        if ($outputKey !== null) {
+            $outputData = $this->resolveAndRunOutput($outputKey, $state, $machine);
+        } elseif ($outputKeys !== null) {
             $contextData = array_merge(
                 is_array($state->context->data) ? $state->context->data : [],
                 $state->context->toResponseArray(),
             );
-            $outputData = array_intersect_key($contextData, array_flip($contextKeys));
+            $outputData = array_intersect_key($contextData, array_flip($outputKeys));
         } else {
             $outputData = $machine->output();
         }
@@ -240,30 +240,30 @@ class MachineController extends Controller
      * When a ForwardContext is provided, it is injected into the OutputBehavior
      * so it can access the child machine's state and context.
      */
-    protected function resolveAndRunResult(
-        string $resultKey,
+    protected function resolveAndRunOutput(
+        string $outputKey,
         State $state,
         Machine $machine,
         ?ForwardContext $forwardContext = null,
     ): mixed {
-        $resultClass = class_exists($resultKey)
-            ? $resultKey
-            : ($machine->definition->behavior['outputs'][$resultKey] ?? null);
+        $outputClass = class_exists($outputKey)
+            ? $outputKey
+            : ($machine->definition->behavior['outputs'][$outputKey] ?? null);
 
-        if ($resultClass === null) {
-            throw new \RuntimeException("Result behavior '{$resultKey}' not found.");
+        if ($outputClass === null) {
+            throw new \RuntimeException("Output behavior '{$outputKey}' not found.");
         }
 
-        $resultBehavior = resolve($resultClass);
+        $outputBehavior = resolve($outputClass);
 
         $params = InvokableBehavior::injectInvokableBehaviorParameters(
-            actionBehavior: $resultBehavior,
+            actionBehavior: $outputBehavior,
             state: $state,
             eventBehavior: $state->triggeringEvent ?? $state->currentEventBehavior,
             forwardContext: $forwardContext,
         );
 
-        return $resultBehavior(...$params);
+        return $outputBehavior(...$params);
     }
 
     /**
@@ -374,22 +374,22 @@ class MachineController extends Controller
      */
     protected function buildForwardedResponse(Machine $machine, State $state, array $defaults): JsonResponse
     {
-        $outputDef   = $defaults['_output'] ?? null;
-        $resultKey   = is_string($outputDef) ? $outputDef : null;
-        $contextKeys = is_array($outputDef) ? $outputDef : null;
-        $statusCode  = $defaults['_status_code'] ?? 200;
+        $outputDef  = $defaults['_output'] ?? null;
+        $outputKey  = is_string($outputDef) ? $outputDef : null;
+        $outputKeys = is_array($outputDef) ? $outputDef : null;
+        $statusCode = $defaults['_status_code'] ?? 200;
 
         $childState = $state->getForwardedChildState();
 
-        // Custom result behavior — runs on PARENT with ForwardContext injected
-        if ($resultKey !== null && $childState instanceof State) {
+        // Custom output behavior — runs on PARENT with ForwardContext injected
+        if ($outputKey !== null && $childState instanceof State) {
             $forwardContext = new ForwardContext(
                 childContext: $childState->context,
                 childState: $childState,
             );
 
-            $result = $this->resolveAndRunResult(
-                resultKey: $resultKey,
+            $result = $this->resolveAndRunOutput(
+                outputKey: $outputKey,
                 state: $state,
                 machine: $machine,
                 forwardContext: $forwardContext,
@@ -419,8 +419,8 @@ class MachineController extends Controller
         if ($childState instanceof State) {
             $childContext = $childState->context->toResponseArray();
 
-            if ($contextKeys !== null) {
-                $childContext = array_intersect_key($childContext, array_flip($contextKeys));
+            if ($outputKeys !== null) {
+                $childContext = array_intersect_key($childContext, array_flip($outputKeys));
             }
 
             $response['child'] = [
