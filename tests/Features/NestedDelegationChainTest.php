@@ -31,7 +31,7 @@ it('three-level chain: grandchild done propagates through child to parent', func
     ThreeLevelParentMachine::test()
         ->send(['type' => 'START'])
         ->assertState('processing')
-        ->simulateChildDone(MiddleChildMachine::class, result: ['chain' => 'complete'])
+        ->simulateChildDone(MiddleChildMachine::class, output: ['chain' => 'complete'])
         ->assertState('completed')
         ->assertContext('result', ['chain' => 'complete']);
 });
@@ -59,7 +59,7 @@ it('three-level chain: startingAt processing then simulateChildDone completes pa
     Queue::fake();
 
     ThreeLevelParentMachine::startingAt(stateId: 'processing')
-        ->simulateChildDone(MiddleChildMachine::class, result: ['level' => 3, 'data' => 'deep'])
+        ->simulateChildDone(MiddleChildMachine::class, output: ['level' => 3, 'data' => 'deep'])
         ->assertState('completed')
         ->assertContext('result', ['level' => 3, 'data' => 'deep']);
 });
@@ -95,7 +95,7 @@ it('three-level inline chain with custom machines and result propagation', funct
         behavior: [
             'actions' => [
                 'captureLevelOneAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                    $ctx->set('grandchildData', $event->payload['result'] ?? null);
+                    $ctx->set('grandchildData', $event->payload['output'] ?? null);
                     $ctx->set('chainDepth', 3);
                 },
             ],
@@ -107,7 +107,7 @@ it('three-level inline chain with custom machines and result propagation', funct
     $testMachine
         ->send('BEGIN')
         ->assertState('level_one')
-        ->simulateChildDone(MiddleChildMachine::class, result: ['origin' => 'grandchild'])
+        ->simulateChildDone(MiddleChildMachine::class, output: ['origin' => 'grandchild'])
         ->assertState('level_one_done')
         ->assertContext('grandchildData', ['origin' => 'grandchild'])
         ->assertContext('chainDepth', 3);

@@ -61,8 +61,8 @@ class ParentOrderMachine extends Machine
                         ContextManager $context,
                         EventBehavior $event
                     ): void {
-                        $context->set('paymentId', $event->payload['result']['paymentId'] ?? null);
-                        $context->set('receiptUrl', $event->payload['result']['receiptUrl'] ?? null);
+                        $context->set('paymentId', $event->payload['output']['paymentId'] ?? null);
+                        $context->set('receiptUrl', $event->payload['output']['receiptUrl'] ?? null);
                     },
                 ],
             ],

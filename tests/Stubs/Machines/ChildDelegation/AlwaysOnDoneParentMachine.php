@@ -55,7 +55,7 @@ class AlwaysOnDoneParentMachine extends Machine
             behavior: [
                 'actions' => [
                     'captureResultAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                        $ctx->set('result', $event->payload['result'] ?? null);
+                        $ctx->set('result', $event->payload['output'] ?? null);
                     },
                 ],
             ],

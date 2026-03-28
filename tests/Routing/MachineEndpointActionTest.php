@@ -111,7 +111,7 @@ test('START endpoint has action class set', function (): void {
 
     expect($endpoint->eventType)->toBe('START')
         ->and($endpoint->actionClass)->toBe(TestEndpointAction::class)
-        ->and($endpoint->resultBehavior)->toBeNull()
+        ->and($endpoint->output)->toBeNull()
         ->and($endpoint->uri)->toBe('/start')
         ->and($endpoint->method)->toBe('POST');
 });
@@ -121,7 +121,7 @@ test('COMPLETE endpoint has result behavior and custom status', function (): voi
     $endpoint   = $definition->parsedEndpoints['COMPLETE'];
 
     expect($endpoint->eventType)->toBe('COMPLETE')
-        ->and($endpoint->resultBehavior)->toBe('testEndpointResult')
+        ->and($endpoint->output)->toBe('testEndpointResult')
         ->and($endpoint->statusCode)->toBe(201)
         ->and($endpoint->actionClass)->toBeNull()
         ->and($endpoint->uri)->toBe('/complete');
@@ -135,7 +135,7 @@ test('CANCEL endpoint uses auto-generated defaults', function (): void {
         ->and($endpoint->uri)->toBe('/cancel')
         ->and($endpoint->method)->toBe('POST')
         ->and($endpoint->actionClass)->toBeNull()
-        ->and($endpoint->resultBehavior)->toBeNull()
+        ->and($endpoint->output)->toBeNull()
         ->and($endpoint->statusCode)->toBeNull()
         ->and($endpoint->middleware)->toBe([]);
 });

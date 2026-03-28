@@ -40,7 +40,7 @@ test('it creates an endpoint from null config with auto-generated URI', function
         ->and($endpoint->uri)->toBe('/farmer-saved')
         ->and($endpoint->method)->toBe('POST')
         ->and($endpoint->actionClass)->toBeNull()
-        ->and($endpoint->resultBehavior)->toBeNull()
+        ->and($endpoint->output)->toBeNull()
         ->and($endpoint->middleware)->toBe([])
         ->and($endpoint->statusCode)->toBeNull();
 });
@@ -52,7 +52,7 @@ test('it creates an endpoint from string config shorthand', function (): void {
         ->and($endpoint->uri)->toBe('/farmer')
         ->and($endpoint->method)->toBe('POST')
         ->and($endpoint->actionClass)->toBeNull()
-        ->and($endpoint->resultBehavior)->toBeNull()
+        ->and($endpoint->output)->toBeNull()
         ->and($endpoint->middleware)->toBe([])
         ->and($endpoint->statusCode)->toBeNull();
 });
@@ -71,7 +71,7 @@ test('it creates an endpoint from array config with all options', function (): v
         ->and($endpoint->uri)->toBe('/custom-farmer')
         ->and($endpoint->method)->toBe('PUT')
         ->and($endpoint->actionClass)->toBe('App\\Actions\\SaveFarmer')
-        ->and($endpoint->resultBehavior)->toBe('farmerResultBehavior')
+        ->and($endpoint->output)->toBe('farmerResultBehavior')
         ->and($endpoint->middleware)->toBe(['auth', 'throttle'])
         ->and($endpoint->statusCode)->toBe(201);
 });
@@ -85,7 +85,7 @@ test('it creates an endpoint from array config with partial options using defaul
         ->and($endpoint->uri)->toBe('/farmer')
         ->and($endpoint->method)->toBe('POST')
         ->and($endpoint->actionClass)->toBeNull()
-        ->and($endpoint->resultBehavior)->toBeNull()
+        ->and($endpoint->output)->toBeNull()
         ->and($endpoint->middleware)->toBe([])
         ->and($endpoint->statusCode)->toBeNull();
 });
@@ -123,7 +123,7 @@ test('it creates an endpoint from list syntax with event class', function (): vo
         ->and($endpoint->uri)->toBe('/simple')
         ->and($endpoint->method)->toBe('POST')
         ->and($endpoint->actionClass)->toBeNull()
-        ->and($endpoint->resultBehavior)->toBeNull()
+        ->and($endpoint->output)->toBeNull()
         ->and($endpoint->middleware)->toBe([])
         ->and($endpoint->statusCode)->toBeNull();
 });

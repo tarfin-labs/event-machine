@@ -114,7 +114,7 @@ it('transfers context to child via with key mapping format', function (): void {
         behavior: [
             'actions' => [
                 'storeAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                    $ctx->set('childGotPrice', $event->payload['result']['amount'] ?? null);
+                    $ctx->set('childGotPrice', $event->payload['output']['amount'] ?? null);
                 },
             ],
         ],
@@ -348,7 +348,7 @@ it('supports @done multi-branch guarded fork', function (): void {
         behavior: [
             'guards' => [
                 'isApprovedGuard' => function (ContextManager $ctx, EventBehavior $event): bool {
-                    return ($event->payload['result']['status'] ?? '') === 'approved';
+                    return ($event->payload['output']['status'] ?? '') === 'approved';
                 },
             ],
         ],

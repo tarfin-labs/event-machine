@@ -36,8 +36,7 @@ test('it parses plain string forward as ForwardedEndpointDefinition', function (
         ->and($fwd->childEventClass)->toBe(ProvideCardEvent::class)
         ->and($fwd->method)->toBe('POST')
         ->and($fwd->actionClass)->toBeNull()
-        ->and($fwd->resultBehavior)->toBeNull()
-        ->and($fwd->contextKeys)->toBeNull()
+        ->and($fwd->output)->toBeNull()
         ->and($fwd->statusCode)->toBeNull()
         ->and($fwd->middleware)->toBe([])
         ->and($fwd->availableEvents)->toBeNull();
@@ -76,8 +75,7 @@ test('it parses rename string forward as ForwardedEndpointDefinition', function 
         ->and($fwd->childEventClass)->toBe(AbortEvent::class)
         ->and($fwd->method)->toBe('POST')
         ->and($fwd->actionClass)->toBeNull()
-        ->and($fwd->resultBehavior)->toBeNull()
-        ->and($fwd->contextKeys)->toBeNull()
+        ->and($fwd->output)->toBeNull()
         ->and($fwd->statusCode)->toBeNull()
         ->and($fwd->middleware)->toBe([]);
 });
@@ -142,18 +140,18 @@ test('it parses rename FQCN both sides as ForwardedEndpointDefinition', function
 //  Forward format parsing — Format 3 (full config)
 // ═══════════════════════════════════════════════════════════════
 
-test('it parses full array forward with result and contextKeys', function (): void {
+test('it parses full array forward with result (now output)', function (): void {
     $definition = ForwardParentEndpointMachine::definition();
 
     expect($definition->forwardedEndpoints)->toHaveKey('CONFIRM_PAYMENT');
 
     $fwd = $definition->forwardedEndpoints['CONFIRM_PAYMENT'];
 
+    // In v9, forward config 'result' is resolved as 'output' (class reference takes priority)
     expect($fwd)->toBeInstanceOf(ForwardedEndpointDefinition::class)
         ->and($fwd->parentEventType)->toBe('CONFIRM_PAYMENT')
         ->and($fwd->childEventType)->toBe('CONFIRM_PAYMENT')
-        ->and($fwd->resultBehavior)->toBe(PaymentStepResult::class)
-        ->and($fwd->contextKeys)->toBe(['cardLast4', 'status'])
+        ->and($fwd->output)->toBe(PaymentStepResult::class)
         ->and($fwd->statusCode)->toBe(200);
 });
 
@@ -213,8 +211,7 @@ test('it parses full array forward with ALL keys simultaneously', function (): v
         ->and($fwd->method)->toBe('PATCH')
         ->and($fwd->middleware)->toBe(['throttle:10'])
         ->and($fwd->actionClass)->toBe(ForwardEndpointAction::class)
-        ->and($fwd->resultBehavior)->toBe(PaymentStepResult::class)
-        ->and($fwd->contextKeys)->toBe(['cardLast4'])
+        ->and($fwd->output)->toBe(PaymentStepResult::class)
         ->and($fwd->statusCode)->toBe(202)
         ->and($fwd->availableEvents)->toBeFalse();
 });
@@ -339,7 +336,7 @@ test('it parses Format 1 + Format 2 + Format 3 in same forward array', function 
     $plain = $definition->forwardedEndpoints['PROVIDE_CARD'];
     expect($plain->parentEventType)->toBe('PROVIDE_CARD')
         ->and($plain->childEventType)->toBe('PROVIDE_CARD')
-        ->and($plain->resultBehavior)->toBeNull();
+        ->and($plain->output)->toBeNull();
 
     // Format 2
     $rename = $definition->forwardedEndpoints['CANCEL_ORDER'];
@@ -350,8 +347,7 @@ test('it parses Format 1 + Format 2 + Format 3 in same forward array', function 
     $full = $definition->forwardedEndpoints['CONFIRM_PAYMENT'];
     expect($full->parentEventType)->toBe('CONFIRM_PAYMENT')
         ->and($full->childEventType)->toBe('CONFIRM_PAYMENT')
-        ->and($full->resultBehavior)->toBe(PaymentStepResult::class)
-        ->and($full->contextKeys)->toBe(['cardLast4'])
+        ->and($full->output)->toBe(PaymentStepResult::class)
         ->and($full->statusCode)->toBe(201);
 });
 
@@ -561,12 +557,11 @@ test('it existing forward behavior unchanged for Format 1 and Format 2', functio
     expect($provideCard->parentEventType)->toBe('PROVIDE_CARD')
         ->and($provideCard->childEventType)->toBe('PROVIDE_CARD');
 
-    // Format 3 with result/contextKeys/status
+    // Format 3 with result (now output)
     $confirmPayment = $definition->forwardedEndpoints['CONFIRM_PAYMENT'];
     expect($confirmPayment->parentEventType)->toBe('CONFIRM_PAYMENT')
         ->and($confirmPayment->childEventType)->toBe('CONFIRM_PAYMENT')
-        ->and($confirmPayment->resultBehavior)->toBe(PaymentStepResult::class)
-        ->and($confirmPayment->contextKeys)->toBe(['cardLast4', 'status'])
+        ->and($confirmPayment->output)->toBe(PaymentStepResult::class)
         ->and($confirmPayment->statusCode)->toBe(200);
 });
 

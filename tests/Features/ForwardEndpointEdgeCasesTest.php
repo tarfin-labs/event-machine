@@ -476,8 +476,7 @@ test('ForwardedEndpointDefinition stores all constructor parameters correctly', 
         uri: '/custom-form',
         method: 'PUT',
         actionClass: ForwardEndpointAction::class,
-        resultBehavior: PaymentStepResult::class,
-        contextKeys: ['field_a', 'field_b'],
+        output: PaymentStepResult::class,
         statusCode: 201,
         middleware: ['auth', 'throttle:5'],
         availableEvents: true,
@@ -490,8 +489,7 @@ test('ForwardedEndpointDefinition stores all constructor parameters correctly', 
         ->and($fwd->uri)->toBe('/custom-form')
         ->and($fwd->method)->toBe('PUT')
         ->and($fwd->actionClass)->toBe(ForwardEndpointAction::class)
-        ->and($fwd->resultBehavior)->toBe(PaymentStepResult::class)
-        ->and($fwd->contextKeys)->toBe(['field_a', 'field_b'])
+        ->and($fwd->output)->toBe(PaymentStepResult::class)
         ->and($fwd->statusCode)->toBe(201)
         ->and($fwd->middleware)->toBe(['auth', 'throttle:5'])
         ->and($fwd->availableEvents)->toBeTrue();
@@ -508,8 +506,7 @@ test('ForwardedEndpointDefinition defaults are correct', function (): void {
 
     expect($fwd->method)->toBe('POST')
         ->and($fwd->actionClass)->toBeNull()
-        ->and($fwd->resultBehavior)->toBeNull()
-        ->and($fwd->contextKeys)->toBeNull()
+        ->and($fwd->output)->toBeNull()
         ->and($fwd->statusCode)->toBeNull()
         ->and($fwd->middleware)->toBe([])
         ->and($fwd->availableEvents)->toBeNull();

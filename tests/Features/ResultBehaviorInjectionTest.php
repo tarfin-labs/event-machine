@@ -42,7 +42,7 @@ it('injects ContextManager into result behavior', function (): void {
 
     // Use Machine class directly
     $def            = $definition;
-    $resultBehavior = $def->behavior['results']['done'];
+    $resultBehavior = $def->behavior['outputs']['done'];
     $params         = InvokableBehavior::injectInvokableBehaviorParameters(
         actionBehavior: $resultBehavior,
         state: $state,
@@ -77,7 +77,7 @@ it('injects EventBehavior into result behavior', function (): void {
     $state = $definition->getInitialState();
     $state = $definition->transition(['type' => 'FINISH'], $state);
 
-    $resultBehavior = $definition->behavior['results']['done'];
+    $resultBehavior = $definition->behavior['outputs']['done'];
     $params         = InvokableBehavior::injectInvokableBehaviorParameters(
         actionBehavior: $resultBehavior,
         state: $state,
@@ -114,7 +114,7 @@ it('injects parameters regardless of order (reversed)', function (): void {
     $state = $definition->getInitialState();
     $state = $definition->transition(['type' => 'DONE'], $state);
 
-    $resultBehavior = $definition->behavior['results']['done'];
+    $resultBehavior = $definition->behavior['outputs']['done'];
     $params         = InvokableBehavior::injectInvokableBehaviorParameters(
         actionBehavior: $resultBehavior,
         state: $state,
@@ -147,7 +147,7 @@ it('injects State into result behavior', function (): void {
 
     $state = $definition->getInitialState();
 
-    $resultBehavior = $definition->behavior['results']['done'];
+    $resultBehavior = $definition->behavior['outputs']['done'];
     $params         = InvokableBehavior::injectInvokableBehaviorParameters(
         actionBehavior: $resultBehavior,
         state: $state,
@@ -177,7 +177,7 @@ it('works with no parameters', function (): void {
 
     $state = $definition->getInitialState();
 
-    $resultBehavior = $definition->behavior['results']['done'];
+    $resultBehavior = $definition->behavior['outputs']['done'];
     $params         = InvokableBehavior::injectInvokableBehaviorParameters(
         actionBehavior: $resultBehavior,
         state: $state,
@@ -234,7 +234,7 @@ it('Machine::result() uses injection for closure result', function (): void {
 
     // The result is registered under the full state ID
     $stateId        = $state->currentStateDefinition->id;
-    $resultBehavior = $definition->behavior['results'][$stateId];
+    $resultBehavior = $definition->behavior['outputs'][$stateId];
     $params         = InvokableBehavior::injectInvokableBehaviorParameters(
         actionBehavior: $resultBehavior,
         state: $state,

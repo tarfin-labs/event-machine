@@ -393,7 +393,7 @@ it('ChildMachineJob::failed returns early when fire-and-forget', function (): vo
 // ─── Machine::fake() with Fire-and-Forget ───────────────────────
 
 it('fake short-circuits fire-and-forget, parent stays in state', function (): void {
-    ImmediateChildMachine::fake(result: []);
+    ImmediateChildMachine::fake(output: []);
 
     $machine = FireAndForgetParentMachine::create();
     $machine->state->context->set('orderId', 'ORD-1');
@@ -404,7 +404,7 @@ it('fake short-circuits fire-and-forget, parent stays in state', function (): vo
 });
 
 it('fake short-circuits fire-and-forget with target', function (): void {
-    SimpleChildMachine::fake(result: []);
+    SimpleChildMachine::fake(output: []);
 
     $machine = FireAndForgetTargetParentMachine::create();
     $machine->state->context->set('tckn', '12345678901');
@@ -415,7 +415,7 @@ it('fake short-circuits fire-and-forget with target', function (): void {
 });
 
 it('fake records invocation with correct context', function (): void {
-    ImmediateChildMachine::fake(result: []);
+    ImmediateChildMachine::fake(output: []);
 
     $machine = FireAndForgetParentMachine::create();
     $machine->state->context->set('orderId', 'ORD-CTX');

@@ -22,7 +22,7 @@ afterEach(function (): void {
 it('Machine::fake() works when with closure accesses null model properties', function (): void {
     Queue::fake();
 
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     // Define a parent with a with closure that accesses a null property
     $definition = MachineDefinition::define(
@@ -59,7 +59,7 @@ it('Machine::fake() works when with closure accesses null model properties', fun
 it('Machine::fake() gracefully handles crashing with closure via try-catch', function (): void {
     Queue::fake();
 
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     $definition = MachineDefinition::define(
         config: [

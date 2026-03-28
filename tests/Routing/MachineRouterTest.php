@@ -351,11 +351,11 @@ test('routes store correct defaults for machine class and event type', function 
     expect($route->defaults['_machine_class'])->toBe(TestEndpointMachine::class)
         ->and($route->defaults['_event_type'])->toBe('START')
         ->and($route->defaults['_action_class'])->toBe(TestEndpointAction::class)
-        ->and($route->defaults['_result_behavior'])->toBeNull()
+        ->and($route->defaults['_output'])->toBeNull()
         ->and($route->defaults['_status_code'])->toBe(200);
 });
 
-test('route defaults include result behavior and status code when set', function (): void {
+test('route defaults include output and status code when set', function (): void {
     MachineRouter::register(TestEndpointMachine::class, [
         'prefix' => '/api/result-defaults',
     ]);
@@ -365,7 +365,7 @@ test('route defaults include result behavior and status code when set', function
     $routes = Route::getRoutes();
     $route  = $routes->getByName('test_endpoint.complete');
 
-    expect($route->defaults['_result_behavior'])->toBe('testEndpointResult')
+    expect($route->defaults['_output'])->toBe('testEndpointResult')
         ->and($route->defaults['_status_code'])->toBe(201);
 });
 
