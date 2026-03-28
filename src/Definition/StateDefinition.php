@@ -111,12 +111,12 @@ class StateDefinition
     public ?array $meta = null;
 
     /**
-     * Output definition for final states. Controls which context keys
-     * are exposed to the parent machine via ChildMachineDoneEvent.
+     * Output definition for this state. Controls what data is exposed
+     * to external consumers (API endpoints, broadcasts, parent machines).
      *
-     * @var null|array<string>|\Closure
+     * @var null|string|array<string>|\Closure
      */
-    public null|array|\Closure $output = null;
+    public null|string|array|\Closure $output = null;
 
     // endregion
 

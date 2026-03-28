@@ -1188,21 +1188,24 @@ class Machine implements Castable, JsonSerializable, Stringable
     /**
      * Resolve an output definition (array filter or callable).
      */
-    private function resolveOutputDefinition(array|\Closure $output): mixed
+    private function resolveOutputDefinition(string|array|\Closure $output): mixed
     {
-        // Array of strings → filter toResponseArray() by these keys
+        // Array of strings → filter context to these keys
         if (is_array($output)) {
             if ($output === []) {
                 return [];
             }
 
-            return array_intersect_key(
+            // Build full context data: merge toResponseArray() (typed + computed) with raw data (inline)
+            $contextData = array_merge(
+                is_array($this->state->context->data) ? $this->state->context->data : [],
                 $this->state->context->toResponseArray(),
-                array_flip($output),
             );
+
+            return array_intersect_key($contextData, array_flip($output));
         }
 
-        // Closure → invoke with parameter injection
+        // String (class reference or inline key) or Closure → resolve via behavior system
         return $this->resolveOutputBehavior($output);
     }
 
