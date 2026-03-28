@@ -152,6 +152,34 @@ Only the parallel state itself can define `output`. It has full context access (
 
 States with `@always` transitions are never observed by external consumers — the machine passes through them immediately. Defining `output` on a transient state throws `InvalidOutputDefinitionException` at definition time. The output would never be read.
 
+### Hierarchical (Compound) States
+
+When a compound state and its child atomic state both define `output`, the **atomic state's output wins** — it is the most specific:
+
+```php
+'payment' => [
+    'initial' => 'pending',
+    'output'  => PaymentSummaryOutput::class,   // default for all children
+    'states'  => [
+        'pending'  => [
+            'output' => PendingPaymentOutput::class,  // overrides parent
+            'on'     => ['PAY' => 'settled'],
+        ],
+        'settled'  => [
+            // no output → parent's PaymentSummaryOutput applies
+            'type' => 'final',
+        ],
+    ],
+],
+```
+
+Resolution within hierarchy:
+1. Atomic state has `output`? → use it
+2. Parent compound state has `output`? → use it
+3. Neither → `toResponseArray()`
+
+This does NOT apply to parallel states — parallel regions cannot define output (see above).
+
 ---
 
 ## Endpoint Integration
@@ -309,7 +337,7 @@ Resolution:
 1. Current state has `output`? → run it, return result
 2. No output defined? → return `toResponseArray()`
 
-`output => []` returns empty array (not null). Undefined output returns toResponseArray(). `$machine->output()` never returns null.
+`output => []` returns empty array. Undefined output returns `toResponseArray()`. `$machine->output()` returns whatever the output behavior produces (including null if the behavior returns null). When no output is defined, returns `toResponseArray()` which is never null for context-backed machines.
 
 Final state check is now explicit — not `output() !== null`:
 
@@ -439,7 +467,7 @@ Each state's output behavior only computes what it needs. States that need prici
 | Feature | Status |
 |---------|--------|
 | `toResponseArray()` | Fallback when no output defined |
-| `computedContext()` | Still works inside toResponseArray() |
+| `computedContext()` | Still works inside toResponseArray() fallback. Deprecated for new code — use OutputBehavior instead |
 | Parameter injection | Same DI system |
 | Constructor DI | Same service container injection |
 | `$machine->availableEvents()` | Unchanged |
@@ -475,6 +503,7 @@ Each state's output behavior only computes what it needs. States that need prici
 | 21 | Update `ChildJobJob` — rename internal `$result` variable to `$output` for clarity | `src/Jobs/ChildJobJob.php` |
 | 22 | Update `StateConfigValidator` — validate `output` on forward endpoints, fire-and-forget validation unchanged | `src/StateConfigValidator.php` |
 | 23 | Update `MachineController` — child completion dispatch uses unified output | `src/Routing/MachineController.php` |
+| 24 | Update `Machine::fake()` — accept `output:` key instead of `result:` | `src/Actor/Machine.php` |
 
 ### Documentation (docs/)
 
@@ -603,13 +632,15 @@ $machine->output();
 
 #### Child machine output
 
+The `output` key on final states already existed in v8 (child→parent data transfer). In v9, the same key now **also** serves API consumers and accepts `OutputBehavior` classes:
+
 ```php
-// Before (v8) — separate output key for child→parent
+// v8 — output only used for child→parent, only array format
 'completed' => ['type' => 'final', 'output' => ['paymentId', 'status']],
 
-// After (v9) — same key, but now accepts OutputBehavior too
+// v9 — same key, now also serves API + accepts OutputBehavior
 'completed' => ['type' => 'final', 'output' => PaymentCompletedOutput::class],
-// Array format still works for simple cases:
+// Array format still works (backward compatible):
 'completed' => ['type' => 'final', 'output' => ['paymentId', 'status']],
 ```
 
@@ -634,10 +665,10 @@ Features analyzed for unified output impact:
 | **Listeners** | No | No output interaction |
 | **sendTo / dispatchTo** | No | Fire-and-forget event delivery, no output flow |
 | **dispatchToParent** | No | Sends events to parent, doesn't carry output |
-| **Machine::fake()** | No | Fakes behavior classes, not output definitions |
+| **Machine::fake()** | Yes | `Machine::fake(result: [...])` → `Machine::fake(output: [...])` |
 | **simulateChildDone** | Yes | `$result` param → `$output` rename |
 | **simulateChildFail** | No | Already uses `$output` param |
-| **XState export** | No | Doesn't currently export result/output definitions |
+| **XState export** | Yes | Needs to export state-level `output` definitions per state |
 | **Machine discovery/cache** | No | Indexes timer configs, not output |
 | **Archive/restore** | No | Output definitions are stateless metadata on StateDefinition |
 | **ForwardContext** | No | Orthogonal — carries child state for injection into parent OutputBehavior |
@@ -815,7 +846,16 @@ None — all existing tests cover valid concepts that survive the rename. No tes
 - Machine::fake result key maps to output
 ```
 
-#### 14. Edge Cases
+#### 14. Hierarchical State Output Resolution
+
+```
+- child atomic state output overrides parent compound state output
+- parent compound output used when child has no output
+- no output on either → toResponseArray() fallback
+- three levels deep: grandchild > child > parent resolution
+```
+
+#### 15. Edge Cases
 
 ```
 - output defined on every state of a machine (full coverage)
