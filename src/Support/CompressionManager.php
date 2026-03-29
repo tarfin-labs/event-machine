@@ -149,7 +149,7 @@ class CompressionManager
             $decompressed = gzuncompress($data);
 
             if ($decompressed === false) {
-                throw ArchiveException::decompressFailed();
+                throw ArchiveException::decompressDataFailed();
             }
 
             return json_decode($decompressed, true, 512, JSON_THROW_ON_ERROR);
