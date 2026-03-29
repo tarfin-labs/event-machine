@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Exceptions;
 
-use InvalidArgumentException;
+use LogicException;
 
-class InvalidJobClassException extends InvalidArgumentException
+class InvalidJobClassException extends LogicException
 {
-    public static function doesNotExist(string $jobClass): self
+    public static function classNotFound(string $jobClass): self
     {
         return new self("Job class '{$jobClass}' does not exist.");
     }
