@@ -420,7 +420,7 @@ When a `ValidationGuardBehavior` fails inside a parallel state region, the behav
 
 A validation guard failure in **any** region blocks **all** regions from transitioning. This is intentional — validation rejection is atomic. The error message propagates as a 422 response through endpoints.
 
-```php no_run
+```php ignore
 'data_collection' => [
     'type' => 'parallel',
     'states' => [
