@@ -363,6 +363,16 @@ class MachineController extends Controller
                 'type'    => $parentEventType,
                 'payload' => $event->payload ?? [],
             ]);
+        } catch (MachineAlreadyRunningException) {
+            $httpStatus = $request->isMethod('GET') ? 200 : 423;
+
+            return $this->buildForwardedResponse(
+                machine: $machine,
+                state: $machine->state,
+                defaults: $defaults,
+                isProcessing: true,
+                statusCodeOverride: $httpStatus,
+            );
         } catch (MachineValidationException $e) { // @phpstan-ignore catch.neverThrown
             return response()->json([
                 'message' => $e->getMessage(),
@@ -391,7 +401,12 @@ class MachineController extends Controller
         $action?->after();
 
         // 5. Build response with child state info
-        return $this->buildForwardedResponse($machine, $state, $defaults);
+        return $this->buildForwardedResponse(
+            machine: $machine,
+            state: $state,
+            defaults: $defaults,
+            isProcessing: false,
+        );
     }
 
     /**
