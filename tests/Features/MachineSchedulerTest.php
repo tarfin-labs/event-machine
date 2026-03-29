@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Scheduling\MachineScheduler;
 use Illuminate\Console\Scheduling\Event as SchedulingEvent;
+use Tarfinlabs\EventMachine\Exceptions\MachineDefinitionNotFoundException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScheduledMachines\ScheduledMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
@@ -40,8 +41,8 @@ it('register supports environments chaining', function (): void {
 
 it('register throws for undefined event type', function (): void {
     MachineScheduler::register(ScheduledMachine::class, 'TYPO_EVENT');
-})->throws(InvalidArgumentException::class, 'TYPO_EVENT');
+})->throws(MachineDefinitionNotFoundException::class, 'TYPO_EVENT');
 
 it('register throws for machine with no schedules', function (): void {
     MachineScheduler::register(TrafficLightsMachine::class, 'INC');
-})->throws(InvalidArgumentException::class, 'INC');
+})->throws(MachineDefinitionNotFoundException::class, 'INC');
