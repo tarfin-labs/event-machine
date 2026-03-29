@@ -8,12 +8,12 @@ use LogicException;
 
 class InvalidRouterConfigException extends LogicException
 {
-    public static function onlyAndExceptTogether(): self
+    public static function onlyAndExceptConflict(): self
     {
         return new self("MachineRouter: 'only' and 'except' cannot be used together.");
     }
 
-    public static function unknownFilterTypes(string $filterKey, array $unknown, array $available): self
+    public static function unknownEventTypes(string $filterKey, array $unknown, array $available): self
     {
         return new self(sprintf(
             "MachineRouter: unknown event types in '%s': %s. Available: %s",
@@ -41,7 +41,7 @@ class InvalidRouterConfigException extends LogicException
         ));
     }
 
-    public static function orphanMachineIdFor(array $orphans, string $context): self
+    public static function orphanedMachineIdFor(array $orphans, string $context): self
     {
         return new self(sprintf(
             "MachineRouter: 'machineIdFor' references event types not in the registered endpoint set: %s%s",
@@ -50,7 +50,7 @@ class InvalidRouterConfigException extends LogicException
         ));
     }
 
-    public static function orphanModelFor(array $orphans, string $context): self
+    public static function orphanedModelFor(array $orphans, string $context): self
     {
         return new self(sprintf(
             "MachineRouter: 'modelFor' references event types not in the registered endpoint set: %s%s",
@@ -59,7 +59,7 @@ class InvalidRouterConfigException extends LogicException
         ));
     }
 
-    public static function modelForRequiresModelAndAttribute(): self
+    public static function modelAndAttributeRequired(): self
     {
         return new self("MachineRouter: 'model' and 'attribute' are required when 'modelFor' is set.");
     }
