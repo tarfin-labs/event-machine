@@ -33,10 +33,10 @@ use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Routing\ForwardedEndpointDefinition;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidEndpointDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidScheduleDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\MaxTransitionDepthExceededException;
-use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
@@ -923,7 +923,7 @@ class MachineDefinition
      * Check final states for invalid transition definitions.
      *
      * Iterates through the state definitions in the `idMap` property and checks if any of the final states
-     * have transition definitions. If a final state has transition definitions, it throws an `InvalidFinalStateDefinitionException`.
+     * have transition definitions. If a final state has transition definitions, it throws an `InvalidStateConfigException`.
      */
     public function checkFinalStatesForTransitions(): void
     {
@@ -932,7 +932,7 @@ class MachineDefinition
                 $stateDefinition->type === StateDefinitionType::FINAL &&
                 $stateDefinition->transitionDefinitions !== null
             ) {
-                throw InvalidFinalStateDefinitionException::noTransitions($stateDefinition->id);
+                throw InvalidStateConfigException::finalStateCannotHaveTransitions($stateDefinition->id);
             }
         }
     }
