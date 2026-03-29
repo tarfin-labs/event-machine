@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use InvalidArgumentException;
 use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RecordAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\GuardedMachine;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\MultiOutcomeChildMachine;
 
@@ -18,7 +18,7 @@ test('validates root level configuration keys', function (): void {
         'invalid_key'     => 'value',
         'another_invalid' => 'value',
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: 'Invalid root level configuration keys: invalid_key, another_invalid. Allowed keys are: id, version, initial, status_events, context, states, on, type, meta, entry, exit, description, scenarios_enabled, should_persist, delimiter'
     );
 });
@@ -36,7 +36,7 @@ test('accepts valid root level configuration', function (): void {
         'states'            => [
             'state_a' => [],
         ],
-    ]))->not->toThrow(exception: InvalidArgumentException::class);
+    ]))->not->toThrow(exception: InvalidStateConfigException::class);
 });
 
 test('accepts machine with root level transitions', function (): void {
@@ -50,7 +50,7 @@ test('accepts machine with root level transitions', function (): void {
             'state_a' => [],
             'state_b' => [],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ]))->not->toThrow(InvalidStateConfigException::class);
 });
 
 test('transitions must be defined under the on key', function (): void {
@@ -65,7 +65,7 @@ test('transitions must be defined under the on key', function (): void {
             ],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'check' has transitions defined directly. All transitions including '@always' must be defined under the 'on' key."
     );
 });
@@ -80,7 +80,7 @@ test('validates on property is an array', function (): void {
             ],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'state_a' has invalid 'on' definition. 'on' must be an array of transitions."
     );
 });
@@ -97,7 +97,7 @@ test('validates transition target is either string or array', function (): void 
             ],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'state_a' has invalid transition for event 'EVENT'. Transition must be a string (target state) or an array (transition config)."
     );
 });
@@ -117,7 +117,7 @@ test('validates condition arrays in transitions', function (): void {
             ],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'state_a' has invalid condition in transition for event 'EVENT'. Each condition must be an array with target/guards/actions."
     );
 });
@@ -137,7 +137,7 @@ test('validates guards configuration in transitions', function (): void {
             ],
         ],
     ]))->toThrow(
-        InvalidArgumentException::class,
+        InvalidStateConfigException::class,
         "State 'state_a' has invalid guards configuration for event 'EVENT'. Guards must be an array or string."
     );
 });
@@ -157,7 +157,7 @@ test('validates actions configuration in transitions', function (): void {
             ],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'state_a' has invalid actions configuration for event 'EVENT'. Actions must be an array or string."
     );
 });
@@ -177,7 +177,7 @@ test('validates calculators configuration in transitions', function (): void {
             ],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'state_a' has invalid calculators configuration for event 'EVENT'. Calculators must be an array or string."
     );
 });
@@ -198,7 +198,7 @@ test('validates allowed keys in transition config', function (): void {
             ],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'state_a' has invalid keys in transition config for event 'EVENT': invalid_key, another_invalid. Allowed keys are: target, guards, actions, description, calculators"
     );
 });
@@ -213,7 +213,7 @@ test('validates state type values', function (): void {
             ],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'state_a' has invalid type: invalid_type. Allowed types are: atomic, compound, parallel, final"
     );
 });
@@ -231,7 +231,7 @@ test('validates final states have no transitions', function (): void {
             ],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "Final state 'state_a' cannot have transitions"
     );
 });
@@ -249,7 +249,7 @@ test('validates final states have no child states', function (): void {
             ],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "Final state 'state_a' cannot have child states"
     );
 });
@@ -265,7 +265,7 @@ test('validates entry and exit actions are arrays or strings', function (): void
             ],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'state_a' has invalid entry/exit actions configuration. Actions must be an array or string."
     );
 });
@@ -316,7 +316,7 @@ test('accepts valid state configuration with all possible features', function ()
             'state_b' => [],
             'state_c' => [],
         ],
-    ]))->not->toThrow(exception: InvalidArgumentException::class);
+    ]))->not->toThrow(exception: InvalidStateConfigException::class);
 });
 
 test('normalizes string behaviors to arrays', function (): void {
@@ -334,7 +334,7 @@ test('normalizes string behaviors to arrays', function (): void {
                 ],
             ],
         ],
-    ]))->not->toThrow(exception: InvalidArgumentException::class);
+    ]))->not->toThrow(exception: InvalidStateConfigException::class);
 });
 
 test('empty array is treated as targetless transition, not empty guarded transition', function (): void {
@@ -347,7 +347,7 @@ test('empty array is treated as targetless transition, not empty guarded transit
                 ],
             ],
         ],
-    ]))->not->toThrow(exception: InvalidArgumentException::class);
+    ]))->not->toThrow(exception: InvalidStateConfigException::class);
 });
 
 test('validates default condition must be last in guarded transitions', function (): void {
@@ -369,7 +369,7 @@ test('validates default condition must be last in guarded transitions', function
             ],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'state_a' has invalid conditions order for event 'EVENT'. Default condition (no guards) must be the last condition."
     );
 });
@@ -398,7 +398,7 @@ test('accepts valid guarded transitions with multiple conditions', function (): 
                 ],
             ],
         ],
-    ]))->not->toThrow(exception: InvalidArgumentException::class);
+    ]))->not->toThrow(exception: InvalidStateConfigException::class);
 });
 
 test('guarded transitions can run actions without changing state when no target is specified', function (): void {
@@ -448,7 +448,7 @@ test('it accepts string @done configuration', function (): void {
             ],
             'completed' => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ]))->not->toThrow(InvalidStateConfigException::class);
 });
 
 test('it accepts array @done with target and actions', function (): void {
@@ -471,7 +471,7 @@ test('it accepts array @done with target and actions', function (): void {
             ],
             'completed' => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ]))->not->toThrow(InvalidStateConfigException::class);
 });
 
 test('it accepts conditional @done with guards', function (): void {
@@ -498,7 +498,7 @@ test('it accepts conditional @done with guards', function (): void {
             'approved'      => ['type' => 'final'],
             'manual_review' => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ]))->not->toThrow(InvalidStateConfigException::class);
 });
 
 test('it rejects @done with default branch not last', function (): void {
@@ -526,7 +526,7 @@ test('it rejects @done with default branch not last', function (): void {
             'manual_review' => ['type' => 'final'],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'processing' has invalid conditions order for event '@done'. Default condition (no guards) must be the last condition."
     );
 });
@@ -555,7 +555,7 @@ test('it rejects @done with invalid keys in branch', function (): void {
             'completed' => ['type' => 'final'],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'processing' has invalid keys in transition config for event '@done': invalid_key. Allowed keys are: target, guards, actions, description, calculators"
     );
 });
@@ -584,7 +584,7 @@ test('it accepts conditional @fail with guards', function (): void {
             'retrying' => ['type' => 'final'],
             'failed'   => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ]))->not->toThrow(InvalidStateConfigException::class);
 });
 
 test('it rejects invalid @done format', function (): void {
@@ -608,7 +608,7 @@ test('it rejects invalid @done format', function (): void {
             'completed' => ['type' => 'final'],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'processing' has invalid '@done' configuration. Must be a string or array."
     );
 });
@@ -634,7 +634,7 @@ test('it rejects invalid @fail format', function (): void {
             'failed' => ['type' => 'final'],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'processing' has invalid '@fail' configuration. Must be a string or array."
     );
 });
@@ -658,7 +658,7 @@ test('it accepts @done on compound state with guards', function (): void {
             'approved' => ['type' => 'final'],
             'rejected' => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ]))->not->toThrow(InvalidStateConfigException::class);
 });
 
 test('it rejects @fail with default branch not last', function (): void {
@@ -686,7 +686,7 @@ test('it rejects @fail with default branch not last', function (): void {
             'failed'   => ['type' => 'final'],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "State 'processing' has invalid conditions order for event '@fail'. Default condition (no guards) must be the last condition."
     );
 });
@@ -709,7 +709,7 @@ it('accepts @done.{state} keys as valid state keys (T20)', function (): void {
             'completed' => ['type' => 'final'],
             'declined'  => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ]))->not->toThrow(InvalidStateConfigException::class);
 });
 
 it('validates @done.{state} values as transition configs (T21)', function (): void {
@@ -726,7 +726,7 @@ it('validates @done.{state} values as transition configs (T21)', function (): vo
             'fallback'  => ['type' => 'final'],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: "has invalid '@done.approved' configuration"
     );
 });
@@ -749,7 +749,7 @@ it('validates @done.{state} guarded branches order (T22)', function (): void {
             'standard' => ['type' => 'final'],
             'fallback' => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ]))->not->toThrow(InvalidStateConfigException::class);
 
     // Invalid: default branch not last
     expect(fn () => StateConfigValidator::validate([
@@ -769,7 +769,7 @@ it('validates @done.{state} guarded branches order (T22)', function (): void {
             'fallback' => ['type' => 'final'],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: 'Default condition (no guards) must be the last condition'
     );
 });
@@ -786,7 +786,7 @@ it('rejects @done. with empty suffix (T29)', function (): void {
             'completed' => ['type' => 'final'],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: 'final state name after the dot cannot be empty'
     );
 });
@@ -808,7 +808,7 @@ it('passes when all child final states are covered by @done.{state} (T23)', func
             'declined'  => ['type' => 'final'],
             'timed_out' => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ]))->not->toThrow(InvalidStateConfigException::class);
 });
 
 it('throws when child final states are uncovered without catch-all (T24)', function (): void {
@@ -826,7 +826,7 @@ it('throws when child final states are uncovered without catch-all (T24)', funct
             'declined'  => ['type' => 'final'],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: 'uncovered final states: expired'
     );
 });
@@ -844,7 +844,7 @@ it('passes when catch-all @done covers remaining final states (T25)', function (
             'completed' => ['type' => 'final'],
             'fallback'  => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ]))->not->toThrow(InvalidStateConfigException::class);
 });
 
 it('passes with only @done and no dot notation — backward compatible (T26)', function (): void {
@@ -858,7 +858,7 @@ it('passes with only @done and no dot notation — backward compatible (T26)', f
             ],
             'completed' => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ]))->not->toThrow(InvalidStateConfigException::class);
 });
 
 it('skips coverage validation when child class does not exist (T27)', function (): void {
@@ -872,7 +872,7 @@ it('skips coverage validation when child class does not exist (T27)', function (
             ],
             'completed' => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ]))->not->toThrow(InvalidStateConfigException::class);
 });
 
 // endregion @done.{state} Coverage Validation
@@ -896,7 +896,7 @@ it('@done.{state} + queue is NOT fire-and-forget — @fail allowed (T28)', funct
             'declined'  => ['type' => 'final'],
             'error'     => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ]))->not->toThrow(InvalidStateConfigException::class);
 });
 
 it('@done.{state} referencing non-final child state is flagged by coverage validation (T30)', function (): void {
@@ -919,7 +919,7 @@ it('@done.{state} referencing non-final child state is flagged by coverage valid
             'error'     => ['type' => 'final'],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: 'uncovered final states'
     );
 });
@@ -936,7 +936,7 @@ it('rejects @done.{state} keys on state without machine delegation', function ()
             'completed' => ['type' => 'final'],
         ],
     ]))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: '@done.{state}'
     );
 });
