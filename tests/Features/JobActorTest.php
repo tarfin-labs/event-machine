@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\FakeExternalService;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\ExternalServiceContract;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\DependencyInjectedTestJob;
 
@@ -30,7 +31,7 @@ it('validates job + machine mutual exclusivity', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "cannot have both 'job' and 'machine'");
+})->throws(InvalidStateConfigException::class, "cannot have both 'job' and 'machine'");
 
 it('validates job without @done requires target', function (): void {
     MachineDefinition::define(
@@ -46,7 +47,7 @@ it('validates job without @done requires target', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "without '@done' or 'target'");
+})->throws(InvalidStateConfigException::class, "without '@done' or 'target'");
 
 it('validates @done + target ambiguity', function (): void {
     MachineDefinition::define(
@@ -63,7 +64,7 @@ it('validates @done + target ambiguity', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "cannot have both '@done' and 'target'");
+})->throws(InvalidStateConfigException::class, "cannot have both '@done' and 'target'");
 
 // ─── Managed Job Actor (@done) ────────────────────────────────────
 
