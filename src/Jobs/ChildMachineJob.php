@@ -62,7 +62,7 @@ class ChildMachineJob implements ShouldQueue
     public function handle(): void
     {
         if (!class_exists($this->childMachineClass) || !is_subclass_of($this->childMachineClass, Machine::class)) {
-            throw InvalidMachineClassException::build($this->childMachineClass);
+            throw InvalidMachineClassException::mustExtendMachine($this->childMachineClass);
         }
 
         // 1. Update tracking record to running (skip for fire-and-forget).
