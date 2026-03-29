@@ -475,6 +475,7 @@ class MachineController extends Controller
             'machineId'       => $state->currentStateDefinition->machine->id ?? null,
             'state'           => $state->value,
             'availableEvents' => $state->availableEvents(),
+            'output'          => null,
         ];
 
         if ($childState instanceof State) {
