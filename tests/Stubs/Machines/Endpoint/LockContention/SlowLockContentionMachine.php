@@ -54,7 +54,7 @@ class SlowLockContentionMachine extends Machine
                 'events' => [
                     'START'            => SlowStartEvent::class,
                     'STATUS_REQUESTED' => SlowStatusEvent::class,
-                    'COMPLETE'         => SlowStartEvent::class,
+                    'COMPLETE'         => SlowCompleteEvent::class,
                 ],
                 'outputs' => [
                     'statusOutput' => SlowStatusOutput::class,
@@ -89,6 +89,14 @@ class SlowStartEvent extends EventBehavior
     public static function getType(): string
     {
         return 'START';
+    }
+}
+
+class SlowCompleteEvent extends EventBehavior
+{
+    public static function getType(): string
+    {
+        return 'COMPLETE';
     }
 }
 
