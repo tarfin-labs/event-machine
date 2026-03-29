@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\StateConfigValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
@@ -105,7 +106,7 @@ it('rejects fire-and-forget with @fail', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "'@fail' without '@done'");
+})->throws(InvalidStateConfigException::class, "'@fail' without '@done'");
 
 it('rejects fire-and-forget with @timeout', function (): void {
     MachineDefinition::define(
@@ -122,7 +123,7 @@ it('rejects fire-and-forget with @timeout', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "'@timeout' without '@done'");
+})->throws(InvalidStateConfigException::class, "'@timeout' without '@done'");
 
 it('rejects fire-and-forget with output', function (): void {
     MachineDefinition::define(
@@ -138,7 +139,7 @@ it('rejects fire-and-forget with output', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "'output' without '@done'");
+})->throws(InvalidStateConfigException::class, "'output' without '@done'");
 
 it('rejects fire-and-forget with forward', function (): void {
     MachineDefinition::define(
@@ -154,7 +155,7 @@ it('rejects fire-and-forget with forward', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "'forward' without '@done'");
+})->throws(InvalidStateConfigException::class, "'forward' without '@done'");
 
 it('rejects machine + target without queue', function (): void {
     MachineDefinition::define(
@@ -170,7 +171,7 @@ it('rejects machine + target without queue', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "no 'queue'");
+})->throws(InvalidStateConfigException::class, "no 'queue'");
 
 it('rejects machine + @done + target', function (): void {
     MachineDefinition::define(
@@ -188,7 +189,7 @@ it('rejects machine + @done + target', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "both '@done' and 'target'");
+})->throws(InvalidStateConfigException::class, "both '@done' and 'target'");
 
 // ─── Fire-and-Forget: Stay in State ─────────────────────────────
 
@@ -617,5 +618,5 @@ it('@done.{state} allows @fail when not fire-and-forget (T19)', function (): voi
             'declined'  => ['type' => 'final'],
             'error'     => ['type' => 'final'],
         ],
-    ]))->not->toThrow(InvalidArgumentException::class);
+    ]))->not->toThrow(InvalidStateConfigException::class);
 });
