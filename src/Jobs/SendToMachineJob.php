@@ -13,6 +13,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidMachineClassException;
 use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
@@ -45,7 +46,7 @@ class SendToMachineJob implements ShouldQueue
     public function handle(): void
     {
         if (!class_exists($this->machineClass) || !is_subclass_of($this->machineClass, Machine::class)) {
-            throw new \InvalidArgumentException("Machine class '{$this->machineClass}' must exist and extend ".Machine::class.'.');
+            throw InvalidMachineClassException::build($this->machineClass);
         }
 
         try {
