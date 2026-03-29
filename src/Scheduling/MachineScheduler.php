@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Scheduling;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Console\Scheduling\Event as SchedulingEvent;
+use Tarfinlabs\EventMachine\Exceptions\InvalidScheduleDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\MachineDefinitionNotFoundException;
 
 /**
@@ -39,7 +40,7 @@ class MachineScheduler
         }
 
         if ($definition->parsedSchedules === null || !isset($definition->parsedSchedules[$eventType])) {
-            throw MachineDefinitionNotFoundException::undefinedScheduleEvent($eventType, $machineClass);
+            throw InvalidScheduleDefinitionException::undefinedEvent($eventType);
         }
 
         /** @var Schedule $schedule */
