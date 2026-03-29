@@ -9,7 +9,6 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
 
 class LockContentionEndpointMachine extends Machine
 {
@@ -42,9 +41,9 @@ class LockContentionEndpointMachine extends Machine
             ],
             behavior: [
                 'events' => [
-                    'START'            => TestStartEvent::class,
+                    'START'            => LockContentionStartEvent::class,
                     'STATUS_REQUESTED' => LockContentionStatusEvent::class,
-                    'COMPLETE'         => TestStartEvent::class,
+                    'COMPLETE'         => LockContentionCompleteEvent::class,
                 ],
                 'outputs' => [
                     'statusOutput' => LockContentionStatusOutput::class,
@@ -62,6 +61,22 @@ class LockContentionEndpointMachine extends Machine
                 ],
             ],
         );
+    }
+}
+
+class LockContentionStartEvent extends EventBehavior
+{
+    public static function getType(): string
+    {
+        return 'START';
+    }
+}
+
+class LockContentionCompleteEvent extends EventBehavior
+{
+    public static function getType(): string
+    {
+        return 'COMPLETE';
     }
 }
 
