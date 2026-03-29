@@ -278,17 +278,17 @@ class MachineDefinition
 
                 // Validate: no overlap with parent's explicit endpoints
                 if ($this->parsedEndpoints !== null && isset($this->parsedEndpoints[$parentEventType])) {
-                    throw InvalidEndpointDefinitionException::forwardOverlapsEndpoint($stateDefinition->id, $parentEventType);
+                    throw InvalidEndpointDefinitionException::forwardConflictsWithEndpoint($stateDefinition->id, $parentEventType);
                 }
 
                 // Validate: no overlap with parent's behavior events
                 if (isset($this->behavior['events'][$parentEventType])) {
-                    throw InvalidEndpointDefinitionException::forwardOverlapsBehaviorEvents($stateDefinition->id, $parentEventType);
+                    throw InvalidEndpointDefinitionException::forwardConflictsWithBehaviorEvent($stateDefinition->id, $parentEventType);
                 }
 
                 // Validate: no collision with another state's forward
                 if (isset($this->forwardedEndpoints[$parentEventType])) {
-                    throw InvalidEndpointDefinitionException::forwardCollision($parentEventType);
+                    throw InvalidEndpointDefinitionException::duplicateForwardEvent($parentEventType);
                 }
 
                 $this->forwardedEndpoints[$parentEventType] = $fwdEndpoint;
