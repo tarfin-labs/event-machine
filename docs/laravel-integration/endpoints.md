@@ -285,7 +285,8 @@ When no `output` is specified, the endpoint returns the machine state as JSON:
         "availableEvents": [
             { "type": "APPROVE", "source": "parent" },
             { "type": "CANCEL", "source": "parent" }
-        ]
+        ],
+        "isProcessing": false
     }
 }
 ```
@@ -313,7 +314,8 @@ For parallel states, `state` contains multiple active state paths and each avail
             { "type": "PAY", "source": "parent", "region": "payment" },
             { "type": "SHIP", "source": "parent", "region": "shipping" },
             { "type": "UPLOAD_DOC", "source": "parent", "region": "documents" }
-        ]
+        ],
+        "isProcessing": false
     }
 }
 ```
@@ -401,6 +403,12 @@ HTTP Request
 |       Guards -> Actions -> Context changes -> State transition
 |   }
 |
++-- catch (MachineAlreadyRunningException) {
+|       GET  → 200 + state snapshot + isProcessing: true
+|       POST → 423 + state snapshot + isProcessing: true
+|       action.after() and action.onException() are NOT called
+|   }
+|
 +-- catch (Throwable $e) {
 |       === action.onException($e) ===
 |       null -> exception re-thrown
@@ -468,6 +476,40 @@ Reference the action in your endpoint definition:
     'action' => StartEndpointAction::class,
 ],
 ```
+
+## Lock Contention Handling
+
+A race condition occurs when the machine is already processing an event (lock held) and another HTTP request arrives for the same machine instance. The most common scenario: a `BroadcastStateAction` fires during state entry, the frontend receives the broadcast and immediately calls `GET /status`, but the lock is still held because the macrostep has not finished.
+
+When `$machine->send()` fails to acquire the lock, EventMachine catches the `MachineAlreadyRunningException` and returns a response based on the HTTP method:
+
+- **GET** endpoints: return HTTP **200** with the last committed state and `isProcessing: true`.
+- **POST / PUT / DELETE** endpoints: return HTTP **423 Locked** with the last committed state and `isProcessing: true`. The event was **not** processed.
+
+The `isProcessing` field is always present in every endpoint response. It is `false` on the normal path and `true` when the response was served from contention handling.
+
+The returned state is internally consistent. `$machine->send()` restores the machine from the database before attempting to acquire the lock, so `$machine->state` holds the latest committed snapshot even when the lock cannot be acquired.
+
+<!-- doctest-attr: ignore -->
+```json
+{
+    "data": {
+        "id": "01JARX5Z8KQVN...",
+        "state": ["submitted"],
+        "output": {
+            "totalAmount": 15000
+        },
+        "availableEvents": [
+            { "type": "APPROVE", "source": "parent" }
+        ],
+        "isProcessing": true
+    }
+}
+```
+
+During contention, `action.after()` and `action.onException()` lifecycle hooks are **not** called. The response is returned directly from the exception handler.
+
+**Frontend pattern:** use `isProcessing` to show a loading spinner and wait for the next broadcast event. Once the machine finishes processing, it will broadcast the updated state, and the frontend can refresh.
 
 ## Create Endpoint
 
