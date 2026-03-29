@@ -464,6 +464,34 @@ class ExportXStateCommand extends Command
      * - String with colon (params): extracts base name
      * - Plain string: used as-is
      */
+    /**
+     * Resolve a behavior to its name and optional params for XState export.
+     *
+     * @return array{name: string, params: array<string, mixed>|null}
+     */
+    private function resolveBehaviorNameAndParams(mixed $behavior): array
+    {
+        // Array tuple: [Class::class, 'min' => 100, 'max' => 10000]
+        if (is_array($behavior)) {
+            $class  = $behavior[0] ?? 'unknown';
+            $params = array_filter(
+                $behavior,
+                fn (int|string $k): bool => is_string($k) && !str_starts_with($k, '@'),
+                ARRAY_FILTER_USE_KEY,
+            );
+
+            return [
+                'name'   => $this->resolveBehaviorName($class),
+                'params' => $params ?: null,
+            ];
+        }
+
+        return [
+            'name'   => $this->resolveBehaviorName($behavior),
+            'params' => null,
+        ];
+    }
+
     private function resolveBehaviorName(mixed $behavior): string
     {
         if (!is_string($behavior)) {
