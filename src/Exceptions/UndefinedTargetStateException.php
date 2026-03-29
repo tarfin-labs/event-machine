@@ -7,12 +7,12 @@ namespace Tarfinlabs\EventMachine\Exceptions;
 use LogicException;
 
 /**
- * Class NoTransitionDefinitionFoundException.
+ * Class UndefinedTargetStateException.
  *
  * This exception is thrown when a transition definition cannot be found
  * for a given event type in the current state definition.
  */
-class NoStateDefinitionFoundException extends LogicException
+class UndefinedTargetStateException extends LogicException
 {
     /**
      * Builds an instance of self.
