@@ -255,6 +255,7 @@ abstract class InvokableBehavior
         ?EventBehavior $eventBehavior = null,
         ?array $actionArguments = null,
         ?ForwardContext $forwardContext = null,
+        ?array $configParams = null,
     ): array {
         $invocableBehaviorParameters = [];
 
@@ -286,7 +287,9 @@ abstract class InvokableBehavior
                 is_a($typeName, class: EventBehavior::class, allow_string: true) || is_subclass_of($typeName, class: EventBehavior::class)   => $effectiveEvent,    // EventBehavior (original event for @always)
                 $state instanceof $typeName                                                                                                  => $state,             // State
                 is_a($state->history, $typeName)                                                                                             => $state->history,    // EventCollection
-                $typeName === 'array'                                                                                                        => $actionArguments,   // Behavior Arguments
+                $typeName === 'array' && $actionArguments !== null                                                                           => $actionArguments,   // Behavior Arguments (deprecated colon syntax)
+                $configParams !== null && array_key_exists($parameter->getName(), $configParams)                                             => $configParams[$parameter->getName()], // Named config params
+                $parameter->isDefaultValueAvailable()                                                                                        => $parameter->getDefaultValue(),        // Default value from signature
                 default                                                                                                                      => null,
             };
 
