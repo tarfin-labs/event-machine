@@ -414,7 +414,7 @@ test('multiple contention requests return same consistent snapshot', function ()
 //  G. Boundary Conditions
 // ═══════════════════════════════════════════════════════════════════════
 
-test('contention overrides custom endpoint statusCode', function (): void {
+test('contention overrides custom endpoint statusCode to 423', function (): void {
     $createResponse = $this->postJson('/api/lock-contention/create');
     $machineId      = $createResponse->json('data.id');
 
@@ -435,6 +435,24 @@ test('contention overrides custom endpoint statusCode', function (): void {
 
     expect($response->status())->toBe(423)
         ->and($response->json('data.isProcessing'))->toBeTrue();
+});
+
+test('normal path uses configured endpoint statusCode', function (): void {
+    // Disable parallel_dispatch so no lock is acquired in sync queue
+    config()->set('machine.parallel_dispatch.enabled', false);
+
+    $createResponse = $this->postJson('/api/lock-contention/create');
+    $machineId      = $createResponse->json('data.id');
+
+    // Transition to started so COMPLETE (status:201) is available
+    $startResponse = $this->postJson("/api/lock-contention-mid/{$machineId}/start");
+    expect($startResponse->json('data.state'))->toContain('lock_contention_endpoint.started');
+
+    // Normal path: COMPLETE returns 201 as configured
+    $response = $this->postJson("/api/lock-contention-mid/{$machineId}/complete");
+
+    expect($response->status())->toBe(201)
+        ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
 test('contention with outputKeys returns filtered keys', function (): void {
