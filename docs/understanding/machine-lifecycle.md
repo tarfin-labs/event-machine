@@ -291,7 +291,7 @@ $state->currentStateDefinition->type === StateDefinitionType::FINAL;
 
 ## Concurrent Execution Safety
 
-EventMachine prevents concurrent modifications:
+EventMachine prevents concurrent modifications using a database-backed mutex (`machine_locks` table) managed by `MachineLockManager`:
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -303,12 +303,23 @@ $machine->send(['type' => 'CANCEL']);
 // Throws MachineAlreadyRunningException
 ```
 
-Implemented via cache locks:
+`$machine->send()` acquires a lock with `timeout=0` (non-blocking). If another process already holds the lock, the call fails immediately with `MachineAlreadyRunningException` rather than waiting.
+
+The lock is only active when the queue driver is async (`redis` or `database`) **or** `parallel_dispatch.enabled` is `true`. In unit tests with a `sync` queue and parallel dispatch disabled, no lock is acquired — this avoids re-entrant deadlocks when sync dispatch chains call `send()` on the same machine.
+
+HTTP endpoints handle `MachineAlreadyRunningException` gracefully:
+
+- **GET endpoints** return `200 OK` with the last committed state and `isProcessing: true`
+- **POST endpoints** return `423 Locked` with the last committed state and `isProcessing: true`
+
+See [Endpoints](/laravel-integration/endpoints) for details on lock contention handling.
 
 <!-- doctest-attr: ignore -->
 ```php
-// Lock key format: "machine:{root_event_id}"
-// Lock duration: configurable, default 30 seconds
+// MachineLockManager acquires a row-level lock in machine_locks
+// Lock key: root_event_id of the machine instance
+// timeout: 0 (non-blocking — fail immediately if already held)
+// Re-entrant: Machine::$heldLockIds prevents deadlock in sync chains
 ```
 
 ## Lifecycle Hooks
