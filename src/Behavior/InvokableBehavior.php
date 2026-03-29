@@ -23,6 +23,7 @@ use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Testing\CommunicationRecorder;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
+use Tarfinlabs\EventMachine\Exceptions\MissingBehaviorParameterException;
 
 /**
  * The abstract class InvokableBehavior defines the common behavior
@@ -292,6 +293,31 @@ abstract class InvokableBehavior
                 $parameter->isDefaultValueAvailable()                                                                                        => $parameter->getDefaultValue(),        // Default value from signature
                 default                                                                                                                      => null,
             };
+
+            // When configParams are active (tuple syntax), throw if a required non-framework param is unresolved
+            if ($value === null
+                && $configParams !== null
+                && !$parameter->isDefaultValueAvailable()
+                && !$parameter->allowsNull()
+                && $typeName !== null
+                && !is_a($typeName, ForwardContext::class, true)
+                && !is_a($typeName, ContextManager::class, true)
+                && !is_subclass_of($typeName, ContextManager::class)
+                && !is_a($typeName, EventBehavior::class, true)
+                && !is_subclass_of($typeName, EventBehavior::class)
+                && !($state instanceof $typeName)
+                && !is_a($state->history, $typeName)
+            ) {
+                $behaviorClass = $actionBehavior instanceof self
+                    ? $actionBehavior::class
+                    : 'Closure';
+
+                throw MissingBehaviorParameterException::build(
+                    behaviorClass: $behaviorClass,
+                    paramName: $parameter->getName(),
+                    paramType: $typeName,
+                );
+            }
 
             $invocableBehaviorParameters[] = $value;
         }
