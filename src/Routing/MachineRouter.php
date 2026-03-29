@@ -56,7 +56,7 @@ class MachineRouter
         $except = $options['except'] ?? null;
 
         if ($only !== null && $except !== null) {
-            throw InvalidRouterConfigException::onlyAndExceptTogether();
+            throw InvalidRouterConfigException::onlyAndExceptConflict();
         }
 
         $onlyTypes = $only !== null
@@ -77,7 +77,7 @@ class MachineRouter
             $unknown     = array_diff($filterTypes, $allKnownTypes);
 
             if ($unknown !== []) {
-                throw InvalidRouterConfigException::unknownFilterTypes($filterKey, $unknown, $allKnownTypes);
+                throw InvalidRouterConfigException::unknownEventTypes($filterKey, $unknown, $allKnownTypes);
             }
         }
 
@@ -141,7 +141,7 @@ class MachineRouter
                 $context = sprintf('. Available: %s', implode(', ', $registeredEventTypes));
             }
 
-            throw InvalidRouterConfigException::orphanMachineIdFor($machineIdOrphans, $context);
+            throw InvalidRouterConfigException::orphanedMachineIdFor($machineIdOrphans, $context);
         }
 
         $modelOrphans = array_diff($modelFor, $registeredEventTypes);
@@ -155,11 +155,11 @@ class MachineRouter
                 $context = sprintf('. Available: %s', implode(', ', $registeredEventTypes));
             }
 
-            throw InvalidRouterConfigException::orphanModelFor($modelOrphans, $context);
+            throw InvalidRouterConfigException::orphanedModelFor($modelOrphans, $context);
         }
 
         if ($modelFor !== [] && ($model === null || $attribute === null)) {
-            throw InvalidRouterConfigException::modelForRequiresModelAndAttribute();
+            throw InvalidRouterConfigException::modelAndAttributeRequired();
         }
 
         $overlap = array_intersect($machineIdFor, $modelFor);
