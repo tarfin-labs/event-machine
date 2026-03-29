@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Support\Timer;
+use Tarfinlabs\EventMachine\Exceptions\InvalidTimerDefinitionException;
 
 it('Timer::seconds returns correct value', function (): void {
     expect(Timer::seconds(30)->inSeconds())->toBe(30);
@@ -42,8 +43,8 @@ it('Timer::weeks(1) equals Timer::days(7)', function (): void {
 
 it('Timer rejects zero duration', function (): void {
     Timer::seconds(0);
-})->throws(InvalidArgumentException::class, 'must be positive');
+})->throws(InvalidTimerDefinitionException::class, 'must be positive');
 
 it('Timer rejects negative duration', function (): void {
     Timer::minutes(-5);
-})->throws(InvalidArgumentException::class, 'must be positive');
+})->throws(InvalidTimerDefinitionException::class, 'must be positive');
