@@ -315,6 +315,100 @@ The listener config format has changed. Class-as-key syntax is replaced with tup
 2. Replace `ClassName::class => ['queue' => true]` with `[ClassName::class, '@queue' => true]`.
 3. Sync listeners (numeric key, no options) remain unchanged: `ClassName::class`.
 
+### Exception Specialization (breaking)
+
+v9 replaces generic PHP exceptions (`InvalidArgumentException`, `RuntimeException`) with domain-specific exception classes across the entire codebase. This enables targeted `catch` blocks and clearer error handling.
+
+#### New Exception Classes
+
+| Before (v8) | After (v9) | Thrown From |
+|-------------|------------|-------------|
+| `InvalidArgumentException` (config validation) | `InvalidStateConfigException` | `StateConfigValidator`, `StateDefinition`, `MachineDefinition` |
+| `InvalidArgumentException` (router config) | `InvalidRouterConfigException` | `MachineRouter` |
+| `RuntimeException` (no parent machine) | `NoParentMachineException` | `InvokableBehavior` |
+| `InvalidArgumentException` / `RuntimeException` (archive) | `ArchiveException` | `MachineEventArchive`, `CompressionManager` |
+| `InvalidArgumentException` (machine class) | `InvalidMachineClassException` | `ChildMachineJob`, `SendToMachineJob` |
+| `InvalidArgumentException` (job class) | `InvalidJobClassException` | `ChildJobJob` |
+| `RuntimeException` (behavior not faked) | `BehaviorNotFakedException` | `Fakeable` trait |
+| `RuntimeException` (no search paths) | `MachineDiscoveryException` | `MachineConfigValidatorCommand` |
+| `InvalidArgumentException` (timer) | `InvalidTimerDefinitionException` | `Timer` |
+
+#### Renamed Exception Classes
+
+| Before (v8) | After (v9) |
+|-------------|------------|
+| `NoStateDefinitionFoundException` | `UndefinedTargetStateException` |
+
+#### Deleted Exception Classes
+
+| Before (v8) | After (v9) |
+|-------------|------------|
+| `InvalidFinalStateDefinitionException` | Merged into `InvalidStateConfigException` (`finalStateCannotHaveTransitions()`, `finalStateCannotHaveChildStates()`) |
+
+#### Extended Exception Classes
+
+| Class | New Factory Methods |
+|-------|---------------------|
+| `InvalidEndpointDefinitionException` | `forwardOverlapsEndpoint()`, `forwardOverlapsBehaviorEvents()`, `forwardCollision()` |
+| `MachineDefinitionNotFoundException` | `failedToLoad()`, `undefinedScheduleEvent()` |
+
+#### Migration Steps
+
+If you catch any of the old generic exceptions for EventMachine errors, update your catch blocks:
+
+<!-- doctest-attr: ignore -->
+```php
+// BEFORE (v8)
+use InvalidArgumentException;
+
+try {
+    StateConfigValidator::validate($config);
+} catch (InvalidArgumentException $e) {
+    // caught ALL InvalidArgumentExceptions, not just config errors
+}
+
+// AFTER (v9)
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
+
+try {
+    StateConfigValidator::validate($config);
+} catch (InvalidStateConfigException $e) {
+    // catches only config validation errors
+}
+```
+
+<!-- doctest-attr: ignore -->
+```php
+// BEFORE (v8)
+use RuntimeException;
+
+try {
+    $context->sendToParent('CHILD_DONE');
+} catch (RuntimeException $e) {
+    // caught ALL RuntimeExceptions
+}
+
+// AFTER (v9)
+use Tarfinlabs\EventMachine\Exceptions\NoParentMachineException;
+
+try {
+    $context->sendToParent('CHILD_DONE');
+} catch (NoParentMachineException $e) {
+    // catches only the "no parent" case
+}
+```
+
+See [Exceptions Reference](/reference/exceptions) for the full list of all exception classes.
+
+### Migration Checklist (updated)
+
+Items 12–15 are new for the exception specialization:
+
+12. Update `catch (InvalidArgumentException)` blocks that handle EventMachine config errors → specific exception classes (see table above)
+13. Update `catch (RuntimeException)` blocks that handle EventMachine runtime errors → specific exception classes
+14. Rename `NoStateDefinitionFoundException` → `UndefinedTargetStateException` in any catch blocks or type hints
+15. Remove `InvalidFinalStateDefinitionException` imports — now `InvalidStateConfigException`
+
 ---
 
 ## From 7.x to 8.0
