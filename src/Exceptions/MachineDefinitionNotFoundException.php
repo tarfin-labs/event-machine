@@ -24,9 +24,4 @@ class MachineDefinitionNotFoundException extends RuntimeException
             previous: $previous,
         );
     }
-
-    public static function undefinedScheduleEvent(string $eventType, string $machineClass): self
-    {
-        return new self("Event '{$eventType}' is not defined in schedules for {$machineClass}.");
-    }
 }
