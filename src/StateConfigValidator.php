@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine;
 
 use InvalidArgumentException;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Exceptions\InvalidListenerDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
 class StateConfigValidator
@@ -115,6 +116,21 @@ class StateConfigValidator
             );
         }
 
+        // Validate individual listener elements — reject old class-as-key format
+        foreach (self::ALLOWED_LISTEN_KEYS as $hookKey) {
+            if (!isset($listen[$hookKey])) {
+                continue;
+            }
+
+            $raw = is_array($listen[$hookKey]) ? $listen[$hookKey] : [$listen[$hookKey]];
+
+            foreach ($raw as $k => $v) {
+                // Old format: ClassName::class => ['queue' => true] — string key with array value
+                if (is_string($k) && is_array($v)) {
+                    throw InvalidListenerDefinitionException::classAsKey($k);
+                }
+            }
+        }
     }
 
     /**

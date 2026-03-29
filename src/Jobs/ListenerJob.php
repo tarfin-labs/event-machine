@@ -27,10 +27,14 @@ class ListenerJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    /**
+     * @param  array<string, mixed>|null  $configParams  Named config params for the listener action
+     */
     public function __construct(
         public readonly string $machineClass,
         public readonly string $rootEventId,
         public readonly string $actionClass,
+        public readonly ?array $configParams = null,
     ) {}
 
     public function handle(): void
@@ -73,6 +77,7 @@ class ListenerJob implements ShouldQueue
             $machine->definition->runAction(
                 actionDefinition: $this->actionClass,
                 state: $machine->state,
+                configParams: $this->configParams,
             );
 
             $machine->state->setInternalEventBehavior(
