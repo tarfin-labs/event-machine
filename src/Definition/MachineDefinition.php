@@ -278,26 +278,17 @@ class MachineDefinition
 
                 // Validate: no overlap with parent's explicit endpoints
                 if ($this->parsedEndpoints !== null && isset($this->parsedEndpoints[$parentEventType])) {
-                    throw new \InvalidArgumentException(
-                        "State '{$stateDefinition->id}' forwards '{$parentEventType}' which is also declared in parent's "
-                        ."endpoints. Remove '{$parentEventType}' from endpoints — forward is the single source of truth for child events."
-                    );
+                    throw InvalidEndpointDefinitionException::forwardOverlapsEndpoint($stateDefinition->id, $parentEventType);
                 }
 
                 // Validate: no overlap with parent's behavior events
                 if (isset($this->behavior['events'][$parentEventType])) {
-                    throw new \InvalidArgumentException(
-                        "State '{$stateDefinition->id}' forwards '{$parentEventType}' which is also declared in parent's "
-                        ."behavior.events. Remove '{$parentEventType}' from behavior.events — forward auto-discovers child events."
-                    );
+                    throw InvalidEndpointDefinitionException::forwardOverlapsBehaviorEvents($stateDefinition->id, $parentEventType);
                 }
 
                 // Validate: no collision with another state's forward
                 if (isset($this->forwardedEndpoints[$parentEventType])) {
-                    throw new \InvalidArgumentException(
-                        "Forward event '{$parentEventType}' is declared in multiple delegating states. "
-                        .'Use rename syntax to disambiguate (e.g., \'CANCEL_PAYMENT\' => \'CANCEL\').'
-                    );
+                    throw InvalidEndpointDefinitionException::forwardCollision($parentEventType);
                 }
 
                 $this->forwardedEndpoints[$parentEventType] = $fwdEndpoint;
