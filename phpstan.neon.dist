@@ -36,7 +36,9 @@ parameters:
         -
             identifier: staticMethod.nonObject
             reportUnmatched: false
-        - identifier: staticMethod.notFound
+        -
+            identifier: staticMethod.notFound
+            reportUnmatched: false
         # Dynamic property access from raw queries
         - identifier: property.notFound
         # Method not found on models - traits add methods dynamically

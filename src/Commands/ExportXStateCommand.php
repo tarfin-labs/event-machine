@@ -396,20 +396,20 @@ class ExportXStateCommand extends Command
 
         // Guards
         if ($branch->guards !== null && $branch->guards !== []) {
-            $guardNames = array_map(
-                $this->resolveBehaviorName(...),
+            $guardEntries = array_map(
+                $this->formatBehaviorForExport(...),
                 $branch->guards
             );
 
-            $config['guard'] = count($guardNames) === 1
-                ? $guardNames[0]
-                : ['type' => 'and', 'guards' => $guardNames];
+            $config['guard'] = count($guardEntries) === 1
+                ? $guardEntries[0]
+                : ['type' => 'and', 'guards' => $guardEntries];
         }
 
         // Actions
         if ($branch->actions !== null && $branch->actions !== []) {
             $config['actions'] = array_map(
-                $this->resolveBehaviorName(...),
+                $this->formatBehaviorForExport(...),
                 $branch->actions
             );
         }
@@ -419,7 +419,7 @@ class ExportXStateCommand extends Command
             $config['meta'] = [
                 'eventMachine' => [
                     'calculators' => array_map(
-                        $this->resolveBehaviorName(...),
+                        $this->formatBehaviorForExport(...),
                         $branch->calculators
                     ),
                 ],
@@ -454,6 +454,21 @@ class ExportXStateCommand extends Command
 
         // For cross-hierarchy targets, use absolute path with # prefix
         return '#'.$target->id;
+    }
+
+    /**
+     * Format a behavior for XState export.
+     * Returns a plain string for parameterless, or {type, params} for parameterized.
+     */
+    private function formatBehaviorForExport(mixed $behavior): array|string
+    {
+        $resolved = $this->resolveBehaviorNameAndParams($behavior);
+
+        if ($resolved['params'] !== null) {
+            return ['type' => $resolved['name'], 'params' => $resolved['params']];
+        }
+
+        return $resolved['name'];
     }
 
     /**

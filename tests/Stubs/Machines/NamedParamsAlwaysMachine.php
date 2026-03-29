@@ -26,17 +26,19 @@ class NamedParamsAlwaysMachine extends Machine
                         ],
                     ],
                     'evaluating' => [
-                        '@always' => [
-                            [
-                                'guards' => [[IsAboveThresholdGuard::class, 'threshold' => 100]],
-                                'target' => 'high',
-                            ],
-                            [
-                                'guards' => [[IsAboveThresholdGuard::class, 'threshold' => 50]],
-                                'target' => 'medium',
-                            ],
-                            [
-                                'target' => 'low',
+                        'on' => [
+                            '@always' => [
+                                [
+                                    'guards' => [[IsAboveThresholdGuard::class, 'threshold' => 100]],
+                                    'target' => 'high',
+                                ],
+                                [
+                                    'guards' => [[IsAboveThresholdGuard::class, 'threshold' => 50]],
+                                    'target' => 'medium',
+                                ],
+                                [
+                                    'target' => 'low',
+                                ],
                             ],
                         ],
                     ],
