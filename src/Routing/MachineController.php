@@ -17,6 +17,7 @@ use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
+use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
 
 class MachineController extends Controller
 {
@@ -163,6 +164,20 @@ class MachineController extends Controller
 
         try {
             $state = $machine->send(event: $event);
+        } catch (MachineAlreadyRunningException) {
+            // $machine->state is fresh — send() restores from DB before lock attempt.
+            // GET → 200 (read succeeded), POST/PUT/DELETE → 423 (event not processed).
+            $httpStatus = request()->isMethod('GET') ? 200 : 423;
+
+            return $this->buildResponse(
+                state: $machine->state,
+                machine: $machine,
+                outputKey: $outputKey,
+                statusCode: $httpStatus,
+                outputKeys: $outputKeys,
+                includeAvailableEvents: $includeAvailableEvents,
+                isProcessing: true,
+            );
         } catch (MachineValidationException $e) { // @phpstan-ignore catch.neverThrown
             return response()->json([
                 'message' => $e->getMessage(),
@@ -192,7 +207,15 @@ class MachineController extends Controller
         // Auto-dispatch completion if child reached final state and has a parent
         $this->dispatchChildCompletionIfFinal($machine, $state);
 
-        return $this->buildResponse($state, $machine, $outputKey, $statusCode, $outputKeys, $includeAvailableEvents);
+        return $this->buildResponse(
+            state: $state,
+            machine: $machine,
+            outputKey: $outputKey,
+            statusCode: $statusCode,
+            outputKeys: $outputKeys,
+            includeAvailableEvents: $includeAvailableEvents,
+            isProcessing: false,
+        );
     }
 
     /**
