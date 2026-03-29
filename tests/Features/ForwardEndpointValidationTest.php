@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ProvideCardEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\FqcnForwardParentMachine;
@@ -41,7 +42,7 @@ test('it rejects forward array config with unknown keys', function (): void {
                 'events' => ['START' => TestStartEvent::class],
             ],
         );
-    })->toThrow(InvalidArgumentException::class, 'unknown keys');
+    })->toThrow(InvalidStateConfigException::class, 'unknown keys');
 });
 
 test('it rejects forward with uri not starting with slash', function (): void {
@@ -70,7 +71,7 @@ test('it rejects forward with uri not starting with slash', function (): void {
                 'events' => ['START' => TestStartEvent::class],
             ],
         );
-    })->toThrow(InvalidArgumentException::class, "uri must start with '/'");
+    })->toThrow(InvalidStateConfigException::class, "uri must start with '/'");
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -98,7 +99,7 @@ test('it rejects forward without queue', function (): void {
                 'events' => ['START' => TestStartEvent::class],
             ],
         );
-    })->toThrow(InvalidArgumentException::class, 'forward');
+    })->toThrow(InvalidStateConfigException::class, 'forward');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -125,7 +126,7 @@ test('it rejects forward with fire-and-forget (queue without @done)', function (
                 'events' => ['START' => TestStartEvent::class],
             ],
         );
-    })->toThrow(InvalidArgumentException::class, 'forward');
+    })->toThrow(InvalidStateConfigException::class, 'forward');
 });
 
 // ═══════════════════════════════════════════════════════════════
