@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
 use Tarfinlabs\EventMachine\Contracts\ProvidesFailureContext;
+use Tarfinlabs\EventMachine\Exceptions\InvalidJobClassException;
 
 /**
  * Queue job that runs a Laravel job as an actor.
@@ -54,11 +55,11 @@ class ChildJobJob implements ShouldQueue
     {
         // 1. Validate that the job class exists and has a handle() method
         if (!class_exists($this->jobClass)) {
-            throw new \InvalidArgumentException("Job class '{$this->jobClass}' does not exist.");
+            throw InvalidJobClassException::doesNotExist($this->jobClass);
         }
 
         if (!method_exists($this->jobClass, 'handle')) {
-            throw new \InvalidArgumentException("Job class '{$this->jobClass}' must have a handle() method.");
+            throw InvalidJobClassException::missingHandleMethod($this->jobClass);
         }
 
         // 2. Create and run the job (use app()->call() for dependency injection)
