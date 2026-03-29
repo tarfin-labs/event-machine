@@ -27,10 +27,10 @@ class ListenerExitTransitionMachine extends Machine
                 ],
                 'listen' => [
                     'exit' => [
-                        QueuedExitAction::class => ['queue' => true],
+                        [QueuedExitAction::class, '@queue' => true],
                     ],
                     'transition' => [
-                        QueuedTransitionAction::class => ['queue' => true],
+                        [QueuedTransitionAction::class, '@queue' => true],
                     ],
                 ],
                 'states' => [

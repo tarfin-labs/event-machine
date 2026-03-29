@@ -136,7 +136,7 @@ it('queued listen records dispatched event on delegation state entry', function 
             'context' => [],
             'listen'  => [
                 'entry' => [
-                    'queuedAction' => ['queue' => true],
+                    ['queuedAction', '@queue' => true],
                 ],
             ],
             'states' => [

@@ -27,6 +27,7 @@ use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionTimeoutJob;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
@@ -1161,12 +1162,20 @@ class Machine implements Castable, JsonSerializable, Stringable
      */
     private function resolveOutputBehavior(mixed $outputBehavior): mixed
     {
-        $arguments = null;
+        $arguments    = null;
+        $configParams = null;
+
+        // Inner-array tuple: [[FormatOutput::class, 'format' => 'json']]
+        if (is_array($outputBehavior) && isset($outputBehavior[0]) && is_array($outputBehavior[0])) {
+            $parsed         = BehaviorTupleParser::parse($outputBehavior[0], 'output');
+            $outputBehavior = $parsed['definition'];
+            $configParams   = $parsed['configParams'] ?: null;
+        }
 
         if (!is_callable($outputBehavior)) {
-            if (str_contains((string) $outputBehavior, ':')) {
-                [$outputBehavior, $arguments] = explode(':', (string) $outputBehavior);
-                $arguments                    = explode(',', $arguments);
+            if (is_string($outputBehavior) && str_contains($outputBehavior, ':')) {
+                [$outputBehavior, $colonArgs] = explode(':', $outputBehavior, 2);
+                $arguments                    = explode(',', $colonArgs);
             }
 
             $outputBehavior = resolve($outputBehavior);
@@ -1177,16 +1186,22 @@ class Machine implements Castable, JsonSerializable, Stringable
             state: $this->state,
             eventBehavior: $this->state->triggeringEvent ?? $this->state->currentEventBehavior,
             actionArguments: $arguments,
+            configParams: $configParams,
         );
 
         return $outputBehavior(...$params);
     }
 
     /**
-     * Resolve an output definition (array filter or callable).
+     * Resolve an output definition (array filter, inner-array tuple, or callable).
      */
     private function resolveOutputDefinition(string|array|\Closure $output): mixed
     {
+        // Inner-array tuple: [[FormatOutput::class, 'format' => 'json']]
+        if (is_array($output) && isset($output[0]) && is_array($output[0])) {
+            return $this->resolveOutputBehavior($output);
+        }
+
         // Array of strings → filter context to these keys
         if (is_array($output)) {
             if ($output === []) {
