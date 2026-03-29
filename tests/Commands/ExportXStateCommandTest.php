@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Events\ValidatedEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\OrderMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\GuardedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ElevatorMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsAmountInRangeGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Events\MachineRegisteredEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
@@ -349,6 +350,30 @@ it('resolves class-based behavior names to short types', function (): void {
 
     // Parameterized behavior strips params
     expect($method->invoke($command, 'guardName:param1,param2'))->toBe('guardName');
+});
+
+it('resolves behavior name from array tuple via resolveBehaviorNameAndParams', function (): void {
+    $command = new ExportXStateCommand();
+    $method  = new ReflectionMethod($command, 'resolveBehaviorNameAndParams');
+
+    // Array tuple with named params extracts name and params
+    $result = $method->invoke($command, [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000]);
+
+    expect($result['name'])->toBe('IsAmountInRangeGuard');
+    expect($result['params'])->toBe(['min' => 100, 'max' => 10000]);
+});
+
+it('formats array tuple behavior with params for XState export', function (): void {
+    $command = new ExportXStateCommand();
+    $method  = new ReflectionMethod($command, 'formatBehaviorForExport');
+
+    // Array tuple should produce {type, params} structure
+    $result = $method->invoke($command, [IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000]);
+
+    expect($result)->toBe([
+        'type'   => 'IsAmountInRangeGuard',
+        'params' => ['min' => 100, 'max' => 10000],
+    ]);
 });
 
 // endregion
