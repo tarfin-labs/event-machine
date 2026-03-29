@@ -198,7 +198,7 @@ class MachineController extends Controller
     /**
      * Build the JSON response with consistent envelope structure.
      *
-     * Always returns: {data: {id, machineId, state, availableEvents, output}}
+     * Always returns: {data: {id, machineId, state, availableEvents, output, isProcessing}}
      */
     protected function buildResponse(
         State $state,
@@ -207,6 +207,7 @@ class MachineController extends Controller
         int $statusCode,
         ?array $outputKeys = null,
         ?bool $includeAvailableEvents = true,
+        bool $isProcessing = false,
     ): JsonResponse {
         $rootEventId = $state->history->first()?->root_event_id;
 
@@ -229,6 +230,7 @@ class MachineController extends Controller
             'state'           => $state->value,
             'availableEvents' => $state->availableEvents(),
             'output'          => $outputData,
+            'isProcessing'    => $isProcessing,
         ];
 
         return response()->json(['data' => $response], $statusCode);
@@ -372,12 +374,17 @@ class MachineController extends Controller
     /**
      * Build response for forwarded endpoints — includes parent + child state.
      */
-    protected function buildForwardedResponse(Machine $machine, State $state, array $defaults): JsonResponse
-    {
+    protected function buildForwardedResponse(
+        Machine $machine,
+        State $state,
+        array $defaults,
+        bool $isProcessing = false,
+        ?int $statusCodeOverride = null,
+    ): JsonResponse {
         $outputDef  = $defaults['_output'] ?? null;
         $outputKey  = is_string($outputDef) ? $outputDef : null;
         $outputKeys = is_array($outputDef) ? $outputDef : null;
-        $statusCode = $defaults['_status_code'] ?? 200;
+        $statusCode = $statusCodeOverride ?? ($defaults['_status_code'] ?? 200);
 
         $childState = $state->getForwardedChildState();
 
@@ -403,6 +410,7 @@ class MachineController extends Controller
                 'state'           => $state->value,
                 'availableEvents' => $state->availableEvents(),
                 'output'          => $result,
+                'isProcessing'    => $isProcessing,
             ]], $statusCode);
         }
 
@@ -428,6 +436,8 @@ class MachineController extends Controller
                 'output' => $childContext,
             ];
         }
+
+        $response['isProcessing'] = $isProcessing;
 
         return response()->json(['data' => $response], $statusCode);
     }
