@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Routing\ForwardedEndpointDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
+use Tarfinlabs\EventMachine\Exceptions\InvalidEndpointDefinitionException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestNoEndpointMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\AbortEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ProvideCardEvent;
@@ -423,7 +424,7 @@ test('it throws when forward event name collides with parent event', function ()
                 ],
             ],
         );
-    })->toThrow(InvalidArgumentException::class, 'behavior.events');
+    })->toThrow(InvalidEndpointDefinitionException::class, 'behavior.events');
 });
 
 test('it throws when same forward event name used in two different delegating states', function (): void {
@@ -462,7 +463,7 @@ test('it throws when same forward event name used in two different delegating st
                 ],
             ],
         );
-    })->toThrow(InvalidArgumentException::class, 'multiple delegating states');
+    })->toThrow(InvalidEndpointDefinitionException::class, 'multiple delegating states');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -505,7 +506,7 @@ test('it throws when forward event also declared in parent endpoints', function 
                 'PROVIDE_CARD',
             ],
         );
-    })->toThrow(InvalidArgumentException::class, 'endpoints');
+    })->toThrow(InvalidEndpointDefinitionException::class, 'endpoints');
 });
 
 test('it throws when forward event also declared in parent behavior.events', function (): void {
@@ -538,7 +539,7 @@ test('it throws when forward event also declared in parent behavior.events', fun
                 ],
             ],
         );
-    })->toThrow(InvalidArgumentException::class, 'behavior.events');
+    })->toThrow(InvalidEndpointDefinitionException::class, 'behavior.events');
 });
 
 // ═══════════════════════════════════════════════════════════════
