@@ -430,6 +430,17 @@ ArchiveSingleMachineJob::dispatch($rootEventId)
     ->onQueue('archival-low-priority');
 ```
 
+## Error Handling
+
+Archive operations throw `ArchiveException` when they encounter problems:
+
+- **Empty collection** — attempting to archive a machine with no events
+- **Compression failure** — gzip compression fails on the event data
+- **Decompression failure** — archived data is corrupt or truncated
+- **Invalid data format** — archived JSON cannot be decoded
+
+All errors include the `root_event_id` in the exception message for debugging.
+
 ## Troubleshooting
 
 ### Events Not Archiving
