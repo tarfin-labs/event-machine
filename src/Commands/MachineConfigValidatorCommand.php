@@ -7,7 +7,6 @@ namespace Tarfinlabs\EventMachine\Commands;
 use Throwable;
 use ReflectionClass;
 use PhpParser\Parser;
-use RuntimeException;
 use PhpParser\PhpVersion;
 use PhpParser\NodeTraverser;
 use PhpParser\ParserFactory;
@@ -15,6 +14,7 @@ use Illuminate\Console\Command;
 use Symfony\Component\Finder\Finder;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\StateConfigValidator;
+use Tarfinlabs\EventMachine\Exceptions\MachineDiscoveryException;
 
 class MachineConfigValidatorCommand extends Command
 {
@@ -116,10 +116,7 @@ class MachineConfigValidatorCommand extends Command
             : $this->getProjectPaths();
 
         if ($paths === []) {
-            throw new RuntimeException(
-                message: 'No valid search paths found for Machine classes. '.
-                'If you are using event-machine package, please ensure your Machine classes are in the app/ directory.'
-            );
+            throw MachineDiscoveryException::noSearchPaths();
         }
 
         return array_filter($paths, callback: is_dir(...));
