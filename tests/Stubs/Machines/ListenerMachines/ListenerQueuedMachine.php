@@ -31,7 +31,7 @@ class ListenerQueuedMachine extends Machine
                 'listen' => [
                     'entry' => [
                         SyncMarkerAction::class,
-                        QueuedMarkerAction::class => ['queue' => true],
+                        [QueuedMarkerAction::class, '@queue' => true],
                     ],
                 ],
                 'states' => [

@@ -14,6 +14,7 @@ use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
@@ -96,9 +97,11 @@ class MachineController extends Controller
 
         $event = $this->resolveEvent($machine, $defaults['_event_type'], $request);
 
-        $outputDef  = $defaults['_output'] ?? null;
-        $outputKey  = is_string($outputDef) ? $outputDef : null;
-        $outputKeys = is_array($outputDef) ? $outputDef : null;
+        $outputDef = $defaults['_output'] ?? null;
+        // Inner-array tuple: [[OutputClass::class, 'param' => val]] → treat as parameterized behavior
+        $isInnerArrayTuple = is_array($outputDef) && isset($outputDef[0]) && is_array($outputDef[0]);
+        $outputKey         = is_string($outputDef) || $isInnerArrayTuple ? $outputDef : null;
+        $outputKeys        = is_array($outputDef) && !$isInnerArrayTuple ? $outputDef : null;
 
         return $this->executeEndpoint(
             machine: $machine,
@@ -241,11 +244,20 @@ class MachineController extends Controller
      * so it can access the child machine's state and context.
      */
     protected function resolveAndRunOutput(
-        string $outputKey,
+        string|array $outputKey,
         State $state,
         Machine $machine,
         ?ForwardContext $forwardContext = null,
     ): mixed {
+        $configParams = null;
+
+        // Inner-array tuple: [[OutputClass::class, 'format' => 'json']]
+        if (is_array($outputKey)) {
+            $parsed       = BehaviorTupleParser::parse($outputKey[0], 'endpoint output');
+            $outputKey    = $parsed['definition'];
+            $configParams = $parsed['configParams'] ?: null;
+        }
+
         $outputClass = class_exists($outputKey)
             ? $outputKey
             : ($machine->definition->behavior['outputs'][$outputKey] ?? null);
@@ -261,6 +273,7 @@ class MachineController extends Controller
             state: $state,
             eventBehavior: $state->triggeringEvent ?? $state->currentEventBehavior,
             forwardContext: $forwardContext,
+            configParams: $configParams,
         );
 
         return $outputBehavior(...$params);
@@ -374,10 +387,11 @@ class MachineController extends Controller
      */
     protected function buildForwardedResponse(Machine $machine, State $state, array $defaults): JsonResponse
     {
-        $outputDef  = $defaults['_output'] ?? null;
-        $outputKey  = is_string($outputDef) ? $outputDef : null;
-        $outputKeys = is_array($outputDef) ? $outputDef : null;
-        $statusCode = $defaults['_status_code'] ?? 200;
+        $outputDef         = $defaults['_output'] ?? null;
+        $isInnerArrayTuple = is_array($outputDef) && isset($outputDef[0]) && is_array($outputDef[0]);
+        $outputKey         = is_string($outputDef) || $isInnerArrayTuple ? $outputDef : null;
+        $outputKeys        = is_array($outputDef) && !$isInnerArrayTuple ? $outputDef : null;
+        $statusCode        = $defaults['_status_code'] ?? 200;
 
         $childState = $state->getForwardedChildState();
 
