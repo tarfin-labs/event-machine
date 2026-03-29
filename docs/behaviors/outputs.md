@@ -427,6 +427,17 @@ it('generates receipt via injected service', function () {
 See [TestMachine](/testing/test-machine) for `assertFinished()` and output access.
 :::
 
+## Output Placement Rules
+
+Not every state can have an `output` definition. `InvalidOutputDefinitionException` is thrown when output is defined on:
+
+- **Transient states** — states with `@always` transitions are routing nodes, not resting states. Output would never be accessible since the machine immediately leaves.
+- **Parallel region states** — individual regions within a parallel state cannot define output. Only the parent parallel state (or its `@done` target) can produce output.
+
+Output is valid on:
+- Final states (`type: 'final'`) — the primary use case for `$machine->output()`
+- Any state referenced by an endpoint `output` key — for HTTP response shaping
+
 ## Best Practices
 
 1. **Outputs are for consumers, context is for the machine.** Don't return raw context — shape the output for whoever calls `output()` or receives the endpoint response.
