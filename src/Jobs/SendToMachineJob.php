@@ -46,7 +46,7 @@ class SendToMachineJob implements ShouldQueue
     public function handle(): void
     {
         if (!class_exists($this->machineClass) || !is_subclass_of($this->machineClass, Machine::class)) {
-            throw InvalidMachineClassException::build($this->machineClass);
+            throw InvalidMachineClassException::mustExtendMachine($this->machineClass);
         }
 
         try {
