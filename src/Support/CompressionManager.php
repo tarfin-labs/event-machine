@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Support;
 
-use InvalidArgumentException;
+use Tarfinlabs\EventMachine\Exceptions\ArchiveException;
 
 class CompressionManager
 {
@@ -47,7 +47,7 @@ class CompressionManager
         $level = (int) (self::getConfig()['level'] ?? 6);
 
         if ($level < 0 || $level > 9) {
-            throw new InvalidArgumentException('Compression level must be between 0 and 9');
+            throw ArchiveException::invalidCompressionLevel();
         }
 
         return $level;
@@ -149,7 +149,7 @@ class CompressionManager
             $decompressed = gzuncompress($data);
 
             if ($decompressed === false) {
-                throw new InvalidArgumentException('Failed to decompress data');
+                throw ArchiveException::decompressFailed();
             }
 
             return json_decode($decompressed, true, 512, JSON_THROW_ON_ERROR);
@@ -159,7 +159,7 @@ class CompressionManager
         $decoded = json_decode($data, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new InvalidArgumentException('Data is neither compressed nor valid JSON');
+            throw ArchiveException::invalidData();
         }
 
         return $decoded;
