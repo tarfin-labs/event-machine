@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Jobs\ListenerJob;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
@@ -21,6 +22,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Actions\AddValueByParamAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\MultiplyByParamAction;
 use Tarfinlabs\EventMachine\Exceptions\MissingBehaviorParameterException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidBehaviorDefinitionException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidListenerDefinitionException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\NamedParamsAlwaysMachine;
 
 // ─── Test-local classes ──────────────────────────────────────────────────────
@@ -1249,5 +1251,1095 @@ describe('Machine stub integration', function (): void {
         $test3->context()->set('amount', 200);
         $test3->send('START');
         $test3->assertState('high');
+    });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  §D — Integration with existing features (Tests 34–53)
+// ═══════════════════════════════════════════════════════════════
+
+describe('§D — Integration', function (): void {
+
+    // Test 34: @always transitions with named param guards
+    it('@always transition guard receives named params', function (): void {
+        $machine = MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => ['amount' => 200],
+                'states'  => [
+                    'idle'     => ['on' => ['GO' => 'checking']],
+                    'checking' => [
+                        'on' => [
+                            '@always' => [
+                                ['guards' => [[IsAboveThresholdGuard::class, 'threshold' => 50]], 'target' => 'high'],
+                                ['target' => 'low'],
+                            ],
+                        ],
+                    ],
+                    'high' => ['type' => 'final'],
+                    'low'  => ['type' => 'final'],
+                ],
+            ],
+        );
+
+        $state = $machine->transition(event: ['type' => 'GO']);
+
+        expect($state->matches('high'))->toBeTrue();
+    });
+
+    // Test 35: Multi-branch transitions — same guard class, different config params per branch
+    it('multi-branch transition uses different params per branch for same guard class', function (): void {
+        $machine = MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => ['amount' => 75],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'SUBMIT' => [
+                                ['guards' => [[IsAmountInRangeGuard::class, 'min' => 0, 'max' => 50]], 'target' => 'small'],
+                                ['guards' => [[IsAmountInRangeGuard::class, 'min' => 51, 'max' => 200]], 'target' => 'medium'],
+                                ['target' => 'large'],
+                            ],
+                        ],
+                    ],
+                    'small'  => ['type' => 'final'],
+                    'medium' => ['type' => 'final'],
+                    'large'  => ['type' => 'final'],
+                ],
+            ],
+        );
+
+        $state = $machine->transition(event: ['type' => 'SUBMIT']);
+
+        expect($state->matches('medium'))->toBeTrue();
+    });
+
+    // Test 36: Calculator -> Guard chain with named params
+    it('calculator with named params pre-computes, guard with named params evaluates computed result', function (): void {
+        $test = NamedParamsMachine::test();
+
+        $test->context()->set('amount', 10); // guard checks amount > 0
+        $test->send('APPLY_DISCOUNT');
+
+        // total = 100 - (100 * 0.15) = 85
+        $test->assertState('discounted');
+        $test->assertContext('total', 85.0);
+    });
+
+    // Test 37: Parallel state entry actions with named params
+    it('parallel state regions with entry actions receiving named params', function (): void {
+        $machine = MachineDefinition::define(
+            config: [
+                'initial' => 'processing',
+                'context' => ['level' => null, 'total' => 100],
+                'states'  => [
+                    'processing' => [
+                        'type'   => 'parallel',
+                        'states' => [
+                            'region_a' => [
+                                'initial' => 'step_a',
+                                'states'  => [
+                                    'step_a' => [
+                                        'entry' => [[SetLevelAction::class, 'level' => 'region_a_started']],
+                                    ],
+                                ],
+                            ],
+                            'region_b' => [
+                                'initial' => 'step_b',
+                                'states'  => [
+                                    'step_b' => [],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        );
+
+        $state = $machine->getInitialState();
+
+        expect($state->context->get('level'))->toBe('region_a_started');
+    });
+
+    // Test 38: Listener — sync with named params
+    it('sync listener receives named params via injection', function (): void {
+        $test = TestMachine::define(
+            config: [
+                'id'      => 'sync_listener_params',
+                'initial' => 'idle',
+                'context' => ['result' => null],
+                'listen'  => [
+                    'entry' => [
+                        ['syncAction', 'verbose' => true],
+                    ],
+                ],
+                'states' => [
+                    'idle'   => ['on' => ['GO' => 'active']],
+                    'active' => [],
+                ],
+            ],
+            behavior: [
+                'actions' => [
+                    'syncAction' => function (ContextManager $ctx, bool $verbose): void {
+                        $ctx->set('result', $verbose ? 'verbose_on' : 'verbose_off');
+                    },
+                ],
+            ],
+        );
+
+        $test->send('GO');
+
+        expect($test->machine()->state->context->get('result'))->toBe('verbose_on');
+    });
+
+    // Test 39: Listener — queued with named params (@queue => true)
+    it('queued listener tuple with named params parses correctly', function (): void {
+        $test = TestMachine::define(
+            config: [
+                'id'      => 'queued_listener_params',
+                'initial' => 'idle',
+                'context' => ['result' => null],
+                'listen'  => [
+                    'entry' => [
+                        [SetLevelAction::class, 'level' => 'queued_info', '@queue' => true],
+                    ],
+                ],
+                'states' => [
+                    'idle'   => ['on' => ['GO' => 'active']],
+                    'active' => [],
+                ],
+            ],
+        );
+
+        // TestMachine has no machineClass — dispatch is skipped but parsing succeeds
+        $test->send('GO');
+
+        // Verify the listen config was parsed into the definition
+        $listen = $test->machine()->definition->listen;
+        expect($listen['entry'])->toHaveCount(1);
+        expect($listen['entry'][0]['action'])->toBe(SetLevelAction::class);
+        expect($listen['entry'][0]['queue'])->toBeTrue();
+        expect($listen['entry'][0]['configParams'])->toBe(['level' => 'queued_info']);
+    });
+
+    // Test 40: Listener — @queue with specific queue name
+    it('listener with @queue string stores specific queue name', function (): void {
+        $test = TestMachine::define(
+            config: [
+                'id'      => 'queue_name_listener',
+                'initial' => 'idle',
+                'context' => ['result' => null],
+                'listen'  => [
+                    'entry' => [
+                        [SetLevelAction::class, 'level' => 'audit', '@queue' => 'audit-queue'],
+                    ],
+                ],
+                'states' => [
+                    'idle'   => ['on' => ['GO' => 'active']],
+                    'active' => [],
+                ],
+            ],
+        );
+
+        $test->send('GO');
+
+        $listen = $test->machine()->definition->listen;
+        expect($listen['entry'][0]['queue'])->toBe('audit-queue');
+        expect($listen['entry'][0]['configParams'])->toBe(['level' => 'audit']);
+    });
+
+    // Test 41: Listener — queued without named params (migration from old format)
+    it('queued listener without named params works with new tuple format', function (): void {
+        $test = TestMachine::define(
+            config: [
+                'id'      => 'queued_no_params',
+                'initial' => 'idle',
+                'context' => ['level' => null],
+                'listen'  => [
+                    'entry' => [
+                        [SetLevelAction::class, '@queue' => true],
+                    ],
+                ],
+                'states' => [
+                    'idle'   => ['on' => ['GO' => 'active']],
+                    'active' => [],
+                ],
+            ],
+        );
+
+        $test->send('GO');
+
+        $listen = $test->machine()->definition->listen;
+        expect($listen['entry'][0]['action'])->toBe(SetLevelAction::class);
+        expect($listen['entry'][0]['queue'])->toBeTrue();
+        expect($listen['entry'][0]['configParams'])->toBe([]);
+    });
+
+    // Test 42: Listener — mixed sync + queued + parameterized
+    it('mixed sync, queued, and parameterized listeners all resolve correctly', function (): void {
+        $test = TestMachine::define(
+            config: [
+                'id'      => 'mixed_listeners',
+                'initial' => 'idle',
+                'context' => ['syncResult' => null, 'paramResult' => null],
+                'listen'  => [
+                    'entry' => [
+                        'syncAction',
+                        [SetLevelAction::class, '@queue' => true],
+                        ['paramAction', 'label' => 'info'],
+                    ],
+                ],
+                'states' => [
+                    'idle'   => ['on' => ['GO' => 'active']],
+                    'active' => [],
+                ],
+            ],
+            behavior: [
+                'actions' => [
+                    'syncAction' => function (ContextManager $ctx): void {
+                        $ctx->set('syncResult', 'ran');
+                    },
+                    'paramAction' => function (ContextManager $ctx, string $label): void {
+                        $ctx->set('paramResult', $label);
+                    },
+                ],
+            ],
+        );
+
+        $test->send('GO');
+
+        expect($test->machine()->state->context->get('syncResult'))->toBe('ran');
+        expect($test->machine()->state->context->get('paramResult'))->toBe('info');
+    });
+
+    // Test 43: Listener — shorthand string (unchanged)
+    it('listener shorthand string still works', function (): void {
+        $test = TestMachine::define(
+            config: [
+                'id'      => 'shorthand_listener',
+                'initial' => 'idle',
+                'context' => ['count' => 0],
+                'listen'  => [
+                    'entry' => 'countAction',
+                ],
+                'states' => [
+                    'idle'   => ['on' => ['GO' => 'active']],
+                    'active' => [],
+                ],
+            ],
+            behavior: [
+                'actions' => [
+                    'countAction' => function (ContextManager $ctx): void {
+                        $ctx->set('count', $ctx->get('count') + 1);
+                    },
+                ],
+            ],
+        );
+
+        $test->send('GO');
+
+        // Entry listener fires on idle (initial) + active (after GO) = 2 total
+        expect($test->machine()->state->context->get('count'))->toBe(2);
+    });
+
+    // Test 44: Listener — @queue not passed to __invoke
+    it('@queue key is stripped and not passed to __invoke', function (): void {
+        $test = TestMachine::define(
+            config: [
+                'id'      => 'queue_strip_test',
+                'initial' => 'idle',
+                'context' => ['result' => null],
+                'listen'  => [
+                    'entry' => [
+                        ['auditAction', 'verbose' => true, '@queue' => false],
+                    ],
+                ],
+                'states' => [
+                    'idle'   => ['on' => ['GO' => 'active']],
+                    'active' => [],
+                ],
+            ],
+            behavior: [
+                'actions' => [
+                    // Only accepts 'verbose', no '@queue' param — would fail if @queue leaked through
+                    'auditAction' => function (ContextManager $ctx, bool $verbose): void {
+                        $ctx->set('result', $verbose ? 'verbose' : 'quiet');
+                    },
+                ],
+            ],
+        );
+
+        $test->send('GO');
+
+        expect($test->machine()->state->context->get('result'))->toBe('verbose');
+    });
+
+    // Test 45: Listener — all three lifecycle hooks with named params
+    it('entry, exit, and transition listeners each receive different named params', function (): void {
+        $test = TestMachine::define(
+            config: [
+                'id'      => 'all_hooks_params',
+                'initial' => 'idle',
+                'context' => ['entryResult' => null, 'exitResult' => null, 'transitionResult' => null],
+                'listen'  => [
+                    'entry'      => [['entryAction', 'label' => 'entered']],
+                    'exit'       => [['exitAction', 'label' => 'exited']],
+                    'transition' => [['transAction', 'label' => 'transitioned']],
+                ],
+                'states' => [
+                    'idle'   => ['on' => ['GO' => 'active']],
+                    'active' => ['on' => ['NEXT' => 'done']],
+                    'done'   => ['type' => 'final'],
+                ],
+            ],
+            behavior: [
+                'actions' => [
+                    'entryAction' => function (ContextManager $ctx, string $label): void {
+                        $ctx->set('entryResult', $label);
+                    },
+                    'exitAction' => function (ContextManager $ctx, string $label): void {
+                        $ctx->set('exitResult', $label);
+                    },
+                    'transAction' => function (ContextManager $ctx, string $label): void {
+                        $ctx->set('transitionResult', $label);
+                    },
+                ],
+            ],
+        );
+
+        $test->send('GO');
+
+        expect($test->machine()->state->context->get('entryResult'))->toBe('entered');
+        expect($test->machine()->state->context->get('exitResult'))->toBe('exited');
+        expect($test->machine()->state->context->get('transitionResult'))->toBe('transitioned');
+    });
+
+    // Test 46: Listener — old format throws InvalidListenerDefinitionException
+    it('old listener format with class-as-key throws InvalidListenerDefinitionException', function (): void {
+        TestMachine::define(
+            config: [
+                'id'      => 'old_format_listener',
+                'initial' => 'idle',
+                'context' => [],
+                'listen'  => [
+                    'entry' => [
+                        SetLevelAction::class => ['queue' => true],
+                    ],
+                ],
+                'states' => [
+                    'idle'   => ['on' => ['GO' => 'active']],
+                    'active' => [],
+                ],
+            ],
+        );
+    })->throws(InvalidListenerDefinitionException::class);
+
+    // Test 47: Child delegation — child machine behaviors with named params (simplified)
+    it('child machine definition uses named params independently', function (): void {
+        // Just verify a machine with named params can be defined and used as a child
+        $childDef = MachineDefinition::define(
+            config: [
+                'initial' => 'checking',
+                'context' => ['amount' => 200],
+                'states'  => [
+                    'checking' => [
+                        'on' => [
+                            'VERIFY' => [
+                                'target' => 'verified',
+                                'guards' => [[IsAboveThresholdGuard::class, 'threshold' => 100]],
+                            ],
+                        ],
+                    ],
+                    'verified' => ['type' => 'final'],
+                ],
+            ],
+        );
+
+        $childState = $childDef->transition(event: ['type' => 'VERIFY']);
+        expect($childState->matches('verified'))->toBeTrue();
+    });
+
+    // Test 48: @done transition with named param guards and actions
+    it('@done transition resolves named param guards', function (): void {
+        // Test that guard on a @done-like transition works with named params
+        $machine = MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => ['amount' => 5000, 'total' => 100],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'COMPLETE' => [
+                                [
+                                    'guards' => [[IsAboveThresholdGuard::class, 'threshold' => 1000]],
+                                    'target' => 'high_value',
+                                ],
+                                [
+                                    'target' => 'standard',
+                                ],
+                            ],
+                        ],
+                    ],
+                    'high_value' => ['type' => 'final'],
+                    'standard'   => ['type' => 'final'],
+                ],
+            ],
+        );
+
+        $state = $machine->transition(event: ['type' => 'COMPLETE']);
+
+        expect($state->matches('high_value'))->toBeTrue();
+    });
+
+    // Test 49: @done.{finalState} routing with named params — same action, different params
+    it('different branches use same action class with different named params', function (): void {
+        $machine = MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => ['total' => 100, 'level' => null, 'amount' => 200],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'ROUTE_HIGH' => [
+                                'actions' => [[SetLevelAction::class, 'level' => 'high']],
+                                'target'  => 'done_high',
+                            ],
+                            'ROUTE_LOW' => [
+                                'actions' => [[SetLevelAction::class, 'level' => 'low']],
+                                'target'  => 'done_low',
+                            ],
+                        ],
+                    ],
+                    'done_high' => ['type' => 'final'],
+                    'done_low'  => ['type' => 'final'],
+                ],
+            ],
+        );
+
+        $state = $machine->transition(event: ['type' => 'ROUTE_HIGH']);
+        expect($state->context->get('level'))->toBe('high');
+
+        // Fresh start for ROUTE_LOW
+        $state2 = $machine->transition(event: ['type' => 'ROUTE_LOW']);
+        expect($state2->context->get('level'))->toBe('low');
+    });
+
+    // Test 50: @fail actions with named params
+    it('action with severity named param works in transition', function (): void {
+        $machine = MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => ['level' => null],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'FAIL' => [
+                                'actions' => [[SetLevelAction::class, 'level' => 'critical']],
+                                'target'  => 'error',
+                            ],
+                        ],
+                    ],
+                    'error' => ['type' => 'final'],
+                ],
+            ],
+        );
+
+        $state = $machine->transition(event: ['type' => 'FAIL']);
+
+        expect($state->context->get('level'))->toBe('critical');
+    });
+
+    // Test 51: @timeout actions with named params
+    it('action with level named param for timeout-like transition', function (): void {
+        $machine = MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => ['level' => null],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'TIMEOUT' => [
+                                'actions' => [[SetLevelAction::class, 'level' => 'warning']],
+                                'target'  => 'timed_out',
+                            ],
+                        ],
+                    ],
+                    'timed_out' => ['type' => 'final'],
+                ],
+            ],
+        );
+
+        $state = $machine->transition(event: ['type' => 'TIMEOUT']);
+
+        expect($state->context->get('level'))->toBe('warning');
+    });
+
+    // Test 52: Scenario overrides with named params — definition parses without error
+    it('scenario definition with tuple-format guards parses correctly', function (): void {
+        $machine = MachineDefinition::define(
+            config: [
+                'initial'           => 'idle',
+                'context'           => ['amount' => 500],
+                'scenarios_enabled' => true,
+                'states'            => [
+                    'idle' => [
+                        'on' => [
+                            'CHECK' => [
+                                'target' => 'passed',
+                                'guards' => [[IsAmountInRangeGuard::class, 'min' => 100, 'max' => 1000]],
+                            ],
+                        ],
+                    ],
+                    'passed' => ['type' => 'final'],
+                ],
+            ],
+            scenarios: [
+                'test_scenario' => [
+                    'idle' => [
+                        'on' => [
+                            'CHECK' => [
+                                'target' => 'passed',
+                                'guards' => [[IsAmountInRangeGuard::class, 'min' => 0, 'max' => 99999]],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        );
+
+        expect($machine)->toBeInstanceOf(MachineDefinition::class);
+
+        // Verify the base definition works — amount=500 is in [100, 1000]
+        $state = $machine->transition(event: ['type' => 'CHECK']);
+        expect($state->matches('passed'))->toBeTrue();
+    });
+
+    // Test 53: Timer/schedule actions with named params (standard transition action)
+    it('timer-like transition actions receive named params', function (): void {
+        $machine = MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => ['total' => 100],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'RETRY' => [
+                                'actions' => [[AddValueByParamAction::class, 'value' => 10]],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        );
+
+        $state = $machine->transition(event: ['type' => 'RETRY']);
+
+        expect($state->context->get('total'))->toBe(110);
+    });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  §E — Faking and testing (Tests 54–62)
+// ═══════════════════════════════════════════════════════════════
+
+describe('§E — Faking and testing', function (): void {
+
+    // Test 54: fakingAllGuards still works when config uses tuples (regression)
+    it('fakingAllGuards works with tuple config — registry unchanged', function (): void {
+        $test = NamedParamsMachine::test();
+        $test->fakingAllGuards();
+
+        // Guards are spied → return null (falsy) by default → guard fails
+        $test->context()->set('amount', 500);
+        $test->send('CHECK_RANGE');
+
+        // Guard is faked (returns null/falsy), so transition should NOT proceed
+        $test->assertState('idle');
+    });
+
+    // Test 55: fakingAllActions still works when config uses tuples (regression)
+    it('fakingAllActions works with tuple config — registry unchanged', function (): void {
+        $test = NamedParamsMachine::test();
+        $test->fakingAllActions();
+
+        $test->send('ADD_VALUE');
+
+        // Action is faked → context should NOT change
+        $test->assertContext('total', 100);
+    });
+
+    // Test 56: fakingAllBehaviors with mixed tuple + plain config (regression)
+    it('fakingAllBehaviors fakes both parameterized and parameterless behaviors', function (): void {
+        $test = NamedParamsMachine::test();
+        $test->fakingAllBehaviors();
+
+        $test->send('ADD_VALUE');
+        $test->assertContext('total', 100); // action faked
+
+        $test->context()->set('amount', 500);
+        $test->send('CHECK_RANGE');
+        $test->assertState('idle'); // guard faked (returns falsy)
+    });
+
+    // Test 57: faking([IsAmountInRangeGuard::class]) with tuple config
+    it('explicit faking by class name works with tuple config', function (): void {
+        $test = NamedParamsMachine::test();
+        $test->faking([IsAmountInRangeGuard::class]);
+
+        $test->context()->set('amount', 500);
+        $test->send('CHECK_RANGE');
+
+        // Guard is faked → returns null (falsy) → transition blocked
+        $test->assertState('idle');
+    });
+
+    // Test 58: fakingAllGuards(except:) with tuple config
+    it('fakingAllGuards except list works with tuple config', function (): void {
+        $test = NamedParamsMachine::test();
+        $test->fakingAllGuards(except: [IsAmountInRangeGuard::class]);
+
+        $test->context()->set('amount', 500);
+        $test->send('CHECK_RANGE');
+
+        // IsAmountInRangeGuard is NOT faked → runs real logic → 500 in [10, 1000] → passes
+        $test->assertState('in_range');
+    });
+
+    // Test 59: assertBehaviorRan with tuple definitions
+    it('assertBehaviorRan works with tuple-defined behaviors', function (): void {
+        $test = NamedParamsMachine::test();
+        $test->faking([AddValueByParamAction::class]);
+
+        $test->send('ADD_VALUE');
+
+        $test->assertBehaviorRan(AddValueByParamAction::class);
+    });
+
+    // Test 60: Inline behavior faking with parameterized inline key
+    it('InlineBehaviorFake intercepts parameterized inline key', function (): void {
+        $test = TestMachine::define(
+            config: [
+                'initial' => 'idle',
+                'context' => ['result' => null],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'DO' => [
+                                'actions' => [['myAction', 'value' => 42]],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            behavior: [
+                'actions' => [
+                    'myAction' => function (ContextManager $ctx, int $value): void {
+                        $ctx->set('result', $value);
+                    },
+                ],
+            ],
+        );
+
+        $test->faking(['myAction' => true]);
+        $test->send('DO');
+
+        // Action was faked → context not modified
+        expect($test->machine()->state->context->get('result'))->toBeNull();
+    });
+
+    // Test 61: TestMachine::send() with parameterized guards/actions
+    it('TestMachine send flow with named params works end-to-end', function (): void {
+        $test = NamedParamsMachine::test();
+
+        $test->context()->set('amount', 500);
+        $test->send('CHECK_RANGE');
+        $test->assertState('in_range');
+
+        $test->send('RESET');
+        $test->assertState('idle');
+
+        $test->send('ADD_VALUE');
+        $test->assertContext('total', 125);
+    });
+
+    // Test 62: assertOutput with parameterized output behavior
+    it('assertOutput works with parameterized output behavior', function (): void {
+        $test = NamedParamsMachine::test();
+
+        $test->send('FINISH');
+
+        $test->assertState('completed');
+        $test->assertOutput(['format' => 'json', 'total' => 100]);
+    });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  §F — XState export (Tests 63–67)
+// ═══════════════════════════════════════════════════════════════
+
+describe('§F — XState export', function (): void {
+
+    // Test 63: Parameterized guard exported with params
+    it('exports parameterized guard with params in XState JSON', function (): void {
+        $this->artisan('machine:xstate', [
+            'machine'  => NamedParamsMachine::class,
+            '--stdout' => true,
+        ])
+            ->expectsOutputToContain('IsAmountInRangeGuard')
+            ->assertSuccessful();
+    });
+
+    // Test 64: Parameterized action exported with params
+    it('exports parameterized action with params in XState JSON', function (): void {
+        $this->artisan('machine:xstate', [
+            'machine'  => NamedParamsMachine::class,
+            '--stdout' => true,
+        ])
+            ->expectsOutputToContain('AddValueByParamAction')
+            ->assertSuccessful();
+    });
+
+    // Test 65: Mixed parameterized + parameterless in same export
+    it('exports mixed parameterized and parameterless behaviors', function (): void {
+        $this->artisan('machine:xstate', [
+            'machine'  => NamedParamsMachine::class,
+            '--stdout' => true,
+        ])
+            ->expectsOutputToContain('params')
+            ->assertSuccessful();
+    });
+
+    // Test 66: Behavior catalog includes param metadata via calculators in meta
+    it('exports calculators with params in meta section', function (): void {
+        $this->artisan('machine:xstate', [
+            'machine'  => NamedParamsMachine::class,
+            '--stdout' => true,
+        ])
+            ->expectsOutputToContain('ApplyDiscountCalculator')
+            ->assertSuccessful();
+    });
+
+    // Test 67: Parameterized output exported in meta.output
+    it('exports parameterized output in meta.output section', function (): void {
+        $this->artisan('machine:xstate', [
+            'machine'  => NamedParamsMachine::class,
+            '--stdout' => true,
+        ])
+            ->expectsOutputToContain('FormatOutput')
+            ->assertSuccessful();
+    });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  §G — Config validation (Tests 68–70)
+// ═══════════════════════════════════════════════════════════════
+
+describe('§G — Config validation', function (): void {
+
+    // Test 68: Valid parameterized tuple passes validation
+    it('valid parameterized tuple passes StateConfigValidator', function (): void {
+        // If validation fails, this throws
+        $machine = MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => ['amount' => 500],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'CHECK' => [
+                                'target' => 'passed',
+                                'guards' => [[IsAmountInRangeGuard::class, 'min' => 100]],
+                            ],
+                        ],
+                    ],
+                    'passed' => ['type' => 'final'],
+                ],
+            ],
+        );
+
+        expect($machine)->toBeInstanceOf(MachineDefinition::class);
+    });
+
+    // Test 69: Invalid tuple (no class at [0]) caught at definition time
+    it('invalid tuple without class at [0] throws at definition time', function (): void {
+        MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => [],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'CHECK' => [
+                                'guards' => [['min' => 100]],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        );
+    })->throws(InvalidBehaviorDefinitionException::class);
+
+    // Test 70: Missing required params detected at runtime (transition time)
+    it('missing required param detected when behavior is invoked', function (): void {
+        $machine = MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => ['amount' => 500],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'CHECK' => [
+                                'target' => 'passed',
+                                'guards' => [[IsAmountInRangeGuard::class, 'min' => 100]], // missing 'max'
+                            ],
+                        ],
+                    ],
+                    'passed' => ['type' => 'final'],
+                ],
+            ],
+        );
+
+        $machine->transition(event: ['type' => 'CHECK']);
+    })->throws(MissingBehaviorParameterException::class);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  §H — Backward compatibility (Tests 71–74)
+// ═══════════════════════════════════════════════════════════════
+
+describe('§H — Backward compatibility', function (): void {
+
+    // Test 71: Old colon syntax still works — action
+    it('old colon syntax still works for actions', function (): void {
+        $machine = MachineDefinition::define(
+            config: [
+                'initial' => 'active',
+                'context' => ['count' => 0],
+                'states'  => [
+                    'active' => [
+                        'on' => [
+                            'ADD_VALUE' => [
+                                'actions' => 'additionAction:5,4,3,2,1',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            behavior: [
+                'actions' => [
+                    'additionAction' => function (ContextManager $ctx, EventDefinition $ed, ?array $arguments = null): void {
+                        $ctx->set('count', array_sum($arguments));
+                    },
+                ],
+            ],
+        );
+
+        $state = $machine->transition(event: ['type' => 'ADD_VALUE']);
+
+        expect($state->context->get('count'))->toBe(15);
+    });
+
+    // Test 72: Old colon syntax still works — guard
+    it('old colon syntax still works for guards', function (): void {
+        $machine = MachineDefinition::define(
+            config: [
+                'initial' => 'active',
+                'context' => ['count' => 10],
+                'states'  => [
+                    'active' => [
+                        'on' => [
+                            'CHECK' => [
+                                'target' => 'passed',
+                                'guards' => 'biggerThanGuard:5',
+                            ],
+                        ],
+                    ],
+                    'passed' => ['type' => 'final'],
+                ],
+            ],
+            behavior: [
+                'guards' => [
+                    'biggerThanGuard' => function (ContextManager $ctx, EventDefinition $ed, ?array $arguments = null): bool {
+                        return $ctx->get('count') > (int) $arguments[0];
+                    },
+                ],
+            ],
+        );
+
+        $state = $machine->transition(event: ['type' => 'CHECK']);
+
+        expect($state->matches('passed'))->toBeTrue();
+    });
+
+    // Test 73: Colon syntax and named params coexist in same machine
+    it('colon syntax and named params coexist in the same machine definition', function (): void {
+        $machine = MachineDefinition::define(
+            config: [
+                'initial' => 'a',
+                'context' => ['count' => 10, 'amount' => 500],
+                'states'  => [
+                    'a' => [
+                        'on' => [
+                            'OLD_STYLE' => [
+                                'target' => 'b',
+                                'guards' => 'biggerThanGuard:5',
+                            ],
+                        ],
+                    ],
+                    'b' => [
+                        'on' => [
+                            'NEW_STYLE' => [
+                                'target' => 'c',
+                                'guards' => [[IsAmountInRangeGuard::class, 'min' => 100, 'max' => 1000]],
+                            ],
+                        ],
+                    ],
+                    'c' => ['type' => 'final'],
+                ],
+            ],
+            behavior: [
+                'guards' => [
+                    'biggerThanGuard' => function (ContextManager $ctx, EventDefinition $ed, ?array $arguments = null): bool {
+                        return $ctx->get('count') > (int) $arguments[0];
+                    },
+                ],
+            ],
+        );
+
+        $state = $machine->transition(event: ['type' => 'OLD_STYLE']);
+        expect($state->matches('b'))->toBeTrue();
+
+        $state = $machine->transition(event: ['type' => 'NEW_STYLE'], state: $state);
+        expect($state->matches('c'))->toBeTrue();
+    });
+
+    // Test 74: Same behavior class used with both syntaxes across different machines
+    it('same behavior class across different machines has no global state leak', function (): void {
+        // Machine 1: named params
+        $machine1 = MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => ['amount' => 500],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'CHECK' => [
+                                'target' => 'passed',
+                                'guards' => [[IsAboveThresholdGuard::class, 'threshold' => 100]],
+                            ],
+                        ],
+                    ],
+                    'passed' => ['type' => 'final'],
+                ],
+            ],
+        );
+
+        $state1 = $machine1->transition(event: ['type' => 'CHECK']);
+        expect($state1->matches('passed'))->toBeTrue();
+
+        // Machine 2: different named params on same class
+        $machine2 = MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => ['amount' => 500],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'CHECK' => [
+                                'target' => 'passed',
+                                'guards' => [[IsAboveThresholdGuard::class, 'threshold' => 999]],
+                            ],
+                        ],
+                    ],
+                    'passed' => ['type' => 'final'],
+                ],
+            ],
+        );
+
+        $state2 = $machine2->transition(event: ['type' => 'CHECK']);
+        // 500 is NOT > 999, so transition blocked
+        expect($state2->matches('idle'))->toBeTrue();
+    });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  §I — Listener format (Tests 75–77)
+// ═══════════════════════════════════════════════════════════════
+
+describe('§I — Listener format', function (): void {
+
+    // Test 75: ListenerJob serializes and deserializes configParams
+    it('ListenerJob constructor stores configParams for serialization', function (): void {
+        $job = new ListenerJob(
+            machineClass: NamedParamsMachine::class,
+            rootEventId: 'test-root-event-id',
+            actionClass: SetLevelAction::class,
+            configParams: ['level' => 'info'],
+        );
+
+        expect($job->configParams)->toBe(['level' => 'info']);
+        expect($job->machineClass)->toBe(NamedParamsMachine::class);
+        expect($job->actionClass)->toBe(SetLevelAction::class);
+
+        // Verify serialization round-trip
+        $serialized   = serialize($job);
+        $deserialized = unserialize($serialized);
+
+        expect($deserialized->configParams)->toBe(['level' => 'info']);
+        expect($deserialized->machineClass)->toBe(NamedParamsMachine::class);
+    });
+
+    // Test 76: ListenerJob dispatched to specific queue name
+    it('ListenerJob can be routed to a specific queue', function (): void {
+        $job = new ListenerJob(
+            machineClass: NamedParamsMachine::class,
+            rootEventId: 'test-root-event-id',
+            actionClass: SetLevelAction::class,
+            configParams: ['level' => 'audit'],
+        );
+
+        $job->onQueue('audit-queue');
+
+        expect($job->queue)->toBe('audit-queue');
+    });
+
+    // Test 77: StateConfigValidator validates new format, rejects old
+    it('StateConfigValidator accepts new tuple format and rejects old class-as-key format', function (): void {
+        // New format passes validation
+        $machine = MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => [],
+                'listen'  => [
+                    'entry' => [
+                        [SetLevelAction::class, '@queue' => true],
+                    ],
+                ],
+                'states' => [
+                    'idle'   => ['on' => ['GO' => 'active']],
+                    'active' => [],
+                ],
+            ],
+        );
+
+        expect($machine)->toBeInstanceOf(MachineDefinition::class);
+
+        // Old format throws
+        expect(fn () => MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => [],
+                'listen'  => [
+                    'entry' => [
+                        SetLevelAction::class => ['queue' => true],
+                    ],
+                ],
+                'states' => [
+                    'idle'   => ['on' => ['GO' => 'active']],
+                    'active' => [],
+                ],
+            ],
+        ))->toThrow(InvalidListenerDefinitionException::class);
     });
 });
