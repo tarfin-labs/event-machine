@@ -17,6 +17,7 @@ use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 
 class MachineController extends Controller
@@ -263,7 +264,7 @@ class MachineController extends Controller
             : ($machine->definition->behavior['outputs'][$outputKey] ?? null);
 
         if ($outputClass === null) {
-            throw new \RuntimeException("Output behavior '{$outputKey}' not found.");
+            throw BehaviorNotFoundException::build($outputKey);
         }
 
         $outputBehavior = resolve($outputClass);
