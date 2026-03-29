@@ -8,7 +8,7 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
-use Tarfinlabs\EventMachine\Exceptions\NoStateDefinitionFoundException;
+use Tarfinlabs\EventMachine\Exceptions\UndefinedTargetStateException;
 
 /**
  * Class TransitionBranch.
@@ -69,7 +69,7 @@ class TransitionBranch
 
             // If the target state definition is not found, throw an exception
             if (!$targetStateDefinition instanceof StateDefinition) {
-                throw NoStateDefinitionFoundException::build(
+                throw UndefinedTargetStateException::build(
                     from: $this->transitionDefinition->source->id,
                     to: $this->transitionBranchConfig,
                     eventType: $this->transitionDefinition->event,
@@ -95,7 +95,7 @@ class TransitionBranch
                 );
 
             if (!$targetStateDefinition instanceof StateDefinition) {
-                throw NoStateDefinitionFoundException::build(
+                throw UndefinedTargetStateException::build(
                     from: $this->transitionDefinition->source->id,
                     to: $this->transitionBranchConfig['target'],
                     eventType: $this->transitionDefinition->event,
