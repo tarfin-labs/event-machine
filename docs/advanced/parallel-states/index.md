@@ -201,24 +201,26 @@ $state->matches('editing.list.bulleted'); // => true
 
 ## Validation Rules
 
-Parallel states have specific validation rules:
+Parallel states have specific validation rules. Violations throw `InvalidParallelStateDefinitionException`:
 
 1. **Must have child states**: A parallel state requires at least one region
 2. **Cannot have `initial` property**: Unlike compound states, parallel states cannot specify an initial state (all regions enter simultaneously)
 3. **Regions must have `initial`**: Each region (child of parallel) must be a compound state with its own `initial` property
 4. **Cannot target sibling region states**: Transitions within a region cannot target states in a sibling region — use events (`raise`/`sendTo`) to coordinate between regions instead. Validated at definition time with a clear error message
+5. **Requires persistence**: Parallel dispatch requires `should_persist: true` in machine config
+6. **Requires Machine subclass**: Parallel dispatch requires the machine to extend `Machine` (not bare `MachineDefinition`)
 
 ```php ignore
 // Invalid - parallel with no children
 'invalid' => [
     'type' => 'parallel',
-    'states' => [],  // Error: requires at least one region
+    'states' => [],  // InvalidParallelStateDefinitionException
 ],
 
 // Invalid - parallel with initial
 'invalid' => [
     'type' => 'parallel',
-    'initial' => 'region1',  // Error: parallel cannot have initial
+    'initial' => 'region1',  // InvalidParallelStateDefinitionException
     'states' => [...],
 ],
 ```

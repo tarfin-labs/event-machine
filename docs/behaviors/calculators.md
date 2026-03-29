@@ -384,12 +384,12 @@ CalculateTotalCalculator::runWithState($state);
 expect($state->context->get('total'))->toBe(45);
 ```
 
-### With Arguments
+### With Named Parameters
 
 <!-- doctest-attr: ignore -->
 ```php
 $state = State::forTesting(['value' => 10]);
-MultiplyCalculator::runWithState($state, arguments: ['3']);
+MultiplyCalculator::runWithState($state, configParams: ['factor' => 3]);
 expect($state->context->get('value'))->toBe(30);
 ```
 

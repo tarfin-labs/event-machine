@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Support\CompressionManager;
+use Tarfinlabs\EventMachine\Exceptions\ArchiveException;
 
 beforeEach(function (): void {
     // Reset config cache before each test
@@ -84,12 +85,12 @@ describe('CompressionManager (Archival)', function (): void {
         config(['machine.archival.level' => -1]);
         CompressionManager::clearCache();
         expect(fn () => CompressionManager::getLevel())
-            ->toThrow(InvalidArgumentException::class, 'Compression level must be between 0 and 9');
+            ->toThrow(ArchiveException::class, 'Compression level must be between 0 and 9');
 
         config(['machine.archival.level' => 10]);
         CompressionManager::clearCache();
         expect(fn () => CompressionManager::getLevel())
-            ->toThrow(InvalidArgumentException::class, 'Compression level must be between 0 and 9');
+            ->toThrow(ArchiveException::class, 'Compression level must be between 0 and 9');
     });
 
     it('handles compression failures gracefully', function (): void {

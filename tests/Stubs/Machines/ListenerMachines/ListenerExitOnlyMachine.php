@@ -26,7 +26,7 @@ class ListenerExitOnlyMachine extends Machine
                 ],
                 'listen' => [
                     'exit' => [
-                        QueuedExitAction::class => ['queue' => true],
+                        [QueuedExitAction::class, '@queue' => true],
                     ],
                 ],
                 'states' => [

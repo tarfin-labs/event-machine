@@ -8,7 +8,7 @@ use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
-use Tarfinlabs\EventMachine\Exceptions\NoStateDefinitionFoundException;
+use Tarfinlabs\EventMachine\Exceptions\UndefinedTargetStateException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 
 // === Basic Transition Definition Tests ===
@@ -121,7 +121,7 @@ it('throws NoTransitionDefinitionFoundException for unknown events', function ()
         );
 });
 
-it('throws NoStateDefinitionFoundException for unknown states - I', function (): void {
+it('throws UndefinedTargetStateException for unknown states - I', function (): void {
     $machine = MachineDefinition::define(config: [
         'states' => [
             'green' => [
@@ -135,11 +135,11 @@ it('throws NoStateDefinitionFoundException for unknown states - I', function ():
         ],
     ]);
 })->throws(
-    exception: NoStateDefinitionFoundException::class,
+    exception: UndefinedTargetStateException::class,
     exceptionMessage: "No transition defined in the event machine from state 'machine.green' to state 'no-yellow' for the event type 'TIMER'. Please ensure that a transition for this event type is defined in the current state definition."
 );
 
-it('throws NoStateDefinitionFoundException for unknown states - II', function (): void {
+it('throws UndefinedTargetStateException for unknown states - II', function (): void {
     $machine = MachineDefinition::define(config: [
         'states' => [
             'green' => [
@@ -151,7 +151,7 @@ it('throws NoStateDefinitionFoundException for unknown states - II', function ()
         ],
     ]);
 })->throws(
-    exception: NoStateDefinitionFoundException::class,
+    exception: UndefinedTargetStateException::class,
     exceptionMessage: "No transition defined in the event machine from state 'machine.green' to state 'no-yellow' for the event type 'TIMER'. Please ensure that a transition for this event type is defined in the current state definition."
 );
 

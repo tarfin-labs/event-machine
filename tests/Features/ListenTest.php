@@ -579,7 +579,7 @@ it('records dispatched internal event for queued entry listener', function (): v
         'context' => [],
         'listen'  => [
             'entry' => [
-                'queuedAction' => ['queue' => true],
+                ['queuedAction', '@queue' => true],
             ],
         ],
         'states' => [
@@ -604,7 +604,7 @@ it('records dispatched internal event for queued transition listener', function 
         'context' => [],
         'listen'  => [
             'transition' => [
-                'queuedAction' => ['queue' => true],
+                ['queuedAction', '@queue' => true],
             ],
         ],
         'states' => [
@@ -630,7 +630,7 @@ it('runs sync listener inline and records queued dispatch event', function (): v
         'listen'  => [
             'entry' => [
                 'syncAction',
-                'queuedAction' => ['queue' => true],
+                ['queuedAction', '@queue' => true],
             ],
         ],
         'states' => [
@@ -660,7 +660,7 @@ it('does not record queued dispatch for transient states', function (): void {
         'context' => [],
         'listen'  => [
             'entry' => [
-                'queuedAction' => ['queue' => true],
+                ['queuedAction', '@queue' => true],
             ],
         ],
         'states' => [
@@ -689,7 +689,7 @@ it('queued and sync dispatched events appear in correct listener block', functio
         'listen'  => [
             'entry' => [
                 'syncAction',
-                'queuedAction' => ['queue' => true],
+                ['queuedAction', '@queue' => true],
             ],
         ],
         'states' => [

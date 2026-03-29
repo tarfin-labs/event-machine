@@ -57,7 +57,7 @@ class OrderWorkflowMachine extends Machine
 
 | Key | Type | Required | Description |
 |-----|------|----------|-------------|
-| `machine` | `string` (FQCN) | Yes | Child machine class. Must extend `Machine`. |
+| `machine` | `string` (FQCN) | Yes | Child machine class. Must extend `Machine`. Throws `InvalidMachineClassException` if the class doesn't exist or doesn't extend `Machine`. |
 | `with` | `array\|Closure` | No | Data to pass from parent context to child. |
 | `@done` | `string\|array` | No | Fires when child reaches a final state. Absence signals fire-and-forget. |
 | `@done.{state}` | `string\|array` | No | Fires when child reaches the specific final state `{state}`. Same format as `@done`. |
@@ -260,7 +260,8 @@ Alternatively, use `target` for an explicit fire-and-forget transition (consiste
 
 - Fire-and-forget requires `queue` — the child must run asynchronously.
 - `@done` absence is the signal — no new keyword needed.
-- `@fail`, `@timeout`, `output`, and `forward` are not valid without `@done`.
+- `@fail`, `@timeout`, `output`, and `forward` are not valid without `@done`. Violating these constraints throws `InvalidStateConfigException`.
+- A state cannot have both `machine` and `type: 'parallel'` — `InvalidStateConfigException` is thrown.
 - The child still persists its own `MachineEvent` records (observability).
 - The child receives parent identity (`sendToParent()` still works).
 

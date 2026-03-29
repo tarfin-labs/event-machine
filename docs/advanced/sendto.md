@@ -92,7 +92,7 @@ class ReportProgressAction extends ActionBehavior
 }
 ```
 
-Both `sendToParent()` and `dispatchToParent()` use `$context->parentMachineId()` and `$context->parentMachineClass()` internally. They throw `RuntimeException` if the machine was not invoked by a parent.
+Both `sendToParent()` and `dispatchToParent()` use `$context->parentMachineId()` and `$context->parentMachineClass()` internally. They throw `NoParentMachineException` if the machine was not invoked by a parent.
 
 ## Progress Reporting Pattern
 

@@ -22,7 +22,9 @@ use Tarfinlabs\EventMachine\Routing\ForwardContext;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Testing\CommunicationRecorder;
+use Tarfinlabs\EventMachine\Exceptions\NoParentMachineException;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
+use Tarfinlabs\EventMachine\Exceptions\MissingBehaviorParameterException;
 
 /**
  * The abstract class InvokableBehavior defines the common behavior
@@ -129,7 +131,7 @@ abstract class InvokableBehavior
         $parentMachineClass = $context->parentMachineClass();
 
         if ($parentRootEventId === null || $parentMachineClass === null) {
-            throw new \RuntimeException('Cannot sendToParent: this machine was not invoked by a parent.');
+            throw NoParentMachineException::sendToParent();
         }
 
         $this->sendTo(
@@ -156,7 +158,7 @@ abstract class InvokableBehavior
         $parentMachineClass = $context->parentMachineClass();
 
         if ($parentRootEventId === null || $parentMachineClass === null) {
-            throw new \RuntimeException('Cannot dispatchToParent: this machine was not invoked by a parent.');
+            throw NoParentMachineException::dispatchToParent();
         }
 
         $this->dispatchTo(
@@ -255,6 +257,7 @@ abstract class InvokableBehavior
         ?EventBehavior $eventBehavior = null,
         ?array $actionArguments = null,
         ?ForwardContext $forwardContext = null,
+        ?array $configParams = null,
     ): array {
         $invocableBehaviorParameters = [];
 
@@ -286,9 +289,36 @@ abstract class InvokableBehavior
                 is_a($typeName, class: EventBehavior::class, allow_string: true) || is_subclass_of($typeName, class: EventBehavior::class)   => $effectiveEvent,    // EventBehavior (original event for @always)
                 $state instanceof $typeName                                                                                                  => $state,             // State
                 is_a($state->history, $typeName)                                                                                             => $state->history,    // EventCollection
-                $typeName === 'array'                                                                                                        => $actionArguments,   // Behavior Arguments
+                $typeName === 'array' && $actionArguments !== null                                                                           => $actionArguments,   // Behavior Arguments (deprecated colon syntax)
+                $configParams !== null && array_key_exists($parameter->getName(), $configParams)                                             => $configParams[$parameter->getName()], // Named config params
+                $parameter->isDefaultValueAvailable()                                                                                        => $parameter->getDefaultValue(),        // Default value from signature
                 default                                                                                                                      => null,
             };
+
+            // When configParams are active (tuple syntax), throw if a required non-framework param is unresolved
+            if ($value === null
+                && $configParams !== null
+                && !$parameter->isDefaultValueAvailable()
+                && !$parameter->allowsNull()
+                && $typeName !== null
+                && !is_a($typeName, ForwardContext::class, true)
+                && !is_a($typeName, ContextManager::class, true)
+                && !is_subclass_of($typeName, ContextManager::class)
+                && !is_a($typeName, EventBehavior::class, true)
+                && !is_subclass_of($typeName, EventBehavior::class)
+                && !($state instanceof $typeName)
+                && !is_a($state->history, $typeName)
+            ) {
+                $behaviorClass = $actionBehavior instanceof self
+                    ? $actionBehavior::class
+                    : 'Closure';
+
+                throw MissingBehaviorParameterException::build(
+                    behaviorClass: $behaviorClass,
+                    paramName: $parameter->getName(),
+                    paramType: $typeName,
+                );
+            }
 
             $invocableBehaviorParameters[] = $value;
         }

@@ -179,20 +179,19 @@ it('sends receipt email', function () {
 
 ## Recipe: Parametric Guard Testing
 
-Test guards that accept arguments (e.g., `guardName:param1,param2`):
+Test guards that accept named parameters via tuple syntax:
 
 <!-- doctest-attr: ignore -->
 ```php
-// Guard definition: 'guards' => 'checkDaysAfterCompletionGuard:7'
-// The engine passes ['7'] as the $arguments parameter
+// Guard definition: 'guards' => [[CheckDaysAfterCompletionGuard::class, 'days' => 7]]
+// The engine passes 'days' => 7 as a named parameter to __invoke
 
 it('blocks before 7 days', function () {
     $state = State::forTesting([
         'completed_at' => now()->subDays(3),
     ]);
 
-    // Third parameter = guard arguments
-    expect(CheckDaysAfterCompletionGuard::runWithState($state, null, ['7']))->toBeFalse();
+    expect(CheckDaysAfterCompletionGuard::runWithState($state, configParams: ['days' => 7]))->toBeFalse();
 });
 
 it('passes after 7 days', function () {
@@ -200,17 +199,7 @@ it('passes after 7 days', function () {
         'completed_at' => now()->subDays(10),
     ]);
 
-    expect(CheckDaysAfterCompletionGuard::runWithState($state, null, ['7']))->toBeTrue();
-});
-
-// Test inline parametric guard via Machine::getGuard()
-it('tests inline parametric guard', function () {
-    $guard = OrderMachine::getGuard('checkMinimumAmountGuard');
-    $context = new ContextManager(['amount' => 50]);
-
-    // Invoke with arguments
-    expect($guard($context, ['100']))->toBeFalse();
-    expect($guard($context, ['25']))->toBeTrue();
+    expect(CheckDaysAfterCompletionGuard::runWithState($state, configParams: ['days' => 7]))->toBeTrue();
 });
 ```
 

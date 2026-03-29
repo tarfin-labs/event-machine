@@ -90,7 +90,7 @@ Terminal states that end the machine's execution:
 Final states cannot have outgoing transitions:
 
 ```php ignore
-// This will throw InvalidFinalStateDefinitionException
+// This will throw InvalidStateConfigException
 'done' => [
     'type' => 'final',
     'on' => [
@@ -209,13 +209,26 @@ Three listener keys are available:
 
 ### Sync and Queued Actions
 
-Listener actions support a `['queue' => true]` modifier — consistent with how EventMachine handles `queue` on states in machine delegation:
+Use the `@queue` key in a tuple to dispatch listener actions to the queue. The `@` prefix marks it as framework metadata — it never reaches `__invoke`:
 
 ```php ignore
 'listen' => [
     'entry' => [
-        BroadcastAction::class,                            // sync (default)
-        HeavyAuditAction::class => ['queue' => true],     // queued
+        BroadcastAction::class,                                // sync (default)
+        [HeavyAuditAction::class, '@queue' => true],          // queued (default queue)
+        [AnalyticsAction::class, '@queue' => 'analytics'],    // queued (specific queue)
+    ],
+],
+```
+
+**`@queue` type:** `bool|string` — `true` = default queue, `'name'` = specific queue, `false`/omitted = sync.
+
+Listeners also support named parameters alongside `@queue`:
+
+```php ignore
+'listen' => [
+    'entry' => [
+        [AuditAction::class, 'verbose' => true, '@queue' => true],
     ],
 ],
 ```
@@ -482,6 +495,49 @@ MachineDefinition::define(
         'key' => 'value',
     ],
     'description' => 'Human readable text',
+],
+```
+
+## Configuration Validation
+
+EventMachine validates your machine configuration at definition time via `StateConfigValidator`. Any structural errors — invalid keys, wrong state types, conflicting options — throw `InvalidStateConfigException` with a descriptive message pointing to the exact problem.
+
+Common validation errors include:
+
+| Error | Cause |
+|-------|-------|
+| Invalid root-level keys | Typo in a top-level config key |
+| Invalid state keys | Unknown key inside a state definition |
+| Invalid state type | `type` is not `'final'` or `'parallel'` |
+| Final state with transitions | Final state has `on` key |
+| Final state with children | Final state has `states` key |
+| Parallel state without regions | `type: 'parallel'` but `states` is empty |
+
+You can also run validation via artisan:
+
+```bash
+php artisan machine:validate-config
+```
+
+This scans all Machine classes and reports config errors without running the application.
+
+::: tip MachineDefinitionNotFoundException
+If a Machine subclass does not implement the `definition()` method, `MachineDefinitionNotFoundException` is thrown when the machine is instantiated or discovered by artisan commands.
+:::
+
+### Listener Validation
+
+Listener config must use the current array format. The removed class-as-key format (e.g., `[MyAction::class => ['queue' => true]]`) throws `InvalidListenerDefinitionException`. Use the tuple format instead:
+
+```php ignore
+// Correct
+'listen' => [
+    'entry' => [[MyAction::class, '@queue' => true]],
+],
+
+// Rejected — throws InvalidListenerDefinitionException
+'listen' => [
+    'entry' => [MyAction::class => ['queue' => true]],
 ],
 ```
 

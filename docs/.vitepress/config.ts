@@ -125,6 +125,7 @@ export default withMermaid(
           collapsed: true,
           items: [
             { text: 'Execution Model', link: '/reference/execution-model' },
+            { text: 'Exceptions Reference', link: '/reference/exceptions' },
             { text: 'Hierarchical States', link: '/advanced/hierarchical-states' },
             { text: 'Entry/Exit Actions', link: '/advanced/entry-exit-actions' },
             { text: '@always Transitions', link: '/advanced/always-transitions' },

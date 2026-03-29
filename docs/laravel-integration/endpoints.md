@@ -748,7 +748,7 @@ MachineRouter::register(CarSalesMachine::class, [
 ]);
 ```
 
-`only` registers **only** the listed event endpoints (whitelist). `except` registers all endpoints **except** the listed ones (blacklist). They are mutually exclusive — using both throws an `InvalidArgumentException`.
+`only` registers **only** the listed event endpoints (whitelist). `except` registers all endpoints **except** the listed ones (blacklist). They are mutually exclusive — using both throws an `InvalidRouterConfigException`.
 
 Both accept event type strings (`'SUBMIT'`) or event class references (`SubmitEvent::class`), same as `machineIdFor` and `modelFor`.
 
@@ -784,13 +784,19 @@ MachineRouter::register(OrderMachine::class, [
 
 Forwarded endpoints **cannot** appear in `machineIdFor` or `modelFor` — they inherit binding mode from the parent's global model config.
 
-### Validation
+### Router Validation
 
-`MachineRouter::register()` validates all options at route registration time:
+`MachineRouter::register()` validates all options at route registration time. Violations throw `InvalidRouterConfigException`:
 
-- **Unknown event types** in `only`/`except` throw with the list of available types
-- **`machineIdFor`/`modelFor`** must reference endpoints in the filtered set — referencing a filtered-out or nonexistent event throws with a specific error message
-- **Forwarded event types** in `machineIdFor`/`modelFor` throw explaining that forwarded endpoints inherit binding from parent config
+| Rule | Throws When |
+|------|-------------|
+| `only` + `except` mutually exclusive | Both are provided in the same registration |
+| Orphaned `machineIdFor` refs | A `machineIdFor` entry references a filtered-out or nonexistent event |
+| Orphaned `modelFor` refs | A `modelFor` entry references a filtered-out or nonexistent event |
+| Forwarded events in `machineIdFor`/`modelFor` | Forwarded endpoints inherit binding from parent config |
+| Unknown event types in `only`/`except` | An event type doesn't match any defined endpoint |
+
+Endpoint definitions are also validated at definition time. `InvalidEndpointDefinitionException` is thrown when an endpoint references an undefined event type, a missing output behavior, an invalid action, or has forward event conflicts (e.g., a forwarded event collides with a behavior-defined event or another forward).
 
 ## Per-Event Middleware
 

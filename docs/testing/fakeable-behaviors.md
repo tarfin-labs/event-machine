@@ -86,6 +86,8 @@ OrderMachine::test(['orderId' => 1])
 | `fake()` | Strict mock | Throws `BadMethodCallException` | You need strict expectations |
 | `spy()` | Permissive spy | Silently ignored | You want to verify after the fact |
 | `faking([...])` | Spies (via `spy()`) | Silently ignored | Selective faking with TestMachine |
+
+Calling assertion methods (e.g., `assertRan()`, `assertNotRan()`) on a behavior that was never faked throws `BehaviorNotFakedException`. Always call `fake()`, `spy()`, or use `faking([...])` before asserting.
 :::
 
 ::: warning Guards need shouldReturn() after faking()

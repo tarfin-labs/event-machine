@@ -396,20 +396,20 @@ class ExportXStateCommand extends Command
 
         // Guards
         if ($branch->guards !== null && $branch->guards !== []) {
-            $guardNames = array_map(
-                $this->resolveBehaviorName(...),
+            $guardEntries = array_map(
+                $this->formatBehaviorForExport(...),
                 $branch->guards
             );
 
-            $config['guard'] = count($guardNames) === 1
-                ? $guardNames[0]
-                : ['type' => 'and', 'guards' => $guardNames];
+            $config['guard'] = count($guardEntries) === 1
+                ? $guardEntries[0]
+                : ['type' => 'and', 'guards' => $guardEntries];
         }
 
         // Actions
         if ($branch->actions !== null && $branch->actions !== []) {
             $config['actions'] = array_map(
-                $this->resolveBehaviorName(...),
+                $this->formatBehaviorForExport(...),
                 $branch->actions
             );
         }
@@ -419,7 +419,7 @@ class ExportXStateCommand extends Command
             $config['meta'] = [
                 'eventMachine' => [
                     'calculators' => array_map(
-                        $this->resolveBehaviorName(...),
+                        $this->formatBehaviorForExport(...),
                         $branch->calculators
                     ),
                 ],
@@ -457,6 +457,21 @@ class ExportXStateCommand extends Command
     }
 
     /**
+     * Format a behavior for XState export.
+     * Returns a plain string for parameterless, or {type, params} for parameterized.
+     */
+    private function formatBehaviorForExport(mixed $behavior): array|string
+    {
+        $resolved = $this->resolveBehaviorNameAndParams($behavior);
+
+        if ($resolved['params'] !== null) {
+            return ['type' => $resolved['name'], 'params' => $resolved['params']];
+        }
+
+        return $resolved['name'];
+    }
+
+    /**
      * Resolve a behavior name from a class FQCN, inline string, or closure.
      *
      * Produces a short, human-readable name for the XState JSON output:
@@ -464,6 +479,34 @@ class ExportXStateCommand extends Command
      * - String with colon (params): extracts base name
      * - Plain string: used as-is
      */
+    /**
+     * Resolve a behavior to its name and optional params for XState export.
+     *
+     * @return array{name: string, params: array<string, mixed>|null}
+     */
+    private function resolveBehaviorNameAndParams(mixed $behavior): array
+    {
+        // Array tuple: [Class::class, 'min' => 100, 'max' => 10000]
+        if (is_array($behavior)) {
+            $class  = $behavior[0] ?? 'unknown';
+            $params = array_filter(
+                $behavior,
+                fn (int|string $k): bool => is_string($k) && !str_starts_with($k, '@'),
+                ARRAY_FILTER_USE_KEY,
+            );
+
+            return [
+                'name'   => $this->resolveBehaviorName($class),
+                'params' => $params ?: null,
+            ];
+        }
+
+        return [
+            'name'   => $this->resolveBehaviorName($behavior),
+            'params' => null,
+        ];
+    }
+
     private function resolveBehaviorName(mixed $behavior): string
     {
         if (!is_string($behavior)) {

@@ -299,6 +299,18 @@ Expired locks (`expires_at < now()`) are cleaned up automatically during lock ac
 
 HTTP endpoints handle `MachineAlreadyRunningException` gracefully, returning an appropriate error response. See [Endpoints](/laravel-integration/endpoints) for details.
 
+When `block()` times out, `MachineLockTimeoutException` is thrown internally. `Machine` catches it and re-throws as `MachineAlreadyRunningException` — which is the exception callers see. In parallel dispatch mode, `MachineLockTimeoutException` is also caught by `ListenerJob`, which releases the job back to the queue for retry.
+
+Lock configuration for parallel dispatch is in `config/machine.php`:
+
+<!-- doctest-attr: ignore -->
+```php
+'parallel_dispatch' => [
+    'lock_timeout' => 60,  // seconds before lock expires
+    'lock_ttl'     => 5,   // seconds to wait for lock acquisition
+],
+```
+
 ## Internal Events
 
 EventMachine generates internal events for tracking:

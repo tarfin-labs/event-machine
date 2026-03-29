@@ -246,6 +246,185 @@ See [Lock Contention Handling](/laravel-integration/endpoints#lock-contention-ha
 7. In tests: `assertResult()` → `assertOutput()`
 8. In tests: `ChildMachineDoneEvent::result()` → `ChildMachineDoneEvent::output()`
 9. Update API consumers for new response envelope keys (`id`, `state`, `output`, `availableEvents`)
+10. Migrate parameterized behaviors: `'guard:arg1,arg2'` → `[[Guard::class, 'param' => value]]` (optional, deprecated syntax still works)
+11. Update listener config: `Class::class => ['queue' => true]` → `[Class::class, '@queue' => true]` (**required**, old format removed)
+
+### New: Named Parameters for Behaviors
+
+Behaviors now accept named parameters via array-tuple syntax. The old `:arg1,arg2` colon syntax is deprecated (removed in v10).
+
+**Before (still works, deprecated):**
+
+```php ignore
+'guards' => 'isAmountInRangeGuard:100,10000',
+
+// Behavior receives untyped positional array
+public function __invoke(ContextManager $ctx, ?array $arguments = null): bool {
+    return $ctx->get('amount') >= (int) $arguments[0]
+        && $ctx->get('amount') <= (int) $arguments[1];
+}
+```
+
+**After:**
+
+```php ignore
+'guards' => [[IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000]],
+
+// Behavior receives typed named parameters
+public function __invoke(ContextManager $ctx, int $min, int $max): bool {
+    return $ctx->get('amount') >= $min
+        && $ctx->get('amount') <= $max;
+}
+```
+
+Works with all behavior keys — guards, actions, calculators, entry/exit, outputs, listeners.
+
+**Output with named params** (inner-array rule, same as guards/actions):
+
+```php ignore
+// Parameterized output — inner array
+'output' => [[FormatOutput::class, 'format' => 'json']],
+
+// Context key filter — plain array (unchanged)
+'output' => ['orderId', 'totalAmount'],
+```
+
+**Migration pitfall:** When migrating, update BOTH config AND behavior signature. If only config is changed, old `?array $arguments` gets `null` — silent failure.
+
+### New: Listener Config Format (breaking)
+
+The listener config format has changed. Class-as-key syntax is replaced with tuple syntax. `@`-prefixed keys are framework-reserved (never reach `__invoke`).
+
+**Before (no longer works):**
+
+```php ignore
+'listen' => [
+    'entry' => [
+        SyncAction::class,
+        QueuedAction::class => ['queue' => true],
+    ],
+]
+```
+
+**After:**
+
+```php ignore
+'listen' => [
+    'entry' => [
+        SyncAction::class,
+        [QueuedAction::class, '@queue' => true],
+    ],
+]
+```
+
+**With named params:**
+
+```php ignore
+'listen' => [
+    'entry' => [
+        [AuditAction::class, 'verbose' => true, '@queue' => true],
+    ],
+]
+```
+
+**Migration steps:**
+1. Find all `'listen'` config blocks in your machine definitions.
+2. Replace `ClassName::class => ['queue' => true]` with `[ClassName::class, '@queue' => true]`.
+3. Sync listeners (numeric key, no options) remain unchanged: `ClassName::class`.
+
+### Exception Specialization (breaking)
+
+v9 replaces generic PHP exceptions (`InvalidArgumentException`, `RuntimeException`) with domain-specific exception classes across the entire codebase. This enables targeted `catch` blocks and clearer error handling.
+
+#### New Exception Classes
+
+| Before (v8) | After (v9) | Thrown From |
+|-------------|------------|-------------|
+| `InvalidArgumentException` (config validation) | `InvalidStateConfigException` | `StateConfigValidator`, `StateDefinition`, `MachineDefinition` |
+| `InvalidArgumentException` (router config) | `InvalidRouterConfigException` | `MachineRouter` |
+| `RuntimeException` (no parent machine) | `NoParentMachineException` | `InvokableBehavior` |
+| `InvalidArgumentException` / `RuntimeException` (archive) | `ArchiveException` | `MachineEventArchive`, `CompressionManager` |
+| `InvalidArgumentException` (machine class) | `InvalidMachineClassException` | `ChildMachineJob`, `SendToMachineJob` |
+| `InvalidArgumentException` (job class) | `InvalidJobClassException` | `ChildJobJob` |
+| `RuntimeException` (behavior not faked) | `BehaviorNotFakedException` | `Fakeable` trait |
+| `RuntimeException` (no search paths) | `MachineDiscoveryException` | `MachineConfigValidatorCommand` |
+| `InvalidArgumentException` (timer) | `InvalidTimerDefinitionException` | `Timer` |
+
+#### Renamed Exception Classes
+
+| Before (v8) | After (v9) |
+|-------------|------------|
+| `NoStateDefinitionFoundException` | `UndefinedTargetStateException` |
+
+#### Deleted Exception Classes
+
+| Before (v8) | After (v9) |
+|-------------|------------|
+| `InvalidFinalStateDefinitionException` | Merged into `InvalidStateConfigException` (`finalStateCannotHaveTransitions()`, `finalStateCannotHaveChildStates()`) |
+
+#### Extended Exception Classes
+
+| Class | New Factory Methods |
+|-------|---------------------|
+| `InvalidEndpointDefinitionException` | `forwardConflictsWithEndpoint()`, `forwardConflictsWithBehaviorEvent()`, `duplicateForwardEvent()` |
+| `MachineDefinitionNotFoundException` | `failedToLoad()` |
+
+#### Migration Steps
+
+If you catch any of the old generic exceptions for EventMachine errors, update your catch blocks:
+
+<!-- doctest-attr: ignore -->
+```php
+// BEFORE (v8)
+use InvalidArgumentException;
+
+try {
+    StateConfigValidator::validate($config);
+} catch (InvalidArgumentException $e) {
+    // caught ALL InvalidArgumentExceptions, not just config errors
+}
+
+// AFTER (v9)
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
+
+try {
+    StateConfigValidator::validate($config);
+} catch (InvalidStateConfigException $e) {
+    // catches only config validation errors
+}
+```
+
+<!-- doctest-attr: ignore -->
+```php
+// BEFORE (v8)
+use RuntimeException;
+
+try {
+    $context->sendToParent('CHILD_DONE');
+} catch (RuntimeException $e) {
+    // caught ALL RuntimeExceptions
+}
+
+// AFTER (v9)
+use Tarfinlabs\EventMachine\Exceptions\NoParentMachineException;
+
+try {
+    $context->sendToParent('CHILD_DONE');
+} catch (NoParentMachineException $e) {
+    // catches only the "no parent" case
+}
+```
+
+See [Exceptions Reference](/reference/exceptions) for the full list of all exception classes.
+
+### Migration Checklist (updated)
+
+Items 12–15 are new for the exception specialization:
+
+12. Update `catch (InvalidArgumentException)` blocks that handle EventMachine config errors → specific exception classes (see table above)
+13. Update `catch (RuntimeException)` blocks that handle EventMachine runtime errors → specific exception classes
+14. Rename `NoStateDefinitionFoundException` → `UndefinedTargetStateException` in any catch blocks or type hints
+15. Remove `InvalidFinalStateDefinitionException` imports — now `InvalidStateConfigException`
 
 ---
 

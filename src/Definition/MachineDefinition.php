@@ -25,6 +25,7 @@ use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineTimeoutJob;
+use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Routing\MachineEndpointAction;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
@@ -32,10 +33,10 @@ use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Routing\ForwardedEndpointDefinition;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidEndpointDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidScheduleDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\MaxTransitionDepthExceededException;
-use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\NoTransitionDefinitionFoundException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
@@ -58,7 +59,7 @@ class MachineDefinition
     /**
      * Parsed listener definitions from the 'listen' config key.
      *
-     * @var array{entry: list<array{action: string, queue: bool}>, exit: list<array{action: string, queue: bool}>, transition: list<array{action: string, queue: bool}>}
+     * @var array{entry: list<array{action: string, queue: bool|string, configParams: array<string, mixed>}>, exit: list<array{action: string, queue: bool|string, configParams: array<string, mixed>}>, transition: list<array{action: string, queue: bool|string, configParams: array<string, mixed>}>}
      */
     public array $listen = [
         'entry'      => [],
@@ -277,26 +278,17 @@ class MachineDefinition
 
                 // Validate: no overlap with parent's explicit endpoints
                 if ($this->parsedEndpoints !== null && isset($this->parsedEndpoints[$parentEventType])) {
-                    throw new \InvalidArgumentException(
-                        "State '{$stateDefinition->id}' forwards '{$parentEventType}' which is also declared in parent's "
-                        ."endpoints. Remove '{$parentEventType}' from endpoints — forward is the single source of truth for child events."
-                    );
+                    throw InvalidEndpointDefinitionException::forwardConflictsWithEndpoint($stateDefinition->id, $parentEventType);
                 }
 
                 // Validate: no overlap with parent's behavior events
                 if (isset($this->behavior['events'][$parentEventType])) {
-                    throw new \InvalidArgumentException(
-                        "State '{$stateDefinition->id}' forwards '{$parentEventType}' which is also declared in parent's "
-                        ."behavior.events. Remove '{$parentEventType}' from behavior.events — forward auto-discovers child events."
-                    );
+                    throw InvalidEndpointDefinitionException::forwardConflictsWithBehaviorEvent($stateDefinition->id, $parentEventType);
                 }
 
                 // Validate: no collision with another state's forward
                 if (isset($this->forwardedEndpoints[$parentEventType])) {
-                    throw new \InvalidArgumentException(
-                        "Forward event '{$parentEventType}' is declared in multiple delegating states. "
-                        .'Use rename syntax to disambiguate (e.g., \'CANCEL_PAYMENT\' => \'CANCEL\').'
-                    );
+                    throw InvalidEndpointDefinitionException::duplicateForwardEvent($parentEventType);
                 }
 
                 $this->forwardedEndpoints[$parentEventType] = $fwdEndpoint;
@@ -922,7 +914,7 @@ class MachineDefinition
      * Check final states for invalid transition definitions.
      *
      * Iterates through the state definitions in the `idMap` property and checks if any of the final states
-     * have transition definitions. If a final state has transition definitions, it throws an `InvalidFinalStateDefinitionException`.
+     * have transition definitions. If a final state has transition definitions, it throws an `InvalidStateConfigException`.
      */
     public function checkFinalStatesForTransitions(): void
     {
@@ -931,7 +923,7 @@ class MachineDefinition
                 $stateDefinition->type === StateDefinitionType::FINAL &&
                 $stateDefinition->transitionDefinitions !== null
             ) {
-                throw InvalidFinalStateDefinitionException::noTransitions($stateDefinition->id);
+                throw InvalidStateConfigException::finalStateCannotHaveTransitions($stateDefinition->id);
             }
         }
     }
@@ -1123,7 +1115,8 @@ class MachineDefinition
     {
         foreach ($transitionDef->branches as $branch) {
             foreach ($branch->guards ?? [] as $guardDefinition) {
-                $baseName = explode(':', (string) $guardDefinition, 2)[0];
+                // Array tuple: [GuardClass::class, 'param' => value]
+                $baseName = is_array($guardDefinition) ? $guardDefinition[0] ?? '' : explode(':', (string) $guardDefinition, 2)[0];
 
                 // FQCN: class directly extends ValidationGuardBehavior
                 if (is_subclass_of($baseName, ValidationGuardBehavior::class)) {
@@ -2045,13 +2038,16 @@ class MachineDefinition
         $state->setInternalEventBehavior(type: InternalEvent::LISTEN_ENTRY_START);
 
         foreach ($this->listen['entry'] as $listener) {
-            if ($listener['queue']) {
-                $this->dispatchListenerJob($listener['action'], $state);
+            $configParams = $listener['configParams'] ?: null;
+
+            if ($listener['queue'] !== false) {
+                $this->dispatchListenerJob($listener['action'], $state, $configParams, $listener['queue']);
             } else {
                 $this->runAction(
                     actionDefinition: $listener['action'],
                     state: $state,
                     eventBehavior: $eventBehavior,
+                    configParams: $configParams,
                 );
             }
         }
@@ -2077,13 +2073,16 @@ class MachineDefinition
         $state->setInternalEventBehavior(type: InternalEvent::LISTEN_EXIT_START);
 
         foreach ($this->listen['exit'] as $listener) {
-            if ($listener['queue']) {
-                $this->dispatchListenerJob($listener['action'], $state);
+            $configParams = $listener['configParams'] ?: null;
+
+            if ($listener['queue'] !== false) {
+                $this->dispatchListenerJob($listener['action'], $state, $configParams, $listener['queue']);
             } else {
                 $this->runAction(
                     actionDefinition: $listener['action'],
                     state: $state,
                     eventBehavior: $state->currentEventBehavior,
+                    configParams: $configParams,
                 );
             }
         }
@@ -2110,13 +2109,16 @@ class MachineDefinition
         $state->setInternalEventBehavior(type: InternalEvent::LISTEN_TRANSITION_START);
 
         foreach ($this->listen['transition'] as $listener) {
-            if ($listener['queue']) {
-                $this->dispatchListenerJob($listener['action'], $state);
+            $configParams = $listener['configParams'] ?: null;
+
+            if ($listener['queue'] !== false) {
+                $this->dispatchListenerJob($listener['action'], $state, $configParams, $listener['queue']);
             } else {
                 $this->runAction(
                     actionDefinition: $listener['action'],
                     state: $state,
                     eventBehavior: $eventBehavior,
+                    configParams: $configParams,
                 );
             }
         }
@@ -2130,8 +2132,12 @@ class MachineDefinition
      * Records LISTEN_QUEUE_DISPATCHED internal event and dispatches ListenerJob.
      * Returns early if no rootEventId (persistence off).
      */
-    protected function dispatchListenerJob(string $action, State $state): void
-    {
+    protected function dispatchListenerJob(
+        string $action,
+        State $state,
+        ?array $configParams = null,
+        bool|string $queue = true,
+    ): void {
         $rootEventId = $state->history->first()?->root_event_id;
 
         if ($rootEventId === null) {
@@ -2149,18 +2155,28 @@ class MachineDefinition
             return;
         }
 
-        dispatch(new ListenerJob(
+        $job = new ListenerJob(
             machineClass: $this->machineClass,
             rootEventId: $rootEventId,
             actionClass: $action,
-        ));
+            configParams: $configParams,
+        );
+
+        // Route to specific queue if @queue is a string
+        if (is_string($queue)) {
+            $job->onQueue($queue);
+        }
+
+        dispatch($job);
     }
 
     /**
      * Parse the 'listen' config key into normalized listener definitions.
      *
-     * Each listener entry is normalized to {action: string, queue: bool}.
-     * Supports: string, FQCN, array of strings, and ClassName => ['queue' => true] modifier.
+     * Each listener entry is normalized to {action: string, queue: bool|string, configParams: array}.
+     * Supports: string shorthand, tuples with @queue and named params.
+     *
+     * @queue accepts bool|string: true = default queue, 'queue-name' = specific queue, false/omitted = sync.
      */
     protected function parseListenConfig(?array $config): void
     {
@@ -2177,11 +2193,20 @@ class MachineDefinition
                 ? $config['listen'][$key]
                 : [$config['listen'][$key]];
 
-            foreach ($raw as $k => $v) {
-                if (is_int($k)) {
-                    $this->listen[$key][] = ['action' => $v, 'queue' => false];
-                } else {
-                    $this->listen[$key][] = ['action' => $k, 'queue' => $v['queue'] ?? false];
+            foreach ($raw as $element) {
+                if (is_string($element)) {
+                    // Plain class or inline key — sync, no params
+                    $this->listen[$key][] = ['action' => $element, 'queue' => false, 'configParams' => []];
+                } elseif (is_array($element)) {
+                    // Tuple: [Class::class, 'param' => val, '@queue' => true|'queue-name']
+                    $class        = $element[0];
+                    $queue        = $element['@queue'] ?? false;
+                    $configParams = array_filter(
+                        $element,
+                        fn (int|string $k): bool => is_string($k) && !str_starts_with($k, '@'),
+                        ARRAY_FILTER_USE_KEY,
+                    );
+                    $this->listen[$key][] = ['action' => $class, 'queue' => $queue, 'configParams' => $configParams];
                 }
             }
         }
@@ -3118,12 +3143,24 @@ class MachineDefinition
      * @throws \ReflectionException
      */
     public function runAction(
-        string $actionDefinition,
+        string|array $actionDefinition,
         State $state,
-        ?EventBehavior $eventBehavior = null
+        ?EventBehavior $eventBehavior = null,
+        ?array $configParams = null,
     ): void {
-        [$actionDefinition, $actionArguments] = array_pad(explode(':', $actionDefinition, 2), 2, null);
-        $actionArguments                      = $actionArguments === null ? [] : explode(',', $actionArguments);
+        $actionArguments = null;
+
+        if (is_array($actionDefinition)) {
+            // Named params tuple: [ActionClass::class, 'value' => 100]
+            $parsed           = BehaviorTupleParser::parse($actionDefinition, 'actions');
+            $actionDefinition = $parsed['definition'];
+            $configParams     = $parsed['configParams'] ?: null;
+        } elseif (str_contains($actionDefinition, ':')) {
+            // Deprecated colon syntax: 'actionName:arg1,arg2'
+            @trigger_error('The colon syntax "behavior:arg1,arg2" is deprecated since tarfin-labs/event-machine 9.0. Use named params tuple [[Class::class, \'param\' => value]] instead.', E_USER_DEPRECATED);
+            [$actionDefinition, $colonArgs] = explode(':', $actionDefinition, 2);
+            $actionArguments                = explode(',', $colonArgs);
+        }
 
         // Retrieve the appropriate action behavior based on the action definition.
         $actionBehavior = $this->getInvokableBehavior(
@@ -3157,7 +3194,8 @@ class MachineDefinition
             actionBehavior: $actionBehavior,
             state: $state,
             eventBehavior: $eventBehavior,
-            actionArguments: $actionArguments
+            actionArguments: $actionArguments,
+            configParams: $configParams,
         );
 
         // Execute the action behavior

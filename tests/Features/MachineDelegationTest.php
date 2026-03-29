@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\OutputChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ParentOrderMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
@@ -561,7 +562,7 @@ it('validates machine + parallel type mutual exclusivity', function (): void {
             ],
         ],
     ))->toThrow(
-        InvalidArgumentException::class,
+        InvalidStateConfigException::class,
         "cannot have both 'machine' and type 'parallel'"
     );
 });
@@ -578,7 +579,7 @@ it('validates machine value must be a string', function (): void {
             ],
         ],
     ))->toThrow(
-        InvalidArgumentException::class,
+        InvalidStateConfigException::class,
         'Must be a string'
     );
 });
@@ -596,7 +597,7 @@ it('validates forward requires queue', function (): void {
             ],
         ],
     ))->toThrow(
-        InvalidArgumentException::class,
+        InvalidStateConfigException::class,
         "has 'forward' without 'queue'"
     );
 });

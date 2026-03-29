@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
 test('parallel state type is correctly detected', function (): void {
@@ -241,7 +242,7 @@ test('parallel state must have at least one region', function (): void {
                 'states' => [], // Invalid - must have at least one region
             ],
         ],
-    ]))->toThrow(InvalidArgumentException::class);
+    ]))->toThrow(InvalidStateConfigException::class);
 });
 
 test('three parallel regions initialize correctly', function (): void {

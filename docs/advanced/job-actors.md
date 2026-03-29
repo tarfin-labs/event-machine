@@ -174,12 +174,14 @@ The `with` key works the same way as machine delegation — same three formats:
 
 | Config | Result |
 |--------|--------|
-| `job` + `machine` | Error: mutually exclusive |
-| `job` + `type: parallel` | Error: not supported |
-| `job` without `@done` or `target` | Error: must define one |
-| `job` + `@done` + `target` | Error: ambiguous |
+| `job` + `machine` | `InvalidStateConfigException`: mutually exclusive |
+| `job` + `type: parallel` | `InvalidStateConfigException`: not supported |
+| `job` without `@done` or `target` | `InvalidStateConfigException`: must define one |
+| `job` + `@done` + `target` | `InvalidStateConfigException`: ambiguous |
 | `job` + `@done` | OK: managed job |
 | `job` + `target` | OK: fire-and-forget |
+
+The `job` class itself is validated at dispatch time. `InvalidJobClassException` is thrown if the class does not exist or does not have a `handle()` method.
 
 ## Queue Configuration
 

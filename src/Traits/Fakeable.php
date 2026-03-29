@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Traits;
 
 use Mockery;
-use RuntimeException;
 use Mockery\MockInterface;
 use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
+use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFakedException;
 
 trait Fakeable
 {
@@ -121,7 +121,7 @@ trait Fakeable
     public static function assertRan(): void
     {
         if (!isset(static::$fakes[static::class])) {
-            throw new RuntimeException('Behavior '.static::class.' was not faked.');
+            throw BehaviorNotFakedException::build(static::class);
         }
 
         static::$fakes[static::class]->shouldHaveReceived('__invoke');
@@ -133,7 +133,7 @@ trait Fakeable
     public static function assertNotRan(): void
     {
         if (!isset(static::$fakes[static::class])) {
-            throw new RuntimeException('Behavior '.static::class.' was not faked.');
+            throw BehaviorNotFakedException::build(static::class);
         }
 
         static::$fakes[static::class]->shouldNotHaveReceived('__invoke');
@@ -145,7 +145,7 @@ trait Fakeable
     public static function assertRanWith(callable $callback): void
     {
         if (!isset(static::$fakes[static::class])) {
-            throw new RuntimeException('Behavior '.static::class.' was not faked.');
+            throw BehaviorNotFakedException::build(static::class);
         }
 
         static::$fakes[static::class]
@@ -159,7 +159,7 @@ trait Fakeable
     public static function assertRanTimes(int $count): void
     {
         if (!isset(static::$fakes[static::class])) {
-            throw new RuntimeException('Behavior '.static::class.' was not faked.');
+            throw BehaviorNotFakedException::build(static::class);
         }
 
         static::$fakes[static::class]

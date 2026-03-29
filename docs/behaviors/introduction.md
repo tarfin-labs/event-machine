@@ -116,7 +116,6 @@ public function __invoke(
     EventBehavior $event,         // Current event
     State $state,                 // Current state
     EventCollection $history,     // Event history
-    array $arguments,             // Behavior arguments
 ): void {
     // Use injected parameters
 }
@@ -130,36 +129,73 @@ public function __invoke(
 | `EventBehavior` | Event that triggered the transition |
 | `State` | Current machine state |
 | `EventCollection` | Event history |
-| `array` | Arguments passed to behavior |
+| Named params | Config-defined parameters matched by name (see [Named Parameters](#named-parameters)) |
 
-## Behavior Arguments
+## Named Parameters
 
-Pass arguments to behaviors:
+Pass typed, named parameters to behaviors using array-tuple syntax:
 
 ```php ignore
-// In configuration
-'actions' => 'addValueAction:10,20',  // Passes ['10', '20']
+// Config — parameterized behavior is always an inner array (tuple)
+'actions' => [[AddValueAction::class, 'amount' => 10, 'multiplier' => 20]],
 
-// In behavior
-public function __invoke(ContextManager $context, array $arguments): void
+// Behavior — receives typed named parameters
+public function __invoke(ContextManager $context, int $amount, int $multiplier): void
 {
-    [$amount, $multiplier] = $arguments;
-    $context->total += (int) $amount * (int) $multiplier;
+    $context->total += $amount * $multiplier;
 }
 ```
 
-### Argument Parsing Rules
+A parameterized behavior is a **tuple**: `[ClassOrKey, 'param' => value, ...]`. The tuple is always an element inside the behavior list — even when it's the only behavior.
 
-Arguments are parsed from the behavior string using this format: `behaviorName:arg1,arg2,arg3`
+### Parameter Resolution Order
 
-- Arguments are split by commas
-- **All arguments are passed as strings** - cast them in your behavior if needed
-- No escaping mechanism (commas and colons cannot be in arguments)
-- Whitespace is preserved
+When `__invoke` is called, parameters are resolved in this order:
 
-::: tip Complex Arguments
-For complex arguments (arrays, objects, or values containing commas), use dependency injection or read from context instead of inline arguments.
+1. **Framework types** — `ContextManager`, `EventBehavior`, `State`, `EventCollection`, `ForwardContext` are matched by type-hint and injected from the framework
+2. **Named params** — remaining parameters are matched by name against config-defined params
+3. **Default values** — if a named param has no config match but has a PHP default, the default is used
+
+### Error Handling
+
+- **Missing required parameter:** If a named param has no config match and no default value, `MissingBehaviorParameterException` is thrown
+- **Type coercion:** Values are passed as-is from config — PHP handles type coercion naturally (int, string, array, etc.)
+- **Extra params ignored:** Config params that don't match any `__invoke` parameter are silently ignored
+
+### `@` Prefix Convention
+
+Keys prefixed with `@` are **framework-reserved** metadata — they are stripped before injection and never reach `__invoke`. PHP parameter names cannot start with `@`, so collision is impossible. Currently used: `@queue` in listeners.
+
+```php ignore
+// @queue is framework metadata, 'verbose' is a named param
+'listen' => [
+    'entry' => [
+        [AuditAction::class, 'verbose' => true, '@queue' => true],
+    ],
+],
+```
+
+### Inline Key with Named Params
+
+Inline closures registered in the behavior map can receive named params via their inline key:
+
+```php ignore
+// Config
+'guards' => [['myGuard', 'min' => 100]],
+
+// Behavior registry
+'guards' => [
+    'myGuard' => fn(ContextManager $ctx, int $min): bool => $ctx->amount >= $min,
+],
+```
+
+::: warning Bare Closure Restriction
+A bare closure cannot be `[0]` in a tuple — use a class reference or inline key instead. Closures are not serializable and cannot be placed in the tuple position.
 :::
+
+### Migration Pitfall
+
+When migrating from the old colon syntax to tuple syntax, **both** config AND behavior signature must be updated together. If only the config is changed but the behavior still declares `?array $arguments = null`, the old parameter gets `null` — a silent failure.
 
 ## Required Context
 
@@ -185,6 +221,12 @@ class ProcessOrderAction extends ActionBehavior
 ```
 
 If required context is missing, `MissingMachineContextException` is thrown.
+
+## Behavior Resolution Errors
+
+When a behavior reference cannot be resolved — for example, a typo in an inline key or an invalid behavior type — `BehaviorNotFoundException` is thrown. Double-check inline keys match entries in the `behavior` map.
+
+Behavior tuples (the `[Class, 'param' => value]` syntax) are validated at definition time. `InvalidBehaviorDefinitionException` is thrown for malformed tuples: empty arrays, missing class reference, or closures placed in the tuple position.
 
 ## Behavior Execution Flow
 
