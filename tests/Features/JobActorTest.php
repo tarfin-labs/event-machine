@@ -9,8 +9,10 @@ use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Exceptions\InvalidJobClassException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\FakeExternalService;
 use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidMachineClassException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\ExternalServiceContract;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\DependencyInjectedTestJob;
 
@@ -269,7 +271,7 @@ it('ChildJobJob rejects non-existent job class', function (): void {
     );
 
     $job->handle();
-})->throws(InvalidArgumentException::class, 'does not exist');
+})->throws(InvalidJobClassException::class, 'does not exist');
 
 it('ChildJobJob rejects job class without handle method', function (): void {
     $noHandleClass = new class() {};
@@ -284,7 +286,7 @@ it('ChildJobJob rejects job class without handle method', function (): void {
     );
 
     $job->handle();
-})->throws(InvalidArgumentException::class, 'must have a handle() method');
+})->throws(InvalidJobClassException::class, 'must have a handle() method');
 
 it('SendToMachineJob rejects non-Machine class', function (): void {
     $job = new SendToMachineJob(
@@ -294,7 +296,7 @@ it('SendToMachineJob rejects non-Machine class', function (): void {
     );
 
     $job->handle();
-})->throws(InvalidArgumentException::class, 'must exist and extend');
+})->throws(InvalidMachineClassException::class, 'must exist and extend');
 
 it('ChildMachineJob rejects non-Machine class', function (): void {
     $job = new ChildMachineJob(
@@ -306,7 +308,7 @@ it('ChildMachineJob rejects non-Machine class', function (): void {
     );
 
     $job->handle();
-})->throws(InvalidArgumentException::class, 'must exist and extend');
+})->throws(InvalidMachineClassException::class, 'must exist and extend');
 
 it('ChildJobJob without ReturnsResult returns empty output', function (): void {
     Queue::fake();
