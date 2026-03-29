@@ -22,6 +22,7 @@ use Tarfinlabs\EventMachine\Routing\ForwardContext;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Testing\CommunicationRecorder;
+use Tarfinlabs\EventMachine\Exceptions\NoParentMachineException;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 use Tarfinlabs\EventMachine\Exceptions\MissingBehaviorParameterException;
 
@@ -130,7 +131,7 @@ abstract class InvokableBehavior
         $parentMachineClass = $context->parentMachineClass();
 
         if ($parentRootEventId === null || $parentMachineClass === null) {
-            throw new \RuntimeException('Cannot sendToParent: this machine was not invoked by a parent.');
+            throw NoParentMachineException::sendToParent();
         }
 
         $this->sendTo(
@@ -157,7 +158,7 @@ abstract class InvokableBehavior
         $parentMachineClass = $context->parentMachineClass();
 
         if ($parentRootEventId === null || $parentMachineClass === null) {
-            throw new \RuntimeException('Cannot dispatchToParent: this machine was not invoked by a parent.');
+            throw NoParentMachineException::dispatchToParent();
         }
 
         $this->dispatchTo(
