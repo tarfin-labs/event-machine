@@ -2046,13 +2046,16 @@ class MachineDefinition
         $state->setInternalEventBehavior(type: InternalEvent::LISTEN_ENTRY_START);
 
         foreach ($this->listen['entry'] as $listener) {
-            if ($listener['queue']) {
-                $this->dispatchListenerJob($listener['action'], $state);
+            $configParams = $listener['configParams'] ?: null;
+
+            if ($listener['queue'] !== false) {
+                $this->dispatchListenerJob($listener['action'], $state, $configParams, $listener['queue']);
             } else {
                 $this->runAction(
                     actionDefinition: $listener['action'],
                     state: $state,
                     eventBehavior: $eventBehavior,
+                    configParams: $configParams,
                 );
             }
         }
@@ -2078,13 +2081,16 @@ class MachineDefinition
         $state->setInternalEventBehavior(type: InternalEvent::LISTEN_EXIT_START);
 
         foreach ($this->listen['exit'] as $listener) {
-            if ($listener['queue']) {
-                $this->dispatchListenerJob($listener['action'], $state);
+            $configParams = $listener['configParams'] ?: null;
+
+            if ($listener['queue'] !== false) {
+                $this->dispatchListenerJob($listener['action'], $state, $configParams, $listener['queue']);
             } else {
                 $this->runAction(
                     actionDefinition: $listener['action'],
                     state: $state,
                     eventBehavior: $state->currentEventBehavior,
+                    configParams: $configParams,
                 );
             }
         }
@@ -2111,13 +2117,16 @@ class MachineDefinition
         $state->setInternalEventBehavior(type: InternalEvent::LISTEN_TRANSITION_START);
 
         foreach ($this->listen['transition'] as $listener) {
-            if ($listener['queue']) {
-                $this->dispatchListenerJob($listener['action'], $state);
+            $configParams = $listener['configParams'] ?: null;
+
+            if ($listener['queue'] !== false) {
+                $this->dispatchListenerJob($listener['action'], $state, $configParams, $listener['queue']);
             } else {
                 $this->runAction(
                     actionDefinition: $listener['action'],
                     state: $state,
                     eventBehavior: $eventBehavior,
+                    configParams: $configParams,
                 );
             }
         }
@@ -2131,8 +2140,12 @@ class MachineDefinition
      * Records LISTEN_QUEUE_DISPATCHED internal event and dispatches ListenerJob.
      * Returns early if no rootEventId (persistence off).
      */
-    protected function dispatchListenerJob(string $action, State $state): void
-    {
+    protected function dispatchListenerJob(
+        string $action,
+        State $state,
+        ?array $configParams = null,
+        bool|string $queue = true,
+    ): void {
         $rootEventId = $state->history->first()?->root_event_id;
 
         if ($rootEventId === null) {
@@ -2150,11 +2163,19 @@ class MachineDefinition
             return;
         }
 
-        dispatch(new ListenerJob(
+        $job = new ListenerJob(
             machineClass: $this->machineClass,
             rootEventId: $rootEventId,
             actionClass: $action,
-        ));
+            configParams: $configParams,
+        );
+
+        // Route to specific queue if @queue is a string
+        if (is_string($queue)) {
+            $job->onQueue($queue);
+        }
+
+        dispatch($job);
     }
 
     /**
