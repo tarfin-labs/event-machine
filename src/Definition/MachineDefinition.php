@@ -1124,7 +1124,8 @@ class MachineDefinition
     {
         foreach ($transitionDef->branches as $branch) {
             foreach ($branch->guards ?? [] as $guardDefinition) {
-                $baseName = explode(':', (string) $guardDefinition, 2)[0];
+                // Array tuple: [GuardClass::class, 'param' => value]
+                $baseName = is_array($guardDefinition) ? $guardDefinition[0] ?? '' : explode(':', (string) $guardDefinition, 2)[0];
 
                 // FQCN: class directly extends ValidationGuardBehavior
                 if (is_subclass_of($baseName, ValidationGuardBehavior::class)) {
@@ -3165,6 +3166,7 @@ class MachineDefinition
             $configParams     = $parsed['configParams'] ?: null;
         } elseif (str_contains($actionDefinition, ':')) {
             // Deprecated colon syntax: 'actionName:arg1,arg2'
+            @trigger_error('The colon syntax "behavior:arg1,arg2" is deprecated since tarfin-labs/event-machine 9.0. Use named params tuple [[Class::class, \'param\' => value]] instead.', E_USER_DEPRECATED);
             [$actionDefinition, $colonArgs] = explode(':', $actionDefinition, 2);
             $actionArguments                = explode(',', $colonArgs);
         }

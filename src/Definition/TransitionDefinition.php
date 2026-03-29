@@ -228,6 +228,7 @@ class TransitionDefinition
                     $configParams    = $parsed['configParams'] ?: null;
                 } elseif (is_string($guardDefinition) && str_contains($guardDefinition, ':')) {
                     // Deprecated colon syntax: 'guardName:arg1,arg2'
+                    @trigger_error('The colon syntax "behavior:arg1,arg2" is deprecated since tarfin-labs/event-machine 9.0. Use named params tuple [[Class::class, \'param\' => value]] instead.', E_USER_DEPRECATED);
                     [$guardDefinition, $colonArgs] = explode(':', $guardDefinition, 2);
                     $guardArguments                = explode(',', $colonArgs);
                 }
@@ -328,6 +329,7 @@ class TransitionDefinition
                 $calculatorDefinition = $parsed['definition'];
                 $configParams         = $parsed['configParams'] ?: null;
             } elseif (is_string($calculatorDefinition) && str_contains($calculatorDefinition, ':')) {
+                @trigger_error('The colon syntax "behavior:arg1,arg2" is deprecated since tarfin-labs/event-machine 9.0. Use named params tuple [[Class::class, \'param\' => value]] instead.', E_USER_DEPRECATED);
                 [$calculatorDefinition, $colonArgs] = explode(':', $calculatorDefinition, 2);
                 $calculatorArguments                = explode(',', $colonArgs);
             }

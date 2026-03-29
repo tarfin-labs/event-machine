@@ -1174,6 +1174,7 @@ class Machine implements Castable, JsonSerializable, Stringable
 
         if (!is_callable($outputBehavior)) {
             if (is_string($outputBehavior) && str_contains($outputBehavior, ':')) {
+                @trigger_error('The colon syntax "behavior:arg1,arg2" is deprecated since tarfin-labs/event-machine 9.0. Use named params tuple [[Class::class, \'param\' => value]] instead.', E_USER_DEPRECATED);
                 [$outputBehavior, $colonArgs] = explode(':', $outputBehavior, 2);
                 $arguments                    = explode(',', $colonArgs);
             }
