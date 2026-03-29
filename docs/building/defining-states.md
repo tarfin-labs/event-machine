@@ -90,7 +90,7 @@ Terminal states that end the machine's execution:
 Final states cannot have outgoing transitions:
 
 ```php ignore
-// This will throw InvalidFinalStateDefinitionException
+// This will throw InvalidStateConfigException
 'done' => [
     'type' => 'final',
     'on' => [
