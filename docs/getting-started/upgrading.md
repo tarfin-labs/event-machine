@@ -83,7 +83,8 @@ The HTTP response envelope keys have been renamed for consistency:
         "id": "01JARX...",
         "state": ["submitted"],
         "output": { "totalAmount": 100 },
-        "availableEvents": [{ "type": "APPROVE", "source": "parent" }]
+        "availableEvents": [{ "type": "APPROVE", "source": "parent" }],
+        "isProcessing": false
     }
 }
 ```
@@ -211,12 +212,28 @@ All endpoints now return the same structure — `availableEvents` is never lost:
         "machineId": "order_workflow",
         "state": ["submitted"],
         "availableEvents": ["APPROVE", "REJECT"],
-        "output": { "totalAmount": 100 }
+        "output": { "totalAmount": 100 },
+        "isProcessing": false
     }
 }
 ```
 
 Endpoints without a custom output use the current state's output (or `toResponseArray()` fallback). No need to define `output` on every endpoint — the state determines the response shape.
+
+### New: Graceful Lock Contention Handling
+
+When a machine is processing an event (lock held), HTTP requests to the same machine no longer fail with a 500 error. Instead:
+
+- **GET endpoints** return **HTTP 200** with the last committed state + `isProcessing: true`
+- **POST/PUT/DELETE endpoints** return **HTTP 423 Locked** with the last committed state + `isProcessing: true`
+
+The `isProcessing` field is present in **every** endpoint response:
+- `false` — normal path, event was processed, state is settled
+- `true` — lock contention, returning last committed snapshot
+
+This is especially useful when `BroadcastStateAction` triggers an immediate frontend status check — the GET request now returns the current state instead of crashing.
+
+See [Lock Contention Handling](/laravel-integration/endpoints#lock-contention-handling) for details.
 
 ### Migration Checklist
 
