@@ -222,6 +222,12 @@ class ProcessOrderAction extends ActionBehavior
 
 If required context is missing, `MissingMachineContextException` is thrown.
 
+## Behavior Resolution Errors
+
+When a behavior reference cannot be resolved — for example, a typo in an inline key or an invalid behavior type — `BehaviorNotFoundException` is thrown. Double-check inline keys match entries in the `behavior` map.
+
+Behavior tuples (the `[Class, 'param' => value]` syntax) are validated at definition time. `InvalidBehaviorDefinitionException` is thrown for malformed tuples: empty arrays, missing class reference, or closures placed in the tuple position.
+
 ## Behavior Execution Flow
 
 ```mermaid
