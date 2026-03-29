@@ -114,6 +114,7 @@ class StateConfigValidator
                 '. Allowed keys are: '.implode(', ', self::ALLOWED_LISTEN_KEYS)
             );
         }
+
     }
 
     /**
