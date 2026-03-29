@@ -328,8 +328,12 @@ test('forwarded contention response has no child key', function (): void {
         'payload' => ['cardNumber' => '4111111111111111'],
     ]);
 
-    expect($response->json('data'))->not->toHaveKey('child')
-        ->and($response->json('data.isProcessing'))->toBeTrue();
+    $data = $response->json('data');
+
+    expect($data)->toHaveKeys(['id', 'machineId', 'state', 'availableEvents', 'output', 'isProcessing'])
+        ->and($data)->not->toHaveKey('child')
+        ->and($data['isProcessing'])->toBeTrue()
+        ->and($data['output'])->toBeNull();
 });
 
 test('forwarded endpoint returns isProcessing:false on normal path', function (): void {
