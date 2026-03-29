@@ -28,7 +28,7 @@ class ArchiveException extends RuntimeException
         return new self('Compression level must be between 0 and 9');
     }
 
-    public static function decompressFailed(): self
+    public static function decompressDataFailed(): self
     {
         return new self('Failed to decompress data');
     }
