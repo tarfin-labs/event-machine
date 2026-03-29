@@ -23,7 +23,7 @@ class InvalidEndpointDefinitionException extends RuntimeException
         return new self("Endpoint action `{$actionClass}` must extend MachineEndpointAction.");
     }
 
-    public static function forwardOverlapsEndpoint(string $stateId, string $parentEventType): self
+    public static function forwardConflictsWithEndpoint(string $stateId, string $parentEventType): self
     {
         return new self(
             "State '{$stateId}' forwards '{$parentEventType}' which is also declared in parent's "
@@ -31,7 +31,7 @@ class InvalidEndpointDefinitionException extends RuntimeException
         );
     }
 
-    public static function forwardOverlapsBehaviorEvents(string $stateId, string $parentEventType): self
+    public static function forwardConflictsWithBehaviorEvent(string $stateId, string $parentEventType): self
     {
         return new self(
             "State '{$stateId}' forwards '{$parentEventType}' which is also declared in parent's "
@@ -39,7 +39,7 @@ class InvalidEndpointDefinitionException extends RuntimeException
         );
     }
 
-    public static function forwardCollision(string $parentEventType): self
+    public static function duplicateForwardEvent(string $parentEventType): self
     {
         return new self(
             "Forward event '{$parentEventType}' is declared in multiple delegating states. "
