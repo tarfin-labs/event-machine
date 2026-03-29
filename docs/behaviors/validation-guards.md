@@ -207,10 +207,8 @@ class ValidatePermissionGuard extends ValidationGuardBehavior
 
     public function __invoke(
         ContextManager $context,
-        array $arguments,
+        string $permission = 'default',
     ): bool {
-        $permission = $arguments[0] ?? 'default';
-
         if (!$this->auth->can($context->userId, $permission)) {
             $this->errorMessage = sprintf(
                 'You do not have permission to perform this action. Required: %s',
@@ -224,7 +222,7 @@ class ValidatePermissionGuard extends ValidationGuardBehavior
 }
 
 // Usage
-'guards' => 'validatePermissionGuard:approve_orders',
+'guards' => [[ValidatePermissionGuard::class, 'permission' => 'approve_orders']],
 ```
 
 ## Localized Messages

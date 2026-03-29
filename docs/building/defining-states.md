@@ -209,13 +209,26 @@ Three listener keys are available:
 
 ### Sync and Queued Actions
 
-Listener actions support a `['queue' => true]` modifier — consistent with how EventMachine handles `queue` on states in machine delegation:
+Use the `@queue` key in a tuple to dispatch listener actions to the queue. The `@` prefix marks it as framework metadata — it never reaches `__invoke`:
 
 ```php ignore
 'listen' => [
     'entry' => [
-        BroadcastAction::class,                            // sync (default)
-        HeavyAuditAction::class => ['queue' => true],     // queued
+        BroadcastAction::class,                                // sync (default)
+        [HeavyAuditAction::class, '@queue' => true],          // queued (default queue)
+        [AnalyticsAction::class, '@queue' => 'analytics'],    // queued (specific queue)
+    ],
+],
+```
+
+**`@queue` type:** `bool|string` — `true` = default queue, `'name'` = specific queue, `false`/omitted = sync.
+
+Listeners also support named parameters alongside `@queue`:
+
+```php ignore
+'listen' => [
+    'entry' => [
+        [AuditAction::class, 'verbose' => true, '@queue' => true],
     ],
 ],
 ```
