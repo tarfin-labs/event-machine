@@ -158,12 +158,12 @@ Execute code during a transition:
 
 Actions execute in the order listed.
 
-### Action Arguments
+### Action Parameters
 
-Pass arguments to actions using colon syntax:
+Pass named parameters to actions using tuple syntax:
 
 ```php ignore
-'actions' => 'notifyAction:email,sms',  // Calls notifyAction with ['email', 'sms']
+'actions' => [[NotifyAction::class, 'channels' => ['email', 'sms']]],
 ```
 
 ## Calculators

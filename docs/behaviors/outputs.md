@@ -147,6 +147,36 @@ Three ways to attach an output — class reference, inline key, or inline closur
 ],
 ```
 
+### Output Parameters
+
+Outputs support named parameters via tuple syntax, the same as guards and actions:
+
+```php ignore
+// In behavior.outputs map (final states)
+'outputs' => ['completed' => [[FormatOutput::class, 'format' => 'detailed']]],
+
+// In state-level output config (any state)
+'output' => [[FormatOutput::class, 'format' => 'detailed']],
+
+// Context key filter (unchanged) — plain array of strings
+'output' => ['orderId', 'totalAmount'],
+```
+
+**Inner-array rule:** A parameterized output is always an inner array (tuple), just like guards and actions. A plain array of strings is a context key filter. The framework disambiguates by checking whether the first element is a class/key string with named keys — if yes, it's a tuple; if the array contains only string values without named keys, it's a filter.
+
+```php ignore
+class FormatOutput extends OutputBehavior
+{
+    public function __invoke(ContextManager $context, string $format = 'summary'): array
+    {
+        return match ($format) {
+            'detailed' => ['orderId' => $context->orderId, 'items' => $context->items, 'total' => $context->total],
+            default    => ['orderId' => $context->orderId, 'total' => $context->total],
+        };
+    }
+}
+```
+
 ### Return Types
 
 Outputs can return any type — the return value of `$machine->output()` matches whatever your output behavior returns:

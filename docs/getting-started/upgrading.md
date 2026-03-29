@@ -229,6 +229,91 @@ Endpoints without a custom output use the current state's output (or `toResponse
 7. In tests: `assertResult()` → `assertOutput()`
 8. In tests: `ChildMachineDoneEvent::result()` → `ChildMachineDoneEvent::output()`
 9. Update API consumers for new response envelope keys (`id`, `state`, `output`, `availableEvents`)
+10. Migrate parameterized behaviors: `'guard:arg1,arg2'` → `[[Guard::class, 'param' => value]]` (optional, deprecated syntax still works)
+11. Update listener config: `Class::class => ['queue' => true]` → `[Class::class, '@queue' => true]` (**required**, old format removed)
+
+### New: Named Parameters for Behaviors
+
+Behaviors now accept named parameters via array-tuple syntax. The old `:arg1,arg2` colon syntax is deprecated (removed in v10).
+
+**Before (still works, deprecated):**
+
+```php ignore
+'guards' => 'isAmountInRangeGuard:100,10000',
+
+// Behavior receives untyped positional array
+public function __invoke(ContextManager $ctx, ?array $arguments = null): bool {
+    return $ctx->get('amount') >= (int) $arguments[0]
+        && $ctx->get('amount') <= (int) $arguments[1];
+}
+```
+
+**After:**
+
+```php ignore
+'guards' => [[IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000]],
+
+// Behavior receives typed named parameters
+public function __invoke(ContextManager $ctx, int $min, int $max): bool {
+    return $ctx->get('amount') >= $min
+        && $ctx->get('amount') <= $max;
+}
+```
+
+Works with all behavior keys — guards, actions, calculators, entry/exit, outputs, listeners.
+
+**Output with named params** (inner-array rule, same as guards/actions):
+
+```php ignore
+// Parameterized output — inner array
+'output' => [[FormatOutput::class, 'format' => 'json']],
+
+// Context key filter — plain array (unchanged)
+'output' => ['orderId', 'totalAmount'],
+```
+
+**Migration pitfall:** When migrating, update BOTH config AND behavior signature. If only config is changed, old `?array $arguments` gets `null` — silent failure.
+
+### New: Listener Config Format (breaking)
+
+The listener config format has changed. Class-as-key syntax is replaced with tuple syntax. `@`-prefixed keys are framework-reserved (never reach `__invoke`).
+
+**Before (no longer works):**
+
+```php ignore
+'listen' => [
+    'entry' => [
+        SyncAction::class,
+        QueuedAction::class => ['queue' => true],
+    ],
+]
+```
+
+**After:**
+
+```php ignore
+'listen' => [
+    'entry' => [
+        SyncAction::class,
+        [QueuedAction::class, '@queue' => true],
+    ],
+]
+```
+
+**With named params:**
+
+```php ignore
+'listen' => [
+    'entry' => [
+        [AuditAction::class, 'verbose' => true, '@queue' => true],
+    ],
+]
+```
+
+**Migration steps:**
+1. Find all `'listen'` config blocks in your machine definitions.
+2. Replace `ClassName::class => ['queue' => true]` with `[ClassName::class, '@queue' => true]`.
+3. Sync listeners (numeric key, no options) remain unchanged: `ClassName::class`.
 
 ---
 
