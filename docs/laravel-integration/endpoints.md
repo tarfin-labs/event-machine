@@ -706,7 +706,7 @@ MachineRouter::register(CarSalesMachine::class, [
 ]);
 ```
 
-`only` registers **only** the listed event endpoints (whitelist). `except` registers all endpoints **except** the listed ones (blacklist). They are mutually exclusive — using both throws an `InvalidArgumentException`.
+`only` registers **only** the listed event endpoints (whitelist). `except` registers all endpoints **except** the listed ones (blacklist). They are mutually exclusive — using both throws an `InvalidRouterConfigException`.
 
 Both accept event type strings (`'SUBMIT'`) or event class references (`SubmitEvent::class`), same as `machineIdFor` and `modelFor`.
 
