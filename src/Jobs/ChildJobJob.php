@@ -55,7 +55,7 @@ class ChildJobJob implements ShouldQueue
     {
         // 1. Validate that the job class exists and has a handle() method
         if (!class_exists($this->jobClass)) {
-            throw InvalidJobClassException::doesNotExist($this->jobClass);
+            throw InvalidJobClassException::classNotFound($this->jobClass);
         }
 
         if (!method_exists($this->jobClass, 'handle')) {
