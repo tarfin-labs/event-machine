@@ -14,6 +14,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\InvalidMachineClassException;
 
 /**
  * Queue job that creates and runs a child machine asynchronously.
@@ -61,7 +62,7 @@ class ChildMachineJob implements ShouldQueue
     public function handle(): void
     {
         if (!class_exists($this->childMachineClass) || !is_subclass_of($this->childMachineClass, Machine::class)) {
-            throw new \InvalidArgumentException("Machine class '{$this->childMachineClass}' must exist and extend ".Machine::class.'.');
+            throw InvalidMachineClassException::build($this->childMachineClass);
         }
 
         // 1. Update tracking record to running (skip for fire-and-forget).
