@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Mockery\MockInterface;
 use Illuminate\Support\Facades\App;
+use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFakedException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Guards\IsEvenGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Actions\IncrementAction;
@@ -149,7 +150,7 @@ it('throws when assertRan() is called on unfaked behavior', function (): void {
     IncrementAction::resetAllFakes();
 
     IncrementAction::assertRan();
-})->throws(RuntimeException::class, 'was not faked');
+})->throws(BehaviorNotFakedException::class, 'was not faked');
 
 // ─── assertNotRan() ──────────────────────────────────────────
 
@@ -164,7 +165,7 @@ it('throws when assertNotRan() is called on unfaked behavior', function (): void
     IncrementAction::resetAllFakes();
 
     IncrementAction::assertNotRan();
-})->throws(RuntimeException::class, 'was not faked');
+})->throws(BehaviorNotFakedException::class, 'was not faked');
 
 // ─── assertRanWith() ─────────────────────────────────────────
 
@@ -182,7 +183,7 @@ it('throws when assertRanWith() is called on unfaked behavior', function (): voi
     IncrementAction::resetAllFakes();
 
     IncrementAction::assertRanWith(fn () => true);
-})->throws(RuntimeException::class, 'was not faked');
+})->throws(BehaviorNotFakedException::class, 'was not faked');
 
 // ─── assertRanTimes() ────────────────────────────────────────
 
@@ -202,7 +203,7 @@ it('throws when assertRanTimes() is called on unfaked behavior', function (): vo
     IncrementAction::resetAllFakes();
 
     IncrementAction::assertRanTimes(1);
-})->throws(RuntimeException::class, 'was not faked');
+})->throws(BehaviorNotFakedException::class, 'was not faked');
 
 // ─── isFaked() / getFake() ───────────────────────────────────
 
