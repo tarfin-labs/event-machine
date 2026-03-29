@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 
 test('multiple unguarded transitions on same event are rejected by validator', function (): void {
     // EventMachine enforces that a guardless (default) branch must be the last condition.
@@ -35,7 +36,7 @@ test('multiple unguarded transitions on same event are rejected by validator', f
         ],
     ]);
 })->throws(
-    InvalidArgumentException::class,
+    InvalidStateConfigException::class,
     "State 'idle' has invalid conditions order for event 'GO'. Default condition (no guards) must be the last condition."
 );
 
@@ -63,7 +64,7 @@ test('three unguarded transitions on same event are rejected by validator', func
         ],
     ]);
 })->throws(
-    InvalidArgumentException::class,
+    InvalidStateConfigException::class,
     "State 'waiting' has invalid conditions order for event 'PROCEED'. Default condition (no guards) must be the last condition."
 );
 
