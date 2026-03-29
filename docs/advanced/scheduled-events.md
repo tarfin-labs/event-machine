@@ -191,6 +191,7 @@ SendToMachineJob (existing)
 
 | Scenario | Behavior |
 |----------|----------|
+| Schedule references undefined event type | `InvalidScheduleDefinitionException` thrown at definition time |
 | Schedule registered but not in definition | Command warns, nothing dispatched |
 | Schedule in definition but not registered | Never runs — no cron trigger |
 | Same event in schedules AND after/every | Independent, both valid |
