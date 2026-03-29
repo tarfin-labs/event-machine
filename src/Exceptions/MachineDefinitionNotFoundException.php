@@ -15,4 +15,18 @@ class MachineDefinitionNotFoundException extends RuntimeException
             "Ensure that the machine's definition is properly configured inside the `definition()` method of the machine class."
         );
     }
+
+    public static function failedToLoad(string $machineClass, \Throwable $previous): self
+    {
+        return new self(
+            message: "MachineScheduler::register() failed to load definition for {$machineClass}: {$previous->getMessage()}",
+            code: $previous->getCode(),
+            previous: $previous,
+        );
+    }
+
+    public static function undefinedScheduleEvent(string $eventType, string $machineClass): self
+    {
+        return new self("Event '{$eventType}' is not defined in schedules for {$machineClass}.");
+    }
 }
