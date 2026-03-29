@@ -349,8 +349,8 @@ v9 replaces generic PHP exceptions (`InvalidArgumentException`, `RuntimeExceptio
 
 | Class | New Factory Methods |
 |-------|---------------------|
-| `InvalidEndpointDefinitionException` | `forwardOverlapsEndpoint()`, `forwardOverlapsBehaviorEvents()`, `forwardCollision()` |
-| `MachineDefinitionNotFoundException` | `failedToLoad()`, `undefinedScheduleEvent()` |
+| `InvalidEndpointDefinitionException` | `forwardConflictsWithEndpoint()`, `forwardConflictsWithBehaviorEvent()`, `duplicateForwardEvent()` |
+| `MachineDefinitionNotFoundException` | `failedToLoad()` |
 
 #### Migration Steps
 
