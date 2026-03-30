@@ -20,7 +20,7 @@ Keep states in the same machine when:
 
 - **Simple linear flow.** A 3-state progression (submitted -> processing -> completed) does not need decomposition.
 
-- **Shared context.** The states all read and write the same context keys. Splitting would require passing everything via `with` and reporting everything via `@done` payload.
+- **Shared context.** The states all read and write the same context keys. Splitting would require passing everything via `input` and reporting everything via `@done` payload.
 
 - **No independent failure.** A failure in one part always means a failure in the whole flow.
 
@@ -116,7 +116,7 @@ A machine this size is impossible to visualise, test comprehensively, or reason 
 'states' => [
     'validating' => [
         'machine' => ValidationMachine::class,
-        'with'    => ['orderId'],
+        'input'    => ['orderId'],
         '@done'   => 'awaiting_payment',
         '@fail'   => 'validation_failed',
     ],
@@ -125,13 +125,13 @@ A machine this size is impossible to visualise, test comprehensively, or reason 
     ],
     'processing_payment' => [
         'machine' => PaymentMachine::class,
-        'with'    => ['orderId', 'orderTotal'],
+        'input'    => ['orderId', 'orderTotal'],
         '@done'   => 'shipping',
         '@fail'   => 'payment_failed',
     ],
     'shipping' => [
         'machine' => ShippingMachine::class,
-        'with'    => ['orderId'],
+        'input'    => ['orderId'],
         '@done'   => 'completed',
         '@fail'   => 'shipping_failed',
     ],
@@ -218,13 +218,13 @@ class OrderWorkflowMachine extends Machine
                 'states'  => [
                     'processing_payment' => [
                         'machine' => PaymentMachine::class,
-                        'with'    => ['orderId', 'orderTotal'],
+                        'input'    => ['orderId', 'orderTotal'],
                         '@done'   => 'shipping',
                         '@fail'   => 'payment_failed',
                     ],
                     'shipping' => [
                         'machine' => ShippingMachine::class,
-                        'with'    => ['orderId'],
+                        'input'    => ['orderId'],
                         '@done'   => 'completed',
                         '@fail'   => 'shipping_failed',
                     ],
@@ -301,7 +301,7 @@ The machine owns the expiration timer, the notification action, and the state tr
 
 2. **Aim for 5-15 states per machine.** Fewer suggests the machine is too granular. More suggests it needs decomposition.
 
-3. **Minimize cross-machine data.** Pass only the IDs and values the child needs via `with`. Return results via `@done` payload.
+3. **Minimize cross-machine data.** Pass only the IDs and values the child needs via `input`. Return results via `@done` payload.
 
 4. **Test children in isolation first.** Verify the child machine works correctly before integrating with the parent.
 
@@ -311,5 +311,5 @@ The machine owns the expiration timer, the notification action, and the state tr
 
 - [Machine Delegation](/advanced/machine-delegation) -- delegation mechanics
 - [Async Delegation](/advanced/async-delegation) -- `job` key for async children
-- [Delegation Data Flow](/advanced/delegation-data-flow) -- `with` and `@done` payload
+- [Delegation Data Flow](/advanced/delegation-data-flow) -- `input` and `@done` payload
 - [Delegation Testing](/testing/delegation-testing) -- testing with `Machine::fake()`
