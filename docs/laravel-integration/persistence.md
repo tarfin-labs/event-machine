@@ -146,6 +146,11 @@ $results = OrderMachine::query()
     ->notInState('idle')
     ->notInFinalState()
     ->get();
+
+// Parallel: instance must be in ALL given states (AND across regions):
+$results = CarSalesMachine::query()
+    ->inAllStates(['awaiting_personal_info', 'awaiting_payment'])
+    ->get();
 ```
 
 ### Query Results
