@@ -187,6 +187,19 @@ class CardSubmittedOutput extends OutputBehavior
 
 **Fix:** Verify the `MachineFailure` class exists and extends `MachineFailure`.
 
+## Query Exceptions
+
+### InvalidStateQueryException
+
+Thrown when `Machine::query()` receives a state name that cannot be resolved
+against the machine's definition — not found via exact match, leaf match,
+or parent match.
+
+- **Extends:** `InvalidArgumentException`
+- **Thrown from:** `MachineQueryBuilder::resolveStateIds()`
+- **Common causes:** Typo in state name, querying a state that was renamed or removed
+- **See:** [Querying Machines](/laravel-integration/persistence#querying-machines)
+
 ## Runtime Exceptions
 
 Thrown during machine execution. These indicate conditions that can
