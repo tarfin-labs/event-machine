@@ -155,7 +155,7 @@ A parameterized behavior is a **tuple**: `[ClassOrKey, 'param' => value, ...]`. 
 
 When `__invoke` is called, parameters are resolved in this order:
 
-1. **Framework types** — `ContextManager`, `EventBehavior`, `State`, `EventCollection`, `ForwardContext` are matched by type-hint and injected from the framework
+1. **Framework types** — `ContextManager`, `EventBehavior`, `State`, `EventCollection`, `MachineOutput`, `MachineFailure` are matched by type-hint and injected from the framework
 2. **Named params** — remaining parameters are matched by name against config-defined params
 3. **Default values** — if a named param has no config match but has a PHP default, the default is used
 

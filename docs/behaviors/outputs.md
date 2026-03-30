@@ -230,7 +230,7 @@ Outputs use the same type-hint based parameter injection as actions, guards, and
 | `EventBehavior` (or subclass) | The triggering event (the original external event, not internal lifecycle events) |
 | `State` | Current state object |
 | `EventCollection` | Full event history |
-| `ForwardContext` | Child machine context (forwarded endpoints only) |
+| `MachineOutput` | Typed child output (forwarded endpoints — via childOutput injection) |
 
 ```php
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior; // [!code hide]

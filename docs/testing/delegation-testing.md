@@ -442,7 +442,7 @@ it('forwards PROVIDE_CARD to child via parent endpoint', function (): void {
 
 ### Advanced Forward Patterns
 
-For detailed forward endpoint testing patterns including response formats, error cases, endpoint customization, ForwardContext, available_events introspection, and FQCN forward keys, see the [Endpoints](/laravel-integration/endpoints) reference.
+For detailed forward endpoint testing patterns including response formats, error cases, endpoint customization, childOutput injection, availableEvents introspection, and FQCN forward keys, see the [Endpoints](/laravel-integration/endpoints) reference.
 
 ::: tip Related
 See [Cross-Machine Messaging](/advanced/sendto) for the API reference,

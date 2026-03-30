@@ -74,7 +74,7 @@ All machine behaviors extend `InvokableBehavior` (parameter injection by type-hi
 - **Events** (`EventBehavior`): Define event structure, validation, and payload types
 - **Outputs** (`OutputBehavior`): Compute final state machine outputs (used by `$machine->output()` and HTTP endpoints)
 
-Behaviors can be defined as classes or inline closures. All support parameter injection: `ContextManager`, `EventBehavior`, `State`, `EventCollection`, `ForwardContext`.
+Behaviors can be defined as classes or inline closures. All support parameter injection: `ContextManager`, `EventBehavior`, `State`, `EventCollection`, `MachineOutput`, `MachineFailure`.
 
 **Guard purity enforcement:** Guards must be pure (no I/O, no context mutation). EventMachine enforces this at runtime via context snapshot/restore — before evaluating guards on a transition branch, context is snapshotted; if any guard fails, context is restored. This prevents side-effect leakage between branches in multi-path transitions. Calculators always run before guards to pre-compute values guards may need.
 
@@ -92,7 +92,7 @@ The `listen` key in machine config supports lifecycle hooks:
 - **`MachineRouter::register()`** — Registers Laravel routes from machine endpoint definitions
 - **`EndpointDefinition`** — Parses endpoint config: `uri`, `method`, `action`, `output`, `middleware`, `status`
 - **`ForwardedEndpointDefinition`** — Auto-generated routes that forward events to child machines
-- **`ForwardContext`** — Type-hintable in `OutputBehavior` to access child context in forwarded endpoints
+- **`MachineOutput`** — Type-hintable in parent @done actions for typed child output injection
 - **`MachineController`** — Handles model-bound, machine-id-bound, stateless, create, and forwarded routes. Graceful `MachineAlreadyRunningException` handling: GET returns 200 + snapshot, POST returns 423 Locked. `isProcessing` flag in all endpoint responses.
 
 ### Parallel States
@@ -237,16 +237,16 @@ All code, tests, and documentation **must** follow the naming conventions define
 ## Package Structure
 
 - `src/Actor/` - Runtime machine and state classes
-- `src/Behavior/` - Base behavior classes (Action, Guard, Calculator, Event, Result)
+- `src/Behavior/` - Base behavior classes (Action, Guard, Calculator, Event, Output, MachineInput, MachineOutput, MachineFailure)
 - `src/Commands/` - Artisan commands (timers, schedules, cache, xstate, archive)
-- `src/Contracts/` - Interfaces (ScheduleResolver, ReturnsResult, ProvidesFailureContext)
+- `src/Contracts/` - Interfaces (ScheduleResolver, ReturnsOutput, ProvidesFailure)
 - `src/Definition/` - Machine definition, state, transition, timer, schedule definitions
 - `src/Enums/` - Type definitions and constants
 - `src/Exceptions/` - Custom exception classes
 - `src/Jobs/` - Queue jobs (ChildMachineJob, SendToMachineJob, ChildJobJob, ParallelRegionJob, ListenerJob, ArchiveSingleMachineJob, etc.)
 - `src/Locks/` - Machine lock manager for concurrent access
 - `src/Models/` - Eloquent models (MachineEvent, MachineChild, MachineCurrentState, MachineTimerFire, MachineEventArchive)
-- `src/Routing/` - HTTP endpoint routing (MachineRouter, MachineController, EndpointDefinition, ForwardedEndpointDefinition, ForwardContext)
+- `src/Routing/` - HTTP endpoint routing (MachineRouter, MachineController, EndpointDefinition, ForwardedEndpointDefinition)
 - `src/Scheduling/` - Schedule registration (MachineScheduler)
 - `src/Services/` - Business logic services (ArchiveService)
 - `src/Support/` - Value objects and utilities (Timer, CompressionManager, MachineDiscovery, ArrayUtils)
