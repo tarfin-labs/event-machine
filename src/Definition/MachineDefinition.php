@@ -66,6 +66,12 @@ class MachineDefinition
         'transition' => [],
     ];
 
+    /** The MachineInput class declared on this machine, or null if untyped. */
+    public ?string $inputClass = null;
+
+    /** The MachineFailure class declared on this machine, or null if untyped. */
+    public ?string $failureClass = null;
+
     /**
      * The map of state definitions to their ids.
      *
@@ -145,6 +151,8 @@ class MachineDefinition
         $this->scenariosEnabled = isset($this->config['scenarios_enabled']) && $this->config['scenarios_enabled'] === true;
 
         $this->shouldPersist = $this->config['should_persist'] ?? $this->shouldPersist;
+        $this->inputClass    = $this->config['input'] ?? null;
+        $this->failureClass  = $this->config['failure'] ?? null;
 
         try {
             $parallelDispatchEnabled = config('machine.parallel_dispatch.enabled', false);
