@@ -19,6 +19,7 @@ use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
 use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
@@ -1834,8 +1835,13 @@ class MachineDefinition
             return ($finalState->output)($context);
         }
 
-        // String — OutputBehavior class reference. Resolve and invoke with context.
         if (is_string($finalState->output)) {
+            // MachineOutput class — auto-resolve from context
+            if (is_subclass_of($finalState->output, MachineOutput::class)) {
+                return $finalState->output::fromContext($context);
+            }
+
+            // OutputBehavior class — resolve and invoke
             $behavior = resolve($finalState->output);
 
             return $behavior($context);
