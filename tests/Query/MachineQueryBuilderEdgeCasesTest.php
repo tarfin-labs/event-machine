@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateQueryException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\QueryBuilderTestMachine;
 
 describe('Edge Cases', function (): void {
@@ -42,10 +43,10 @@ describe('Edge Cases', function (): void {
         );
     });
 
-    test('invalid state name throws InvalidArgumentException', function (): void {
+    test('invalid state name throws InvalidStateQueryException', function (): void {
         QueryBuilderTestMachine::query()
             ->inState('does_not_exist');
-    })->throws(InvalidArgumentException::class);
+    })->throws(InvalidStateQueryException::class);
 
     test('notInState excludes matching instances', function (): void {
         createPersistedQBMachine('idle');
