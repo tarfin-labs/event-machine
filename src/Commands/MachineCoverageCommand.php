@@ -143,7 +143,13 @@ class MachineCoverageCommand extends Command
                         $line = "  → [{$step->event}] ";
                     }
 
-                    $this->line($line.$step->stateKey);
+                    $display = $step->stateKey;
+
+                    if ($step->invokeClass !== null) {
+                        $display .= ' ('.class_basename($step->invokeClass).')';
+                    }
+
+                    $this->line($line.$display);
                 }
 
                 $this->line('');

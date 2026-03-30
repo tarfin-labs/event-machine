@@ -171,6 +171,157 @@ readonly class PathEnumerationResult
 
     // endregion
 
+    // region Structured Stats
+
+    /**
+     * Structured list of child machine delegations.
+     *
+     * @return list<array{stateKey: string, class: string, async: bool, queue: ?string}>
+     */
+    public function childMachines(): array
+    {
+        $result = [];
+
+        foreach ($this->definition?->idMap ?? [] as $state) {
+            if (!$state->hasMachineInvoke()) {
+                continue;
+            }
+
+            $def = $state->getMachineInvokeDefinition();
+            if ($def === null) {
+                continue;
+            }
+            if ($def->isJob()) {
+                continue;
+            }
+            if ($def->machineClass === '') {
+                continue;
+            }
+
+            $result[] = [
+                'stateKey' => $state->key ?? '',
+                'class'    => $def->machineClass,
+                'async'    => $def->async,
+                'queue'    => $def->queue,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Structured list of job actor delegations.
+     *
+     * @return list<array{stateKey: string, class: string, queue: ?string}>
+     */
+    public function jobActors(): array
+    {
+        $result = [];
+
+        foreach ($this->definition?->idMap ?? [] as $state) {
+            if (!$state->hasMachineInvoke()) {
+                continue;
+            }
+
+            $def = $state->getMachineInvokeDefinition();
+            if ($def === null) {
+                continue;
+            }
+            if (!$def->isJob()) {
+                continue;
+            }
+
+            $result[] = [
+                'stateKey' => $state->key ?? '',
+                'class'    => $def->jobClass ?? '',
+                'queue'    => $def->queue,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Detect child machines whose final states are not fully handled by the parent.
+     *
+     * Only checks non-fire-and-forget, non-job invoke states where the parent
+     * uses @done.{state} routing without a catch-all @done.
+     *
+     * @return list<array{parentStateKey: string, childClass: string, childFinalStates: list<string>, handledStates: list<string>, unhandled: list<string>}>
+     */
+    public function unhandledChildOutcomes(): array
+    {
+        $result = [];
+
+        foreach ($this->definition?->idMap ?? [] as $state) {
+            if (!$state->hasMachineInvoke()) {
+                continue;
+            }
+
+            $def = $state->getMachineInvokeDefinition();
+            // Skip job actors (no machine final states) and fire-and-forget (no @done expected)
+            if ($def === null) {
+                continue;
+            }
+            if ($def->isJob()) {
+                continue;
+            }
+            if ($def->machineClass === '') {
+                continue;
+            }
+            if ($def->target !== null) {
+                continue;
+            }
+
+            // If parent has catch-all @done, all outcomes are handled
+            if ($state->onDoneTransition !== null) {
+                continue;
+            }
+
+            // Try to get child definition
+            try {
+                if (!class_exists($def->machineClass)) {
+                    continue;
+                }
+
+                $childDef = $def->machineClass::definition();
+            } catch (\Throwable) {
+                continue;
+            }
+
+            // Find child's root-level FINAL state keys
+            $childFinalStates = [];
+
+            foreach ($childDef->root->stateDefinitions ?? [] as $childState) {
+                if ($childState->type === StateDefinitionType::FINAL) {
+                    $childFinalStates[] = $childState->key;
+                }
+            }
+
+            if ($childFinalStates === []) {
+                continue;
+            }
+
+            // Compare against parent's @done.{state} routes
+            $handledStates = array_keys($state->onDoneStateTransitions);
+            $unhandled     = array_values(array_diff($childFinalStates, $handledStates));
+
+            if ($unhandled !== []) {
+                $result[] = [
+                    'parentStateKey'   => $state->key ?? '',
+                    'childClass'       => $def->machineClass,
+                    'childFinalStates' => $childFinalStates,
+                    'handledStates'    => $handledStates,
+                    'unhandled'        => $unhandled,
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    // endregion
+
     /**
      * @return list<MachinePath>
      */

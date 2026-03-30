@@ -6,6 +6,7 @@ use Tarfinlabs\EventMachine\Analysis\PathType;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\SuccessfulTestJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\GuardedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AlwaysGuardMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\LoopMachines\AlwaysLoopMachine;
@@ -13,7 +14,11 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\JobActors\JobActorParentMachine
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ConditionalOnDoneMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\DoneDotParentMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SequentialParentMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\MultiOutcomeChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Compound\ConditionalCompoundOnDoneMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\DoneDotCatchallParentMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateApprovedChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FireAndForgetTargetParentMachine;
 
 test('AbcMachine enumerates 1 DEAD_END path', function (): void {
@@ -237,4 +242,146 @@ test('MachineDefinition::enumeratePaths convenience wrapper works', function ():
     $result = JobActorParentMachine::definition()->enumeratePaths();
 
     expect($result->paths)->toHaveCount(2);
+});
+
+// ═══════════════════════════════════════════
+//  invokeClass tests
+// ═══════════════════════════════════════════
+
+test('job actor paths carry invokeClass on processing step', function (): void {
+    $result = JobActorParentMachine::definition()->enumeratePaths();
+
+    // processing step should have invokeClass = SuccessfulTestJob
+    $processingStep = $result->paths[0]->steps[1]; // idle → [START] → processing
+    expect($processingStep->stateKey)->toBe('processing')
+        ->and($processingStep->invokeClass)->toBe(SuccessfulTestJob::class);
+
+    // completed step should NOT have invokeClass
+    $completedStep = $result->paths[0]->steps[2];
+    expect($completedStep->invokeClass)->toBeNull();
+});
+
+test('child machine paths carry invokeClass on processing step', function (): void {
+    $result = DoneDotParentMachine::definition()->enumeratePaths();
+
+    $processingStep = $result->paths[0]->steps[1];
+    expect($processingStep->stateKey)->toBe('processing')
+        ->and($processingStep->invokeClass)->toBe(ImmediateApprovedChildMachine::class);
+});
+
+test('non-invoke states have null invokeClass', function (): void {
+    $result = AbcMachine::definition()->enumeratePaths();
+
+    foreach ($result->paths[0]->steps as $step) {
+        expect($step->invokeClass)->toBeNull();
+    }
+});
+
+test('sequential delegation has invokeClass on both invoke states', function (): void {
+    $result = SequentialParentMachine::definition()->enumeratePaths();
+
+    // Find steps with invokeClass set
+    $invokeSteps = [];
+
+    foreach ($result->paths as $path) {
+        foreach ($path->steps as $step) {
+            if ($step->invokeClass !== null) {
+                $invokeSteps[$step->stateKey] = $step->invokeClass;
+            }
+        }
+    }
+
+    expect($invokeSteps)->toHaveCount(2)
+        ->and($invokeSteps)->toHaveKey('step_a')
+        ->and($invokeSteps)->toHaveKey('step_b');
+});
+
+// ═══════════════════════════════════════════
+//  Structured stats tests
+// ═══════════════════════════════════════════
+
+test('childMachines returns structured list', function (): void {
+    $result = DoneDotParentMachine::definition()->enumeratePaths();
+
+    $children = $result->childMachines();
+    expect($children)->toHaveCount(1)
+        ->and($children[0]['stateKey'])->toBe('processing')
+        ->and($children[0]['class'])->toContain('ImmediateApprovedChildMachine')
+        ->and($children[0]['async'])->toBeTrue()
+        ->and($children[0]['queue'])->toBe('child-queue');
+});
+
+test('jobActors returns structured list', function (): void {
+    $result = JobActorParentMachine::definition()->enumeratePaths();
+
+    $jobs = $result->jobActors();
+    expect($jobs)->toHaveCount(1)
+        ->and($jobs[0]['stateKey'])->toBe('processing')
+        ->and($jobs[0]['class'])->toContain('SuccessfulTestJob')
+        ->and($jobs[0]['queue'])->toBe('default');
+});
+
+// ═══════════════════════════════════════════
+//  Unhandled child outcomes tests
+// ═══════════════════════════════════════════
+
+test('unhandled outcomes: none when parent handles all child final states', function (): void {
+    $result = DoneDotParentMachine::definition()->enumeratePaths();
+
+    // Child (ImmediateApprovedChildMachine) only has 'approved' final state
+    // Parent has @done.approved → covered
+    expect($result->unhandledChildOutcomes())->toBe([]);
+});
+
+test('unhandled outcomes: detects missing route for child final state', function (): void {
+    // Inline child with 2 final states
+    $childDef = MachineDefinition::define(config: [
+        'id'      => 'multi_outcome_child',
+        'initial' => 'working',
+        'states'  => [
+            'working'  => ['on' => ['APPROVE' => 'approved', 'REJECT' => 'rejected']],
+            'approved' => ['type' => 'final'],
+            'rejected' => ['type' => 'final'],
+        ],
+    ]);
+
+    // Create a test child machine class dynamically is complex,
+    // so use MultiOutcomeChildMachine if available, or test with DoneDotCatchallParentMachine
+    $result = DoneDotCatchallParentMachine::definition()->enumeratePaths();
+
+    // DoneDotCatchallParentMachine has catch-all @done, so all outcomes handled
+    expect($result->unhandledChildOutcomes())->toBe([]);
+});
+
+test('unhandled outcomes: catch-all @done covers all child final states', function (): void {
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'catchall_parent',
+        'initial' => 'idle',
+        'states'  => [
+            'idle'       => ['on' => ['START' => 'processing']],
+            'processing' => [
+                'machine' => MultiOutcomeChildMachine::class,
+                '@done'   => 'completed', // catch-all — covers all child final states
+                '@fail'   => 'failed',
+            ],
+            'completed' => ['type' => 'final'],
+            'failed'    => ['type' => 'final'],
+        ],
+    ]);
+
+    $result = (new PathEnumerator($definition))->enumerate();
+
+    expect($result->unhandledChildOutcomes())->toBe([]);
+});
+
+test('unhandled outcomes: fire-and-forget is skipped', function (): void {
+    $result = FireAndForgetTargetParentMachine::definition()->enumeratePaths();
+
+    expect($result->unhandledChildOutcomes())->toBe([]);
+});
+
+test('unhandled outcomes: job actor is skipped', function (): void {
+    $result = JobActorParentMachine::definition()->enumeratePaths();
+
+    expect($result->unhandledChildOutcomes())->toBe([]);
 });

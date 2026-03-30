@@ -71,7 +71,20 @@ class MachinePathsCommand extends Command
         $this->line("  Actions: {$result->actionCount()}");
         $this->line("  Calculators: {$result->calculatorCount()}");
         $this->line("  Job actors: {$result->jobActorCount()}");
+
+        foreach ($result->jobActors() as $job) {
+            $queueInfo = $job['queue'] !== null ? "queue: {$job['queue']}" : '';
+            $this->line("    {$job['stateKey']} → ".class_basename($job['class']).($queueInfo !== '' ? " ({$queueInfo})" : ''));
+        }
+
         $this->line("  Child machines: {$result->childMachineCount()}");
+
+        foreach ($result->childMachines() as $child) {
+            $mode = $child['async'] ? 'async' : 'sync';
+            $info = $child['queue'] !== null ? "{$mode}, queue: {$child['queue']}" : $mode;
+            $this->line("    {$child['stateKey']} → ".class_basename($child['class'])." ({$info})");
+        }
+
         $this->line("  Timers: {$result->timerCount()}");
         $this->line('  Terminal paths: '.count($result->paths));
 
@@ -151,6 +164,21 @@ class MachinePathsCommand extends Command
             }
         }
 
+        // Unhandled child outcomes warning
+        $unhandled = $result->unhandledChildOutcomes();
+
+        if ($unhandled !== []) {
+            $this->line('');
+            $this->warn('UNHANDLED CHILD OUTCOMES:');
+
+            foreach ($unhandled as $item) {
+                $this->line("  {$item['parentStateKey']} → ".class_basename($item['childClass']));
+                $this->line('    Child final states: '.implode(', ', $item['childFinalStates']));
+                $this->line('    Parent handles: '.($item['handledStates'] !== [] ? implode(', ', array_map(fn (string $s): string => "@done.{$s}", $item['handledStates'])) : '(none)'));
+                $this->line('    Unhandled: '.implode(', ', $item['unhandled']));
+            }
+        }
+
         $this->line('');
     }
 
@@ -164,6 +192,10 @@ class MachinePathsCommand extends Command
             }
 
             $line .= $step->stateKey;
+
+            if ($step->invokeClass !== null) {
+                $line .= ' ('.class_basename($step->invokeClass).')';
+            }
 
             if ($step->timerType !== null) {
                 $line .= " ({$step->timerType})";
@@ -180,27 +212,29 @@ class MachinePathsCommand extends Command
         $data = [
             'machine' => class_basename($machinePath),
             'stats'   => [
-                'states'         => $stateStats['total'],
-                'atomic_states'  => $stateStats['atomic'],
-                'final_states'   => $stateStats['final'],
-                'events'         => $result->eventCount(),
-                'guards'         => $result->guardCount(),
-                'actions'        => $result->actionCount(),
-                'calculators'    => $result->calculatorCount(),
-                'job_actors'     => $result->jobActorCount(),
-                'child_machines' => $result->childMachineCount(),
-                'timers'         => $result->timerCount(),
-                'terminal_paths' => count($result->paths),
+                'states'                   => $stateStats['total'],
+                'atomic_states'            => $stateStats['atomic'],
+                'final_states'             => $stateStats['final'],
+                'events'                   => $result->eventCount(),
+                'guards'                   => $result->guardCount(),
+                'actions'                  => $result->actionCount(),
+                'calculators'              => $result->calculatorCount(),
+                'job_actors'               => array_map(static fn (array $j): array => ['state' => $j['stateKey'], 'class' => class_basename($j['class']), 'queue' => $j['queue']], $result->jobActors()),
+                'child_machines'           => array_map(static fn (array $c): array => ['state' => $c['stateKey'], 'class' => class_basename($c['class']), 'async' => $c['async'], 'queue' => $c['queue']], $result->childMachines()),
+                'timers'                   => $result->timerCount(),
+                'terminal_paths'           => count($result->paths),
+                'unhandled_child_outcomes' => array_map(static fn (array $u): array => ['parent_state' => $u['parentStateKey'], 'child_class' => class_basename($u['childClass']), 'unhandled' => $u['unhandled']], $result->unhandledChildOutcomes()),
             ],
             'paths' => array_map(static fn (MachinePath $path, int $index): array => [
                 'id'        => $index + 1,
                 'type'      => $path->type->value,
                 'signature' => $path->signature(),
                 'steps'     => array_map(static fn (PathStep $step): array => array_filter([
-                    'state'       => $step->stateKey,
-                    'event'       => $step->event,
-                    'invoke_type' => $step->invokeType,
-                    'timer_type'  => $step->timerType,
+                    'state'        => $step->stateKey,
+                    'event'        => $step->event,
+                    'invoke_type'  => $step->invokeType,
+                    'invoke_class' => $step->invokeClass !== null ? class_basename($step->invokeClass) : null,
+                    'timer_type'   => $step->timerType,
                 ], static fn (?string $v): bool => $v !== null), $path->steps),
                 'terminal_state' => $path->terminalStateId !== null
                     ? (str_contains($path->terminalStateId, '.') ? substr($path->terminalStateId, strrpos($path->terminalStateId, '.') + 1) : $path->terminalStateId)

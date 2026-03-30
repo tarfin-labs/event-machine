@@ -193,6 +193,16 @@ FindeksMachine::assertPathCoverage(minimum: 90.0);
 | GUARD_BLOCK | All guards fail with no fallback — event swallowed |
 | DEAD_END | ATOMIC state with no transitions and not FINAL |
 
+### Child Machine Visibility
+
+Path analysis treats child machines as opaque (compositional verification). Each machine's paths are analyzed independently. The output shows:
+
+- **Child machine/job class names** on invoke state steps (e.g., `processing (PaymentMachine)`)
+- **Async/sync mode and queue** in the stats section
+- **Unhandled child outcome warnings** when a child has final states the parent doesn't route via `@done.{state}`
+
+To see a child machine's internal paths, run `machine:paths` on the child separately.
+
 ### CI Integration
 
 ```yaml

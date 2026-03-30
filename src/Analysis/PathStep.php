@@ -21,6 +21,7 @@ readonly class PathStep
      * @param  array<string>  $actions  Action names executed on this step.
      * @param  ?string  $timerType  'after' or 'every' if this step was timer-triggered, null otherwise.
      * @param  ?string  $invokeType  '@done', '@fail', '@timeout', or '@done.{state}' if machine invoke, null otherwise.
+     * @param  ?string  $invokeClass  FQCN of child machine or job class delegated by this state, null if no delegation.
      */
     public function __construct(
         public string $stateId,
@@ -31,5 +32,6 @@ readonly class PathStep
         public array $actions = [],
         public ?string $timerType = null,
         public ?string $invokeType = null,
+        public ?string $invokeClass = null,
     ) {}
 }

@@ -84,7 +84,17 @@ class PathEnumerator
             return;
         }
 
-        // 2. Add current state as a step (with transition metadata)
+        // 2. Detect invokeClass if this state delegates to a child machine or job
+        $invokeClass = null;
+
+        if ($state->hasMachineInvoke()) {
+            $def         = $state->getMachineInvokeDefinition();
+            $invokeClass = $def->isJob()
+                ? $def->jobClass
+                : ($def->machineClass !== '' ? $def->machineClass : null);
+        }
+
+        // 3. Add current state as a step (with transition + invoke metadata)
         $steps[] = new PathStep(
             stateId: $state->id,
             stateKey: $state->key ?? '',
@@ -94,6 +104,7 @@ class PathEnumerator
             actions: $actions,
             timerType: $timerType,
             invokeType: $invokeType,
+            invokeClass: $invokeClass,
         );
 
         $visitedIds[$state->id] = true;

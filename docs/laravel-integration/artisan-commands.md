@@ -309,9 +309,12 @@ php artisan machine:paths "App\Machines\OrderMachine" --json
 ### What It Shows
 
 - Machine stats: states, events, guards, actions, calculators, job actors, child machines, timers
+- Child machine and job actor names with async/sync mode and queue info
 - All terminal paths grouped by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END
+- Child machine/job class names on invoke state steps
 - Parallel state per-region paths with combination count
 - Guard and action details per path
+- Unhandled child outcome warnings (child final states without parent @done.{state} routes)
 
 ### Example Output
 
@@ -323,6 +326,10 @@ OrderMachine — Path Analysis
   Events: 1
   Guards: 0
   Actions: 1
+  Job actors: 1
+    processing → PaymentJob (queue: default)
+  Child machines: 0
+  Timers: 0
   Terminal paths: 2
 
 HAPPY PATHS (→ completed): 1 path
@@ -337,6 +344,18 @@ FAIL PATHS (→ failed): 1 path
   #2  → idle
       → [START] processing (PaymentJob)
       → [@fail] failed
+```
+
+Child machine and job class names appear in parentheses after the invoke state (e.g., `processing (PaymentJob)`). The stats section lists each delegation with its async/sync mode and queue name.
+
+If a child machine has final states that the parent doesn't handle via `@done.{state}` routing (and no catch-all `@done`), a warning is shown at the end:
+
+```
+⚠ UNHANDLED CHILD OUTCOMES:
+  processing → PaymentChildMachine
+    Child final states: approved, rejected, expired
+    Parent handles: @done.approved
+    Unhandled: rejected, expired
 ```
 
 ## machine:coverage

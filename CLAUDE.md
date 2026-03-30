@@ -160,6 +160,9 @@ Four top-level sections:
 - **`EventBuilder`**: Abstract base for event test factories (like model factories but for events)
 - **Behavior faking**: `fakingAllActions(except:)`, `fakingAllGuards(except:)`, `fakingAllBehaviors(except:)`, `simulateChildDone/Fail/Timeout`
 - **Isolated assertions**: `ActionClass::assertRaised()`, `assertNotRaised()`, `assertRaisedCount()`, `assertNothingRaised()`
+- **`TracksPathCoverage`** trait: Automatic path coverage tracking — add to TestCase for `PathCoverageTracker` enable + parallel-safe export via `register_shutdown_function`
+- **`PathCoverageTracker`**: Static singleton accumulating state sequences during tests, exports PID-suffixed JSON for parallel workers
+- **Path coverage assertions**: `Machine::assertAllPathsCovered()`, `Machine::assertPathCoverage(minimum:)` — cross-reference enumerated vs observed paths
 
 ## Workflow Rules
 
@@ -239,8 +242,9 @@ All code, tests, and documentation **must** follow the naming conventions define
 ## Package Structure
 
 - `src/Actor/` - Runtime machine and state classes
-- `src/Behavior/` - Base behavior classes (Action, Guard, Calculator, Event, Result)
-- `src/Commands/` - Artisan commands (timers, schedules, cache, xstate, archive)
+- `src/Analysis/` - Path coverage analysis (PathEnumerator, PathCoverageTracker, PathCoverageReport, value objects)
+- `src/Behavior/` - Base behavior classes (Action, Guard, Calculator, Event, Output)
+- `src/Commands/` - Artisan commands (timers, schedules, cache, xstate, archive, paths, coverage)
 - `src/Contracts/` - Interfaces (ScheduleResolver, ReturnsResult, ProvidesFailureContext)
 - `src/Definition/` - Machine definition, state, transition, timer, schedule definitions
 - `src/Enums/` - Type definitions and constants
@@ -252,7 +256,7 @@ All code, tests, and documentation **must** follow the naming conventions define
 - `src/Scheduling/` - Schedule registration (MachineScheduler)
 - `src/Services/` - Business logic services (ArchiveService)
 - `src/Support/` - Value objects and utilities (Timer, CompressionManager, MachineDiscovery, ArrayUtils)
-- `src/Testing/` - Test helpers (TestMachine, InteractsWithMachines, CommunicationRecorder, InlineBehaviorFake, EventBuilder)
+- `src/Testing/` - Test helpers (TestMachine, InteractsWithMachines, TracksPathCoverage, CommunicationRecorder, InlineBehaviorFake, EventBuilder)
 - `src/Traits/` - Reusable traits (Fakeable, HasMachines)
 - `src/Transformers/` - Spatie LaravelData transformers (ModelTransformer)
 - `tests/LocalQA/` - Local QA tests requiring real MySQL + Redis + Horizon
