@@ -26,6 +26,59 @@ Keep states in the same machine when:
 
 - **Tight coupling.** If you find yourself sending 5+ events between parent and child on every transition, they are one machine pretending to be two.
 
+## Contract-Driven Decomposition
+
+When splitting a machine into parent and child, define the typed contracts **before** building the child machine. This "contract-first" approach ensures the interface is intentional rather than emergent.
+
+### Step 1: Define the contract
+
+```php ignore
+// What the child needs
+class VerificationInput extends MachineInput
+{
+    public function __construct(
+        public readonly string $applicantId,
+        public readonly string $documentType,
+    ) {}
+}
+
+// What the child produces on success
+class VerificationOutput extends MachineOutput
+{
+    public function __construct(
+        public readonly string $verificationId,
+        public readonly string $status,
+    ) {}
+}
+
+// What the child produces on failure
+class VerificationFailure extends MachineFailure
+{
+    public function __construct(
+        public readonly string $errorCode,
+        public readonly bool $retryable,
+    ) {}
+}
+```
+
+### Step 2: Wire the parent
+
+```php ignore
+'verifying' => [
+    'machine' => VerificationMachine::class,
+    'input'   => VerificationInput::class,
+    'failure' => VerificationFailure::class,
+    '@done'   => 'verified',
+    '@fail'   => 'verification_failed',
+],
+```
+
+### Step 3: Build the child
+
+Now build the child machine knowing exactly what it receives and what it must produce. The contracts serve as acceptance criteria.
+
+This approach works especially well when different team members build the parent and child machines -- the contracts are the handoff artifact.
+
 ## Anti-Pattern: Mega-Machine
 
 ```php ignore
