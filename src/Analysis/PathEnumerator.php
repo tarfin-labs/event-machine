@@ -33,8 +33,9 @@ class PathEnumerator
      */
     public function enumerate(): PathEnumerationResult
     {
-        $this->paths          = [];
-        $this->parallelGroups = [];
+        $this->paths              = [];
+        $this->parallelGroups     = [];
+        $this->recordedSignatures = [];
 
         $initialState = $this->definition->initialStateDefinition;
 
@@ -536,6 +537,9 @@ class PathEnumerator
      *
      * @param  list<PathStep>  $steps
      */
+    /** @var array<string, true> Recorded signatures to prevent duplicates. */
+    private array $recordedSignatures = [];
+
     private function recordPath(array $steps, PathType $type): void
     {
         $terminalStateId = $steps !== [] ? $steps[count($steps) - 1]->stateId : null;
@@ -545,11 +549,21 @@ class PathEnumerator
             $terminalStateId = null;
         }
 
-        $this->paths[] = new MachinePath(
+        $path = new MachinePath(
             steps: $steps,
             type: $type,
             terminalStateId: $terminalStateId,
         );
+
+        // Deduplicate by signature + type (same state sequence and classification = same path)
+        $dedupeKey = $path->signature().'|'.$type->value;
+
+        if (isset($this->recordedSignatures[$dedupeKey])) {
+            return;
+        }
+
+        $this->recordedSignatures[$dedupeKey] = true;
+        $this->paths[]                        = $path;
     }
 
     /**

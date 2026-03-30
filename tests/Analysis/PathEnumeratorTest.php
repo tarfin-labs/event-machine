@@ -374,6 +374,52 @@ test('unhandled outcomes: catch-all @done covers all child final states', functi
     expect($result->unhandledChildOutcomes())->toBe([]);
 });
 
+// ═══════════════════════════════════════════
+//  Duplicate path detection
+// ═══════════════════════════════════════════
+
+test('no duplicate paths are generated for guarded @fail with retry loop', function (): void {
+    // Simulates FindeksMachine's confirming_pin pattern:
+    // awaiting_pin → PIN_CONFIRMED → confirming_pin (job)
+    // confirming_pin @fail: [retryable → awaiting_pin (loop), fallback → failed]
+    // The retry branch loops back to awaiting_pin which has PIN_CONFIRMED → confirming_pin
+    // This can generate duplicate LOOP paths without dedup.
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'retry_fail_test',
+        'initial' => 'idle',
+        'states'  => [
+            'idle'       => ['on' => ['START' => 'awaiting']],
+            'awaiting'   => ['on' => ['CONFIRM' => 'processing']],
+            'processing' => [
+                'job'   => SuccessfulTestJob::class,
+                '@done' => 'completed',
+                '@fail' => [
+                    ['target' => 'awaiting', 'guards' => 'isRetryableGuard'],
+                    ['target' => 'failed'],
+                ],
+            ],
+            'completed' => ['type' => 'final'],
+            'failed'    => ['type' => 'final'],
+        ],
+    ], behavior: [
+        'guards' => [
+            'isRetryableGuard' => fn (): bool => true,
+        ],
+    ]);
+
+    $result = (new PathEnumerator($definition))->enumerate();
+
+    // All signatures must be unique — no duplicate paths
+    $signatures = array_map(fn ($p) => $p->signature(), $result->paths);
+    expect(count($signatures))->toBe(count(array_unique($signatures)));
+
+    // Verify expected path count: @done→completed (HAPPY), @fail fallback→failed (FAIL),
+    // @fail retry→awaiting (LOOP), CONFIRM from awaiting (LOOP already handled by dedup)
+    expect($result->happyPaths())->toHaveCount(1)
+        ->and($result->failPaths())->toHaveCount(1)
+        ->and($result->loopPaths())->toHaveCount(1);
+});
+
 test('unhandled outcomes: fire-and-forget is skipped', function (): void {
     $result = FireAndForgetTargetParentMachine::definition()->enumeratePaths();
 
