@@ -192,6 +192,7 @@ class ChildMachineJob implements ShouldQueue
             errorMessage: $exception->getMessage(),
             errorCode: $exception->getCode(),
             outputData: $outputData,
+            failureClass: $failureClass,
         ));
     }
 }
