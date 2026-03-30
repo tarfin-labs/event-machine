@@ -95,3 +95,60 @@ test('TypedFailingJob failure() delegates to PaymentFailure::fromException', fun
     // from a plain RuntimeException, so fromException throws
     TypedFailingJob::failure(new RuntimeException('Gateway timeout', 503));
 })->throws(MachineFailureResolutionException::class);
+
+// ═══════════════════════════════════════════════════════════════
+//  UntypedOutputJob — array content verification
+// ═══════════════════════════════════════════════════════════════
+
+test('UntypedOutputJob output() returns array with expected keys and values', function (): void {
+    $job    = new UntypedOutputJob();
+    $output = $job->output();
+
+    expect($output)->toBeArray()
+        ->and($output)->toHaveKey('done')
+        ->and($output['done'])->toBeTrue()
+        ->and($output)->toHaveKey('message')
+        ->and($output['message'])->toBe('completed');
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  NoInterfaceJob — no ProvidesFailure
+// ═══════════════════════════════════════════════════════════════
+
+test('NoInterfaceJob does not implement ProvidesFailure', function (): void {
+    $job = new NoInterfaceJob();
+
+    expect($job)->not->toBeInstanceOf(ProvidesFailure::class);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  TypedSuccessfulJob — failure() returns MachineFailure subclass
+// ═══════════════════════════════════════════════════════════════
+
+test('TypedSuccessfulJob failure() delegates to PaymentFailure::fromException', function (): void {
+    // PaymentFailure has required $errorCode which cannot be auto-resolved
+    // from a plain RuntimeException, so fromException throws MachineFailureResolutionException.
+    // This confirms TypedSuccessfulJob implements ProvidesFailure and delegates correctly.
+    expect(fn () => TypedSuccessfulJob::failure(new RuntimeException('test error')))
+        ->toThrow(MachineFailureResolutionException::class);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  ReturnsOutput — accepts both array and MachineOutput
+// ═══════════════════════════════════════════════════════════════
+
+test('ReturnsOutput output() return type accepts both array and MachineOutput', function (): void {
+    $reflection = new ReflectionMethod(ReturnsOutput::class, 'output');
+    $returnType = $reflection->getReturnType();
+
+    // Should be a union type: array|MachineOutput
+    expect($returnType)->toBeInstanceOf(ReflectionUnionType::class);
+
+    $typeNames = array_map(
+        fn (ReflectionNamedType $t) => $t->getName(),
+        $returnType->getTypes(),
+    );
+
+    expect($typeNames)->toContain('array')
+        ->and($typeNames)->toContain(MachineOutput::class);
+});
