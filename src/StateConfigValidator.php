@@ -14,14 +14,14 @@ class StateConfigValidator
     private const ALLOWED_ROOT_KEYS = [
         'id', 'version', 'initial', 'status_events', 'context', 'states', 'on', 'type',
         'meta', 'entry', 'exit', 'description', 'scenarios_enabled',
-        'should_persist', 'delimiter', 'listen',
+        'should_persist', 'delimiter', 'listen', 'input', 'failure',
     ];
 
     private const ALLOWED_LISTEN_KEYS = ['entry', 'exit', 'transition'];
 
     private const ALLOWED_STATE_KEYS = [
         'id', 'on', 'states', 'initial', 'type', 'meta', 'entry', 'exit', 'description', 'output', '@done', '@fail',
-        'machine', 'with', 'forward', 'queue', 'connection', '@timeout', 'retry', 'output',
+        'machine', 'input', 'forward', 'queue', 'connection', '@timeout', 'retry', 'output',
         'job', 'target',
     ];
 
