@@ -12,7 +12,7 @@ The parent waits for the job to complete and routes `@done` or `@fail`:
 ```php
 'sending_email' => [
     'job'      => SendWelcomeEmailJob::class,
-    'with'     => ['email', 'name'],
+    'input'     => ['email', 'name'],
     '@done'    => 'email_sent',
     '@fail'    => 'email_failed',
     '@timeout' => ['target' => 'timed_out', 'after' => 300],
@@ -27,7 +27,7 @@ No `@done`/`@fail` — the job is dispatched and the parent transitions immediat
 ```php
 'logging' => [
     'job'    => AuditLogJob::class,
-    'with'   => ['action', 'userId'],
+    'input'   => ['action', 'userId'],
     'target' => 'next_state',
 ],
 ```
@@ -191,7 +191,7 @@ class IsPinRetryableGuard extends GuardBehavior
 | Aspect | `machine` | `job` |
 |--------|-----------|-------|
 | Stateful | Yes (multiple states) | No (single step) |
-| Context | Own ContextManager | Data from `with` |
+| Context | Own ContextManager | Data from `input` |
 | Lifecycle | `@done` / `@fail` / `@timeout` | `@done` / `@fail` / `@timeout` |
 | Fire-and-forget | Yes (omit `@done`, requires `queue`) | Yes (`target` key) |
 | Output | `output` key on final state | `ReturnsOutput` interface |
@@ -200,7 +200,7 @@ class IsPinRetryableGuard extends GuardBehavior
 
 ## Context Transfer
 
-The `with` key works the same way as machine delegation — same three formats:
+The `input` key works the same way as machine delegation — same three formats:
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -230,7 +230,7 @@ Jobs support the same queue options as machine delegation:
 ```php
 'processing' => [
     'job'        => ProcessDataJob::class,
-    'with'       => ['data'],
+    'input'       => ['data'],
     'queue'      => 'heavy',
     'connection' => 'redis',
     '@done'      => 'processed',
