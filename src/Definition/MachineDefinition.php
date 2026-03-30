@@ -1621,6 +1621,18 @@ class MachineDefinition
             placeholder: $childMachineClass,
         );
 
+        // Test mode: skip dispatch and DB tracking. The machine stays in the delegating
+        // state waiting for simulateChildDone()/simulateChildFail(). Without this,
+        // sync queue would run ChildMachineJob immediately → cascade through @done.
+        // Fire-and-forget still transitions to target immediately.
+        if (!$this->shouldPersist) {
+            if ($isFireAndForget) {
+                $this->transitionToFireAndForgetTarget($state, $invokeDefinition->target);
+            }
+
+            return;
+        }
+
         // Create tracking record (managed only — fire-and-forget skips this)
         $machineChildId = '';
         if (!$isFireAndForget) {
