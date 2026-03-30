@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Query;
 
-use InvalidArgumentException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +12,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateQueryException;
 
 /**
  * Fluent query builder for finding machine instances by state.
@@ -331,9 +331,7 @@ class MachineQueryBuilder
         }
 
         // 4. No match
-        throw new InvalidArgumentException(
-            "State '{$stateName}' not found in machine definition '{$this->definition->id}'."
-        );
+        throw InvalidStateQueryException::stateNotFound($stateName, $this->definition->id);
     }
 
     // endregion
