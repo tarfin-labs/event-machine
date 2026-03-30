@@ -578,6 +578,27 @@ abstract class TestCase extends BaseTestCase {
 
 The trait automatically enables tracking, cleans stale data from previous runs, and exports coverage when the process exits. Each parallel worker writes a separate file; the `machine:coverage` command merges them.
 
+#### Child Machine Visibility
+
+`machine:paths` shows child machine and job class names on invoke state steps, detailed delegation info in stats, and warns about unhandled child outcomes:
+
+```
+  Child machines: 1
+    processing → PaymentMachine (async, queue: payments)
+
+  #1  → idle
+      → [START] processing (PaymentMachine)
+      → [@done.approved] completed
+
+⚠ UNHANDLED CHILD OUTCOMES:
+  processing → PaymentMachine
+    Child final states: approved, rejected
+    Parent handles: @done.approved
+    Unhandled: rejected
+```
+
+Each machine is analyzed independently (compositional verification). Run `machine:paths` on child machines separately to see their internal paths.
+
 #### Path Types
 
 Enumerated paths are classified by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END.
