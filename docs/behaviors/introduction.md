@@ -14,6 +14,9 @@ This section covers all behavior types in depth. If you're just getting started,
 | [Calculators](/behaviors/calculators) | Compute values before guards | `void` |
 | [Event Behaviors](/behaviors/events) | Define event structure | Event data |
 | [Outputs](/behaviors/outputs) | Compute final state output | `mixed` |
+| [MachineInput](/advanced/typed-contracts) | Typed input DTO for child machine delegation | Input data |
+| [MachineOutput](/advanced/typed-contracts) | Typed output DTO for final states and delegation | Output data |
+| [MachineFailure](/advanced/typed-contracts) | Typed failure DTO for `@fail` error data | Failure data |
 
 ## Behavior Registration
 
