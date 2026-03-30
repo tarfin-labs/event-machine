@@ -14,14 +14,14 @@ Information flows one way in a well-designed machine system: **commands down, st
 
 ### Anti-Pattern: Leaking Parent State to Child
 
-When a parent passes its own status flags to a child via `with`, the child becomes coupled to the parent's lifecycle:
+When a parent passes its own status flags to a child via `input`, the child becomes coupled to the parent's lifecycle:
 
 ```php
 $config = [ // [!code hide]
 // Anti-pattern: parent passes its own state to child
 'awaiting_payment' => [
     'machine' => 'PaymentMachine',
-    'with'    => ['orderId', 'orderTotal', 'orderStatus'],  // ← parent state leaked
+    'input'    => ['orderId', 'orderTotal', 'orderStatus'],  // ← parent state leaked
     '@done'   => 'shipping',
     '@fail'   => 'failed',
 ],
@@ -51,14 +51,14 @@ The child should not care whether the order is cancelled. That is the parent's c
 
 ### Fix: Parent Handles Its Own Concerns
 
-Pass only payment-relevant data via `with`. Handle cancellation in the parent with an `on` transition:
+Pass only payment-relevant data via `input`. Handle cancellation in the parent with an `on` transition:
 
 ```php
 $config = [ // [!code hide]
 // Parent handles cancellation — child only knows about payment
 'awaiting_payment' => [
     'machine' => 'PaymentMachine',
-    'with'    => ['orderId', 'orderTotal'],  // only payment-relevant data
+    'input'    => ['orderId', 'orderTotal'],  // only payment-relevant data
     'on'      => ['ORDER_CANCELLED' => 'cancelled'],
     '@done'   => 'shipped',
     '@fail'   => 'failed',
@@ -68,7 +68,7 @@ $config = [ // [!code hide]
 
 If the parent receives `ORDER_CANCELLED` while the child is running, the parent transitions to `cancelled` directly. The child is cleaned up automatically. No coupling needed.
 
-**Takeaway:** Pass only IDs and values the child needs via `with` -- never parent state or status flags. Commands flow down (`machine`, `forward`, `sendTo`), states flow up (`@done`, `@done.{state}`, `sendToParent`).
+**Takeaway:** Pass only IDs and values the child needs via `input` -- never parent state or status flags. Commands flow down (`machine`, `forward`, `sendTo`), states flow up (`@done`, `@done.{state}`, `sendToParent`).
 
 ## Design Your Child States for the Parent
 
@@ -92,7 +92,7 @@ When a child has only one final state, the parent cannot distinguish between dif
 // Parent: no way to route differently
 'processing_credit' => [
     'machine' => CreditCheckMachine::class,
-    'with'    => ['applicantId'],
+    'input'    => ['applicantId'],
     '@done'   => 'credit_decision',  // always same target, must read context
 ],
 ```
@@ -145,7 +145,7 @@ $config = [ // [!code hide]
 // Parent: routes differently based on child's final state
 'processing_credit' => [
     'machine'                   => CreditCheckMachine::class,
-    'with'                      => ['applicant_id'],
+    'input'                      => ['applicant_id'],
     '@done.approved'            => 'approved',
     '@done.rejected'            => 'rejected',
     '@done.bureau_unavailable'  => 'retrying_credit_check',
@@ -217,7 +217,7 @@ $config = [ // [!code hide]
 'verifying_documents' => [
     'machine'            => DocumentVerificationMachine::class,
     'queue'              => 'default',
-    'with'               => ['document_ids'],
+    'input'               => ['document_ids'],
     '@done.verified'     => 'documents_verified',
     '@done.rejected'     => 'documents_rejected',
     '@done.failed'       => 'verification_failed',
@@ -266,7 +266,7 @@ PaymentMachine owns the fraud check as its child. The parent (OrderWorkflow) del
 // PaymentMachine owns the fraud check as its child
 'processing' => [
     'machine'                    => FraudCheckMachine::class,
-    'with'                       => ['transactionId', 'amount'],
+    'input'                       => ['transactionId', 'amount'],
     '@done.clean'                => 'capturing',
     '@done.flagged'              => 'awaiting_manual_review',
     '@fail'                      => 'failed',
@@ -353,14 +353,14 @@ Typed contracts (`MachineInput`, `MachineOutput`, `MachineFailure`) add compile-
 ### Keep untyped when:
 
 - **Simple internal machines.** A child machine used by a single parent within the same codebase may not need the overhead of contract classes.
-- **Prototyping.** During early development, use `with` arrays and untyped outputs. Add contracts when the interface stabilizes.
+- **Prototyping.** During early development, use `input` arrays and untyped outputs. Add contracts when the interface stabilizes.
 - **Same-name context pass-through.** When `input: ['orderId']` is sufficient, a `MachineInput` class adds no value.
 
-**Rule of thumb:** If you find yourself writing documentation comments explaining what keys the `with` array should contain or what the `@done` output shape is, it is time for typed contracts.
+**Rule of thumb:** If you find yourself writing documentation comments explaining what keys the `input` array should contain or what the `@done` output shape is, it is time for typed contracts.
 
 ## Guidelines
 
-1. **Commands down, states up.** Parent delegates via `machine` key, reads `@done.{state}`. Child never reads parent state -- only values passed via `with`.
+1. **Commands down, states up.** Parent delegates via `machine` key, reads `@done.{state}`. Child never reads parent state -- only values passed via `input`.
 
 2. **Design child final states for the parent.** Use `@done.{finalState}` for routing and `output` on final states to filter context. Each distinct business outcome the parent cares about should be a separate final state.
 
@@ -379,6 +379,6 @@ Typed contracts (`MachineInput`, `MachineOutput`, `MachineFailure`) add compile-
 - [Machine Decomposition](./machine-decomposition) -- when to split a machine
 - [Machine Delegation](/advanced/machine-delegation) -- `machine`/`job` key mechanics, `@done.{state}` routing
 - [Async Delegation](/advanced/async-delegation) -- queue-based child machines, `@timeout`
-- [Delegation Data Flow](/advanced/delegation-data-flow) -- `with`, `output`, and `@done` payload
+- [Delegation Data Flow](/advanced/delegation-data-flow) -- `input`, `output`, and `@done` payload
 - [Cross-Machine Messaging](/advanced/sendto) -- `sendTo`/`dispatchTo`
 - [Time-Based Patterns](./time-based-patterns) -- `after`/`every` timer patterns
