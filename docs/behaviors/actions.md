@@ -71,6 +71,8 @@ class IncrementAction extends ActionBehavior
 
 ### Direct Class Reference
 
+You can use a class FQCN directly in config without registering it in the `behavior` map. Both inline keys and FQCN references work interchangeably — see [Behavior Resolution](/behaviors/introduction#behavior-resolution) for details.
+
 ```php ignore
 'on' => [
     'INCREMENT' => [
