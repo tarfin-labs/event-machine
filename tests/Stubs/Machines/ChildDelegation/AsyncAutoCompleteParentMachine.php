@@ -38,7 +38,7 @@ class AsyncAutoCompleteParentMachine extends Machine
                     ],
                     'processing' => [
                         'machine' => ImmediateChildMachine::class,
-                        'with'    => ['orderId'],
+                        'input'   => ['orderId'],
                         'queue'   => 'child-queue',
                         'on'      => [
                             'CANCEL' => 'skipped',

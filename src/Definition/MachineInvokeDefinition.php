@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Definition;
 
 use Closure;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\MachineInput;
 use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
 use Tarfinlabs\EventMachine\Routing\ForwardedEndpointDefinition;
 
@@ -13,13 +14,13 @@ use Tarfinlabs\EventMachine\Routing\ForwardedEndpointDefinition;
  * Value object that holds machine/job delegation configuration.
  *
  * Parsed from the `machine` or `job` key in a state definition config.
- * Handles context transfer resolution via the `with` key.
+ * Handles context transfer resolution via the `input` key.
  */
 class MachineInvokeDefinition
 {
     /**
      * @param  string  $machineClass  The FQCN of the child machine definition (empty string for job actors).
-     * @param  array|Closure|null  $with  Context transfer configuration (3 formats).
+     * @param  array|Closure|string|null  $input  Input configuration: MachineInput class, closure, or array (3 formats).
      * @param  array  $forward  Event types to forward to the child machine.
      * @param  bool  $async  Whether the child runs asynchronously.
      * @param  string|null  $queue  Queue name for async execution.
@@ -31,7 +32,7 @@ class MachineInvokeDefinition
      */
     public function __construct(
         public readonly string $machineClass = '',
-        public readonly array|Closure|null $with = null,
+        public readonly array|Closure|string|null $input = null,
         public readonly array $forward = [],
         public readonly bool $async = false,
         public readonly ?string $queue = null,
@@ -53,10 +54,10 @@ class MachineInvokeDefinition
     /**
      * Resolve the child machine's initial context from the parent context.
      *
-     * Supports 3 formats for the `with` key:
-     * - Format 1: Same-name array ['order_id'] → child gets order_id from parent
-     * - Format 2: Key mapping ['amount' => 'total_amount'] → child amount = parent total_amount
-     * - Format 3: Closure fn(ContextManager $ctx) => ['key' => 'value']
+     * Supports 3 formats for the `input` key:
+     * - MachineInput class: auto-resolve via fromContext() → toArray()
+     * - Closure: fn(ContextManager $ctx) => MachineInput or array
+     * - Array: same-name ['orderId'] or key mapping ['amount' => 'totalAmount']
      *
      * @param  ContextManager  $parentContext  The parent machine's context.
      *
@@ -64,22 +65,38 @@ class MachineInvokeDefinition
      */
     public function resolveChildContext(ContextManager $parentContext): array
     {
-        if ($this->with === null) {
+        if ($this->input === null) {
             return [];
         }
 
-        if ($this->with instanceof Closure) {
-            return ($this->with)($parentContext);
+        // MachineInput class reference — auto-resolve from context
+        if (is_string($this->input) && class_exists($this->input) && is_subclass_of($this->input, MachineInput::class)) {
+            $inputClass = $this->input;
+
+            return $inputClass::fromContext($parentContext)->toArray();
         }
 
+        // Closure — manual mapping
+        if ($this->input instanceof Closure) {
+            $result = ($this->input)($parentContext);
+
+            // Closure may return MachineInput instance or array
+            if ($result instanceof MachineInput) {
+                return $result->toArray();
+            }
+
+            return $result;
+        }
+
+        // Array — untyped key mapping (renamed `with` behavior)
         $childContext = [];
 
-        foreach ($this->with as $key => $value) {
+        foreach ($this->input as $key => $value) {
             if (is_int($key)) {
-                // Format 1: ['order_id'] → same name
+                // Format 1: ['orderId'] → same name
                 $childContext[$value] = $parentContext->get($value);
             } else {
-                // Format 2: ['amount' => 'total_amount'] → rename
+                // Format 2: ['amount' => 'totalAmount'] → rename
                 $childContext[$key] = $parentContext->get($value);
             }
         }

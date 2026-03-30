@@ -72,6 +72,31 @@ class HasItemsGuard extends GuardBehavior
 }
 ```
 
+## MachineInput and Context
+
+When a child machine is invoked with a `MachineInput` class, the input properties are automatically merged into the child's initial context. This means the child can access input values via `$context->get('key')` as if they were defined in the `context` array:
+
+```php ignore
+// Parent delegates with typed input
+'processing_payment' => [
+    'machine' => PaymentMachine::class,
+    'input'   => PaymentInput::class,  // has orderId, amount
+    '@done'   => 'completed',
+],
+
+// Child can read input values from context
+class CapturePaymentAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        $orderId = $context->get('orderId');  // from MachineInput
+        $amount  = $context->get('amount');   // from MachineInput
+    }
+}
+```
+
+The merge happens after the child's default context is initialized, so `MachineInput` values override any matching default context keys.
+
 ## Key Concepts
 
 | Concept | Description |
@@ -79,6 +104,7 @@ class HasItemsGuard extends GuardBehavior
 | **Initial Context** | Default values when machine starts |
 | **ContextManager** | Class that holds and manages context data |
 | **Custom Context** | Type-safe context with validation |
+| **MachineInput** | Typed input DTO that auto-merges into child context on delegation |
 | **Persistence** | Context is saved with each event |
 
 ## Learn More

@@ -149,6 +149,7 @@ export default withMermaid(
             { text: 'Overview', link: '/advanced/machine-delegation' },
             { text: 'Sync vs Async', link: '/advanced/async-delegation' },
             { text: 'Data Flow', link: '/advanced/delegation-data-flow' },
+            { text: 'Typed Contracts', link: '/advanced/typed-contracts' },
             { text: 'Patterns', link: '/advanced/delegation-patterns' },
             { text: 'Job Actors', link: '/advanced/job-actors' },
             { text: 'Time-Based Events', link: '/advanced/time-based-events' },

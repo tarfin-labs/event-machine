@@ -54,6 +54,22 @@ What happens:
 2. State is replayed to rebuild current position
 3. Context is reconstructed from event history
 
+## 1b. Input Validation (Delegation Only)
+
+When a machine is created as a child via the `machine` key with a typed `input`, the `MachineInput` is validated before the machine starts:
+
+```
+Parent enters delegation state
+  → Resolve input (MachineInput class, closure, or array)
+  → If MachineInput class: construct from parent context
+  → Validate required parameters
+  → If validation fails: MachineInputValidationException → @fail on parent
+  → If valid: merge input properties into child context
+  → Proceed to child start
+```
+
+In async mode, this validation happens inside `ChildMachineJob`. A validation failure dispatches `ChildMachineCompletionJob` with an error, routing `@fail` on the parent.
+
 ## 2. Start / Initial State
 
 The first time you interact with the machine, it enters the initial state:

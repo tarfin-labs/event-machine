@@ -459,3 +459,72 @@ return [
     'notes'   => $context->notes ?? [],
 ];
 ```
+
+## MachineOutput -- Typed Output DTO
+
+`MachineOutput` is a lightweight alternative to `OutputBehavior` for defining typed output contracts on final states. While `OutputBehavior` is a full behavior class with dependency injection and computation logic, `MachineOutput` is a plain DTO that maps context keys to typed properties.
+
+### Type Dispatch Order
+
+When resolving the output for a final state, EventMachine checks in this order:
+
+1. **Behavior registry** -- inline key resolved from `behavior.outputs`
+2. **MachineOutput** -- a class extending `MachineOutput`
+3. **OutputBehavior** -- a class extending `OutputBehavior`
+4. **Array** -- an array of context keys to filter
+5. **Closure** -- an inline closure
+
+### When to Use MachineOutput vs OutputBehavior
+
+| Use Case | Tool |
+|----------|------|
+| Simple context-to-output mapping | `MachineOutput` |
+| Computed values, formatting, external lookups | `OutputBehavior` |
+| Cross-team contract enforcement | `MachineOutput` |
+| Constructor DI (services, repos) | `OutputBehavior` |
+
+### Defining a MachineOutput
+
+```php ignore
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
+
+class PaymentOutput extends MachineOutput
+{
+    public function __construct(
+        public readonly string $paymentId,
+        public readonly int $amount,
+        public readonly string $status,
+    ) {}
+}
+```
+
+Attach it to a final state:
+
+```php ignore
+'charged' => [
+    'type'   => 'final',
+    'output' => PaymentOutput::class,
+],
+```
+
+### Composition: OutputBehavior Returning MachineOutput
+
+An `OutputBehavior` can return a `MachineOutput` instance when you need computation before producing a typed output:
+
+```php ignore
+class PaymentCompletedOutput extends OutputBehavior
+{
+    public function __invoke(ContextManager $context): PaymentOutput
+    {
+        return new PaymentOutput(
+            paymentId: $context->paymentId,
+            amount: $context->capturedAmount ?? $context->requestedAmount,
+            status: 'completed',
+        );
+    }
+}
+```
+
+::: tip Typed Contracts
+MachineOutput is part of the typed inter-machine contract system. See [Typed Contracts](/advanced/typed-contracts) for the full guide covering MachineInput, MachineOutput, and MachineFailure.
+:::

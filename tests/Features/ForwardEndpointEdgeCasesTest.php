@@ -7,7 +7,6 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
-use Tarfinlabs\EventMachine\Routing\ForwardContext;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Routing\ForwardedEndpointDefinition;
@@ -177,52 +176,6 @@ test('overlap rejection error message contains removal instructions', function (
     } catch (InvalidEndpointDefinitionException $e) {
         expect($e->getMessage())->toContain('Remove');
     }
-});
-
-// ═══════════════════════════════════════════════════════════════
-//  ForwardContext Injection Edge Cases
-// ═══════════════════════════════════════════════════════════════
-
-test('ForwardContext.childContext is the child ContextManager', function (): void {
-    $childCtx   = new ContextManager(['cardLast4' => '4242', 'status' => 'ok']);
-    $childDef   = ForwardChildEndpointMachine::definition();
-    $childState = State::forTesting(
-        context: $childCtx,
-        currentStateDefinition: $childDef->idMap['forward_endpoint_child.awaiting_confirmation'],
-    );
-
-    $fc = new ForwardContext(childContext: $childCtx, childState: $childState);
-
-    expect($fc->childContext)->toBe($childCtx)
-        ->and($fc->childContext->get('cardLast4'))->toBe('4242');
-});
-
-test('ForwardContext.childState exposes child state value', function (): void {
-    $childCtx   = new ContextManager(['orderId' => 1, 'cardLast4' => null, 'status' => 'pending']);
-    $childDef   = ForwardChildEndpointMachine::definition();
-    $childState = State::forTesting(
-        context: $childCtx,
-        currentStateDefinition: $childDef->idMap['forward_endpoint_child.awaiting_card'],
-    );
-
-    $fc = new ForwardContext(childContext: $childCtx, childState: $childState);
-
-    expect($fc->childState)->toBe($childState)
-        ->and($fc->childState->value)->toBe(['forward_endpoint_child.awaiting_card']);
-});
-
-test('ForwardContext can carry a child state in final state', function (): void {
-    $childCtx   = new ContextManager(['orderId' => 99, 'cardLast4' => '1111', 'status' => 'charged']);
-    $childDef   = ForwardChildEndpointMachine::definition();
-    $childState = State::forTesting(
-        context: $childCtx,
-        currentStateDefinition: $childDef->idMap['forward_endpoint_child.charged'],
-    );
-
-    $fc = new ForwardContext(childContext: $childCtx, childState: $childState);
-
-    expect($fc->childState->value)->toBe(['forward_endpoint_child.charged'])
-        ->and($fc->childContext->get('status'))->toBe('charged');
 });
 
 // ═══════════════════════════════════════════════════════════════

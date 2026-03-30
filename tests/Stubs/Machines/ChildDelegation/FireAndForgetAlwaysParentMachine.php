@@ -30,7 +30,7 @@ class FireAndForgetAlwaysParentMachine extends Machine
                     ],
                     'dispatching_verification' => [
                         'machine' => ImmediateChildMachine::class,
-                        'with'    => ['tckn'],
+                        'input'   => ['tckn'],
                         'queue'   => 'child-queue',
                         // No @done → fire-and-forget
                         'on' => ['@always' => 'prevented'],

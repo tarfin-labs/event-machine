@@ -27,7 +27,7 @@ class FullConfigForwardParentMachine extends Machine
                     'processing' => [
                         'machine' => ForwardChildEndpointMachine::class,
                         'queue'   => 'default',
-                        'with'    => ['orderId'],
+                        'input'   => ['orderId'],
                         'forward' => [
                             ProvideCardEvent::class => [
                                 'child_event'      => 'PROVIDE_CARD',

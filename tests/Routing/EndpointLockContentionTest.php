@@ -360,7 +360,7 @@ test('forwarded endpoint returns isProcessing:false on normal path', function ()
 
     $response->assertStatus(200);
     expect($response->json('data.isProcessing'))->toBeFalse()
-        ->and($response->json('data'))->toHaveKey('child');
+        ->and($response->json('data'))->toHaveKey('output');
 });
 
 // ═══════════════════════════════════════════════════════════════════════

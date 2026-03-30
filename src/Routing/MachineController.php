@@ -12,6 +12,8 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Validation\ValidationException;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
+use Tarfinlabs\EventMachine\Behavior\MachineFailure;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
@@ -19,6 +21,7 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
+use Tarfinlabs\EventMachine\Exceptions\MachineOutputInjectionException;
 
 class MachineController extends Controller
 {
@@ -248,6 +251,11 @@ class MachineController extends Controller
             $outputData = array_intersect_key($contextData, array_flip($outputKeys));
         } else {
             $outputData = $machine->output();
+
+            // Serialize MachineOutput for JSON response
+            if ($outputData instanceof MachineOutput) {
+                $outputData = $outputData->toArray();
+            }
         }
 
         $response = [
@@ -264,15 +272,12 @@ class MachineController extends Controller
 
     /**
      * Resolve and run a OutputBehavior using the InvokableBehavior parameter injection pattern.
-     *
-     * When a ForwardContext is provided, it is injected into the OutputBehavior
-     * so it can access the child machine's state and context.
      */
     protected function resolveAndRunOutput(
         string|array $outputKey,
         State $state,
         Machine $machine,
-        ?ForwardContext $forwardContext = null,
+        MachineOutput|MachineFailure|null $childOutput = null,
     ): mixed {
         $configParams = null;
 
@@ -285,15 +290,54 @@ class MachineController extends Controller
 
         $outputBehavior = $machine->definition->resolveOutputKey($outputKey);
 
+        // Check if OutputBehavior type-hints MachineOutput but no child output is available (forward endpoint contract mismatch)
+        if ($childOutput === null) {
+            $this->validateNoMachineOutputTypeHint($outputBehavior, is_string($outputKey) ? $outputKey : 'unknown', $state);
+        }
+
         $params = InvokableBehavior::injectInvokableBehaviorParameters(
             actionBehavior: $outputBehavior,
             state: $state,
             eventBehavior: $state->triggeringEvent ?? $state->currentEventBehavior,
-            forwardContext: $forwardContext,
+            childOutput: $childOutput,
             configParams: $configParams,
         );
 
         return $outputBehavior(...$params);
+    }
+
+    /**
+     * Validate that an OutputBehavior doesn't type-hint MachineOutput when no child output is available.
+     *
+     * Throws MachineOutputInjectionException when a forward endpoint OutputBehavior expects
+     * typed child output but the child's state doesn't define a MachineOutput.
+     */
+    private function validateNoMachineOutputTypeHint(object $outputBehavior, string $outputClass, State $state): void
+    {
+        try {
+            $method = new \ReflectionMethod($outputBehavior, '__invoke');
+
+            foreach ($method->getParameters() as $param) {
+                $type = $param->getType();
+
+                if ($type instanceof \ReflectionNamedType && is_subclass_of($type->getName(), MachineOutput::class)) {
+                    $childState        = $state->getForwardedChildState();
+                    $childStateName    = $childState?->currentStateDefinition?->key ?? 'unknown';
+                    $childMachineClass = $childState?->currentStateDefinition?->machine?->machineClass ?? 'unknown';
+
+                    throw MachineOutputInjectionException::missingChildOutput(
+                        outputBehaviorClass: $outputClass,
+                        expectedOutputClass: $type->getName(),
+                        childMachineClass: $childMachineClass,
+                        childStateName: $childStateName,
+                    );
+                }
+            }
+        } catch (MachineOutputInjectionException $e) {
+            throw $e;
+        } catch (\Throwable) {
+            // Reflection failed — skip validation
+        }
     }
 
     /**
@@ -432,18 +476,22 @@ class MachineController extends Controller
 
         $childState = $state->getForwardedChildState();
 
-        // Custom output behavior — runs on PARENT with ForwardContext injected
-        if ($outputKey !== null && $childState instanceof State) {
-            $forwardContext = new ForwardContext(
-                childContext: $childState->context,
-                childState: $childState,
-            );
+        // Custom output behavior — runs on PARENT, child's typed output available via injection
+        if ($outputKey !== null) {
+            // Resolve child's typed output for injection into parent's OutputBehavior
+            $childTypedOutput = null;
+            if ($childState instanceof State) {
+                $childOutputResolved = $machine->output();
+                if ($childOutputResolved instanceof MachineOutput) {
+                    $childTypedOutput = $childOutputResolved;
+                }
+            }
 
             $result = $this->resolveAndRunOutput(
                 outputKey: $outputKey,
                 state: $state,
                 machine: $machine,
-                forwardContext: $forwardContext,
+                childOutput: $childTypedOutput,
             );
 
             $rootEventId = $state->history->first()?->root_event_id;
@@ -458,7 +506,7 @@ class MachineController extends Controller
             ]], $statusCode);
         }
 
-        // Default response: parent state + child output
+        // Default response: parent state + child's resolved output
         $rootEventId = $state->history->first()?->root_event_id;
 
         $response = [
@@ -470,16 +518,13 @@ class MachineController extends Controller
         ];
 
         if ($childState instanceof State) {
-            $childContext = $childState->context->toResponseArray();
+            $childOutput = $childState->context->toResponseArray();
 
             if ($outputKeys !== null) {
-                $childContext = array_intersect_key($childContext, array_flip($outputKeys));
+                $childOutput = array_intersect_key($childOutput, array_flip($outputKeys));
             }
 
-            $response['child'] = [
-                'state'  => $childState->value,
-                'output' => $childContext,
-            ];
+            $response['output'] = $childOutput;
         }
 
         $response['isProcessing'] = $isProcessing;

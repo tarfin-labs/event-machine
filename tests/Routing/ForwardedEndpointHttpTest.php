@@ -145,10 +145,9 @@ test('it forwards event via parent endpoint and returns child state in response'
 
     $data = $response->json('data');
 
-    // Default forwarded response includes child.state
-    expect($data)->toHaveKey('child')
-        ->and($data['child'])->toHaveKey('state')
-        ->and($data['child']['state'])->toContain('forward_endpoint_child.awaiting_confirmation')
+    // Default forwarded response includes child output
+    expect($data)->toHaveKey('output')
+        ->and($data['output'])->toBeArray()
         ->and($data['isProcessing'])->toBeFalse();
 });
 
@@ -196,11 +195,9 @@ test('forwarded response includes child value and child context', function (): v
 
     $response->assertStatus(200);
 
-    $child = $response->json('data.child');
+    $output = $response->json('data.output');
 
-    expect($child)->toHaveKeys(['state', 'output'])
-        ->and($child['state'])->toContain('forward_endpoint_child.awaiting_confirmation')
-        ->and($child['output'])->toBeArray()
+    expect($output)->toBeArray()
         ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
@@ -213,14 +210,14 @@ test('child context reflects storeCardAction side effect', function (): void {
 
     $response->assertStatus(200);
 
-    // ContextManager::toArray() wraps in 'data' key
-    $childContextData = $response->json('data.child.output.data');
+    // Child output via toResponseArray — data nested under data key
+    $childOutput = $response->json('data.output.data');
 
     // storeCardAction stores last 4 digits and sets status
-    expect($childContextData)->toHaveKey('cardLast4')
-        ->and($childContextData['cardLast4'])->toBe('1111')
-        ->and($childContextData)->toHaveKey('status')
-        ->and($childContextData['status'])->toBe('card_provided')
+    expect($childOutput)->toHaveKey('cardLast4')
+        ->and($childOutput['cardLast4'])->toBe('1111')
+        ->and($childOutput)->toHaveKey('status')
+        ->and($childOutput['status'])->toBe('card_provided')
         ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
@@ -237,8 +234,7 @@ test('sequential forward events advance child through multiple states', function
     ]);
 
     $provideResponse->assertStatus(200);
-    expect($provideResponse->json('data.child.state'))
-        ->toContain('forward_endpoint_child.awaiting_confirmation');
+    expect($provideResponse->json('data.output'))->toBeArray();
 
     // Step 2: CONFIRM_PAYMENT -> child moves to charged (final)
     // CONFIRM_PAYMENT has result: PaymentStepOutput, so response is custom
@@ -250,17 +246,14 @@ test('sequential forward events advance child through multiple states', function
 
     $data = $confirmResponse->json('data');
 
-    // PaymentStepOutput returns custom keys — now nested under data.output
+    // PaymentStepOutput returns custom keys — nested under data.output
     $output = $data['output'];
     expect($output)->toHaveKey('orderId')
-        ->and($output)->toHaveKey('cardLast4')
-        ->and($output['cardLast4'])->toBe('1111')
-        ->and($output)->toHaveKey('childStep')
         ->and($data['isProcessing'])->toBeFalse();
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-//  Happy Path: OutputBehavior with ForwardContext
+//  Happy Path: OutputBehavior with child output
 // ═══════════════════════════════════════════════════════════════════════
 
 test('it runs parent OutputBehavior and returns custom response', function (): void {
@@ -280,13 +273,9 @@ test('it runs parent OutputBehavior and returns custom response', function (): v
 
     $data = $response->json('data');
 
-    // PaymentStepOutput reads parent context.order_id and child context.card_last4 — nested under output
+    // PaymentStepOutput reads parent context.orderId — nested under output
     $output = $data['output'];
     expect($output)->toHaveKey('orderId')
-        ->and($output)->toHaveKey('cardLast4')
-        ->and($output['cardLast4'])->toBe('0004')
-        ->and($output)->toHaveKey('childStep')
-        ->and($output['childStep'])->toContain('forward_endpoint_child')
         ->and($data['isProcessing'])->toBeFalse();
 });
 
@@ -303,13 +292,13 @@ test('PROVIDE_CARD without contextKeys returns full child context', function ():
 
     $response->assertStatus(200);
 
-    // ContextManager::toArray() wraps in 'data' key
-    $childContextData = $response->json('data.child.output.data');
+    // Child output via toResponseArray — data nested under data key
+    $childOutput = $response->json('data.output.data');
 
-    // No contextKeys filtering on PROVIDE_CARD -- full child context
-    expect($childContextData)->toHaveKey('orderId')
-        ->and($childContextData)->toHaveKey('cardLast4')
-        ->and($childContextData)->toHaveKey('status')
+    // No output filtering on PROVIDE_CARD — full child context
+    expect($childOutput)->toHaveKey('orderId')
+        ->and($childOutput)->toHaveKey('cardLast4')
+        ->and($childOutput)->toHaveKey('status')
         ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
@@ -463,8 +452,8 @@ test('FQCN Format 1 forward works end-to-end via HTTP', function (): void {
 
     $data = $response->json('data');
 
-    expect($data)->toHaveKey('child')
-        ->and($data['child']['state'])->toContain('forward_endpoint_child.awaiting_confirmation')
+    expect($data)->toHaveKey('output')
+        ->and($data['output'])->toBeArray()
         ->and($data['isProcessing'])->toBeFalse();
 });
 

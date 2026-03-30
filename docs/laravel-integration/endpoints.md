@@ -1140,7 +1140,7 @@ class OrderMachine extends Machine
                     'processing_payment' => [
                         'machine'  => PaymentMachine::class,
                         'queue'    => 'payments',
-                        'with'     => ['orderId'],
+                        'input'     => ['orderId'],
                         'forward'  => ['PROVIDE_CARD', 'CANCEL_ORDER' => 'ABORT'],
                         'on'       => [
                             '@done' => 'paid',
@@ -1223,34 +1223,36 @@ Forwarded endpoints are included in [`only`/`except`](#endpoint-filtering) filte
    → Returns combined parent + child state
 ```
 
-## ForwardContext
+## Child Output in Forwarded Endpoints
 
-When a forwarded endpoint has a custom `OutputBehavior`, you often need access to the child machine's context and state. Type-hint `ForwardContext` in your output's `__invoke()` method to receive it automatically:
+When a forwarded endpoint has a custom `OutputBehavior`, you can access the child machine's output by type-hinting the child's `MachineOutput` class in your output's `__invoke()` method:
 
 ```php no_run
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Routing\ForwardContext;
 
 class CardSubmittedOutput extends OutputBehavior
 {
-    public function __invoke(ContextManager $context, ForwardContext $forwardContext): array
+    public function __invoke(ContextManager $context, PaymentOutput $childOutput): array
     {
         return [
-            'orderId'     => $context->get('orderId'),
-            'cardStatus'  => $forwardContext->childContext->get('status'),
-            'childState' => $forwardContext->childState->value,
+            'orderId'    => $context->get('orderId'),
+            'cardStatus' => $childOutput->status,
+            'cardLast4'  => $childOutput->cardLast4,
         ];
     }
 }
 ```
 
-`ForwardContext` is a value object with two properties:
+The `MachineOutput` instance is resolved from the child machine's final state output definition and injected automatically. This replaces the previous `ForwardContext` value object with a typed, contract-driven approach.
 
-- `childContext` (`ContextManager`) — the child machine's context after the forwarded event
-- `childState` (`State`) — the child machine's full state after the forwarded event
+::: warning ForwardContext Removed
+`ForwardContext` has been removed. If you were type-hinting `ForwardContext` in your output behaviors, replace it with the child machine's `MachineOutput` class. This provides the same data access with stronger typing.
+:::
 
-`ForwardContext` is only injected for forwarded endpoints. In regular endpoints, it is not available. The injection uses the same `InvokableBehavior` parameter resolution that all behaviors use — no special setup is needed.
+::: danger MachineOutputInjectionException
+If you type-hint a `MachineOutput` subclass in an output behavior but the child machine does not define a matching output, a `MachineOutputInjectionException` is thrown. Ensure the child machine's final state has an `output` key that produces the expected `MachineOutput` type.
+:::
 
 ## Migration Guide
 

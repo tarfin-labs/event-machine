@@ -6,7 +6,6 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Routing\ForwardContext;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
@@ -35,7 +34,7 @@ class ForwardParentEndpointMachine extends Machine
                     'processing' => [
                         'machine' => ForwardChildEndpointMachine::class,
                         'queue'   => 'default',
-                        'with'    => ['orderId'],
+                        'input'   => ['orderId'],
                         'forward' => [
                             'PROVIDE_CARD',
                             'CONFIRM_PAYMENT' => [
@@ -71,12 +70,10 @@ class ForwardParentEndpointMachine extends Machine
 
 class PaymentStepOutput extends OutputBehavior
 {
-    public function __invoke(ContextManager $context, ForwardContext $forwardContext): array
+    public function __invoke(ContextManager $context): array
     {
         return [
-            'orderId'   => $context->get('orderId'),
-            'cardLast4' => $forwardContext->childContext->get('cardLast4'),
-            'childStep' => $forwardContext->childState->value[0] ?? null,
+            'orderId' => $context->get('orderId'),
         ];
     }
 }

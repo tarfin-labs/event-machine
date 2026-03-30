@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Jobs;
 
-use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
+use Tarfinlabs\EventMachine\Contracts\ReturnsOutput;
 
 /**
- * A test job actor that succeeds and returns a result.
+ * A test job actor that succeeds and returns output.
  */
-class SuccessfulTestJob implements ReturnsResult
+class SuccessfulTestJob implements ReturnsOutput
 {
     public function __construct(
         public readonly ?string $orderId = null,
@@ -20,7 +20,7 @@ class SuccessfulTestJob implements ReturnsResult
         // Simulate work — no-op for testing
     }
 
-    public function result(): array
+    public function output(): array
     {
         return [
             'paymentId' => 'pay_test_123',

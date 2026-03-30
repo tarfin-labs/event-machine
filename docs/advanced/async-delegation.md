@@ -85,6 +85,16 @@ For comprehensive async delegation testing patterns, see [Delegation Testing](/t
 `Queue::fake()` verifies dispatch but not the full pipeline (child runs → completes → parent routes). For end-to-end verification with real infrastructure, see [Recipe: Full Async Delegation Pipeline](/testing/recipes#recipe-full-async-delegation-pipeline).
 :::
 
+## Typed Contracts in Async Mode
+
+Typed contracts (`MachineInput`, `MachineOutput`, `MachineFailure`) work identically for sync and async delegation. In async mode:
+
+- **Input** is validated inside `ChildMachineJob` before the child machine starts. If validation fails, `@fail` fires on the parent.
+- **Output** is serialized via `toArray()` and carried through `ChildMachineCompletionJob` back to the parent.
+- **Failure** is serialized via `toArray()` and carried through the completion job's error payload.
+
+No special configuration is needed -- the same `input`, `output`, and `failure` keys work regardless of whether `queue` is set.
+
 ## Queue Configuration
 
 <!-- doctest-attr: ignore -->
@@ -243,7 +253,7 @@ class OrderMachine extends Machine
                     'processing_payment' => [
                         'machine' => PaymentFlowMachine::class,
                         'queue'   => 'default',
-                        'with'    => ['orderId'],
+                        'input'    => ['orderId'],
                         'forward' => [
                             'PROVIDE_CARD',                      // Format 1: forward as-is
                             'CONFIRM_PAYMENT' => [               // Format 3: with endpoint customization

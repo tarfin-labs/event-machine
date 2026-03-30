@@ -30,6 +30,9 @@ Consistent naming makes your state machines easier to read, maintain, and debug.
 | Endpoint action inline key | camelCase | `{descriptiveName}EndpointAction` | `cancelEndpointAction` |
 | Endpoint output class | PascalCase | `{EventDerived}EndpointOutput` | `GuarantorSavedEndpointOutput` |
 | Endpoint output inline key | camelCase | `{eventDerived}EndpointOutput` | `guarantorSavedEndpointOutput` |
+| MachineInput class | PascalCase | `{Domain}Input` | `PaymentInput` |
+| MachineOutput class | PascalCase | `{Domain}Output` or `{State}Output` | `PaymentOutput`, `ApprovedOutput` |
+| MachineFailure class | PascalCase | `{Domain}Failure` | `PaymentFailure` |
 | Resolver class | PascalCase | `{Description}Resolver` | `ExpiredApplicationsResolver` |
 | Endpoint URI (auto) | kebab-case | from event type | `/farmer-saved` |
 | Route name (auto) | snake_case | from event type | `machines.application.farmer_saved` |
@@ -663,6 +666,58 @@ class OrderConfirmationOutput extends OutputBehavior { ... }
 class RiskAssessmentOutput extends OutputBehavior { ... }
 ```
 
+## Typed Contracts
+
+Typed contracts (`MachineInput`, `MachineOutput`, `MachineFailure`) follow domain-driven naming. Constructor parameters use `camelCase`.
+
+### MachineInput
+
+Name after the **domain** the child machine serves. The suffix is always `Input`:
+
+```php ignore
+// Class name: {Domain}Input — PascalCase
+class PaymentInput extends MachineInput { ... }
+class VerificationInput extends MachineInput { ... }
+class ShippingInput extends MachineInput { ... }
+```
+
+### MachineOutput
+
+Name after the **domain** or the **final state** the output represents. The suffix is always `Output`:
+
+```php ignore
+// Domain-scoped (single output for the machine)
+class PaymentOutput extends MachineOutput { ... }
+
+// State-scoped (different output per final state)
+class ApprovedOutput extends MachineOutput { ... }
+class RejectedOutput extends MachineOutput { ... }
+```
+
+### MachineFailure
+
+Name after the **domain** the failure relates to. The suffix is always `Failure`:
+
+```php ignore
+class PaymentFailure extends MachineFailure { ... }
+class VerificationFailure extends MachineFailure { ... }
+```
+
+### Constructor Parameters
+
+All constructor parameters use `camelCase`, consistent with context keys and event payloads:
+
+```php ignore
+class PaymentInput extends MachineInput
+{
+    public function __construct(
+        public readonly string $orderId,       // camelCase
+        public readonly int $totalAmount,      // camelCase
+        public readonly ?string $couponCode,   // camelCase
+    ) {}
+}
+```
+
 ## Machine Definition
 
 ### Machine Classes
@@ -799,7 +854,7 @@ Data flowing between parent and child machines uses `camelCase`:
 // Parent → Child (input)
 'delegating' => [
     'machine' => PaymentMachine::class,
-    'with'    => ['orderId', 'totalAmount'],
+    'input'    => ['orderId', 'totalAmount'],
 ],
 
 // Child → Parent (output on final state)

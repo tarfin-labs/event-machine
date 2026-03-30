@@ -19,6 +19,7 @@ use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
 use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
@@ -67,6 +68,12 @@ class MachineDefinition
         'exit'       => [],
         'transition' => [],
     ];
+
+    /** The MachineInput class declared on this machine, or null if untyped. */
+    public ?string $inputClass = null;
+
+    /** The MachineFailure class declared on this machine, or null if untyped. */
+    public ?string $failureClass = null;
 
     /**
      * The map of state definitions to their ids.
@@ -147,6 +154,8 @@ class MachineDefinition
         $this->scenariosEnabled = isset($this->config['scenarios_enabled']) && $this->config['scenarios_enabled'] === true;
 
         $this->shouldPersist = $this->config['should_persist'] ?? $this->shouldPersist;
+        $this->inputClass    = $this->config['input'] ?? null;
+        $this->failureClass  = $this->config['failure'] ?? null;
 
         try {
             $parallelDispatchEnabled = config('machine.parallel_dispatch.enabled', false);
@@ -1469,7 +1478,7 @@ class MachineDefinition
             return;
         }
 
-        // Resolve child context from parent via `with` config
+        // Resolve child context from parent via `input` config
         $childContext      = $invokeDefinition->resolveChildContext($state->context);
         $childMachineClass = $invokeDefinition->machineClass;
 
@@ -1675,7 +1684,7 @@ class MachineDefinition
     {
         $childMachineClass = $invokeDefinition->machineClass;
 
-        // Resolve child context best-effort — with() closure may crash if
+        // Resolve child context best-effort — input() closure may crash if
         // calculators were spied (leaving model properties null). Gracefully
         // fall back to empty array so faked machines don't require full context.
         try {
@@ -1727,6 +1736,7 @@ class MachineDefinition
 
             $doneEvent = ChildMachineDoneEvent::forChild([
                 'output'        => $fake['output'] ?? [],
+                'output_class'  => $fake['output_class'] ?? null,
                 'machine_id'    => '',
                 'machine_class' => $childMachineClass,
                 'final_state'   => $fake['finalState'],
@@ -1846,8 +1856,13 @@ class MachineDefinition
             return ($finalState->output)($context);
         }
 
-        // String — delegate to unified resolution (FQCN → registry → error)
         if (is_string($finalState->output)) {
+            // MachineOutput class — auto-resolve from context
+            if (is_subclass_of($finalState->output, MachineOutput::class)) {
+                return $finalState->output::fromContext($context);
+            }
+
+            // OutputBehavior class — delegate to unified resolution (FQCN → registry → error)
             $behavior = $finalState->machine->resolveOutputKey($finalState->output);
 
             return $behavior($context);

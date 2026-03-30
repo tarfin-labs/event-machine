@@ -17,6 +17,7 @@ use Tarfinlabs\EventMachine\Support\ArrayUtils;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Illuminate\Contracts\Database\Eloquent\Castable;
 use Tarfinlabs\EventMachine\Services\ArchiveService;
@@ -52,7 +53,7 @@ class Machine implements Castable, JsonSerializable, Stringable
     /** Whether parallel region jobs were dispatched to the queue in this lifecycle */
     public bool $dispatched = false;
 
-    /** @var array<class-string, array{output: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>, creations: list<array>, sends: list<array>}> Machine-level fakes for testing. */
+    /** @var array<class-string, array{output: mixed, output_class: string|null, fail: bool, error: string|null, finalState: string|null, invocations: list<array>, creations: list<array>, sends: list<array>}> Machine-level fakes for testing. */
     private static array $machineFakes = [];
 
     /**
@@ -788,19 +789,23 @@ class Machine implements Castable, JsonSerializable, Stringable
      * @param  string|null  $finalState  The child's final state key — determines which `@done.{state}` route fires on the parent.
      */
     public static function fake(
-        ?array $output = null,
+        array|MachineOutput|null $output = null,
         bool $fail = false,
         ?string $error = null,
         ?string $finalState = null,
     ): void {
+        $outputData  = $output instanceof MachineOutput ? $output->toArray() : $output;
+        $outputClass = $output instanceof MachineOutput ? $output::class : null;
+
         self::$machineFakes[static::class] = [
-            'output'      => $output,
-            'fail'        => $fail,
-            'error'       => $error,
-            'finalState'  => $finalState,
-            'invocations' => [],
-            'creations'   => [],
-            'sends'       => [],
+            'output'       => $outputData,
+            'output_class' => $outputClass,
+            'fail'         => $fail,
+            'error'        => $error,
+            'finalState'   => $finalState,
+            'invocations'  => [],
+            'creations'    => [],
+            'sends'        => [],
         ];
     }
 
@@ -815,7 +820,7 @@ class Machine implements Castable, JsonSerializable, Stringable
     /**
      * Get the fake configuration for a machine class.
      *
-     * @return array{output: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>, creations: list<array>, sends: list<array>}|null
+     * @return array{output: mixed, output_class: string|null, fail: bool, error: string|null, finalState: string|null, invocations: list<array>, creations: list<array>, sends: list<array>}|null
      */
     public static function getMachineFake(?string $class = null): ?array
     {
@@ -1170,6 +1175,11 @@ class Machine implements Castable, JsonSerializable, Stringable
             $parsed         = BehaviorTupleParser::parse($outputBehavior[0], 'output');
             $outputBehavior = $parsed['definition'];
             $configParams   = $parsed['configParams'] ?: null;
+        }
+
+        // MachineOutput class — auto-resolve from context (before container resolution)
+        if (is_string($outputBehavior) && is_subclass_of($outputBehavior, MachineOutput::class)) {
+            return $outputBehavior::fromContext($this->state->context);
         }
 
         if (!is_callable($outputBehavior)) {

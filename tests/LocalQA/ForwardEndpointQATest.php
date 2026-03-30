@@ -265,7 +265,7 @@ it('LocalQA: parent OutputBehavior receives both parent and child context via HT
         'payload' => ['cardNumber' => '5555555555554444'],
     ])->assertStatus(200);
 
-    // Forward CONFIRM_PAYMENT (has result: PaymentStepOutput using ForwardContext)
+    // Forward CONFIRM_PAYMENT (has result: PaymentStepOutput using child output)
     $response = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
         'payload' => ['confirmationCode' => 'CTX-TEST'],
     ]);
@@ -370,10 +370,10 @@ it('LocalQA: available_events updates correctly through full forward lifecycle',
 });
 
 // ═══════════════════════════════════════════════════════════════
-//  P2: ForwardContext carries correct child data
+//  P2: child output carries correct child data
 // ═══════════════════════════════════════════════════════════════
 
-it('LocalQA: ForwardContext carries correct child data through real async flow', function (): void {
+it('LocalQA: child output carries correct child data through real async flow', function (): void {
     $machineId = createAndStartParent($this);
 
     // Forward PROVIDE_CARD with specific card number
@@ -381,7 +381,7 @@ it('LocalQA: ForwardContext carries correct child data through real async flow',
         'payload' => ['cardNumber' => '9876543210987654'],
     ])->assertStatus(200);
 
-    // Forward CONFIRM_PAYMENT (uses PaymentStepOutput with ForwardContext)
+    // Forward CONFIRM_PAYMENT (uses PaymentStepOutput with child output)
     $response = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
         'payload' => ['confirmationCode' => 'FC-VERIFY'],
     ]);
@@ -389,7 +389,7 @@ it('LocalQA: ForwardContext carries correct child data through real async flow',
     $response->assertStatus(200);
     $data = $response->json('data');
 
-    // ForwardContext->childContext->get('cardLast4') should be last 4 of card
+    // child output->childContext->get('cardLast4') should be last 4 of card
     expect($data)->toHaveKey('orderId')
         ->and($data)->toHaveKey('cardLast4')
         ->and($data['cardLast4'])->toBe('7654')

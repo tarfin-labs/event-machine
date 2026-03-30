@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Jobs\ChildJobJob;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
-use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
+use Tarfinlabs\EventMachine\Contracts\ReturnsOutput;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Exceptions\InvalidJobClassException;
@@ -84,7 +84,7 @@ it('dispatches ChildJobJob when entering a state with job key', function (): voi
                 ],
                 'sending' => [
                     'job'   => 'App\\Jobs\\SendEmailJob',
-                    'with'  => ['email'],
+                    'input' => ['email'],
                     '@done' => 'sent',
                     '@fail' => 'failed',
                 ],
@@ -120,7 +120,7 @@ it('dispatches fire-and-forget job and transitions immediately', function (): vo
                 ],
                 'logging' => [
                     'job'    => 'App\\Jobs\\AuditLogJob',
-                    'with'   => ['action'],
+                    'input'  => ['action'],
                     'target' => 'next_state',
                 ],
                 'next_state' => ['type' => 'final'],
@@ -146,8 +146,8 @@ it('dispatches fire-and-forget job and transitions immediately', function (): vo
 it('ChildJobJob runs job and dispatches completion with result', function (): void {
     Queue::fake();
 
-    // Create a test job that implements ReturnsResult
-    $testJobClass = new class() implements ReturnsResult {
+    // Create a test job that implements ReturnsOutput
+    $testJobClass = new class() implements ReturnsOutput {
         public string $messageId = '';
 
         public function handle(): void
@@ -155,7 +155,7 @@ it('ChildJobJob runs job and dispatches completion with result', function (): vo
             $this->messageId = 'msg_123';
         }
 
-        public function result(): array
+        public function output(): array
         {
             return ['message_id' => $this->messageId];
         }
@@ -310,13 +310,13 @@ it('ChildMachineJob rejects non-Machine class', function (): void {
     $job->handle();
 })->throws(InvalidMachineClassException::class, 'must exist and extend');
 
-it('ChildJobJob without ReturnsResult returns empty output', function (): void {
+it('ChildJobJob without ReturnsOutput returns empty output', function (): void {
     Queue::fake();
 
     $simpleJobClass = new class() {
         public function handle(): void
         {
-            // no ReturnsResult
+            // no ReturnsOutput
         }
     };
 

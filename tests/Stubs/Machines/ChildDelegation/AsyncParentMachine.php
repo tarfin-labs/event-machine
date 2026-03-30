@@ -37,7 +37,7 @@ class AsyncParentMachine extends Machine
                     ],
                     'processing' => [
                         'machine' => SimpleChildMachine::class,
-                        'with'    => ['orderId'],
+                        'input'   => ['orderId'],
                         'queue'   => 'child-queue',
                         'on'      => [
                             'CANCEL' => 'skipped',

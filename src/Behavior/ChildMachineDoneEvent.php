@@ -35,6 +35,24 @@ class ChildMachineDoneEvent extends EventBehavior
     }
 
     /**
+     * Get the typed MachineOutput instance, if available.
+     *
+     * Returns null when the child's output was untyped (array).
+     * Used by InvokableBehavior for typed injection in parent @done actions.
+     */
+    public function typedOutput(): ?MachineOutput
+    {
+        $outputClass = $this->payload['output_class'] ?? null;
+        $outputData  = $this->payload['output'] ?? [];
+
+        if ($outputClass === null || !is_subclass_of($outputClass, MachineOutput::class)) {
+            return null;
+        }
+
+        return new $outputClass(...$outputData);
+    }
+
+    /**
      * Get the child machine's root_event_id.
      */
     public function childMachineId(): string

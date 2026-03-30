@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine;
 
+use Tarfinlabs\EventMachine\Behavior\MachineInput;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\MachineFailure;
 use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidListenerDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
@@ -15,14 +17,14 @@ class StateConfigValidator
     private const ALLOWED_ROOT_KEYS = [
         'id', 'version', 'initial', 'status_events', 'context', 'states', 'on', 'type',
         'meta', 'entry', 'exit', 'description', 'scenarios_enabled',
-        'should_persist', 'delimiter', 'listen',
+        'should_persist', 'delimiter', 'listen', 'input', 'failure',
     ];
 
     private const ALLOWED_LISTEN_KEYS = ['entry', 'exit', 'transition'];
 
     private const ALLOWED_STATE_KEYS = [
         'id', 'on', 'states', 'initial', 'type', 'meta', 'entry', 'exit', 'description', 'output', '@done', '@fail',
-        'machine', 'with', 'forward', 'queue', 'connection', '@timeout', 'retry', 'output',
+        'machine', 'input', 'forward', 'queue', 'connection', '@timeout', 'retry', 'output',
         'job', 'target',
     ];
 
@@ -93,6 +95,15 @@ class StateConfigValidator
 
         if (isset($config['listen'])) {
             self::validateListenConfig($config['listen']);
+        }
+
+        // Validate typed contract declarations
+        if (isset($config['input']) && is_string($config['input']) && class_exists($config['input']) && !is_subclass_of($config['input'], MachineInput::class)) {
+            throw InvalidStateConfigException::invalidInputClass($config['input']);
+        }
+
+        if (isset($config['failure']) && (!is_string($config['failure']) || !class_exists($config['failure']) || !is_subclass_of($config['failure'], MachineFailure::class))) {
+            throw InvalidStateConfigException::invalidFailureClass(is_string($config['failure']) ? $config['failure'] : gettype($config['failure']));
         }
     }
 
