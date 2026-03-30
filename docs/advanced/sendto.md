@@ -103,7 +103,7 @@ Combine `dispatchToParent()` with the parent's `on` map for bidirectional commun
 // Parent config — receives progress updates while child runs
 'batch_processing' => [
     'machine' => BatchProcessMachine::class,
-    'with'    => ['items'],
+    'input'    => ['items'],
     'queue'   => 'batch',
     '@done'   => 'completed',
     '@fail'   => 'failed',
