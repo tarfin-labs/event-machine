@@ -1458,7 +1458,7 @@ class MachineDefinition
             return;
         }
 
-        // Resolve child context from parent via `with` config
+        // Resolve child context from parent via `input` config
         $childContext      = $invokeDefinition->resolveChildContext($state->context);
         $childMachineClass = $invokeDefinition->machineClass;
 
