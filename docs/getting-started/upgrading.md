@@ -230,6 +230,84 @@ Endpoints without a custom output use the current state's output (or `toResponse
 8. In tests: `ChildMachineDoneEvent::result()` → `ChildMachineDoneEvent::output()`
 9. Update API consumers for new response envelope keys (`id`, `state`, `output`, `availableEvents`)
 
+### Typed Contracts — `with` → `input`, `MachineInput`/`MachineOutput`/`MachineFailure`
+
+v9 introduces typed contracts for delegation boundaries. Machines and jobs can declare what data they expect (input), produce (output), and how their exceptions map to structured errors (failure).
+
+**`with` → `input`:**
+
+| Before (v8) | After (v9) | Effect |
+|-------------|------------|--------|
+| `'with' => ['orderId', 'amount']` | `'input' => ['orderId', 'amount']` | Untyped key mapping (renamed) |
+| `'with' => ['amount' => 'totalAmount']` | `'input' => ['amount' => 'totalAmount']` | Key rename mapping (renamed) |
+| N/A | `'input' => PaymentInput::class` | Typed: auto-resolve from parent context |
+| N/A | `'input' => fn(ContextManager $ctx) => new PaymentInput(...)` | Typed: closure adapter |
+
+**New machine config keys:**
+
+<!-- doctest-attr: ignore -->
+```php
+MachineDefinition::define(config: [
+    'id'      => 'payment',
+    'input'   => PaymentInput::class,    // declares expected input
+    'failure' => PaymentFailure::class,  // maps exceptions to typed failures
+    'initial' => 'processing',
+    'context' => ['paymentId' => null],
+]);
+```
+
+**Typed output on states via `MachineOutput`:**
+
+<!-- doctest-attr: ignore -->
+```php
+'completed' => [
+    'type'   => 'final',
+    'output' => PaymentOutput::class,   // extends MachineOutput — auto-resolved from context
+],
+```
+
+**Typed output in parent @done/@fail actions:**
+
+<!-- doctest-attr: ignore -->
+```php
+'@done' => [
+    'target'  => 'shipped',
+    'actions' => function (ContextManager $ctx, PaymentOutput $output): void {
+        $ctx->set('paymentId', $output->paymentId);  // IDE autocomplete
+    },
+],
+```
+
+### Job Interface Renames
+
+| Before (v8) | After (v9) |
+|-------------|------------|
+| `ReturnsResult` | `ReturnsOutput` |
+| `result()` | `output()` |
+| `ProvidesFailureContext` | `ProvidesFailure` |
+| `failureContext(Throwable): array` | `failure(Throwable): MachineFailure` |
+
+### ForwardContext Removed
+
+`ForwardContext` is removed. Forward endpoint `OutputBehavior` classes now inject child's `MachineOutput` by type-hint instead of accessing raw child internals. Forward endpoints without custom `OutputBehavior` use child's `$machine->output()` directly.
+
+### Machine::fake() Parameter Rename
+
+| Before (v8) | After (v9) |
+|-------------|------------|
+| `Machine::fake(result: [...])` | `Machine::fake(output: [...])` |
+| N/A | `Machine::fake(output: new PaymentOutput(...))` |
+
+### Migration Checklist (typed contracts)
+
+1. Rename `'with' =>` to `'input' =>` in all delegation configs
+2. Rename `ReturnsResult` → `ReturnsOutput`, `result()` → `output()` in job actors
+3. Rename `ProvidesFailureContext` → `ProvidesFailure`, `failureContext()` → `failure()` — return type changes to `MachineFailure`
+4. Replace `ForwardContext` type-hints with child's `MachineOutput` type-hint
+5. Optionally: define `MachineInput`/`MachineOutput`/`MachineFailure` subclasses
+6. Optionally: add `'input'` and `'failure'` to machine configs
+7. Run `composer quality`
+
 ---
 
 ## From 7.x to 8.0
