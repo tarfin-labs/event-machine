@@ -17,6 +17,7 @@ use Tarfinlabs\EventMachine\Support\ArrayUtils;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Illuminate\Contracts\Database\Eloquent\Castable;
 use Tarfinlabs\EventMachine\Services\ArchiveService;
@@ -1162,6 +1163,11 @@ class Machine implements Castable, JsonSerializable, Stringable
     private function resolveOutputBehavior(mixed $outputBehavior): mixed
     {
         $arguments = null;
+
+        // MachineOutput class — auto-resolve from context (before container resolution)
+        if (is_string($outputBehavior) && is_subclass_of($outputBehavior, MachineOutput::class)) {
+            return $outputBehavior::fromContext($this->state->context);
+        }
 
         if (!is_callable($outputBehavior)) {
             if (str_contains((string) $outputBehavior, ':')) {
