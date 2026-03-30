@@ -573,7 +573,7 @@ $results->first()->machineId;   // root_event_id
 $results->first()->machine();   // full Machine instance (lazy)
 ```
 
-Key features: leaf/exact/parent/wildcard state matching, `active()`/`notInFinalState()` helpers, automatic parallel state deduplication, `LengthAwarePaginator` support.
+Key features: leaf/exact/parent/wildcard state matching, `active()`/`notInFinalState()` helpers, `inAllStates()` for parallel AND queries, automatic parallel state deduplication, `LengthAwarePaginator` support.
 
 See [Querying Machines](https://eventmachine.dev/laravel-integration/persistence#querying-machines) for full documentation.
 
