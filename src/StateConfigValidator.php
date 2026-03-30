@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine;
 
-use InvalidArgumentException;
 use Tarfinlabs\EventMachine\Behavior\MachineInput;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\MachineFailure;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidListenerDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
 class StateConfigValidator
@@ -44,7 +45,7 @@ class StateConfigValidator
      * It validates the root level configuration and recursively validates
      * all nested states and their transitions.
      *
-     * @throws InvalidArgumentException When configuration validation fails
+     * @throws InvalidStateConfigException When configuration validation fails
      */
     public static function validate(?array $config): void
     {
@@ -58,7 +59,7 @@ class StateConfigValidator
         // Validate states if they exist
         if (isset($config['states'])) {
             if (!is_array($config['states'])) {
-                throw new InvalidArgumentException(message: 'States configuration must be an array.');
+                throw InvalidStateConfigException::statesMustBeArray();
             }
 
             foreach ($config['states'] as $stateName => $stateConfig) {
@@ -79,7 +80,7 @@ class StateConfigValidator
     /**
      * Validates root level configuration.
      *
-     * @throws InvalidArgumentException
+     * @throws InvalidStateConfigException
      */
     private static function validateRootConfig(array $config): void
     {
@@ -89,10 +90,7 @@ class StateConfigValidator
         );
 
         if ($invalidRootKeys !== []) {
-            throw new InvalidArgumentException(
-                message: 'Invalid root level configuration keys: '.implode(separator: ', ', array: $invalidRootKeys).
-                '. Allowed keys are: '.implode(separator: ', ', array: self::ALLOWED_ROOT_KEYS)
-            );
+            throw InvalidStateConfigException::invalidRootKeys($invalidRootKeys, self::ALLOWED_ROOT_KEYS);
         }
 
         if (isset($config['listen'])) {
@@ -101,13 +99,13 @@ class StateConfigValidator
 
         // Validate typed contract declarations
         if (isset($config['input']) && is_string($config['input']) && class_exists($config['input']) && !is_subclass_of($config['input'], MachineInput::class)) {
-            throw new InvalidArgumentException(
+            throw new InvalidStateConfigException(
                 message: "Root 'input' key must be a MachineInput subclass, array, or closure. Got: {$config['input']}"
             );
         }
 
         if (isset($config['failure']) && (!is_string($config['failure']) || !class_exists($config['failure']) || !is_subclass_of($config['failure'], MachineFailure::class))) {
-            throw new InvalidArgumentException(
+            throw new InvalidStateConfigException(
                 message: "Root 'failure' key must be a MachineFailure subclass. Got: ".(is_string($config['failure']) ? $config['failure'] : gettype($config['failure']))
             );
         }
@@ -116,18 +114,29 @@ class StateConfigValidator
     private static function validateListenConfig(mixed $listen): void
     {
         if (!is_array($listen)) {
-            throw new InvalidArgumentException(
-                message: "The 'listen' configuration must be an array."
-            );
+            throw InvalidStateConfigException::invalidListenConfig();
         }
 
         $invalidKeys = array_diff(array_keys($listen), self::ALLOWED_LISTEN_KEYS);
 
         if ($invalidKeys !== []) {
-            throw new InvalidArgumentException(
-                message: "Invalid 'listen' keys: ".implode(', ', $invalidKeys).
-                '. Allowed keys are: '.implode(', ', self::ALLOWED_LISTEN_KEYS)
-            );
+            throw InvalidStateConfigException::invalidListenKeys($invalidKeys, self::ALLOWED_LISTEN_KEYS);
+        }
+
+        // Validate individual listener elements — reject old class-as-key format
+        foreach (self::ALLOWED_LISTEN_KEYS as $hookKey) {
+            if (!isset($listen[$hookKey])) {
+                continue;
+            }
+
+            $raw = is_array($listen[$hookKey]) ? $listen[$hookKey] : [$listen[$hookKey]];
+
+            foreach ($raw as $k => $v) {
+                // Old format: ClassName::class => ['queue' => true] — string key with array value
+                if (is_string($k) && is_array($v)) {
+                    throw InvalidListenerDefinitionException::classAsKey($k);
+                }
+            }
         }
     }
 
@@ -145,7 +154,7 @@ class StateConfigValidator
      * The validation order is important: we validate nested states first,
      * then process the transitions to ensure proper context.
      *
-     * @throws InvalidArgumentException When state configuration is invalid
+     * @throws InvalidStateConfigException When state configuration is invalid
      */
     private static function validateStateConfig(?array $stateConfig, string $path): void
     {
@@ -155,10 +164,7 @@ class StateConfigValidator
 
         // Check for transitions defined outside 'on'
         if (isset($stateConfig['@always']) || array_key_exists(key: '@always', array: $stateConfig)) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has transitions defined directly. ".
-                "All transitions including '@always' must be defined under the 'on' key."
-            );
+            throw InvalidStateConfigException::alwaysMustBeUnderOn($path);
         }
 
         // Validate state keys (filter out dynamic @done.{state} keys before checking)
@@ -168,10 +174,7 @@ class StateConfigValidator
         );
         $invalidKeys = array_diff($configKeysToValidate, self::ALLOWED_STATE_KEYS);
         if ($invalidKeys !== []) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has invalid keys: ".implode(separator: ', ', array: $invalidKeys).
-                '. Allowed keys are: '.implode(separator: ', ', array: self::ALLOWED_STATE_KEYS)
-            );
+            throw InvalidStateConfigException::invalidStateKeys($path, $invalidKeys, self::ALLOWED_STATE_KEYS);
         }
 
         // Validate state type if specified
@@ -206,9 +209,7 @@ class StateConfigValidator
                 $suffix = substr((string) $key, 6);
 
                 if ($suffix === '') {
-                    throw new InvalidArgumentException(
-                        message: "State '{$path}' has invalid key '@done.' — final state name after the dot cannot be empty."
-                    );
+                    throw InvalidStateConfigException::emptyDoneDotSuffix($path);
                 }
 
                 self::validateDoneFailConfig($value, $key, $path);
@@ -217,10 +218,7 @@ class StateConfigValidator
 
         // @done.{state} requires machine delegation
         if (self::hasDoneDotKeys($stateConfig) && !isset($stateConfig['machine'])) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has @done.{state} keys but no 'machine' delegation. "
-                    .'Per-final-state routing is only valid on states that delegate to a child machine.'
-            );
+            throw InvalidStateConfigException::doneDotRequiresMachine($path);
         }
 
         // Validate machine delegation configuration (after @done.{state} validation)
@@ -236,9 +234,7 @@ class StateConfigValidator
         // Process nested states first to ensure proper context
         if (isset($stateConfig['states'])) {
             if (!is_array($stateConfig['states'])) {
-                throw new InvalidArgumentException(
-                    message: "State '{$path}' has invalid states configuration. States must be an array."
-                );
+                throw InvalidStateConfigException::invalidStatesConfig($path);
             }
 
             foreach ($stateConfig['states'] as $childKey => $childState) {
@@ -262,42 +258,35 @@ class StateConfigValidator
     /**
      * Validates state type configuration.
      *
-     * @throws InvalidArgumentException
+     * @throws InvalidStateConfigException
      */
     private static function validateStateType(array $stateConfig, string $path): void
     {
         if (!in_array($stateConfig['type'], haystack: self::VALID_STATE_TYPES, strict: true)) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has invalid type: {$stateConfig['type']}. ".
-                'Allowed types are: '.implode(separator: ', ', array: self::VALID_STATE_TYPES)
-            );
+            throw InvalidStateConfigException::invalidStateType($path, $stateConfig['type'], self::VALID_STATE_TYPES);
         }
     }
 
     /**
      * Validates final state constraints.
      *
-     * @throws InvalidArgumentException
+     * @throws InvalidStateConfigException
      */
     private static function validateFinalState(array $stateConfig, string $path): void
     {
         if (isset($stateConfig['on'])) {
-            throw new InvalidArgumentException(
-                message: "Final state '{$path}' cannot have transitions"
-            );
+            throw InvalidStateConfigException::finalStateCannotHaveTransitions($path);
         }
 
         if (isset($stateConfig['states'])) {
-            throw new InvalidArgumentException(
-                message: "Final state '{$path}' cannot have child states"
-            );
+            throw InvalidStateConfigException::finalStateCannotHaveChildStates($path);
         }
     }
 
     /**
      * Validates parallel state constraints.
      *
-     * @throws InvalidArgumentException
+     * @throws InvalidStateConfigException|InvalidParallelStateDefinitionException
      */
     private static function validateParallelState(array $stateConfig, string $path): void
     {
@@ -306,9 +295,7 @@ class StateConfigValidator
         }
 
         if (!isset($stateConfig['states']) || !is_array($stateConfig['states']) || $stateConfig['states'] === []) {
-            throw new InvalidArgumentException(
-                message: "Parallel state '{$path}' must have at least one region defined in 'states'."
-            );
+            throw InvalidStateConfigException::parallelStateMustHaveRegions($path);
         }
 
         // Validate no cross-region transitions exist
@@ -318,7 +305,7 @@ class StateConfigValidator
     /**
      * Validates state entry and exit actions.
      *
-     * @throws InvalidArgumentException
+     * @throws InvalidStateConfigException
      */
     private static function validateStateActions(array $stateConfig, string $path): void
     {
@@ -326,10 +313,7 @@ class StateConfigValidator
             if (isset($stateConfig[$actionType])) {
                 $actions = $stateConfig[$actionType];
                 if (!is_string($actions) && !is_array($actions)) {
-                    throw new InvalidArgumentException(
-                        message: "State '{$path}' has invalid entry/exit actions configuration. ".
-                        'Actions must be an array or string.'
-                    );
+                    throw InvalidStateConfigException::invalidStateActions($path);
                 }
             }
         }
@@ -341,7 +325,7 @@ class StateConfigValidator
      * This method processes both standard event names and Event class names as transition triggers.
      * It ensures that all transitions are properly formatted and contain valid configuration.
      *
-     * @throws InvalidArgumentException When transitions configuration is invalid
+     * @throws InvalidStateConfigException When transitions configuration is invalid
      */
     private static function validateTransitionsConfig(
         mixed $transitionsConfig,
@@ -349,9 +333,7 @@ class StateConfigValidator
         ?array $parentState = null
     ): void {
         if (!is_array($transitionsConfig)) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has invalid 'on' definition. 'on' must be an array of transitions."
-            );
+            throw InvalidStateConfigException::invalidTransitionsConfig($path);
         }
 
         foreach ($transitionsConfig as $eventName => $transition) {
@@ -392,10 +374,7 @@ class StateConfigValidator
         }
 
         if (!is_array($transition)) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has invalid transition for event '{$eventName}'. ".
-                'Transition must be a string (target state) or an array (transition config).'
-            );
+            throw InvalidStateConfigException::invalidTransitionFormat($path, $eventName);
         }
 
         // Strip timer keys (after/every/max/then) before validating transition structure
@@ -427,11 +406,7 @@ class StateConfigValidator
         // Validate allowed keys
         $invalidKeys = array_diff(array_keys($transitionConfig), self::ALLOWED_TRANSITION_KEYS);
         if ($invalidKeys !== []) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has invalid keys in transition config for event '{$eventName}': ".
-                    implode(separator: ', ', array: $invalidKeys).
-                    '. Allowed keys are: '.implode(separator: ', ', array: self::ALLOWED_TRANSITION_KEYS)
-            );
+            throw InvalidStateConfigException::invalidTransitionKeys($path, $eventName, $invalidKeys, self::ALLOWED_TRANSITION_KEYS);
         }
 
         // Normalize and validate behaviors
@@ -452,15 +427,12 @@ class StateConfigValidator
             'calculators' => 'Calculators',
         ];
 
-        foreach ($behaviors as $behavior => $label) {
+        foreach (array_keys($behaviors) as $behavior) {
             if (isset($transitionConfig[$behavior])) {
                 try {
                     $transitionConfig[$behavior] = self::normalizeArrayOrString(value: $transitionConfig[$behavior]);
-                } catch (InvalidArgumentException) {
-                    throw new InvalidArgumentException(
-                        message: "State '{$path}' has invalid {$behavior} configuration for event '{$eventName}'. ".
-                        "{$label} must be an array or string."
-                    );
+                } catch (InvalidStateConfigException) {
+                    throw InvalidStateConfigException::invalidBehaviorConfig($path, $eventName, $behavior);
                 }
             }
         }
@@ -472,26 +444,17 @@ class StateConfigValidator
     private static function validateGuardedTransitions(array $conditions, string $path, string $eventName): void
     {
         if ($conditions === []) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has empty conditions array for event '{$eventName}'. ".
-                         'Guarded transitions must have at least one condition.'
-            );
+            throw InvalidStateConfigException::emptyGuardedTransitions($path, $eventName);
         }
 
         foreach ($conditions as $index => $condition) {
             if (!is_array($condition)) {
-                throw new InvalidArgumentException(
-                    message: "State '{$path}' has invalid condition in transition for event '{$eventName}'. ".
-                             'Each condition must be an array with target/guards/actions.'
-                );
+                throw InvalidStateConfigException::invalidGuardedCondition($path, $eventName);
             }
 
             // If this is not the last condition and it has no guards
             if (!isset($condition['guards']) && $index !== count($conditions) - 1) {
-                throw new InvalidArgumentException(
-                    message: "State '{$path}' has invalid conditions order for event '{$eventName}'. ".
-                             'Default condition (no guards) must be the last condition.'
-                );
+                throw InvalidStateConfigException::defaultGuardMustBeLast($path, $eventName);
             }
         }
     }
@@ -502,7 +465,7 @@ class StateConfigValidator
      * Accepts the same formats as regular transitions: string target,
      * single config object, or conditional array of objects with guards.
      *
-     * @throws InvalidArgumentException
+     * @throws InvalidStateConfigException
      */
     private static function validateDoneFailConfig(mixed $config, string $key, string $path): void
     {
@@ -511,9 +474,7 @@ class StateConfigValidator
         }
 
         if (!is_array($config)) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has invalid '{$key}' configuration. Must be a string or array."
-            );
+            throw InvalidStateConfigException::invalidDoneFailConfig($path, $key);
         }
 
         if (array_is_list($config)) {
@@ -529,7 +490,7 @@ class StateConfigValidator
     /**
      * Validates machine delegation configuration.
      *
-     * @throws InvalidArgumentException
+     * @throws InvalidStateConfigException
      */
     private static function validateMachineConfig(array $stateConfig, string $path): void
     {
@@ -537,23 +498,17 @@ class StateConfigValidator
 
         // machine value must be a string (FQCN)
         if (!is_string($machineClass)) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has invalid 'machine' value. Must be a string (machine class FQCN)."
-            );
+            throw InvalidStateConfigException::invalidMachineValue($path);
         }
 
         // machine + type:parallel are mutually exclusive
         if (isset($stateConfig['type']) && $stateConfig['type'] === 'parallel') {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' cannot have both 'machine' and type 'parallel'. Machine delegation is only for atomic states."
-            );
+            throw InvalidStateConfigException::machineAndParallelConflict($path);
         }
 
         // forward requires queue (only valid in async mode)
         if (!empty($stateConfig['forward']) && !isset($stateConfig['queue'])) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has 'forward' without 'queue'. Event forwarding is only valid in async mode."
-            );
+            throw InvalidStateConfigException::forwardRequiresQueue($path);
         }
 
         // Validate Format 3 forward array entries
@@ -565,16 +520,11 @@ class StateConfigValidator
                     $unknownKeys = array_diff(array_keys($value), $allowedForwardKeys);
 
                     if ($unknownKeys !== []) {
-                        throw new InvalidArgumentException(
-                            message: "State '{$path}' forward entry '{$key}' has unknown keys: ".implode(', ', $unknownKeys)
-                                .'. Allowed: '.implode(', ', $allowedForwardKeys)
-                        );
+                        throw InvalidStateConfigException::invalidForwardKeys($path, $key, $unknownKeys, $allowedForwardKeys);
                     }
 
                     if (isset($value['uri']) && !str_starts_with((string) $value['uri'], '/')) {
-                        throw new InvalidArgumentException(
-                            message: "State '{$path}' forward entry '{$key}' uri must start with '/'."
-                        );
+                        throw InvalidStateConfigException::forwardUriMustStartWithSlash($path, $key);
                     }
                 }
             }
@@ -585,59 +535,31 @@ class StateConfigValidator
         $isFireAndForget = isset($stateConfig['queue']) && !$hasDoneRouting;
 
         if ($isFireAndForget) {
-            // @fail is invalid — fire-and-forget doesn't track child failures
             if (isset($stateConfig['@fail'])) {
-                throw new InvalidArgumentException(
-                    message: "State '{$path}' has '@fail' without '@done'. "
-                           .'Fire-and-forget machine delegation does not support failure callbacks. '
-                           ."Add '@done' for managed delegation, or remove '@fail'."
-                );
+                throw InvalidStateConfigException::fireAndForgetCannotHaveFail($path);
             }
 
-            // @timeout is invalid — fire-and-forget doesn't track timing
             if (isset($stateConfig['@timeout'])) {
-                throw new InvalidArgumentException(
-                    message: "State '{$path}' has '@timeout' without '@done'. "
-                           .'Fire-and-forget machine delegation does not support timeout callbacks. '
-                           ."Add '@done' for managed delegation, or remove '@timeout'."
-                );
+                throw InvalidStateConfigException::fireAndForgetCannotHaveTimeout($path);
             }
 
-            // output is invalid — fire-and-forget doesn't receive results
             if (isset($stateConfig['output'])) {
-                throw new InvalidArgumentException(
-                    message: "State '{$path}' has 'output' without '@done'. "
-                           .'Fire-and-forget machine delegation does not produce output for the parent.'
-                );
+                throw InvalidStateConfigException::fireAndForgetCannotHaveOutput($path);
             }
 
-            // forward is invalid — no running child to forward to.
-            // Note: the no-queue + forward case is already rejected above (line 483).
-            // This branch only fires when queue IS present but @done is absent.
             if (!empty($stateConfig['forward'])) {
-                throw new InvalidArgumentException(
-                    message: "State '{$path}' has 'forward' without '@done'. "
-                           .'Fire-and-forget machine delegation does not support event forwarding.'
-                );
+                throw InvalidStateConfigException::fireAndForgetCannotHaveForward($path);
             }
         }
 
         // target validation (fire-and-forget with immediate transition)
         if (isset($stateConfig['target'])) {
-            // target requires queue (sync fire-and-forget with transition is contradictory)
             if (!isset($stateConfig['queue'])) {
-                throw new InvalidArgumentException(
-                    message: "State '{$path}' has 'machine' with 'target' but no 'queue'. "
-                           .'Fire-and-forget with immediate transition requires async execution.'
-                );
+                throw InvalidStateConfigException::targetRequiresQueue($path);
             }
 
-            // target + @done is ambiguous
             if (isset($stateConfig['@done'])) {
-                throw new InvalidArgumentException(
-                    message: "State '{$path}' cannot have both '@done' and 'target' with 'machine'. "
-                           ."Use '@done' for managed delegation or 'target' for fire-and-forget."
-                );
+                throw InvalidStateConfigException::targetAndDoneConflict($path);
             }
         }
 
@@ -648,59 +570,41 @@ class StateConfigValidator
     /**
      * Validates job actor configuration.
      *
-     * @throws InvalidArgumentException
+     * @throws InvalidStateConfigException
      */
     private static function validateJobConfig(array $stateConfig, string $path): void
     {
         $jobClass = $stateConfig['job'];
 
-        // job value must be a string (FQCN)
         if (!is_string($jobClass)) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has invalid 'job' value. Must be a string (job class FQCN)."
-            );
+            throw InvalidStateConfigException::invalidJobValue($path);
         }
 
-        // job + machine are mutually exclusive
         if (isset($stateConfig['machine'])) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' cannot have both 'job' and 'machine'. Use one or the other."
-            );
+            throw InvalidStateConfigException::jobAndMachineConflict($path);
         }
 
-        // job + type:parallel are mutually exclusive
         if (isset($stateConfig['type']) && $stateConfig['type'] === 'parallel') {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' cannot have both 'job' and type 'parallel'."
-            );
+            throw InvalidStateConfigException::jobAndParallelConflict($path);
         }
 
-        // forward is only valid for machine delegation, not jobs
         if (!empty($stateConfig['forward'])) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has 'forward' with 'job'. Event forwarding is only valid for machine delegation."
-            );
+            throw InvalidStateConfigException::forwardWithJobNotAllowed($path);
         }
 
-        // Fire-and-forget: job without @done requires target
         if (!isset($stateConfig['@done']) && !isset($stateConfig['target'])) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has 'job' without '@done' or 'target'. Either define '@done' (managed) or 'target' (fire-and-forget)."
-            );
+            throw InvalidStateConfigException::jobRequiresDoneOrTarget($path);
         }
 
-        // Ambiguous: @done + target
         if (isset($stateConfig['@done']) && isset($stateConfig['target'])) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' cannot have both '@done' and 'target'. Use '@done' for managed jobs or 'target' for fire-and-forget."
-            );
+            throw InvalidStateConfigException::jobDoneAndTargetConflict($path);
         }
     }
 
     /**
      * Normalizes the given value into an array or returns null.
      *
-     * @throws InvalidArgumentException If the value is neither string, array, nor null.
+     * @throws InvalidStateConfigException If the value is neither string, array, nor null.
      */
     private static function normalizeArrayOrString(mixed $value): ?array
     {
@@ -716,7 +620,7 @@ class StateConfigValidator
             return $value;
         }
 
-        throw new InvalidArgumentException('Value must be string, array or null');
+        throw InvalidStateConfigException::valueMustBeStringArrayOrNull();
     }
 
     /**
@@ -738,7 +642,7 @@ class StateConfigValidator
      *
      * Only runs when @done.{state} keys are present. Skips gracefully if child class is unresolvable.
      *
-     * @throws InvalidArgumentException When child final states are uncovered.
+     * @throws InvalidStateConfigException When child final states are uncovered.
      */
     private static function validateChildFinalStateCoverage(array $stateConfig, string $path): void
     {
@@ -778,12 +682,7 @@ class StateConfigValidator
         $uncovered = array_diff($childFinalStates, $doneStateKeys);
 
         if ($uncovered !== []) {
-            throw new InvalidArgumentException(
-                message: "State '{$path}' has @done.{state} routing but child machine "
-                    ."'{$machineClass}' has uncovered final states: "
-                    .implode(', ', $uncovered)
-                    .". Add specific '@done.{state}' keys or a catch-all '@done' to handle all outcomes."
-            );
+            throw InvalidStateConfigException::uncoveredChildFinalStates($path, $machineClass, $uncovered);
         }
     }
 
@@ -793,7 +692,7 @@ class StateConfigValidator
      * @param  array<string, array|null>  $regions  The regions defined under a parallel state
      * @param  string  $parallelPath  The dot-path of the parallel state
      *
-     * @throws InvalidArgumentException When a cross-region transition is detected
+     * @throws InvalidStateConfigException When a cross-region transition is detected
      */
     private static function validateNoCrossRegionTransitions(array $regions, string $parallelPath): void
     {
@@ -831,11 +730,7 @@ class StateConfigValidator
                     }
 
                     if (in_array($target, $siblingStates, true)) {
-                        throw new InvalidArgumentException(
-                            message: "Cross-region transition not allowed: state \"{$parallelPath}.{$regionName}.{$sourceName}\" "
-                                ."in region \"{$regionName}\" cannot target state \"{$target}\" in sibling region \"{$siblingRegionName}\". "
-                                .'Use events (raise/sendTo) to coordinate between regions.'
-                        );
+                        throw InvalidStateConfigException::crossRegionTransition($parallelPath, $regionName, $sourceName, $target, $siblingRegionName);
                     }
                 }
             }

@@ -11,6 +11,7 @@ use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Routing\ForwardedEndpointDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
+use Tarfinlabs\EventMachine\Exceptions\InvalidEndpointDefinitionException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\AbortEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ProvideCardEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\PaymentStepOutput;
@@ -136,7 +137,7 @@ test('overlap rejection throws when forward event collides with parent endpoints
             ],
             endpoints: ['PROVIDE_CARD'],
         );
-    })->toThrow(InvalidArgumentException::class);
+    })->toThrow(InvalidEndpointDefinitionException::class);
 });
 
 test('overlap rejection error message contains removal instructions', function (): void {
@@ -171,8 +172,8 @@ test('overlap rejection error message contains removal instructions', function (
             endpoints: ['PROVIDE_CARD'],
         );
 
-        test()->fail('Expected InvalidArgumentException was not thrown.');
-    } catch (InvalidArgumentException $e) {
+        test()->fail('Expected InvalidEndpointDefinitionException was not thrown.');
+    } catch (InvalidEndpointDefinitionException $e) {
         expect($e->getMessage())->toContain('Remove');
     }
 });

@@ -147,7 +147,8 @@ test('it forwards event via parent endpoint and returns child state in response'
 
     // Default forwarded response includes child output
     expect($data)->toHaveKey('output')
-        ->and($data['output'])->toBeArray();
+        ->and($data['output'])->toBeArray()
+        ->and($data['isProcessing'])->toBeFalse();
 });
 
 test('forwarded response includes parent machine_id and value', function (): void {
@@ -164,7 +165,8 @@ test('forwarded response includes parent machine_id and value', function (): voi
     expect($data)->toHaveKey('id')
         ->and($data['id'])->toBe($machineId)
         ->and($data)->toHaveKey('state')
-        ->and($data['state'])->toContain('forward_endpoint_parent.processing');
+        ->and($data['state'])->toContain('forward_endpoint_parent.processing')
+        ->and($data['isProcessing'])->toBeFalse();
 });
 
 test('forwarded default response includes availableEvents', function (): void {
@@ -180,7 +182,8 @@ test('forwarded default response includes availableEvents', function (): void {
 
     expect($data)->toHaveKey('availableEvents')
         ->and($data['availableEvents'])->toBeArray()
-        ->and($data['availableEvents'])->not->toBeEmpty();
+        ->and($data['availableEvents'])->not->toBeEmpty()
+        ->and($data['isProcessing'])->toBeFalse();
 });
 
 test('forwarded response includes child value and child context', function (): void {
@@ -194,7 +197,8 @@ test('forwarded response includes child value and child context', function (): v
 
     $output = $response->json('data.output');
 
-    expect($output)->toBeArray();
+    expect($output)->toBeArray()
+        ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
 test('child context reflects storeCardAction side effect', function (): void {
@@ -213,7 +217,8 @@ test('child context reflects storeCardAction side effect', function (): void {
     expect($childOutput)->toHaveKey('cardLast4')
         ->and($childOutput['cardLast4'])->toBe('1111')
         ->and($childOutput)->toHaveKey('status')
-        ->and($childOutput['status'])->toBe('card_provided');
+        ->and($childOutput['status'])->toBe('card_provided')
+        ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -243,7 +248,8 @@ test('sequential forward events advance child through multiple states', function
 
     // PaymentStepOutput returns custom keys — nested under data.output
     $output = $data['output'];
-    expect($output)->toHaveKey('orderId');
+    expect($output)->toHaveKey('orderId')
+        ->and($data['isProcessing'])->toBeFalse();
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -269,7 +275,8 @@ test('it runs parent OutputBehavior and returns custom response', function (): v
 
     // PaymentStepOutput reads parent context.orderId — nested under output
     $output = $data['output'];
-    expect($output)->toHaveKey('orderId');
+    expect($output)->toHaveKey('orderId')
+        ->and($data['isProcessing'])->toBeFalse();
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -291,7 +298,8 @@ test('PROVIDE_CARD without contextKeys returns full child context', function ():
     // No output filtering on PROVIDE_CARD — full child context
     expect($childOutput)->toHaveKey('orderId')
         ->and($childOutput)->toHaveKey('cardLast4')
-        ->and($childOutput)->toHaveKey('status');
+        ->and($childOutput)->toHaveKey('status')
+        ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -445,7 +453,8 @@ test('FQCN Format 1 forward works end-to-end via HTTP', function (): void {
     $data = $response->json('data');
 
     expect($data)->toHaveKey('output')
-        ->and($data['output'])->toBeArray();
+        ->and($data['output'])->toBeArray()
+        ->and($data['isProcessing'])->toBeFalse();
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -466,7 +475,8 @@ test('parent CANCEL event still works when forward endpoints are registered', fu
 
     $data = $response->json('data');
 
-    expect($data['state'])->toContain('forward_endpoint_parent.cancelled');
+    expect($data['state'])->toContain('forward_endpoint_parent.cancelled')
+        ->and($data['isProcessing'])->toBeFalse();
 });
 
 // ═══════════════════════════════════════════════════════════════════════

@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Routing;
 
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Route;
+use Tarfinlabs\EventMachine\Exceptions\InvalidRouterConfigException;
 
 /**
  * Registers Laravel routes for machine endpoints.
@@ -55,9 +56,7 @@ class MachineRouter
         $except = $options['except'] ?? null;
 
         if ($only !== null && $except !== null) {
-            throw new \InvalidArgumentException(
-                "MachineRouter: 'only' and 'except' cannot be used together."
-            );
+            throw InvalidRouterConfigException::onlyAndExceptConflict();
         }
 
         $onlyTypes = $only !== null
@@ -78,14 +77,7 @@ class MachineRouter
             $unknown     = array_diff($filterTypes, $allKnownTypes);
 
             if ($unknown !== []) {
-                throw new \InvalidArgumentException(
-                    sprintf(
-                        "MachineRouter: unknown event types in '%s': %s. Available: %s",
-                        $filterKey,
-                        implode(', ', $unknown),
-                        implode(', ', $allKnownTypes),
-                    )
-                );
+                throw InvalidRouterConfigException::unknownEventTypes($filterKey, $unknown, $allKnownTypes);
             }
         }
 
@@ -125,25 +117,13 @@ class MachineRouter
             $forwardedInMachineId = array_intersect($machineIdFor, $forwardedEventTypes);
 
             if ($forwardedInMachineId !== []) {
-                throw new \InvalidArgumentException(
-                    sprintf(
-                        "MachineRouter: 'machineIdFor' cannot reference forwarded endpoints "
-                        .'(they inherit binding mode from parent model config): %s',
-                        implode(', ', $forwardedInMachineId),
-                    )
-                );
+                throw InvalidRouterConfigException::forwardedInMachineIdFor($forwardedInMachineId);
             }
 
             $forwardedInModel = array_intersect($modelFor, $forwardedEventTypes);
 
             if ($forwardedInModel !== []) {
-                throw new \InvalidArgumentException(
-                    sprintf(
-                        "MachineRouter: 'modelFor' cannot reference forwarded endpoints "
-                        .'(they inherit binding mode from parent model config): %s',
-                        implode(', ', $forwardedInModel),
-                    )
-                );
+                throw InvalidRouterConfigException::forwardedInModelFor($forwardedInModel);
             }
         }
 
@@ -161,13 +141,7 @@ class MachineRouter
                 $context = sprintf('. Available: %s', implode(', ', $registeredEventTypes));
             }
 
-            throw new \InvalidArgumentException(
-                sprintf(
-                    "MachineRouter: 'machineIdFor' references event types not in the registered endpoint set: %s%s",
-                    implode(', ', $machineIdOrphans),
-                    $context,
-                )
-            );
+            throw InvalidRouterConfigException::orphanedMachineIdFor($machineIdOrphans, $context);
         }
 
         $modelOrphans = array_diff($modelFor, $registeredEventTypes);
@@ -181,27 +155,17 @@ class MachineRouter
                 $context = sprintf('. Available: %s', implode(', ', $registeredEventTypes));
             }
 
-            throw new \InvalidArgumentException(
-                sprintf(
-                    "MachineRouter: 'modelFor' references event types not in the registered endpoint set: %s%s",
-                    implode(', ', $modelOrphans),
-                    $context,
-                )
-            );
+            throw InvalidRouterConfigException::orphanedModelFor($modelOrphans, $context);
         }
 
         if ($modelFor !== [] && ($model === null || $attribute === null)) {
-            throw new \InvalidArgumentException(
-                "MachineRouter: 'model' and 'attribute' are required when 'modelFor' is set."
-            );
+            throw InvalidRouterConfigException::modelAndAttributeRequired();
         }
 
         $overlap = array_intersect($machineIdFor, $modelFor);
 
         if ($overlap !== []) {
-            throw new \InvalidArgumentException(
-                "MachineRouter: events cannot be in both 'machineIdFor' and 'modelFor': ".implode(', ', $overlap)
-            );
+            throw InvalidRouterConfigException::overlappingBindingModes($overlap);
         }
 
         $middleware = $options['middleware'] ?? [];

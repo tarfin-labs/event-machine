@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Tests\Stubs\Inputs\PaymentInput;
 use Tarfinlabs\EventMachine\Tests\Stubs\Failures\PaymentFailure;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 
 // ═══════════════════════════════════════════════════════════════
 //  Input Validation
@@ -33,7 +34,7 @@ test('invalid input class (not MachineInput subclass) throws', function (): void
             'idle' => ['type' => 'final'],
         ],
     ]);
-})->throws(InvalidArgumentException::class, "Root 'input' key must be a MachineInput subclass");
+})->throws(InvalidStateConfigException::class, "Root 'input' key must be a MachineInput subclass");
 
 test('input as array passes validation', function (): void {
     StateConfigValidator::validate([
@@ -76,7 +77,7 @@ test('invalid failure class throws', function (): void {
             'idle' => ['type' => 'final'],
         ],
     ]);
-})->throws(InvalidArgumentException::class, "Root 'failure' key must be a MachineFailure subclass");
+})->throws(InvalidStateConfigException::class, "Root 'failure' key must be a MachineFailure subclass");
 
 test('failure with non-string value throws', function (): void {
     StateConfigValidator::validate([
@@ -87,7 +88,7 @@ test('failure with non-string value throws', function (): void {
             'idle' => ['type' => 'final'],
         ],
     ]);
-})->throws(InvalidArgumentException::class, "Root 'failure' key must be a MachineFailure subclass");
+})->throws(InvalidStateConfigException::class, "Root 'failure' key must be a MachineFailure subclass");
 
 // ═══════════════════════════════════════════════════════════════
 //  Input — closure passes validation
@@ -120,4 +121,4 @@ test('failure key as non-existent class throws', function (): void {
             'idle' => ['type' => 'final'],
         ],
     ]);
-})->throws(InvalidArgumentException::class, "Root 'failure' key must be a MachineFailure subclass");
+})->throws(InvalidStateConfigException::class, "Root 'failure' key must be a MachineFailure subclass");

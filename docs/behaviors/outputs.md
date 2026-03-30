@@ -147,6 +147,38 @@ Three ways to attach an output — class reference, inline key, or inline closur
 ],
 ```
 
+All three formats use the same resolution mechanism described in [Behavior Resolution](/behaviors/introduction#behavior-resolution). Inline keys and class references work interchangeably in every context where an output can be defined: `$machine->output()`, endpoint responses, child machine outputs, and forwarded endpoint outputs.
+
+### Output Parameters
+
+Outputs support named parameters via tuple syntax, the same as guards and actions:
+
+```php ignore
+// In behavior.outputs map (final states)
+'outputs' => ['completed' => [[FormatOutput::class, 'format' => 'detailed']]],
+
+// In state-level output config (any state)
+'output' => [[FormatOutput::class, 'format' => 'detailed']],
+
+// Context key filter (unchanged) — plain array of strings
+'output' => ['orderId', 'totalAmount'],
+```
+
+**Inner-array rule:** A parameterized output is always an inner array (tuple), just like guards and actions. A plain array of strings is a context key filter. The framework disambiguates by checking whether the first element is a class/key string with named keys — if yes, it's a tuple; if the array contains only string values without named keys, it's a filter.
+
+```php ignore
+class FormatOutput extends OutputBehavior
+{
+    public function __invoke(ContextManager $context, string $format = 'summary'): array
+    {
+        return match ($format) {
+            'detailed' => ['orderId' => $context->orderId, 'items' => $context->items, 'total' => $context->total],
+            default    => ['orderId' => $context->orderId, 'total' => $context->total],
+        };
+    }
+}
+```
+
 ### Return Types
 
 Outputs can return any type — the return value of `$machine->output()` matches whatever your output behavior returns:
@@ -396,6 +428,17 @@ it('generates receipt via injected service', function () {
 ::: tip Full Testing Guide
 See [TestMachine](/testing/test-machine) for `assertFinished()` and output access.
 :::
+
+## Output Placement Rules
+
+Not every state can have an `output` definition. `InvalidOutputDefinitionException` is thrown when output is defined on:
+
+- **Transient states** — states with `@always` transitions are routing nodes, not resting states. Output would never be accessible since the machine immediately leaves.
+- **Parallel region states** — individual regions within a parallel state cannot define output. Only the parent parallel state (or its `@done` target) can produce output.
+
+Output is valid on:
+- Final states (`type: 'final'`) — the primary use case for `$machine->output()`
+- Any state referenced by an endpoint `output` key — for HTTP response shaping
 
 ## Best Practices
 

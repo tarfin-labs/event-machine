@@ -63,13 +63,15 @@ test('create endpoint returns 201 with machine_id in response', function (): voi
                 'id',
                 'state',
                 'output',
+                'isProcessing',
             ],
         ]);
 
     $data = $response->json('data');
 
     expect($data['id'])->not->toBeNull()
-        ->and($data['id'])->toBeString();
+        ->and($data['id'])->toBeString()
+        ->and($data['isProcessing'])->toBeFalse();
 });
 
 test('create endpoint initializes machine in initial state', function (): void {
@@ -80,7 +82,8 @@ test('create endpoint initializes machine in initial state', function (): void {
     $value = $response->json('data.state');
 
     // The initial state is 'idle', so value should contain 'test_endpoint.idle'
-    expect($value)->toContain('test_endpoint.idle');
+    expect($value)->toContain('test_endpoint.idle')
+        ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
 // ─── Stateless Endpoint: Simple Flow ──────────────────────────────────
@@ -94,6 +97,7 @@ test('stateless endpoint creates machine and transitions state', function (): vo
                 'id',
                 'state',
                 'output',
+                'isProcessing',
             ],
         ]);
 
@@ -101,7 +105,8 @@ test('stateless endpoint creates machine and transitions state', function (): vo
     // idle -> started
     $value = $response->json('data.state');
 
-    expect($value)->toContain('test_endpoint.started');
+    expect($value)->toContain('test_endpoint.started')
+        ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
 test('default status code is 200 when not specified in endpoint config', function (): void {
@@ -131,10 +136,12 @@ test('machineId-bound endpoint returns state JSON with correct structure', funct
                 'id',
                 'state',
                 'output',
+                'isProcessing',
             ],
         ]);
 
-    expect($response->json('data.id'))->toBe($machineId);
+    expect($response->json('data.id'))->toBe($machineId)
+        ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
 test('machineId-bound endpoints allow sequential transitions', function (): void {
@@ -146,13 +153,15 @@ test('machineId-bound endpoints allow sequential transitions', function (): void
     $startResponse = $this->postJson("/api/endpoint-mid/{$machineId}/start");
     $startResponse->assertStatus(200);
 
-    expect($startResponse->json('data.state'))->toContain('test_endpoint.started');
+    expect($startResponse->json('data.state'))->toContain('test_endpoint.started')
+        ->and($startResponse->json('data.isProcessing'))->toBeFalse();
 
     // started -> cancelled
     $cancelResponse = $this->postJson("/api/endpoint-mid/{$machineId}/cancel");
     $cancelResponse->assertStatus(200);
 
-    expect($cancelResponse->json('data.state'))->toContain('test_endpoint.cancelled');
+    expect($cancelResponse->json('data.state'))->toContain('test_endpoint.cancelled')
+        ->and($cancelResponse->json('data.isProcessing'))->toBeFalse();
 });
 
 // ─── Endpoint with OutputBehavior ─────────────────────────────────────
@@ -175,7 +184,8 @@ test('endpoint with result behavior returns custom response with custom status',
     // TestEndpointOutput returns ['custom' => true, 'output' => $context->toArray()] — now nested under data.output
     $output = $data['output'];
     expect($output)->toHaveKey('custom')
-        ->and($output['custom'])->toBeTrue();
+        ->and($output['custom'])->toBeTrue()
+        ->and($data['isProcessing'])->toBeFalse();
 });
 
 // ─── Endpoint with EndpointAction ─────────────────────────────────────

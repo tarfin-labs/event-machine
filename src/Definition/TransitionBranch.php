@@ -7,7 +7,8 @@ namespace Tarfinlabs\EventMachine\Definition;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Exceptions\NoStateDefinitionFoundException;
+use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
+use Tarfinlabs\EventMachine\Exceptions\UndefinedTargetStateException;
 
 /**
  * Class TransitionBranch.
@@ -68,7 +69,7 @@ class TransitionBranch
 
             // If the target state definition is not found, throw an exception
             if (!$targetStateDefinition instanceof StateDefinition) {
-                throw NoStateDefinitionFoundException::build(
+                throw UndefinedTargetStateException::build(
                     from: $this->transitionDefinition->source->id,
                     to: $this->transitionBranchConfig,
                     eventType: $this->transitionDefinition->event,
@@ -94,7 +95,7 @@ class TransitionBranch
                 );
 
             if (!$targetStateDefinition instanceof StateDefinition) {
-                throw NoStateDefinitionFoundException::build(
+                throw UndefinedTargetStateException::build(
                     from: $this->transitionDefinition->source->id,
                     to: $this->transitionBranchConfig['target'],
                     eventType: $this->transitionDefinition->event,
@@ -172,9 +173,20 @@ class TransitionBranch
     protected function initializeInlineBehaviors(array $inlineBehaviors, BehaviorType $behaviorType): void
     {
         foreach ($inlineBehaviors as $behavior) {
+            // Array tuple: [Class::class, 'param' => value, ...] — extract class from [0]
+            if (is_array($behavior)) {
+                $parsed   = BehaviorTupleParser::parse($behavior, $behaviorType->value);
+                $behavior = $parsed['definition'];
+            }
+
+            // Skip non-string behaviors (closures, etc.)
+            if (!is_string($behavior)) {
+                continue;
+            }
+
             // If the behavior contains a colon, it means that it has a parameter.
-            if (str_contains((string) $behavior, ':')) {
-                $behavior = explode(':', (string) $behavior)[0];
+            if (str_contains($behavior, ':')) {
+                $behavior = explode(':', $behavior)[0];
             }
 
             // If the behavior is class of a known behavior type (e.g., Guard, Action, etc.),

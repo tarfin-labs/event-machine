@@ -17,6 +17,8 @@ Timer::days(7)        // 7 days
 Timer::weeks(2)       // 2 weeks
 ```
 
+Duration must be positive. Passing zero or a negative value throws `InvalidTimerDefinitionException`.
+
 ## `after` — One-Shot Timer
 
 "If the machine stays in this state for N time, auto-trigger this event."

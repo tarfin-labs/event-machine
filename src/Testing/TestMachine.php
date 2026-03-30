@@ -349,15 +349,24 @@ class TestMachine
         $behaviors = $this->machine->definition->behavior[$type] ?? [];
 
         foreach ($behaviors as $key => $value) {
-            if (in_array($value, $except, true)) {
+            // Output registry can contain inner-array tuples: [[Class, 'param' => val]]
+            $resolvedClass = $value;
+            if (is_array($value) && isset($value[0]) && is_array($value[0])) {
+                $resolvedClass = $value[0][0] ?? null;
+            } elseif (is_array($value) && isset($value[0]) && is_string($value[0])) {
+                // Single tuple: [Class, 'param' => val] (shouldn't be in registry normally, but handle)
+                $resolvedClass = $value[0];
+            }
+
+            if (in_array($resolvedClass, $except, true)) {
                 continue;
             }
             if (in_array($key, $except, true)) {
                 continue;
             }
-            if (is_string($value) && is_subclass_of($value, InvokableBehavior::class)) {
-                $value::spy();
-                $this->fakedBehaviors[] = $value;
+            if (is_string($resolvedClass) && is_subclass_of($resolvedClass, InvokableBehavior::class)) {
+                $resolvedClass::spy();
+                $this->fakedBehaviors[] = $resolvedClass;
             }
         }
 

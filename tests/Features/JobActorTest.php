@@ -9,7 +9,10 @@ use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Contracts\ReturnsOutput;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Exceptions\InvalidJobClassException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\FakeExternalService;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidMachineClassException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\ExternalServiceContract;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\DependencyInjectedTestJob;
 
@@ -30,7 +33,7 @@ it('validates job + machine mutual exclusivity', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "cannot have both 'job' and 'machine'");
+})->throws(InvalidStateConfigException::class, "cannot have both 'job' and 'machine'");
 
 it('validates job without @done requires target', function (): void {
     MachineDefinition::define(
@@ -46,7 +49,7 @@ it('validates job without @done requires target', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "without '@done' or 'target'");
+})->throws(InvalidStateConfigException::class, "without '@done' or 'target'");
 
 it('validates @done + target ambiguity', function (): void {
     MachineDefinition::define(
@@ -63,7 +66,7 @@ it('validates @done + target ambiguity', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "cannot have both '@done' and 'target'");
+})->throws(InvalidStateConfigException::class, "cannot have both '@done' and 'target'");
 
 // ─── Managed Job Actor (@done) ────────────────────────────────────
 
@@ -268,7 +271,7 @@ it('ChildJobJob rejects non-existent job class', function (): void {
     );
 
     $job->handle();
-})->throws(InvalidArgumentException::class, 'does not exist');
+})->throws(InvalidJobClassException::class, 'does not exist');
 
 it('ChildJobJob rejects job class without handle method', function (): void {
     $noHandleClass = new class() {};
@@ -283,7 +286,7 @@ it('ChildJobJob rejects job class without handle method', function (): void {
     );
 
     $job->handle();
-})->throws(InvalidArgumentException::class, 'must have a handle() method');
+})->throws(InvalidJobClassException::class, 'must have a handle() method');
 
 it('SendToMachineJob rejects non-Machine class', function (): void {
     $job = new SendToMachineJob(
@@ -293,7 +296,7 @@ it('SendToMachineJob rejects non-Machine class', function (): void {
     );
 
     $job->handle();
-})->throws(InvalidArgumentException::class, 'must exist and extend');
+})->throws(InvalidMachineClassException::class, 'must exist and extend');
 
 it('ChildMachineJob rejects non-Machine class', function (): void {
     $job = new ChildMachineJob(
@@ -305,7 +308,7 @@ it('ChildMachineJob rejects non-Machine class', function (): void {
     );
 
     $job->handle();
-})->throws(InvalidArgumentException::class, 'must exist and extend');
+})->throws(InvalidMachineClassException::class, 'must exist and extend');
 
 it('ChildJobJob without ReturnsOutput returns empty output', function (): void {
     Queue::fake();

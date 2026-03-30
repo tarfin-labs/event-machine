@@ -158,12 +158,12 @@ Execute code during a transition:
 
 Actions execute in the order listed.
 
-### Action Arguments
+### Action Parameters
 
-Pass arguments to actions using colon syntax:
+Pass named parameters to actions using tuple syntax:
 
 ```php ignore
-'actions' => 'notifyAction:email,sms',  // Calls notifyAction with ['email', 'sms']
+'actions' => [[NotifyAction::class, 'channels' => ['email', 'sms']]],
 ```
 
 ## Calculators
@@ -508,6 +508,22 @@ When a transition fires, this is the execution sequence:
    - Stay in current state
    - No actions execute
 ```
+
+## Transition Validation
+
+EventMachine validates transition config at definition time. Invalid configurations throw `InvalidStateConfigException`:
+
+| Constraint | Example |
+|-----------|---------|
+| `on` must be an array | `'on' => 'SUBMIT'` (string instead of array) |
+| Transition must be string or array | `'SUBMIT' => 123` (integer) |
+| Invalid transition keys | Unknown keys inside a transition definition |
+| Guards/actions/calculators must be array or string | `'guards' => 123` |
+| Empty conditions array | `'SUBMIT' => [[]]` (empty branch) |
+| Each condition must be an array | `'SUBMIT' => ['not_array', [...]]` |
+| Default guard must be last | Unguarded branch before guarded branches |
+
+If a transition references a target state that does not exist in the machine definition, `UndefinedTargetStateException` is thrown at transition time.
 
 ## Testing Transitions
 

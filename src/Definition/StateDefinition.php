@@ -10,8 +10,8 @@ use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidOutputDefinitionException;
-use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
 class StateDefinition
@@ -576,7 +576,7 @@ class StateDefinition
     {
         if (!empty($this->config['type']) && $this->config['type'] === 'final') {
             if ($this->stateDefinitions !== null) {
-                throw InvalidFinalStateDefinitionException::noChildStates($this->id);
+                throw InvalidStateConfigException::finalStateCannotHaveChildStates($this->id);
             }
 
             return StateDefinitionType::FINAL;

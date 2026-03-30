@@ -22,4 +22,28 @@ class InvalidEndpointDefinitionException extends RuntimeException
     {
         return new self("Endpoint action `{$actionClass}` must extend MachineEndpointAction.");
     }
+
+    public static function forwardConflictsWithEndpoint(string $stateId, string $parentEventType): self
+    {
+        return new self(
+            "State '{$stateId}' forwards '{$parentEventType}' which is also declared in parent's "
+            ."endpoints. Remove '{$parentEventType}' from endpoints — forward is the single source of truth for child events."
+        );
+    }
+
+    public static function forwardConflictsWithBehaviorEvent(string $stateId, string $parentEventType): self
+    {
+        return new self(
+            "State '{$stateId}' forwards '{$parentEventType}' which is also declared in parent's "
+            ."behavior.events. Remove '{$parentEventType}' from behavior.events — forward auto-discovers child events."
+        );
+    }
+
+    public static function duplicateForwardEvent(string $parentEventType): self
+    {
+        return new self(
+            "Forward event '{$parentEventType}' is declared in multiple delegating states. "
+            ."Use rename syntax to disambiguate (e.g., 'CANCEL_PAYMENT' => 'CANCEL')."
+        );
+    }
 }

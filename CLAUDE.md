@@ -93,7 +93,7 @@ The `listen` key in machine config supports lifecycle hooks:
 - **`EndpointDefinition`** — Parses endpoint config: `uri`, `method`, `action`, `output`, `middleware`, `status`
 - **`ForwardedEndpointDefinition`** — Auto-generated routes that forward events to child machines
 - **`ForwardContext`** — Type-hintable in `OutputBehavior` to access child context in forwarded endpoints
-- **`MachineController`** — Handles model-bound, machine-id-bound, stateless, create, and forwarded routes
+- **`MachineController`** — Handles model-bound, machine-id-bound, stateless, create, and forwarded routes. Graceful `MachineAlreadyRunningException` handling: GET returns 200 + snapshot, POST returns 423 Locked. `isProcessing` flag in all endpoint responses.
 
 ### Parallel States
 

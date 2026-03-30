@@ -56,7 +56,8 @@ test('#1 — both required query params reach event payload', function (): void 
     $context = $response->json('data.output.data');
 
     expect($context['dealerCode'])->toBe('ABC123')
-        ->and($context['plateNumber'])->toBe('34XY');
+        ->and($context['plateNumber'])->toBe('34XY')
+        ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
 test('#2 — missing one required param returns 422', function (): void {
@@ -93,7 +94,8 @@ test('#5 — explicit payload[] syntax not double-wrapped', function (): void {
     $context = $response->json('data.output.data');
 
     expect($context['dealerCode'])->toBe('ABC123')
-        ->and($context['plateNumber'])->toBe('34XY');
+        ->and($context['plateNumber'])->toBe('34XY')
+        ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -104,6 +106,8 @@ test('#6 — GET with no validation rules and no params returns 200', function (
     $response = $this->get('/api/get-noval/ping');
 
     $response->assertStatus(200);
+
+    expect($response->json('data.isProcessing'))->toBeFalse();
 });
 
 test('#7 — GET with no validation rules stores query params in context', function (): void {
@@ -113,7 +117,8 @@ test('#7 — GET with no validation rules stores query params in context', funct
 
     $context = $response->json('data.output.data');
 
-    expect($context['pingPayload'])->toBe(['foo' => 'bar', 'baz' => 'qux']);
+    expect($context['pingPayload'])->toBe(['foo' => 'bar', 'baz' => 'qux'])
+        ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -135,7 +140,8 @@ test('#8 — machineId-bound GET endpoint works after create', function (): void
 
     expect($data['state'])->toContain('get_endpoint.done')
         ->and($data['output']['data']['dealerCode'])->toBe('ABC123')
-        ->and($data['output']['data']['plateNumber'])->toBe('34XY');
+        ->and($data['output']['data']['plateNumber'])->toBe('34XY')
+        ->and($data['isProcessing'])->toBeFalse();
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -159,7 +165,8 @@ test('#9 — forwarded GET validates child event and reaches child', function ()
 
     $childOutput = $response->json('data.output');
 
-    expect($childOutput['data']['childParam'])->toBe('hello');
+    expect($childOutput['data']['childParam'])->toBe('hello')
+        ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
 test('#10 — forwarded GET missing required child param returns 422', function (): void {
@@ -190,7 +197,8 @@ test('#11 — numeric string passes string validation rule', function (): void {
 
     $context = $response->json('data.output.data');
 
-    expect($context['dealerCode'])->toBe('12345');
+    expect($context['dealerCode'])->toBe('12345')
+        ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
 test('#12 — empty string converted to null by ConvertEmptyStringsToNull middleware', function (): void {
@@ -207,7 +215,8 @@ test('#13 — array-style query params preserved in payload', function (): void 
 
     $context = $response->json('data.output.data');
 
-    expect($context['pingPayload']['items'])->toBe(['a', 'b']);
+    expect($context['pingPayload']['items'])->toBe(['a', 'b'])
+        ->and($response->json('data.isProcessing'))->toBeFalse();
 });
 
 test('#14 — type in query param does not override event type', function (): void {
@@ -218,5 +227,6 @@ test('#14 — type in query param does not override event type', function (): vo
     // Machine transitioned successfully — event type resolved from getType(), not query param
     $data = $response->json('data');
 
-    expect($data['state'])->toContain('get_endpoint.done');
+    expect($data['state'])->toContain('get_endpoint.done')
+        ->and($data['isProcessing'])->toBeFalse();
 });

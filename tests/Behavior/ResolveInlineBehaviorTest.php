@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\OrderMachine;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
@@ -72,4 +73,36 @@ test('it throws exception when behavior type not found', function (): void {
     // Act & Assert
     expect(fn () => OrderMachine::getBehavior('invalidType.someBehavior'))
         ->toThrow(BehaviorNotFoundException::class, 'Behavior of type `invalidType.someBehavior` not found.');
+});
+
+test('it can resolve inline key with named params from tuple', function (): void {
+    // 1. Arrange — define machine with inline guard referenced via tuple
+    $machine = MachineDefinition::define(
+        config: [
+            'initial' => 'idle',
+            'context' => ['amount' => 500],
+            'states'  => [
+                'idle' => [
+                    'on' => [
+                        'CHECK' => [
+                            'target' => 'passed',
+                            'guards' => [['isInRangeGuard', 'min' => 100, 'max' => 1000]],
+                        ],
+                    ],
+                ],
+                'passed' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'guards' => [
+                'isInRangeGuard' => fn (ContextManager $ctx, int $min, int $max): bool => $ctx->get('amount') >= $min && $ctx->get('amount') <= $max,
+            ],
+        ],
+    );
+
+    // 2. Act
+    $state = $machine->transition(event: ['type' => 'CHECK']);
+
+    // 3. Assert — guard passed with named params, transition occurred
+    expect($state->matches('passed'))->toBeTrue();
 });

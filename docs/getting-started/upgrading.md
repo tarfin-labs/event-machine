@@ -83,7 +83,8 @@ The HTTP response envelope keys have been renamed for consistency:
         "id": "01JARX...",
         "state": ["submitted"],
         "output": { "totalAmount": 100 },
-        "availableEvents": [{ "type": "APPROVE", "source": "parent" }]
+        "availableEvents": [{ "type": "APPROVE", "source": "parent" }],
+        "isProcessing": false
     }
 }
 ```
@@ -211,12 +212,45 @@ All endpoints now return the same structure — `availableEvents` is never lost:
         "machineId": "order_workflow",
         "state": ["submitted"],
         "availableEvents": ["APPROVE", "REJECT"],
-        "output": { "totalAmount": 100 }
+        "output": { "totalAmount": 100 },
+        "isProcessing": false
     }
 }
 ```
 
 Endpoints without a custom output use the current state's output (or `toResponseArray()` fallback). No need to define `output` on every endpoint — the state determines the response shape.
+
+### New: Graceful Lock Contention Handling
+
+When a machine is processing an event (lock held), HTTP requests to the same machine no longer fail with a 500 error. Instead:
+
+- **GET endpoints** return **HTTP 200** with the last committed state + `isProcessing: true`
+- **POST/PUT/DELETE endpoints** return **HTTP 423 Locked** with the last committed state + `isProcessing: true`
+
+The `isProcessing` field is present in **every** endpoint response:
+- `false` — normal path, event was processed, state is settled
+- `true` — lock contention, returning last committed snapshot
+
+This is especially useful when `BroadcastStateAction` triggers an immediate frontend status check — the GET request now returns the current state instead of crashing.
+
+See [Lock Contention Handling](/laravel-integration/endpoints#lock-contention-handling) for details.
+
+### New: Consistent Behavior Resolution for Outputs
+
+In v8, output behavior resolution was inconsistent across different entry points:
+- `Machine::output()` and `resolveChildOutput()` only supported class FQCN — inline keys from the `behavior['outputs']` registry were not resolved, throwing a `BindingResolutionException`
+- `MachineController::resolveAndRunOutput()` supported both, but with its own duplicated logic
+
+In v9, all output resolution uses a single unified method (`MachineDefinition::resolveOutputKey()`) with a consistent dispatch order: **FQCN → registry → error**. This is the same order used by `getInvokableBehavior()` for actions, guards, and calculators.
+
+**What this means in practice:**
+
+- Inline output keys now work everywhere — `Machine::output()`, child machine `@done` output, endpoint output, and forwarded endpoint output all resolve inline keys from the `behavior['outputs']` registry
+- Invalid output keys now throw `BehaviorNotFoundException` instead of `BindingResolutionException`
+
+**Impact:** If your code catches `BindingResolutionException` from output resolution (unlikely — this only happens with config typos), update the catch to `BehaviorNotFoundException`. No changes needed for valid configurations.
+
+See [Behavior Resolution](/behaviors/introduction#behavior-resolution) for the full dispatch order documentation.
 
 ### Migration Checklist
 
@@ -229,6 +263,185 @@ Endpoints without a custom output use the current state's output (or `toResponse
 7. In tests: `assertResult()` → `assertOutput()`
 8. In tests: `ChildMachineDoneEvent::result()` → `ChildMachineDoneEvent::output()`
 9. Update API consumers for new response envelope keys (`id`, `state`, `output`, `availableEvents`)
+10. Migrate parameterized behaviors: `'guard:arg1,arg2'` → `[[Guard::class, 'param' => value]]` (optional, deprecated syntax still works)
+11. Update listener config: `Class::class => ['queue' => true]` → `[Class::class, '@queue' => true]` (**required**, old format removed)
+
+### New: Named Parameters for Behaviors
+
+Behaviors now accept named parameters via array-tuple syntax. The old `:arg1,arg2` colon syntax is deprecated (removed in v10).
+
+**Before (still works, deprecated):**
+
+```php ignore
+'guards' => 'isAmountInRangeGuard:100,10000',
+
+// Behavior receives untyped positional array
+public function __invoke(ContextManager $ctx, ?array $arguments = null): bool {
+    return $ctx->get('amount') >= (int) $arguments[0]
+        && $ctx->get('amount') <= (int) $arguments[1];
+}
+```
+
+**After:**
+
+```php ignore
+'guards' => [[IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000]],
+
+// Behavior receives typed named parameters
+public function __invoke(ContextManager $ctx, int $min, int $max): bool {
+    return $ctx->get('amount') >= $min
+        && $ctx->get('amount') <= $max;
+}
+```
+
+Works with all behavior keys — guards, actions, calculators, entry/exit, outputs, listeners.
+
+**Output with named params** (inner-array rule, same as guards/actions):
+
+```php ignore
+// Parameterized output — inner array
+'output' => [[FormatOutput::class, 'format' => 'json']],
+
+// Context key filter — plain array (unchanged)
+'output' => ['orderId', 'totalAmount'],
+```
+
+**Migration pitfall:** When migrating, update BOTH config AND behavior signature. If only config is changed, old `?array $arguments` gets `null` — silent failure.
+
+### New: Listener Config Format (breaking)
+
+The listener config format has changed. Class-as-key syntax is replaced with tuple syntax. `@`-prefixed keys are framework-reserved (never reach `__invoke`).
+
+**Before (no longer works):**
+
+```php ignore
+'listen' => [
+    'entry' => [
+        SyncAction::class,
+        QueuedAction::class => ['queue' => true],
+    ],
+]
+```
+
+**After:**
+
+```php ignore
+'listen' => [
+    'entry' => [
+        SyncAction::class,
+        [QueuedAction::class, '@queue' => true],
+    ],
+]
+```
+
+**With named params:**
+
+```php ignore
+'listen' => [
+    'entry' => [
+        [AuditAction::class, 'verbose' => true, '@queue' => true],
+    ],
+]
+```
+
+**Migration steps:**
+1. Find all `'listen'` config blocks in your machine definitions.
+2. Replace `ClassName::class => ['queue' => true]` with `[ClassName::class, '@queue' => true]`.
+3. Sync listeners (numeric key, no options) remain unchanged: `ClassName::class`.
+
+### Exception Specialization (breaking)
+
+v9 replaces generic PHP exceptions (`InvalidArgumentException`, `RuntimeException`) with domain-specific exception classes across the entire codebase. This enables targeted `catch` blocks and clearer error handling.
+
+#### New Exception Classes
+
+| Before (v8) | After (v9) | Thrown From |
+|-------------|------------|-------------|
+| `InvalidArgumentException` (config validation) | `InvalidStateConfigException` | `StateConfigValidator`, `StateDefinition`, `MachineDefinition` |
+| `InvalidArgumentException` (router config) | `InvalidRouterConfigException` | `MachineRouter` |
+| `RuntimeException` (no parent machine) | `NoParentMachineException` | `InvokableBehavior` |
+| `InvalidArgumentException` / `RuntimeException` (archive) | `ArchiveException` | `MachineEventArchive`, `CompressionManager` |
+| `InvalidArgumentException` (machine class) | `InvalidMachineClassException` | `ChildMachineJob`, `SendToMachineJob` |
+| `InvalidArgumentException` (job class) | `InvalidJobClassException` | `ChildJobJob` |
+| `RuntimeException` (behavior not faked) | `BehaviorNotFakedException` | `Fakeable` trait |
+| `RuntimeException` (no search paths) | `MachineDiscoveryException` | `MachineConfigValidatorCommand` |
+| `InvalidArgumentException` (timer) | `InvalidTimerDefinitionException` | `Timer` |
+
+#### Renamed Exception Classes
+
+| Before (v8) | After (v9) |
+|-------------|------------|
+| `NoStateDefinitionFoundException` | `UndefinedTargetStateException` |
+
+#### Deleted Exception Classes
+
+| Before (v8) | After (v9) |
+|-------------|------------|
+| `InvalidFinalStateDefinitionException` | Merged into `InvalidStateConfigException` (`finalStateCannotHaveTransitions()`, `finalStateCannotHaveChildStates()`) |
+
+#### Extended Exception Classes
+
+| Class | New Factory Methods |
+|-------|---------------------|
+| `InvalidEndpointDefinitionException` | `forwardConflictsWithEndpoint()`, `forwardConflictsWithBehaviorEvent()`, `duplicateForwardEvent()` |
+| `MachineDefinitionNotFoundException` | `failedToLoad()` |
+
+#### Migration Steps
+
+If you catch any of the old generic exceptions for EventMachine errors, update your catch blocks:
+
+<!-- doctest-attr: ignore -->
+```php
+// BEFORE (v8)
+use InvalidArgumentException;
+
+try {
+    StateConfigValidator::validate($config);
+} catch (InvalidArgumentException $e) {
+    // caught ALL InvalidArgumentExceptions, not just config errors
+}
+
+// AFTER (v9)
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
+
+try {
+    StateConfigValidator::validate($config);
+} catch (InvalidStateConfigException $e) {
+    // catches only config validation errors
+}
+```
+
+<!-- doctest-attr: ignore -->
+```php
+// BEFORE (v8)
+use RuntimeException;
+
+try {
+    $context->sendToParent('CHILD_DONE');
+} catch (RuntimeException $e) {
+    // caught ALL RuntimeExceptions
+}
+
+// AFTER (v9)
+use Tarfinlabs\EventMachine\Exceptions\NoParentMachineException;
+
+try {
+    $context->sendToParent('CHILD_DONE');
+} catch (NoParentMachineException $e) {
+    // catches only the "no parent" case
+}
+```
+
+See [Exceptions Reference](/reference/exceptions) for the full list of all exception classes.
+
+### Migration Checklist (updated)
+
+Items 12–15 are new for the exception specialization:
+
+12. Update `catch (InvalidArgumentException)` blocks that handle EventMachine config errors → specific exception classes (see table above)
+13. Update `catch (RuntimeException)` blocks that handle EventMachine runtime errors → specific exception classes
+14. Rename `NoStateDefinitionFoundException` → `UndefinedTargetStateException` in any catch blocks or type hints
+15. Remove `InvalidFinalStateDefinitionException` imports — now `InvalidStateConfigException`
 
 ### Typed Contracts — `with` → `input`, `MachineInput`/`MachineOutput`/`MachineFailure`
 

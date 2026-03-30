@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 
 // region Cross-Region Transition Validation
 // Source: Boost.Statechart InvalidTransitionTest1-2 — illegal transitions between sibling orthogonal regions.
@@ -56,7 +57,7 @@ test('cross-region transition from region_a to region_b is rejected at definitio
             ],
         ],
     ))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: 'Cross-region transition not allowed: state "active.region_a.idle" in region "region_a" cannot target state "received" in sibling region "region_b". Use events (raise/sendTo) to coordinate between regions.'
     );
 });
@@ -96,7 +97,7 @@ test('cross-region transition from region_b to region_a is also rejected', funct
             ],
         ],
     ))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: 'Cross-region transition not allowed: state "processing.region_b.pending" in region "region_b" cannot target state "step_two" in sibling region "region_a". Use events (raise/sendTo) to coordinate between regions.'
     );
 });
@@ -136,7 +137,7 @@ test('cross-region transition with array config is also rejected', function (): 
             ],
         ],
     ))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: 'Cross-region transition not allowed: state "running.region_a.idle" in region "region_a" cannot target state "finished" in sibling region "region_b". Use events (raise/sendTo) to coordinate between regions.'
     );
 });
@@ -177,7 +178,7 @@ test('cross-region transition with guarded conditions is also rejected', functio
             ],
         ],
     ))->toThrow(
-        exception: InvalidArgumentException::class,
+        exception: InvalidStateConfigException::class,
         exceptionMessage: 'Cross-region transition not allowed: state "active.region_a.idle" in region "region_a" cannot target state "done_b" in sibling region "region_b". Use events (raise/sendTo) to coordinate between regions.'
     );
 });

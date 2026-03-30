@@ -15,6 +15,6 @@ class MachineAlreadyRunningException extends RuntimeException
      */
     public static function build(string $machineId): self
     {
-        return new self(message: "Event processing failed: Machine `{$machineId}`is already running.");
+        return new self(message: "Event processing failed: Machine `{$machineId}` is already running.");
     }
 }

@@ -39,7 +39,6 @@ public function __invoke(
     EventBehavior $event,         // Triggering event
     State $state,                 // Current state
     EventCollection $history,     // Event history
-    array $arguments,             // Behavior arguments
 ): void {
     // Use injected parameters
 }
@@ -53,7 +52,25 @@ public function __invoke(
 | `EventBehavior` | The event that triggered the transition |
 | `State` | Current machine state |
 | `EventCollection` | History of all events |
-| `array` | Arguments passed via behavior string |
+| Named params | Config-defined parameters matched by name |
+
+### Framework Types + Named Params
+
+Framework types and config-defined named params can coexist in the same `__invoke` signature:
+
+<!-- doctest-attr: ignore -->
+```php
+// Config
+'guards' => [[IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000]],
+
+// Guard
+public function __invoke(ContextManager $context, int $min, int $max): bool
+{
+    return $context->amount >= $min && $context->amount <= $max;
+}
+```
+
+Resolution order: framework types (matched by type-hint) → named params (matched by name from config) → PHP defaults.
 
 ### Partial Injection
 
