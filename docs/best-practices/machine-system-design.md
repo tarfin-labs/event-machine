@@ -339,6 +339,25 @@ Designing a machine system is iterative. Start simple, add complexity only where
 
 5. **Integration check.** If this machine will be a child, ensure its final states provide enough information for the parent. A machine that works alone may need additional final states when delegated to (see [Design Your Child States for the Parent](#design-your-child-states-for-the-parent)).
 
+## When to Use Typed Contracts
+
+Typed contracts (`MachineInput`, `MachineOutput`, `MachineFailure`) add compile-time-like safety to inter-machine communication. They are not always necessary -- choose based on your situation.
+
+### Use typed contracts when:
+
+- **Cross-team boundaries.** When one team builds the parent and another builds the child, typed contracts serve as a formal interface agreement. Changes to the child's input requirements are caught at definition validation time, not at runtime.
+- **Public API machines.** When a machine is reused across multiple parents (e.g., a shared `PaymentMachine`), typed contracts document the expected inputs and outputs without reading the child's source code.
+- **Complex output shapes.** When a child produces structured output with many fields, a `MachineOutput` DTO is easier to work with than an untyped array.
+- **Failure categorization.** When `@fail` routing depends on structured error data (error codes, retry hints), `MachineFailure` replaces ad-hoc array conventions.
+
+### Keep untyped when:
+
+- **Simple internal machines.** A child machine used by a single parent within the same codebase may not need the overhead of contract classes.
+- **Prototyping.** During early development, use `with` arrays and untyped outputs. Add contracts when the interface stabilizes.
+- **Same-name context pass-through.** When `input: ['orderId']` is sufficient, a `MachineInput` class adds no value.
+
+**Rule of thumb:** If you find yourself writing documentation comments explaining what keys the `with` array should contain or what the `@done` output shape is, it is time for typed contracts.
+
 ## Guidelines
 
 1. **Commands down, states up.** Parent delegates via `machine` key, reads `@done.{state}`. Child never reads parent state -- only values passed via `with`.
