@@ -360,4 +360,20 @@ class InvalidStateConfigException extends LogicException
     {
         return new self(message: 'Value must be string, array or null');
     }
+
+    // ── Typed Contract Validation ─────────────────────────────────────
+
+    public static function invalidInputClass(string $class): self
+    {
+        return new self(
+            message: "Root 'input' key must be a MachineInput subclass, array, or closure. Got: {$class}"
+        );
+    }
+
+    public static function invalidFailureClass(string $value): self
+    {
+        return new self(
+            message: "Root 'failure' key must be a MachineFailure subclass. Got: {$value}"
+        );
+    }
 }
