@@ -37,7 +37,7 @@ class ParentOrderMachine extends Machine
                     ],
                     'processing_payment' => [
                         'machine' => ChildPaymentMachine::class,
-                        'with'    => [
+                        'input'   => [
                             'orderId',
                             'amount' => 'totalAmount',
                         ],

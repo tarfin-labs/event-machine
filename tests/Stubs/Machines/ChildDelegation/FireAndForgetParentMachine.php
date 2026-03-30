@@ -30,7 +30,7 @@ class FireAndForgetParentMachine extends Machine
                     ],
                     'processing' => [
                         'machine' => ImmediateChildMachine::class,
-                        'with'    => ['orderId'],
+                        'input'   => ['orderId'],
                         'queue'   => 'child-queue',
                         // No @done → fire-and-forget, stay in state
                         'on' => [
