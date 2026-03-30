@@ -2,12 +2,16 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Testing\InteractsWithMachines;
 use Tarfinlabs\EventMachine\Tests\Stubs\Outputs\PaymentOutput;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TypedDelegation\TypedChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TypedDelegation\TypedParentMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TypedDelegation\CatchAllParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TypedDelegation\DiscriminatedChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TypedDelegation\DiscriminatedParentMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TypedDelegation\OptionalContractChildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TypedDelegation\TypedClosureInputParentMachine;
 
 uses(InteractsWithMachines::class);
 
@@ -123,4 +127,75 @@ test('@done.rejected routes to under_review', function (): void {
         ->send('START');
 
     $tm->assertState('under_review');
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Closure Input Adapter
+// ═══════════════════════════════════════════════════════════════
+
+test('parent sends typed input via closure adapter', function (): void {
+    TypedChildMachine::fake(output: ['paymentId' => 'pay_closure', 'status' => 'ok']);
+
+    $tm = TypedClosureInputParentMachine::test()
+        ->send('START');
+
+    $tm->assertState('completed');
+
+    $invocations = TypedChildMachine::getMachineInvocations();
+    expect($invocations)->toHaveCount(1)
+        ->and($invocations[0]['orderId'])->toBe('ORD-CLOSURE')
+        ->and($invocations[0]['amount'])->toBe(250);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Child Without Input Declaration
+// ═══════════════════════════════════════════════════════════════
+
+test('child without input declaration accepts any input', function (): void {
+    // OptionalContractChildMachine has no 'input' config key — accepts whatever parent sends
+    OptionalContractChildMachine::fake();
+
+    // Inline parent that delegates with input to optional child
+    $parent = TestMachine::define(config: [
+        'id'      => 'optional_parent',
+        'initial' => 'idle',
+        'context' => ['orderId' => 'ORD-1'],
+        'states'  => [
+            'idle'       => ['on' => ['START' => 'delegating']],
+            'delegating' => [
+                'machine' => OptionalContractChildMachine::class,
+                'input'   => ['orderId'],
+                '@done'   => ['target' => 'completed'],
+            ],
+            'completed' => ['type' => 'final'],
+        ],
+    ]);
+
+    $parent->send('START');
+
+    // No exception — child has no input declaration, accepts anything
+    OptionalContractChildMachine::assertInvoked();
+    $parent->assertState('completed');
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  @done Catch-All
+// ═══════════════════════════════════════════════════════════════
+
+test('@done catch-all routes regardless of final state', function (): void {
+    DiscriminatedChildMachine::fake(finalState: 'approved');
+
+    $tm = CatchAllParentMachine::test()
+        ->send('START');
+
+    $tm->assertState('completed');
+});
+
+test('@done catch-all also works for rejected final state', function (): void {
+    DiscriminatedChildMachine::fake(finalState: 'rejected');
+
+    $tm = CatchAllParentMachine::test()
+        ->send('START');
+
+    $tm->assertState('completed');
 });
