@@ -65,6 +65,32 @@ OrderWorkflowMachine (orchestrator)
     └── invokes ShippingMachine    → @done → completed
 ```
 
+### Typed Orchestration
+
+When child machines define typed contracts, the orchestrator's definition becomes a fully typed I/O specification:
+
+<!-- doctest-attr: ignore -->
+```php
+'validating' => [
+    'machine' => ValidationMachine::class,
+    'input'   => ValidationInput::class,
+    '@done'   => [
+        'target'  => 'processing_payment',
+        'actions' => 'storeValidationOutputAction',
+    ],
+    '@fail' => 'validation_failed',
+],
+'processing_payment' => [
+    'machine' => PaymentMachine::class,
+    'input'   => PaymentInput::class,
+    'failure' => PaymentFailure::class,
+    '@done'   => 'shipping',
+    '@fail'   => 'payment_failed',
+],
+```
+
+Each child declares what it needs (`MachineInput`), what it produces (`MachineOutput` on final states), and how it fails (`MachineFailure`). The orchestrator reads like a typed pipeline specification.
+
 ### Conditional Orchestration
 
 When a child machine has multiple outcomes, use `@done.{state}` for declarative routing instead of guards:
@@ -252,6 +278,22 @@ class NotifyShippingAction extends ActionBehavior {
 ## Fire-and-Forget Pattern
 
 Fire-and-forget means dispatching work without tracking the output. Use it for side effects where the parent doesn't care about the outcome.
+
+### Fire-and-Forget with Typed Input
+
+Fire-and-forget machines can still use typed input to validate the data being passed:
+
+<!-- doctest-attr: ignore -->
+```php
+'dispatching_audit' => [
+    'machine' => AuditMachine::class,
+    'input'   => AuditInput::class,
+    'queue'   => 'background',
+    'target'  => 'suspended',
+],
+```
+
+The `AuditInput` is validated before the child is dispatched. No `failure` key is needed since the parent does not track the child's outcome.
 
 ### Machine Delegation (stay in state)
 
