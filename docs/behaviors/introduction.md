@@ -222,7 +222,41 @@ class ProcessOrderAction extends ActionBehavior
 
 If required context is missing, `MissingMachineContextException` is thrown.
 
-## Behavior Resolution Errors
+## Behavior Resolution
+
+When you reference a behavior in config (actions, guards, calculators, outputs), EventMachine resolves it using a consistent dispatch order:
+
+1. **FQCN check** — If the string is an existing class name (`class_exists`), resolve it directly from the container
+2. **Registry lookup** — Otherwise, look it up in the `behavior` map (e.g., `behavior['actions'][$key]`)
+3. **Not found** — Throw `BehaviorNotFoundException`
+
+This means both formats work everywhere a behavior reference is accepted:
+
+```php ignore
+// Direct class reference — resolved via step 1 (FQCN)
+'actions' => IncrementAction::class,
+'guards'  => HasItemsGuard::class,
+'output'  => OrderOutput::class,
+
+// Inline key — resolved via step 2 (registry lookup)
+'actions' => 'incrementAction',
+'guards'  => 'hasItemsGuard',
+'output'  => 'orderOutput',
+```
+
+The dispatch order is the same across all resolution points:
+- Transition actions, guards, calculators (`getInvokableBehavior`)
+- Entry/exit actions on states
+- Output on states (`Machine::output()`)
+- Output on endpoints (`MachineController`)
+- Output on child machine final states (`resolveChildOutput`)
+- Listener actions
+
+::: tip FQCN Always Takes Precedence
+If a class with the given name exists, it is resolved directly from the container — even if the same string happens to be registered as an inline key. This is consistent with how Laravel's service container works.
+:::
+
+### Resolution Errors
 
 When a behavior reference cannot be resolved — for example, a typo in an inline key or an invalid behavior type — `BehaviorNotFoundException` is thrown. Double-check inline keys match entries in the `behavior` map.
 
