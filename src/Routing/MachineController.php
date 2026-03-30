@@ -19,6 +19,7 @@ use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
+use Tarfinlabs\EventMachine\Exceptions\MachineOutputInjectionException;
 
 class MachineController extends Controller
 {
@@ -260,6 +261,11 @@ class MachineController extends Controller
 
         $outputBehavior = resolve($outputClass);
 
+        // Check if OutputBehavior type-hints MachineOutput but no child output is available (forward endpoint contract mismatch)
+        if ($childOutput === null) {
+            $this->validateNoMachineOutputTypeHint($outputBehavior, $outputClass, $state);
+        }
+
         $params = InvokableBehavior::injectInvokableBehaviorParameters(
             actionBehavior: $outputBehavior,
             state: $state,
@@ -268,6 +274,40 @@ class MachineController extends Controller
         );
 
         return $outputBehavior(...$params);
+    }
+
+    /**
+     * Validate that an OutputBehavior doesn't type-hint MachineOutput when no child output is available.
+     *
+     * Throws MachineOutputInjectionException when a forward endpoint OutputBehavior expects
+     * typed child output but the child's state doesn't define a MachineOutput.
+     */
+    private function validateNoMachineOutputTypeHint(object $outputBehavior, string $outputClass, State $state): void
+    {
+        try {
+            $method = new \ReflectionMethod($outputBehavior, '__invoke');
+
+            foreach ($method->getParameters() as $param) {
+                $type = $param->getType();
+
+                if ($type instanceof \ReflectionNamedType && is_subclass_of($type->getName(), MachineOutput::class)) {
+                    $childState        = $state->getForwardedChildState();
+                    $childStateName    = $childState?->currentStateDefinition?->key ?? 'unknown';
+                    $childMachineClass = $childState?->currentStateDefinition?->machine?->machineClass ?? 'unknown';
+
+                    throw MachineOutputInjectionException::missingChildOutput(
+                        outputBehaviorClass: $outputClass,
+                        expectedOutputClass: $type->getName(),
+                        childMachineClass: $childMachineClass,
+                        childStateName: $childStateName,
+                    );
+                }
+            }
+        } catch (MachineOutputInjectionException $e) {
+            throw $e;
+        } catch (\Throwable) {
+            // Reflection failed — skip validation
+        }
     }
 
     /**
