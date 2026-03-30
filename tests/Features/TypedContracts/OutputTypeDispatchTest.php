@@ -3,12 +3,10 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Outputs\PaymentOutput;
-use Tarfinlabs\EventMachine\Definition\StateDefinition;
 
 // ═══════════════════════════════════════════════════════════════
 //  resolveChildOutput — MachineOutput dispatch
