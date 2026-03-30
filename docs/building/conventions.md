@@ -854,7 +854,7 @@ Data flowing between parent and child machines uses `camelCase`:
 // Parent → Child (input)
 'delegating' => [
     'machine' => PaymentMachine::class,
-    'with'    => ['orderId', 'totalAmount'],
+    'input'    => ['orderId', 'totalAmount'],
 ],
 
 // Child → Parent (output on final state)
