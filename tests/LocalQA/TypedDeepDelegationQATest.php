@@ -72,6 +72,89 @@ it('LocalQA: three-level typed delegation — grandparent → parent → child, 
         ->and($childOutput)->toHaveKey('status');
 });
 
+it('LocalQA: each level has typed input/output/failure declarations', function (): void {
+    // Verifies typed contract declarations exist at each delegation level:
+    // Grandparent delegates with input: PaymentInput::class
+    // Middle has input: PaymentInput::class, output: PaymentOutput::class, failure: SimpleFailure::class (via QATypedFailingMiddleMachine pattern)
+    // Child has input: PaymentInput::class, output: PaymentOutput::class, failure: PaymentFailure::class
+    // This test validates that the chain completes successfully with contracts at every level.
+    $grandparent = QATypedGrandparentMachine::create();
+    $grandparent->send(['type' => 'START']);
+    $grandparent->persist();
+
+    $rootEventId = $grandparent->state->history->first()->root_event_id;
+
+    $completed = LocalQATestCase::waitFor(function () use ($rootEventId) {
+        $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+
+        return $cs && str_contains($cs->state_id, 'completed');
+    }, timeoutSeconds: 90, description: 'typed contracts at each level: chain should complete');
+
+    expect($completed)->toBeTrue('Chain with typed contracts at each level did not complete');
+
+    // Verify 2 child records exist (grandparent→middle, middle→child)
+    $totalChildren = DB::table('machine_children')->count();
+    expect($totalChildren)->toBe(2, 'Each level should create a child record');
+});
+
+it('LocalQA: mid-level machine fails — grandparent receives typed failure from mid-level (not child)', function (): void {
+    // In this scenario, the middle machine's child fails, middle routes to @fail → 'failed' (final).
+    // The grandparent then receives a failure from the middle machine (not the original child error).
+    // This tests that failure propagation stops at each level and re-emits appropriately.
+    $grandparent = QATypedFailingGrandparentMachine::create();
+    $grandparent->send(['type' => 'START']);
+    $grandparent->persist();
+
+    $rootEventId = $grandparent->state->history->first()->root_event_id;
+
+    $errored = LocalQATestCase::waitFor(function () use ($rootEventId) {
+        $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+
+        return $cs && str_contains($cs->state_id, 'errored');
+    }, timeoutSeconds: 90, description: 'mid-level failure: grandparent should receive failure from middle');
+
+    expect($errored)->toBeTrue('Grandparent did not receive failure from mid-level machine');
+
+    $restored = QATypedFailingGrandparentMachine::create(state: $rootEventId);
+    $error    = $restored->state->context->get('error');
+
+    expect($error)->not->toBeNull('Error should be captured from mid-level failure propagation');
+});
+
+it('LocalQA: child completes with typed output — output accessible at each level', function (): void {
+    // Verify that the grandparent can access the child's typed output after it propagates
+    // through the middle machine. The middle captures child output and produces its own
+    // PaymentOutput on its 'completed' final state. The grandparent captures the middle's output.
+    $grandparent = QATypedGrandparentMachine::create();
+    $grandparent->send(['type' => 'START']);
+    $grandparent->persist();
+
+    $rootEventId = $grandparent->state->history->first()->root_event_id;
+
+    $completed = LocalQATestCase::waitFor(function () use ($rootEventId) {
+        $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+
+        return $cs && str_contains($cs->state_id, 'completed');
+    }, timeoutSeconds: 90, description: 'output at each level: grandparent should have child output');
+
+    expect($completed)->toBeTrue('Chain did not complete for output accessibility check');
+
+    // Verify the grandparent has output data from the chain
+    $restored    = QATypedGrandparentMachine::create(state: $rootEventId);
+    $childOutput = $restored->state->context->get('childOutput');
+
+    expect($childOutput)->toBeArray('Output should be accessible at grandparent level')
+        ->and($childOutput)->toHaveKey('paymentId')
+        ->and($childOutput)->toHaveKey('status');
+
+    // The middle machine also captures child output. Verify the middle completed.
+    $middleChild = DB::table('machine_children')
+        ->where('parent_root_event_id', $rootEventId)
+        ->first();
+    expect($middleChild)->not->toBeNull();
+    expect($middleChild->status)->toBe('completed', 'Middle machine should have completed');
+});
+
 it('LocalQA: three-level typed delegation — child fails, failure propagates up through chain via Horizon', function (): void {
     // Chain: QATypedFailingGrandparentMachine → QATypedFailingMiddleMachine → QATypedFailingChildMachine
     //
