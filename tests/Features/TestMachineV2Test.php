@@ -24,6 +24,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Actions\SendToTargetAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AlwaysGuardMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\DispatchToTargetAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\JobActors\JobActorParentMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\JobActors\ChainedJobParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ParentOrderMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
@@ -1588,4 +1589,48 @@ it('V31: Machine::resetMachineFake clears single class only', function (): void 
 
     expect(ChildPaymentMachine::isMachineFaked())->toBeFalse();
     expect(SimpleChildMachine::isMachineFaked())->toBeTrue();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Job Actor — Test Mode Safety (no infinite loop)
+// ═══════════════════════════════════════════════════════════════
+
+it('V70: transitioning into job state in test mode stays waiting (no auto-dispatch)', function (): void {
+    // Bug: without fix, entering a job state via send() in test mode (sync queue)
+    // dispatches ChildJobJob immediately → @done fires → next job state → cascading loop.
+    // Expected: machine enters job state and WAITS for simulateChildDone().
+    JobActorParentMachine::test()
+        ->send(['type' => 'START'])
+        ->assertState('processing');
+
+    // Machine should NOT have auto-transitioned to 'completed' — it's waiting for child.
+});
+
+it('V71: chained job states do not cascade — each waits for simulateChildDone', function (): void {
+    // ChainedJobParentMachine: idle → step_one [job] → step_two [job] → completed
+    // Without fix: send(START) → step_one → ChildJobJob → @done → step_two → ChildJobJob → @done → completed
+    // With fix: send(START) → step_one (WAITS) → simulateChildDone → step_two (WAITS) → simulateChildDone → completed
+    ChainedJobParentMachine::test()
+        ->send(['type' => 'START'])
+        ->assertState('step_one')
+        ->simulateChildDone(SuccessfulTestJob::class)
+        ->assertState('step_two')
+        ->simulateChildDone(SuccessfulTestJob::class)
+        ->assertState('completed');
+});
+
+it('V72: startingAt job state + send does not auto-dispatch job', function (): void {
+    // Start at idle, transition into job state via send()
+    // Machine should stay at job state, not cascade through @done
+    JobActorParentMachine::startingAt(stateId: 'idle')
+        ->send(['type' => 'START'])
+        ->assertState('processing');
+});
+
+it('V73: fakingAllActions + send into job state stays waiting', function (): void {
+    // The exact pattern from the bug report
+    JobActorParentMachine::test()
+        ->fakingAllActions()
+        ->send(['type' => 'START'])
+        ->assertState('processing');
 });
