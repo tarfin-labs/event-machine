@@ -46,6 +46,9 @@ class QATypedForwardChildMachine extends Machine
                 ],
             ],
             behavior: [
+                'events' => [
+                    'SUBMIT_PAYMENT' => SubmitPaymentEvent::class,
+                ],
                 'actions' => [
                     'processPaymentAction' => function (ContextManager $ctx, EventBehavior $event): void {
                         $ctx->set('paymentId', 'pay_fwd_001');

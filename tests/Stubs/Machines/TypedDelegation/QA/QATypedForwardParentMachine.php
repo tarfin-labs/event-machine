@@ -52,6 +52,9 @@ class QATypedForwardParentMachine extends Machine
                 ],
             ],
             behavior: [
+                'events' => [
+                    'START' => QAStartEvent::class,
+                ],
                 'actions' => [
                     'captureOutputAction' => function (ContextManager $ctx, EventBehavior $event): void {
                         $ctx->set('childOutput', $event->payload['output'] ?? null);

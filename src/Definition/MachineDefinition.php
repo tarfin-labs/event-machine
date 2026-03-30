@@ -1794,6 +1794,15 @@ class MachineDefinition
         if ($childMachine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
             $childRecord->markCompleted();
 
+            $resolvedOutput = self::resolveChildOutput(
+                $childMachine->state->currentStateDefinition,
+                $childMachine->state->context,
+            );
+
+            // Serialize MachineOutput instances — store class FQCN for typed reconstruction
+            $outputData  = $resolvedOutput instanceof MachineOutput ? $resolvedOutput->toArray() : $resolvedOutput;
+            $outputClass = $resolvedOutput instanceof MachineOutput ? $resolvedOutput::class : null;
+
             dispatch(new ChildMachineCompletionJob(
                 parentRootEventId: $state->history->first()->root_event_id,
                 parentMachineClass: $this->machineClass,
@@ -1802,11 +1811,9 @@ class MachineDefinition
                 childRootEventId: $childRecord->child_root_event_id,
                 success: true,
                 childContextData: $childMachine->state->context->data,
-                outputData: self::resolveChildOutput(
-                    $childMachine->state->currentStateDefinition,
-                    $childMachine->state->context,
-                ),
+                outputData: $outputData,
                 childFinalState: $childMachine->state->currentStateDefinition->key,
+                outputClass: $outputClass,
             ));
         }
 

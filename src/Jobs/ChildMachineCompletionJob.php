@@ -206,7 +206,7 @@ class ChildMachineCompletionJob implements ShouldQueue
         }
 
         if ($shouldPropagate) {
-            $this->propagateChainCompletion($freshParent);
+            $this->propagateChainCompletion($freshParent, $this->success);
         }
     }
 
@@ -215,8 +215,16 @@ class ChildMachineCompletionJob implements ShouldQueue
      * dispatch a ChildMachineCompletionJob to route @done/@fail to its own parent.
      *
      * This enables deep delegation chains: Parent → Child → Grandchild → ...
+     *
+     * The $upstreamSuccess flag propagates the success/failure status through the chain.
+     * When a child fails, the middle machine routes @fail to a "failed" final state.
+     * The grandparent should receive this as a failure, not a success — so we carry
+     * the original success flag forward. Each level can also define its own failure
+     * class to re-wrap the error at its level.
+     *
+     * @param  bool  $upstreamSuccess  Whether the upstream child completed successfully.
      */
-    protected function propagateChainCompletion(Machine $machine): void
+    protected function propagateChainCompletion(Machine $machine, bool $upstreamSuccess): void
     {
         $rootEventId = $machine->state->history->first()->root_event_id;
 
@@ -228,7 +236,11 @@ class ChildMachineCompletionJob implements ShouldQueue
             return;
         }
 
-        $childRecord->markCompleted();
+        if ($upstreamSuccess) {
+            $childRecord->markCompleted();
+        } else {
+            $childRecord->markFailed();
+        }
 
         $resolvedOutput = MachineDefinition::resolveChildOutput(
             $machine->state->currentStateDefinition,
@@ -239,17 +251,38 @@ class ChildMachineCompletionJob implements ShouldQueue
         $outputData  = $resolvedOutput instanceof MachineOutput ? $resolvedOutput->toArray() : $resolvedOutput;
         $outputClass = $resolvedOutput instanceof MachineOutput ? $resolvedOutput::class : null;
 
-        dispatch(new self(
-            parentRootEventId: $childRecord->parent_root_event_id,
-            parentMachineClass: $childRecord->parent_machine_class,
-            parentStateId: $childRecord->parent_state_id,
-            childMachineClass: $childRecord->child_machine_class,
-            childRootEventId: $rootEventId,
-            success: true,
-            childContextData: $machine->state->context->data,
-            outputData: $outputData,
-            childFinalState: $machine->state->currentStateDefinition->key,
-            outputClass: $outputClass,
-        ));
+        if ($upstreamSuccess) {
+            dispatch(new self(
+                parentRootEventId: $childRecord->parent_root_event_id,
+                parentMachineClass: $childRecord->parent_machine_class,
+                parentStateId: $childRecord->parent_state_id,
+                childMachineClass: $childRecord->child_machine_class,
+                childRootEventId: $rootEventId,
+                success: true,
+                childContextData: $machine->state->context->data,
+                outputData: $outputData,
+                childFinalState: $machine->state->currentStateDefinition->key,
+                outputClass: $outputClass,
+            ));
+        } else {
+            // Propagate failure: the middle machine captured the error in its context
+            // and may define its own failure class for re-wrapping.
+            $failureClass = $machine->definition->failureClass;
+
+            dispatch(new self(
+                parentRootEventId: $childRecord->parent_root_event_id,
+                parentMachineClass: $childRecord->parent_machine_class,
+                parentStateId: $childRecord->parent_state_id,
+                childMachineClass: $childRecord->child_machine_class,
+                childRootEventId: $rootEventId,
+                success: false,
+                childContextData: $machine->state->context->data,
+                errorMessage: $machine->state->context->get('error') ?? $this->errorMessage ?? 'Child machine failed',
+                errorCode: $this->errorCode,
+                outputData: $outputData,
+                childFinalState: $machine->state->currentStateDefinition->key,
+                failureClass: $failureClass,
+            ));
+        }
     }
 }

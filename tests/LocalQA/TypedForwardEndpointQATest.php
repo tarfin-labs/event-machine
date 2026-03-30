@@ -44,7 +44,7 @@ it('LocalQA: forward endpoint full lifecycle — create, delegate, forward, chil
     // Step 1: Create parent via HTTP
     $createResponse = $this->postJson('/api/typed-forward-parent/create');
     $createResponse->assertStatus(201);
-    $machineId = $createResponse->json('data.machine_id');
+    $machineId = $createResponse->json('data.id');
     expect($machineId)->not->toBeNull('Machine ID should be returned from create endpoint');
 
     // Step 2: Send START via HTTP → parent enters 'processing', child dispatched
@@ -101,7 +101,7 @@ it('LocalQA: forward endpoint returns child state after forwarded event', functi
 
     // Create and start parent
     $createResponse = $this->postJson('/api/typed-forward-parent/create');
-    $machineId      = $createResponse->json('data.machine_id');
+    $machineId      = $createResponse->json('data.id');
 
     $this->postJson("/api/typed-forward-parent/{$machineId}/start");
 
@@ -144,7 +144,7 @@ it('LocalQA: forward endpoint child has no MachineOutput — toResponseArray() f
 
     // Create and start parent
     $createResponse = $this->postJson('/api/typed-forward-parent/create');
-    $machineId      = $createResponse->json('data.machine_id');
+    $machineId      = $createResponse->json('data.id');
 
     $this->postJson("/api/typed-forward-parent/{$machineId}/start");
 
@@ -178,7 +178,7 @@ it('LocalQA: forward endpoint OutputBehavior type-hints MachineOutput but child 
 
     // Create and start parent
     $createResponse = $this->postJson('/api/typed-forward-parent/create');
-    $machineId      = $createResponse->json('data.machine_id');
+    $machineId      = $createResponse->json('data.id');
 
     $this->postJson("/api/typed-forward-parent/{$machineId}/start");
 
