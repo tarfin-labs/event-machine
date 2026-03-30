@@ -254,7 +254,7 @@ test('sequential forward events advance child through multiple states', function
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-//  Happy Path: OutputBehavior with ForwardContext
+//  Happy Path: OutputBehavior with child output
 // ═══════════════════════════════════════════════════════════════════════
 
 test('it runs parent OutputBehavior and returns custom response', function (): void {
