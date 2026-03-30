@@ -178,8 +178,8 @@ MachineDefinition::define(
 - **Scheduled events** — cron-based batch operations via `MachineScheduler` with resolver pattern
 - **Parallel states with real dispatch** — concurrent region execution via Laravel queue with DB-level locking and LWW conflict detection
 - **Infinite loop protection** — configurable depth guard (default 100) prevents stack overflow from `@always` and `raise()` cycles
-- **HTTP endpoints** — register RESTful routes for machines with `contextKeys` response filtering
-- **Machine faking** — short-circuit child delegation in tests with result injection and invocation assertions
+- **HTTP endpoints** — register RESTful routes for machines with `output` response filtering
+- **Machine faking** — short-circuit child delegation in tests with output injection and invocation assertions
 - **Archival/compression** — archive millions of completed workflows, restore any time
 - **Laravel-native** — DI, Eloquent, Artisan, Horizon, Pest — everything works naturally
 

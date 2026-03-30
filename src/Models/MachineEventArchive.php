@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Models;
 
-use RuntimeException;
-use InvalidArgumentException;
 use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Tarfinlabs\EventMachine\EventCollection;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Tarfinlabs\EventMachine\Support\CompressionManager;
+use Tarfinlabs\EventMachine\Exceptions\ArchiveException;
 
 /**
  * Class MachineEventArchive.
@@ -77,7 +76,7 @@ class MachineEventArchive extends Model
     public static function archiveEvents(EventCollection $events, ?int $compressionLevel = null): self
     {
         if ($events->isEmpty()) {
-            throw new InvalidArgumentException('Cannot archive empty event collection');
+            throw ArchiveException::emptyEventCollection();
         }
 
         $rootEventId = $events->first()->root_event_id;
@@ -95,7 +94,7 @@ class MachineEventArchive extends Model
         $compressedData = gzcompress($jsonData, $level);
 
         if ($compressedData === false) {
-            throw new RuntimeException('Failed to compress events data');
+            throw ArchiveException::compressionFailed();
         }
 
         return self::create([
@@ -122,7 +121,7 @@ class MachineEventArchive extends Model
         $decompressed = gzuncompress($this->events_data);
 
         if ($decompressed === false) {
-            throw new RuntimeException('Failed to decompress archived events data');
+            throw ArchiveException::decompressionFailed();
         }
 
         $eventsData = json_decode($decompressed, true, 512, JSON_THROW_ON_ERROR);

@@ -19,8 +19,8 @@ test('it resolves conditional @done in async mode with null EventBehavior', func
         'id'      => 'test_async_done',
         'initial' => 'processing',
         'context' => [
-            'inventoryResult'  => 'success',
-            'paymentResult'    => 'success',
+            'inventoryData'    => 'success',
+            'paymentData'      => 'success',
             'approvalLogged'   => false,
             'reviewerNotified' => false,
         ],
@@ -73,8 +73,8 @@ test('it handles null EventBehavior with synthetic event on guard failure', func
         'id'      => 'test_async_fallback',
         'initial' => 'processing',
         'context' => [
-            'inventoryResult'  => null,
-            'paymentResult'    => null,
+            'inventoryData'    => null,
+            'paymentData'      => null,
             'reviewerNotified' => false,
         ],
         'states' => [

@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
@@ -91,7 +91,7 @@ test('result actions can return', function (): void {
     // 1. Arrange
     $value = random_int(10, 20);
 
-    $multipleWithItselfAction = new class() extends ResultBehavior {
+    $multipleWithItselfAction = new class() extends OutputBehavior {
         public function __invoke(EventBehavior $event): int
         {
             return $event->payload['value'] * $event->payload['value'];

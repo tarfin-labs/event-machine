@@ -14,7 +14,7 @@ Consistent naming makes your state machines easier to read, maintain, and debug.
 | Guard class | PascalCase | `{Prefix}{Condition}Guard` | `IsPaymentValidGuard` |
 | Validation Guard | PascalCase | `{Prefix}{Condition}ValidationGuard` | `IsAmountValidValidationGuard` |
 | Calculator class | PascalCase | `{Subject}{Noun}Calculator` | `OrderTotalCalculator` |
-| Result class | PascalCase | `{Subject}{Noun}Result` | `InvoiceSummaryResult` |
+| Output class | PascalCase | `{Subject}{Noun}Output` | `InvoiceSummaryOutput` |
 | Machine class | PascalCase | `{Domain}Machine` | `OrderWorkflowMachine` |
 | Machine ID | snake_case | `{domain_name}` | `order_workflow` |
 | Context class | PascalCase | `{Domain}Context` | `OrderWorkflowContext` |
@@ -28,8 +28,11 @@ Consistent naming makes your state machines easier to read, maintain, and debug.
 | Eloquent column | snake_case | `{domain}_mre` | `order_workflow_mre` |
 | Endpoint action class | PascalCase | `{DescriptiveName}EndpointAction` | `CancelEndpointAction` |
 | Endpoint action inline key | camelCase | `{descriptiveName}EndpointAction` | `cancelEndpointAction` |
-| Endpoint result class | PascalCase | `{EventDerived}EndpointResult` | `GuarantorSavedEndpointResult` |
-| Endpoint result inline key | camelCase | `{eventDerived}EndpointResult` | `guarantorSavedEndpointResult` |
+| Endpoint output class | PascalCase | `{EventDerived}EndpointOutput` | `GuarantorSavedEndpointOutput` |
+| Endpoint output inline key | camelCase | `{eventDerived}EndpointOutput` | `guarantorSavedEndpointOutput` |
+| MachineInput class | PascalCase | `{Domain}Input` | `PaymentInput` |
+| MachineOutput class | PascalCase | `{Domain}Output` or `{State}Output` | `PaymentOutput`, `ApprovedOutput` |
+| MachineFailure class | PascalCase | `{Domain}Failure` | `PaymentFailure` |
 | Resolver class | PascalCase | `{Description}Resolver` | `ExpiredApplicationsResolver` |
 | Endpoint URI (auto) | kebab-case | from event type | `/farmer-saved` |
 | Route name (auto) | snake_case | from event type | `machines.application.farmer_saved` |
@@ -44,12 +47,12 @@ Every element in EventMachine has two identities: its **PHP class name** and the
 | Guard | `IsPaymentValidGuard` | `isPaymentValidGuard` | `'isPaymentValidGuard'` |
 | Validation Guard | `IsAmountValidValidationGuard` | `isAmountValidValidationGuard` | `'isAmountValidValidationGuard'` |
 | Calculator | `OrderTotalCalculator` | `orderTotalCalculator` | `'orderTotalCalculator'` |
-| Result | `InvoiceSummaryResult` | `invoiceSummaryResult` | `'invoiceSummaryResult'` |
+| Output | `InvoiceSummaryOutput` | `invoiceSummaryOutput` | `'invoiceSummaryOutput'` |
 | Event | `OrderSubmittedEvent` | — | `'ORDER_SUBMITTED'` |
 | Machine | `OrderWorkflowMachine` | — | `'order_workflow'` |
 | Context | `OrderWorkflowContext` | — | — |
 | Endpoint Action | `CancelEndpointAction` | — | `CancelEndpointAction::class` |
-| Endpoint Result | `OrderDetailEndpointResult` | `orderDetailEndpointResult` | `'orderDetailEndpointResult'` |
+| Endpoint Output | `OrderDetailEndpointOutput` | `orderDetailEndpointOutput` | `'orderDetailEndpointOutput'` |
 
 The pattern is straightforward:
 
@@ -652,15 +655,67 @@ Inline keys:
 ],
 ```
 
-## Results
+## Outputs
 
-Results compute the final output of a state machine. Name them with a **descriptive noun** and a `Result` suffix.
+Outputs compute the final output of a state machine. Name them with a **descriptive noun** and an `Output` suffix.
 
 ```php ignore
-// Class name: {Subject}{Noun}Result — PascalCase
-class InvoiceSummaryResult extends ResultBehavior { ... }
-class OrderConfirmationResult extends ResultBehavior { ... }
-class RiskAssessmentResult extends ResultBehavior { ... }
+// Class name: {Subject}{Noun}Output — PascalCase
+class InvoiceSummaryOutput extends OutputBehavior { ... }
+class OrderConfirmationOutput extends OutputBehavior { ... }
+class RiskAssessmentOutput extends OutputBehavior { ... }
+```
+
+## Typed Contracts
+
+Typed contracts (`MachineInput`, `MachineOutput`, `MachineFailure`) follow domain-driven naming. Constructor parameters use `camelCase`.
+
+### MachineInput
+
+Name after the **domain** the child machine serves. The suffix is always `Input`:
+
+```php ignore
+// Class name: {Domain}Input — PascalCase
+class PaymentInput extends MachineInput { ... }
+class VerificationInput extends MachineInput { ... }
+class ShippingInput extends MachineInput { ... }
+```
+
+### MachineOutput
+
+Name after the **domain** or the **final state** the output represents. The suffix is always `Output`:
+
+```php ignore
+// Domain-scoped (single output for the machine)
+class PaymentOutput extends MachineOutput { ... }
+
+// State-scoped (different output per final state)
+class ApprovedOutput extends MachineOutput { ... }
+class RejectedOutput extends MachineOutput { ... }
+```
+
+### MachineFailure
+
+Name after the **domain** the failure relates to. The suffix is always `Failure`:
+
+```php ignore
+class PaymentFailure extends MachineFailure { ... }
+class VerificationFailure extends MachineFailure { ... }
+```
+
+### Constructor Parameters
+
+All constructor parameters use `camelCase`, consistent with context keys and event payloads:
+
+```php ignore
+class PaymentInput extends MachineInput
+{
+    public function __construct(
+        public readonly string $orderId,       // camelCase
+        public readonly int $totalAmount,      // camelCase
+        public readonly ?string $couponCode,   // camelCase
+    ) {}
+}
 ```
 
 ## Machine Definition
@@ -799,7 +854,7 @@ Data flowing between parent and child machines uses `camelCase`:
 // Parent → Child (input)
 'delegating' => [
     'machine' => PaymentMachine::class,
-    'with'    => ['orderId', 'totalAmount'],
+    'input'    => ['orderId', 'totalAmount'],
 ],
 
 // Child → Parent (output on final state)
@@ -912,23 +967,23 @@ Inline keys use camelCase:
 ],
 ```
 
-### Endpoint Result Classes
+### Endpoint Output Classes
 
-Endpoint results customize the HTTP response. Name them with the **event-derived name** and an `EndpointResult` suffix:
+Endpoint outputs customize the HTTP response. Name them with the **event-derived name** and an `EndpointOutput` suffix:
 
 ```php ignore
-// Class name: {EventDerived}EndpointResult — PascalCase
-class GuarantorSavedEndpointResult extends ResultBehavior { ... }
-class ApprovedWithInitiativeEndpointResult extends ResultBehavior { ... }
-class PriceEndpointResult extends ResultBehavior { ... }
+// Class name: {EventDerived}EndpointOutput — PascalCase
+class GuarantorSavedEndpointOutput extends OutputBehavior { ... }
+class ApprovedWithInitiativeEndpointOutput extends OutputBehavior { ... }
+class PriceEndpointOutput extends OutputBehavior { ... }
 ```
 
 Inline keys use camelCase and are referenced in the endpoint definition:
 
 ```php ignore
 'behavior' => [
-    'results' => [
-        'guarantorSavedEndpointResult' => GuarantorSavedEndpointResult::class,
+    'outputs' => [
+        'guarantorSavedEndpointOutput' => GuarantorSavedEndpointOutput::class,
     ],
 ],
 ```
@@ -958,7 +1013,7 @@ MachineDefinition::define(
             'uri'        => '/submit',        // snake_case (kebab-case value)
             'method'     => 'POST',           // HTTP method
             'action'     => SubmitEndpointAction::class,
-            'result'     => 'orderSummaryResult',
+            'output' => 'orderSummaryOutput',
             'statusCode' => 201,              // camelCase (inherited from XState convention)
             'middleware'  => ['auth:api'],
         ],
@@ -1042,14 +1097,14 @@ app/
         │   └── PaymentReceivedEvent.php
         ├── Calculators/
         │   └── OrderTotalCalculator.php
-        ├── Results/
-        │   └── OrderConfirmationResult.php
+        ├── Outputs/
+        │   └── OrderConfirmationOutput.php
         ├── Endpoints/
         │   ├── Actions/
         │   │   ├── CancelEndpointAction.php
         │   │   └── StartEndpointAction.php
-        │   └── Results/
-        │       └── OrderDetailEndpointResult.php
+        │   └── Outputs/
+        │       └── OrderDetailEndpointOutput.php
         └── Resolvers/
             └── ExpiredApplicationsResolver.php
 ```
@@ -1072,5 +1127,5 @@ The key principles behind these conventions:
 4. **Guards are questions** — boolean predicates with `is`/`has`/`can`/`should` prefix (`IsPaymentValid`, not `PaymentValid`)
 5. **Business data is camelCase, config is snake_case** — context keys, payloads, input/output use `camelCase`; framework config keys use `snake_case`
 6. **Inline keys include the type suffix** — `'sendEmailAction'` not `'sendEmail'` for clarity
-7. **Suffixes prevent ambiguity** — `Event`, `Action`, `Guard`, `Calculator`, `Result` suffixes on class names make the role immediately clear
+7. **Suffixes prevent ambiguity** — `Event`, `Action`, `Guard`, `Calculator`, `Output` suffixes on class names make the role immediately clear
 8. **Consistency over cleverness** — pick one pattern and apply it everywhere

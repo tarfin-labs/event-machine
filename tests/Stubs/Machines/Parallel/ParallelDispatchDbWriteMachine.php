@@ -8,7 +8,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\WriteToDbAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\ProcessRegionAAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBResultAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBOutputAction;
 
 /**
  * Test machine for transaction safety verification.
@@ -36,8 +36,8 @@ class ParallelDispatchDbWriteMachine extends Machine
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
-                    'regionAResult' => null,
-                    'regionBResult' => null,
+                    'regionAData' => null,
+                    'regionBData' => null,
                 ],
                 'states' => [
                     'processing' => [
@@ -64,7 +64,7 @@ class ParallelDispatchDbWriteMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => SetRegionBResultAction::class,
+                                        'entry' => SetRegionBOutputAction::class,
                                         'on'    => ['REGION_B_DONE' => 'finished'],
                                     ],
                                     'finished' => ['type' => 'final'],

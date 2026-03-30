@@ -62,7 +62,7 @@ class CalculateAction extends ActionBehavior
         $this->raise([
             'type' => 'CALCULATION_COMPLETE',
             'payload' => [
-                'result' => $result,
+                'value' => $result,
                 'timestamp' => now()->toIso8601String(),
             ],
         ]);

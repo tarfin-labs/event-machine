@@ -17,7 +17,7 @@ $events = $machine->state->availableEvents();
 
 // 3. Via toArray() — auto-included
 $array = $machine->state->toArray();
-// $array['available_events'] contains the same data
+// $array['availableEvents'] contains the same data
 ```
 
 Each entry in the returned array is an associative array with these keys:
@@ -30,19 +30,19 @@ Each entry in the returned array is an associative array with these keys:
 
 ## HTTP Response Format
 
-When an endpoint returns the default response (no custom `ResultBehavior`), `available_events` is included automatically:
+When an endpoint returns the default response (no custom `OutputBehavior`), `availableEvents` is included automatically:
 
 <!-- doctest-attr: ignore -->
 ```json
 {
     "data": {
-        "machine_id": "01JARX5Z8KQVN...",
-        "value": ["awaiting_approval"],
-        "context": {
+        "id": "01JARX5Z8KQVN...",
+        "state": ["awaiting_approval"],
+        "output": {
             "order_id": 42,
             "total_amount": 15000
         },
-        "available_events": [
+        "availableEvents": [
             { "type": "APPROVE", "source": "parent" },
             { "type": "REJECT", "source": "parent" },
             { "type": "PROVIDE_CARD", "source": "forward" }
@@ -57,13 +57,13 @@ In parallel states, each event includes its `region`:
 ```json
 {
     "data": {
-        "machine_id": "01JARX5Z8KQVN...",
-        "value": [
+        "id": "01JARX5Z8KQVN...",
+        "state": [
             "fulfillment.payment.pending",
             "fulfillment.shipping.preparing"
         ],
-        "context": {},
-        "available_events": [
+        "output": {},
+        "availableEvents": [
             { "type": "PAY", "source": "parent", "region": "payment" },
             { "type": "SHIP", "source": "parent", "region": "shipping" }
         ]
@@ -81,7 +81,7 @@ To exclude `available_events` from a specific endpoint's response, set `availabl
 ],
 ```
 
-When a custom `ResultBehavior` is used, `available_events` is not added to the response automatically — the result behavior has full control over the response shape. You can still call `$state->availableEvents()` inside your result if needed.
+When a custom `OutputBehavior` is used, `availableEvents` is not added to the response automatically — the output behavior has full control over the response shape. You can still call `$state->availableEvents()` inside your output if needed.
 
 ## Source Annotations
 

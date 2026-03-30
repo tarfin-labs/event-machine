@@ -93,6 +93,18 @@ class ExportXStateCommand extends Command
             $node['context'] = $context;
         }
 
+        // Export typed contract declarations as XState v5 types (input only — output resolved per-state)
+        $types = $this->extractTypedContracts($definition);
+        if ($types !== []) {
+            $node['types'] = $types;
+        }
+
+        // Export EventMachine-specific metadata (failure class, input class FQCN) under meta
+        $emMeta = $this->extractEventMachineMeta($definition);
+        if ($emMeta !== []) {
+            $node['meta'] = ['eventMachine' => $emMeta];
+        }
+
         $rootState = $this->buildStateNode($definition->root);
 
         // Merge root state properties into machine node
@@ -160,6 +172,19 @@ class ExportXStateCommand extends Command
         // Meta
         if ($stateDefinition->meta !== null) {
             $node['meta'] = $stateDefinition->meta;
+        }
+
+        // Output — XState v5 only supports machine-level output, not per-state.
+        // Export per-state output as meta.output for EventMachine-specific tooling.
+        if ($stateDefinition->output !== null) {
+            $outputValue = match (true) {
+                is_array($stateDefinition->output)           => $stateDefinition->output,
+                is_string($stateDefinition->output)          => ['type' => class_basename($stateDefinition->output)],
+                $stateDefinition->output instanceof \Closure => '<inline closure>',
+            };
+
+            $node['meta'] ??= [];
+            $node['meta']['output'] = $outputValue;
         }
 
         // Child states
@@ -273,10 +298,10 @@ class ExportXStateCommand extends Command
             'src' => class_basename($invokeDefinition->machineClass),
         ];
 
-        // with → input (context transfer schema)
-        if ($invokeDefinition->with !== null && !$invokeDefinition->with instanceof \Closure) {
+        // input → XState input schema
+        if ($invokeDefinition->input !== null && is_array($invokeDefinition->input)) {
             $input = [];
-            foreach ($invokeDefinition->with as $key => $value) {
+            foreach ($invokeDefinition->input as $key => $value) {
                 if (is_int($key)) {
                     $input[$value] = $value; // Same-name mapping
                 } else {
@@ -383,20 +408,20 @@ class ExportXStateCommand extends Command
 
         // Guards
         if ($branch->guards !== null && $branch->guards !== []) {
-            $guardNames = array_map(
-                $this->resolveBehaviorName(...),
+            $guardEntries = array_map(
+                $this->formatBehaviorForExport(...),
                 $branch->guards
             );
 
-            $config['guard'] = count($guardNames) === 1
-                ? $guardNames[0]
-                : ['type' => 'and', 'guards' => $guardNames];
+            $config['guard'] = count($guardEntries) === 1
+                ? $guardEntries[0]
+                : ['type' => 'and', 'guards' => $guardEntries];
         }
 
         // Actions
         if ($branch->actions !== null && $branch->actions !== []) {
             $config['actions'] = array_map(
-                $this->resolveBehaviorName(...),
+                $this->formatBehaviorForExport(...),
                 $branch->actions
             );
         }
@@ -406,7 +431,7 @@ class ExportXStateCommand extends Command
             $config['meta'] = [
                 'eventMachine' => [
                     'calculators' => array_map(
-                        $this->resolveBehaviorName(...),
+                        $this->formatBehaviorForExport(...),
                         $branch->calculators
                     ),
                 ],
@@ -444,6 +469,21 @@ class ExportXStateCommand extends Command
     }
 
     /**
+     * Format a behavior for XState export.
+     * Returns a plain string for parameterless, or {type, params} for parameterized.
+     */
+    private function formatBehaviorForExport(mixed $behavior): array|string
+    {
+        $resolved = $this->resolveBehaviorNameAndParams($behavior);
+
+        if ($resolved['params'] !== null) {
+            return ['type' => $resolved['name'], 'params' => $resolved['params']];
+        }
+
+        return $resolved['name'];
+    }
+
+    /**
      * Resolve a behavior name from a class FQCN, inline string, or closure.
      *
      * Produces a short, human-readable name for the XState JSON output:
@@ -451,6 +491,34 @@ class ExportXStateCommand extends Command
      * - String with colon (params): extracts base name
      * - Plain string: used as-is
      */
+    /**
+     * Resolve a behavior to its name and optional params for XState export.
+     *
+     * @return array{name: string, params: array<string, mixed>|null}
+     */
+    private function resolveBehaviorNameAndParams(mixed $behavior): array
+    {
+        // Array tuple: [Class::class, 'min' => 100, 'max' => 10000]
+        if (is_array($behavior)) {
+            $class  = $behavior[0] ?? 'unknown';
+            $params = array_filter(
+                $behavior,
+                fn (int|string $k): bool => is_string($k) && !str_starts_with($k, '@'),
+                ARRAY_FILTER_USE_KEY,
+            );
+
+            return [
+                'name'   => $this->resolveBehaviorName($class),
+                'params' => $params ?: null,
+            ];
+        }
+
+        return [
+            'name'   => $this->resolveBehaviorName($behavior),
+            'params' => null,
+        ];
+    }
+
     private function resolveBehaviorName(mixed $behavior): string
     {
         if (!is_string($behavior)) {
@@ -499,6 +567,77 @@ class ExportXStateCommand extends Command
         }
 
         return [];
+    }
+
+    /**
+     * Extract typed contract declarations as XState v5 types format.
+     *
+     * XState v5 supports: context, events, input, output, actions, guards, actors, delays.
+     * We map MachineInput → types.input, MachineOutput (from final states) → types.output.
+     * MachineFailure has no XState equivalent — stored in meta.eventMachine.failure.
+     */
+    private function extractTypedContracts(MachineDefinition $definition): array
+    {
+        $types = [];
+
+        // XState v5 types.input — maps to MachineInput
+        if ($definition->inputClass !== null && class_exists($definition->inputClass)) {
+            $types['input'] = $this->reflectContractProperties($definition->inputClass);
+        }
+
+        return $types;
+    }
+
+    /**
+     * Extract EventMachine-specific metadata (failure class) not supported by XState v5.
+     * Stored under meta.eventMachine to avoid collision with XState standard keys.
+     */
+    private function extractEventMachineMeta(MachineDefinition $definition): array
+    {
+        $meta = [];
+
+        if ($definition->failureClass !== null && class_exists($definition->failureClass)) {
+            $meta['failure'] = [
+                'class'      => $definition->failureClass,
+                'properties' => $this->reflectContractProperties($definition->failureClass),
+            ];
+        }
+
+        if ($definition->inputClass !== null && class_exists($definition->inputClass)) {
+            $meta['inputClass'] = $definition->inputClass;
+        }
+
+        return $meta;
+    }
+
+    /**
+     * Reflect a typed contract class into a property map (XState v5 compatible format).
+     *
+     * Returns { propertyName: defaultValue } matching XState's types pattern:
+     *   types: { input: {} as { orderId: string; amount: number } }
+     */
+    private function reflectContractProperties(string $class): array
+    {
+        $reflection = new ReflectionClass($class);
+        $properties = [];
+
+        foreach ($reflection->getConstructor()?->getParameters() ?? [] as $param) {
+            $type = $param->getType();
+
+            // Use type-appropriate default values (matches XState's {} as T pattern)
+            $properties[$param->getName()] = match (true) {
+                !$type instanceof \ReflectionNamedType                     => null,
+                $type->allowsNull()                                        => null,
+                $param->isDefaultValueAvailable()                          => $param->getDefaultValue(),
+                $type->getName() === 'int' || $type->getName() === 'float' => 0,
+                $type->getName() === 'bool'                                => false,
+                $type->getName() === 'string'                              => '',
+                $type->getName() === 'array'                               => [],
+                default                                                    => null,
+            };
+        }
+
+        return $properties;
     }
 
     /**

@@ -70,7 +70,7 @@ OrderMachine::test()
 Queue::assertPushed(ChildMachineJob::class);
 
 // Test with faked child (sync short-circuit)
-PaymentMachine::fake(result: ['paymentId' => 'pay_123'], finalState: 'approved');
+PaymentMachine::fake(output: ['paymentId' => 'pay_123'], finalState: 'approved');
 OrderMachine::test()
     ->send('START_PAYMENT')
     ->assertState('completed');
@@ -84,6 +84,16 @@ For comprehensive async delegation testing patterns, see [Delegation Testing](/t
 ::: warning Testing Async Delegation
 `Queue::fake()` verifies dispatch but not the full pipeline (child runs → completes → parent routes). For end-to-end verification with real infrastructure, see [Recipe: Full Async Delegation Pipeline](/testing/recipes#recipe-full-async-delegation-pipeline).
 :::
+
+## Typed Contracts in Async Mode
+
+Typed contracts (`MachineInput`, `MachineOutput`, `MachineFailure`) work identically for sync and async delegation. In async mode:
+
+- **Input** is validated inside `ChildMachineJob` before the child machine starts. If validation fails, `@fail` fires on the parent.
+- **Output** is serialized via `toArray()` and carried through `ChildMachineCompletionJob` back to the parent.
+- **Failure** is serialized via `toArray()` and carried through the completion job's error payload.
+
+No special configuration is needed -- the same `input`, `output`, and `failure` keys work regardless of whether `queue` is set.
 
 ## Queue Configuration
 
@@ -243,11 +253,11 @@ class OrderMachine extends Machine
                     'processing_payment' => [
                         'machine' => PaymentFlowMachine::class,
                         'queue'   => 'default',
-                        'with'    => ['orderId'],
+                        'input'    => ['orderId'],
                         'forward' => [
                             'PROVIDE_CARD',                      // Format 1: forward as-is
                             'CONFIRM_PAYMENT' => [               // Format 3: with endpoint customization
-                                'contextKeys' => ['cardLast4', 'status'],
+                                'output' => ['cardLast4', 'status'],
                                 'status'      => 200,
                             ],
                         ],
@@ -366,8 +376,7 @@ Forward entries support the same endpoint customization keys as regular endpoint
         'method'           => 'PATCH',             // HTTP method (default: POST)
         'middleware'       => ['throttle:10'],      // Route middleware
         'action'           => CustomAction::class,  // Parent-level action lifecycle
-        'result'           => CustomResult::class,  // ResultBehavior (receives ForwardContext)
-        'contextKeys'      => ['cardLast4'],       // Filter child context in response
+        'output'           => CustomOutput::class,  // OutputBehavior (receives ForwardContext)
         'status'           => 202,                  // HTTP status code
         'available_events' => false,                // Suppress available_events in response
     ],

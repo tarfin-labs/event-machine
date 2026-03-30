@@ -7,33 +7,31 @@ use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 
 // region ChildMachineDoneEvent::forTesting()
 
-it('creates a done event with only result data', function (): void {
-    $event = ChildMachineDoneEvent::forTesting(['result' => ['statusCode' => 3]]);
+it('creates a done event with output data', function (): void {
+    $event = ChildMachineDoneEvent::forTesting(['output' => ['statusCode' => 3]]);
 
-    expect($event->result('statusCode'))->toBe(3)
-        ->and($event->output())->toBe([])
+    expect($event->output('statusCode'))->toBe(3)
         ->and($event->childMachineId())->toBe('test')
         ->and($event->childMachineClass())->toBe('TestMachine');
 });
 
-it('creates a done event with result and output', function (): void {
+it('creates a done event with output containing multiple keys', function (): void {
     $event = ChildMachineDoneEvent::forTesting([
-        'result' => ['amount' => 1500],
-        'output' => ['currency' => 'TRY'],
+        'output' => ['amount' => 1500, 'currency' => 'TRY'],
     ]);
 
-    expect($event->result('amount'))->toBe(1500)
+    expect($event->output('amount'))->toBe(1500)
         ->and($event->output('currency'))->toBe('TRY');
 });
 
 it('creates a done event with final state', function (): void {
     $event = ChildMachineDoneEvent::forTesting([
-        'result'      => ['status' => 'ok'],
+        'output'      => ['status' => 'ok'],
         'final_state' => 'approved',
     ]);
 
     expect($event->finalState())->toBe('approved')
-        ->and($event->result('status'))->toBe('ok');
+        ->and($event->output('status'))->toBe('ok');
 });
 
 it('creates a done event with custom machine identity', function (): void {
@@ -49,15 +47,14 @@ it('creates a done event with custom machine identity', function (): void {
 it('creates a done event with zero-config defaults', function (): void {
     $event = ChildMachineDoneEvent::forTesting();
 
-    expect($event->result())->toBe([])
-        ->and($event->output())->toBe([])
+    expect($event->output())->toBe([])
         ->and($event->childMachineId())->toBe('test')
         ->and($event->childMachineClass())->toBe('TestMachine')
         ->and($event->finalState())->toBeNull();
 });
 
 it('creates a done event with correct type', function (): void {
-    $event = ChildMachineDoneEvent::forTesting(['result' => ['x' => 1]]);
+    $event = ChildMachineDoneEvent::forTesting(['output' => ['x' => 1]]);
 
     expect($event->type)->toBe('CHILD_MACHINE_DONE');
 });

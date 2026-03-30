@@ -33,7 +33,7 @@ class JobActorParentMachine extends Machine
                     ],
                     'processing' => [
                         'job'   => SuccessfulTestJob::class,
-                        'with'  => ['orderId'],
+                        'input' => ['orderId'],
                         'queue' => 'default',
                         '@done' => [
                             'target'  => 'completed',

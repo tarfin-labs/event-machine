@@ -10,14 +10,14 @@ Use `Machine::fake()` to short-circuit child machine execution in tests:
 ```php
 use Tarfinlabs\EventMachine\Actor\Machine;
 
-// Fake a successful child result
-PaymentMachine::fake(result: ['paymentId' => 'pay_123']);
+// Fake a successful child output
+PaymentMachine::fake(output: ['paymentId' => 'pay_123']);
 
 // Fake a failure
 PaymentMachine::fake(fail: true, error: 'Insufficient funds');
 
 // Fake with specific final state name
-PaymentMachine::fake(result: ['status' => 'ok'], finalState: 'approved');
+PaymentMachine::fake(output: ['status' => 'ok'], finalState: 'approved');
 ```
 
 When a faked machine is invoked via the `machine` key, it short-circuits: no child machine is actually created. Instead, it records the invocation and immediately routes `@done` (or `@fail`) on the parent.
@@ -26,7 +26,7 @@ When a faked machine is invoked via the `machine` key, it short-circuits: no chi
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `result` | `array` | The result the child "returns" via `@done` |
+| `output` | `array` | The output the child "returns" via `@done` |
 | `fail` | `bool` | When `true`, triggers `@fail` instead of `@done` |
 | `error` | `string` | Error message passed to `ChildMachineFailEvent` |
 | `finalState` | `string` | Override the final state name reported to the parent |
@@ -39,7 +39,7 @@ After faking, verify invocations:
 ```php
 use Tarfinlabs\EventMachine\Actor\Machine;
 
-PaymentMachine::fake(result: ['paymentId' => 'pay_123']);
+PaymentMachine::fake(output: ['paymentId' => 'pay_123']);
 
 // ... run the parent machine ...
 
@@ -65,7 +65,7 @@ The `TestMachine` fluent API integrates child delegation testing directly into t
 <!-- doctest-attr: ignore -->
 ```php
 OrderMachine::test()
-    ->fakingChild(PaymentMachine::class, result: ['id' => 'pay_1'], finalState: 'approved')
+    ->fakingChild(PaymentMachine::class, output: ['id' => 'pay_1'], finalState: 'approved')
     ->send('PLACE_ORDER')
     ->assertState('completed')
     ->assertChildInvoked(PaymentMachine::class)
@@ -97,7 +97,7 @@ For async simulation (parent already waiting for child):
 OrderMachine::test()
     ->send('START_ASYNC_PAYMENT')
     ->assertState('awaiting_payment')
-    ->simulateChildDone(PaymentMachine::class, result: ['id' => 'pay_1'], finalState: 'approved')
+    ->simulateChildDone(PaymentMachine::class, output: ['id' => 'pay_1'], finalState: 'approved')
     ->assertState('completed');
 ```
 
@@ -179,6 +179,67 @@ expect($machine->state->currentStateDefinition->id)->toContain('fallback');
 The `finalState` parameter on `Machine::fake()` determines which `@done.{state}` route fires on the parent. When omitted (or `null`), the event has no final state info and falls through to the `@done` catch-all.
 :::
 
+## Typed Contract Testing
+
+When child machines use typed contracts (`MachineInput`, `MachineOutput`, `MachineFailure`), the same faking and simulation methods work with typed instances:
+
+### Faking with MachineOutput
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Actor\Machine;
+
+// Fake with a MachineOutput instance
+PaymentMachine::fake(output: new PaymentOutput(
+    paymentId: 'pay_123',
+    amount: 5000,
+    status: 'captured',
+));
+
+OrderMachine::test()
+    ->send('START')
+    ->assertState('completed');
+
+PaymentMachine::assertInvoked();
+```
+
+### Simulating Typed Child Done
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->send('START_PAYMENT')
+    ->assertState('awaiting_payment')
+    ->simulateChildDone(
+        PaymentMachine::class,
+        output: new PaymentOutput(
+            paymentId: 'pay_456',
+            amount: 5000,
+            status: 'captured',
+        ),
+    )
+    ->assertState('completed');
+```
+
+### Simulating Typed Child Fail
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->send('START_PAYMENT')
+    ->assertState('awaiting_payment')
+    ->simulateChildFail(
+        PaymentMachine::class,
+        output: new PaymentFailure(
+            errorCode: 'INSUFFICIENT_FUNDS',
+            retryable: true,
+        ),
+    )
+    ->assertState('retrying_payment');
+```
+
+The `MachineOutput` and `MachineFailure` instances are serialized via `toArray()` before being passed to the parent's routing logic, matching the production behavior.
+
 ## Full Test Example
 
 <!-- doctest-attr: no_run -->
@@ -187,7 +248,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 
 it('processes order through payment', function (): void {
     // Arrange: fake the child machine
-    PaymentMachine::fake(result: ['paymentId' => 'pay_456']);
+    PaymentMachine::fake(output: ['paymentId' => 'pay_456']);
 
     // Act: run the orchestrator
     $machine = OrderWorkflowMachine::create();
@@ -197,7 +258,7 @@ it('processes order through payment', function (): void {
     PaymentMachine::assertInvoked();
     PaymentMachine::assertInvokedWith(['orderId' => 'ORD-1']);
 
-    // Assert: parent received child result and transitioned
+    // Assert: parent received child output and transitioned
     expect($machine->state->context->get('paymentId'))->toBe('pay_456');
     // No cleanup needed — InteractsWithMachines handles it
 });
@@ -291,7 +352,7 @@ VerificationMachine::test()
     ->withoutPersistence()
     ->faking([StoreItemsAction::class, ValidateOrderAction::class])
     ->assertState('processing_items')
-    ->simulateChildDone(ProcessItemsJob::class, result: [
+    ->simulateChildDone(ProcessItemsJob::class, output: [
         'phones' => [['itemId' => 'ITEM-1', 'quantity' => 2]],
     ])
     ->assertState('awaiting_confirmation');
@@ -308,7 +369,7 @@ For fire-and-forget machine delegation (`machine` + `queue`, no `@done`), use `M
 use Tarfinlabs\EventMachine\Actor\Machine;
 
 it('fire-and-forget machine delegation stays in state', function (): void {
-    AuditMachine::fake(result: []);
+    AuditMachine::fake(output: []);
 
     $machine = AccountMachine::create();
     $machine->send(['type' => 'SUSPEND']);

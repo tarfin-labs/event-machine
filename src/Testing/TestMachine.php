@@ -17,6 +17,8 @@ use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
+use Tarfinlabs\EventMachine\Behavior\MachineFailure;
 use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
@@ -352,15 +354,24 @@ class TestMachine
         $behaviors = $this->machine->definition->behavior[$type] ?? [];
 
         foreach ($behaviors as $key => $value) {
-            if (in_array($value, $except, true)) {
+            // Output registry can contain inner-array tuples: [[Class, 'param' => val]]
+            $resolvedClass = $value;
+            if (is_array($value) && isset($value[0]) && is_array($value[0])) {
+                $resolvedClass = $value[0][0] ?? null;
+            } elseif (is_array($value) && isset($value[0]) && is_string($value[0])) {
+                // Single tuple: [Class, 'param' => val] (shouldn't be in registry normally, but handle)
+                $resolvedClass = $value[0];
+            }
+
+            if (in_array($resolvedClass, $except, true)) {
                 continue;
             }
             if (in_array($key, $except, true)) {
                 continue;
             }
-            if (is_string($value) && is_subclass_of($value, InvokableBehavior::class)) {
-                $value::spy();
-                $this->fakedBehaviors[] = $value;
+            if (is_string($resolvedClass) && is_subclass_of($resolvedClass, InvokableBehavior::class)) {
+                $resolvedClass::spy();
+                $this->fakedBehaviors[] = $resolvedClass;
             }
         }
 
@@ -517,13 +528,32 @@ class TestMachine
         return $this;
     }
 
-    public function assertResult(mixed $expected): self
+    public function assertOutput(mixed $expected): self
     {
         Assert::assertSame(
             $expected,
-            $this->machine->result(),
-            'Machine result did not match expected value'
+            $this->machine->output(),
+            'Machine output did not match expected value'
         );
+
+        return $this;
+    }
+
+    public function assertOutputHasKey(string $key): self
+    {
+        $output = $this->machine->output();
+        Assert::assertIsArray($output, 'Machine output is not an array');
+        Assert::assertArrayHasKey($key, $output, "Machine output does not have key '{$key}'");
+
+        return $this;
+    }
+
+    public function assertOutputEquals(string $key, mixed $value): self
+    {
+        $output = $this->machine->output();
+        Assert::assertIsArray($output, 'Machine output is not an array');
+        Assert::assertArrayHasKey($key, $output, "Machine output does not have key '{$key}'");
+        Assert::assertSame($value, $output[$key], "Machine output key '{$key}' did not match expected value");
 
         return $this;
     }
@@ -1651,12 +1681,12 @@ class TestMachine
      */
     public function fakingChild(
         string $childClass,
-        ?array $result = null,
+        ?array $output = null,
         bool $fail = false,
         ?string $error = null,
         ?string $finalState = null,
     ): self {
-        $childClass::fake(result: $result, fail: $fail, error: $error, finalState: $finalState);
+        $childClass::fake(output: $output, fail: $fail, error: $error, finalState: $finalState);
         $this->fakedChildMachines[] = $childClass;
 
         return $this;
@@ -1793,12 +1823,11 @@ class TestMachine
      * Simulate async child completion without real queues.
      *
      * Works for both machine delegation (`machine:` key) and job actors (`job:` key).
-     * The `result` parameter populates both `output()` and `result()` accessors,
-     * matching Machine::fake() behavior.
+     * The `output` parameter populates the `output()` accessor on ChildMachineDoneEvent.
      */
     public function simulateChildDone(
         string $childClass,
-        array $result = [],
+        array|MachineOutput $output = [],
         ?string $finalState = null,
     ): self {
         $stateDefinition = $this->machine->state->currentStateDefinition;
@@ -1816,9 +1845,12 @@ class TestMachine
             placeholder: $childClass,
         );
 
+        $outputData  = $output instanceof MachineOutput ? $output->toArray() : $output;
+        $outputClass = $output instanceof MachineOutput ? $output::class : null;
+
         $doneEvent = ChildMachineDoneEvent::forChild([
-            'result'        => $result,
-            'output'        => $result,
+            'output'        => $outputData,
+            'output_class'  => $outputClass,
             'machine_id'    => '',
             'machine_class' => $childClass,
             'final_state'   => $finalState,
@@ -1846,7 +1878,7 @@ class TestMachine
         string $childClass,
         string $errorMessage = 'Simulated failure',
         int|string|null $errorCode = null,
-        array $output = [],
+        array|MachineFailure $output = [],
     ): self {
         $stateDefinition = $this->machine->state->currentStateDefinition;
 
@@ -1863,12 +1895,16 @@ class TestMachine
             placeholder: $childClass,
         );
 
+        $outputData   = $output instanceof MachineFailure ? $output->toArray() : $output;
+        $failureClass = $output instanceof MachineFailure ? $output::class : null;
+
         $failEvent = ChildMachineFailEvent::forChild([
             'error_message' => $errorMessage,
             'error_code'    => $errorCode,
             'machine_id'    => '',
             'machine_class' => $childClass,
-            'output'        => $output,
+            'output'        => $outputData,
+            'failure_class' => $failureClass,
         ]);
 
         $this->machine->definition->routeChildFailEvent(

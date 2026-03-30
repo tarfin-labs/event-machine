@@ -6,10 +6,13 @@ use Illuminate\Support\Facades\Queue;
 use Tarfinlabs\EventMachine\Jobs\ChildJobJob;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
-use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
+use Tarfinlabs\EventMachine\Contracts\ReturnsOutput;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Exceptions\InvalidJobClassException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\FakeExternalService;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidMachineClassException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\ExternalServiceContract;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\DependencyInjectedTestJob;
 
@@ -30,7 +33,7 @@ it('validates job + machine mutual exclusivity', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "cannot have both 'job' and 'machine'");
+})->throws(InvalidStateConfigException::class, "cannot have both 'job' and 'machine'");
 
 it('validates job without @done requires target', function (): void {
     MachineDefinition::define(
@@ -46,7 +49,7 @@ it('validates job without @done requires target', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "without '@done' or 'target'");
+})->throws(InvalidStateConfigException::class, "without '@done' or 'target'");
 
 it('validates @done + target ambiguity', function (): void {
     MachineDefinition::define(
@@ -63,7 +66,7 @@ it('validates @done + target ambiguity', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "cannot have both '@done' and 'target'");
+})->throws(InvalidStateConfigException::class, "cannot have both '@done' and 'target'");
 
 // ─── Managed Job Actor (@done) ────────────────────────────────────
 
@@ -81,7 +84,7 @@ it('dispatches ChildJobJob when entering a state with job key', function (): voi
                 ],
                 'sending' => [
                     'job'   => 'App\\Jobs\\SendEmailJob',
-                    'with'  => ['email'],
+                    'input' => ['email'],
                     '@done' => 'sent',
                     '@fail' => 'failed',
                 ],
@@ -117,7 +120,7 @@ it('dispatches fire-and-forget job and transitions immediately', function (): vo
                 ],
                 'logging' => [
                     'job'    => 'App\\Jobs\\AuditLogJob',
-                    'with'   => ['action'],
+                    'input'  => ['action'],
                     'target' => 'next_state',
                 ],
                 'next_state' => ['type' => 'final'],
@@ -143,8 +146,8 @@ it('dispatches fire-and-forget job and transitions immediately', function (): vo
 it('ChildJobJob runs job and dispatches completion with result', function (): void {
     Queue::fake();
 
-    // Create a test job that implements ReturnsResult
-    $testJobClass = new class() implements ReturnsResult {
+    // Create a test job that implements ReturnsOutput
+    $testJobClass = new class() implements ReturnsOutput {
         public string $messageId = '';
 
         public function handle(): void
@@ -152,7 +155,7 @@ it('ChildJobJob runs job and dispatches completion with result', function (): vo
             $this->messageId = 'msg_123';
         }
 
-        public function result(): array
+        public function output(): array
         {
             return ['message_id' => $this->messageId];
         }
@@ -253,7 +256,7 @@ it('ChildJobJob resolves handle() dependencies via service container', function 
 
     Queue::assertPushed(ChildMachineCompletionJob::class, function (ChildMachineCompletionJob $completionJob): bool {
         return $completionJob->success === true
-            && $completionJob->outputData === ['serviceResult' => 'fake-result'];
+            && $completionJob->outputData === ['serviceData' => 'fake-result'];
     });
 });
 
@@ -268,7 +271,7 @@ it('ChildJobJob rejects non-existent job class', function (): void {
     );
 
     $job->handle();
-})->throws(InvalidArgumentException::class, 'does not exist');
+})->throws(InvalidJobClassException::class, 'does not exist');
 
 it('ChildJobJob rejects job class without handle method', function (): void {
     $noHandleClass = new class() {};
@@ -283,7 +286,7 @@ it('ChildJobJob rejects job class without handle method', function (): void {
     );
 
     $job->handle();
-})->throws(InvalidArgumentException::class, 'must have a handle() method');
+})->throws(InvalidJobClassException::class, 'must have a handle() method');
 
 it('SendToMachineJob rejects non-Machine class', function (): void {
     $job = new SendToMachineJob(
@@ -293,7 +296,7 @@ it('SendToMachineJob rejects non-Machine class', function (): void {
     );
 
     $job->handle();
-})->throws(InvalidArgumentException::class, 'must exist and extend');
+})->throws(InvalidMachineClassException::class, 'must exist and extend');
 
 it('ChildMachineJob rejects non-Machine class', function (): void {
     $job = new ChildMachineJob(
@@ -305,15 +308,15 @@ it('ChildMachineJob rejects non-Machine class', function (): void {
     );
 
     $job->handle();
-})->throws(InvalidArgumentException::class, 'must exist and extend');
+})->throws(InvalidMachineClassException::class, 'must exist and extend');
 
-it('ChildJobJob without ReturnsResult returns empty output', function (): void {
+it('ChildJobJob without ReturnsOutput returns empty output', function (): void {
     Queue::fake();
 
     $simpleJobClass = new class() {
         public function handle(): void
         {
-            // no ReturnsResult
+            // no ReturnsOutput
         }
     };
 

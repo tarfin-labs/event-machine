@@ -12,6 +12,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Models\MachineChild;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -42,11 +43,12 @@ class ChildMachineCompletionJob implements ShouldQueue
      * @param  string  $childMachineClass  FQCN of the child machine.
      * @param  string|null  $childRootEventId  The child's root_event_id (null on pre-start failure).
      * @param  bool  $success  Whether the child completed successfully.
-     * @param  mixed  $result  The child's ResultBehavior output (for @done).
-     * @param  array  $childContextData  The child's final context data (for @done).
+     * @param  array  $childContextData  The child's final context data (for @done fallback).
      * @param  string|null  $errorMessage  Error message (for @fail).
      * @param  int|string|null  $errorCode  Error code from the exception (for @fail).
-     * @param  array|null  $outputData  The child's filtered output (from final state `output` key).
+     * @param  array|null  $outputData  The child's output (from final state `output` behavior or key filter).
+     * @param  string|null  $outputClass  FQCN of MachineOutput subclass (for typed reconstruction on parent side).
+     * @param  string|null  $failureClass  FQCN of MachineFailure subclass (for typed reconstruction on parent side).
      */
     public function __construct(
         public readonly string $parentRootEventId,
@@ -55,12 +57,13 @@ class ChildMachineCompletionJob implements ShouldQueue
         public readonly string $childMachineClass,
         public readonly ?string $childRootEventId = null,
         public readonly bool $success = true,
-        public readonly mixed $result = null,
         public readonly array $childContextData = [],
         public readonly ?string $errorMessage = null,
         public readonly int|string|null $errorCode = null,
         public readonly ?array $outputData = null,
         public readonly ?string $childFinalState = null,
+        public readonly ?string $outputClass = null,
+        public readonly ?string $failureClass = null,
     ) {}
 
     public function handle(): void
@@ -135,8 +138,8 @@ class ChildMachineCompletionJob implements ShouldQueue
                 );
 
                 $doneEvent = ChildMachineDoneEvent::forChild([
-                    'result'        => $this->result,
-                    'output'        => $this->outputData,
+                    'output'        => $this->outputData ?? $this->childContextData,
+                    'output_class'  => $this->outputClass,
                     'machine_id'    => $this->childRootEventId ?? '',
                     'machine_class' => $this->childMachineClass,
                     'final_state'   => $this->childFinalState,
@@ -159,6 +162,7 @@ class ChildMachineCompletionJob implements ShouldQueue
                     'machine_id'    => $this->childRootEventId ?? '',
                     'machine_class' => $this->childMachineClass,
                     'output'        => $this->outputData ?? $this->childContextData,
+                    'failure_class' => $this->failureClass,
                 ]);
 
                 $freshParent->definition->routeChildFailEvent(
@@ -226,6 +230,15 @@ class ChildMachineCompletionJob implements ShouldQueue
 
         $childRecord->markCompleted();
 
+        $resolvedOutput = MachineDefinition::resolveChildOutput(
+            $machine->state->currentStateDefinition,
+            $machine->state->context,
+        );
+
+        // Serialize MachineOutput instances — store class FQCN for typed reconstruction
+        $outputData  = $resolvedOutput instanceof MachineOutput ? $resolvedOutput->toArray() : $resolvedOutput;
+        $outputClass = $resolvedOutput instanceof MachineOutput ? $resolvedOutput::class : null;
+
         dispatch(new self(
             parentRootEventId: $childRecord->parent_root_event_id,
             parentMachineClass: $childRecord->parent_machine_class,
@@ -233,13 +246,10 @@ class ChildMachineCompletionJob implements ShouldQueue
             childMachineClass: $childRecord->child_machine_class,
             childRootEventId: $rootEventId,
             success: true,
-            result: $machine->result(),
             childContextData: $machine->state->context->data,
-            outputData: MachineDefinition::resolveChildOutput(
-                $machine->state->currentStateDefinition,
-                $machine->state->context,
-            ),
+            outputData: $outputData,
             childFinalState: $machine->state->currentStateDefinition->key,
+            outputClass: $outputClass,
         ));
     }
 }

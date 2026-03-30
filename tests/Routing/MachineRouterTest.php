@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Tarfinlabs\EventMachine\Routing\MachineRouter;
+use Tarfinlabs\EventMachine\Exceptions\InvalidRouterConfigException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestCancelEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestEndpointAction;
@@ -351,11 +352,11 @@ test('routes store correct defaults for machine class and event type', function 
     expect($route->defaults['_machine_class'])->toBe(TestEndpointMachine::class)
         ->and($route->defaults['_event_type'])->toBe('START')
         ->and($route->defaults['_action_class'])->toBe(TestEndpointAction::class)
-        ->and($route->defaults['_result_behavior'])->toBeNull()
+        ->and($route->defaults['_output'])->toBeNull()
         ->and($route->defaults['_status_code'])->toBe(200);
 });
 
-test('route defaults include result behavior and status code when set', function (): void {
+test('route defaults include output and status code when set', function (): void {
     MachineRouter::register(TestEndpointMachine::class, [
         'prefix' => '/api/result-defaults',
     ]);
@@ -365,7 +366,7 @@ test('route defaults include result behavior and status code when set', function
     $routes = Route::getRoutes();
     $route  = $routes->getByName('test_endpoint.complete');
 
-    expect($route->defaults['_result_behavior'])->toBe('testEndpointResult')
+    expect($route->defaults['_output'])->toBe('testEndpointOutput')
         ->and($route->defaults['_status_code'])->toBe(201);
 });
 
@@ -421,29 +422,29 @@ test('machineIdFor without model falls back to stateless for other events', func
 
 // ─── Validation ──────────────────────────────────────────────────────
 
-test('modelFor without model throws InvalidArgumentException', function (): void {
+test('modelFor without model throws InvalidRouterConfigException', function (): void {
     expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
         'prefix'   => '/api/invalid',
         'modelFor' => ['START'],
-    ]))->toThrow(InvalidArgumentException::class, "'model' and 'attribute' are required when 'modelFor' is set");
+    ]))->toThrow(InvalidRouterConfigException::class, "'model' and 'attribute' are required when 'modelFor' is set");
 });
 
-test('modelFor without attribute throws InvalidArgumentException', function (): void {
+test('modelFor without attribute throws InvalidRouterConfigException', function (): void {
     expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
         'prefix'   => '/api/invalid',
         'model'    => 'App\\Models\\Order',
         'modelFor' => ['START'],
-    ]))->toThrow(InvalidArgumentException::class, "'model' and 'attribute' are required when 'modelFor' is set");
+    ]))->toThrow(InvalidRouterConfigException::class, "'model' and 'attribute' are required when 'modelFor' is set");
 });
 
-test('overlapping machineIdFor and modelFor throws InvalidArgumentException', function (): void {
+test('overlapping machineIdFor and modelFor throws InvalidRouterConfigException', function (): void {
     expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
         'prefix'       => '/api/invalid',
         'model'        => 'App\\Models\\Order',
         'attribute'    => 'machine',
         'machineIdFor' => ['START'],
         'modelFor'     => ['START'],
-    ]))->toThrow(InvalidArgumentException::class, "events cannot be in both 'machineIdFor' and 'modelFor'");
+    ]))->toThrow(InvalidRouterConfigException::class, "events cannot be in both 'machineIdFor' and 'modelFor'");
 });
 
 // ─── Endpoint Filtering ──────────────────────────────────────────────
@@ -553,33 +554,33 @@ test('only matching all endpoints equals no filter', function (): void {
 
 // ─── Endpoint Filtering Validation ───────────────────────────────────
 
-test('only and except together throws InvalidArgumentException', function (): void {
+test('only and except together throws InvalidRouterConfigException', function (): void {
     expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
         'prefix' => '/api/invalid',
         'only'   => ['START'],
         'except' => ['CANCEL'],
-    ]))->toThrow(InvalidArgumentException::class, "'only' and 'except' cannot be used together");
+    ]))->toThrow(InvalidRouterConfigException::class, "'only' and 'except' cannot be used together");
 });
 
 test('unknown event type in only throws with available types', function (): void {
     expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
         'prefix' => '/api/invalid',
         'only'   => ['NONEXISTENT'],
-    ]))->toThrow(InvalidArgumentException::class, "unknown event types in 'only': NONEXISTENT. Available:");
+    ]))->toThrow(InvalidRouterConfigException::class, "unknown event types in 'only': NONEXISTENT. Available:");
 });
 
 test('unknown event type in except throws with available types', function (): void {
     expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
         'prefix' => '/api/invalid',
         'except' => ['NONEXISTENT'],
-    ]))->toThrow(InvalidArgumentException::class, "unknown event types in 'except': NONEXISTENT. Available:");
+    ]))->toThrow(InvalidRouterConfigException::class, "unknown event types in 'except': NONEXISTENT. Available:");
 });
 
 test('machineIdFor referencing forwarded event throws with specific message', function (): void {
     expect(fn () => MachineRouter::register(ForwardParentEndpointMachine::class, [
         'prefix'       => '/api/invalid',
         'machineIdFor' => ['PROVIDE_CARD'],
-    ]))->toThrow(InvalidArgumentException::class, "'machineIdFor' cannot reference forwarded endpoints (they inherit binding mode from parent model config): PROVIDE_CARD");
+    ]))->toThrow(InvalidRouterConfigException::class, "'machineIdFor' cannot reference forwarded endpoints (they inherit binding mode from parent model config): PROVIDE_CARD");
 });
 
 test('modelFor referencing forwarded event throws with specific message', function (): void {
@@ -588,7 +589,7 @@ test('modelFor referencing forwarded event throws with specific message', functi
         'model'     => 'App\\Models\\Order',
         'attribute' => 'machine',
         'modelFor'  => ['PROVIDE_CARD'],
-    ]))->toThrow(InvalidArgumentException::class, "'modelFor' cannot reference forwarded endpoints (they inherit binding mode from parent model config): PROVIDE_CARD");
+    ]))->toThrow(InvalidRouterConfigException::class, "'modelFor' cannot reference forwarded endpoints (they inherit binding mode from parent model config): PROVIDE_CARD");
 });
 
 test('machineIdFor referencing only-excluded event throws', function (): void {
@@ -596,7 +597,7 @@ test('machineIdFor referencing only-excluded event throws', function (): void {
         'prefix'       => '/api/invalid',
         'only'         => ['START'],
         'machineIdFor' => ['START', 'CANCEL'],
-    ]))->toThrow(InvalidArgumentException::class, "'machineIdFor' references event types not in the registered endpoint set: CANCEL (filtered by 'only')");
+    ]))->toThrow(InvalidRouterConfigException::class, "'machineIdFor' references event types not in the registered endpoint set: CANCEL (filtered by 'only')");
 });
 
 test('modelFor referencing except-excluded event throws', function (): void {
@@ -606,14 +607,14 @@ test('modelFor referencing except-excluded event throws', function (): void {
         'attribute' => 'machine',
         'except'    => ['COMPLETE'],
         'modelFor'  => ['COMPLETE'],
-    ]))->toThrow(InvalidArgumentException::class, "'modelFor' references event types not in the registered endpoint set: COMPLETE (filtered by 'except')");
+    ]))->toThrow(InvalidRouterConfigException::class, "'modelFor' references event types not in the registered endpoint set: COMPLETE (filtered by 'except')");
 });
 
 test('machineIdFor referencing nonexistent event throws without filtering', function (): void {
     expect(fn () => MachineRouter::register(TestEndpointMachine::class, [
         'prefix'       => '/api/invalid',
         'machineIdFor' => ['TYPO'],
-    ]))->toThrow(InvalidArgumentException::class, "'machineIdFor' references event types not in the registered endpoint set: TYPO. Available:");
+    ]))->toThrow(InvalidRouterConfigException::class, "'machineIdFor' references event types not in the registered endpoint set: TYPO. Available:");
 });
 
 test('modelFor referencing nonexistent event throws without filtering', function (): void {
@@ -622,7 +623,7 @@ test('modelFor referencing nonexistent event throws without filtering', function
         'model'     => 'App\\Models\\Order',
         'attribute' => 'machine',
         'modelFor'  => ['TYPO'],
-    ]))->toThrow(InvalidArgumentException::class, "'modelFor' references event types not in the registered endpoint set: TYPO. Available:");
+    ]))->toThrow(InvalidRouterConfigException::class, "'modelFor' references event types not in the registered endpoint set: TYPO. Available:");
 });
 
 test('orphan error fires before overlap error', function (): void {
@@ -633,7 +634,7 @@ test('orphan error fires before overlap error', function (): void {
         'except'       => ['START'],
         'machineIdFor' => ['START'],
         'modelFor'     => ['START'],
-    ]))->toThrow(InvalidArgumentException::class, "'machineIdFor' references event types not in the registered endpoint set");
+    ]))->toThrow(InvalidRouterConfigException::class, "'machineIdFor' references event types not in the registered endpoint set");
 });
 
 test('orphan error fires before modelFor-requires-model error', function (): void {
@@ -641,7 +642,7 @@ test('orphan error fires before modelFor-requires-model error', function (): voi
         'prefix'   => '/api/invalid',
         'except'   => ['START'],
         'modelFor' => ['START'],
-    ]))->toThrow(InvalidArgumentException::class, "'modelFor' references event types not in the registered endpoint set");
+    ]))->toThrow(InvalidRouterConfigException::class, "'modelFor' references event types not in the registered endpoint set");
 });
 
 // ─── Endpoint Filtering Interaction ──────────────────────────────────
@@ -721,7 +722,7 @@ test('overlap validation works after filtering', function (): void {
         'only'         => ['START', 'COMPLETE'],
         'machineIdFor' => ['START'],
         'modelFor'     => ['START'],
-    ]))->toThrow(InvalidArgumentException::class, "events cannot be in both 'machineIdFor' and 'modelFor'");
+    ]))->toThrow(InvalidRouterConfigException::class, "events cannot be in both 'machineIdFor' and 'modelFor'");
 });
 
 // ─── Forwarded Endpoint Filtering ───────────────────────────────────

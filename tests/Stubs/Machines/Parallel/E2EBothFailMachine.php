@@ -22,8 +22,8 @@ class E2EBothFailMachine extends Machine
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
-                    'regionAResult' => null,
-                    'regionBResult' => null,
+                    'regionAData' => null,
+                    'regionBData' => null,
                 ],
                 'states' => [
                     'processing' => [

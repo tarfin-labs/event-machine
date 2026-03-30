@@ -98,7 +98,7 @@ it('LocalQA: forward via HTTP endpoint delivers PROVIDE_CARD to async child', fu
     expect($childContext['data']['cardLast4'] ?? $childContext['cardLast4'] ?? null)->toBe('4242');
 });
 
-it('LocalQA: forward via HTTP with ResultBehavior returns custom response', function (): void {
+it('LocalQA: forward via HTTP with OutputBehavior returns custom response', function (): void {
     $machineId = createAndStartParent($this);
 
     // Step 1: Forward PROVIDE_CARD (no result, default response)
@@ -106,7 +106,7 @@ it('LocalQA: forward via HTTP with ResultBehavior returns custom response', func
         'payload' => ['cardNumber' => '4242424242424242'],
     ])->assertStatus(200);
 
-    // Step 2: Forward CONFIRM_PAYMENT (has result: PaymentStepResult)
+    // Step 2: Forward CONFIRM_PAYMENT (has result: PaymentStepOutput)
     $response = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
         'payload' => ['confirmationCode' => 'ABC123'],
     ]);
@@ -115,7 +115,7 @@ it('LocalQA: forward via HTTP with ResultBehavior returns custom response', func
 
     $data = $response->json('data');
 
-    // PaymentStepResult returns: order_id, card_last4, child_step
+    // PaymentStepOutput returns: order_id, card_last4, child_step
     expect($data)->toHaveKey('cardLast4')
         ->and($data['cardLast4'])->toBe('4242');
     expect($data)->toHaveKey('childStep');
@@ -254,10 +254,10 @@ it('LocalQA: forward with custom URI + method + action works via real HTTP', fun
 });
 
 // ═══════════════════════════════════════════════════════════════
-//  P1: Parent ResultBehavior receives both parent and child context
+//  P1: Parent OutputBehavior receives both parent and child context
 // ═══════════════════════════════════════════════════════════════
 
-it('LocalQA: parent ResultBehavior receives both parent and child context via HTTP', function (): void {
+it('LocalQA: parent OutputBehavior receives both parent and child context via HTTP', function (): void {
     $machineId = createAndStartParent($this);
 
     // Forward PROVIDE_CARD → child stores card_last4
@@ -265,7 +265,7 @@ it('LocalQA: parent ResultBehavior receives both parent and child context via HT
         'payload' => ['cardNumber' => '5555555555554444'],
     ])->assertStatus(200);
 
-    // Forward CONFIRM_PAYMENT (has result: PaymentStepResult using ForwardContext)
+    // Forward CONFIRM_PAYMENT (has result: PaymentStepOutput using child output)
     $response = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
         'payload' => ['confirmationCode' => 'CTX-TEST'],
     ]);
@@ -273,7 +273,7 @@ it('LocalQA: parent ResultBehavior receives both parent and child context via HT
     $response->assertStatus(200);
     $data = $response->json('data');
 
-    // PaymentStepResult reads parent context (order_id) and child context (card_last4)
+    // PaymentStepOutput reads parent context (order_id) and child context (card_last4)
     // order_id comes from parent context (default null)
     expect($data)->toHaveKey('orderId')
         ->and($data)->toHaveKey('cardLast4')
@@ -370,10 +370,10 @@ it('LocalQA: available_events updates correctly through full forward lifecycle',
 });
 
 // ═══════════════════════════════════════════════════════════════
-//  P2: ForwardContext carries correct child data
+//  P2: child output carries correct child data
 // ═══════════════════════════════════════════════════════════════
 
-it('LocalQA: ForwardContext carries correct child data through real async flow', function (): void {
+it('LocalQA: child output carries correct child data through real async flow', function (): void {
     $machineId = createAndStartParent($this);
 
     // Forward PROVIDE_CARD with specific card number
@@ -381,7 +381,7 @@ it('LocalQA: ForwardContext carries correct child data through real async flow',
         'payload' => ['cardNumber' => '9876543210987654'],
     ])->assertStatus(200);
 
-    // Forward CONFIRM_PAYMENT (uses PaymentStepResult with ForwardContext)
+    // Forward CONFIRM_PAYMENT (uses PaymentStepOutput with child output)
     $response = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
         'payload' => ['confirmationCode' => 'FC-VERIFY'],
     ]);
@@ -389,7 +389,7 @@ it('LocalQA: ForwardContext carries correct child data through real async flow',
     $response->assertStatus(200);
     $data = $response->json('data');
 
-    // ForwardContext->childContext->get('cardLast4') should be last 4 of card
+    // child output->childContext->get('cardLast4') should be last 4 of card
     expect($data)->toHaveKey('orderId')
         ->and($data)->toHaveKey('cardLast4')
         ->and($data['cardLast4'])->toBe('7654')

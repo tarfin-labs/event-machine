@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Definition\TimerDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\InvalidTimerDefinitionException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\EveryTimerMachine;
 
@@ -92,11 +93,11 @@ it('Timer::seconds(1) is valid minimum', function (): void {
 
 it('Timer::seconds(0) throws', function (): void {
     Timer::seconds(0);
-})->throws(InvalidArgumentException::class);
+})->throws(InvalidTimerDefinitionException::class);
 
 it('Timer::minutes(-1) throws', function (): void {
     Timer::minutes(-1);
-})->throws(InvalidArgumentException::class);
+})->throws(InvalidTimerDefinitionException::class);
 
 // ═══════════════════════════════════════════
 //  4. extractTimerConfig — all config formats

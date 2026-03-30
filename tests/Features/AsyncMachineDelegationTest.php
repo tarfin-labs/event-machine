@@ -85,8 +85,7 @@ it('routeChildDoneEvent is safe when parent already transitioned', function (): 
     $stateDefinition = $machine->definition->idMap['async_parent.processing'];
 
     $doneEvent = ChildMachineDoneEvent::forChild([
-        'result'        => ['status' => 'ok'],
-        'output'        => [],
+        'output'        => ['status' => 'ok'],
         'machine_id'    => '',
         'machine_class' => SimpleChildMachine::class,
     ]);
@@ -594,7 +593,6 @@ it('async child completion routes via @done.{state} (T15)', function (): void {
 
     // Simulate ChildMachineDoneEvent with finalState='approved'
     $doneEvent = ChildMachineDoneEvent::forChild([
-        'result'        => null,
         'output'        => ['decision' => 'yes'],
         'machine_id'    => 'child-123',
         'machine_class' => MultiOutcomeChildMachine::class,
@@ -624,7 +622,6 @@ it('async @done.{state} falls through to catch-all (T16)', function (): void {
     $stateDefn = $state->currentStateDefinition;
 
     $doneEvent = ChildMachineDoneEvent::forChild([
-        'result'        => null,
         'output'        => [],
         'machine_id'    => 'child-456',
         'machine_class' => MultiOutcomeChildMachine::class,
@@ -638,7 +635,6 @@ it('async @done.{state} falls through to catch-all (T16)', function (): void {
 
 it('ChildMachineDoneEvent carries finalState from CompletionJob (T17)', function (): void {
     $doneEvent = ChildMachineDoneEvent::forChild([
-        'result'        => null,
         'output'        => [],
         'machine_id'    => 'child-123',
         'machine_class' => MultiOutcomeChildMachine::class,
@@ -650,7 +646,6 @@ it('ChildMachineDoneEvent carries finalState from CompletionJob (T17)', function
 
     // Legacy event without final_state
     $legacyEvent = ChildMachineDoneEvent::forChild([
-        'result'        => null,
         'output'        => [],
         'machine_id'    => 'child-456',
         'machine_class' => MultiOutcomeChildMachine::class,

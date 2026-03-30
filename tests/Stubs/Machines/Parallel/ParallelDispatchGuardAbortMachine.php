@@ -6,7 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBResultAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBOutputAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SimulateConcurrentModificationAction;
 
 class ParallelDispatchGuardAbortMachine extends Machine
@@ -19,8 +19,8 @@ class ParallelDispatchGuardAbortMachine extends Machine
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
-                    'concurrentResult' => null,
-                    'regionBResult'    => null,
+                    'concurrentData' => null,
+                    'regionBData'    => null,
                 ],
                 'states' => [
                     'processing' => [
@@ -43,7 +43,7 @@ class ParallelDispatchGuardAbortMachine extends Machine
                                 'initial' => 'working',
                                 'states'  => [
                                     'working' => [
-                                        'entry' => SetRegionBResultAction::class,
+                                        'entry' => SetRegionBOutputAction::class,
                                         'on'    => [
                                             'REGION_B_DONE' => 'finished',
                                         ],

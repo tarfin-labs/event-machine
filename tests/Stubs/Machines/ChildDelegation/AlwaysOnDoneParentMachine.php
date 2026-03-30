@@ -24,7 +24,7 @@ class AlwaysOnDoneParentMachine extends Machine
                 'id'      => 'always_on_done_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'result' => null,
+                    'output' => null,
                 ],
                 'states' => [
                     'idle' => [
@@ -37,7 +37,7 @@ class AlwaysOnDoneParentMachine extends Machine
                         'queue'   => 'child-queue',
                         '@done'   => [
                             'target'  => 'routing',
-                            'actions' => 'captureResultAction',
+                            'actions' => 'captureOutputAction',
                         ],
                         '@fail' => [
                             'target' => 'failed',
@@ -54,8 +54,8 @@ class AlwaysOnDoneParentMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'captureResultAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                        $ctx->set('result', $event->payload['result'] ?? null);
+                    'captureOutputAction' => function (ContextManager $ctx, EventBehavior $event): void {
+                        $ctx->set('childOutput', $event->payload['output'] ?? null);
                     },
                 ],
             ],

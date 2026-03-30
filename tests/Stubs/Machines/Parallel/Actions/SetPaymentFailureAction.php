@@ -11,6 +11,6 @@ class SetPaymentFailureAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('paymentResult', 'failure');
+        $context->set('paymentData', 'failure');
     }
 }

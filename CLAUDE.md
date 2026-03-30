@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Artisan Commands
 - `php artisan machine:xstate` - Export machine definition to XState v5 JSON for Stately Studio
-- `php artisan machine:validate-config` - Validate machine configuration
+- `php artisan machine:validate` - Validate machine configuration
 - `php artisan machine:process-timers` - Sweep command for after/every timers (auto-registered)
 - `php artisan machine:process-scheduled` - Process scheduled events (called by MachineScheduler)
 - `php artisan machine:timer-status` - Display timer status for machine instances
@@ -53,7 +53,7 @@ EventMachine is a Laravel package for creating event-driven state machines, heav
 **Machine** (`src/Actor/Machine.php`): Runtime instance that executes state machines:
 - State persistence and restoration
 - Event handling and transitions (`send()`, `transition()`)
-- `result()` — computes final output via `ResultBehavior` (uses `triggeringEvent` for correct payload)
+- `output()` — computes final output via `OutputBehavior` (uses `triggeringEvent` for correct payload)
 - `availableEvents()` — returns event types valid from the current state
 - Machine delegation (sync/async child machines, fire-and-forget)
 - Cross-machine communication (`sendTo`, `dispatchTo`, `sendToParent`, `dispatchToParent`, `raise`)
@@ -74,7 +74,7 @@ All machine behaviors extend `InvokableBehavior` (parameter injection by type-hi
 - **Guards** (`GuardBehavior` / `ValidationGuardBehavior`): Control transition execution with conditions
 - **Calculators** (`CalculatorBehavior`): Pre-compute values before guards/actions in a transition
 - **Events** (`EventBehavior`): Define event structure, validation, and payload types
-- **Results** (`ResultBehavior`): Compute final state machine outputs (used by `Machine::result()` and HTTP endpoints)
+- **Outputs** (`OutputBehavior`): Compute final state machine outputs (used by `$machine->output()` and HTTP endpoints)
 
 Behaviors can be defined as classes or inline closures. All support parameter injection: `ContextManager`, `EventBehavior`, `State`, `EventCollection`, `ForwardContext`.
 
@@ -92,10 +92,10 @@ The `listen` key in machine config supports lifecycle hooks:
 
 `src/Routing/` provides a full HTTP API layer for machines:
 - **`MachineRouter::register()`** — Registers Laravel routes from machine endpoint definitions
-- **`EndpointDefinition`** — Parses endpoint config: `uri`, `method`, `action`, `result`, `middleware`, `status`, `contextKeys`
+- **`EndpointDefinition`** — Parses endpoint config: `uri`, `method`, `action`, `output`, `middleware`, `status`
 - **`ForwardedEndpointDefinition`** — Auto-generated routes that forward events to child machines
-- **`ForwardContext`** — Type-hintable in `ResultBehavior` to access child context in forwarded endpoints
-- **`MachineController`** — Handles model-bound, machine-id-bound, stateless, create, and forwarded routes
+- **`ForwardContext`** — Type-hintable in `OutputBehavior` to access child context in forwarded endpoints
+- **`MachineController`** — Handles model-bound, machine-id-bound, stateless, create, and forwarded routes. Graceful `MachineAlreadyRunningException` handling: GET returns 200 + snapshot, POST returns 423 Locked. `isProcessing` flag in all endpoint responses.
 
 ### Parallel States
 
@@ -196,7 +196,7 @@ MachineDefinition::define(
         'guards' => [...],
         'calculators' => [...],
         'events' => [...],
-        'results' => [...],
+        'outputs' => [...],
     ],
     endpoints: [...],
     schedules: [...],
@@ -209,7 +209,7 @@ All behaviors should extend appropriate base classes:
 - Guards extend `GuardBehavior` or `ValidationGuardBehavior`
 - Calculators extend `CalculatorBehavior`
 - Events extend `EventBehavior`
-- Results extend `ResultBehavior`
+- Outputs extend `OutputBehavior`
 
 ### Testing Patterns
 - **Entry points**: `MyMachine::test()`, `MyMachine::startingAt('state')` — NOT `TestMachine::create()` (deprecated)

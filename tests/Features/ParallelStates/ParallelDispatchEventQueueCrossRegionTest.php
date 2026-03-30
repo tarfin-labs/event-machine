@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionAResultAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBResultAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionAOutputAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\Actions\SetRegionBOutputAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchWithRaiseMachine;
 
 uses(RefreshDatabase::class);
@@ -61,7 +61,7 @@ it('cross-region event advances sibling → sibling job detects stale state', fu
                             'initial' => 'working',
                             'states'  => [
                                 'working' => [
-                                    'entry' => SetRegionAResultAction::class,
+                                    'entry' => SetRegionAOutputAction::class,
                                     'on'    => ['DONE_A' => 'finished'],
                                 ],
                                 'finished' => ['type' => 'final'],
@@ -71,7 +71,7 @@ it('cross-region event advances sibling → sibling job detects stale state', fu
                             'initial' => 'working',
                             'states'  => [
                                 'working' => [
-                                    'entry' => SetRegionBResultAction::class,
+                                    'entry' => SetRegionBOutputAction::class,
                                     'on'    => ['DONE_B' => 'finished'],
                                 ],
                                 'finished' => ['type' => 'final'],
@@ -89,8 +89,8 @@ it('cross-region event advances sibling → sibling job detects stale state', fu
     // Since we can't dispatch to inline definitions, test sequential mode
     $state = $definition->getInitialState();
 
-    expect($state->context->get('regionAResult'))->toBe('processed_by_a');
-    expect($state->context->get('regionBResult'))->toBe('processed_by_b');
+    expect($state->context->get('regionAData'))->toBe('processed_by_a');
+    expect($state->context->get('regionBData'))->toBe('processed_by_b');
 
     // Both regions at initial, send events to advance
     $state = $definition->transition(['type' => 'DONE_A'], $state);
@@ -125,8 +125,8 @@ it('no race condition when job A finishes before job B starts', function (): voi
     $restored = ParallelDispatchWithRaiseMachine::create(state: $rootEventId);
 
     // Both regions completed their work
-    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
-    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAData'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBData'))->toBe('processed_by_b');
 
     // Region A at finished (raised event), Region B at working (no raise)
     expect($restored->state->value)->toContain('parallel_dispatch_with_raise.processing.region_a.finished');

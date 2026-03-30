@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Jobs;
 
-use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
+use Tarfinlabs\EventMachine\Contracts\ReturnsOutput;
 
-class DependencyInjectedTestJob implements ReturnsResult
+class DependencyInjectedTestJob implements ReturnsOutput
 {
-    private string $serviceResult = '';
+    private string $serviceData = '';
 
     public function handle(ExternalServiceContract $service): void
     {
-        $this->serviceResult = $service->execute();
+        $this->serviceData = $service->execute();
     }
 
-    public function result(): array
+    public function output(): array
     {
-        return ['serviceResult' => $this->serviceResult];
+        return ['serviceData' => $this->serviceData];
     }
 }

@@ -23,7 +23,7 @@ Understanding the complete lifecycle of an EventMachine helps you build correct 
 │  4. PERSIST          5. RESTORE          6. FINAL STATE    │
 │  ──────────          ──────────          ─────────────     │
 │  Auto-saved          create(state: id)   Machine done      │
-│  to database                             Result computed    │
+│  to database                             Output computed    │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -53,6 +53,22 @@ What happens:
 1. Events are loaded from database
 2. State is replayed to rebuild current position
 3. Context is reconstructed from event history
+
+## 1b. Input Validation (Delegation Only)
+
+When a machine is created as a child via the `machine` key with a typed `input`, the `MachineInput` is validated before the machine starts:
+
+```
+Parent enters delegation state
+  → Resolve input (MachineInput class, closure, or array)
+  → If MachineInput class: construct from parent context
+  → Validate required parameters
+  → If validation fails: MachineInputValidationException → @fail on parent
+  → If valid: merge input properties into child context
+  → Proceed to child start
+```
+
+In async mode, this validation happens inside `ChildMachineJob`. A validation failure dispatches `ChildMachineCompletionJob` with an error, routing `@fail` on the parent.
 
 ## 2. Start / Initial State
 
@@ -271,13 +287,13 @@ When a machine reaches a final state:
 ```php
 'delivered' => [
     'type' => 'final',
-    'result' => 'computeDeliveryResult',
+    'output' => 'computeDeliveryOutput',
 ]
 ```
 
 What happens:
 1. Entry actions run (if any)
-2. Result behavior computes final output
+2. Output behavior computes final output
 3. Machine is "done" - no more transitions possible
 4. `machine.finish` internal event fires
 
@@ -291,7 +307,7 @@ $state->currentStateDefinition->type === StateDefinitionType::FINAL;
 
 ## Concurrent Execution Safety
 
-EventMachine prevents concurrent modifications:
+EventMachine prevents concurrent modifications using a database-backed mutex (`machine_locks` table) managed by `MachineLockManager`:
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -303,12 +319,23 @@ $machine->send(['type' => 'CANCEL']);
 // Throws MachineAlreadyRunningException
 ```
 
-Implemented via cache locks:
+`$machine->send()` acquires a lock with `timeout=0` (non-blocking). If another process already holds the lock, the call fails immediately with `MachineAlreadyRunningException` rather than waiting.
+
+The lock is only active when the queue driver is async (`redis` or `database`) **or** `parallel_dispatch.enabled` is `true`. In unit tests with a `sync` queue and parallel dispatch disabled, no lock is acquired — this avoids re-entrant deadlocks when sync dispatch chains call `send()` on the same machine.
+
+HTTP endpoints handle `MachineAlreadyRunningException` gracefully:
+
+- **GET endpoints** return `200 OK` with the last committed state and `isProcessing: true`
+- **POST endpoints** return `423 Locked` with the last committed state and `isProcessing: true`
+
+See [Endpoints](/laravel-integration/endpoints) for details on lock contention handling.
 
 <!-- doctest-attr: ignore -->
 ```php
-// Lock key format: "machine:{root_event_id}"
-// Lock duration: configurable, default 30 seconds
+// MachineLockManager acquires a row-level lock in machine_locks
+// Lock key: root_event_id of the machine instance
+// timeout: 0 (non-blocking — fail immediately if already held)
+// Re-entrant: Machine::$heldLockIds prevents deadlock in sync chains
 ```
 
 ## Lifecycle Hooks

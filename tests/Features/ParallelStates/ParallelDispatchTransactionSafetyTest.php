@@ -102,7 +102,7 @@ it('ParallelRegionJob critical section runs inside a DB transaction', function (
     expect(DB::table('test_side_effects')->count())->toBe(1);
 
     $restored = ParallelDispatchDbWriteMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionAData'))->toBe('processed_by_a');
 
     // Clean up
     Schema::drop('test_side_effects');

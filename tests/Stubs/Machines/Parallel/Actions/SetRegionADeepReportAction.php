@@ -12,6 +12,6 @@ class SetRegionADeepReportAction extends ActionBehavior
     public function __invoke(ContextManager $context): void
     {
         $context->set('report', ['findeks' => ['score' => 750, 'provider' => 'kkb']]);
-        $context->set('regionAResult', 'processed_by_a');
+        $context->set('regionAData', 'processed_by_a');
     }
 }

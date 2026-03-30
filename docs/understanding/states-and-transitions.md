@@ -92,13 +92,13 @@ A **final state** is a terminal state - no transitions out:
 ```php
 'delivered' => [
     'type' => 'final',
-    'result' => 'calculateDeliveryResult',  // Compute final output
+    'output' => 'calculateDeliveryOutput',  // Compute final output
 ]
 ```
 
 When a machine reaches a final state:
 - No more events can trigger transitions
-- Optional result behavior computes the final output
+- Optional output behavior computes the final output
 - The machine is considered "done"
 
 ## What is a Transition?
@@ -358,7 +358,7 @@ stateDiagram-v2
     'type' => 'final',              // Terminal state
 
     // Final state output
-    'result' => 'computeResult',
+    'output' => 'computeOutput',
 
     // Metadata
     'meta' => [

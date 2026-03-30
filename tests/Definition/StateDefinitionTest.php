@@ -8,7 +8,7 @@ use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Results\GreenResult;
+use Tarfinlabs\EventMachine\Tests\Stubs\Outputs\GreenOutput;
 
 // === StateDefinition Basic Tests ===
 
@@ -576,13 +576,13 @@ test('a machine can have outputs on final states', function (string $eventType):
                 ],
                 'yellow' => [
                     'type'   => 'final',
-                    'result' => function (): Carbon {
+                    'output' => function (): Carbon {
                         return now();
                     },
                 ],
                 'green' => [
                     'type'   => 'final',
-                    'result' => GreenResult::class,
+                    'output' => GreenOutput::class,
                 ],
             ],
         ],
@@ -591,7 +591,7 @@ test('a machine can have outputs on final states', function (string $eventType):
     $machine->send($eventType);
 
     /** @var Carbon $result */
-    $result = $machine->result();
+    $result = $machine->output();
 
     expect($result->toDateTimeString())->toBe($now->toDateTimeString());
 })->with([

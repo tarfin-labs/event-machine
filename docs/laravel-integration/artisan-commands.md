@@ -23,6 +23,8 @@ php artisan machine:validate --all
 - Final states without children
 - Required initial states for compound states
 - Behavior references
+- Typed contract declarations (`input` and `failure` config keys reference valid `MachineInput` and `MachineFailure` subclasses)
+- `MachineOutput` classes on final states are valid subclasses
 
 ### Example Output
 

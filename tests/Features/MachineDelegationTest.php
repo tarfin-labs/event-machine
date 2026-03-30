@@ -8,13 +8,14 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\OutputChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ParentOrderMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ResultChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ChildPaymentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FailingChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateChildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FinalOutputChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ContextMutatingChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateApprovedChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateRejectedChildMachine;
@@ -64,10 +65,10 @@ it('transfers context to child via with array (same-name format)', function (): 
                 'start'      => ['on' => ['GO' => 'processing']],
                 'processing' => [
                     'machine' => ChildPaymentMachine::class,
-                    'with'    => ['orderId', 'amount'],
+                    'input'   => ['orderId', 'amount'],
                     '@done'   => [
                         'target'  => 'done',
-                        'actions' => 'captureResultAction',
+                        'actions' => 'captureOutputAction',
                     ],
                 ],
                 'done' => ['type' => 'final'],
@@ -75,8 +76,8 @@ it('transfers context to child via with array (same-name format)', function (): 
         ],
         behavior: [
             'actions' => [
-                'captureResultAction' => function (ContextManager $context, EventBehavior $event): void {
-                    $context->set('receivedOrderId', $event->payload['output']['orderId'] ?? null);
+                'captureOutputAction' => function (ContextManager $context, EventBehavior $event): void {
+                    $context->set('receivedOrderId', $event->payload['output']['amount'] ?? null);
                 },
             ],
         ],
@@ -86,7 +87,7 @@ it('transfers context to child via with array (same-name format)', function (): 
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
 
     expect($state->value)->toBe(['parent_with.done'])
-        ->and($state->context->get('receivedOrderId'))->toBe('ORD-123');
+        ->and($state->context->get('receivedOrderId'))->toBe(5000);
 });
 
 it('transfers context to child via with key mapping format', function (): void {
@@ -102,7 +103,7 @@ it('transfers context to child via with key mapping format', function (): void {
                 'start'      => ['on' => ['GO' => 'processing']],
                 'processing' => [
                     'machine' => ChildPaymentMachine::class,
-                    'with'    => ['amount' => 'totalPrice'],
+                    'input'   => ['amount' => 'totalPrice'],
                     '@done'   => [
                         'target'  => 'done',
                         'actions' => 'storeAction',
@@ -114,7 +115,7 @@ it('transfers context to child via with key mapping format', function (): void {
         behavior: [
             'actions' => [
                 'storeAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                    $ctx->set('childGotPrice', $event->payload['result']['amount'] ?? null);
+                    $ctx->set('childGotPrice', $event->payload['output']['amount'] ?? null);
                 },
             ],
         ],
@@ -282,7 +283,7 @@ it('child context changes do not affect parent context', function (): void {
                 'idle'       => ['on' => ['GO' => 'processing']],
                 'processing' => [
                     'machine' => ContextMutatingChildMachine::class,
-                    'with'    => ['orderId'],
+                    'input'   => ['orderId'],
                     '@done'   => 'done',
                 ],
                 'done' => ['type' => 'final'],
@@ -335,7 +336,7 @@ it('supports @done multi-branch guarded fork', function (): void {
             'states'  => [
                 'idle'       => ['on' => ['GO' => 'processing']],
                 'processing' => [
-                    'machine' => ResultChildMachine::class,
+                    'machine' => FinalOutputChildMachine::class,
                     '@done'   => [
                         ['target' => 'approved', 'guards' => 'isApprovedGuard'],
                         ['target' => 'review'],
@@ -348,7 +349,7 @@ it('supports @done multi-branch guarded fork', function (): void {
         behavior: [
             'guards' => [
                 'isApprovedGuard' => function (ContextManager $ctx, EventBehavior $event): bool {
-                    return ($event->payload['result']['status'] ?? '') === 'approved';
+                    return ($event->payload['output']['status'] ?? '') === 'approved';
                 },
             ],
         ],
@@ -435,7 +436,7 @@ it('ChildMachineDoneEvent has typed accessors', function (): void {
             'states'  => [
                 'idle'       => ['on' => ['GO' => 'processing']],
                 'processing' => [
-                    'machine' => ResultChildMachine::class,
+                    'machine' => FinalOutputChildMachine::class,
                     '@done'   => [
                         'target'  => 'done',
                         'actions' => 'captureEventAction',
@@ -457,9 +458,8 @@ it('ChildMachineDoneEvent has typed accessors', function (): void {
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
 
     expect($receivedEvent)->toBeInstanceOf(ChildMachineDoneEvent::class)
-        ->and($receivedEvent->result('paymentId'))->toBe('pay_abc')
         ->and($receivedEvent->output('paymentId'))->toBe('pay_abc')
-        ->and($receivedEvent->childMachineClass())->toBe(ResultChildMachine::class);
+        ->and($receivedEvent->childMachineClass())->toBe(FinalOutputChildMachine::class);
 });
 
 // ─── Output Filtering ────────────────────────────────────────────
@@ -518,7 +518,7 @@ it('output falls back to full context when no output key defined', function (): 
                     'on' => ['GO' => 'processing'],
                 ],
                 'processing' => [
-                    'machine' => ResultChildMachine::class,
+                    'machine' => FinalOutputChildMachine::class,
                     '@done'   => [
                         'target'  => 'done',
                         'actions' => 'captureOutputAction',
@@ -539,7 +539,7 @@ it('output falls back to full context when no output key defined', function (): 
     $state = $machine->getInitialState();
     $state = $machine->transition(event: ['type' => 'GO'], state: $state);
 
-    // ResultChildMachine has no output key → full context returned (payment_id, status)
+    // FinalOutputChildMachine has no output key → full context returned (payment_id, status)
     expect($receivedEvent)->toBeInstanceOf(ChildMachineDoneEvent::class)
         ->and($receivedEvent->output())->toBeArray()
         ->and($receivedEvent->output('paymentId'))->toBe('pay_abc')
@@ -562,7 +562,7 @@ it('validates machine + parallel type mutual exclusivity', function (): void {
             ],
         ],
     ))->toThrow(
-        InvalidArgumentException::class,
+        InvalidStateConfigException::class,
         "cannot have both 'machine' and type 'parallel'"
     );
 });
@@ -579,7 +579,7 @@ it('validates machine value must be a string', function (): void {
             ],
         ],
     ))->toThrow(
-        InvalidArgumentException::class,
+        InvalidStateConfigException::class,
         'Must be a string'
     );
 });
@@ -597,7 +597,7 @@ it('validates forward requires queue', function (): void {
             ],
         ],
     ))->toThrow(
-        InvalidArgumentException::class,
+        InvalidStateConfigException::class,
         "has 'forward' without 'queue'"
     );
 });
@@ -837,7 +837,7 @@ it('ChildMachineDoneEvent.finalState() returns key not full ID (T7)', function (
 
 it('ChildMachineDoneEvent.finalState() returns null for legacy events (T8)', function (): void {
     $event = ChildMachineDoneEvent::forChild([
-        'result'        => null,
+        'output'        => null,
         'output'        => [],
         'machine_id'    => 'test-123',
         'machine_class' => ImmediateChildMachine::class,
@@ -873,7 +873,7 @@ it('@done.{state} coexists with @fail independently (T9)', function (): void {
 
 it('@done.{state} action receives output, result, and finalState together (T10)', function (): void {
     $capturedOutput     = null;
-    $capturedResult     = null;
+    $capturedOutput     = null;
     $capturedFinalState = null;
 
     $machine = MachineDefinition::define(
@@ -882,7 +882,7 @@ it('@done.{state} action receives output, result, and finalState together (T10)'
             'states' => [
                 'idle'       => ['on' => ['GO' => 'delegating']],
                 'delegating' => [
-                    'machine'    => ResultChildMachine::class,
+                    'machine'    => FinalOutputChildMachine::class,
                     '@done.done' => ['target' => 'completed', 'actions' => 'captureAllAction'],
                 ],
                 'completed' => ['type' => 'final'],
@@ -890,9 +890,8 @@ it('@done.{state} action receives output, result, and finalState together (T10)'
         ],
         behavior: [
             'actions' => [
-                'captureAllAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedOutput, &$capturedResult, &$capturedFinalState): void {
+                'captureAllAction' => function (ContextManager $ctx, ChildMachineDoneEvent $event) use (&$capturedOutput, &$capturedFinalState): void {
                     $capturedOutput     = $event->output('status');
-                    $capturedResult     = $event->result('status');
                     $capturedFinalState = $event->finalState();
                 },
             ],
@@ -904,7 +903,6 @@ it('@done.{state} action receives output, result, and finalState together (T10)'
 
     expect($state->value)->toBe(['all_accessors.completed'])
         ->and($capturedOutput)->toBe('approved')
-        ->and($capturedResult)->toBe('approved')
         ->and($capturedFinalState)->toBe('done');
 });
 

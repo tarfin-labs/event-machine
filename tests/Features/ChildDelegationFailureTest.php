@@ -27,7 +27,7 @@ it('ignores @done after @timeout — parent stays in timed_out', function (): vo
             'id'      => 'done_after_timeout',
             'initial' => 'idle',
             'context' => [
-                'result'  => null,
+                'output'  => null,
                 'timeout' => false,
             ],
             'states' => [
@@ -39,7 +39,7 @@ it('ignores @done after @timeout — parent stays in timed_out', function (): vo
                     'queue'   => 'child-queue',
                     '@done'   => [
                         'target'  => 'completed',
-                        'actions' => 'captureResultAction',
+                        'actions' => 'captureOutputAction',
                     ],
                     '@timeout' => [
                         'target'  => 'timed_out',
@@ -53,8 +53,8 @@ it('ignores @done after @timeout — parent stays in timed_out', function (): vo
         ],
         behavior: [
             'actions' => [
-                'captureResultAction' => function (ContextManager $ctx): void {
-                    $ctx->set('result', 'child_completed');
+                'captureOutputAction' => function (ContextManager $ctx): void {
+                    $ctx->set('childOutput', 'child_completed');
                 },
                 'captureTimeoutAction' => function (ContextManager $ctx): void {
                     $ctx->set('timeout', true);
@@ -82,7 +82,7 @@ it('ignores @done after @timeout — parent stays in timed_out', function (): vo
     // Parent stays in timed_out, result unchanged
     $testMachine
         ->assertState('timed_out')
-        ->assertContext('result', null);
+        ->assertContext('childOutput', null);
 });
 
 // ============================================================

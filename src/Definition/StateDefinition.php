@@ -10,7 +10,8 @@ use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
-use Tarfinlabs\EventMachine\Exceptions\InvalidFinalStateDefinitionException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
+use Tarfinlabs\EventMachine\Exceptions\InvalidOutputDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
 class StateDefinition
@@ -110,12 +111,12 @@ class StateDefinition
     public ?array $meta = null;
 
     /**
-     * Output definition for final states. Controls which context keys
-     * are exposed to the parent machine via ChildMachineDoneEvent.
+     * Output definition for this state. Controls what data is exposed
+     * to external consumers (API endpoints, broadcasts, parent machines).
      *
-     * @var null|array<string>|\Closure
+     * @var null|string|array<string>|\Closure
      */
-    public null|array|\Closure $output = null;
+    public null|string|array|\Closure $output = null;
 
     // endregion
 
@@ -147,8 +148,9 @@ class StateDefinition
 
         if ($this->type === StateDefinitionType::FINAL) {
             $this->initializeResults();
-            $this->initializeOutput();
         }
+
+        $this->initializeOutput();
 
         $this->events = $this->collectUniqueEvents();
 
@@ -244,28 +246,86 @@ class StateDefinition
     }
 
     /**
-     * Initialize the results for the current state.
-     *
-     * If a result is set in the configuration, it will be assigned to the machine's behavior.
+     * Initialize the output behavior for the current state in the behavior registry.
      */
     protected function initializeResults(): void
     {
-        if (isset($this->config['result'])) {
-            $this->machine->behavior[BehaviorType::Result->value][$this->id] = $this->config['result'];
+        $outputDef = $this->config['output'] ?? null;
+
+        if ($outputDef !== null) {
+            $this->machine->behavior[BehaviorType::Output->value][$this->id] = $outputDef;
         }
     }
 
     /**
-     * Initialize the output definition for this final state.
+     * Initialize the output definition for this state.
      *
-     * Output controls which context keys are exposed to the parent
-     * via ChildMachineDoneEvent. Accepts an array of key names or a Closure.
+     * Output controls what data this state exposes to external consumers
+     * (API endpoints, broadcasts, parent machines). Accepts an array of
+     * key names, an OutputBehavior class, an inline key, or a Closure.
+     *
+     * Validation rules:
+     * - Transient states (@always) cannot define output (never observed)
+     * - Parallel region states cannot define output (only the parallel state itself can)
      */
     protected function initializeOutput(): void
     {
-        if (isset($this->config['output'])) {
-            $this->output = $this->config['output'];
+        if (!isset($this->config['output'])) {
+            return;
         }
+
+        // Transient states (@always) are never observed — output would never be read
+        if ($this->isTransient()) {
+            throw InvalidOutputDefinitionException::transientState($this->route);
+        }
+
+        // Parallel region states cannot define output — only the parallel state itself can
+        if ($this->isInsideParallelRegion()) {
+            throw InvalidOutputDefinitionException::parallelRegionState($this->route);
+        }
+
+        $this->output = $this->config['output'];
+    }
+
+    /**
+     * Check if this state is transient (has @always transitions that will immediately exit).
+     */
+    protected function isTransient(): bool
+    {
+        if (!isset($this->config['on'])) {
+            return false;
+        }
+
+        foreach ($this->config['on'] as $eventType => $transitionConfig) {
+            if ($eventType === '@always') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if this state is inside a parallel region (not the parallel state itself).
+     */
+    protected function isInsideParallelRegion(): bool
+    {
+        $ancestor = $this->parent;
+
+        while ($ancestor instanceof self) {
+            if (isset($ancestor->type) && $ancestor->type === StateDefinitionType::PARALLEL) {
+                return true;
+            }
+
+            // Also check config directly (type may not be initialized yet during construction)
+            if (isset($ancestor->config['type']) && $ancestor->config['type'] === 'parallel') {
+                return true;
+            }
+
+            $ancestor = $ancestor->parent;
+        }
+
+        return false;
     }
 
     /**
@@ -438,7 +498,7 @@ class StateDefinition
             return;
         }
 
-        $with       = $this->config['with'] ?? null;
+        $input      = $this->config['input'] ?? null;
         $rawForward = $this->config['forward'] ?? [];
         $rawQueue   = $this->config['queue'] ?? null;
 
@@ -495,7 +555,7 @@ class StateDefinition
 
         $this->machineInvokeDefinition = new MachineInvokeDefinition(
             machineClass: $hasMachine ? $this->config['machine'] : '',
-            with: $with,
+            input: $input,
             forward: $forward,
             async: $async,
             queue: $queue,
@@ -516,7 +576,7 @@ class StateDefinition
     {
         if (!empty($this->config['type']) && $this->config['type'] === 'final') {
             if ($this->stateDefinitions !== null) {
-                throw InvalidFinalStateDefinitionException::noChildStates($this->id);
+                throw InvalidStateConfigException::finalStateCannotHaveChildStates($this->id);
             }
 
             return StateDefinitionType::FINAL;

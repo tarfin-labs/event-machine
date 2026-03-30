@@ -32,13 +32,13 @@ class ListenerLifecycleMachine extends Machine
                 ],
                 'listen' => [
                     'entry' => [
-                        ThrowOnceAction::class => ['queue' => true],
+                        [ThrowOnceAction::class, '@queue' => true],
                     ],
                     'exit' => [
-                        QueuedExitAction::class => ['queue' => true],
+                        [QueuedExitAction::class, '@queue' => true],
                     ],
                     'transition' => [
-                        QueuedTransitionAction::class => ['queue' => true],
+                        [QueuedTransitionAction::class, '@queue' => true],
                     ],
                 ],
                 'states' => [

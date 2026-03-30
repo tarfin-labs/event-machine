@@ -20,7 +20,7 @@ class GrandchildDelegationMachine extends Machine
                 'id'      => 'grandchild_delegation',
                 'initial' => 'delegating',
                 'context' => [
-                    'grandchildResult' => null,
+                    'grandchildData' => null,
                 ],
                 'states' => [
                     'delegating' => [

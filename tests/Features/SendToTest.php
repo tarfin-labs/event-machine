@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
+use Tarfinlabs\EventMachine\Exceptions\NoParentMachineException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ParentOrderMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 
@@ -152,7 +153,7 @@ it('sendToParent throws on non-child machine', function (): void {
     $ctx = ContextManager::validateAndCreate(['data' => []]);
 
     $action->__invoke($ctx);
-})->throws(RuntimeException::class, 'Cannot sendToParent');
+})->throws(NoParentMachineException::class, 'Cannot sendToParent');
 
 it('sendToParent sends event synchronously to parent', function (): void {
     // Use SimpleChildMachine as "parent" — it starts in idle, can receive COMPLETE
@@ -228,7 +229,7 @@ it('dispatchToParent throws on non-child machine', function (): void {
     $ctx = ContextManager::validateAndCreate(['data' => []]);
 
     $action->__invoke($ctx);
-})->throws(RuntimeException::class, 'Cannot dispatchToParent');
+})->throws(NoParentMachineException::class, 'Cannot dispatchToParent');
 
 it('dispatchTo converts EventBehavior to array for dispatch', function (): void {
     Queue::fake();

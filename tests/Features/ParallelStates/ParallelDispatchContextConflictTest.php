@@ -72,8 +72,8 @@ it('does not record context conflict when regions write to different keys', func
 
     // Both context values should be set
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
-    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAData'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBData'))->toBe('processed_by_b');
 });
 
 // ============================================================

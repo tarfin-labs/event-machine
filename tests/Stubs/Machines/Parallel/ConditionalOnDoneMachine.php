@@ -28,8 +28,8 @@ class ConditionalOnDoneMachine extends Machine
                 'id'      => 'conditional_on_done',
                 'initial' => 'processing',
                 'context' => [
-                    'inventoryResult'  => null,
-                    'paymentResult'    => null,
+                    'inventoryData'    => null,
+                    'paymentData'      => null,
                     'approvalLogged'   => false,
                     'reviewerNotified' => false,
                 ],

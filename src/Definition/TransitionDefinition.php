@@ -15,6 +15,7 @@ use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
+use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 
 /**
@@ -217,8 +218,20 @@ class TransitionDefinition
             $contextDataBeforeGuards = $state->context->data;
             $guardsPassed            = true;
             foreach ($branch->guards as $guardDefinition) {
-                [$guardDefinition, $guardArguments] = array_pad(explode(':', (string) $guardDefinition, 2), 2, null);
-                $guardArguments                     = $guardArguments === null ? [] : explode(',', $guardArguments);
+                $configParams   = null;
+                $guardArguments = null;
+
+                if (is_array($guardDefinition)) {
+                    // Named params tuple: [GuardClass::class, 'min' => 100, 'max' => 10000]
+                    $parsed          = BehaviorTupleParser::parse($guardDefinition, 'guards');
+                    $guardDefinition = $parsed['definition'];
+                    $configParams    = $parsed['configParams'] ?: null;
+                } elseif (is_string($guardDefinition) && str_contains($guardDefinition, ':')) {
+                    // Deprecated colon syntax: 'guardName:arg1,arg2'
+                    @trigger_error('The colon syntax "behavior:arg1,arg2" is deprecated since tarfin-labs/event-machine 9.0. Use named params tuple [[Class::class, \'param\' => value]] instead.', E_USER_DEPRECATED);
+                    [$guardDefinition, $colonArgs] = explode(':', $guardDefinition, 2);
+                    $guardArguments                = explode(',', $colonArgs);
+                }
 
                 $guardBehavior = $this->source->machine->getInvokableBehavior(
                     behaviorDefinition: $guardDefinition,
@@ -237,6 +250,7 @@ class TransitionDefinition
                     state: $state,
                     eventBehavior: $eventBehavior,
                     actionArguments: $guardArguments,
+                    configParams: $configParams,
                 );
 
                 // Execute the guard behavior
@@ -307,8 +321,18 @@ class TransitionDefinition
         }
 
         foreach ($branch->calculators as $calculatorDefinition) {
-            [$calculatorDefinition, $calculatorArguments] = array_pad(explode(':', (string) $calculatorDefinition, 2), 2, null);
-            $calculatorArguments                          = $calculatorArguments === null ? [] : explode(',', $calculatorArguments);
+            $configParams        = null;
+            $calculatorArguments = null;
+
+            if (is_array($calculatorDefinition)) {
+                $parsed               = BehaviorTupleParser::parse($calculatorDefinition, 'calculators');
+                $calculatorDefinition = $parsed['definition'];
+                $configParams         = $parsed['configParams'] ?: null;
+            } elseif (is_string($calculatorDefinition) && str_contains($calculatorDefinition, ':')) {
+                @trigger_error('The colon syntax "behavior:arg1,arg2" is deprecated since tarfin-labs/event-machine 9.0. Use named params tuple [[Class::class, \'param\' => value]] instead.', E_USER_DEPRECATED);
+                [$calculatorDefinition, $colonArgs] = explode(':', $calculatorDefinition, 2);
+                $calculatorArguments                = explode(',', $colonArgs);
+            }
 
             $calculatorBehavior = $this->source->machine->getInvokableBehavior(
                 behaviorDefinition: $calculatorDefinition,
@@ -323,6 +347,7 @@ class TransitionDefinition
                     state: $state,
                     eventBehavior: $eventBehavior,
                     actionArguments: $calculatorArguments,
+                    configParams: $configParams,
                 );
 
                 if (InlineBehaviorFake::intercept($calculatorDefinition, $calculatorParameters)) {

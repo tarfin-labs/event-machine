@@ -24,7 +24,7 @@ class ThreeLevelParentMachine extends Machine
                 'id'      => 'three_level_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'result' => null,
+                    'output' => null,
                     'error'  => null,
                 ],
                 'states' => [
@@ -36,7 +36,7 @@ class ThreeLevelParentMachine extends Machine
                         'queue'   => 'child-queue',
                         '@done'   => [
                             'target'  => 'completed',
-                            'actions' => 'captureResultAction',
+                            'actions' => 'captureOutputAction',
                         ],
                         '@fail' => [
                             'target'  => 'failed',
@@ -49,8 +49,8 @@ class ThreeLevelParentMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'captureResultAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                        $ctx->set('result', $event->payload['result'] ?? null);
+                    'captureOutputAction' => function (ContextManager $ctx, EventBehavior $event): void {
+                        $ctx->set('childOutput', $event->payload['output'] ?? null);
                     },
                     'captureErrorAction' => function (ContextManager $ctx, EventBehavior $event): void {
                         $ctx->set('error', $event->payload['error_message'] ?? 'unknown');

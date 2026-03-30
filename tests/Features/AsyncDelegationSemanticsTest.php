@@ -88,8 +88,7 @@ test('xa2: events from completed child are silently discarded', function (): voi
 
     // First @done: transitions from processing -> completed
     $doneEvent = ChildMachineDoneEvent::forChild([
-        'result'        => ['status' => 'ok'],
-        'output'        => [],
+        'output'        => ['status' => 'ok'],
         'machine_id'    => 'child-1',
         'machine_class' => SimpleChildMachine::class,
     ]);
@@ -100,8 +99,7 @@ test('xa2: events from completed child are silently discarded', function (): voi
     // Second (late) @done from the same child — should be silently discarded.
     // No exception, state unchanged.
     $lateEvent = ChildMachineDoneEvent::forChild([
-        'result'        => ['status' => 'late'],
-        'output'        => [],
+        'output'        => ['status' => 'late'],
         'machine_id'    => 'child-1',
         'machine_class' => SimpleChildMachine::class,
     ]);

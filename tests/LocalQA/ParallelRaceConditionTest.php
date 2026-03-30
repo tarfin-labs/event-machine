@@ -63,8 +63,8 @@ it('LocalQA: both parallel regions fail simultaneously — single @fail transiti
     expect($failEvents)->toBe(1, 'Expected exactly one @fail event, got '.$failEvents);
 
     // Neither region's result was set (both threw before setting context)
-    expect($restored->state->context->get('regionAResult'))->toBeNull();
-    expect($restored->state->context->get('regionBResult'))->toBeNull();
+    expect($restored->state->context->get('regionAData'))->toBeNull();
+    expect($restored->state->context->get('regionBData'))->toBeNull();
 
     // No stale locks
     $locks = DB::table('machine_locks')->where('root_event_id', $rootEventId)->count();

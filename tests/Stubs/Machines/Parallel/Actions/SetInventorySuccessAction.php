@@ -11,6 +11,6 @@ class SetInventorySuccessAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('inventoryResult', 'success');
+        $context->set('inventoryData', 'success');
     }
 }

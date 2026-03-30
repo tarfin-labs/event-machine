@@ -71,6 +71,8 @@ class IncrementAction extends ActionBehavior
 
 ### Direct Class Reference
 
+You can use a class FQCN directly in config without registering it in the `behavior` map. Both inline keys and FQCN references work interchangeably — see [Behavior Resolution](/behaviors/introduction#behavior-resolution) for details.
+
 ```php ignore
 'on' => [
     'INCREMENT' => [
@@ -136,28 +138,22 @@ class ProcessAction extends ActionBehavior
 ```
 
 ::: tip Available Parameters
-See [Parameter Injection](/behaviors/introduction#parameter-injection) for the full list of injectable parameters (`ContextManager`, `EventBehavior`, `State`, `EventCollection`, `array`).
+See [Parameter Injection](/behaviors/introduction#parameter-injection) for the full list of injectable parameters (`ContextManager`, `EventBehavior`, `State`, `EventCollection`) and [Named Parameters](/behaviors/introduction#named-parameters) for config-defined params.
 :::
 
-## Action Arguments
+## Action Parameters
 
-Pass arguments using colon syntax:
+Pass named parameters using tuple syntax:
 
 ```php ignore
-// Configuration
-'actions' => 'addValueAction:100',
+// Config — parameterized action is an inner array (tuple)
+'actions' => [[AddValueAction::class, 'value' => 100]],
 
-// Multiple arguments
-'actions' => 'multiplyAction:2,10',
-
-// In action
+// Action — receives typed named parameter
 class AddValueAction extends ActionBehavior
 {
-    public function __invoke(
-        ContextManager $context,
-        array $arguments,
-    ): void {
-        $value = $arguments[0] ?? 0;
+    public function __invoke(ContextManager $context, int $value): void
+    {
         $context->total += $value;
     }
 }
@@ -467,7 +463,7 @@ class ExternalApiAction extends ActionBehavior
     {
         try {
             $result = $this->api->call($context->data);
-            $context->apiResult = $result;
+            $context->apiData = $result;
         } catch (ApiException $e) {
             $context->apiError = $e->getMessage();
             $this->raise(['type' => 'API_ERROR']);

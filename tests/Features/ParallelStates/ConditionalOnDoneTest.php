@@ -113,8 +113,8 @@ test('it falls through to default branch when first guard fails', function (): v
         'id'      => 'test_fallback',
         'initial' => 'processing',
         'context' => [
-            'inventoryResult'  => null,
-            'paymentResult'    => null,
+            'inventoryData'    => null,
+            'paymentData'      => null,
             'reviewerNotified' => false,
         ],
         'states' => [
@@ -162,8 +162,8 @@ test('it aborts @done when all guards fail and no default', function (): void {
         'id'      => 'test_all_fail',
         'initial' => 'processing',
         'context' => [
-            'inventoryResult' => null,
-            'paymentResult'   => null,
+            'inventoryData' => null,
+            'paymentData'   => null,
         ],
         'states' => [
             'processing' => [
@@ -243,8 +243,8 @@ test('it works with compound state @done when guard passes', function (): void {
         'id'      => 'compound_test',
         'initial' => 'verification',
         'context' => [
-            'inventoryResult'  => 'success',
-            'paymentResult'    => 'success',
+            'inventoryData'    => 'success',
+            'paymentData'      => 'success',
             'approvalLogged'   => false,
             'reviewerNotified' => false,
         ],
@@ -285,8 +285,8 @@ test('it works with compound state @done when guard fails', function (): void {
         'id'      => 'compound_fail_test',
         'initial' => 'verification',
         'context' => [
-            'inventoryResult'  => null,
-            'paymentResult'    => null,
+            'inventoryData'    => null,
+            'paymentData'      => null,
             'approvalLogged'   => false,
             'reviewerNotified' => false,
         ],
@@ -324,8 +324,8 @@ test('it aborts compound @done when all guards fail and no default', function ()
         'id'      => 'compound_abort',
         'initial' => 'verification',
         'context' => [
-            'inventoryResult' => null,
-            'paymentResult'   => null,
+            'inventoryData' => null,
+            'paymentData'   => null,
         ],
         'states' => [
             'verification' => [
@@ -359,8 +359,8 @@ test('it falls through to default branch when all guarded branches fail', functi
         'id'      => 'test_second_branch',
         'initial' => 'processing',
         'context' => [
-            'inventoryResult' => null,
-            'paymentResult'   => 'success',
+            'inventoryData' => null,
+            'paymentData'   => 'success',
         ],
         'states' => [
             'processing' => [
@@ -415,8 +415,8 @@ test('it handles conditional @done via Machine::create with full lifecycle', fun
     // Second send: payment validated → entry sets payment_result=success, all regions final, @done fires
     $state = $machine->send(['type' => 'PAYMENT_VALIDATED']);
     expect($state->value)->toBe(['conditional_on_done.approved'])
-        ->and($state->context->get('inventoryResult'))->toBe('success')
-        ->and($state->context->get('paymentResult'))->toBe('success')
+        ->and($state->context->get('inventoryData'))->toBe('success')
+        ->and($state->context->get('paymentData'))->toBe('success')
         ->and(LogApprovalAction::wasExecuted())->toBeTrue()
         ->and(NotifyReviewerAction::wasExecuted())->toBeFalse();
 });
@@ -445,7 +445,7 @@ test('compound @done guard passes when context is pre-set via Machine::create', 
     $machine = ConditionalCompoundOnDoneMachine::create();
 
     // Pre-set payment_result so both are success after entry action
-    $machine->state->context->set('paymentResult', 'success');
+    $machine->state->context->set('paymentData', 'success');
 
     $state = $machine->send(['type' => 'CHECK_COMPLETED']);
 

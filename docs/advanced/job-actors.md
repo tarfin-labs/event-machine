@@ -12,7 +12,7 @@ The parent waits for the job to complete and routes `@done` or `@fail`:
 ```php
 'sending_email' => [
     'job'      => SendWelcomeEmailJob::class,
-    'with'     => ['email', 'name'],
+    'input'     => ['email', 'name'],
     '@done'    => 'email_sent',
     '@fail'    => 'email_failed',
     '@timeout' => ['target' => 'timed_out', 'after' => 300],
@@ -27,23 +27,23 @@ No `@done`/`@fail` — the job is dispatched and the parent transitions immediat
 ```php
 'logging' => [
     'job'    => AuditLogJob::class,
-    'with'   => ['action', 'userId'],
+    'input'   => ['action', 'userId'],
     'target' => 'next_state',
 ],
 ```
 
-The parent does not track the job's result. If the job fails, it goes to Laravel's `failed_jobs` table.
+The parent does not track the job's output. If the job fails, it goes to Laravel's `failed_jobs` table.
 
 ## Returning Output
 
-Jobs that implement `ReturnsResult` can return data to the parent:
+Jobs that implement `ReturnsOutput` can return data to the parent:
 
 <!-- doctest-attr: no_run -->
 ```php
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
+use Tarfinlabs\EventMachine\Contracts\ReturnsOutput;
 
-class SendWelcomeEmailJob implements ShouldQueue, ReturnsResult
+class SendWelcomeEmailJob implements ShouldQueue, ReturnsOutput
 {
     public function __construct(
         public readonly string $email,
@@ -56,7 +56,7 @@ class SendWelcomeEmailJob implements ShouldQueue, ReturnsResult
         $this->messageId = 'msg_abc123';
     }
 
-    public function result(): array
+    public function output(): array
     {
         return ['messageId' => $this->messageId];
     }
@@ -71,7 +71,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 
-class StoreEmailResultAction extends ActionBehavior
+class StoreEmailOutputAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context, ChildMachineDoneEvent $event): void
     {
@@ -80,18 +80,57 @@ class StoreEmailResultAction extends ActionBehavior
 }
 ```
 
-Jobs that do **not** implement `ReturnsResult` return an empty output (`[]`).
+Jobs that do **not** implement `ReturnsOutput` return an empty output (`[]`).
 
-## Returning Failure Context
+### Typed Output with MachineOutput
 
-By default, when a job throws an exception, only `$exception->getMessage()` and `$exception->getCode()` are available to `@fail` guards. For structured error data (error codes, retry hints, categories), implement `ProvidesFailureContext`:
+Jobs can also return a `MachineOutput` DTO for typed contracts:
 
 <!-- doctest-attr: no_run -->
 ```php
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Tarfinlabs\EventMachine\Contracts\ProvidesFailureContext;
+use Tarfinlabs\EventMachine\Contracts\ReturnsOutput;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 
-class ConfirmPinJob implements ShouldQueue, ProvidesFailureContext
+class EmailOutput extends MachineOutput
+{
+    public function __construct(
+        public readonly string $messageId,
+        public readonly string $status,
+    ) {}
+}
+
+class SendWelcomeEmailJob implements ShouldQueue, ReturnsOutput
+{
+    public function __construct(
+        public readonly string $email,
+    ) {}
+
+    public function handle(): void
+    {
+        $this->messageId = 'msg_abc123';
+    }
+
+    public function output(): EmailOutput
+    {
+        return new EmailOutput(
+            messageId: $this->messageId,
+            status: 'sent',
+        );
+    }
+}
+```
+
+## Returning Failure Context
+
+By default, when a job throws an exception, only `$exception->getMessage()` and `$exception->getCode()` are available to `@fail` guards. For structured error data (error codes, retry hints, categories), implement `ProvidesFailure`:
+
+<!-- doctest-attr: no_run -->
+```php
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Tarfinlabs\EventMachine\Contracts\ProvidesFailure;
+
+class ConfirmPinJob implements ShouldQueue, ProvidesFailure
 {
     public function __construct(
         public readonly string $pin,
@@ -102,7 +141,7 @@ class ConfirmPinJob implements ShouldQueue, ProvidesFailureContext
         // ... may throw FindeksException with error code E311
     }
 
-    public static function failureContext(\Throwable $exception): array
+    public static function failure(\Throwable $exception): array
     {
         if ($exception instanceof FindeksException) {
             return [
@@ -139,12 +178,12 @@ class IsPinRetryableGuard extends GuardBehavior
 |----------|--------|-----------------|
 | `errorMessage()` | `$exception->getMessage()` | Yes |
 | `errorCode()` | `$exception->getCode()` | Yes |
-| `output(?string $key)` | `ProvidesFailureContext::failureContext()` | Only with contract |
+| `output(?string $key)` | `ProvidesFailure::failure()` | Only with contract |
 | `childMachineId()` | Job tracking ID | Yes |
 | `childMachineClass()` | Job FQCN | Yes |
 
-::: tip ReturnsResult vs ProvidesFailureContext
-`ReturnsResult` populates `$event->output()` on `@done`. `ProvidesFailureContext` populates `$event->output()` on `@fail`. They complement each other — a job can implement both.
+::: tip ReturnsOutput vs ProvidesFailure
+`ReturnsOutput` populates `$event->output()` on `@done`. `ProvidesFailure` populates `$event->output()` on `@fail`. They complement each other -- a job can implement both.
 :::
 
 ## Machine vs Job
@@ -152,16 +191,16 @@ class IsPinRetryableGuard extends GuardBehavior
 | Aspect | `machine` | `job` |
 |--------|-----------|-------|
 | Stateful | Yes (multiple states) | No (single step) |
-| Context | Own ContextManager | Data from `with` |
+| Context | Own ContextManager | Data from `input` |
 | Lifecycle | `@done` / `@fail` / `@timeout` | `@done` / `@fail` / `@timeout` |
 | Fire-and-forget | Yes (omit `@done`, requires `queue`) | Yes (`target` key) |
-| Output | `output` key on final state | `ReturnsResult` interface |
+| Output | `output` key on final state | `ReturnsOutput` interface |
 | Testing | `Machine::fake()` | `Queue::fake()` + `ChildJobJob` |
 | Use case | Complex stateful workflows | Single-step async operations |
 
 ## Context Transfer
 
-The `with` key works the same way as machine delegation — same three formats:
+The `input` key works the same way as machine delegation — same three formats:
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -174,12 +213,14 @@ The `with` key works the same way as machine delegation — same three formats:
 
 | Config | Result |
 |--------|--------|
-| `job` + `machine` | Error: mutually exclusive |
-| `job` + `type: parallel` | Error: not supported |
-| `job` without `@done` or `target` | Error: must define one |
-| `job` + `@done` + `target` | Error: ambiguous |
+| `job` + `machine` | `InvalidStateConfigException`: mutually exclusive |
+| `job` + `type: parallel` | `InvalidStateConfigException`: not supported |
+| `job` without `@done` or `target` | `InvalidStateConfigException`: must define one |
+| `job` + `@done` + `target` | `InvalidStateConfigException`: ambiguous |
 | `job` + `@done` | OK: managed job |
 | `job` + `target` | OK: fire-and-forget |
+
+The `job` class itself is validated at dispatch time. `InvalidJobClassException` is thrown if the class does not exist or does not have a `handle()` method.
 
 ## Queue Configuration
 
@@ -189,7 +230,7 @@ Jobs support the same queue options as machine delegation:
 ```php
 'processing' => [
     'job'        => ProcessDataJob::class,
-    'with'       => ['data'],
+    'input'       => ['data'],
     'queue'      => 'heavy',
     'connection' => 'redis',
     '@done'      => 'processed',
@@ -226,7 +267,7 @@ MyMachine::test()
     ->withoutPersistence()
     ->send('START')
     ->assertState('processing')
-    ->simulateChildDone(MyJob::class, result: ['status' => 'ok'])
+    ->simulateChildDone(MyJob::class, output: ['status' => 'ok'])
     ->assertState('completed');
 ```
 
@@ -238,7 +279,7 @@ This works because job actors and machine children share the same completion rou
 |------|------|
 | Verify job was dispatched | `Queue::fake()` + `Queue::assertPushed(ChildJobJob::class)` |
 | Verify dispatch data | `Queue::assertPushed(ChildJobJob::class, fn($job) => ...)` |
-| Test `@done` routing | `simulateChildDone(MyJob::class, result: [...])` |
+| Test `@done` routing | `simulateChildDone(MyJob::class, output: [...])` |
 | Test `@fail` routing | `simulateChildFail(MyJob::class, errorMessage: '...')` |
 | Test `@timeout` handling | `simulateChildTimeout(MyJob::class)` |
 | Full pipeline with Horizon | LocalQA tests |

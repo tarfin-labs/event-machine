@@ -116,7 +116,7 @@ export default withMermaid(
             { text: 'Validation Guards', link: '/behaviors/validation-guards' },
             { text: 'Calculators', link: '/behaviors/calculators' },
             { text: 'Events', link: '/behaviors/events' },
-            { text: 'Results', link: '/behaviors/results' },
+            { text: 'Outputs', link: '/behaviors/outputs' },
             { text: 'Dependency Injection', link: '/advanced/dependency-injection' }
           ]
         },
@@ -125,6 +125,7 @@ export default withMermaid(
           collapsed: true,
           items: [
             { text: 'Execution Model', link: '/reference/execution-model' },
+            { text: 'Exceptions Reference', link: '/reference/exceptions' },
             { text: 'Hierarchical States', link: '/advanced/hierarchical-states' },
             { text: 'Entry/Exit Actions', link: '/advanced/entry-exit-actions' },
             { text: '@always Transitions', link: '/advanced/always-transitions' },
@@ -148,6 +149,7 @@ export default withMermaid(
             { text: 'Overview', link: '/advanced/machine-delegation' },
             { text: 'Sync vs Async', link: '/advanced/async-delegation' },
             { text: 'Data Flow', link: '/advanced/delegation-data-flow' },
+            { text: 'Typed Contracts', link: '/advanced/typed-contracts' },
             { text: 'Patterns', link: '/advanced/delegation-patterns' },
             { text: 'Job Actors', link: '/advanced/job-actors' },
             { text: 'Time-Based Events', link: '/advanced/time-based-events' },

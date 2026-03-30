@@ -27,8 +27,7 @@ it('processes raised events from entry actions after @done child transition', fu
     $stateDefinition = $machine->definition->idMap['raise_on_done_parent.processing'];
 
     $doneEvent = ChildMachineDoneEvent::forChild([
-        'result'        => ['status' => 'ok'],
-        'output'        => [],
+        'output'        => ['status' => 'ok'],
         'machine_id'    => '',
         'machine_class' => SimpleChildMachine::class,
     ]);
@@ -51,8 +50,7 @@ it('follows @always transitions on @done target state after child completion', f
     $stateDefinition = $machine->definition->idMap['always_on_done_parent.processing'];
 
     $doneEvent = ChildMachineDoneEvent::forChild([
-        'result'        => ['status' => 'ok'],
-        'output'        => [],
+        'output'        => ['status' => 'ok'],
         'machine_id'    => '',
         'machine_class' => SimpleChildMachine::class,
     ]);
@@ -99,8 +97,7 @@ it('existing async child @done delegation still works without raise or @always',
     $stateDefinition = $machine->definition->idMap['async_parent.processing'];
 
     $doneEvent = ChildMachineDoneEvent::forChild([
-        'result'        => ['status' => 'ok'],
-        'output'        => [],
+        'output'        => ['status' => 'ok'],
         'machine_id'    => '',
         'machine_class' => SimpleChildMachine::class,
     ]);

@@ -26,7 +26,7 @@ class ListenerTransitionOnlyMachine extends Machine
                 ],
                 'listen' => [
                     'transition' => [
-                        QueuedTransitionAction::class => ['queue' => true],
+                        [QueuedTransitionAction::class, '@queue' => true],
                     ],
                 ],
                 'states' => [

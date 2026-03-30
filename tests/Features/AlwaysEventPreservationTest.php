@@ -182,7 +182,7 @@ it('fires @always after compound @done — fixed', function (): void {
     // → @always on routing fires → transitions to 'completed'
     $machine->send([
         'type'    => 'CHECK_COMPLETED',
-        'payload' => ['result' => 'passed'],
+        'payload' => ['output' => 'passed'],
     ]);
 
     // @always after compound @done now works — machine reaches 'completed'

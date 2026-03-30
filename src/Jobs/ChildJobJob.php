@@ -9,8 +9,10 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Tarfinlabs\EventMachine\Contracts\ReturnsResult;
-use Tarfinlabs\EventMachine\Contracts\ProvidesFailureContext;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
+use Tarfinlabs\EventMachine\Contracts\ReturnsOutput;
+use Tarfinlabs\EventMachine\Contracts\ProvidesFailure;
+use Tarfinlabs\EventMachine\Exceptions\InvalidJobClassException;
 
 /**
  * Queue job that runs a Laravel job as an actor.
@@ -22,7 +24,7 @@ use Tarfinlabs\EventMachine\Contracts\ProvidesFailureContext;
  * NOTE: The inner job's handle() is called directly — this intentionally bypasses
  * Laravel's queue middleware, rate limiters, retry/backoff, and ShouldBeUnique.
  * Inner jobs should be simple service objects, not full queue jobs.
- * See ReturnsResult contract for the full contract documentation.
+ * See ReturnsOutput contract for the full contract documentation.
  */
 class ChildJobJob implements ShouldQueue
 {
@@ -54,11 +56,11 @@ class ChildJobJob implements ShouldQueue
     {
         // 1. Validate that the job class exists and has a handle() method
         if (!class_exists($this->jobClass)) {
-            throw new \InvalidArgumentException("Job class '{$this->jobClass}' does not exist.");
+            throw InvalidJobClassException::classNotFound($this->jobClass);
         }
 
         if (!method_exists($this->jobClass, 'handle')) {
-            throw new \InvalidArgumentException("Job class '{$this->jobClass}' must have a handle() method.");
+            throw InvalidJobClassException::missingHandleMethod($this->jobClass);
         }
 
         // 2. Create and run the job (use app()->call() for dependency injection)
@@ -70,8 +72,10 @@ class ChildJobJob implements ShouldQueue
             return;
         }
 
-        // 3. Extract result if job implements ReturnsResult
-        $result = $job instanceof ReturnsResult ? $job->result() : [];
+        // 3. Extract output if job implements ReturnsOutput
+        $output      = $job instanceof ReturnsOutput ? $job->output() : [];
+        $outputData  = $output instanceof MachineOutput ? $output->toArray() : $output;
+        $outputClass = $output instanceof MachineOutput ? $output::class : null;
 
         // 4. Dispatch completion to parent
         dispatch(new ChildMachineCompletionJob(
@@ -81,9 +85,9 @@ class ChildJobJob implements ShouldQueue
             childMachineClass: $this->jobClass,
             childRootEventId: null,
             success: true,
-            result: null,
             childContextData: [],
-            outputData: $result,
+            outputData: $outputData,
+            outputClass: $outputClass,
         ));
     }
 
@@ -93,13 +97,17 @@ class ChildJobJob implements ShouldQueue
             return;
         }
 
-        // Extract structured failure context if the job supports it
-        $output = null;
-        if (is_a($this->jobClass, ProvidesFailureContext::class, true)) {
+        // Extract typed failure if the job supports it
+        $output       = null;
+        $failureClass = null;
+
+        if (is_a($this->jobClass, ProvidesFailure::class, true)) {
             try {
-                $output = $this->jobClass::failureContext($exception);
+                $failure      = $this->jobClass::failure($exception);
+                $output       = $failure->toArray();
+                $failureClass = $failure::class;
             } catch (\Throwable) {
-                // failureContext() itself failed — proceed with null output
+                // failure() itself failed — proceed with null output
             }
         }
 
@@ -113,6 +121,7 @@ class ChildJobJob implements ShouldQueue
             errorMessage: $exception->getMessage(),
             errorCode: $exception->getCode(),
             outputData: $output,
+            failureClass: $failureClass,
         ));
     }
 }

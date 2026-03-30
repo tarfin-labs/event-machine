@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Support\Timer;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\InvalidTimerDefinitionException;
 
 // ─── after key accepted ─────────────────────────────────────────
 
@@ -165,8 +166,8 @@ it('does not extract timer when no after/every key', function (): void {
 
 it('Timer rejects zero duration', function (): void {
     Timer::seconds(0);
-})->throws(InvalidArgumentException::class, 'must be positive');
+})->throws(InvalidTimerDefinitionException::class, 'must be positive');
 
 it('Timer rejects negative duration', function (): void {
     Timer::days(-1);
-})->throws(InvalidArgumentException::class, 'must be positive');
+})->throws(InvalidTimerDefinitionException::class, 'must be positive');

@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\AssertionFailedError;
-use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
 use Tarfinlabs\EventMachine\Tests\Stubs\Jobs\SuccessfulTestJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\JobActors\JobActorParentMachine;
@@ -18,7 +17,7 @@ afterEach(function (): void {
 });
 
 test('assertPathCoverage passes when threshold is met', function (): void {
-    $tm = TestMachine::create(JobActorParentMachine::class);
+    $tm = JobActorParentMachine::test();
     $tm->send('START');
     $tm->simulateChildDone(SuccessfulTestJob::class);
     $tm->assertFinished();
@@ -28,7 +27,7 @@ test('assertPathCoverage passes when threshold is met', function (): void {
 });
 
 test('assertPathCoverage fails when threshold is not met', function (): void {
-    $tm = TestMachine::create(JobActorParentMachine::class);
+    $tm = JobActorParentMachine::test();
     $tm->send('START');
     $tm->simulateChildDone(SuccessfulTestJob::class);
     $tm->assertFinished();
@@ -37,7 +36,7 @@ test('assertPathCoverage fails when threshold is not met', function (): void {
 })->throws(AssertionFailedError::class, 'below minimum');
 
 test('assertAllPathsCovered fails when paths are missing', function (): void {
-    $tm = TestMachine::create(JobActorParentMachine::class);
+    $tm = JobActorParentMachine::test();
     $tm->send('START');
     $tm->simulateChildDone(SuccessfulTestJob::class);
     $tm->assertFinished();
@@ -47,13 +46,13 @@ test('assertAllPathsCovered fails when paths are missing', function (): void {
 
 test('assertAllPathsCovered passes when all paths are covered', function (): void {
     // Happy path: @done
-    $tm1 = TestMachine::create(JobActorParentMachine::class);
+    $tm1 = JobActorParentMachine::test();
     $tm1->send('START');
     $tm1->simulateChildDone(SuccessfulTestJob::class);
     $tm1->assertFinished();
 
     // Fail path: @fail
-    $tm2 = TestMachine::create(JobActorParentMachine::class);
+    $tm2 = JobActorParentMachine::test();
     $tm2->send('START');
     $tm2->simulateChildFail(SuccessfulTestJob::class);
     $tm2->assertFinished();

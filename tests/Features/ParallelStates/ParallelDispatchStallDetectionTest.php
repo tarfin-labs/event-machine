@@ -46,7 +46,7 @@ it('records stall event when region entry action completes without raising event
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    // SetRegionAResultAction only sets context, never raises events
+    // SetRegionAOutputAction only sets context, never raises events
     (new ParallelRegionJob(
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
@@ -101,7 +101,7 @@ it('does not record stall event when entry action raises event that advances reg
 it('stall event payload includes context_changed=false when entry action has no side effects', function (): void {
     config()->set('machine.parallel_dispatch.enabled', true);
 
-    // SetRegionBResultAction sets context → context_changed=true for region B
+    // SetRegionBOutputAction sets context → context_changed=true for region B
     // But for this test, we check region_b which DOES set context
     $machine = ParallelDispatchMachine::create();
     $machine->persist();
@@ -134,7 +134,7 @@ it('records separate stall events for each region that does not advance', functi
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
-    // Both SetRegionAResultAction and SetRegionBResultAction only set context — no raise
+    // Both SetRegionAOutputAction and SetRegionBOutputAction only set context — no raise
     (new ParallelRegionJob(
         machineClass: ParallelDispatchMachine::class,
         rootEventId: $rootEventId,
@@ -218,7 +218,7 @@ it('machine can be restored correctly after stall events exist in history', func
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
 
     expect($restored->state->isInParallelState())->toBeTrue();
-    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionAData'))->toBe('processed_by_a');
     // Region still at initial — stall is informational, not destructive
     expect($restored->state->value)->toContain('parallel_dispatch.processing.region_a.working');
 });

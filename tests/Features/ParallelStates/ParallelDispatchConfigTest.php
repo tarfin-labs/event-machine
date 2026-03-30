@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Asd\AsdMachine;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
@@ -85,7 +86,7 @@ it('still rejects invalid state keys', function (): void {
             ],
         ],
     ]);
-})->throws(InvalidArgumentException::class, 'invalid keys');
+})->throws(InvalidStateConfigException::class, 'invalid keys');
 
 it('creates requiresPersistence exception', function (): void {
     $exception = InvalidParallelStateDefinitionException::requiresPersistence();

@@ -15,8 +15,7 @@ test('it constructs with all properties', function (): void {
         uri: '/forward/provide-card',
         method: 'PUT',
         actionClass: 'App\\Actions\\StoreCard',
-        resultBehavior: 'cardResultBehavior',
-        contextKeys: ['cardLast4', 'status'],
+        output: 'cardOutput',
         statusCode: 201,
         middleware: ['auth', 'throttle'],
         availableEvents: true,
@@ -29,8 +28,7 @@ test('it constructs with all properties', function (): void {
         ->and($definition->uri)->toBe('/forward/provide-card')
         ->and($definition->method)->toBe('PUT')
         ->and($definition->actionClass)->toBe('App\\Actions\\StoreCard')
-        ->and($definition->resultBehavior)->toBe('cardResultBehavior')
-        ->and($definition->contextKeys)->toBe(['cardLast4', 'status'])
+        ->and($definition->output)->toBe('cardOutput')
         ->and($definition->statusCode)->toBe(201)
         ->and($definition->middleware)->toBe(['auth', 'throttle'])
         ->and($definition->availableEvents)->toBeTrue();
@@ -54,8 +52,7 @@ test('it constructs with minimal properties and applies defaults', function (): 
         ->and($definition->uri)->toBe('/forward/provide-card')
         ->and($definition->method)->toBe('POST')
         ->and($definition->actionClass)->toBeNull()
-        ->and($definition->resultBehavior)->toBeNull()
-        ->and($definition->contextKeys)->toBeNull()
+        ->and($definition->output)->toBeNull()
         ->and($definition->statusCode)->toBeNull()
         ->and($definition->middleware)->toBe([])
         ->and($definition->availableEvents)->toBeNull();

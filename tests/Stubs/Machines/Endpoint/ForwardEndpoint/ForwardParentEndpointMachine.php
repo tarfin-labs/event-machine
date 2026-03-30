@@ -6,8 +6,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Routing\ForwardContext;
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
 
@@ -15,7 +14,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
  * Parent machine with forward + endpoints (mixed Format 1/3).
  *
  * Flow: idle → (START) → processing (async child with forward) → completed/failed
- * Forwards PROVIDE_CARD (plain) and CONFIRM_PAYMENT (with result + contextKeys).
+ * Forwards PROVIDE_CARD (plain) and CONFIRM_PAYMENT (with output).
  */
 class ForwardParentEndpointMachine extends Machine
 {
@@ -35,13 +34,12 @@ class ForwardParentEndpointMachine extends Machine
                     'processing' => [
                         'machine' => ForwardChildEndpointMachine::class,
                         'queue'   => 'default',
-                        'with'    => ['orderId'],
+                        'input'   => ['orderId'],
                         'forward' => [
                             'PROVIDE_CARD',
                             'CONFIRM_PAYMENT' => [
-                                'result'      => PaymentStepResult::class,
-                                'contextKeys' => ['cardLast4', 'status'],
-                                'status'      => 200,
+                                'output' => PaymentStepOutput::class,
+                                'status' => 200,
                             ],
                         ],
                         'on'    => ['CANCEL' => 'cancelled'],
@@ -58,8 +56,8 @@ class ForwardParentEndpointMachine extends Machine
                     'START'  => TestStartEvent::class,
                     'CANCEL' => TestStartEvent::class,
                 ],
-                'results' => [
-                    'paymentStepResult' => PaymentStepResult::class,
+                'outputs' => [
+                    'paymentStepOutput' => PaymentStepOutput::class,
                 ],
             ],
             endpoints: [
@@ -70,14 +68,12 @@ class ForwardParentEndpointMachine extends Machine
     }
 }
 
-class PaymentStepResult extends ResultBehavior
+class PaymentStepOutput extends OutputBehavior
 {
-    public function __invoke(ContextManager $context, ForwardContext $forwardContext): array
+    public function __invoke(ContextManager $context): array
     {
         return [
-            'orderId'   => $context->get('orderId'),
-            'cardLast4' => $forwardContext->childContext->get('cardLast4'),
-            'childStep' => $forwardContext->childState->value[0] ?? null,
+            'orderId' => $context->get('orderId'),
         ];
     }
 }

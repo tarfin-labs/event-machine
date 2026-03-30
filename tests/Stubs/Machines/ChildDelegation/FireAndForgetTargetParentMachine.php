@@ -30,7 +30,7 @@ class FireAndForgetTargetParentMachine extends Machine
                     ],
                     'dispatching_verification' => [
                         'machine'    => SimpleChildMachine::class,
-                        'with'       => ['tckn'],
+                        'input'      => ['tckn'],
                         'queue'      => 'verifications',
                         'connection' => 'redis',
                         'retry'      => 3,
