@@ -157,7 +157,7 @@ test('#9 — forwarded GET validates child event and reaches child', function ()
 
     $response->assertStatus(200);
 
-    $childOutput = $response->json('data.child.output');
+    $childOutput = $response->json('data.output');
 
     expect($childOutput['data']['childParam'])->toBe('hello');
 });
