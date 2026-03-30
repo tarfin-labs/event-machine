@@ -58,7 +58,8 @@ class OrderWorkflowMachine extends Machine
 | Key | Type | Required | Description |
 |-----|------|----------|-------------|
 | `machine` | `string` (FQCN) | Yes | Child machine class. Must extend `Machine`. |
-| `with` | `array\|Closure` | No | Data to pass from parent context to child. |
+| `input` | `string\|array\|Closure` | No | Data to pass from parent context to child. Accepts MachineInput FQCN, array, or closure. (Alias: `with`) |
+| `failure` | `string` (FQCN) | No | MachineFailure class for typed error data on `@fail`. |
 | `@done` | `string\|array` | No | Fires when child reaches a final state. Absence signals fire-and-forget. |
 | `@done.{state}` | `string\|array` | No | Fires when child reaches the specific final state `{state}`. Same format as `@done`. |
 | `@fail` | `string\|array` | No | Fires when child fails. Not valid without `@done` or `@done.{state}`. |
@@ -68,30 +69,94 @@ class OrderWorkflowMachine extends Machine
 | `on` | `array` | No | Additional events the parent can handle while child is running. |
 | `target` | `string` | No | Fire-and-forget + immediate transition. Requires `queue`. Mutually exclusive with `@done`. |
 
-## `with` — Context Transfer
+## `input` — Context Transfer
 
-The `with` key controls what data flows from parent context to child context. Three formats are supported:
+::: warning Renamed from `with`
+The `with` key has been renamed to `input` to align with the typed contract system. `with` is still accepted as an alias but will be removed in a future release.
+:::
+
+The `input` key controls what data flows from parent context to child context. Four formats are supported:
 
 <!-- doctest-attr: ignore -->
 ```php
 // Format 1: Same-named keys
-'with' => ['orderId', 'totalAmount'],
+'input' => ['orderId', 'totalAmount'],
 // Child context receives: { orderId: ..., totalAmount: ... }
 
 // Format 2: Key mapping (child_key => parent_key)
-'with' => [
+'input' => [
     'id'     => 'orderId',        // child sees 'id', parent has 'orderId'
     'amount' => 'totalAmount',    // child sees 'amount', parent has 'totalAmount'
 ],
 
 // Format 3: Dynamic (closure)
-'with' => fn (ContextManager $ctx) => [
+'input' => fn (ContextManager $ctx) => [
     'orderId' => $ctx->get('orderId'),
     'amount'  => $ctx->get('totalAmount') * 100,
 ],
+
+// Format 4: MachineInput class (typed contract)
+'input' => PaymentInput::class,
+// Resolved from parent context, validated, merged into child context
 ```
 
-Without `with`, the child starts with its own default context. No parent data is transferred automatically.
+Without `input`, the child starts with its own default context. No parent data is transferred automatically.
+
+### MachineInput -- Typed Input Contract
+
+A `MachineInput` class defines a typed contract for what data the child expects:
+
+```php ignore
+use Tarfinlabs\EventMachine\Behavior\MachineInput;
+
+class PaymentInput extends MachineInput
+{
+    public function __construct(
+        public readonly string $orderId,
+        public readonly int $amount,
+    ) {}
+}
+```
+
+```php ignore
+'processing_payment' => [
+    'machine' => PaymentMachine::class,
+    'input'   => PaymentInput::class,
+    '@done'   => 'completed',
+    '@fail'   => 'payment_failed',
+],
+```
+
+The MachineInput is constructed from the parent context (matching constructor parameter names to context keys), validated, and its properties are merged into the child's initial context.
+
+## `failure` -- Typed Failure Contract
+
+The `failure` key declares a `MachineFailure` class that structures the error data passed to the parent's `@fail` handler:
+
+```php ignore
+use Tarfinlabs\EventMachine\Behavior\MachineFailure;
+
+class PaymentFailure extends MachineFailure
+{
+    public function __construct(
+        public readonly string $errorCode,
+        public readonly bool $retryable,
+        public readonly ?string $gatewayRef = null,
+    ) {}
+}
+```
+
+```php ignore
+'processing_payment' => [
+    'machine' => PaymentMachine::class,
+    'input'   => PaymentInput::class,
+    'failure' => PaymentFailure::class,
+    '@done'   => 'completed',
+    '@fail'   => 'payment_failed',
+],
+```
+
+The parent's `@fail` actions and guards receive the `MachineFailure` instance via `ChildMachineFailEvent->output()`.
 
 ## `@done` — Child Completion
 
