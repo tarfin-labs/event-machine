@@ -13,6 +13,7 @@ use Illuminate\Validation\ValidationException;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\MachineOutput;
+use Tarfinlabs\EventMachine\Behavior\MachineFailure;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -247,6 +248,7 @@ class MachineController extends Controller
         string $outputKey,
         State $state,
         Machine $machine,
+        MachineOutput|MachineFailure|null $childOutput = null,
     ): mixed {
         $outputClass = class_exists($outputKey)
             ? $outputKey
@@ -262,6 +264,7 @@ class MachineController extends Controller
             actionBehavior: $outputBehavior,
             state: $state,
             eventBehavior: $state->triggeringEvent ?? $state->currentEventBehavior,
+            childOutput: $childOutput,
         );
 
         return $outputBehavior(...$params);
@@ -382,12 +385,22 @@ class MachineController extends Controller
 
         $childState = $state->getForwardedChildState();
 
-        // Custom output behavior — runs on PARENT, child's output available via injection
+        // Custom output behavior — runs on PARENT, child's typed output available via injection
         if ($outputKey !== null) {
+            // Resolve child's typed output for injection into parent's OutputBehavior
+            $childTypedOutput = null;
+            if ($childState instanceof State) {
+                $childOutputResolved = $machine->output();
+                if ($childOutputResolved instanceof MachineOutput) {
+                    $childTypedOutput = $childOutputResolved;
+                }
+            }
+
             $result = $this->resolveAndRunOutput(
                 outputKey: $outputKey,
                 state: $state,
                 machine: $machine,
+                childOutput: $childTypedOutput,
             );
 
             $rootEventId = $state->history->first()?->root_event_id;
