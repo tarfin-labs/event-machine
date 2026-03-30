@@ -304,6 +304,9 @@ php artisan machine:paths "App\Machines\OrderMachine"
 
 # JSON output for CI
 php artisan machine:paths "App\Machines\OrderMachine" --json
+
+# Increase path limit for large machines (default: 1000)
+php artisan machine:paths "App\Machines\LargeMachine" --max-paths=5000
 ```
 
 ### What It Shows
