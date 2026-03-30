@@ -145,6 +145,9 @@ Each state supports these keys:
 | `output` | string\|array | Output behavior for final states |
 | `initial` | string | Initial child state |
 | `states` | array | Child state definitions |
+| `machine` | string (FQCN) | Child machine class for delegation |
+| `input` | string\|array\|Closure | Data to pass to child machine. MachineInput FQCN, array, or closure. (Alias: `with`) |
+| `failure` | string (FQCN) | MachineFailure class for typed error data on child `@fail` |
 | `meta` | array | Custom metadata |
 | `description` | string | Human-readable description |
 
