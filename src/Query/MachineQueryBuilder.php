@@ -86,6 +86,23 @@ class MachineQueryBuilder
         return $this;
     }
 
+    /**
+     * AND filter — instance must be in ALL of the given states simultaneously.
+     *
+     * Useful for parallel machines where different regions are in different states.
+     * Each state adds a subquery intersection — instance must have matching rows for each.
+     *
+     * @param  list<string>  $states
+     */
+    public function inAllStates(array $states): self
+    {
+        foreach ($states as $state) {
+            $this->inState($state);
+        }
+
+        return $this;
+    }
+
     // endregion
 
     // region Negative Filters
