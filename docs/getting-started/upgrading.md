@@ -1219,7 +1219,7 @@ $machine->state->matches('pending');
 - **Event class keys** — Use event classes directly as transition keys (`SubmitEvent::class => [...]`)
 - **Custom context classes** — `ContextManager` subclasses with typed properties and validation
 - **Event archival** — `ArchiveService` with compression, fan-out processing, and auto-restore
-- **Config validator command** — `php artisan machine:validate-config`
+- **Config validator command** — `php artisan machine:validate`
 - **PHPStan level 5** compliance
 
 **Migration steps:**
@@ -1306,7 +1306,7 @@ $machine->send([
 
 ### 2.1.0
 
-- Added `machine:validate-config` artisan command
+- Added `machine:validate` artisan command
 - Added tests for calculator execution in guarded transitions
 - Added Laravel 12.x compatibility
 
