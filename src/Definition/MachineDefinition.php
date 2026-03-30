@@ -19,6 +19,7 @@ use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
 use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
@@ -769,6 +770,32 @@ class MachineDefinition
         }
 
         return $invokableBehavior;
+    }
+
+    /**
+     * Resolve an output behavior key to a callable or OutputBehavior instance.
+     *
+     * Unified dispatch order (consistent with getInvokableBehavior):
+     *   1. FQCN — class_exists() → container resolve
+     *   2. Registry — behavior['outputs'][$key] → callable or container resolve
+     *   3. Not found → BehaviorNotFoundException
+     */
+    public function resolveOutputKey(string $outputKey): callable|OutputBehavior
+    {
+        // 1. FQCN — resolve directly through container
+        if (class_exists($outputKey)) {
+            return resolve($outputKey);
+        }
+
+        // 2. Registry lookup
+        $resolved = $this->behavior[BehaviorType::Output->value][$outputKey] ?? null;
+
+        if ($resolved === null) {
+            throw BehaviorNotFoundException::build($outputKey);
+        }
+
+        // Registry value may be a callable (closure) or a class name string
+        return is_callable($resolved) ? $resolved : resolve($resolved);
     }
 
     /**
@@ -1819,9 +1846,9 @@ class MachineDefinition
             return ($finalState->output)($context);
         }
 
-        // String — OutputBehavior class reference. Resolve and invoke with context.
+        // String — delegate to unified resolution (FQCN → registry → error)
         if (is_string($finalState->output)) {
-            $behavior = resolve($finalState->output);
+            $behavior = $finalState->machine->resolveOutputKey($finalState->output);
 
             return $behavior($context);
         }

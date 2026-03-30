@@ -171,7 +171,7 @@ Root entry does NOT run on every state change. For that, use [Listeners](#listen
 
 ## Listeners
 
-Listeners are cross-cutting actions that run on every state change without per-state boilerplate. Instead of adding `broadcastAction` to 13 states individually, define it once:
+Listeners are cross-cutting actions that run on every state change without per-state boilerplate. Listener actions use the same resolution mechanism as all other behaviors — both inline keys and FQCN references work interchangeably (see [Behavior Resolution](/behaviors/introduction#behavior-resolution)). Instead of adding `broadcastAction` to 13 states individually, define it once:
 
 ```php ignore
 'listen' => [

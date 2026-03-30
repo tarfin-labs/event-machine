@@ -235,6 +235,23 @@ This is especially useful when `BroadcastStateAction` triggers an immediate fron
 
 See [Lock Contention Handling](/laravel-integration/endpoints#lock-contention-handling) for details.
 
+### New: Consistent Behavior Resolution for Outputs
+
+In v8, output behavior resolution was inconsistent across different entry points:
+- `Machine::output()` and `resolveChildOutput()` only supported class FQCN — inline keys from the `behavior['outputs']` registry were not resolved, throwing a `BindingResolutionException`
+- `MachineController::resolveAndRunOutput()` supported both, but with its own duplicated logic
+
+In v9, all output resolution uses a single unified method (`MachineDefinition::resolveOutputKey()`) with a consistent dispatch order: **FQCN → registry → error**. This is the same order used by `getInvokableBehavior()` for actions, guards, and calculators.
+
+**What this means in practice:**
+
+- Inline output keys now work everywhere — `Machine::output()`, child machine `@done` output, endpoint output, and forwarded endpoint output all resolve inline keys from the `behavior['outputs']` registry
+- Invalid output keys now throw `BehaviorNotFoundException` instead of `BindingResolutionException`
+
+**Impact:** If your code catches `BindingResolutionException` from output resolution (unlikely — this only happens with config typos), update the catch to `BehaviorNotFoundException`. No changes needed for valid configurations.
+
+See [Behavior Resolution](/behaviors/introduction#behavior-resolution) for the full dispatch order documentation.
+
 ### Migration Checklist
 
 1. Rename all `ResultBehavior` subclasses to extend `OutputBehavior`

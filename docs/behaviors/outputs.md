@@ -147,6 +147,8 @@ Three ways to attach an output — class reference, inline key, or inline closur
 ],
 ```
 
+All three formats use the same resolution mechanism described in [Behavior Resolution](/behaviors/introduction#behavior-resolution). Inline keys and class references work interchangeably in every context where an output can be defined: `$machine->output()`, endpoint responses, child machine outputs, and forwarded endpoint outputs.
+
 ### Output Parameters
 
 Outputs support named parameters via tuple syntax, the same as guards and actions:

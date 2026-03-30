@@ -1179,7 +1179,9 @@ class Machine implements Castable, JsonSerializable, Stringable
                 $arguments                    = explode(',', $colonArgs);
             }
 
-            $outputBehavior = resolve($outputBehavior);
+            $outputBehavior = is_string($outputBehavior)
+                ? $this->definition->resolveOutputKey($outputBehavior)
+                : resolve($outputBehavior);
         }
 
         $params = InvokableBehavior::injectInvokableBehaviorParameters(
