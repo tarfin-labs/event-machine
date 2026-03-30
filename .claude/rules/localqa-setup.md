@@ -217,3 +217,23 @@ When `ChildMachineCompletionJob::propagateChainCompletion()` dispatches to the g
 
 ### Horizon config for QA: minProcesses=4, maxProcesses=8, tries=3
 Auto-scaling to 1 worker causes queue backlog. Set `minProcesses=4` minimum for reliable QA runs. `tries=3` ensures transient failures (lock contention) are retried.
+
+### Job actors skip dispatch in test mode (shouldPersist=false)
+In test mode, `handleJobInvoke()` returns early after recording `CHILD_MACHINE_START` — no `ChildJobJob` is dispatched. Without this guard, sync queue would run the job immediately → `@done` fires → next job state → cascade → memory crash. Use `simulateChildDone(JobClass::class)` to step through job states in unit tests. Same guard exists on `handleAsyncMachineInvoke()` for async child machines.
+
+### QA tests must cover all Queue::fake()-masked patterns
+Unit tests using `Queue::fake()` or `Machine::fake()` mask real async behavior. Every async pattern tested with fakes MUST have a corresponding QA test verifying the real Horizon pipeline. Key patterns to cover:
+- Job actor dispatch + completion via `ChildJobJob` → `ChildMachineCompletionJob`
+- Fire-and-forget job (target without @done) — parent transitions immediately
+- Guarded @done on job actors — conditional routing after completion
+- Mixed chains: machine delegation → @done → job actor → @done → completed
+- Job @done → @always chain — transient routing state
+- Chained job states — sequential job actors without cascade
+- Concurrent events during job processing — lock serialization
+- FailingTestJob → `ChildJobJob::failed()` → @fail routing (note: `failed_jobs` record expected)
+
+### FailingTestJob creates failed_jobs records — this is expected
+When `FailingTestJob` exhausts all retries, Laravel records a `failed_jobs` entry. This is SEPARATE from the machine-level `@fail` routing (handled by `ChildJobJob::failed()`). In QA stress tests with failing jobs, assert `failed_jobs <= N` (number of failing machines), not `failed_jobs == 0`.
+
+### First QA run after Horizon start may have transient failures
+The first full QA run immediately after `redis-cli FLUSHALL && php artisan horizon` may have 1-2 timing-sensitive test failures due to Horizon worker warm-up. Run the suite twice — if the second run passes, the first failures were transient. Design tests to tolerate 60s+ timeouts for heavy async chains.
