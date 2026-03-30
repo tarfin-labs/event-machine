@@ -176,6 +176,8 @@ The `inState()` method supports multiple matching strategies:
 | `'checkout'` | Parent match | Matches any descendant of a compound/parallel state |
 | `'checkout.*'` | Wildcard | Pattern with `*` → SQL `LIKE` |
 
+If a state name cannot be resolved, an `InvalidStateQueryException` is thrown. See [Exceptions Reference](/reference/exceptions#invalidstatequeryexception) for details.
+
 ### Parallel State Deduplication
 
 Parallel machines have multiple rows in `machine_current_states` (one per active region). The query builder automatically deduplicates — each instance appears once in results. Use `stateIds` to see all active states:
