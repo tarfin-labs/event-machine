@@ -236,15 +236,11 @@ class MachineController extends Controller
 
     /**
      * Resolve and run a OutputBehavior using the InvokableBehavior parameter injection pattern.
-     *
-     * When a ForwardContext is provided, it is injected into the OutputBehavior
-     * so it can access the child machine's state and context.
      */
     protected function resolveAndRunOutput(
         string $outputKey,
         State $state,
         Machine $machine,
-        ?ForwardContext $forwardContext = null,
     ): mixed {
         $outputClass = class_exists($outputKey)
             ? $outputKey
@@ -260,7 +256,6 @@ class MachineController extends Controller
             actionBehavior: $outputBehavior,
             state: $state,
             eventBehavior: $state->triggeringEvent ?? $state->currentEventBehavior,
-            forwardContext: $forwardContext,
         );
 
         return $outputBehavior(...$params);
@@ -381,18 +376,12 @@ class MachineController extends Controller
 
         $childState = $state->getForwardedChildState();
 
-        // Custom output behavior — runs on PARENT with ForwardContext injected
-        if ($outputKey !== null && $childState instanceof State) {
-            $forwardContext = new ForwardContext(
-                childContext: $childState->context,
-                childState: $childState,
-            );
-
+        // Custom output behavior — runs on PARENT, child's output available via injection
+        if ($outputKey !== null) {
             $result = $this->resolveAndRunOutput(
                 outputKey: $outputKey,
                 state: $state,
                 machine: $machine,
-                forwardContext: $forwardContext,
             );
 
             $rootEventId = $state->history->first()?->root_event_id;
@@ -406,7 +395,7 @@ class MachineController extends Controller
             ]], $statusCode);
         }
 
-        // Default response: parent state + child output
+        // Default response: parent state + child's resolved output
         $rootEventId = $state->history->first()?->root_event_id;
 
         $response = [
@@ -417,16 +406,13 @@ class MachineController extends Controller
         ];
 
         if ($childState instanceof State) {
-            $childContext = $childState->context->toResponseArray();
+            $childOutput = $childState->context->toResponseArray();
 
             if ($outputKeys !== null) {
-                $childContext = array_intersect_key($childContext, array_flip($outputKeys));
+                $childOutput = array_intersect_key($childOutput, array_flip($outputKeys));
             }
 
-            $response['child'] = [
-                'state'  => $childState->value,
-                'output' => $childContext,
-            ];
+            $response['output'] = $childOutput;
         }
 
         return response()->json(['data' => $response], $statusCode);
