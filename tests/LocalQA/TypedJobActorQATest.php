@@ -81,6 +81,31 @@ it('LocalQA: typed job failure via ProvidesFailure — delivered to parent via H
     expect($error)->not->toBeNull('Error should be captured in parent context');
 });
 
+it('LocalQA: typed job with input key — constructor params resolved from MachineInput', function (): void {
+    // QATypedJobParentMachine uses input: ['orderId'] to pass orderId to TypedSuccessfulJob.
+    // TypedSuccessfulJob constructor accepts $orderId. This test verifies the input
+    // key resolution and that the job receives the correct constructor param via Horizon.
+    $parent = QATypedJobParentMachine::create();
+    $parent->send(['type' => 'START']);
+    $parent->persist();
+
+    $rootEventId = $parent->state->history->first()->root_event_id;
+
+    // If the input key resolution fails, TypedSuccessfulJob won't construct properly
+    // and the job will fail. If it succeeds, parent reaches 'completed'.
+    $completed = LocalQATestCase::waitFor(function () use ($rootEventId) {
+        $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+
+        return $cs && str_contains($cs->state_id, 'completed');
+    }, timeoutSeconds: 60, description: 'typed job input: job should receive constructor params from input key');
+
+    expect($completed)->toBeTrue('Typed job with input key did not complete — constructor param resolution may have failed');
+
+    // Verify the job completed successfully by checking output was captured
+    $restored = QATypedJobParentMachine::create(state: $rootEventId);
+    expect($restored->state->context->get('paymentId'))->toBe('pay_typed_123', 'Job should have produced typed output after receiving input');
+});
+
 it('LocalQA: untyped job (array output) — backward compat via Horizon', function (): void {
     // This test verifies that the existing untyped job pattern still works alongside
     // the new typed contracts. JobActorParentMachine delegates to SuccessfulTestJob
