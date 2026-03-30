@@ -10,7 +10,7 @@ When no `queue` key is specified, the child runs **inline** within the parent's 
 Parent.send(EVENT)
   → Parent enters 'processing' state
   → Detects 'machine' key
-  → Resolves child context via 'with'
+  → Resolves child context via 'input'
   → Creates and runs child machine inline
   │
   ├── Child reaches final → parent's @done fires immediately
@@ -376,7 +376,7 @@ Forward entries support the same endpoint customization keys as regular endpoint
         'method'           => 'PATCH',             // HTTP method (default: POST)
         'middleware'       => ['throttle:10'],      // Route middleware
         'action'           => CustomAction::class,  // Parent-level action lifecycle
-        'output'           => CustomOutput::class,  // OutputBehavior (receives ForwardContext)
+        'output'           => CustomOutput::class,  // OutputBehavior (OutputBehavior with childOutput injection)
         'status'           => 202,                  // HTTP status code
         'available_events' => false,                // Suppress available_events in response
     ],

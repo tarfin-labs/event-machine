@@ -26,6 +26,7 @@ use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
 use Tarfinlabs\EventMachine\Traits\ResolvesBehaviors;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Query\MachineQueryBuilder;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
@@ -127,6 +128,17 @@ class Machine implements Castable, JsonSerializable, Stringable
     public static function definition(): ?MachineDefinition
     {
         throw MachineDefinitionNotFoundException::build();
+    }
+
+    /**
+     * Create a fluent query builder for finding machine instances by state.
+     */
+    public static function query(): MachineQueryBuilder
+    {
+        return new MachineQueryBuilder(
+            machineClass: static::class,
+            definition: static::definition(),
+        );
     }
 
     // endregion

@@ -605,6 +605,42 @@ Enumerated paths are classified by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK
 
 See [Transitions & Paths — Path Coverage Analysis](/testing/transitions-and-paths#path-coverage-analysis) for full documentation.
 
+### New: Machine Query Builder
+
+New fluent API for finding machine instances by state. No breaking changes — purely additive.
+
+**Before (direct table query):**
+
+<!-- doctest-attr: ignore -->
+```php
+$machineIds = MachineCurrentState::query()
+    ->where('machine_class', OrderMachine::class)
+    ->where('state_id', 'order.checkout.awaiting_payment')
+    ->pluck('root_event_id');
+
+foreach ($machineIds as $id) {
+    $machine = OrderMachine::create(state: $id);
+}
+```
+
+**After (Machine::query()):**
+
+<!-- doctest-attr: ignore -->
+```php
+$results = OrderMachine::query()
+    ->inState('awaiting_payment')  // leaf match — no full ID needed
+    ->latest()
+    ->paginate(20);
+
+// Lightweight results with lazy restore
+$results->first()->machineId;   // root_event_id
+$results->first()->machine();   // full Machine instance (lazy)
+```
+
+Key features: leaf/exact/parent/wildcard state matching, `active()`/`notInFinalState()` helpers, `inAllStates()` for parallel AND queries, automatic parallel state deduplication, `LengthAwarePaginator` support.
+
+See [Querying Machines](https://eventmachine.dev/laravel-integration/persistence#querying-machines) for full documentation.
+
 ---
 
 ## From 7.x to 8.0

@@ -558,6 +558,14 @@ class MachineController extends Controller
 
         $childRecord->markCompleted();
 
+        $resolvedOutput = MachineDefinition::resolveChildOutput(
+            $state->currentStateDefinition,
+            $state->context,
+        );
+
+        $outputData  = $resolvedOutput instanceof MachineOutput ? $resolvedOutput->toArray() : $resolvedOutput;
+        $outputClass = $resolvedOutput instanceof MachineOutput ? $resolvedOutput::class : null;
+
         dispatch(new ChildMachineCompletionJob(
             parentRootEventId: $childRecord->parent_root_event_id,
             parentMachineClass: $childRecord->parent_machine_class ?? $machine->definition->machineClass ?? '',
@@ -566,11 +574,9 @@ class MachineController extends Controller
             childRootEventId: $rootEventId,
             success: true,
             childContextData: $state->context->data,
-            outputData: MachineDefinition::resolveChildOutput(
-                $state->currentStateDefinition,
-                $state->context,
-            ),
+            outputData: $outputData,
             childFinalState: $state->currentStateDefinition->key,
+            outputClass: $outputClass,
         ));
     }
 }
