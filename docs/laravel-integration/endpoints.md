@@ -1140,7 +1140,7 @@ class OrderMachine extends Machine
                     'processing_payment' => [
                         'machine'  => PaymentMachine::class,
                         'queue'    => 'payments',
-                        'with'     => ['orderId'],
+                        'input'     => ['orderId'],
                         'forward'  => ['PROVIDE_CARD', 'CANCEL_ORDER' => 'ABORT'],
                         'on'       => [
                             '@done' => 'paid',
