@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Testing\InteractsWithMachines;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\QueryBuilderTestMachine;
 
 uses(
     TestCase::class,
@@ -13,7 +15,7 @@ uses(
 )->in(
     'Actor', 'Architecture', 'Behavior', 'Commands', 'Definition',
     'E2E', 'Examples', 'Features', 'Integration', 'Jobs',
-    'Models', 'Routing', 'Services', 'Support',
+    'Models', 'Query', 'Routing', 'Services', 'Support',
 );
 
 /*
@@ -56,7 +58,20 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-// function something()
-// {
-//    // ..
-// }
+/**
+ * Create and persist a QueryBuilderTestMachine in the given state.
+ */
+function createPersistedQBMachine(string $targetState = 'idle'): Machine
+{
+    $machine = QueryBuilderTestMachine::create();
+    $machine->persist();
+
+    if ($targetState === 'active') {
+        $machine->send(['type' => 'START']);
+    } elseif ($targetState === 'completed') {
+        $machine->send(['type' => 'START']);
+        $machine->send(['type' => 'FINISH']);
+    }
+
+    return $machine;
+}
