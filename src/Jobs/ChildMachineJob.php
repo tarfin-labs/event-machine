@@ -12,6 +12,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Models\MachineChild;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Behavior\MachineFailure;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -130,6 +131,15 @@ class ChildMachineJob implements ShouldQueue
         if ($childMachine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
             $childRecord->markCompleted();
 
+            // Resolve output and serialize MachineOutput for typed reconstruction
+            $resolvedOutput = MachineDefinition::resolveChildOutput(
+                $childMachine->state->currentStateDefinition,
+                $childMachine->state->context,
+            );
+
+            $outputData  = $resolvedOutput instanceof MachineOutput ? $resolvedOutput->toArray() : $resolvedOutput;
+            $outputClass = $resolvedOutput instanceof MachineOutput ? $resolvedOutput::class : null;
+
             // Dispatch completion job to route @done to parent
             dispatch(new ChildMachineCompletionJob(
                 parentRootEventId: $this->parentRootEventId,
@@ -139,11 +149,9 @@ class ChildMachineJob implements ShouldQueue
                 childRootEventId: $childRootEventId,
                 success: true,
                 childContextData: $childMachine->state->context->data,
-                outputData: MachineDefinition::resolveChildOutput(
-                    $childMachine->state->currentStateDefinition,
-                    $childMachine->state->context,
-                ),
+                outputData: $outputData,
                 childFinalState: $childMachine->state->currentStateDefinition->key,
+                outputClass: $outputClass,
             ));
         }
 
