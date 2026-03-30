@@ -277,8 +277,12 @@ abstract class InvokableBehavior
                 $effectiveEvent = $state->triggeringEvent;
             }
 
+            // Resolve typed MachineOutput/MachineFailure from event if type-hinted
+            $typedContract = self::resolveTypedContract($typeName, $effectiveEvent);
+
             $value = match (true) {
                 $typeName === null                                                                                                           => null,
+                $typedContract !== null                                                                                                      => $typedContract,     // MachineOutput / MachineFailure (typed contract)
                 is_a($typeName, class: ContextManager::class, allow_string: true) || is_subclass_of($typeName, class: ContextManager::class) => $state->context,    // ContextManager (parent)
                 is_a($typeName, class: EventBehavior::class, allow_string: true) || is_subclass_of($typeName, class: EventBehavior::class)   => $effectiveEvent,    // EventBehavior (original event for @always)
                 $state instanceof $typeName                                                                                                  => $state,             // State
@@ -291,6 +295,36 @@ abstract class InvokableBehavior
         }
 
         return $invocableBehaviorParameters;
+    }
+
+    /**
+     * Resolve a typed MachineOutput or MachineFailure from the event, if type-hinted.
+     *
+     * Returns the typed instance when:
+     * - The parameter type-hints a MachineOutput subclass and event is ChildMachineDoneEvent with typed output
+     * - The parameter type-hints a MachineFailure subclass and event is ChildMachineFailEvent with typed failure
+     */
+    private static function resolveTypedContract(?string $typeName, ?EventBehavior $event): MachineOutput|MachineFailure|null
+    {
+        if ($typeName === null || !$event instanceof EventBehavior) {
+            return null;
+        }
+
+        // MachineOutput injection from ChildMachineDoneEvent
+        if (is_subclass_of($typeName, MachineOutput::class) && $event instanceof ChildMachineDoneEvent) {
+            $typed = $event->typedOutput();
+
+            return ($typed instanceof $typeName) ? $typed : null;
+        }
+
+        // MachineFailure injection from ChildMachineFailEvent
+        if (is_subclass_of($typeName, MachineFailure::class) && $event instanceof ChildMachineFailEvent) {
+            $typed = $event->typedFailure();
+
+            return ($typed instanceof $typeName) ? $typed : null;
+        }
+
+        return null;
     }
 
     /**
