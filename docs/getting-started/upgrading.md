@@ -298,15 +298,35 @@ MachineDefinition::define(config: [
 | `Machine::fake(result: [...])` | `Machine::fake(output: [...])` |
 | N/A | `Machine::fake(output: new PaymentOutput(...))` |
 
+### New Base Classes
+
+| Class | Purpose | Factory |
+|-------|---------|---------|
+| `MachineInput` | Parent → child data contract | `fromContext(ContextManager): static` |
+| `MachineOutput` | Child → parent data contract | `fromContext(ContextManager): static` |
+| `MachineFailure` | Exception → structured error | `fromException(Throwable): static` |
+
+All three are abstract classes with `readonly` constructor properties and `toArray()` serialization. Subclass them with your domain-specific fields.
+
+### New Exceptions
+
+| Exception | When |
+|-----------|------|
+| `MachineInputValidationException` | `MachineInput::fromContext()` can't resolve a required constructor param |
+| `MachineOutputResolutionException` | `MachineOutput::fromContext()` can't resolve a required constructor param |
+| `MachineOutputInjectionException` | Forward endpoint `OutputBehavior` type-hints `MachineOutput` but child state has none |
+| `MachineFailureResolutionException` | `MachineFailure::fromException()` can't resolve a required constructor param |
+
 ### Migration Checklist (typed contracts)
 
-1. Rename `'with' =>` to `'input' =>` in all delegation configs
+1. Rename `'with' =>` to `'input' =>` in all delegation configs (array format works as-is)
 2. Rename `ReturnsResult` → `ReturnsOutput`, `result()` → `output()` in job actors
-3. Rename `ProvidesFailureContext` → `ProvidesFailure`, `failureContext()` → `failure()` — return type changes to `MachineFailure`
-4. Replace `ForwardContext` type-hints with child's `MachineOutput` type-hint
-5. Optionally: define `MachineInput`/`MachineOutput`/`MachineFailure` subclasses
-6. Optionally: add `'input'` and `'failure'` to machine configs
-7. Run `composer quality`
+3. Rename `ProvidesFailureContext` → `ProvidesFailure`, `failureContext()` → `failure()` — return type changes from `array` to `MachineFailure`
+4. Replace `ForwardContext` type-hints in forward endpoint `OutputBehavior` classes with child's `MachineOutput` type-hint
+5. Optionally: define `MachineInput`/`MachineOutput`/`MachineFailure` subclasses for typed delegation contracts
+6. Optionally: add `'input' => MyInput::class` and `'failure' => MyFailure::class` to machine configs
+7. Optionally: replace array `'output'` on states with `MachineOutput` subclasses
+8. Run `composer quality`
 
 ---
 
