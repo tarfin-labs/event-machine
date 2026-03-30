@@ -264,7 +264,7 @@ Run children inline for simple cases, or dispatch to a queue for external I/O an
 ```php
 'processing_payment' => [
     'machine' => PaymentMachine::class,
-    'with'    => ['orderId', 'totalAmount'],
+    'input'    => ['orderId', 'totalAmount'],
     'queue'   => 'payments',
     '@done'   => [
         'target'  => 'shipping',
