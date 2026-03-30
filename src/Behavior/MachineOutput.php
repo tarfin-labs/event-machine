@@ -44,7 +44,7 @@ abstract class MachineOutput
                 throw MachineOutputResolutionException::missingField(
                     outputClass: static::class,
                     paramName: $key,
-                    availableKeys: array_keys($context->toArray()),
+                    availableKeys: is_array($context->data) ? array_keys($context->data) : array_keys(get_object_vars($context->data)),
                 );
             }
         }
