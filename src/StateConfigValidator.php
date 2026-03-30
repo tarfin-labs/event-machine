@@ -99,15 +99,11 @@ class StateConfigValidator
 
         // Validate typed contract declarations
         if (isset($config['input']) && is_string($config['input']) && class_exists($config['input']) && !is_subclass_of($config['input'], MachineInput::class)) {
-            throw new InvalidStateConfigException(
-                message: "Root 'input' key must be a MachineInput subclass, array, or closure. Got: {$config['input']}"
-            );
+            throw InvalidStateConfigException::invalidInputClass($config['input']);
         }
 
         if (isset($config['failure']) && (!is_string($config['failure']) || !class_exists($config['failure']) || !is_subclass_of($config['failure'], MachineFailure::class))) {
-            throw new InvalidStateConfigException(
-                message: "Root 'failure' key must be a MachineFailure subclass. Got: ".(is_string($config['failure']) ? $config['failure'] : gettype($config['failure']))
-            );
+            throw InvalidStateConfigException::invalidFailureClass(is_string($config['failure']) ? $config['failure'] : gettype($config['failure']));
         }
     }
 
