@@ -93,10 +93,16 @@ class ExportXStateCommand extends Command
             $node['context'] = $context;
         }
 
-        // Export typed contract declarations as XState types
+        // Export typed contract declarations as XState v5 types (input only — output resolved per-state)
         $types = $this->extractTypedContracts($definition);
         if ($types !== []) {
             $node['types'] = $types;
+        }
+
+        // Export EventMachine-specific metadata (failure class, input class FQCN) under meta
+        $emMeta = $this->extractEventMachineMeta($definition);
+        if ($emMeta !== []) {
+            $node['meta'] = ['eventMachine' => $emMeta];
         }
 
         $rootState = $this->buildStateNode($definition->root);
@@ -521,27 +527,53 @@ class ExportXStateCommand extends Command
     }
 
     /**
-     * Extract typed contract declarations (input/failure) as XState types schema.
+     * Extract typed contract declarations as XState v5 types format.
+     *
+     * XState v5 supports: context, events, input, output, actions, guards, actors, delays.
+     * We map MachineInput → types.input, MachineOutput (from final states) → types.output.
+     * MachineFailure has no XState equivalent — stored in meta.eventMachine.failure.
      */
     private function extractTypedContracts(MachineDefinition $definition): array
     {
         $types = [];
 
+        // XState v5 types.input — maps to MachineInput
         if ($definition->inputClass !== null && class_exists($definition->inputClass)) {
-            $types['input'] = $this->reflectContractSchema($definition->inputClass);
-        }
-
-        if ($definition->failureClass !== null && class_exists($definition->failureClass)) {
-            $types['failure'] = $this->reflectContractSchema($definition->failureClass);
+            $types['input'] = $this->reflectContractProperties($definition->inputClass);
         }
 
         return $types;
     }
 
     /**
-     * Reflect a typed contract class into a JSON schema-like structure.
+     * Extract EventMachine-specific metadata (failure class) not supported by XState v5.
+     * Stored under meta.eventMachine to avoid collision with XState standard keys.
      */
-    private function reflectContractSchema(string $class): array
+    private function extractEventMachineMeta(MachineDefinition $definition): array
+    {
+        $meta = [];
+
+        if ($definition->failureClass !== null && class_exists($definition->failureClass)) {
+            $meta['failure'] = [
+                'class'      => $definition->failureClass,
+                'properties' => $this->reflectContractProperties($definition->failureClass),
+            ];
+        }
+
+        if ($definition->inputClass !== null && class_exists($definition->inputClass)) {
+            $meta['inputClass'] = $definition->inputClass;
+        }
+
+        return $meta;
+    }
+
+    /**
+     * Reflect a typed contract class into a property map (XState v5 compatible format).
+     *
+     * Returns { propertyName: defaultValue } matching XState's types pattern:
+     *   types: { input: {} as { orderId: string; amount: number } }
+     */
+    private function reflectContractProperties(string $class): array
     {
         $reflection = new ReflectionClass($class);
         $properties = [];
@@ -549,26 +581,20 @@ class ExportXStateCommand extends Command
         foreach ($reflection->getConstructor()?->getParameters() ?? [] as $param) {
             $type = $param->getType();
 
+            // Use type-appropriate default values (matches XState's {} as T pattern)
             $properties[$param->getName()] = match (true) {
-                !$type instanceof \ReflectionNamedType => 'mixed',
-                $type->getName() === 'int'             => 'number',
-                $type->getName() === 'float'           => 'number',
-                $type->getName() === 'bool'            => 'boolean',
-                $type->getName() === 'string'          => 'string',
-                $type->getName() === 'array'           => 'array',
-                default                                => $type->getName(),
+                !$type instanceof \ReflectionNamedType                     => null,
+                $type->allowsNull()                                        => null,
+                $param->isDefaultValueAvailable()                          => $param->getDefaultValue(),
+                $type->getName() === 'int' || $type->getName() === 'float' => 0,
+                $type->getName() === 'bool'                                => false,
+                $type->getName() === 'string'                              => '',
+                $type->getName() === 'array'                               => [],
+                default                                                    => null,
             };
-
-            if ($type instanceof \ReflectionNamedType && $type->allowsNull()) {
-                $properties[$param->getName()] = ['oneOf' => [$properties[$param->getName()], 'null']];
-            }
         }
 
-        return [
-            'type'       => class_basename($class),
-            'class'      => $class,
-            'properties' => $properties,
-        ];
+        return $properties;
     }
 
     /**
