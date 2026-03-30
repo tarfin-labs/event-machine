@@ -286,10 +286,10 @@ class ExportXStateCommand extends Command
             'src' => class_basename($invokeDefinition->machineClass),
         ];
 
-        // with → input (context transfer schema)
-        if ($invokeDefinition->with !== null && !$invokeDefinition->with instanceof \Closure) {
+        // input → XState input schema
+        if ($invokeDefinition->input !== null && is_array($invokeDefinition->input)) {
             $input = [];
-            foreach ($invokeDefinition->with as $key => $value) {
+            foreach ($invokeDefinition->input as $key => $value) {
                 if (is_int($key)) {
                     $input[$value] = $value; // Same-name mapping
                 } else {
