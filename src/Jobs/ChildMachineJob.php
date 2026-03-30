@@ -12,6 +12,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Models\MachineChild;
+use Tarfinlabs\EventMachine\Behavior\MachineFailure;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
@@ -161,6 +162,25 @@ class ChildMachineJob implements ShouldQueue
         $childRecord = MachineChild::find($this->machineChildId);
         $childRecord?->markFailed();
 
+        // Resolve typed failure if child declares a failure class
+        $outputData   = null;
+        $failureClass = null;
+        $childMachine = $this->childMachineClass;
+
+        if (class_exists($childMachine) && method_exists($childMachine, 'definition')) {
+            try {
+                $definition   = $childMachine::definition();
+                $failureClass = $definition->failureClass;
+
+                if ($failureClass !== null && is_subclass_of($failureClass, MachineFailure::class)) {
+                    $failure    = $failureClass::fromException($exception);
+                    $outputData = $failure->toArray();
+                }
+            } catch (\Throwable) {
+                // Failed to resolve failure — proceed with raw exception data
+            }
+        }
+
         // Dispatch completion job with error payload to route @fail on parent
         dispatch(new ChildMachineCompletionJob(
             parentRootEventId: $this->parentRootEventId,
@@ -171,6 +191,7 @@ class ChildMachineJob implements ShouldQueue
             success: false,
             errorMessage: $exception->getMessage(),
             errorCode: $exception->getCode(),
+            outputData: $outputData,
         ));
     }
 }
