@@ -17,6 +17,8 @@ use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
+use Tarfinlabs\EventMachine\Behavior\MachineFailure;
 use Tarfinlabs\EventMachine\Models\MachineTimerFire;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
@@ -1777,7 +1779,7 @@ class TestMachine
      */
     public function simulateChildDone(
         string $childClass,
-        array $output = [],
+        array|MachineOutput $output = [],
         ?string $finalState = null,
     ): self {
         $stateDefinition = $this->machine->state->currentStateDefinition;
@@ -1795,8 +1797,12 @@ class TestMachine
             placeholder: $childClass,
         );
 
+        $outputData  = $output instanceof MachineOutput ? $output->toArray() : $output;
+        $outputClass = $output instanceof MachineOutput ? $output::class : null;
+
         $doneEvent = ChildMachineDoneEvent::forChild([
-            'output'        => $output,
+            'output'        => $outputData,
+            'output_class'  => $outputClass,
             'machine_id'    => '',
             'machine_class' => $childClass,
             'final_state'   => $finalState,
@@ -1824,7 +1830,7 @@ class TestMachine
         string $childClass,
         string $errorMessage = 'Simulated failure',
         int|string|null $errorCode = null,
-        array $output = [],
+        array|MachineFailure $output = [],
     ): self {
         $stateDefinition = $this->machine->state->currentStateDefinition;
 
@@ -1841,12 +1847,16 @@ class TestMachine
             placeholder: $childClass,
         );
 
+        $outputData   = $output instanceof MachineFailure ? $output->toArray() : $output;
+        $failureClass = $output instanceof MachineFailure ? $output::class : null;
+
         $failEvent = ChildMachineFailEvent::forChild([
             'error_message' => $errorMessage,
             'error_code'    => $errorCode,
             'machine_id'    => '',
             'machine_class' => $childClass,
-            'output'        => $output,
+            'output'        => $outputData,
+            'failure_class' => $failureClass,
         ]);
 
         $this->machine->definition->routeChildFailEvent(
