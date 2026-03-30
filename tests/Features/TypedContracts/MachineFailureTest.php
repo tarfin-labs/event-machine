@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Behavior\MachineFailure;
 use Tarfinlabs\EventMachine\Tests\Stubs\Failures\SimpleFailure;
 use Tarfinlabs\EventMachine\Tests\Stubs\Failures\PaymentFailure;
 use Tarfinlabs\EventMachine\Tests\Stubs\Failures\CustomMappingFailure;
@@ -15,6 +16,24 @@ test('fromException maps $message to getMessage()', function (): void {
     $failure = SimpleFailure::fromException(new RuntimeException('Connection lost'));
 
     expect($failure->message)->toBe('Connection lost');
+});
+
+test('fromException maps $previous to getPrevious()', function (): void {
+    $previous = new LogicException('Root cause');
+    $e        = new RuntimeException('Wrapper', 0, $previous);
+
+    // Use a failure class with $previous param
+    $failureClass = new class('test', null) extends MachineFailure {
+        public function __construct(
+            public readonly string $message,
+            public readonly ?Throwable $previous = null,
+        ) {}
+    };
+
+    $failure = $failureClass::fromException($e);
+
+    expect($failure->message)->toBe('Wrapper')
+        ->and($failure->previous)->toBe($previous);
 });
 
 test('fromException maps $code to getCode()', function (): void {
