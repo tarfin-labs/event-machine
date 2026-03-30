@@ -88,3 +88,36 @@ test('failure with non-string value throws', function (): void {
         ],
     ]);
 })->throws(InvalidArgumentException::class, "Root 'failure' key must be a MachineFailure subclass");
+
+// ═══════════════════════════════════════════════════════════════
+//  Input — closure passes validation
+// ═══════════════════════════════════════════════════════════════
+
+test('input key as closure passes validation', function (): void {
+    StateConfigValidator::validate([
+        'id'      => 'input_closure',
+        'initial' => 'idle',
+        'input'   => fn () => ['orderId' => 'test'],
+        'states'  => [
+            'idle' => ['type' => 'final'],
+        ],
+    ]);
+
+    // No exception — closures are allowed as input declarations
+    expect(true)->toBeTrue();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Failure — non-existent class throws
+// ═══════════════════════════════════════════════════════════════
+
+test('failure key as non-existent class throws', function (): void {
+    StateConfigValidator::validate([
+        'id'      => 'failure_nonexistent',
+        'initial' => 'idle',
+        'failure' => 'App\\Failures\\NonExistentFailure',
+        'states'  => [
+            'idle' => ['type' => 'final'],
+        ],
+    ]);
+})->throws(InvalidArgumentException::class, "Root 'failure' key must be a MachineFailure subclass");
