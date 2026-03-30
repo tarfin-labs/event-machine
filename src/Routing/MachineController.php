@@ -17,7 +17,6 @@ use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
-use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
 
@@ -284,15 +283,7 @@ class MachineController extends Controller
             $configParams = $parsed['configParams'] ?: null;
         }
 
-        $outputClass = class_exists($outputKey)
-            ? $outputKey
-            : ($machine->definition->behavior['outputs'][$outputKey] ?? null);
-
-        if ($outputClass === null) {
-            throw BehaviorNotFoundException::build($outputKey);
-        }
-
-        $outputBehavior = resolve($outputClass);
+        $outputBehavior = $machine->definition->resolveOutputKey($outputKey);
 
         $params = InvokableBehavior::injectInvokableBehaviorParameters(
             actionBehavior: $outputBehavior,
