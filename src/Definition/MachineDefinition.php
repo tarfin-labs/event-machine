@@ -1563,6 +1563,18 @@ class MachineDefinition
             placeholder: $jobClass,
         );
 
+        // Test mode: skip job dispatch. The machine stays in the job state
+        // waiting for simulateChildDone()/simulateChildFail(). Without this,
+        // sync queue would run ChildJobJob immediately → @done cascades → infinite loop.
+        // Fire-and-forget jobs still transition to target immediately.
+        if (!$this->shouldPersist) {
+            if ($isFireAndForget) {
+                $this->transitionToFireAndForgetTarget($state, $invokeDefinition->target);
+            }
+
+            return;
+        }
+
         // Dispatch the job
         $childJobJob = new ChildJobJob(
             parentRootEventId: $state->history?->first()?->root_event_id ?? '',
