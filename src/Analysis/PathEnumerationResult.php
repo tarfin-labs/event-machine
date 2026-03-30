@@ -24,6 +24,7 @@ readonly class PathEnumerationResult
         public array $paths = [],
         public array $parallelGroups = [],
         public ?MachineDefinition $definition = null,
+        public bool $pathLimitReached = false,
     ) {}
 
     // region Filters

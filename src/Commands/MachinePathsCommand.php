@@ -14,7 +14,8 @@ class MachinePathsCommand extends Command
 {
     protected $signature = 'machine:paths
         {machine : The Machine class path or FQCN}
-        {--json : Output as JSON}';
+        {--json : Output as JSON}
+        {--max-paths=1000 : Maximum paths to enumerate (prevents explosion in large machines)}';
     protected $description = 'Enumerate all paths through a machine definition';
 
     public function handle(): int
@@ -39,7 +40,8 @@ class MachinePathsCommand extends Command
         }
 
         $definition = $machinePath::definition();
-        $enumerator = new PathEnumerator($definition);
+        $maxPaths   = (int) $this->option('max-paths');
+        $enumerator = new PathEnumerator($definition, $maxPaths);
         $result     = $enumerator->enumerate();
 
         if ($this->option('json')) {
@@ -86,7 +88,7 @@ class MachinePathsCommand extends Command
         }
 
         $this->line("  Timers: {$result->timerCount()}");
-        $this->line('  Terminal paths: '.count($result->paths));
+        $this->line('  Terminal paths: '.count($result->paths).($result->pathLimitReached ? ' (limit reached — increase with --max-paths)' : ''));
 
         foreach ($result->parallelGroups as $group) {
             $regionCount = count($group->regionPaths);

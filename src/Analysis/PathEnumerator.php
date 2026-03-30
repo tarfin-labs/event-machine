@@ -24,17 +24,27 @@ class PathEnumerator
     /** @var list<ParallelPathGroup> Accumulated parallel region groups. */
     private array $parallelGroups = [];
 
+    /** Maximum number of paths before stopping enumeration. Prevents explosion in large machines. */
+    private int $maxPaths = 1000;
+
+    /** Whether the path limit was reached during enumeration. */
+    private bool $pathLimitReached = false;
+
     public function __construct(
         private readonly MachineDefinition $definition,
-    ) {}
+        int $maxPaths = 1000,
+    ) {
+        $this->maxPaths = $maxPaths;
+    }
 
     /**
      * Enumerate all paths from the initial state.
      */
     public function enumerate(): PathEnumerationResult
     {
-        $this->paths          = [];
-        $this->parallelGroups = [];
+        $this->paths            = [];
+        $this->parallelGroups   = [];
+        $this->pathLimitReached = false;
 
         $initialState = $this->definition->initialStateDefinition;
 
@@ -50,6 +60,7 @@ class PathEnumerator
             paths: $this->paths,
             parallelGroups: $this->parallelGroups,
             definition: $this->definition,
+            pathLimitReached: $this->pathLimitReached,
         );
     }
 
@@ -77,6 +88,11 @@ class PathEnumerator
         ?string $timerType = null,
         ?string $invokeType = null,
     ): void {
+        // 0. Path limit — stop DFS when limit reached
+        if ($this->pathLimitReached) {
+            return;
+        }
+
         // 1. Cycle detection — very first check
         if (isset($visitedIds[$state->id])) {
             // Add the cycle target as the last step so the signature includes
@@ -567,6 +583,12 @@ class PathEnumerator
      */
     private function recordPath(array $steps, PathType $type): void
     {
+        if (count($this->paths) >= $this->maxPaths) {
+            $this->pathLimitReached = true;
+
+            return;
+        }
+
         $terminalStateId = $steps !== [] ? $steps[count($steps) - 1]->stateId : null;
 
         // For non-terminal types, clear the terminal state
