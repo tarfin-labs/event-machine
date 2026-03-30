@@ -514,7 +514,7 @@ it('job fire-and-forget still works unchanged (regression)', function (): void {
                 ],
                 'logging' => [
                     'job'    => 'App\\Jobs\\AuditLogJob',
-                    'with'   => ['action'],
+                    'input'  => ['action'],
                     'target' => 'done',
                 ],
                 'done' => ['type' => 'final'],

@@ -64,7 +64,7 @@ it('transfers context to child via with array (same-name format)', function (): 
                 'start'      => ['on' => ['GO' => 'processing']],
                 'processing' => [
                     'machine' => ChildPaymentMachine::class,
-                    'with'    => ['orderId', 'amount'],
+                    'input'   => ['orderId', 'amount'],
                     '@done'   => [
                         'target'  => 'done',
                         'actions' => 'captureOutputAction',
@@ -102,7 +102,7 @@ it('transfers context to child via with key mapping format', function (): void {
                 'start'      => ['on' => ['GO' => 'processing']],
                 'processing' => [
                     'machine' => ChildPaymentMachine::class,
-                    'with'    => ['amount' => 'totalPrice'],
+                    'input'   => ['amount' => 'totalPrice'],
                     '@done'   => [
                         'target'  => 'done',
                         'actions' => 'storeAction',
@@ -282,7 +282,7 @@ it('child context changes do not affect parent context', function (): void {
                 'idle'       => ['on' => ['GO' => 'processing']],
                 'processing' => [
                     'machine' => ContextMutatingChildMachine::class,
-                    'with'    => ['orderId'],
+                    'input'   => ['orderId'],
                     '@done'   => 'done',
                 ],
                 'done' => ['type' => 'final'],

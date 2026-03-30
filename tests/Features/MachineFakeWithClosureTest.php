@@ -36,7 +36,7 @@ it('Machine::fake() works when with closure accesses null model properties', fun
                 ],
                 'delegating' => [
                     'machine' => ImmediateChildMachine::class,
-                    'with'    => fn (ContextManager $ctx): array => [
+                    'input'   => fn (ContextManager $ctx): array => [
                         'userName' => $ctx->get('user')->name,  // crashes: null->name
                     ],
                     '@done' => 'completed',
@@ -69,7 +69,7 @@ it('Machine::fake() gracefully handles crashing with closure via try-catch', fun
             'states'  => [
                 'delegating' => [
                     'machine' => ImmediateChildMachine::class,
-                    'with'    => fn (ContextManager $ctx): array => [
+                    'input'   => fn (ContextManager $ctx): array => [
                         'userName' => $ctx->get('user')->name,  // will crash
                     ],
                     '@done' => 'completed',

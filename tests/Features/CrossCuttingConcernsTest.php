@@ -30,7 +30,7 @@ it('child context changes do not leak into parent context after delegation compl
                 'idle'       => ['on' => ['GO' => 'processing']],
                 'processing' => [
                     'machine' => ContextMutatingChildMachine::class,
-                    'with'    => ['orderId'],
+                    'input'   => ['orderId'],
                     '@done'   => 'completed',
                 ],
                 'completed' => ['type' => 'final'],
