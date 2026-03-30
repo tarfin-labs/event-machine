@@ -33,9 +33,8 @@ class PathEnumerator
      */
     public function enumerate(): PathEnumerationResult
     {
-        $this->paths              = [];
-        $this->parallelGroups     = [];
-        $this->recordedSignatures = [];
+        $this->paths          = [];
+        $this->parallelGroups = [];
 
         $initialState = $this->definition->initialStateDefinition;
 
@@ -80,6 +79,21 @@ class PathEnumerator
     ): void {
         // 1. Cycle detection — very first check
         if (isset($visitedIds[$state->id])) {
+            // Add the cycle target as the last step so the signature includes
+            // which state the loop returns to (and via which event).
+            // Without this, different loops ending at the same state before the
+            // cycle target would produce identical signatures.
+            $steps[] = new PathStep(
+                stateId: $state->id,
+                stateKey: $state->key ?? '',
+                event: $event,
+                branchIndex: $branchIndex,
+                guards: $guards,
+                actions: $actions,
+                timerType: $timerType,
+                invokeType: $invokeType,
+            );
+
             $this->recordPath($steps, PathType::LOOP);
 
             return;
@@ -182,10 +196,24 @@ class PathEnumerator
             }
         }
 
-        $this->parallelGroups[] = new ParallelPathGroup(
-            parallelStateId: $state->id,
-            regionPaths: $regionPaths,
-        );
+        // Only add to parallelGroups if this parallel state hasn't been recorded yet
+        // (multiple DFS forks can discover the same parallel state independently)
+        $alreadyRecorded = false;
+
+        foreach ($this->parallelGroups as $existing) {
+            if ($existing->parallelStateId === $state->id) {
+                $alreadyRecorded = true;
+
+                break;
+            }
+        }
+
+        if (!$alreadyRecorded) {
+            $this->parallelGroups[] = new ParallelPathGroup(
+                parallelStateId: $state->id,
+                regionPaths: $regionPaths,
+            );
+        }
 
         // Follow @done transition
         if ($state->onDoneTransition instanceof TransitionDefinition) {
@@ -537,9 +565,6 @@ class PathEnumerator
      *
      * @param  list<PathStep>  $steps
      */
-    /** @var array<string, true> Recorded signatures to prevent duplicates. */
-    private array $recordedSignatures = [];
-
     private function recordPath(array $steps, PathType $type): void
     {
         $terminalStateId = $steps !== [] ? $steps[count($steps) - 1]->stateId : null;
@@ -549,21 +574,11 @@ class PathEnumerator
             $terminalStateId = null;
         }
 
-        $path = new MachinePath(
+        $this->paths[] = new MachinePath(
             steps: $steps,
             type: $type,
             terminalStateId: $terminalStateId,
         );
-
-        // Deduplicate by signature + type (same state sequence and classification = same path)
-        $dedupeKey = $path->signature().'|'.$type->value;
-
-        if (isset($this->recordedSignatures[$dedupeKey])) {
-            return;
-        }
-
-        $this->recordedSignatures[$dedupeKey] = true;
-        $this->paths[]                        = $path;
     }
 
     /**

@@ -378,28 +378,25 @@ test('unhandled outcomes: catch-all @done covers all child final states', functi
 //  Duplicate path detection
 // ═══════════════════════════════════════════
 
-test('no duplicate paths are generated for guarded @fail with retry loop', function (): void {
-    // Simulates FindeksMachine's confirming_pin pattern:
-    // awaiting_pin → PIN_CONFIRMED → confirming_pin (job)
-    // confirming_pin @fail: [retryable → awaiting_pin (loop), fallback → failed]
-    // The retry branch loops back to awaiting_pin which has PIN_CONFIRMED → confirming_pin
-    // This can generate duplicate LOOP paths without dedup.
+test('LOOP paths include the cycle target step to distinguish different loops', function (): void {
+    // Machine with a job actor that has both @done (loop) and @fail retry (loop)
+    // Both cycle back to already-visited states but via different events.
+    // The cycle target step must be included so signatures differ.
     $definition = MachineDefinition::define(config: [
-        'id'      => 'retry_fail_test',
+        'id'      => 'dual_loop_test',
         'initial' => 'idle',
         'states'  => [
             'idle'       => ['on' => ['START' => 'awaiting']],
             'awaiting'   => ['on' => ['CONFIRM' => 'processing']],
             'processing' => [
                 'job'   => SuccessfulTestJob::class,
-                '@done' => 'completed',
+                '@done' => 'awaiting',   // loop back via @done
                 '@fail' => [
-                    ['target' => 'awaiting', 'guards' => 'isRetryableGuard'],
+                    ['target' => 'awaiting', 'guards' => 'isRetryableGuard'],  // retry loop via @fail
                     ['target' => 'failed'],
                 ],
             ],
-            'completed' => ['type' => 'final'],
-            'failed'    => ['type' => 'final'],
+            'failed' => ['type' => 'final'],
         ],
     ], behavior: [
         'guards' => [
@@ -409,15 +406,26 @@ test('no duplicate paths are generated for guarded @fail with retry loop', funct
 
     $result = (new PathEnumerator($definition))->enumerate();
 
-    // All signatures must be unique — no duplicate paths
+    // All signatures must be unique
     $signatures = array_map(fn ($p) => $p->signature(), $result->paths);
     expect(count($signatures))->toBe(count(array_unique($signatures)));
 
-    // Verify expected path count: @done→completed (HAPPY), @fail fallback→failed (FAIL),
-    // @fail retry→awaiting (LOOP), CONFIRM from awaiting (LOOP already handled by dedup)
-    expect($result->happyPaths())->toHaveCount(1)
-        ->and($result->failPaths())->toHaveCount(1)
-        ->and($result->loopPaths())->toHaveCount(1);
+    // Both @done→awaiting and @fail→awaiting are LOOP but with different cycle targets/events
+    $loopSigs = array_map(fn ($p) => $p->signature(), $result->loopPaths());
+    expect($loopSigs)->each->toContain('awaiting');
+
+    // @done loop and @fail loop should have different signatures (different events)
+    expect($result->loopPaths())->toHaveCount(2);
+});
+
+test('LOOP path signature includes cycle target state', function (): void {
+    $result = AlwaysLoopMachine::definition()->enumeratePaths();
+
+    // idle → TRIGGER → loop_a → @always → loop_b → @always → loop_a (LOOP)
+    // The last step should be loop_a (the cycle target)
+    $loopPath = $result->loopPaths()[0];
+    $lastStep = $loopPath->steps[count($loopPath->steps) - 1];
+    expect($lastStep->stateKey)->toBe('loop_a');
 });
 
 test('unhandled outcomes: fire-and-forget is skipped', function (): void {
