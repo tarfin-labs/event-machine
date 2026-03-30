@@ -93,6 +93,12 @@ class ExportXStateCommand extends Command
             $node['context'] = $context;
         }
 
+        // Export typed contract declarations as XState types
+        $types = $this->extractTypedContracts($definition);
+        if ($types !== []) {
+            $node['types'] = $types;
+        }
+
         $rootState = $this->buildStateNode($definition->root);
 
         // Merge root state properties into machine node
@@ -512,6 +518,57 @@ class ExportXStateCommand extends Command
         }
 
         return [];
+    }
+
+    /**
+     * Extract typed contract declarations (input/failure) as XState types schema.
+     */
+    private function extractTypedContracts(MachineDefinition $definition): array
+    {
+        $types = [];
+
+        if ($definition->inputClass !== null && class_exists($definition->inputClass)) {
+            $types['input'] = $this->reflectContractSchema($definition->inputClass);
+        }
+
+        if ($definition->failureClass !== null && class_exists($definition->failureClass)) {
+            $types['failure'] = $this->reflectContractSchema($definition->failureClass);
+        }
+
+        return $types;
+    }
+
+    /**
+     * Reflect a typed contract class into a JSON schema-like structure.
+     */
+    private function reflectContractSchema(string $class): array
+    {
+        $reflection = new ReflectionClass($class);
+        $properties = [];
+
+        foreach ($reflection->getConstructor()?->getParameters() ?? [] as $param) {
+            $type = $param->getType();
+
+            $properties[$param->getName()] = match (true) {
+                !$type instanceof \ReflectionNamedType => 'mixed',
+                $type->getName() === 'int'             => 'number',
+                $type->getName() === 'float'           => 'number',
+                $type->getName() === 'bool'            => 'boolean',
+                $type->getName() === 'string'          => 'string',
+                $type->getName() === 'array'           => 'array',
+                default                                => $type->getName(),
+            };
+
+            if ($type instanceof \ReflectionNamedType && $type->allowsNull()) {
+                $properties[$param->getName()] = ['oneOf' => [$properties[$param->getName()], 'null']];
+            }
+        }
+
+        return [
+            'type'       => class_basename($class),
+            'class'      => $class,
+            'properties' => $properties,
+        ];
     }
 
     /**
