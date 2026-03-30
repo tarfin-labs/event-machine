@@ -72,7 +72,9 @@ class ChildJobJob implements ShouldQueue
         }
 
         // 3. Extract output if job implements ReturnsOutput
-        $output = $job instanceof ReturnsOutput ? $job->output() : [];
+        $output      = $job instanceof ReturnsOutput ? $job->output() : [];
+        $outputData  = $output instanceof MachineOutput ? $output->toArray() : $output;
+        $outputClass = $output instanceof MachineOutput ? $output::class : null;
 
         // 4. Dispatch completion to parent
         dispatch(new ChildMachineCompletionJob(
@@ -83,7 +85,8 @@ class ChildJobJob implements ShouldQueue
             childRootEventId: null,
             success: true,
             childContextData: [],
-            outputData: $output instanceof MachineOutput ? $output->toArray() : $output,
+            outputData: $outputData,
+            outputClass: $outputClass,
         ));
     }
 
@@ -94,11 +97,14 @@ class ChildJobJob implements ShouldQueue
         }
 
         // Extract typed failure if the job supports it
-        $output = null;
+        $output       = null;
+        $failureClass = null;
+
         if (is_a($this->jobClass, ProvidesFailure::class, true)) {
             try {
-                $failure = $this->jobClass::failure($exception);
-                $output  = $failure->toArray();
+                $failure      = $this->jobClass::failure($exception);
+                $output       = $failure->toArray();
+                $failureClass = $failure::class;
             } catch (\Throwable) {
                 // failure() itself failed — proceed with null output
             }
@@ -114,6 +120,7 @@ class ChildJobJob implements ShouldQueue
             errorMessage: $exception->getMessage(),
             errorCode: $exception->getCode(),
             outputData: $output,
+            failureClass: $failureClass,
         ));
     }
 }
