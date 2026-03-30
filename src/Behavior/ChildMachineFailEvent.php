@@ -68,6 +68,24 @@ class ChildMachineFailEvent extends EventBehavior
     }
 
     /**
+     * Get the typed MachineFailure instance, if available.
+     *
+     * Returns null when the child's failure was untyped (array or no failure declaration).
+     * Used by InvokableBehavior for typed injection in parent @fail actions.
+     */
+    public function typedFailure(): ?MachineFailure
+    {
+        $failureClass = $this->payload['failure_class'] ?? null;
+        $failureData  = $this->payload['output'] ?? [];
+
+        if ($failureClass === null || !is_subclass_of($failureClass, MachineFailure::class)) {
+            return null;
+        }
+
+        return new $failureClass(...$failureData);
+    }
+
+    /**
      * Create an instance for internal use.
      *
      * @param  array  $payload  The payload containing error_message, machine_id, machine_class, output.
