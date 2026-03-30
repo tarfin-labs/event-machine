@@ -14,6 +14,7 @@ Typed contracts bring type safety to machine delegation boundaries. Instead of p
 
 Defines what data a child requires from its parent. Consumed at the delegation boundary — validates, merges into context, then is gone.
 
+<!-- doctest-attr: ignore -->
 ```php
 class PaymentInput extends MachineInput
 {
@@ -27,6 +28,7 @@ class PaymentInput extends MachineInput
 
 ### Parent-side usage
 
+<!-- doctest-attr: ignore -->
 ```php
 'delegating' => [
     'machine' => PaymentMachine::class,
@@ -46,6 +48,7 @@ class PaymentInput extends MachineInput
 
 ### Child-side declaration
 
+<!-- doctest-attr: ignore -->
 ```php
 MachineDefinition::define(config: [
     'input'   => PaymentInput::class,
@@ -58,6 +61,7 @@ MachineDefinition::define(config: [
 
 Defines what data a machine produces. Works on any state (not just final). Plugs into v9's output type dispatch as a new case alongside `OutputBehavior`.
 
+<!-- doctest-attr: ignore -->
 ```php
 class PaymentOutput extends MachineOutput
 {
@@ -71,6 +75,7 @@ class PaymentOutput extends MachineOutput
 
 ### Usage on states
 
+<!-- doctest-attr: ignore -->
 ```php
 'completed' => [
     'type'   => 'final',
@@ -88,6 +93,7 @@ When `output` is a string:
 
 ### Parent receives typed output
 
+<!-- doctest-attr: ignore -->
 ```php
 '@done' => [
     'target'  => 'shipped',
@@ -101,6 +107,7 @@ When `output` is a string:
 
 When output needs computation, `OutputBehavior` can return a `MachineOutput`:
 
+<!-- doctest-attr: ignore -->
 ```php
 class ComputedOutput extends OutputBehavior
 {
@@ -118,6 +125,7 @@ class ComputedOutput extends OutputBehavior
 
 Maps exceptions to structured error data. Used for both machine and job delegation.
 
+<!-- doctest-attr: ignore -->
 ```php
 class PaymentFailure extends MachineFailure
 {
@@ -133,6 +141,7 @@ class PaymentFailure extends MachineFailure
 
 `fromException()` auto-maps `$message` → `getMessage()`, `$code` → `getCode()`. Override for domain-specific mapping:
 
+<!-- doctest-attr: ignore -->
 ```php
 public static function fromException(Throwable $e): static
 {
@@ -145,6 +154,7 @@ public static function fromException(Throwable $e): static
 
 ### Declaration
 
+<!-- doctest-attr: ignore -->
 ```php
 MachineDefinition::define(config: [
     'failure' => PaymentFailure::class,
@@ -158,6 +168,7 @@ The `failure` key is optional. Without it, `@fail` actions receive raw exception
 
 Different final states can produce different typed outputs:
 
+<!-- doctest-attr: ignore -->
 ```php
 'approved' => ['type' => 'final', 'output' => ApprovalOutput::class],
 'rejected' => ['type' => 'final', 'output' => RejectionOutput::class],
@@ -165,6 +176,7 @@ Different final states can produce different typed outputs:
 
 Parent routes per-state:
 
+<!-- doctest-attr: ignore -->
 ```php
 '@done.approved' => [
     'actions' => function (ContextManager $ctx, ApprovalOutput $output): void { ... },
@@ -178,6 +190,7 @@ Parent routes per-state:
 
 Jobs use the same contracts via interfaces:
 
+<!-- doctest-attr: ignore -->
 ```php
 class ProcessPaymentJob implements ReturnsOutput, ProvidesFailure
 {
@@ -194,6 +207,7 @@ Typed contracts travel through queues via `ChildMachineCompletionJob`. The frame
 
 ## Testing
 
+<!-- doctest-attr: ignore -->
 ```php
 // Machine::fake with typed output
 PaymentMachine::fake(output: new PaymentOutput(paymentId: 'pay_1', status: 'ok'));
