@@ -51,6 +51,8 @@ class HasItemsGuard extends GuardBehavior
 ],
 ```
 
+Both inline keys and FQCN references work interchangeably — see [Behavior Resolution](/behaviors/introduction#behavior-resolution) for details.
+
 ## Multiple Guards (AND Logic)
 
 All guards must pass for the transition to occur. Guards evaluate in order and **short-circuit** on the first failure:
