@@ -253,7 +253,7 @@ class OrderMachine extends Machine
                     'processing_payment' => [
                         'machine' => PaymentFlowMachine::class,
                         'queue'   => 'default',
-                        'with'    => ['orderId'],
+                        'input'    => ['orderId'],
                         'forward' => [
                             'PROVIDE_CARD',                      // Format 1: forward as-is
                             'CONFIRM_PAYMENT' => [               // Format 3: with endpoint customization
