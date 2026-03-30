@@ -179,6 +179,67 @@ expect($machine->state->currentStateDefinition->id)->toContain('fallback');
 The `finalState` parameter on `Machine::fake()` determines which `@done.{state}` route fires on the parent. When omitted (or `null`), the event has no final state info and falls through to the `@done` catch-all.
 :::
 
+## Typed Contract Testing
+
+When child machines use typed contracts (`MachineInput`, `MachineOutput`, `MachineFailure`), the same faking and simulation methods work with typed instances:
+
+### Faking with MachineOutput
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Actor\Machine;
+
+// Fake with a MachineOutput instance
+PaymentMachine::fake(output: new PaymentOutput(
+    paymentId: 'pay_123',
+    amount: 5000,
+    status: 'captured',
+));
+
+OrderMachine::test()
+    ->send('START')
+    ->assertState('completed');
+
+PaymentMachine::assertInvoked();
+```
+
+### Simulating Typed Child Done
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->send('START_PAYMENT')
+    ->assertState('awaiting_payment')
+    ->simulateChildDone(
+        PaymentMachine::class,
+        output: new PaymentOutput(
+            paymentId: 'pay_456',
+            amount: 5000,
+            status: 'captured',
+        ),
+    )
+    ->assertState('completed');
+```
+
+### Simulating Typed Child Fail
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->send('START_PAYMENT')
+    ->assertState('awaiting_payment')
+    ->simulateChildFail(
+        PaymentMachine::class,
+        output: new PaymentFailure(
+            errorCode: 'INSUFFICIENT_FUNDS',
+            retryable: true,
+        ),
+    )
+    ->assertState('retrying_payment');
+```
+
+The `MachineOutput` and `MachineFailure` instances are serialized via `toArray()` before being passed to the parent's routing logic, matching the production behavior.
+
 ## Full Test Example
 
 <!-- doctest-attr: no_run -->
