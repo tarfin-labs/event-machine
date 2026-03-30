@@ -498,7 +498,7 @@ class StateDefinition
             return;
         }
 
-        $with       = $this->config['with'] ?? null;
+        $with       = $this->config['input'] ?? null;
         $rawForward = $this->config['forward'] ?? [];
         $rawQueue   = $this->config['queue'] ?? null;
 
