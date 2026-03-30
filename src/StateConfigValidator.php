@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine;
 
 use InvalidArgumentException;
+use Tarfinlabs\EventMachine\Behavior\MachineInput;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\MachineFailure;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 
 class StateConfigValidator
@@ -95,6 +97,19 @@ class StateConfigValidator
 
         if (isset($config['listen'])) {
             self::validateListenConfig($config['listen']);
+        }
+
+        // Validate typed contract declarations
+        if (isset($config['input']) && is_string($config['input']) && class_exists($config['input']) && !is_subclass_of($config['input'], MachineInput::class)) {
+            throw new InvalidArgumentException(
+                message: "Root 'input' key must be a MachineInput subclass, array, or closure. Got: {$config['input']}"
+            );
+        }
+
+        if (isset($config['failure']) && (!is_string($config['failure']) || !class_exists($config['failure']) || !is_subclass_of($config['failure'], MachineFailure::class))) {
+            throw new InvalidArgumentException(
+                message: "Root 'failure' key must be a MachineFailure subclass. Got: ".(is_string($config['failure']) ? $config['failure'] : gettype($config['failure']))
+            );
         }
     }
 
