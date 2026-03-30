@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Carbon;
 use Tarfinlabs\EventMachine\Query\MachineQueryResult;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateQueryException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\QueryBuilderTestMachine;
 
 describe('Basic Querying', function (): void {
@@ -91,11 +92,11 @@ describe('State Matching', function (): void {
         expect($results)->toHaveCount(1);
     });
 
-    test('invalid state name throws InvalidArgumentException', function (): void {
+    test('invalid state name throws InvalidStateQueryException', function (): void {
         createPersistedQBMachine('idle');
 
         QueryBuilderTestMachine::query()
             ->inState('nonexistent_state')
             ->get();
-    })->throws(InvalidArgumentException::class);
+    })->throws(InvalidStateQueryException::class);
 });
