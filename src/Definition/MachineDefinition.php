@@ -1664,7 +1664,7 @@ class MachineDefinition
     {
         $childMachineClass = $invokeDefinition->machineClass;
 
-        // Resolve child context best-effort — with() closure may crash if
+        // Resolve child context best-effort — input() closure may crash if
         // calculators were spied (leaving model properties null). Gracefully
         // fall back to empty array so faked machines don't require full context.
         try {
@@ -1716,6 +1716,7 @@ class MachineDefinition
 
             $doneEvent = ChildMachineDoneEvent::forChild([
                 'output'        => $fake['output'] ?? [],
+                'output_class'  => $fake['output_class'] ?? null,
                 'machine_id'    => '',
                 'machine_class' => $childMachineClass,
                 'final_state'   => $fake['finalState'],
