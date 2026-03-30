@@ -30,6 +30,9 @@ class PathEnumerator
     /** Whether the path limit was reached during enumeration. */
     private bool $pathLimitReached = false;
 
+    /** @var array<string, list<array{suffixSteps: list<PathStep>, type: PathType, terminalStateId: ?string}>> */
+    private array $suffixCache = [];
+
     public function __construct(
         private readonly MachineDefinition $definition,
         int $maxPaths = 1000,
@@ -45,6 +48,7 @@ class PathEnumerator
         $this->paths            = [];
         $this->parallelGroups   = [];
         $this->pathLimitReached = false;
+        $this->suffixCache      = [];
 
         $initialState = $this->definition->initialStateDefinition;
 
@@ -126,7 +130,7 @@ class PathEnumerator
         }
 
         // 3. Add current state as a step (with transition + invoke metadata)
-        $steps[] = new PathStep(
+        $currentStep = new PathStep(
             stateId: $state->id,
             stateKey: $state->key ?? '',
             event: $event,
@@ -137,16 +141,54 @@ class PathEnumerator
             invokeType: $invokeType,
             invokeClass: $invokeClass,
         );
+        $steps[] = $currentStep;
 
         $visitedIds[$state->id] = true;
 
-        // 3. Dispatch by state type
+        // 4. Suffix memoization — if we've explored this (state + visitedIds) before,
+        //    replay cached suffixes instead of re-exploring.
+        $cacheKey = $state->id.'|'.implode(',', array_keys($visitedIds));
+
+        if (isset($this->suffixCache[$cacheKey])) {
+            $prefixLength = count($steps);
+
+            foreach ($this->suffixCache[$cacheKey] as $cached) {
+                $fullSteps = [...$steps, ...$cached['suffixSteps']];
+                $this->recordPath($fullSteps, $cached['type']);
+            }
+
+            return;
+        }
+
+        // Record path count before exploration so we can extract suffixes afterward.
+        $pathCountBefore = count($this->paths);
+
+        // 5. Dispatch by state type
         match ($state->type) {
             StateDefinitionType::FINAL    => $this->handleFinal($state, $steps, $visitedIds),
             StateDefinitionType::PARALLEL => $this->handleParallel($state, $steps, $visitedIds),
             StateDefinitionType::COMPOUND => $this->handleCompound($state, $steps, $visitedIds),
             StateDefinitionType::ATOMIC   => $this->handleAtomic($state, $steps, $visitedIds),
         };
+
+        // 6. Cache the suffixes discovered from this (state, visitedIds) combination.
+        if (!$this->pathLimitReached) {
+            $prefixLength = count($steps);
+            $suffixes     = [];
+            $counter      = count($this->paths);
+
+            for ($i = $pathCountBefore; $i < $counter; $i++) {
+                $path        = $this->paths[$i];
+                $suffixSteps = array_slice($path->steps, $prefixLength);
+                $suffixes[]  = [
+                    'suffixSteps'     => $suffixSteps,
+                    'type'            => $path->type,
+                    'terminalStateId' => $path->terminalStateId,
+                ];
+            }
+
+            $this->suffixCache[$cacheKey] = $suffixes;
+        }
     }
 
     /**
