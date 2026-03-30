@@ -28,7 +28,7 @@ class OrderWorkflowMachine extends Machine
                 'states' => [
                     'validating' => [
                         'machine' => ValidationMachine::class,
-                        'with'    => ['orderId'],
+                        'input'    => ['orderId'],
                         '@done'   => [
                             'target'  => 'processing_payment',
                             'actions' => 'storeValidationOutputAction',
@@ -37,7 +37,7 @@ class OrderWorkflowMachine extends Machine
                     ],
                     'processing_payment' => [
                         'machine' => PaymentMachine::class,
-                        'with'    => ['orderId'],
+                        'input'    => ['orderId'],
                         '@done'   => 'completed',
                         '@fail'   => 'payment_failed',
                     ],
@@ -58,7 +58,7 @@ class OrderWorkflowMachine extends Machine
 | Key | Type | Required | Description |
 |-----|------|----------|-------------|
 | `machine` | `string` (FQCN) | Yes | Child machine class. Must extend `Machine`. Throws `InvalidMachineClassException` if the class doesn't exist or doesn't extend `Machine`. |
-| `input` | `string\|array\|Closure` | No | Data to pass from parent context to child. Accepts MachineInput FQCN, array, or closure. (Alias: `with`) |
+| `input` | `string\|array\|Closure` | No | Data to pass from parent context to child. Accepts MachineInput FQCN, array, or closure. (renamed from `with` in v9) |
 | `failure` | `string` (FQCN) | No | MachineFailure class for typed error data on `@fail`. |
 | `@done` | `string\|array` | No | Fires when child reaches a final state. Absence signals fire-and-forget. |
 | `@done.{state}` | `string\|array` | No | Fires when child reaches the specific final state `{state}`. Same format as `@done`. |
@@ -71,7 +71,7 @@ class OrderWorkflowMachine extends Machine
 
 ## `input` — Context Transfer
 
-::: warning Renamed from `with`
+::: warning Renamed from `with` in v9
 The `with` key has been renamed to `input` to align with the typed contract system. `with` is still accepted as an alias but will be removed in a future release.
 :::
 
@@ -188,7 +188,7 @@ When a child machine has multiple final states with different meanings, use `@do
 ```php
 'verifying' => [
     'machine' => VerificationMachine::class,
-    'with'    => ['applicantId'],
+    'input'    => ['applicantId'],
 
     '@done.approved' => 'processing',
     '@done.rejected' => 'declined',
@@ -284,7 +284,7 @@ The state spawns the child on entry and continues functioning normally with its 
 ```php
 'suspended' => [
     'machine' => AuditMachine::class,
-    'with'    => ['userId'],
+    'input'    => ['userId'],
     'queue'   => 'background',
     // No @done → fire-and-forget
     'on' => ['REACTIVATE' => 'active'],
@@ -301,7 +301,7 @@ Use `@always` to immediately transition after spawning the child:
 ```php
 'dispatching_audit' => [
     'machine' => AuditMachine::class,
-    'with'    => ['userId'],
+    'input'    => ['userId'],
     'queue'   => 'background',
     'on'      => ['@always' => 'suspended'],
 ],
@@ -315,7 +315,7 @@ Alternatively, use `target` for an explicit fire-and-forget transition (consiste
 ```php
 'dispatching_audit' => [
     'machine' => AuditMachine::class,
-    'with'    => ['userId'],
+    'input'    => ['userId'],
     'queue'   => 'background',
     'target'  => 'suspended',
 ],
@@ -389,7 +389,7 @@ This means an entry action can `raise()` an event that transitions the machine a
 'validating' => [
     'entry'   => 'checkCacheAction',      // May raise CACHE_HIT
     'machine' => ValidationMachine::class,
-    'with'    => ['orderId'],
+    'input'    => ['orderId'],
     '@done'   => 'processing',
     'on'      => [
         'CACHE_HIT' => 'processing',      // Bypasses delegation entirely
