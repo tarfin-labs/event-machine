@@ -498,7 +498,7 @@ class StateDefinition
             return;
         }
 
-        $with       = $this->config['input'] ?? null;
+        $input      = $this->config['input'] ?? null;
         $rawForward = $this->config['forward'] ?? [];
         $rawQueue   = $this->config['queue'] ?? null;
 
@@ -555,7 +555,7 @@ class StateDefinition
 
         $this->machineInvokeDefinition = new MachineInvokeDefinition(
             machineClass: $hasMachine ? $this->config['machine'] : '',
-            with: $with,
+            input: $input,
             forward: $forward,
             async: $async,
             queue: $queue,
