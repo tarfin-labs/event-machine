@@ -18,7 +18,6 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Traits\Fakeable;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
-use Tarfinlabs\EventMachine\Routing\ForwardContext;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Testing\CommunicationRecorder;
@@ -254,7 +253,6 @@ abstract class InvokableBehavior
         State $state,
         ?EventBehavior $eventBehavior = null,
         ?array $actionArguments = null,
-        ?ForwardContext $forwardContext = null,
     ): array {
         $invocableBehaviorParameters = [];
 
@@ -281,7 +279,6 @@ abstract class InvokableBehavior
 
             $value = match (true) {
                 $typeName === null                                                                                                           => null,
-                is_a($typeName, class: ForwardContext::class, allow_string: true)                                                            => $forwardContext,    // ForwardContext (child)
                 is_a($typeName, class: ContextManager::class, allow_string: true) || is_subclass_of($typeName, class: ContextManager::class) => $state->context,    // ContextManager (parent)
                 is_a($typeName, class: EventBehavior::class, allow_string: true) || is_subclass_of($typeName, class: EventBehavior::class)   => $effectiveEvent,    // EventBehavior (original event for @always)
                 $state instanceof $typeName                                                                                                  => $state,             // State
