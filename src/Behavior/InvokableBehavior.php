@@ -253,6 +253,7 @@ abstract class InvokableBehavior
         State $state,
         ?EventBehavior $eventBehavior = null,
         ?array $actionArguments = null,
+        MachineOutput|MachineFailure|null $childOutput = null,
     ): array {
         $invocableBehaviorParameters = [];
 
@@ -277,8 +278,9 @@ abstract class InvokableBehavior
                 $effectiveEvent = $state->triggeringEvent;
             }
 
-            // Resolve typed MachineOutput/MachineFailure from event if type-hinted
-            $typedContract = self::resolveTypedContract($typeName, $effectiveEvent);
+            // Resolve typed MachineOutput/MachineFailure from event or childOutput parameter
+            $typedContract = self::resolveTypedContract($typeName, $effectiveEvent)
+                ?? ($childOutput !== null && $typeName !== null && is_a($childOutput, $typeName) ? $childOutput : null);
 
             $value = match (true) {
                 $typeName === null                                                                                                           => null,
