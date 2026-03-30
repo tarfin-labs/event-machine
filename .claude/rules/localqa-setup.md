@@ -159,6 +159,12 @@ When a single transition dispatches BOTH exit and transition ListenerJobs, they 
 ### Event type naming uses dot-notation, not enum names
 Internal events use the pattern `{machine}.parallel.{placeholder}.region.timeout`, NOT `PARALLEL_REGION_TIMEOUT`. When querying `machine_events`, use `LIKE '%region.timeout%'` not `LIKE '%PARALLEL_REGION_TIMEOUT%'`.
 
+### ChildMachineCompletionJob auto-restores archived parents
+If a parent machine is archived while its child is still running, `ChildMachineCompletionJob` catches `RestoringStateException` and calls `ArchiveService::restoreMachine()` before retrying. Without this, child completion events for archived parents were silently discarded. Test pattern: create parent → delegate → archive parent → dispatch `ChildMachineCompletionJob` directly → verify parent auto-restores and reaches completed.
+
+### Partial parallel failure: Region A context may be lost (last-writer-wins)
+When Region A succeeds and Region B fails, Region A's context changes may be lost if Region B's `failed()` handler persists first using the dispatch-time snapshot. This is documented last-writer-wins behavior. In tests, don't assert Region A's context survives under partial failure — only assert the machine reaches `failed` state.
+
 ### ChildMachineCompletionJob propagates deep delegation chains
 After fix: when ChildMachineCompletionJob routes @done/@fail and the parent reaches a final state, it checks if the parent is itself a managed child and dispatches another ChildMachineCompletionJob to the grandparent. This enables Parent→Child→Grandchild async chains.
 
