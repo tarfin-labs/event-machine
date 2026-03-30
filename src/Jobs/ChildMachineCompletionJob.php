@@ -10,14 +10,17 @@ use Illuminate\Queue\InteractsWithQueue;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Tarfinlabs\EventMachine\EventCollection;
 use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Behavior\MachineOutput;
+use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
+use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 
 /**
  * Queue job that restores a parent machine and routes @done/@fail
@@ -72,6 +75,31 @@ class ChildMachineCompletionJob implements ShouldQueue
         try {
             /** @var Machine $parentMachine */
             $parentMachine = $this->parentMachineClass::create(state: $this->parentRootEventId);
+        } catch (RestoringStateException) {
+            // Parent may be archived — attempt auto-restore and retry
+            if (config('machine.archival.enabled')) {
+                $archiveService = new ArchiveService();
+                $restored       = $archiveService->restoreMachine($this->parentRootEventId);
+
+                if ($restored instanceof EventCollection) {
+                    // Events restored — retry the entire handle() to restore machine from fresh events
+                    $parentMachine = $this->parentMachineClass::create(state: $this->parentRootEventId);
+                } else {
+                    logger()->warning('ChildMachineCompletionJob: parent machine archived but could not restore', [
+                        'parent_root_event_id' => $this->parentRootEventId,
+                        'parent_machine_class' => $this->parentMachineClass,
+                    ]);
+
+                    return;
+                }
+            } else {
+                logger()->warning('ChildMachineCompletionJob: could not restore parent machine (no events found)', [
+                    'parent_root_event_id' => $this->parentRootEventId,
+                    'parent_machine_class' => $this->parentMachineClass,
+                ]);
+
+                return;
+            }
         } catch (\Throwable $e) {
             logger()->warning('ChildMachineCompletionJob: could not restore parent machine', [
                 'parent_root_event_id' => $this->parentRootEventId,
