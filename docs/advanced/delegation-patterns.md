@@ -27,13 +27,13 @@ class OrderWorkflowMachine extends Machine
                 'states' => [
                     'validating' => [
                         'machine' => ValidationMachine::class,
-                        'with'    => ['orderId'],
+                        'input'    => ['orderId'],
                         '@done'   => 'processing_payment',
                         '@fail'   => 'validation_failed',
                     ],
                     'processing_payment' => [
                         'machine' => PaymentMachine::class,
-                        'with'    => ['orderId', 'totalAmount'],
+                        'input'    => ['orderId', 'totalAmount'],
                         'queue'   => 'payments',
                         '@done'   => [
                             'target'  => 'shipping',
@@ -43,7 +43,7 @@ class OrderWorkflowMachine extends Machine
                     ],
                     'shipping' => [
                         'machine' => ShippingMachine::class,
-                        'with'    => ['orderId'],
+                        'input'    => ['orderId'],
                         '@done'   => 'completed',
                         '@fail'   => 'shipping_failed',
                     ],
@@ -99,7 +99,7 @@ When a child machine has multiple outcomes, use `@done.{state}` for declarative 
 ```php
 'credit_check' => [
     'machine' => CreditCheckMachine::class,
-    'with'    => ['applicantId', 'loanAmount'],
+    'input'    => ['applicantId', 'loanAmount'],
 
     '@done.approved'       => 'disbursement',
     '@done.manual_review'  => 'underwriting',
@@ -161,7 +161,7 @@ class BookingMachine extends Machine
                 'states' => [
                     'reserving_flight' => [
                         'machine' => FlightReservationMachine::class,
-                        'with'    => ['bookingId'],
+                        'input'    => ['bookingId'],
                         '@done'   => [
                             'target'  => 'reserving_hotel',
                             'actions' => 'storeFlightRefAction',
@@ -170,7 +170,7 @@ class BookingMachine extends Machine
                     ],
                     'reserving_hotel' => [
                         'machine' => HotelReservationMachine::class,
-                        'with'    => ['bookingId'],
+                        'input'    => ['bookingId'],
                         '@done'   => [
                             'target'  => 'confirmed',
                             'actions' => 'storeHotelRefAction',
@@ -180,7 +180,7 @@ class BookingMachine extends Machine
                     ],
                     'cancelling_flight' => [
                         'machine' => FlightCancellationMachine::class,
-                        'with'    => ['flightRef'],
+                        'input'    => ['flightRef'],
                         '@done'   => 'failed',
                         '@fail'   => 'failed',
                     ],
@@ -211,7 +211,7 @@ Combine parallel states with machine delegation to run multiple child machines c
             'states'  => [
                 'charging' => [
                     'machine' => PaymentMachine::class,
-                    'with'    => ['orderId', 'totalAmount'],
+                    'input'    => ['orderId', 'totalAmount'],
                     '@done'   => 'charged',
                 ],
                 'charged' => ['type' => 'final'],
@@ -222,7 +222,7 @@ Combine parallel states with machine delegation to run multiple child machines c
             'states'  => [
                 'reserving' => [
                     'machine' => InventoryMachine::class,
-                    'with'    => ['orderId'],
+                    'input'    => ['orderId'],
                     '@done'   => 'reserved',
                 ],
                 'reserved' => ['type' => 'final'],
@@ -303,7 +303,7 @@ Omit `@done` to make a machine delegation fire-and-forget. The parent stays in t
 ```php
 'suspended' => [
     'machine' => AuditMachine::class,
-    'with'    => ['userId'],
+    'input'    => ['userId'],
     'queue'   => 'background',
     // No @done → fire-and-forget
     'on' => ['REACTIVATE' => 'active'],
@@ -318,7 +318,7 @@ Use `@always` or `target` to spawn and immediately move to the next state:
 ```php
 'dispatching_audit' => [
     'machine' => AuditMachine::class,
-    'with'    => ['userId'],
+    'input'    => ['userId'],
     'queue'   => 'background',
     'on'      => ['@always' => 'suspended'],
 ],
@@ -332,7 +332,7 @@ For single-step async operations:
 ```php
 'logging' => [
     'job'    => AuditLogJob::class,
-    'with'   => ['action', 'userId'],
+    'input'   => ['action', 'userId'],
     'target' => 'next_state',
 ],
 ```
@@ -402,7 +402,7 @@ class LoanApplicationMachine extends Machine
                     ],
                     'identity_verification' => [
                         'machine' => IdentityVerificationMachine::class,
-                        'with'    => ['applicantId'],
+                        'input'    => ['applicantId'],
                         'queue'   => 'verification',
                         'forward' => [
                             'UPLOAD_DOCUMENT',
