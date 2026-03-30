@@ -151,6 +151,24 @@ $results = OrderMachine::query()
 $results = CarSalesMachine::query()
     ->inAllStates(['awaiting_personal_info', 'awaiting_payment'])
     ->get();
+
+// Only completed/rejected machines (final states):
+$results = OrderMachine::query()
+    ->inFinalState()
+    ->get();
+
+// Time-based filtering:
+$results = OrderMachine::query()
+    ->active()
+    ->enteredAfter(now()->subDay())     // entered current state in the last 24h
+    ->oldest()                          // earliest first
+    ->get();
+
+$results = OrderMachine::query()
+    ->inState('awaiting_payment')
+    ->enteredBefore(now()->subWeek())   // stale — waiting for over a week
+    ->latest()
+    ->paginate(10);
 ```
 
 ### Query Results
@@ -194,6 +212,22 @@ $result = ParallelMachine::query()->inState('processing')->first();
 $result->stateIds;  // ['machine.processing.region_a.working', 'machine.processing.region_b.idle']
 $result->stateId;   // most recently entered state
 ```
+
+### Fluent Methods
+
+| Method | Behavior |
+|--------|----------|
+| `inState($state)` | AND — instance must match (subquery). Multiple calls = AND. |
+| `inAnyState($states)` | OR — instance must match any (closure-isolated). |
+| `inAllStates($states)` | AND — instance must match all (parallel regions). |
+| `notInState($state)` | Exclude instances matching this state. |
+| `active()` | Alias for `notInFinalState()`. |
+| `notInFinalState()` | Exclude instances in any FINAL state. |
+| `inFinalState()` | Only instances in a FINAL state. |
+| `latest()` | Order by most recently entered state (desc). |
+| `oldest()` | Order by earliest entered state (asc). |
+| `enteredBefore($date)` | Filter: state entered before the given Carbon date. |
+| `enteredAfter($date)` | Filter: state entered after the given Carbon date. |
 
 ### Terminal Methods
 
