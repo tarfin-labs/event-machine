@@ -53,6 +53,8 @@ MachineDefinition::define(
 
 ### Class-Based Calculator
 
+Both inline keys and FQCN references work interchangeably — see [Behavior Resolution](/behaviors/introduction#behavior-resolution) for details.
+
 ```php
 use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
