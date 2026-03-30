@@ -1634,3 +1634,121 @@ it('V73: fakingAllActions + send into job state stays waiting', function (): voi
         ->send(['type' => 'START'])
         ->assertState('processing');
 });
+
+it('V74: fire-and-forget job in test mode transitions to target immediately', function (): void {
+    // Fire-and-forget jobs should still transition in test mode
+    $testMachine = TestMachine::define(
+        config: [
+            'id'      => 'v74_machine',
+            'initial' => 'idle',
+            'context' => ['orderId' => 'ord_74'],
+            'states'  => [
+                'idle' => [
+                    'on' => ['START' => 'dispatching'],
+                ],
+                'dispatching' => [
+                    'job'    => SuccessfulTestJob::class,
+                    'target' => 'waiting', // fire-and-forget: target without @done
+                ],
+                'waiting' => ['type' => 'final'],
+            ],
+        ],
+    );
+
+    // Fire-and-forget transitions immediately — no simulateChildDone needed
+    $testMachine->send('START')->assertState('waiting');
+});
+
+it('V75: async machine delegation in test mode stays waiting without Queue::fake or Machine::fake', function (): void {
+    // Same bug pattern as job actors: async delegation without Queue::fake()
+    // would dispatch ChildMachineJob on sync queue → cascade.
+    // Fix: shouldPersist=false skips dispatch, machine waits.
+    AsyncParentMachine::test()
+        ->send(['type' => 'START', 'payload' => ['orderId' => 'ORD-75']])
+        ->assertState('processing');
+    // Machine should be in processing (waiting for child), not completed
+});
+
+it('V76: chained job states with simulateChildFail on first step', function (): void {
+    // Verify @fail routing works correctly in chained job scenario
+    ChainedJobParentMachine::test()
+        ->send(['type' => 'START'])
+        ->assertState('step_one')
+        ->simulateChildFail(SuccessfulTestJob::class, errorMessage: 'Step 1 failed')
+        ->assertState('failed');
+});
+
+it('V77: job state after non-job state transition works correctly', function (): void {
+    // Machine: idle → intermediate (normal) → processing (job)
+    // The non-job → job transition should still stop at job state
+    $testMachine = TestMachine::define(
+        config: [
+            'id'      => 'v77_machine',
+            'initial' => 'idle',
+            'context' => ['orderId' => 'ord_77'],
+            'states'  => [
+                'idle' => [
+                    'on' => ['START' => 'validating'],
+                ],
+                'validating' => [
+                    'on' => ['VALID' => 'processing'],
+                ],
+                'processing' => [
+                    'job'   => SuccessfulTestJob::class,
+                    '@done' => 'completed',
+                    '@fail' => 'failed',
+                ],
+                'completed' => ['type' => 'final'],
+                'failed'    => ['type' => 'final'],
+            ],
+        ],
+    );
+
+    $testMachine
+        ->send('START')
+        ->assertState('validating')
+        ->send('VALID')
+        ->assertState('processing')   // Stays at job state
+        ->simulateChildDone(SuccessfulTestJob::class)
+        ->assertState('completed');
+});
+
+it('V78: multiple simulateChildDone calls step through chained jobs correctly', function (): void {
+    // Extended chain: 3 job states in sequence
+    $testMachine = TestMachine::define(
+        config: [
+            'id'      => 'v78_machine',
+            'initial' => 'step_one',
+            'context' => ['orderId' => 'ord_78'],
+            'states'  => [
+                'step_one' => [
+                    'job'   => SuccessfulTestJob::class,
+                    '@done' => 'step_two',
+                    '@fail' => 'failed',
+                ],
+                'step_two' => [
+                    'job'   => SuccessfulTestJob::class,
+                    '@done' => 'step_three',
+                    '@fail' => 'failed',
+                ],
+                'step_three' => [
+                    'job'   => SuccessfulTestJob::class,
+                    '@done' => 'completed',
+                    '@fail' => 'failed',
+                ],
+                'completed' => ['type' => 'final'],
+                'failed'    => ['type' => 'final'],
+            ],
+        ],
+    );
+
+    // Machine starts in step_one (job state) — no cascade
+    $testMachine
+        ->assertState('step_one')
+        ->simulateChildDone(SuccessfulTestJob::class)
+        ->assertState('step_two')
+        ->simulateChildDone(SuccessfulTestJob::class)
+        ->assertState('step_three')
+        ->simulateChildDone(SuccessfulTestJob::class)
+        ->assertState('completed');
+});
