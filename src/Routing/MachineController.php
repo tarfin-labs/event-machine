@@ -12,6 +12,7 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Validation\ValidationException;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -221,6 +222,11 @@ class MachineController extends Controller
             $outputData = array_intersect_key($contextData, array_flip($outputKeys));
         } else {
             $outputData = $machine->output();
+
+            // Serialize MachineOutput for JSON response
+            if ($outputData instanceof MachineOutput) {
+                $outputData = $outputData->toArray();
+            }
         }
 
         $response = [
