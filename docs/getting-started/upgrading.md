@@ -541,6 +541,49 @@ All three are abstract classes with `readonly` constructor properties and `toArr
 7. Optionally: replace array `'output'` on states with `MachineOutput` subclasses
 8. Run `composer quality`
 
+### New Feature: Path Coverage Analysis
+
+v9 adds automated path coverage analysis — static path enumeration, test-time tracking, coverage assertions, and artisan commands.
+
+#### New Artisan Commands
+
+| Command | Purpose |
+|---------|---------|
+| `machine:paths {machine}` | Enumerate all paths through a machine definition (static analysis) |
+| `machine:coverage {machine}` | Report path coverage (reads test data, supports `--min` for CI gates) |
+
+#### New Assertions
+
+```php
+// Assert all enumerated paths are covered by tests
+FindeksMachine::assertAllPathsCovered();
+
+// Assert minimum coverage threshold
+FindeksMachine::assertPathCoverage(minimum: 90.0);
+```
+
+#### New Trait: TracksPathCoverage
+
+Add to your test suite for automatic path coverage tracking. Works with PHPUnit, Pest, and parallel runners (Paratest).
+
+```php
+// Pest:
+uses(TracksPathCoverage::class)->in('Feature', 'Unit');
+
+// PHPUnit:
+abstract class TestCase extends BaseTestCase {
+    use TracksPathCoverage;
+}
+```
+
+The trait automatically enables tracking, cleans stale data from previous runs, and exports coverage when the process exits. Each parallel worker writes a separate file; the `machine:coverage` command merges them.
+
+#### Path Types
+
+Enumerated paths are classified by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END.
+
+See [Transitions & Paths — Path Coverage Analysis](/testing/transitions-and-paths#path-coverage-analysis) for full documentation.
+
 ---
 
 ## From 7.x to 8.0
