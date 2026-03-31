@@ -396,10 +396,13 @@ class PathEnumerator
             }
         }
 
-        // Walk up parent chain — add transitions for events NOT already seen
+        // Walk up parent chain INCLUDING root — add transitions for events NOT already seen.
+        // The root state (order === 0) can have machine-level `on` transitions that are
+        // inherited by all children (e.g., TERMINATED → terminated). Runtime's
+        // findTransitionDefinition() checks root transitions, so we must too.
         $current = $state->parent;
 
-        while ($current instanceof StateDefinition && $current->order !== 0) {
+        while ($current instanceof StateDefinition) {
             if ($current->transitionDefinitions !== null) {
                 foreach ($current->transitionDefinitions as $event => $transition) {
                     if (!isset($transitions[$event])) {
