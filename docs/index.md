@@ -77,9 +77,9 @@ Every behavior is a single-responsibility class. Compose them freely to build co
 ```php
 'CHECKOUT' => [
     'target'      => 'processing',
-    'calculators' => PriceCalculator::class,  // Runs first
-    'guards'      => MinimumOrderGuard::class, // Validates
-    'actions'     => SendReceiptAction::class, // Executes
+    'calculators' => PriceCalculator::class,
+    'guards'      => [[MinimumOrderGuard::class, 'min' => 100]],
+    'actions'     => SendReceiptAction::class,
 ],
 ```
 
@@ -102,9 +102,9 @@ use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
 
 class MinimumOrderGuard extends GuardBehavior
 {
-    public function __invoke(ContextManager $context): bool
+    public function __invoke(ContextManager $context, int $min = 0): bool
     {
-        return $context->get('total') >= 100;
+        return $context->get('total') >= $min;
     }
 }
 ```
@@ -253,7 +253,7 @@ $machine->send(['type' => 'SHIPPED']); // shipping → done
 
 **Break complex workflows into composable machines.** A parent state delegates work to a child machine. When the child completes, `@done` fires. When it fails, `@fail` fires. Sync or async — your choice.
 
-Run children inline for simple cases, or dispatch to a queue for external I/O and webhooks. Fake child machines in tests with `Machine::fake()`. No child actually runs — assertions verify the invocation.
+Type-safe contracts define the boundary: `MachineInput` validates what goes in, `MachineOutput` types what comes out, `MachineFailure` types what went wrong. Fake child machines in tests — no child actually runs.
 
 [Machine delegation &rarr;](/advanced/machine-delegation)
 
@@ -264,13 +264,16 @@ Run children inline for simple cases, or dispatch to a queue for external I/O an
 ```php
 'processing_payment' => [
     'machine' => PaymentMachine::class,
-    'input'    => ['orderId', 'totalAmount'],
+    'input'   => PaymentInput::class,     // Typed & validated
     'queue'   => 'payments',
     '@done'   => [
         'target'  => 'shipping',
-        'actions' => 'storePaymentResultAction',
+        'actions' => CapturePaymentAction::class, // Type-hints MachineOutput
     ],
-    '@fail'    => 'payment_failed',
+    '@fail'    => [
+        'target'  => 'payment_failed',
+        'actions' => HandleFailureAction::class,   // Type-hints MachineFailure
+    ],
     '@timeout' => [
         'after'  => 300,
         'target' => 'payment_timed_out',
@@ -281,15 +284,15 @@ Run children inline for simple cases, or dispatch to a queue for external I/O an
 <!-- doctest-attr: ignore -->
 ```php
 // Test without running the real child machine
-PaymentMachine::fake(output: ['paymentId' => 'pay_123']);
+PaymentMachine::fake(output: new PaymentOutput(paymentId: 'pay_123'));
 
-$machine = OrderWorkflowMachine::create();
-$machine->send(['type' => 'START']);
+OrderWorkflowMachine::test()
+    ->send('START')
+    ->assertState('shipping')
+    ->assertContext('paymentId', 'pay_123');
 
 PaymentMachine::assertInvoked();
 PaymentMachine::assertInvokedWith(['orderId' => 'ORD-1']);
-
-Machine::resetMachineFakes();
 ```
 
 </div>
@@ -588,6 +591,53 @@ $order = OrderMachine::create(state: $archive->root_event_id);
 $order->state->matches('completed');       // true
 $order->state->context->total;             // 15000
 $order->state->history->count();           // 847
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
+## Find Any Machine, Instantly
+
+**Query machines by state with a fluent API.** No more raw SQL against `machine_current_states`. Find all machines awaiting payment, filter by date, paginate results — with automatic parallel state deduplication.
+
+Lazy-loaded restores mean you only pay the cost of full machine reconstruction when you actually need it.
+
+[Querying machines &rarr;](/laravel-integration/persistence#querying-machines)
+
+</div>
+<div class="feature-code">
+
+<!-- doctest-attr: ignore -->
+```php
+// Find all machines in a specific state
+$results = OrderMachine::query()
+    ->inState('awaiting_payment')
+    ->latest()
+    ->paginate(20);
+
+// Lightweight results — lazy restore on demand
+foreach ($results as $result) {
+    $result->machineId;    // root_event_id (instant)
+    $result->stateId;      // current state (instant)
+    $result->machine();    // full Machine (lazy restore)
+}
+```
+
+<!-- doctest-attr: ignore -->
+```php
+// Advanced filtering
+OrderMachine::query()
+    ->active()                            // not in final state
+    ->enteredBefore(now()->subDays(7))    // stale machines
+    ->count();                            // efficient COUNT(DISTINCT)
+
+// Parallel-safe: automatic deduplication
+ProcessingMachine::query()
+    ->inState('processing')               // parallel state
+    ->get();                              // each machine appears once
 ```
 
 </div>
