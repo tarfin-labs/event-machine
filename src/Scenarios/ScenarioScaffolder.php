@@ -133,7 +133,57 @@ class ScenarioScaffolder
 
         $comment = "            // ── {$step->stateKey} ── interactive, @continue to reach target";
 
+        // Check if event has rules() for payload extraction
+        $payloadFields = $this->extractEventPayloadFields($firstEvent);
+
+        if ($payloadFields !== []) {
+            $payloadEntries = [];
+            foreach ($payloadFields as $field => $type) {
+                $payloadEntries[] = "                    '{$field}' => '', // TODO: {$type}";
+            }
+            $payloadBlock = implode("\n", $payloadEntries);
+
+            return "{$comment}\n            '{$step->stateRoute}' => [\n                '@continue' => [{$firstShort}, 'payload' => [\n{$payloadBlock}\n                ]],{$alsoComment}\n            ],";
+        }
+
         return "{$comment}\n            '{$step->stateRoute}' => [\n                '@continue' => {$firstShort},{$alsoComment}\n            ],";
+    }
+
+    /**
+     * Extract payload field names and types from EventBehavior::rules().
+     *
+     * @return array<string, string> field => type hint
+     */
+    private function extractEventPayloadFields(string $eventClass): array
+    {
+        if (!class_exists($eventClass) || !method_exists($eventClass, 'rules')) {
+            return [];
+        }
+
+        try {
+            $rules = $eventClass::rules();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        if (!is_array($rules)) {
+            return [];
+        }
+
+        $fields = [];
+        foreach ($rules as $field => $rule) {
+            $ruleStr = is_array($rule) ? implode('|', array_map(strval(...), $rule)) : (string) $rule;
+            $type    = match (true) {
+                str_contains($ruleStr, 'integer') || str_contains($ruleStr, 'numeric') => 'number',
+                str_contains($ruleStr, 'boolean')                                      => 'boolean',
+                str_contains($ruleStr, 'array')                                        => 'array',
+                default                                                                => 'string',
+            };
+            $required       = str_contains($ruleStr, 'required') ? 'required' : 'optional';
+            $fields[$field] = "{$required} ({$type})";
+        }
+
+        return $fields;
     }
 
     /**
