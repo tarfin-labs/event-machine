@@ -166,6 +166,14 @@ abstract class MachineScenario
     }
 
     /**
+     * Get the validated (hydrated) parameter values.
+     */
+    public function validatedParams(): array
+    {
+        return $this->resolvedParams;
+    }
+
+    /**
      * Extract validation rules from param definitions.
      * Plain array = rules directly. Rich definition = extract 'rules' key.
      */
