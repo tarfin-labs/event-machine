@@ -368,8 +368,8 @@ The timeout job triggers `processParallelOnFail()`. Without a `@fail` target def
 ```
 :::
 
-::: tip Idempotent
-The timeout job is safe to fire multiple times. Once the machine transitions out of the parallel state (via `@fail` or `@done`), subsequent timeout checks are no-ops.
+::: tip Idempotent and Race-Safe
+The timeout job is safe to fire multiple times. Once the machine transitions out of the parallel state (via `@fail` or `@done`), subsequent timeout checks are no-ops. If regions complete at the exact moment the timeout fires, the lock serializes both operations — only one of `@done` or `@fail` transitions the machine, never both.
 :::
 
 ## Context Conflict Detection

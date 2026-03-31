@@ -76,19 +76,19 @@ it('LocalQA: entry/exit actions execute exactly once per transition under concur
     // Verify via MachineEvent count — each entry action produces an internal event
     $entryEvents = MachineEvent::query()
         ->where('root_event_id', $rootEventId)
-        ->where('type', 'like', '%state.entry%')
+        ->where('type', 'like', '%.entry.start')
         ->count();
 
-    // 4 state entries
-    expect($entryEvents)->toBe(4, "Expected 4 state.entry events, got {$entryEvents}");
+    // 4 state entries (idle, processing, idle, completed)
+    expect($entryEvents)->toBe(4, "Expected 4 entry.start events, got {$entryEvents}");
 
     $exitEvents = MachineEvent::query()
         ->where('root_event_id', $rootEventId)
-        ->where('type', 'like', '%state.exit%')
+        ->where('type', 'like', '%.exit.start')
         ->count();
 
-    // 3 state exits
-    expect($exitEvents)->toBe(3, "Expected 3 state.exit events, got {$exitEvents}");
+    // 3 state exits (idle, processing, idle)
+    expect($exitEvents)->toBe(3, "Expected 3 exit.start events, got {$exitEvents}");
 
     // No stale locks
     $locks = DB::table('machine_locks')->where('root_event_id', $rootEventId)->count();

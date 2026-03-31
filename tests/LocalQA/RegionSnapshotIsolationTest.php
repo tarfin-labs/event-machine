@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ParallelDispatchViaEventMachine;
 
 uses(LocalQATestCase::class);
 
@@ -32,8 +32,8 @@ it('LocalQA: parallel dispatch regions start from same context snapshot', functi
     config(['machine.parallel_dispatch.enabled' => true]);
     config(['machine.parallel_dispatch.queue' => 'default']);
 
-    // Create machine and enter parallel state
-    $machine = ParallelDispatchMachine::create();
+    // Create machine and transition to parallel state via START
+    $machine = ParallelDispatchViaEventMachine::create();
     $machine->send(['type' => 'START_PROCESSING']);
     $rootEventId = $machine->state->history->first()->root_event_id;
 
@@ -46,7 +46,7 @@ it('LocalQA: parallel dispatch regions start from same context snapshot', functi
         }
 
         // Machine should settle after regions complete
-        $restored = ParallelDispatchMachine::create(state: $rootEventId);
+        $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
         $regionA  = $restored->state->context->get('regionAData');
         $regionB  = $restored->state->context->get('regionBData');
 
@@ -56,7 +56,7 @@ it('LocalQA: parallel dispatch regions start from same context snapshot', functi
     expect($completed)->toBeTrue('Parallel dispatch regions did not complete');
 
     // Verify machine state is consistent
-    $restored = ParallelDispatchMachine::create(state: $rootEventId);
+    $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
 
     // Both regions should have produced results
     expect($restored->state->context->get('regionAData'))->not->toBeNull()

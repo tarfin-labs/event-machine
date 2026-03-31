@@ -233,6 +233,36 @@ After auto-restore, the machine won't be eligible for re-archival until the cool
 3. Cooldown until Jan 16
 4. If no activity until Feb 15 → Eligible for re-archival
 
+### Archival and Child Delegation
+
+When a parent machine is archived while a child is still running, `ChildMachineCompletionJob` auto-restores the parent before routing `@done` / `@fail`. This happens transparently — no manual intervention needed.
+
+```
+Parent (archived)       Child (running on Horizon)
+     │                         │
+     │ ◄────── @done ──────────┤  child completes
+     │                         │
+     ▼                         │
+ChildMachineCompletionJob      │
+     │                         │
+     ├─ create(state:) fails   │
+     │  (RestoringStateException)
+     │                         │
+     ├─ ArchiveService::restoreMachine()
+     │  → events back to DB    │
+     │                         │
+     ├─ create(state:) succeeds│
+     │                         │
+     ├─ route @done to parent  │
+     │                         │
+     ▼                         │
+Parent reaches completed       │
+```
+
+::: warning Archival Safety
+Only archive machines that have been inactive for a meaningful period (`days_inactive`). Archiving a parent while its child is actively processing works, but is an edge case — the auto-restore adds a small overhead to the completion path.
+:::
+
 ## Programmatic Archival
 
 ### `ArchiveService`

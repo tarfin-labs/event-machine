@@ -24,6 +24,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `php artisan machine:process-timers` - Sweep command for after/every timers (auto-registered)
 - `php artisan machine:process-scheduled` - Process scheduled events (called by MachineScheduler)
 - `php artisan machine:timer-status` - Display timer status for machine instances
+- `php artisan machine:paths` - Enumerate all paths through a machine definition (static analysis)
+- `php artisan machine:coverage` - Report path coverage for a machine (reads test coverage JSON)
 - `php artisan machine:cache` - Cache machine class discovery for production
 - `php artisan machine:clear` - Clear machine discovery cache
 - `php artisan machine:archive-events` - Archive old machine events (fan-out, `--dry-run`, `--sync`, `--dispatch-limit`)
@@ -159,6 +161,9 @@ Four top-level sections:
 - **`EventBuilder`**: Abstract base for event test factories (like model factories but for events)
 - **Behavior faking**: `fakingAllActions(except:)`, `fakingAllGuards(except:)`, `fakingAllBehaviors(except:)`, `simulateChildDone/Fail/Timeout`
 - **Isolated assertions**: `ActionClass::assertRaised()`, `assertNotRaised()`, `assertRaisedCount()`, `assertNothingRaised()`
+- **`TracksPathCoverage`** trait: Automatic path coverage tracking — add to TestCase for `PathCoverageTracker` enable + parallel-safe export via `register_shutdown_function`
+- **`PathCoverageTracker`**: Static singleton accumulating state sequences during tests, exports PID-suffixed JSON for parallel workers
+- **Path coverage assertions**: `Machine::assertAllPathsCovered()`, `Machine::assertPathCoverage(minimum:)` — cross-reference enumerated vs observed paths
 
 ## Workflow Rules
 
@@ -238,8 +243,9 @@ All code, tests, and documentation **must** follow the naming conventions define
 ## Package Structure
 
 - `src/Actor/` - Runtime machine and state classes
+- `src/Analysis/` - Path coverage analysis (PathEnumerator, PathCoverageTracker, PathCoverageReport, value objects)
 - `src/Behavior/` - Base behavior classes (Action, Guard, Calculator, Event, Output, MachineInput, MachineOutput, MachineFailure)
-- `src/Commands/` - Artisan commands (timers, schedules, cache, xstate, archive)
+- `src/Commands/` - Artisan commands (timers, schedules, cache, xstate, archive, paths, coverage)
 - `src/Contracts/` - Interfaces (ScheduleResolver, ReturnsOutput, ProvidesFailure)
 - `src/Definition/` - Machine definition, state, transition, timer, schedule definitions
 - `src/Enums/` - Type definitions and constants
@@ -252,7 +258,7 @@ All code, tests, and documentation **must** follow the naming conventions define
 - `src/Scheduling/` - Schedule registration (MachineScheduler)
 - `src/Services/` - Business logic services (ArchiveService)
 - `src/Support/` - Value objects and utilities (Timer, CompressionManager, MachineDiscovery, ArrayUtils)
-- `src/Testing/` - Test helpers (TestMachine, InteractsWithMachines, CommunicationRecorder, InlineBehaviorFake, EventBuilder)
+- `src/Testing/` - Test helpers (TestMachine, InteractsWithMachines, TracksPathCoverage, CommunicationRecorder, InlineBehaviorFake, EventBuilder)
 - `src/Traits/` - Reusable traits (Fakeable, HasMachines)
 - `src/Transformers/` - Spatie LaravelData transformers (ModelTransformer)
 - `tests/LocalQA/` - Local QA tests requiring real MySQL + Redis + Horizon

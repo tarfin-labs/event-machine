@@ -33,6 +33,16 @@ class SendToMachineJob implements ShouldQueue
     use SerializesModels;
 
     /**
+     * High tries to accommodate lock contention retries via release().
+     * Each release() increments attempts — with 4+ concurrent events
+     * to the same machine, each may need 3-5 release cycles.
+     * maxExceptions limits actual failures (not release retries).
+     */
+    public int $tries = 25;
+
+    public int $maxExceptions = 3;
+
+    /**
      * @param  string  $machineClass  FQCN of the target Machine subclass.
      * @param  string  $rootEventId  The target machine's root_event_id.
      * @param  array  $event  The event to send (array with 'type' and optional 'payload').
@@ -67,11 +77,10 @@ class SendToMachineJob implements ShouldQueue
             // Without this, all retry attempts fire instantly and exhaust tries.
             $this->release(1);
         } catch (NoTransitionDefinitionFoundException) {
-            Log::warning('SendToMachineJob: failed to deliver event, target machine cannot handle it in current state.', [
-                'machine_class' => $this->machineClass,
-                'root_event_id' => $this->rootEventId,
-                'event'         => $this->event,
-            ]);
+            // Machine is not in a state that handles this event yet.
+            // Release back to queue — the machine may transition to a
+            // valid state after other pending events are processed.
+            $this->release(2);
         }
     }
 }

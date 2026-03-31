@@ -35,6 +35,10 @@ class MachineRouter
      */
     public static function register(string $machineClass, array $options): void
     {
+        if (app()->runningConsoleCommand('package:discover')) {
+            return;
+        }
+
         $definition         = $machineClass::definition();
         $endpoints          = $definition->parsedEndpoints ?? [];
         $forwardedEndpoints = $definition->forwardedEndpoints ?? [];

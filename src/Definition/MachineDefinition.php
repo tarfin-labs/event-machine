@@ -20,6 +20,7 @@ use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
 use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\MachineOutput;
+use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
@@ -29,6 +30,7 @@ use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineTimeoutJob;
 use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Routing\MachineEndpointAction;
+use Tarfinlabs\EventMachine\Analysis\PathEnumerationResult;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
@@ -1563,6 +1565,18 @@ class MachineDefinition
             placeholder: $jobClass,
         );
 
+        // Test mode: skip job dispatch. The machine stays in the job state
+        // waiting for simulateChildDone()/simulateChildFail(). Without this,
+        // sync queue would run ChildJobJob immediately → @done cascades → infinite loop.
+        // Fire-and-forget jobs still transition to target immediately.
+        if (!$this->shouldPersist) {
+            if ($isFireAndForget) {
+                $this->transitionToFireAndForgetTarget($state, $invokeDefinition->target);
+            }
+
+            return;
+        }
+
         // Dispatch the job
         $childJobJob = new ChildJobJob(
             parentRootEventId: $state->history?->first()?->root_event_id ?? '',
@@ -1608,6 +1622,18 @@ class MachineDefinition
             type: InternalEvent::CHILD_MACHINE_START,
             placeholder: $childMachineClass,
         );
+
+        // Test mode: skip dispatch and DB tracking. The machine stays in the delegating
+        // state waiting for simulateChildDone()/simulateChildFail(). Without this,
+        // sync queue would run ChildMachineJob immediately → cascade through @done.
+        // Fire-and-forget still transitions to target immediately.
+        if (!$this->shouldPersist) {
+            if ($isFireAndForget) {
+                $this->transitionToFireAndForgetTarget($state, $invokeDefinition->target);
+            }
+
+            return;
+        }
 
         // Create tracking record (managed only — fire-and-forget skips this)
         $machineChildId = '';
@@ -2947,6 +2973,16 @@ class MachineDefinition
     // endregion
 
     // region Public Methods
+
+    /**
+     * Enumerate all paths through this machine definition.
+     *
+     * Convenience wrapper around PathEnumerator.
+     */
+    public function enumeratePaths(): PathEnumerationResult
+    {
+        return (new PathEnumerator($this))->enumerate();
+    }
 
     /**
      * Transition the state machine to a new state based on an event.

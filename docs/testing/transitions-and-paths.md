@@ -135,6 +135,83 @@ OrderMachine::test()
     ->assertHistoryContains('PROCESSING_COMPLETE');
 ```
 
+## Path Coverage Analysis
+
+EventMachine can statically enumerate all paths through a machine definition and track which paths your tests exercise.
+
+### Enumerating Paths
+
+```bash
+php artisan machine:paths "App\Machines\FindeksMachine"
+```
+
+This produces a complete list of all possible paths grouped by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END.
+
+### Tracking Coverage in Tests
+
+Add the `TracksPathCoverage` trait to your test suite. It automatically enables the tracker, cleans stale data, and exports coverage when the process exits:
+
+<!-- doctest-attr: ignore -->
+```php
+// In tests/Pest.php:
+use Tarfinlabs\EventMachine\Testing\TracksPathCoverage;
+
+uses(TracksPathCoverage::class)->in('Feature', 'Unit');
+
+// Or in a PHPUnit base TestCase:
+use Tarfinlabs\EventMachine\Testing\TracksPathCoverage;
+
+abstract class TestCase extends BaseTestCase
+{
+    use TracksPathCoverage;
+}
+```
+
+The trait works with both PHPUnit and Pest, including parallel test runners (Paratest). Each worker writes a separate coverage file; the `machine:coverage` command merges them automatically.
+
+The tracker records state transitions through `TestMachine`. Paths are completed when `assertFinished()` or `assertState()` (on a FINAL state) is called.
+
+### Coverage Assertions
+
+<!-- doctest-attr: ignore -->
+```php
+// Assert all enumerated paths are covered by tests
+FindeksMachine::assertAllPathsCovered();
+
+// Assert at least 90% of paths are covered
+FindeksMachine::assertPathCoverage(minimum: 90.0);
+```
+
+### Path Types
+
+| Type | Meaning |
+|------|---------|
+| HAPPY | Reached a FINAL state without @fail or timer |
+| FAIL | Path contains an @fail step |
+| TIMEOUT | Path contains a timer-triggered step or @timeout |
+| LOOP | Cycle detected — path revisits a state |
+| GUARD_BLOCK | All guards fail with no fallback — event swallowed |
+| DEAD_END | ATOMIC state with no transitions and not FINAL |
+
+### Child Machine Visibility
+
+Path analysis treats child machines as opaque (compositional verification). Each machine's paths are analyzed independently. The output shows:
+
+- **Child machine/job class names** on invoke state steps (e.g., `processing (PaymentMachine)`)
+- **Async/sync mode and queue** in the stats section
+- **Unhandled child outcome warnings** when a child has final states the parent doesn't route via `@done.{state}`
+
+To see a child machine's internal paths, run `machine:paths` on the child separately.
+
+### CI Integration
+
+```yaml
+- run: composer test
+- run: php artisan machine:coverage FindeksMachine --min=100
+```
+
+See [Artisan Commands](/laravel-integration/artisan-commands#machine-paths) for full command documentation.
+
 ::: tip Related
 See [TestMachine](/testing/test-machine) for the complete assertion API,
 [Isolated Testing](/testing/isolated-testing) for unit-level guard testing,

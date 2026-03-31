@@ -516,7 +516,7 @@ Common validation errors include:
 You can also run validation via artisan:
 
 ```bash
-php artisan machine:validate-config
+php artisan machine:validate
 ```
 
 This scans all Machine classes and reports config errors without running the application.

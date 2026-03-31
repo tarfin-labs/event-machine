@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Actor;
 
 use Stringable;
 use JsonSerializable;
+use PHPUnit\Framework\Assert;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\ContextManager;
@@ -16,6 +17,7 @@ use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Support\ArrayUtils;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
+use Tarfinlabs\EventMachine\Analysis\MachinePath;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
@@ -29,7 +31,9 @@ use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+use Tarfinlabs\EventMachine\Analysis\PathCoverageReport;
 use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
+use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionTimeoutJob;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
@@ -820,6 +824,68 @@ class Machine implements Castable, JsonSerializable, Stringable
             'sends'        => [],
         ];
     }
+
+    // region Path Coverage Assertions
+
+    /**
+     * Assert that all enumerated paths have been covered by tests.
+     *
+     * Reads directly from PathCoverageTracker's static state (same process).
+     *
+     * @throws AssertionFailedError
+     */
+    public static function assertAllPathsCovered(): void
+    {
+        $report = self::buildPathCoverageReport();
+
+        $uncovered = $report->uncoveredPaths();
+
+        Assert::assertEmpty(
+            $uncovered,
+            sprintf(
+                "%d untested path(s) in %s:\n%s",
+                count($uncovered),
+                static::class,
+                implode("\n", array_map(
+                    static fn (MachinePath $p): string => "  - {$p->signature()} ({$p->type->value})",
+                    $uncovered,
+                )),
+            ),
+        );
+    }
+
+    /**
+     * Assert that path coverage meets a minimum percentage.
+     *
+     * @throws AssertionFailedError
+     */
+    public static function assertPathCoverage(float $minimum): void
+    {
+        $report   = self::buildPathCoverageReport();
+        $coverage = $report->coveragePercentage();
+
+        Assert::assertGreaterThanOrEqual(
+            $minimum,
+            $coverage,
+            sprintf(
+                'Path coverage %.1f%% is below minimum %.1f%% for %s',
+                $coverage,
+                $minimum,
+                static::class,
+            ),
+        );
+    }
+
+    private static function buildPathCoverageReport(): PathCoverageReport
+    {
+        $definition  = static::definition();
+        $enumeration = $definition->enumeratePaths();
+        $observed    = PathCoverageTracker::observedPaths(static::class);
+
+        return new PathCoverageReport($enumeration, $observed);
+    }
+
+    // endregion
 
     /**
      * Check if a machine class is currently faked.

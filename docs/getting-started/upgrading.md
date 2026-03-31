@@ -541,6 +541,80 @@ All three are abstract classes with `readonly` constructor properties and `toArr
 7. Optionally: replace array `'output'` on states with `MachineOutput` subclasses
 8. Run `composer quality`
 
+### New Feature: Path Coverage Analysis
+
+v9 adds automated path coverage analysis — static path enumeration, test-time tracking, coverage assertions, and artisan commands.
+
+#### New Artisan Commands
+
+| Command | Purpose |
+|---------|---------|
+| `machine:paths {machine}` | Enumerate all paths through a machine definition (static analysis) |
+| `machine:coverage {machine}` | Report path coverage (reads test data, supports `--min` for CI gates) |
+
+#### New Assertions
+
+```php
+// Assert all enumerated paths are covered by tests
+FindeksMachine::assertAllPathsCovered();
+
+// Assert minimum coverage threshold
+FindeksMachine::assertPathCoverage(minimum: 90.0);
+```
+
+#### New Trait: TracksPathCoverage
+
+Add to your test suite for automatic path coverage tracking. Works with PHPUnit, Pest, and parallel runners (Paratest).
+
+```php
+// Pest:
+uses(TracksPathCoverage::class)->in('Feature', 'Unit');
+
+// PHPUnit:
+abstract class TestCase extends BaseTestCase {
+    use TracksPathCoverage;
+}
+```
+
+The trait automatically enables tracking, cleans stale data from previous runs, and exports coverage when the process exits. Each parallel worker writes a separate file; the `machine:coverage` command merges them.
+
+#### Child Machine Visibility
+
+`machine:paths` shows child machine and job class names on invoke state steps, detailed delegation info in stats, and warns about unhandled child outcomes:
+
+```
+  Child machines: 1
+    processing → PaymentMachine (async, queue: payments)
+
+  #1  → idle
+      → [START] processing (PaymentMachine)
+      → [@done.approved] completed
+
+⚠ UNHANDLED CHILD OUTCOMES:
+  processing → PaymentMachine
+    Child final states: approved, rejected
+    Parent handles: @done.approved
+    Unhandled: rejected
+```
+
+Each machine is analyzed independently (compositional verification). Run `machine:paths` on child machines separately to see their internal paths.
+
+#### Large Machines
+
+Machines with mutual state cycles (e.g., approved ↔ rejected) can generate thousands of valid paths. Use `--max-paths` to control enumeration:
+
+```bash
+php artisan machine:paths "App\Machines\LargeMachine" --max-paths=5000
+```
+
+Default limit is 1000. The command warns when the limit is reached.
+
+#### Path Types
+
+Enumerated paths are classified by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END.
+
+See [Transitions & Paths — Path Coverage Analysis](/testing/transitions-and-paths#path-coverage-analysis) for full documentation.
+
 ### New: Machine Query Builder
 
 New fluent API for finding machine instances by state. No breaking changes — purely additive.
@@ -576,6 +650,16 @@ $results->first()->machine();   // full Machine instance (lazy)
 Key features: leaf/exact/parent/wildcard state matching, `active()`/`notInFinalState()` helpers, `inAllStates()` for parallel AND queries, automatic parallel state deduplication, `LengthAwarePaginator` support.
 
 See [Querying Machines](https://eventmachine.dev/laravel-integration/persistence#querying-machines) for full documentation.
+
+### Bug Fixes in 9.0
+
+These production bugs were discovered and fixed during QA testing with real Horizon:
+
+- **`SendToMachineJob` event retry** — `NoTransitionDefinitionFoundException` previously logged a warning and silently dropped the event. Now uses `release(2)` to retry, with `$tries=25` and `$maxExceptions=3` to handle lock contention. Events are no longer lost when the target machine hasn't yet reached the correct state.
+- **`MachineOutput` serialization** — `resolveChildOutput()` can return a `MachineOutput` instance, but `ChildMachineCompletionJob` expects `?array`. Fixed in `ChildMachineJob`, `MachineController`, `MachineDefinition::tryForwardEventToChild()`, and `ChildMachineCompletionJob::propagateChainCompletion()`.
+- **Deep delegation failure propagation** — `ChildMachineCompletionJob::propagateChainCompletion()` always passed `success: true` to the grandparent, even when the middle machine failed. Now correctly propagates the failure flag.
+- **Archived parent auto-restore** — `ChildMachineCompletionJob` caught all `Throwable` and silently discarded when the parent was archived. Now catches `RestoringStateException` specifically and attempts archive auto-restore before routing `@done`/`@fail`.
+- **Job actor test mode** — `handleJobInvoke()` and `handleAsyncMachineInvoke()` dispatched real jobs even in test mode (`shouldPersist=false`), causing infinite loops with sync queue when entering chained job states. Now skips dispatch in test mode — use `simulateChildDone()`/`simulateChildFail()` to step through job states.
 
 ---
 
