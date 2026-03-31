@@ -4,8 +4,14 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Scenarios;
 
+use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
+use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\ScenariosDisabledException;
@@ -84,13 +90,111 @@ class ScenarioPlayer
     }
 
     /**
-     * Register scenario overrides in the container.
+     * Register behavior overrides in the container.
      * Called during execute() and during async restoration (§9).
-     * Placeholder — will be implemented in plan-engine epic.
      */
     public static function registerOverrides(MachineScenario $scenario): void
     {
-        // Placeholder for plan-engine epic
+        $plan = $scenario->resolvedPlan();
+
+        foreach ($plan as $value) {
+            if (!is_array($value) || isset($value['outcome'])) {
+                continue; // Skip delegation outcomes and child scenarios
+            }
+
+            foreach ($value as $behaviorKey => $override) {
+                if ($behaviorKey === '@continue') {
+                    continue; // @continue is not a behavior override
+                }
+
+                self::bindOverride($behaviorKey, $override);
+            }
+        }
+    }
+
+    /**
+     * Bind a single behavior override in the container.
+     */
+    private static function bindOverride(string $behaviorKey, mixed $override): void
+    {
+        // Only bind class-based behaviors (FQCN that extend InvokableBehavior)
+        if (!class_exists($behaviorKey) || !is_subclass_of($behaviorKey, InvokableBehavior::class)) {
+            // Inline behavior keys (camelCase strings) are handled by InlineBehaviorFake
+            return;
+        }
+
+        App::bind($behaviorKey, function () use ($behaviorKey, $override) {
+            return match (true) {
+                is_bool($override)                                                                                     => self::createBoolGuardProxy($override),
+                is_array($override) && is_subclass_of($behaviorKey, OutputBehavior::class)                             => self::createOutputProxy($override),
+                is_array($override)                                                                                    => self::createContextWriteProxy($override),
+                $override instanceof \Closure                                                                          => self::createClosureProxy($override),
+                is_string($override) && class_exists($override) && is_subclass_of($override, InvokableBehavior::class) => App::make($override),
+                default                                                                                                => throw new \InvalidArgumentException("Invalid override value for {$behaviorKey}"),
+            };
+        });
+    }
+
+    /**
+     * Create a GuardBehavior proxy that returns a fixed bool.
+     */
+    private static function createBoolGuardProxy(bool $value): GuardBehavior
+    {
+        return new class($value) extends GuardBehavior {
+            public function __construct(private readonly bool $returnValue) {}
+
+            public function __invoke(): bool
+            {
+                return $this->returnValue;
+            }
+        };
+    }
+
+    /**
+     * Create an ActionBehavior proxy that writes key-value pairs to context.
+     */
+    private static function createContextWriteProxy(array $data): ActionBehavior
+    {
+        return new class($data) extends ActionBehavior {
+            public function __construct(private readonly array $contextData) {}
+
+            public function __invoke(ContextManager $ctx): void
+            {
+                foreach ($this->contextData as $key => $val) {
+                    $ctx->set($key, $val);
+                }
+            }
+        };
+    }
+
+    /**
+     * Create an OutputBehavior proxy that returns a fixed array.
+     */
+    private static function createOutputProxy(array $data): OutputBehavior
+    {
+        return new class($data) extends OutputBehavior {
+            public function __construct(private readonly array $outputData) {}
+
+            public function __invoke(): array
+            {
+                return $this->outputData;
+            }
+        };
+    }
+
+    /**
+     * Create an InvokableBehavior proxy that delegates to a closure.
+     */
+    private static function createClosureProxy(\Closure $handler): InvokableBehavior
+    {
+        return new class($handler) extends InvokableBehavior {
+            public function __construct(private readonly \Closure $handler) {}
+
+            public function __invoke(mixed ...$args): mixed
+            {
+                return ($this->handler)(...$args);
+            }
+        };
     }
 
     /**
