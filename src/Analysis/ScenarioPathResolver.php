@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Analysis;
 
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Exceptions\NoScenarioPathFoundException;
 
@@ -247,6 +248,87 @@ class ScenarioPathResolver
         }
 
         return $id;
+    }
+
+    /**
+     * Resolve a deep target (cross-delegation) into parent target + child target.
+     *
+     * Input: 'findeks.awaiting_birth_date_correction'
+     * Output: ['parentTarget' => 'verification', 'childMachine' => FindeksMachine::class, 'childTarget' => 'awaiting_birth_date_correction']
+     * Returns null if target is not a deep target.
+     */
+    public function resolveDeepTarget(string $target): ?array
+    {
+        // First check if the target exists directly in the machine
+        try {
+            $this->graph->resolveState($target);
+
+            return null; // Direct target, not deep
+        } catch (\InvalidArgumentException) {
+            // Not found — might be a deep target
+        }
+
+        // Try to parse as region_key.child_state
+        $parts = explode('.', $target, 2);
+        if (count($parts) < 2) {
+            return null; // Can't be a deep target without at least 2 parts
+        }
+
+        // Walk the idMap looking for delegation states whose path contains the first part
+        $definition = $this->graph->definition();
+
+        foreach ($definition->idMap as $id => $state) {
+            if (!$state->hasMachineInvoke()) {
+                continue;
+            }
+
+            // Check if the state's path contains the prefix (e.g., 'verification.findeks.running' contains 'findeks')
+            if (!str_contains((string) $id, '.'.$parts[0].'.') && !str_ends_with((string) $id, '.'.$parts[0])) {
+                continue;
+            }
+
+            $childMachineClass = $state->getMachineInvokeDefinition()?->machineClass;
+            if ($childMachineClass === null) {
+                continue;
+            }
+            if ($childMachineClass === '') {
+                continue;
+            }
+            if (!class_exists($childMachineClass)) {
+                continue;
+            }
+
+            // Check if the child state part exists in the child machine
+            $childDefinition = $childMachineClass::definition();
+            $childTarget     = $parts[1];
+            $found           = $childDefinition->idMap[$childTarget]
+                ?? $childDefinition->idMap[$childDefinition->id.'.'.$childTarget]
+                ?? null;
+
+            if ($found !== null) {
+                // Find the parallel parent state (e.g., 'verification')
+                $parentState = $state->parent;
+                while ($parentState !== null && $parentState->parent !== null) {
+                    if ($parentState->type === StateDefinitionType::PARALLEL) {
+                        break;
+                    }
+                    $parentState = $parentState->parent;
+                }
+
+                $parentTarget = $parentState !== null
+                    ? substr($parentState->id, strlen($definition->id) + 1)
+                    : substr($state->id, strlen($definition->id) + 1);
+
+                return [
+                    'parentTarget'    => $parentTarget,
+                    'delegationState' => substr($state->id, strlen($definition->id) + 1),
+                    'childMachine'    => $childMachineClass,
+                    'childTarget'     => $childTarget,
+                ];
+            }
+        }
+
+        return null;
     }
 
     /**
