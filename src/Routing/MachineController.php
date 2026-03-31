@@ -15,7 +15,9 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Behavior\MachineFailure;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
@@ -266,6 +268,26 @@ class MachineController extends Controller
             'output'          => $outputData,
             'isProcessing'    => $isProcessing,
         ];
+
+        if (config('machine.scenarios.enabled', false) && $machine->definition->machineClass !== null) {
+            $availableScenarios = [];
+
+            foreach ($state->value as $currentStateRoute) {
+                $grouped = ScenarioDiscovery::groupedByEvent(
+                    machineClass: $machine->definition->machineClass,
+                    currentState: $currentStateRoute,
+                );
+
+                foreach ($grouped as $eventType => $scenarios) {
+                    $availableScenarios[$eventType] = array_merge(
+                        $availableScenarios[$eventType] ?? [],
+                        $scenarios,
+                    );
+                }
+            }
+
+            $response['availableScenarios'] = $availableScenarios;
+        }
 
         return response()->json(['data' => $response], $statusCode);
     }
@@ -530,6 +552,53 @@ class MachineController extends Controller
         $response['isProcessing'] = $isProcessing;
 
         return response()->json(['data' => $response], $statusCode);
+    }
+
+    /**
+     * List all scenarios available for a machine, grouped by event type.
+     * Route: GET {prefix}/scenarios.
+     */
+    public function handleScenarioList(Request $request): JsonResponse
+    {
+        $machineClass = $request->route()->defaults['_machine_class'];
+
+        $scenarios = ScenarioDiscovery::forMachine($machineClass);
+
+        $data = $scenarios->map(fn (MachineScenario $scenario): array => [
+            'slug'        => $scenario->slug(),
+            'description' => $scenario->description(),
+            'source'      => $scenario->source(),
+            'event'       => $scenario->event(),
+            'target'      => $scenario->target(),
+            'params'      => $scenario->resolvedParams(),
+        ])->values()->all();
+
+        return response()->json(['data' => $data]);
+    }
+
+    /**
+     * Describe a single scenario by slug.
+     * Route: GET {prefix}/scenarios/{slug}/describe.
+     */
+    public function handleScenarioDescribe(Request $request): JsonResponse
+    {
+        $machineClass = $request->route()->defaults['_machine_class'];
+        $slug         = $request->route()->parameter('slug');
+
+        $scenario = ScenarioDiscovery::resolveBySlug($machineClass, $slug);
+
+        if (!$scenario instanceof MachineScenario) {
+            abort(404, "Scenario '{$slug}' not found for this machine.");
+        }
+
+        return response()->json(['data' => [
+            'slug'        => $scenario->slug(),
+            'description' => $scenario->description(),
+            'source'      => $scenario->source(),
+            'event'       => $scenario->event(),
+            'target'      => $scenario->target(),
+            'params'      => $scenario->resolvedParams(),
+        ]]);
     }
 
     /**
