@@ -33,6 +33,29 @@ Each section below has step-by-step migration instructions with before/after exa
 
 ---
 
+## From 9.3.x to 9.4.0
+
+### New: Machine Scenarios
+
+Declarative behavior overrides for QA and staging environments. Define `MachineScenario` classes that specify a journey (source → event → target) with `plan()` overrides, then activate from existing endpoints via a `scenario` field.
+
+See [Scenarios](/advanced/scenarios) for the full documentation.
+
+**Setup:**
+1. Add `MACHINE_SCENARIOS_ENABLED=true` to staging `.env`
+2. Run the migration: `php artisan migrate` (adds `scenario_class` and `scenario_params` columns to `machine_current_states`)
+3. Create `MachineScenario` classes (use `php artisan machine:scenario` to scaffold)
+4. Run `php artisan machine:scenario-validate` to verify
+
+**Old scenario system deprecated:**
+The old `scenarios_enabled` / `scenarioType` system is deprecated and will be removed in the next major version. Migration steps:
+1. Remove `scenarios_enabled` from machine config
+2. Remove `scenarioType` from event payloads
+3. Remove `withScenario()` from tests
+4. Create `MachineScenario` classes as replacements
+
+---
+
 ## From 8.x to 9.0
 
 ### Unified Output — `result`/`contextKeys` → `output`
