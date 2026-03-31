@@ -28,6 +28,66 @@ function refreshRoutes(): void
     Route::getRoutes()->refreshActionLookups();
 }
 
+// ─── Package Discover Safety ─────────────────────────────────────────
+
+test('register skips route registration during package:discover', function (): void {
+    $originalArgv = $_SERVER['argv'] ?? [];
+
+    try {
+        $_SERVER['argv'] = ['artisan', 'package:discover'];
+        app()->instance('env', 'testing');
+
+        $routeCountBefore = count(Route::getRoutes()->getRoutes());
+
+        MachineRouter::register(TestEndpointMachine::class, [
+            'prefix' => '/api/discover-test',
+        ]);
+
+        refreshRoutes();
+
+        $routeCountAfter = count(Route::getRoutes()->getRoutes());
+
+        expect($routeCountAfter)->toBe($routeCountBefore);
+    } finally {
+        $_SERVER['argv'] = $originalArgv;
+    }
+});
+
+test('register works normally for other artisan commands', function (): void {
+    $originalArgv = $_SERVER['argv'] ?? [];
+
+    try {
+        $_SERVER['argv'] = ['artisan', 'route:list'];
+
+        MachineRouter::register(TestEndpointMachine::class, [
+            'prefix' => '/api/route-list-test',
+        ]);
+
+        refreshRoutes();
+
+        $routes = Route::getRoutes();
+
+        expect($routes->getByName('test_endpoint.start'))->not->toBeNull();
+    } finally {
+        $_SERVER['argv'] = $originalArgv;
+    }
+});
+
+test('register works normally in HTTP context', function (): void {
+    // Default test environment is not console — routes should register
+    MachineRouter::register(TestEndpointMachine::class, [
+        'prefix' => '/api/http-test',
+    ]);
+
+    refreshRoutes();
+
+    $routes = Route::getRoutes();
+
+    expect($routes->getByName('test_endpoint.start'))->not->toBeNull()
+        ->and($routes->getByName('test_endpoint.complete'))->not->toBeNull()
+        ->and($routes->getByName('test_endpoint.cancel'))->not->toBeNull();
+});
+
 // ─── Route Registration ───────────────────────────────────────────────
 
 test('register creates routes for all parsed endpoints', function (): void {
