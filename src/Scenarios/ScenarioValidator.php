@@ -7,6 +7,8 @@ namespace Tarfinlabs\EventMachine\Scenarios;
 use Tarfinlabs\EventMachine\Analysis\MachineGraph;
 use Tarfinlabs\EventMachine\Analysis\StateClassification;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Analysis\ScenarioPathResolver;
+use Tarfinlabs\EventMachine\Exceptions\NoScenarioPathFoundException;
 
 /**
  * Static validator for MachineScenario classes.
@@ -132,6 +134,73 @@ class ScenarioValidator
                 $this->errors[] = "State route '{$route}' in plan() not found in machine definition";
             }
         }
+    }
+
+    /**
+     * Run Level-2 path validation checks.
+     *
+     * @return list<string> Error messages (empty = valid).
+     */
+    public function validatePaths(): array
+    {
+        $errors = [];
+
+        $machineClass = $this->scenario->machine();
+        if (!class_exists($machineClass)) {
+            return ['Cannot validate paths — machine class not found'];
+        }
+
+        $definition = $machineClass::definition();
+        $graph      = new MachineGraph($definition);
+        $resolver   = new ScenarioPathResolver($graph);
+
+        // Check 1: Path exists from source to target
+        try {
+            $resolver->resolve(
+                source: $this->scenario->source(),
+                event: $this->scenario->event(),
+                target: $this->scenario->target(),
+            );
+        } catch (NoScenarioPathFoundException) {
+            $errors[] = "No path from '{$this->scenario->source()}' to '{$this->scenario->target()}' via '{$this->scenario->event()}'";
+        } catch (\InvalidArgumentException $e) {
+            $errors[] = $e->getMessage();
+        }
+
+        // Check 2: @continue events lead toward target (basic direction check)
+        $plan = $this->scenario->resolvedPlan();
+        foreach ($plan as $route => $value) {
+            if (!is_array($value)) {
+                continue;
+            }
+            if (!isset($value['@continue'])) {
+                continue;
+            }
+            $continue   = $value['@continue'];
+            $eventClass = is_string($continue) ? $continue : ($continue[0] ?? null);
+
+            if ($eventClass === null) {
+                continue;
+            }
+
+            // Check the event class exists if it looks like a FQCN
+            if (is_string($eventClass) && str_contains($eventClass, '\\') && !class_exists($eventClass)) {
+                $errors[] = "@continue at '{$route}' references non-existent event class: {$eventClass}";
+            }
+        }
+
+        // Check 3: Deep target child scenario exists
+        $deepTarget = $resolver->resolveDeepTarget($this->scenario->target());
+        if ($deepTarget !== null) {
+            $childScenarios = ScenarioDiscovery::forMachine($deepTarget['childMachine']);
+            $matching       = $childScenarios->filter(fn (MachineScenario $s): bool => $s->target() === $deepTarget['childTarget']);
+
+            if ($matching->isEmpty()) {
+                $errors[] = "Deep target: no child scenario found for {$deepTarget['childMachine']} targeting '{$deepTarget['childTarget']}'";
+            }
+        }
+
+        return $errors;
     }
 
     private function checkPlanStructure(MachineDefinition $definition, MachineGraph $graph): void
