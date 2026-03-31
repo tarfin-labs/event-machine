@@ -37,6 +37,12 @@ class ScenarioPlayer
     /** @var list<string> Class-based behavior keys bound in container during this execution. */
     private static array $boundClassKeys = [];
 
+    /** @var array<string, string|array> Delegation outcomes from classified plan (stateRoute => outcome). */
+    private static array $outcomes = [];
+
+    /** @var array<string, class-string<MachineScenario>> Child scenario references from classified plan. */
+    private static array $childScenarios = [];
+
     public function __construct(
         private readonly MachineScenario $scenario,
     ) {}
@@ -76,11 +82,15 @@ class ScenarioPlayer
             $this->persistScenario($rootEventId);
         }
 
-        // Steps 5-6: Register behavior overrides and set active flag
+        // Steps 5-6: Register behavior overrides, populate outcomes, set active flag
         self::$isActive = true;
 
         try {
             self::registerOverrides($this->scenario);
+
+            // Classify plan values to populate outcomes/childScenarios BEFORE send().
+            // The engine queries these during handleMachineInvoke() to intercept delegations.
+            $classified = $this->classifyPlanValues();
 
             // Step 7: Send trigger event
             try {
@@ -97,7 +107,6 @@ class ScenarioPlayer
             }
 
             // Step 8: @continue loop
-            $classified    = $this->classifyPlanValues();
             $maxDepth      = config('machine.max_transition_depth', 100);
             $continueCount = 0;
 
@@ -145,6 +154,48 @@ class ScenarioPlayer
     }
 
     /**
+     * Get the delegation outcome for a state route, if defined in plan().
+     * Called by MachineDefinition during invoke handling.
+     *
+     * @return string|array|null Outcome string ('@done', '@fail', '@timeout') or array with 'outcome' key, or null.
+     */
+    public static function getOutcome(string $stateRoute): string|array|null
+    {
+        // Try exact match first
+        if (isset(self::$outcomes[$stateRoute])) {
+            return self::$outcomes[$stateRoute];
+        }
+
+        // Try suffix match (plan keys may omit machine prefix)
+        foreach (self::$outcomes as $route => $outcome) {
+            if (str_ends_with($stateRoute, '.'.$route)) {
+                return $outcome;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the child scenario class for a state route, if defined in plan().
+     * Called by MachineDefinition during invoke handling.
+     */
+    public static function getChildScenario(string $stateRoute): ?string
+    {
+        if (isset(self::$childScenarios[$stateRoute])) {
+            return self::$childScenarios[$stateRoute];
+        }
+
+        foreach (self::$childScenarios as $route => $scenarioClass) {
+            if (str_ends_with($stateRoute, '.'.$route)) {
+                return $scenarioClass;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Reset all inline behavior overrides registered during scenario execution.
      * Called at the end of execute() and by test teardown.
      */
@@ -170,6 +221,10 @@ class ScenarioPlayer
 
         self::$boundClassKeys = [];
 
+        // Clear delegation outcomes and child scenario references
+        self::$outcomes       = [];
+        self::$childScenarios = [];
+
         // Reset inline overrides
         self::resetInlineOverrides();
     }
@@ -188,8 +243,12 @@ class ScenarioPlayer
     }
 
     /**
-     * Execute a child scenario — creates child machine, applies scenario, runs.
+     * Execute a child scenario — creates child machine, applies overrides, starts.
      * Returns the child's final state or null if child paused at interactive state.
+     *
+     * The child machine is created with shouldPersist=false to avoid DB dependency
+     * during scenario replay. Child's plan() overrides (guards, outcomes) and the
+     * parent's existing overrides are both active in the container.
      */
     public static function executeChildScenario(
         string $childScenarioClass,
@@ -199,22 +258,57 @@ class ScenarioPlayer
         /** @var MachineScenario $childScenario */
         $childScenario = new $childScenarioClass();
 
-        // Register child's overrides
+        // Classify child plan values to populate outcomes/childScenarios for nested delegation
+        $childPlan            = $childScenario->resolvedPlan();
+        $parentOutcomes       = self::$outcomes;
+        $parentChildScenarios = self::$childScenarios;
+
+        // Register child's behavior overrides (adds to existing parent overrides)
         self::registerOverrides($childScenario);
+        $childOutcomes       = [];
+        $childChildScenarios = [];
 
-        // Create child machine
-        $childMachine = $childMachineClass::create();
+        foreach ($childPlan as $stateRoute => $value) {
+            if (is_string($value) && str_starts_with($value, '@')) {
+                $childOutcomes[$stateRoute] = $value;
+            } elseif (is_string($value) && class_exists($value) && is_subclass_of($value, MachineScenario::class)) {
+                $childChildScenarios[$stateRoute] = $value;
+            } elseif (is_array($value) && isset($value['outcome'])) {
+                $childOutcomes[$stateRoute] = $value;
+            }
+        }
 
-        // Note: The child runs through its plan() overrides automatically.
-        // @continue loop for child scenarios runs here too.
+        // Merge child outcomes into static storage (child takes precedence)
+        self::$outcomes       = array_merge(self::$outcomes, $childOutcomes);
+        self::$childScenarios = array_merge(self::$childScenarios, $childChildScenarios);
+
+        // Create child machine without persistence — @always chain runs with overrides
+        $definition                = clone $childMachineClass::definition();
+        $definition->shouldPersist = false;
+        $definition->machineClass  = $childMachineClass;
+
+        if ($input !== []) {
+            $definition->config['context'] = array_merge(
+                $definition->config['context'] ?? [],
+                $input,
+            );
+        }
+
+        $childMachine = Machine::withDefinition($definition);
+        $childMachine->start();
+
         $childState = $childMachine->state;
+
+        // Restore parent outcomes (child overrides should not leak to parent)
+        self::$outcomes       = $parentOutcomes;
+        self::$childScenarios = $parentChildScenarios;
 
         // Check if child reached a final state
         if ($childState->currentStateDefinition?->type === StateDefinitionType::FINAL) {
             return $childState;
         }
 
-        // Child paused at interactive state — stays running
+        // Child paused at interactive/delegation state — stays running
         return null;
     }
 
@@ -527,6 +621,10 @@ class ScenarioPlayer
                 $overrides[$stateRoute] = $value;
             }
         }
+
+        // Populate static storage for engine to query during delegation handling
+        self::$outcomes       = $outcomes;
+        self::$childScenarios = $childScenarios;
 
         return [
             'overrides'      => $overrides,
