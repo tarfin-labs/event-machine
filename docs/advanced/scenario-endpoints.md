@@ -1,6 +1,6 @@
 # Scenario Endpoints
 
-How scenarios integrate with machine HTTP endpoints — QA workflow, request/response format, scenario routes, and file organization.
+How scenarios integrate with machine HTTP endpoints — QA workflow, request/response format, and file organization.
 
 ## QA Workflow
 
@@ -40,7 +40,7 @@ POST /api/orders/{orderId}/review-rejected
 
 ## Response Format
 
-After any successful transition, the response includes `availableScenarios` grouped by event:
+When `MACHINE_SCENARIOS_ENABLED=true`, every endpoint response includes an `availableScenarios` field. This field is **state-aware** — it only lists scenarios whose `$source` matches the machine's current state, grouped by event type:
 
 ```json
 {
@@ -81,14 +81,19 @@ After any successful transition, the response includes `availableScenarios` grou
 }
 ```
 
-## Scenario Routes
+### `availableScenarios` Structure
 
-When scenarios are enabled, `MachineRouter` registers two additional routes:
+| Key | Type | Description |
+|-----|------|-------------|
+| Top-level keys | `string` | Event type strings (e.g., `"ReviewApprovedEvent"`) — resolved via `EventBehavior::getType()`, never FQCN |
+| `slug` | `string` | Kebab-case identifier (e.g., `"at-approved-scenario"`) — used in `scenario` request field |
+| `description` | `string` | Human-readable description from the scenario class |
+| `target` | `string` | Final state route the scenario reaches |
+| `params` | `object` | Parameter definitions with `type`, `values`, `label`, `rules`, `required` — empty `{}` when no params |
 
-| Route | Description |
-|-------|-------------|
-| `GET {prefix}/scenarios` | List all scenarios for this machine |
-| `GET {prefix}/scenarios/{slug}/describe` | Scenario details (identity, params) |
+The field is built by `ScenarioDiscovery::groupedByEvent()` which scans the `Scenarios/` directory relative to the machine class. Only scenarios whose `$source` property matches the current state (exact or suffix match) are included.
+
+When `MACHINE_SCENARIOS_ENABLED=false` (default), the `availableScenarios` field is **not present** in the response — zero overhead in production.
 
 ## File Organization
 

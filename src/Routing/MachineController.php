@@ -573,53 +573,6 @@ class MachineController extends Controller
     }
 
     /**
-     * List all scenarios available for a machine, grouped by event type.
-     * Route: GET {prefix}/scenarios.
-     */
-    public function handleScenarioList(Request $request): JsonResponse
-    {
-        $machineClass = $request->route()->defaults['_machine_class'];
-
-        $scenarios = ScenarioDiscovery::forMachine($machineClass);
-
-        $data = $scenarios->map(fn (MachineScenario $scenario): array => [
-            'slug'        => $scenario->slug(),
-            'description' => $scenario->description(),
-            'source'      => $scenario->source(),
-            'event'       => $scenario->eventType(),
-            'target'      => $scenario->target(),
-            'params'      => $scenario->resolvedParams(),
-        ])->values()->all();
-
-        return response()->json(['data' => $data]);
-    }
-
-    /**
-     * Describe a single scenario by slug.
-     * Route: GET {prefix}/scenarios/{slug}/describe.
-     */
-    public function handleScenarioDescribe(Request $request): JsonResponse
-    {
-        $machineClass = $request->route()->defaults['_machine_class'];
-        $slug         = $request->route()->parameter('slug');
-
-        $scenario = ScenarioDiscovery::resolveBySlug($machineClass, $slug);
-
-        if (!$scenario instanceof MachineScenario) {
-            abort(404, "Scenario '{$slug}' not found for this machine.");
-        }
-
-        return response()->json(['data' => [
-            'slug'        => $scenario->slug(),
-            'description' => $scenario->description(),
-            'source'      => $scenario->source(),
-            'event'       => $scenario->eventType(),
-            'target'      => $scenario->target(),
-            'params'      => $scenario->resolvedParams(),
-        ]]);
-    }
-
-    /**
      * Read scenario from request, validate, and activate overrides.
      * Returns the scenario instance or null if no scenario in request.
      */
