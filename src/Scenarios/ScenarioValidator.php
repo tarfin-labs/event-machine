@@ -102,7 +102,18 @@ class ScenarioValidator
             return;
         }
 
-        $event       = $this->scenario->event();
+        $event = $this->scenario->event();
+
+        // @start: valid when source is the machine's initial state (typically transient)
+        if ($event === MachineScenario::START) {
+            $initialState = $definition->config['initial'] ?? null;
+            if ($initialState !== null && $source !== $initialState && !str_ends_with($source, '.'.$initialState)) {
+                $this->errors[] = "@start event requires source to be the initial state ('{$initialState}'), got '{$source}'";
+            }
+
+            return;
+        }
+
         $available   = $graph->availableEventsFrom($state);
         $transitions = $graph->transitionsFrom($state);
 
