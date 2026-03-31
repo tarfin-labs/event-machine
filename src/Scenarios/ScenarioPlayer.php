@@ -85,7 +85,7 @@ class ScenarioPlayer
             // Step 7: Send trigger event
             try {
                 $state = $machine->send([
-                    'type'    => $this->resolveEventType($this->scenario->event()),
+                    'type'    => $this->scenario->eventType(),
                     'payload' => $eventPayload,
                 ]);
             } catch (MissingMachineContextException $e) {
