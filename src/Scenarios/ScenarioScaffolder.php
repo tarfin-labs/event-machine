@@ -33,15 +33,15 @@ class ScenarioScaffolder
 
         $importsBlock = implode("\n", array_map(fn (string $i): string => "use {$i};", $imports));
 
-        // Extract trigger event payload hint
+        // Extract trigger event payload hint (shown as class docblock)
         $triggerPayloadHint   = '';
         $triggerPayloadFields = $this->extractEventPayloadFields($event);
         if ($triggerPayloadFields !== []) {
             $fields = [];
             foreach ($triggerPayloadFields as $field => $type) {
-                $fields[] = " *   - {$field}: {$type}";
+                $fields[] = "     *   - {$field}: {$type}";
             }
-            $triggerPayloadHint = "\n     *\n     * Trigger event payload:\n".implode("\n", $fields);
+            $triggerPayloadHint = "/**\n     * Trigger event payload:\n".implode("\n", $fields)."\n     */\n        ";
         }
 
         return <<<PHP
@@ -53,9 +53,7 @@ class ScenarioScaffolder
 
         {$importsBlock}
 
-        /**{$triggerPayloadHint}
-         */
-        class {$scenarioName} extends MachineScenario
+        {$triggerPayloadHint}class {$scenarioName} extends MachineScenario
         {
             protected string \$machine     = {$shortMachine}::class;
             protected string \$source      = '{$source}';
