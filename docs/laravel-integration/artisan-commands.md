@@ -389,6 +389,93 @@ UNTESTED: 1 path
   → [@fail] failed
 ```
 
+## machine:scenario
+
+Generate a `MachineScenario` class by analyzing the machine definition and resolving the path from source to target.
+
+### Usage
+
+```bash
+# Generate scenario class
+php artisan machine:scenario AtAllocation CarSalesMachine \
+    awaiting_customer_start CustomerStartedEvent allocation
+
+# Preview without writing
+php artisan machine:scenario AtAllocation CarSalesMachine \
+    awaiting_customer_start CustomerStartedEvent allocation --dry-run
+
+# Overwrite existing file
+php artisan machine:scenario AtAllocation CarSalesMachine \
+    awaiting_customer_start CustomerStartedEvent allocation --force
+
+# Select specific path when multiple exist
+php artisan machine:scenario AtAllocation CarSalesMachine \
+    awaiting_customer_start CustomerStartedEvent allocation --path=1
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `name` | Scenario class name (`Scenario` suffix auto-added if missing) |
+| `machine` | Machine class FQCN |
+| `source` | Source state route (full or partial) |
+| `event` | Triggering event (class FQCN or event type string) |
+| `target` | Target state route (full or partial, supports deep targets) |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--dry-run` | Print generated file to stdout without writing |
+| `--force` | Overwrite existing scenario file |
+| `--path=N` | Select path by index when multiple paths exist (default: 0) |
+
+The command classifies each intermediate state (transient, delegation, interactive, parallel) and generates appropriate `plan()` entries with TODO comments. Supports deep targets (cross-delegation) with automatic child scenario discovery.
+
+See [Scenarios — Scaffold Command](/advanced/scenarios#scaffold-command) for full details.
+
+## machine:scenario-validate
+
+Validate all scenarios against their machine definitions. Catches structural errors and broken paths without running machines.
+
+### Usage
+
+```bash
+# Validate all scenarios for all machines
+php artisan machine:scenario-validate
+
+# Validate scenarios for a specific machine
+php artisan machine:scenario-validate "App\Machines\CarSalesMachine"
+
+# Validate a single scenario
+php artisan machine:scenario-validate --scenario=AtCheckingProtocolScenario
+```
+
+### What It Checks
+
+**Level 1 — Static validation:** machine class exists, source/target/event valid, plan() routes exist, behavior classes exist, delegation outcomes on correct states, child scenario machine matches.
+
+**Level 2 — Path validation:** path exists from source to target, `@continue` events lead toward target, deep target child scenarios exist.
+
+### Output
+
+```
+Validating scenarios...
+
+CarSalesMachine (5 scenarios)
+  ✓ AtVerificationScenario                idle → verification
+  ✓ AtCheckingProtocolScenario            idle → checking_protocol
+  ✗ AtAllocationScenario                  idle → allocation
+    State route 'checking_protocols' not found in machine definition
+
+4 passed, 1 failed
+```
+
+Exit code 0 = all valid, exit code 1 = failures found. Suitable for CI/CD pipelines.
+
+See [Scenarios — Validation Command](/advanced/scenarios#validation-command) for full details.
+
 ## Scheduling Commands
 
 Add commands to your scheduler:
