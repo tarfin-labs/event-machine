@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Scenarios;
 
 use Tarfinlabs\EventMachine\Analysis\MachineGraph;
+use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Analysis\StateClassification;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Analysis\ScenarioPathResolver;
@@ -197,6 +198,50 @@ class ScenarioValidator
             // Check the event class exists if it looks like a FQCN
             if (is_string($eventClass) && str_contains($eventClass, '\\') && !class_exists($eventClass)) {
                 $errors[] = "@continue at '{$route}' references non-existent event class: {$eventClass}";
+
+                continue;
+            }
+
+            // Direction check: verify @continue event is available from this state
+            // and leads toward target (not away from it)
+            $state = $definition->idMap[$route] ?? $definition->idMap[$definition->id.'.'.$route] ?? null;
+            if ($state !== null) {
+                $availableEvents = $graph->availableEventsFrom($state);
+
+                // Resolve event type for comparison
+                $eventType = (is_string($eventClass) && class_exists($eventClass) && method_exists($eventClass, 'getType'))
+                    ? $eventClass::getType()
+                    : $eventClass;
+
+                if ($availableEvents !== [] && !in_array($eventType, $availableEvents, true)) {
+                    $errors[] = "@continue at '{$route}' sends '{$eventType}' which is not available from this state. Available: ".implode(', ', $availableEvents);
+                }
+
+                // Check if event leads toward target (any transition target is closer to $target)
+                $transitions = $graph->transitionsFrom($state);
+                $transition  = $transitions[$eventType] ?? null;
+                if ($transition !== null) {
+                    $leadsTowardTarget = false;
+                    foreach ($transition->branches ?? [] as $branch) {
+                        if (!$branch->target instanceof StateDefinition) {
+                            continue;
+                        }
+                        $branchRoute = $branch->target->route ?? $branch->target->key ?? '';
+                        $targetRoute = $this->scenario->target();
+                        // Does the branch target match or get closer to $target?
+                        if ($branchRoute === $targetRoute
+                            || str_contains($branchRoute, $targetRoute)
+                            || str_contains($targetRoute, $branchRoute)) {
+                            $leadsTowardTarget = true;
+                            break;
+                        }
+                        // Any transition is "toward target" if we can't determine direction
+                        $leadsTowardTarget = true;
+                    }
+                    if (!$leadsTowardTarget) {
+                        $errors[] = "@continue at '{$route}' sends '{$eventType}' which does not lead toward target '{$this->scenario->target()}'";
+                    }
+                }
             }
         }
 
