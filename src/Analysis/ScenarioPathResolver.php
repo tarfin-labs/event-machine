@@ -6,7 +6,9 @@ namespace Tarfinlabs\EventMachine\Analysis;
 
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
+use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
 use Tarfinlabs\EventMachine\Exceptions\NoScenarioPathFoundException;
 
 /**
@@ -44,15 +46,21 @@ class ScenarioPathResolver
         $targetState = $this->graph->resolveState($target);
 
         // Find initial transitions from source via trigger event
-        $transitions     = $this->graph->transitionsFrom($sourceState);
-        $eventTransition = $transitions[$event] ?? null;
+        $transitions = $this->graph->transitionsFrom($sourceState);
 
-        // Try EventBehavior::getType() match
-        if ($eventTransition === null) {
-            foreach ($transitions as $eventKey => $transition) {
-                if (class_exists($event) && method_exists($event, 'getType') && $eventKey === $event::getType()) {
-                    $eventTransition = $transition;
-                    break;
+        // @start: use the @always transition from the initial state
+        if ($event === MachineScenario::START) {
+            $eventTransition = $transitions[TransitionProperty::Always->value] ?? null;
+        } else {
+            $eventTransition = $transitions[$event] ?? null;
+
+            // Try EventBehavior::getType() match
+            if ($eventTransition === null) {
+                foreach ($transitions as $eventKey => $transition) {
+                    if (class_exists($event) && method_exists($event, 'getType') && $eventKey === $event::getType()) {
+                        $eventTransition = $transition;
+                        break;
+                    }
                 }
             }
         }
@@ -185,12 +193,33 @@ class ScenarioPathResolver
                 break;
 
             case StateClassification::DELEGATION:
-                // Follow @done/@fail/@timeout transitions
-                $transitions = $state->transitionDefinitions ?? [];
-                foreach ($transitions as $event => $transition) {
-                    if (!str_starts_with((string) $event, '@done') && $event !== '@fail' && $event !== '@timeout') {
-                        continue;
+                // Follow @done/@fail/@timeout transitions.
+                // These are stored on separate properties (onDoneTransition, etc.)
+                // AND/OR in transitionDefinitions (when defined via 'on' key).
+                $doneTransitions = [];
+
+                // Collect from dedicated properties
+                if ($state->onDoneTransition instanceof TransitionDefinition) {
+                    $doneTransitions['@done'] = $state->onDoneTransition;
+                }
+                foreach ($state->onDoneStateTransitions as $doneState => $transition) {
+                    $doneTransitions["@done.{$doneState}"] = $transition;
+                }
+                if ($state->onFailTransition instanceof TransitionDefinition) {
+                    $doneTransitions['@fail'] = $state->onFailTransition;
+                }
+                if ($state->onTimeoutTransition instanceof TransitionDefinition) {
+                    $doneTransitions['@timeout'] = $state->onTimeoutTransition;
+                }
+
+                // Also check transitionDefinitions (for states defined via 'on' key)
+                foreach ($state->transitionDefinitions ?? [] as $event => $transition) {
+                    if (str_starts_with((string) $event, '@done') || $event === '@fail' || $event === '@timeout') {
+                        $doneTransitions[$event] = $transition;
                     }
+                }
+
+                foreach ($doneTransitions as $event => $transition) {
                     foreach ($transition->branches ?? [] as $branch) {
                         if ($branch->target instanceof StateDefinition) {
                             $next[] = [$branch->target, $event, $branch->guards ?? [], $branch->actions ?? []];
@@ -200,12 +229,23 @@ class ScenarioPathResolver
                 break;
 
             case StateClassification::PARALLEL:
-                // Follow @done transition
-                $transitions = $state->transitionDefinitions ?? [];
-                foreach ($transitions as $event => $transition) {
-                    if (!str_starts_with((string) $event, '@done')) {
-                        continue;
+                // Follow @done/@fail transitions.
+                // Check both dedicated properties and transitionDefinitions.
+                $parallelTransitions = [];
+
+                if ($state->onDoneTransition instanceof TransitionDefinition) {
+                    $parallelTransitions['@done'] = $state->onDoneTransition;
+                }
+                if ($state->onFailTransition instanceof TransitionDefinition) {
+                    $parallelTransitions['@fail'] = $state->onFailTransition;
+                }
+                foreach ($state->transitionDefinitions ?? [] as $event => $transition) {
+                    if (str_starts_with((string) $event, '@done') || $event === '@fail') {
+                        $parallelTransitions[$event] = $transition;
                     }
+                }
+
+                foreach ($parallelTransitions as $event => $transition) {
                     foreach ($transition->branches ?? [] as $branch) {
                         if ($branch->target instanceof StateDefinition) {
                             $next[] = [$branch->target, $event, $branch->guards ?? [], $branch->actions ?? []];
