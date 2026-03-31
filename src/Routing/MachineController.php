@@ -14,6 +14,7 @@ use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Behavior\MachineFailure;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
@@ -21,6 +22,7 @@ use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Exceptions\ScenarioFailedException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
 use Tarfinlabs\EventMachine\Exceptions\MachineOutputInjectionException;
@@ -117,6 +119,7 @@ class MachineController extends Controller
             statusCode: $defaults['_status_code'] ?? 200,
             outputKeys: $outputKeys,
             includeAvailableEvents: $defaults['_available_events'] ?? true,
+            request: $request,
         );
     }
 
@@ -163,12 +166,19 @@ class MachineController extends Controller
         int $statusCode,
         ?array $outputKeys = null,
         ?bool $includeAvailableEvents = true,
+        ?Request $request = null,
     ): JsonResponse {
         $action = $actionClass !== null
             ? resolve($actionClass)->withMachineContext($machine, $machine->state)
             : null;
 
         $action?->before();
+
+        // Activate scenario overrides if a scenario slug is present in the request.
+        // Must be called before send() so overrides are registered before the event is processed.
+        if ($request instanceof Request && $machine->definition->machineClass !== null) {
+            $this->maybeRegisterScenarioOverrides($request, $machine->definition->machineClass, $machine);
+        }
 
         try {
             $state = $machine->send(event: $event);
@@ -599,6 +609,65 @@ class MachineController extends Controller
             'target'      => $scenario->target(),
             'params'      => $scenario->resolvedParams(),
         ]]);
+    }
+
+    /**
+     * Read scenario from request, validate, and activate overrides.
+     * Returns the scenario instance or null if no scenario in request.
+     */
+    private function maybeRegisterScenarioOverrides(
+        Request $request,
+        string $machineClass,
+        Machine $machine,
+    ): ?MachineScenario {
+        if (!config('machine.scenarios.enabled', false)) {
+            return null; // Silently ignored when disabled
+        }
+
+        $scenarioSlug = $request->input('scenario');
+
+        if ($scenarioSlug === null) {
+            // No scenario — deactivate any active scenario
+            $rootEventId = $machine->state->history?->first()?->root_event_id;
+            if ($rootEventId !== null) {
+                ScenarioPlayer::deactivateScenario($rootEventId);
+            }
+
+            return null;
+        }
+
+        // Resolve scenario by slug
+        $scenario = ScenarioDiscovery::resolveBySlug($machineClass, $scenarioSlug);
+
+        if (!$scenario instanceof MachineScenario) {
+            abort(404, "Scenario '{$scenarioSlug}' not found.");
+        }
+
+        // Validate $source matches current state
+        $currentRoutes = $machine->state->value;
+        $sourceMatch   = false;
+        foreach ($currentRoutes as $route) {
+            if ($route === $scenario->source() || str_ends_with($route, '.'.$scenario->source())) {
+                $sourceMatch = true;
+                break;
+            }
+        }
+
+        if (!$sourceMatch) {
+            throw ScenarioFailedException::sourceMismatch(
+                expected: $scenario->source(),
+                actual: implode(', ', $currentRoutes),
+            );
+        }
+
+        // Hydrate params
+        $scenarioParams = $request->input('scenarioParams', []);
+        $scenario->hydrateParams($scenarioParams);
+
+        // Register overrides
+        ScenarioPlayer::registerOverrides($scenario);
+
+        return $scenario;
     }
 
     /**
