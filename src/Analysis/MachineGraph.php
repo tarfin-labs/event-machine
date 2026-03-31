@@ -130,6 +130,73 @@ class MachineGraph
     }
 
     /**
+     * Event types that can be sent to this state (from own + parent transitions).
+     * Excludes @always (internal).
+     *
+     * @return list<string>
+     */
+    public function availableEventsFrom(StateDefinition $state): array
+    {
+        $transitions = $this->transitionsFrom($state);
+        $events      = [];
+
+        foreach (array_keys($transitions) as $event) {
+            if ($event === TransitionProperty::Always->value) {
+                continue;
+            }
+            $events[] = $event;
+        }
+
+        return $events;
+    }
+
+    /**
+     * Available delegation outcomes (@done.{state}, @done, @fail, @timeout) for a delegation state.
+     *
+     * @return list<string>
+     */
+    public function delegationOutcomes(StateDefinition $state): array
+    {
+        if (!$state->hasMachineInvoke()) {
+            return [];
+        }
+
+        $outcomes    = [];
+        $transitions = $state->transitionDefinitions ?? [];
+
+        foreach (array_keys($transitions) as $event) {
+            if (str_starts_with((string) $event, '@done') || $event === '@fail' || $event === '@timeout') {
+                $outcomes[] = $event;
+            }
+        }
+
+        return $outcomes;
+    }
+
+    /**
+     * Guard class names on each @always branch.
+     *
+     * @return list<list<string>> Outer list = branches, inner list = guard names per branch.
+     */
+    public function alwaysBranchGuards(StateDefinition $state): array
+    {
+        $transitions = $this->transitionsFrom($state);
+        $always      = $transitions[TransitionProperty::Always->value] ?? null;
+
+        if ($always === null) {
+            return [];
+        }
+
+        $branchGuards = [];
+
+        foreach ($always->branches ?? [] as $branch) {
+            $branchGuards[] = $branch->guards ?? [];
+        }
+
+        return $branchGuards;
+    }
+
+    /**
      * Get the underlying machine definition.
      */
     public function definition(): MachineDefinition
