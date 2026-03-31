@@ -162,7 +162,7 @@ class ScenarioValidator
                 target: $this->scenario->target(),
             );
         } catch (NoScenarioPathFoundException) {
-            $errors[] = "No path from '{$this->scenario->source()}' to '{$this->scenario->target()}' via '{$this->scenario->event()}'";
+            $errors[] = "No path from '{$this->scenario->source()}' to '{$this->scenario->target()}' via '{$this->scenario->eventType()}'";
         } catch (\InvalidArgumentException $e) {
             $errors[] = $e->getMessage();
         }
