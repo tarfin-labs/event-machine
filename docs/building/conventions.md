@@ -24,7 +24,8 @@ Consistent naming makes your state machines easier to read, maintain, and debug.
 | Event payload keys | camelCase | `$descriptiveName` | `transactionId` |
 | Config keys | snake_case | `{descriptive_name}` | `should_persist` |
 | Inline behavior key | camelCase | `{descriptiveName}{Type}` | `sendEmailAction` |
-| Scenario name | snake_case | `{descriptive_name}` | `express_checkout` |
+| Machine scenario class | PascalCase | `At{Target}Scenario` | `AtCheckingProtocolScenario` |
+| Behavior scenario class | PascalCase | `{OriginalName}Scenario` | `HasConsentGuardScenario` |
 | Eloquent column | snake_case | `{domain}_mre` | `order_workflow_mre` |
 | Endpoint action class | PascalCase | `{DescriptiveName}EndpointAction` | `CancelEndpointAction` |
 | Endpoint action inline key | camelCase | `{descriptiveName}EndpointAction` | `cancelEndpointAction` |
