@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Analysis;
 
+use Tarfinlabs\EventMachine\Enums\TransitionProperty;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
@@ -51,6 +53,36 @@ class MachineGraph
         }
 
         return $transitions;
+    }
+
+    /**
+     * Classify a state by its structural role.
+     */
+    public function classifyState(StateDefinition $state): StateClassification
+    {
+        // Final states
+        if ($state->type === StateDefinitionType::FINAL) {
+            return StateClassification::FINAL;
+        }
+
+        // Parallel states
+        if ($state->type === StateDefinitionType::PARALLEL) {
+            return StateClassification::PARALLEL;
+        }
+
+        // Delegation states (machine or job invoke)
+        if ($state->hasMachineInvoke()) {
+            return StateClassification::DELEGATION;
+        }
+
+        // Transient states (have @always transition)
+        $transitions = $this->transitionsFrom($state);
+        if (isset($transitions[TransitionProperty::Always->value])) {
+            return StateClassification::TRANSIENT;
+        }
+
+        // Everything else is interactive
+        return StateClassification::INTERACTIVE;
     }
 
     /**
