@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 
 // ── Single machine ───────────────────────────────────────────────────────────
@@ -61,9 +62,11 @@ test('no argument — discovers all machines with Scenarios/ directory', functio
 });
 
 test('no machines with scenarios — prints warning, returns SUCCESS', function (): void {
-    // Hard to test without clearing classmap. Verify command doesn't crash.
-    expect(true)->toBeTrue();
-})->skip('Requires environment with no scenario machines — covered by edge case testing');
+    // AbcMachine has no Scenarios/ directory — validate should handle gracefully
+    $this->artisan('machine:scenario-validate', [
+        'machine' => AbcMachine::class,
+    ])->assertSuccessful();
+});
 
 test('multiple machines — validates each, shows per-machine sections', function (): void {
     // With explicit machine argument, validates one machine

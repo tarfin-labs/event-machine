@@ -20,13 +20,16 @@ use Tarfinlabs\EventMachine\Exceptions\ScenariosDisabledException;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioConfigurationException;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioTargetMismatchException;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\AlwaysFinalMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsValidGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\SimpleLinearMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Actions\ProcessAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Outputs\TestScenarioOutput;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\HappyPathScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Actions\RequiresUserIdAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\FailurePathScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinueLoopScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\StateAwareOverrideScenario;
@@ -181,33 +184,22 @@ test('@start creates machine internally and processes @always chain', function (
         protected string $description = 'Start test';
     };
 
-    // For @start, execute creates machine internally using machineClass::definition().
-    // But our anonymous class uses ScenarioTestMachine which has complex definition.
-    // The @start path goes through the @always chain.
-    // Let's test with a real scenario: HappyPathScenario on the actual machine.
-    // The issue is delegation in shouldPersist=false mode.
-    // Actually, execute() for @start creates the machine with shouldPersist=false itself.
-    // So delegation is skipped. The @always chain from idle → routing requires guard override.
+    // AlwaysFinalMachine: idle → @always → done (final). No delegation.
+    $scenario = new class() extends MachineScenario {
+        protected string $machine     = AlwaysFinalMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = '@start';
+        protected string $target      = 'done';
+        protected string $description = 'Start to final';
+    };
+    $player = new ScenarioPlayer($scenario);
+    $state  = $player->execute();
 
-    // Let's verify @start works with a simple machine defined inline.
-    // We can't easily override the machineClass for @start since execute() calls $machineClass::definition().
-    // For now, skip this test complexity and test the behavior through the HappyPath.
+    expect($state)->toBeInstanceOf(State::class)
+        ->and($state->value)->toContain('always_final.done');
+});
 
-    // Testing that @start scenario works: the player should create a machine and process @always.
-    // Since HappyPathScenario uses @start + delegation outcomes, it's hard to test without DB.
-    // Let's verify the basic mechanism: @start creates machine, @always fires, target reached.
-    expect(true)->toBeTrue(); // Placeholder — integration covered by ScenarioValidator
-})->skip('Requires machine class that can be instantiated via @start without delegation — covered by integration tests');
-
-test('@start with delegation outcomes in plan (full chain)', function (): void {
-    config()->set('machine.scenarios.enabled', true);
-
-    // This tests the full @start chain with delegation outcomes.
-    // In test mode (shouldPersist=false), job delegation is skipped.
-    // The outcomes map tells the engine to simulate @done/@fail.
-    // This is tested through HappyPathScenario integration.
-    expect(true)->toBeTrue();
-})->skip('Requires ScenarioPlayer integration with delegation interception — covered by integration tests');
+// NOTE: '@start with delegation outcomes' moved to QA tests — requires real delegation via Horizon.
 
 test('null machine for non-@start event throws ScenarioConfigurationException', function (): void {
     config()->set('machine.scenarios.enabled', true);
@@ -222,12 +214,45 @@ test('null machine for non-@start event throws ScenarioConfigurationException', 
 test('MissingMachineContextException enriched with requiredContext hints', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
-    // This tests that when a guard has $requiredContext and the context key is missing,
-    // the exception message is enriched with hints.
-    // Requires a machine that throws MissingMachineContextException during execution.
-    // Complex to set up without DB. Verify the buildRequiredContextHints method exists.
-    expect(method_exists(ScenarioPlayer::class, 'execute'))->toBeTrue();
-})->skip('Requires machine with context-dependent guards that throw MissingMachineContextException');
+    // Machine where entry action has $requiredContext = ['userId' => 'int'].
+    // Context doesn't have userId → action's validateRequiredContext throws.
+    // ScenarioPlayer catches and enriches with hints.
+    $def = MachineDefinition::define(config: [
+        'id'      => 'ctx_hint_test',
+        'initial' => 'idle',
+        'context' => [], // userId intentionally missing
+        'states'  => [
+            'idle' => ['on' => ['GO' => [
+                'target' => 'processing',
+            ]]],
+            'processing' => [
+                'entry' => RequiresUserIdAction::class,
+                'on'    => ['DONE' => 'done'],
+            ],
+            'done' => ['type' => 'final'],
+        ],
+    ]);
+    $def->shouldPersist = false;
+    $m                  = Machine::withDefinition($def);
+    $m->start();
+
+    $scenario = new class() extends MachineScenario {
+        protected string $machine     = SimpleLinearMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = 'GO';
+        protected string $target      = 'processing';
+        protected string $description = 'Context hint test';
+    };
+    $player = new ScenarioPlayer($scenario);
+
+    try {
+        $player->execute(machine: $m);
+        $this->fail('Expected MissingMachineContextException');
+    } catch (MissingMachineContextException $e) {
+        // Exception message should contain the enriched hint about userId
+        expect($e->getMessage())->toContain('userId');
+    }
+});
 
 // ── @continue loop ───────────────────────────────────────────────────────────
 
@@ -528,42 +553,29 @@ test('action override (array) — writes key-value to context', function (): voi
 test('output override (array) — returns fixed output', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
-    // Create a test OutputBehavior subclass
-    $outputClass = new class() extends OutputBehavior {
-        public function __invoke(): array
-        {
-            return ['original' => true];
-        }
-    };
-    $className = $outputClass::class;
-
-    $scenario = new class($className) extends MachineScenario {
-        private string $outputClass;
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
         protected string $target      = 'blocked';
         protected string $description = 'Output override';
 
-        public function __construct(string $outputClass)
-        {
-            $this->outputClass = $outputClass;
-            parent::__construct();
-        }
-
         protected function plan(): array
         {
             return [
-                'routing' => [$this->outputClass => ['overridden' => true]],
+                'routing' => [TestScenarioOutput::class => ['overridden' => true, 'amount' => 42]],
             ];
         }
     };
+    ScenarioPlayer::registerOverrides($scenario);
 
-    // Can't easily test OutputBehavior override without a real output class.
-    // The mechanism is: if key is subclass of OutputBehavior and value is array,
-    // createOutputProxy is called. Let's verify via registerOverrides directly.
-    expect(true)->toBeTrue();
-})->skip('Output override requires registered OutputBehavior FQCN — tested via integration');
+    // TestScenarioOutput is an OutputBehavior subclass → createOutputProxy wraps it
+    $resolved = App::make(TestScenarioOutput::class);
+    expect($resolved)->toBeInstanceOf(OutputBehavior::class)
+        ->and($resolved())->toBe(['overridden' => true, 'amount' => 42]);
+
+    ScenarioPlayer::cleanupOverrides();
+});
 
 test('closure override — delegates to closure', function (): void {
     config()->set('machine.scenarios.enabled', true);
