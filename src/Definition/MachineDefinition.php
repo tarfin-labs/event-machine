@@ -23,6 +23,7 @@ use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
@@ -1631,6 +1632,14 @@ class MachineDefinition
             if ($isFireAndForget) {
                 $this->transitionToFireAndForgetTarget($state, $invokeDefinition->target);
             }
+
+            return;
+        }
+
+        // Scenario replay: suppress fire-and-forget dispatch — child machines should
+        // not be dispatched asynchronously during scenario execution.
+        if ($isFireAndForget && ScenarioPlayer::isActive()) {
+            $this->transitionToFireAndForgetTarget($state, $invokeDefinition->target);
 
             return;
         }
