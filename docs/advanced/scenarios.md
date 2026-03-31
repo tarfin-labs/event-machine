@@ -154,7 +154,7 @@ Properties are the default. Methods can be used when computed values are needed:
 protected string $machine = CarSalesMachine::class;
 
 // Alternative — method override (when computation is needed)
-protected function machine(): string
+public function machine(): string
 {
     return config('machines.car_sales.class');
 }
@@ -677,10 +677,10 @@ After any successful transition, the response includes `availableScenarios` grou
 
 When scenarios are enabled, `MachineRouter` registers two additional routes:
 
-| Route | Handler | Description |
-|-------|---------|-------------|
-| `GET {prefix}/scenarios` | List all scenarios for this machine | |
-| `GET {prefix}/scenarios/{slug}/describe` | Scenario details (plan, params, identity) | |
+| Route | Description |
+|-------|-------------|
+| `GET {prefix}/scenarios` | List all scenarios for this machine |
+| `GET {prefix}/scenarios/{slug}/describe` | Scenario details (identity, params) |
 
 ## File Organization
 

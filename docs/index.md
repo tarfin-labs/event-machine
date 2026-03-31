@@ -614,10 +614,11 @@ No manual multi-step setup. No developer assistance. QA selects a scenario, send
 ```php
 class AtCheckingProtocolScenario extends MachineScenario
 {
-    protected string $machine = CarSalesMachine::class;
-    protected string $source  = 'awaiting_customer_start';
-    protected string $event   = CustomerStartedEvent::class;
-    protected string $target  = 'checking_protocol';
+    protected string $machine     = CarSalesMachine::class;
+    protected string $source      = 'awaiting_customer_start';
+    protected string $event       = CustomerStartedEvent::class;
+    protected string $target      = 'checking_protocol';
+    protected string $description = 'At checking protocol — children completed';
 
     protected function plan(): array
     {
