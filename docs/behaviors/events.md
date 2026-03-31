@@ -422,21 +422,10 @@ class RejectRequestEvent extends EventBehavior
 }
 ```
 
-## Scenario Support
+## Scenario Activation
 
-Events can specify scenarios:
-
-```php ignore
-$machine->send([
-    'type' => 'SUBMIT',
-    'payload' => [
-        'scenarioType' => 'test',  // Use 'test' scenario
-        'data' => [...],
-    ],
-]);
-```
-
-See [Scenarios](/advanced/scenarios) for details.
+Events can be sent with a scenario slug to activate behavior overrides in staging.
+See [Scenarios — Endpoint Integration](/advanced/scenarios#endpoint-integration) for details.
 
 ## Event in Actions
 
