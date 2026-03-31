@@ -11,8 +11,10 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\ScenariosDisabledException;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioConfigurationException;
@@ -24,6 +26,12 @@ use Tarfinlabs\EventMachine\Exceptions\ScenarioTargetMismatchException;
  */
 class ScenarioPlayer
 {
+    /** Whether a scenario is currently being executed. */
+    private static bool $isActive = false;
+
+    /** @var list<string> Inline behavior keys registered during this execution. */
+    private static array $inlineKeys = [];
+
     public function __construct(
         private readonly MachineScenario $scenario,
     ) {}
@@ -60,20 +68,45 @@ class ScenarioPlayer
             $this->persistScenario($rootEventId);
         }
 
-        // Steps 5-6: Placeholders for plan-engine and async epics
+        // Steps 5-6: Register behavior overrides and set active flag
+        self::$isActive = true;
 
-        // Step 7: Send trigger event
-        $state = $machine->send([
-            'type'    => $this->scenario->event(),
-            'payload' => $eventPayload,
-        ]);
+        try {
+            self::registerOverrides($this->scenario);
 
-        // Step 8: @continue loop — placeholder
+            // Step 7: Send trigger event
+            $state = $machine->send([
+                'type'    => $this->scenario->event(),
+                'payload' => $eventPayload,
+            ]);
 
-        // Step 9: Validate target
-        $this->validateTarget($state);
+            // Step 8: @continue loop — placeholder
+
+            // Step 9: Validate target
+            $this->validateTarget($state);
+        } finally {
+            self::$isActive = false;
+        }
 
         return $state;
+    }
+
+    public static function isActive(): bool
+    {
+        return self::$isActive;
+    }
+
+    /**
+     * Reset all inline behavior overrides registered during scenario execution.
+     * Called at the end of execute() and by test teardown.
+     */
+    public static function resetInlineOverrides(): void
+    {
+        foreach (self::$inlineKeys as $key) {
+            InlineBehaviorFake::reset($key);
+        }
+
+        self::$inlineKeys = [];
     }
 
     /**
@@ -90,6 +123,37 @@ class ScenarioPlayer
     }
 
     /**
+     * Execute a child scenario — creates child machine, applies scenario, runs.
+     * Returns the child's final state or null if child paused at interactive state.
+     */
+    public static function executeChildScenario(
+        string $childScenarioClass,
+        string $childMachineClass,
+        array $input = [],
+    ): ?State {
+        /** @var MachineScenario $childScenario */
+        $childScenario = new $childScenarioClass();
+
+        // Register child's overrides
+        self::registerOverrides($childScenario);
+
+        // Create child machine
+        $childMachine = $childMachineClass::create();
+
+        // Note: The child runs through its plan() overrides automatically.
+        // @continue loop for child scenarios runs here too.
+        $childState = $childMachine->state;
+
+        // Check if child reached a final state
+        if ($childState->currentStateDefinition?->type === StateDefinitionType::FINAL) {
+            return $childState;
+        }
+
+        // Child paused at interactive state — stays running
+        return null;
+    }
+
+    /**
      * Register behavior overrides in the container.
      * Called during execute() and during async restoration (§9).
      */
@@ -98,10 +162,26 @@ class ScenarioPlayer
         $plan = $scenario->resolvedPlan();
 
         foreach ($plan as $value) {
-            if (!is_array($value) || isset($value['outcome'])) {
-                continue; // Skip delegation outcomes and child scenarios
+            if (!is_array($value)) {
+                continue; // Simple string values (delegation outcomes, child scenario refs) — skip
             }
 
+            if (isset($value['outcome'])) {
+                // Delegation outcome with guard overrides — extract overrides, skip meta-keys
+                foreach ($value as $key => $override) {
+                    if ($key === 'outcome') {
+                        continue;
+                    }
+                    if ($key === 'output') {
+                        continue;
+                    }
+                    self::bindOverride($key, $override);
+                }
+
+                continue;
+            }
+
+            // Behavior overrides array
             foreach ($value as $behaviorKey => $override) {
                 if ($behaviorKey === '@continue') {
                     continue; // @continue is not a behavior override
@@ -117,12 +197,22 @@ class ScenarioPlayer
      */
     private static function bindOverride(string $behaviorKey, mixed $override): void
     {
-        // Only bind class-based behaviors (FQCN that extend InvokableBehavior)
-        if (!class_exists($behaviorKey) || !is_subclass_of($behaviorKey, InvokableBehavior::class)) {
-            // Inline behavior keys (camelCase strings) are handled by InlineBehaviorFake
+        // Class-based behaviors (FQCN extending InvokableBehavior) — use App::bind()
+        if (class_exists($behaviorKey) && is_subclass_of($behaviorKey, InvokableBehavior::class)) {
+            self::bindClassOverride($behaviorKey, $override);
+
             return;
         }
 
+        // Inline behavior keys (camelCase strings) — use InlineBehaviorFake
+        self::bindInlineOverride($behaviorKey, $override);
+    }
+
+    /**
+     * Bind a class-based behavior override via App::bind().
+     */
+    private static function bindClassOverride(string $behaviorKey, mixed $override): void
+    {
         App::bind($behaviorKey, function () use ($behaviorKey, $override) {
             return match (true) {
                 is_bool($override)                                                                                     => self::createBoolGuardProxy($override),
@@ -133,6 +223,26 @@ class ScenarioPlayer
                 default                                                                                                => throw new \InvalidArgumentException("Invalid override value for {$behaviorKey}"),
             };
         });
+    }
+
+    /**
+     * Bind an inline behavior key override via InlineBehaviorFake.
+     */
+    private static function bindInlineOverride(string $key, mixed $override): void
+    {
+        if (is_bool($override)) {
+            InlineBehaviorFake::fake($key, fn (): bool => $override);
+        } elseif (is_array($override)) {
+            InlineBehaviorFake::fake($key, function (ContextManager $ctx) use ($override): void {
+                foreach ($override as $k => $v) {
+                    $ctx->set($k, $v);
+                }
+            });
+        } elseif ($override instanceof \Closure) {
+            InlineBehaviorFake::fake($key, $override);
+        }
+
+        self::$inlineKeys[] = $key;
     }
 
     /**
