@@ -645,9 +645,15 @@ class ScenarioPlayer
         $currentRoutes = $state->value;
         $target        = $this->scenario->target();
 
-        // Check if any current state route matches or contains the target
+        // Check if any current state route matches the target.
+        // For parallel states, child routes contain the parent as a prefix
+        // (e.g., target 'data_collection' matches 'car_sales.data_collection.retailer.waiting').
         foreach ($currentRoutes as $route) {
             if ($route === $target || str_ends_with($route, '.'.$target)) {
+                return;
+            }
+            // Parallel: target is parent, route is child (contains target as segment)
+            if (str_contains($route, '.'.$target.'.')) {
                 return;
             }
         }
