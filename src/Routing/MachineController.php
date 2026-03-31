@@ -184,7 +184,19 @@ class MachineController extends Controller
         }
 
         try {
-            $state = $machine->send(event: $event);
+            if ($scenarioActive && isset($scenario)) {
+                // Scenario active: use ScenarioPlayer::execute() for full scenario flow
+                // (override registration, delegation interception, @continue loop, target validation).
+                $rootEventId = $machine->state->history?->first()?->root_event_id;
+                $player      = new ScenarioPlayer($scenario);
+                $state       = $player->execute(
+                    machine: $machine,
+                    eventPayload: $event->payload ?? [],
+                    rootEventId: $rootEventId,
+                );
+            } else {
+                $state = $machine->send(event: $event);
+            }
         } catch (MachineAlreadyRunningException) {
             // $machine->state is fresh — send() restores from DB before lock attempt.
             // GET → 200 (read succeeded), POST/PUT/DELETE → 423 (event not processed).
@@ -199,12 +211,7 @@ class MachineController extends Controller
                 includeAvailableEvents: $includeAvailableEvents,
                 isProcessing: true,
             );
-        } catch (MachineValidationException $e) { // @phpstan-ignore catch.neverThrown
-            return response()->json([
-                'message' => $e->getMessage(),
-                'errors'  => method_exists($e, 'errors') ? $e->errors() : [],
-            ], 422);
-        } catch (ValidationException $e) { // @phpstan-ignore catch.neverThrown
+        } catch (MachineValidationException|ValidationException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
                 'errors'  => $e->errors(),
@@ -218,11 +225,8 @@ class MachineController extends Controller
 
             throw $e;
         } finally {
-            // Cleanup scenario overrides from container — prevents leaking into
-            // subsequent requests in long-running processes (Octane, queue workers).
-            if ($scenarioActive) {
-                ScenarioPlayer::cleanupOverrides();
-            }
+            // ScenarioPlayer::execute() handles its own cleanup in finally.
+            // For the non-scenario path, no cleanup needed.
         }
 
         if ($action !== null) {
@@ -463,12 +467,7 @@ class MachineController extends Controller
                 isProcessing: true,
                 statusCodeOverride: $httpStatus,
             );
-        } catch (MachineValidationException $e) { // @phpstan-ignore catch.neverThrown
-            return response()->json([
-                'message' => $e->getMessage(),
-                'errors'  => method_exists($e, 'errors') ? $e->errors() : [],
-            ], 422);
-        } catch (ValidationException $e) { // @phpstan-ignore catch.neverThrown
+        } catch (MachineValidationException|ValidationException $e) { // @phpstan-ignore catch.neverThrown, catch.neverThrown
             return response()->json([
                 'message' => $e->getMessage(),
                 'errors'  => $e->errors(),
@@ -675,12 +674,29 @@ class MachineController extends Controller
             );
         }
 
+        // Validate $event matches the event being sent
+        $eventType         = $request->input('type', '');
+        $scenarioEventType = $scenario->eventType();
+        if ($eventType !== '' && $eventType !== $scenarioEventType) {
+            // Also check class FQCN match
+            $eventTypeResolved = class_exists($eventType) && method_exists($eventType, 'getType')
+                ? $eventType::getType()
+                : $eventType;
+            if ($eventTypeResolved !== $scenarioEventType) {
+                throw ScenarioFailedException::eventMismatch(
+                    expected: $scenarioEventType,
+                    actual: $eventTypeResolved,
+                );
+            }
+        }
+
         // Hydrate params
         $scenarioParams = $request->input('scenarioParams', []);
         $scenario->hydrateParams($scenarioParams);
 
-        // Register overrides
-        ScenarioPlayer::registerOverrides($scenario);
+        // Note: ScenarioPlayer::execute() handles override registration, delegation
+        // interception, @continue loop, and target validation. No need to call
+        // registerOverrides() here — it's called inside execute().
 
         return $scenario;
     }
