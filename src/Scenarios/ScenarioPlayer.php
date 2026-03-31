@@ -46,8 +46,11 @@ class ScenarioPlayer
         // Step 3: Parse plan() — validate state routes
         $this->validatePlanKeys($this->scenario->machine()::definition());
 
-        // Step 4: Persist scenario to DB
-        if ($rootEventId !== null) {
+        // Step 3b: Classify plan() values
+        $this->classifyPlanValues();
+
+        // Step 4: Persist scenario to DB (only when machine persists)
+        if ($rootEventId !== null && $this->shouldPersist($machine)) {
             $this->persistScenario($rootEventId);
         }
 
@@ -65,6 +68,19 @@ class ScenarioPlayer
         $this->validateTarget($state);
 
         return $state;
+    }
+
+    /**
+     * Clear scenario from machine_current_states.
+     * Called when QA sends next event without scenario field.
+     */
+    public static function deactivateScenario(string $rootEventId): void
+    {
+        MachineCurrentState::where('root_event_id', $rootEventId)
+            ->update([
+                'scenario_class'  => null,
+                'scenario_params' => null,
+            ]);
     }
 
     /**
@@ -112,6 +128,50 @@ class ScenarioPlayer
                 'scenario_class'  => $this->scenario::class,
                 'scenario_params' => $this->scenario->validatedParams() !== [] ? $this->scenario->validatedParams() : null,
             ]);
+    }
+
+    private function shouldPersist(Machine $machine): bool
+    {
+        return $machine->definition->shouldPersist;
+    }
+
+    /**
+     * Classify each plan() value using the detection table (spec §5).
+     *
+     * @return array{
+     *     overrides: array<string, array>,
+     *     outcomes: array<string, string|array>,
+     *     childScenarios: array<string, class-string<MachineScenario>>,
+     * }
+     */
+    private function classifyPlanValues(): array
+    {
+        $plan           = $this->scenario->resolvedPlan();
+        $overrides      = [];
+        $outcomes       = [];
+        $childScenarios = [];
+
+        foreach ($plan as $stateRoute => $value) {
+            if (is_string($value) && str_starts_with($value, '@')) {
+                // Delegation outcome — simple string (@done, @fail, @timeout)
+                $outcomes[$stateRoute] = $value;
+            } elseif (is_string($value) && class_exists($value) && is_subclass_of($value, MachineScenario::class)) {
+                // Child scenario reference
+                $childScenarios[$stateRoute] = $value;
+            } elseif (is_array($value) && isset($value['outcome'])) {
+                // Delegation outcome with optional output and/or guard overrides
+                $outcomes[$stateRoute] = $value;
+            } elseif (is_array($value)) {
+                // Behavior overrides (may include @continue)
+                $overrides[$stateRoute] = $value;
+            }
+        }
+
+        return [
+            'overrides'      => $overrides,
+            'outcomes'       => $outcomes,
+            'childScenarios' => $childScenarios,
+        ];
     }
 
     private function validateEnvironment(): void
