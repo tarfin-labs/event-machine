@@ -159,6 +159,12 @@ When a single transition dispatches BOTH exit and transition ListenerJobs, they 
 ### Event type naming uses dot-notation, not enum names
 Internal events use the pattern `{machine}.parallel.{placeholder}.region.timeout`, NOT `PARALLEL_REGION_TIMEOUT`. When querying `machine_events`, use `LIKE '%region.timeout%'` not `LIKE '%PARALLEL_REGION_TIMEOUT%'`.
 
+### ChildMachineCompletionJob auto-restores archived parents
+If a parent machine is archived while its child is still running, `ChildMachineCompletionJob` catches `RestoringStateException` and calls `ArchiveService::restoreMachine()` before retrying. Without this, child completion events for archived parents were silently discarded. Test pattern: create parent → delegate → archive parent → dispatch `ChildMachineCompletionJob` directly → verify parent auto-restores and reaches completed.
+
+### Partial parallel failure: Region A context may be lost (last-writer-wins)
+When Region A succeeds and Region B fails, Region A's context changes may be lost if Region B's `failed()` handler persists first using the dispatch-time snapshot. This is documented last-writer-wins behavior. In tests, don't assert Region A's context survives under partial failure — only assert the machine reaches `failed` state.
+
 ### ChildMachineCompletionJob propagates deep delegation chains
 After fix: when ChildMachineCompletionJob routes @done/@fail and the parent reaches a final state, it checks if the parent is itself a managed child and dispatches another ChildMachineCompletionJob to the grandparent. This enables Parent→Child→Grandchild async chains.
 
@@ -174,3 +180,60 @@ Two `SendToMachineJob`s dispatched simultaneously to the same parallel machine c
 - **Unit tests (sync queue, parallel_dispatch=false)**: no lock — avoids re-entrant deadlocks
 - **Unit tests (sync queue, parallel_dispatch=true)**: locked — tests can verify lock behavior
 Re-entrant locking via `Machine::$heldLockIds` prevents deadlock in sync dispatch chains: `send() → ChildMachineJob → ChildMachineCompletionJob → send()` on same parent.
+
+### Async forward endpoint responses do NOT contain child state
+In v9, forwarded endpoint HTTP responses return the parent's envelope `{id, machineId, state, availableEvents, output}`. The child processes the forwarded event asynchronously via Horizon. The immediate response does NOT include child state/context.
+
+**Pattern for testing forward endpoints in QA:**
+1. Send forward request → assert 200
+2. `waitFor()` child to process (restore child machine, check state)
+3. Verify child context via restore, NOT from HTTP response
+
+```php
+// WRONG — child state not in immediate response
+$response = $this->postJson("/api/forward/{$machineId}/provide-card", [...]);
+$data = $response->json('data.child'); // ← NULL in async mode!
+
+// CORRECT — wait for async processing, then verify via restore
+$response->assertStatus(200);
+$childUpdated = LocalQATestCase::waitFor(function () use ($machineId) {
+    $child = MachineChild::where('parent_root_event_id', $machineId)->first();
+    $childMachine = ChildMachine::create(state: $child->child_root_event_id);
+    return str_contains(implode(',', $childMachine->state->value), 'expected_state');
+}, timeoutSeconds: 30);
+```
+
+### MachineOutput must be serialized before queue dispatch
+`resolveChildOutput()` can return a `MachineOutput` instance (not just array). Before passing to `ChildMachineCompletionJob`, always serialize:
+```php
+$resolved = MachineDefinition::resolveChildOutput($state, $context);
+$outputData  = $resolved instanceof MachineOutput ? $resolved->toArray() : $resolved;
+$outputClass = $resolved instanceof MachineOutput ? $resolved::class : null;
+```
+This applies in: `ChildMachineJob::handle()`, `MachineController::dispatchChildCompletionIfFinal()`, `MachineDefinition::tryForwardEventToChild()`, `ChildMachineCompletionJob::propagateChainCompletion()`.
+
+### Failure propagation in deep delegation must carry upstream success flag
+When `ChildMachineCompletionJob::propagateChainCompletion()` dispatches to the grandparent, it must pass the correct `success` flag. If the middle machine reached a `failed` final state (because its child failed), the propagation to the grandparent must use `success: false` — not always `true`.
+
+### Horizon config for QA: minProcesses=4, maxProcesses=8, tries=3
+Auto-scaling to 1 worker causes queue backlog. Set `minProcesses=4` minimum for reliable QA runs. `tries=3` ensures transient failures (lock contention) are retried.
+
+### Job actors skip dispatch in test mode (shouldPersist=false)
+In test mode, `handleJobInvoke()` returns early after recording `CHILD_MACHINE_START` — no `ChildJobJob` is dispatched. Without this guard, sync queue would run the job immediately → `@done` fires → next job state → cascade → memory crash. Use `simulateChildDone(JobClass::class)` to step through job states in unit tests. Same guard exists on `handleAsyncMachineInvoke()` for async child machines.
+
+### QA tests must cover all Queue::fake()-masked patterns
+Unit tests using `Queue::fake()` or `Machine::fake()` mask real async behavior. Every async pattern tested with fakes MUST have a corresponding QA test verifying the real Horizon pipeline. Key patterns to cover:
+- Job actor dispatch + completion via `ChildJobJob` → `ChildMachineCompletionJob`
+- Fire-and-forget job (target without @done) — parent transitions immediately
+- Guarded @done on job actors — conditional routing after completion
+- Mixed chains: machine delegation → @done → job actor → @done → completed
+- Job @done → @always chain — transient routing state
+- Chained job states — sequential job actors without cascade
+- Concurrent events during job processing — lock serialization
+- FailingTestJob → `ChildJobJob::failed()` → @fail routing (note: `failed_jobs` record expected)
+
+### FailingTestJob creates failed_jobs records — this is expected
+When `FailingTestJob` exhausts all retries, Laravel records a `failed_jobs` entry. This is SEPARATE from the machine-level `@fail` routing (handled by `ChildJobJob::failed()`). In QA stress tests with failing jobs, assert `failed_jobs <= N` (number of failing machines), not `failed_jobs == 0`.
+
+### First QA run after Horizon start may have transient failures
+The first full QA run immediately after `redis-cli FLUSHALL && php artisan horizon` may have 1-2 timing-sensitive test failures due to Horizon worker warm-up. Run the suite twice — if the second run passes, the first failures were transient. Design tests to tolerate 60s+ timeouts for heavy async chains.

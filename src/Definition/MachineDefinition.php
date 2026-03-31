@@ -1565,6 +1565,18 @@ class MachineDefinition
             placeholder: $jobClass,
         );
 
+        // Test mode: skip job dispatch. The machine stays in the job state
+        // waiting for simulateChildDone()/simulateChildFail(). Without this,
+        // sync queue would run ChildJobJob immediately → @done cascades → infinite loop.
+        // Fire-and-forget jobs still transition to target immediately.
+        if (!$this->shouldPersist) {
+            if ($isFireAndForget) {
+                $this->transitionToFireAndForgetTarget($state, $invokeDefinition->target);
+            }
+
+            return;
+        }
+
         // Dispatch the job
         $childJobJob = new ChildJobJob(
             parentRootEventId: $state->history?->first()?->root_event_id ?? '',
@@ -1610,6 +1622,18 @@ class MachineDefinition
             type: InternalEvent::CHILD_MACHINE_START,
             placeholder: $childMachineClass,
         );
+
+        // Test mode: skip dispatch and DB tracking. The machine stays in the delegating
+        // state waiting for simulateChildDone()/simulateChildFail(). Without this,
+        // sync queue would run ChildMachineJob immediately → cascade through @done.
+        // Fire-and-forget still transitions to target immediately.
+        if (!$this->shouldPersist) {
+            if ($isFireAndForget) {
+                $this->transitionToFireAndForgetTarget($state, $invokeDefinition->target);
+            }
+
+            return;
+        }
 
         // Create tracking record (managed only — fire-and-forget skips this)
         $machineChildId = '';
@@ -1796,6 +1820,15 @@ class MachineDefinition
         if ($childMachine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
             $childRecord->markCompleted();
 
+            $resolvedOutput = self::resolveChildOutput(
+                $childMachine->state->currentStateDefinition,
+                $childMachine->state->context,
+            );
+
+            // Serialize MachineOutput instances — store class FQCN for typed reconstruction
+            $outputData  = $resolvedOutput instanceof MachineOutput ? $resolvedOutput->toArray() : $resolvedOutput;
+            $outputClass = $resolvedOutput instanceof MachineOutput ? $resolvedOutput::class : null;
+
             dispatch(new ChildMachineCompletionJob(
                 parentRootEventId: $state->history->first()->root_event_id,
                 parentMachineClass: $this->machineClass,
@@ -1804,11 +1837,9 @@ class MachineDefinition
                 childRootEventId: $childRecord->child_root_event_id,
                 success: true,
                 childContextData: $childMachine->state->context->data,
-                outputData: self::resolveChildOutput(
-                    $childMachine->state->currentStateDefinition,
-                    $childMachine->state->context,
-                ),
+                outputData: $outputData,
                 childFinalState: $childMachine->state->currentStateDefinition->key,
+                outputClass: $outputClass,
             ));
         }
 
