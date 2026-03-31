@@ -15,6 +15,7 @@ use Tarfinlabs\EventMachine\Commands\ProcessTimersCommand;
 use Tarfinlabs\EventMachine\Commands\MachineCoverageCommand;
 use Tarfinlabs\EventMachine\Commands\ProcessScheduledCommand;
 use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
+use Tarfinlabs\EventMachine\Commands\MachineScenarioValidateCommand;
 
 /**
  * Class MachineServiceProvider.
@@ -56,6 +57,7 @@ class MachineServiceProvider extends PackageServiceProvider
             ->hasCommand(TimerStatusCommand::class)
             ->hasCommand(ProcessScheduledCommand::class)
             ->hasCommand(MachinePathsCommand::class)
-            ->hasCommand(MachineCoverageCommand::class);
+            ->hasCommand(MachineCoverageCommand::class)
+            ->hasCommand(MachineScenarioValidateCommand::class);
     }
 }
