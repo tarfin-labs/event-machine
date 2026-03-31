@@ -229,8 +229,9 @@ class ScenarioPathResolver
                 break;
 
             case StateClassification::PARALLEL:
-                // Follow @done/@fail transitions.
-                // Check both dedicated properties and transitionDefinitions.
+                // Follow @done/@fail transitions AND regular 'on' transitions.
+                // Parallel states can have both @done/@fail AND normal event transitions
+                // (e.g., ApplicationSubmittedEvent on data_collection parallel state).
                 $parallelTransitions = [];
 
                 if ($state->onDoneTransition instanceof TransitionDefinition) {
@@ -239,10 +240,9 @@ class ScenarioPathResolver
                 if ($state->onFailTransition instanceof TransitionDefinition) {
                     $parallelTransitions['@fail'] = $state->onFailTransition;
                 }
+                // Include ALL transitionDefinitions (both @done-style and regular events)
                 foreach ($state->transitionDefinitions ?? [] as $event => $transition) {
-                    if (str_starts_with((string) $event, '@done') || $event === '@fail') {
-                        $parallelTransitions[$event] = $transition;
-                    }
+                    $parallelTransitions[$event] = $transition;
                 }
 
                 foreach ($parallelTransitions as $event => $transition) {
