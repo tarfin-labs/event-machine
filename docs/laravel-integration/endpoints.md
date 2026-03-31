@@ -78,7 +78,6 @@ Endpoints are defined as the fourth parameter of `MachineDefinition::define()`:
 MachineDefinition::define(
     config: [...],
     behavior: [...],
-    scenarios: null,
     endpoints: [
         // ... endpoint definitions ...
     ],
@@ -476,6 +475,21 @@ Reference the action in your endpoint definition:
     'action' => StartEndpointAction::class,
 ],
 ```
+
+## Scenario Support
+
+When scenarios are enabled (`MACHINE_SCENARIOS_ENABLED=true`), endpoint responses include `availableScenarios` grouped by event, and requests accept `scenario` + `scenarioParams` fields:
+
+```http
+POST /api/car-sales/{applicationId}/customer-started
+{
+    "type": "CustomerStartedEvent",
+    "scenario": "at-checking-protocol-scenario",
+    "scenarioParams": { "reason": "INSUFFICIENT_INCOME" }
+}
+```
+
+Response includes `availableScenarios` for events that have matching scenarios at the current state. See [Scenarios — Endpoint Integration](/advanced/scenarios#endpoint-integration) for details.
 
 ## Lock Contention Handling
 
