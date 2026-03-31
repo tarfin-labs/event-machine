@@ -150,18 +150,8 @@ class ScenarioTestMachine extends Machine
                 ],
             ],
             endpoints: [
-                'reviewing' => [
-                    'approve' => [
-                        'uri'    => '/approve',
-                        'method' => 'POST',
-                        'action' => 'APPROVE',
-                    ],
-                    'reject' => [
-                        'uri'    => '/reject',
-                        'method' => 'POST',
-                        'action' => 'REJECT',
-                    ],
-                ],
+                'APPROVE',
+                'REJECT',
             ],
         );
     }
