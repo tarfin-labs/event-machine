@@ -34,6 +34,9 @@ class ScenarioPlayer
     /** @var list<string> Inline behavior keys registered during this execution. */
     private static array $inlineKeys = [];
 
+    /** @var list<string> Class-based behavior keys bound in container during this execution. */
+    private static array $boundClassKeys = [];
+
     public function __construct(
         private readonly MachineScenario $scenario,
     ) {}
@@ -131,6 +134,8 @@ class ScenarioPlayer
             // Step 9: Validate target
             $this->validateTarget($state);
         } finally {
+            // Step 11: Cleanup — unbind overrides from container
+            self::cleanupOverrides();
             self::$isActive = false;
         }
 
@@ -153,6 +158,23 @@ class ScenarioPlayer
         }
 
         self::$inlineKeys = [];
+    }
+
+    /**
+     * Unbind all scenario overrides from the container.
+     * Called in execute()'s finally block — ensures overrides never leak.
+     */
+    public static function cleanupOverrides(): void
+    {
+        // Unbind class-based overrides
+        foreach (self::$boundClassKeys as $key) {
+            app()->offsetUnset($key);
+        }
+
+        self::$boundClassKeys = [];
+
+        // Reset inline overrides
+        self::resetInlineOverrides();
     }
 
     /**
@@ -339,6 +361,8 @@ class ScenarioPlayer
      */
     private static function bindClassOverride(string $behaviorKey, mixed $override): void
     {
+        self::$boundClassKeys[] = $behaviorKey;
+
         App::bind($behaviorKey, function () use ($behaviorKey, $override) {
             return match (true) {
                 is_bool($override)                                                                                     => self::createBoolGuardProxy($override),
