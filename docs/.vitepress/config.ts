@@ -103,7 +103,14 @@ export default withMermaid(
             { text: 'Handling Events', link: '/building/handling-events' },
             { text: 'Configuration', link: '/building/configuration' },
             { text: 'Custom Context Classes', link: '/advanced/custom-context' },
-            { text: 'Scenarios', link: '/advanced/scenarios' }
+            {
+              text: 'Scenarios',
+              collapsed: true,
+              items: [
+                { text: 'Overview', link: '/advanced/scenarios' },
+                { text: 'Scenario Behaviors', link: '/advanced/scenario-behaviors' },
+              ]
+            }
           ]
         },
         {
