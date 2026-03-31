@@ -7,6 +7,7 @@ use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\LogAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseOutputReadyAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseEventBehaviorAction;
 
 afterEach(function (): void {
     InvokableBehavior::resetAllFakes();
@@ -92,4 +93,32 @@ it('assertRaised throws when runWithState was not called', function (): void {
     // Don't call runWithState — directly assert
     expect(fn () => LogAction::assertRaised('SOME_EVENT'))
         ->toThrow(AssertionFailedError::class, 'runWithState() has not been called');
+});
+
+// ============================================================
+// EventBehavior instance support (regression: TypeError fix)
+// ============================================================
+
+it('assertRaised works when raise() receives EventBehavior instance', function (): void {
+    $state = State::forTesting([]);
+
+    RaiseEventBehaviorAction::runWithState($state);
+
+    RaiseEventBehaviorAction::assertRaised('INSTANCE_RAISED');
+});
+
+it('assertNotRaised works when raise() receives EventBehavior instance', function (): void {
+    $state = State::forTesting([]);
+
+    RaiseEventBehaviorAction::runWithState($state);
+
+    RaiseEventBehaviorAction::assertNotRaised('SOME_OTHER_EVENT');
+});
+
+it('assertRaisedCount works when raise() receives EventBehavior instance', function (): void {
+    $state = State::forTesting([]);
+
+    RaiseEventBehaviorAction::runWithState($state);
+
+    RaiseEventBehaviorAction::assertRaisedCount(1);
 });

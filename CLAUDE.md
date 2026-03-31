@@ -26,8 +26,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `php artisan machine:timer-status` - Display timer status for machine instances
 - `php artisan machine:paths` - Enumerate all paths through a machine definition (static analysis)
 - `php artisan machine:coverage` - Report path coverage for a machine (reads test coverage JSON)
-- `php artisan machine:cache` - Cache machine class discovery for production
-- `php artisan machine:clear` - Clear machine discovery cache
 - `php artisan machine:archive-events` - Archive old machine events (fan-out, `--dry-run`, `--sync`, `--dispatch-limit`)
 - `php artisan machine:archive-status` - Show archive stats, restore via `--restore=<rootEventId>`
 

@@ -88,10 +88,6 @@ return [
     |
     */
     'timers' => [
-        // How often the sweep command runs. Maps to Laravel Scheduler method names.
-        // Use TimerResolution enum values: everyMinute, everyFiveMinutes, etc.
-        'resolution' => env('MACHINE_TIMER_RESOLUTION', 'everyMinute'),
-
         // Maximum instances to process per sweep query batch.
         // Higher values process more instances per sweep but use more memory.
         'batch_size' => env('MACHINE_TIMER_BATCH_SIZE', 100),
