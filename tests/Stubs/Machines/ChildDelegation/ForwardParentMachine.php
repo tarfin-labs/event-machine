@@ -27,7 +27,7 @@ class ForwardParentMachine extends Machine
                 'id'      => 'forward_parent_v2',
                 'initial' => 'idle',
                 'context' => [
-                    'result' => null,
+                    'output' => null,
                 ],
                 'states' => [
                     'idle' => [
@@ -42,7 +42,7 @@ class ForwardParentMachine extends Machine
                         ],
                         '@done' => [
                             'target'  => 'completed',
-                            'actions' => 'captureResultAction',
+                            'actions' => 'captureOutputAction',
                         ],
                         '@fail' => 'failed',
                     ],
@@ -52,8 +52,8 @@ class ForwardParentMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'captureResultAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                        $ctx->set('result', $event->payload['result'] ?? null);
+                    'captureOutputAction' => function (ContextManager $ctx, EventBehavior $event): void {
+                        $ctx->set('childOutput', $event->payload['output'] ?? null);
                     },
                 ],
             ],

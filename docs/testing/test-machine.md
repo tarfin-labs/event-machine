@@ -58,7 +58,7 @@ Chain configuration methods before sending events to customize machine behavior 
 ->assertState('checkout.payment')          // hierarchical
 ->assertNotState('cancelled')
 ->assertFinished()                         // current state is type:final
-->assertResult($expected)                  // final state result value
+->assertOutput($expected)                  // final state output value
 ```
 
 ## Context Assertions
@@ -306,7 +306,7 @@ When a state delegates to a child machine, use `fakingChild()` to short-circuit 
 <!-- doctest-attr: ignore -->
 ```php
 OrderMachine::test()
-    ->fakingChild(PaymentMachine::class, result: ['id' => 'pay_1'], finalState: 'approved')
+    ->fakingChild(PaymentMachine::class, output: ['id' => 'pay_1'], finalState: 'approved')
     ->send('PLACE_ORDER')
     ->assertChildInvoked(PaymentMachine::class)
     ->assertChildNotInvoked(AuditMachine::class)
@@ -317,7 +317,7 @@ OrderMachine::test()
 
 | Method | Description |
 |--------|-------------|
-| `fakingChild(class, result, finalState)` | Short-circuit child delegation with a given outcome |
+| `fakingChild(class, output, finalState)` | Short-circuit child delegation with a given outcome |
 | `assertChildInvoked(class)` | Assert the child machine was invoked at least once |
 | `assertChildNotInvoked(class)` | Assert the child machine was never invoked |
 | `assertChildInvokedTimes(class, int)` | Assert invocation count |
@@ -332,8 +332,8 @@ Chain multiple `fakingChild()` calls for multiple children. This keeps the API s
 ```php
 // Complete fluent delegation testing pattern
 OrderMachine::test()
-    ->fakingChild(PaymentMachine::class, result: ['id' => 'pay_1'], finalState: 'approved')
-    ->fakingChild(FraudCheckMachine::class, result: ['score' => 0.1], finalState: 'clear')
+    ->fakingChild(PaymentMachine::class, output: ['id' => 'pay_1'], finalState: 'approved')
+    ->fakingChild(FraudCheckMachine::class, output: ['score' => 0.1], finalState: 'clear')
     ->send('PLACE_ORDER')
     ->assertChildInvoked(PaymentMachine::class)
     ->assertChildInvoked(FraudCheckMachine::class)
@@ -348,19 +348,19 @@ Use `simulateChild*` methods to trigger completion on a parent that is already w
 
 <!-- doctest-attr: ignore -->
 ```php
-->simulateChildDone(PaymentMachine::class, result: ['id' => 'pay_1'], finalState: 'approved')
+->simulateChildDone(PaymentMachine::class, output: ['id' => 'pay_1'], finalState: 'approved')
 ->simulateChildFail(PaymentMachine::class, errorMessage: 'Insufficient funds')
 ->simulateChildTimeout(PaymentMachine::class)
 ```
 
 | Method | Description |
 |--------|-------------|
-| `simulateChildDone(class, result, finalState)` | Trigger `@done` transition as if the child completed successfully |
+| `simulateChildDone(class, output, finalState)` | Trigger `@done` transition as if the child completed successfully |
 | `simulateChildFail(class, errorMessage)` | Trigger `@fail` transition as if the child threw an error |
 | `simulateChildTimeout(class)` | Trigger `@timeout` transition as if the child exceeded its deadline |
 
 ::: info
-The `result` parameter populates both `output()` and `result()` accessors on the event, matching `Machine::fake()` behavior. For distinct output/result values, build a `ChildMachineDoneEvent` manually and call `routeChildDoneEvent()` directly.
+The `output` parameter populates the `output()` accessor on the event, matching `Machine::fake()` behavior.
 :::
 
 **`fakingChild()` vs `simulateChildDone()`:**
@@ -378,7 +378,7 @@ MyMachine::test()
     ->withoutPersistence()
     ->send('START')
     ->assertState('processing')
-    ->simulateChildDone(ProcessDataJob::class, result: ['output' => 'done'])
+    ->simulateChildDone(ProcessDataJob::class, output: ['status' => 'done'])
     ->assertState('completed');
 ```
 

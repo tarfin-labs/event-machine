@@ -20,11 +20,64 @@ Keep states in the same machine when:
 
 - **Simple linear flow.** A 3-state progression (submitted -> processing -> completed) does not need decomposition.
 
-- **Shared context.** The states all read and write the same context keys. Splitting would require passing everything via `with` and reporting everything via `@done` payload.
+- **Shared context.** The states all read and write the same context keys. Splitting would require passing everything via `input` and reporting everything via `@done` payload.
 
 - **No independent failure.** A failure in one part always means a failure in the whole flow.
 
 - **Tight coupling.** If you find yourself sending 5+ events between parent and child on every transition, they are one machine pretending to be two.
+
+## Contract-Driven Decomposition
+
+When splitting a machine into parent and child, define the typed contracts **before** building the child machine. This "contract-first" approach ensures the interface is intentional rather than emergent.
+
+### Step 1: Define the contract
+
+```php ignore
+// What the child needs
+class VerificationInput extends MachineInput
+{
+    public function __construct(
+        public readonly string $applicantId,
+        public readonly string $documentType,
+    ) {}
+}
+
+// What the child produces on success
+class VerificationOutput extends MachineOutput
+{
+    public function __construct(
+        public readonly string $verificationId,
+        public readonly string $status,
+    ) {}
+}
+
+// What the child produces on failure
+class VerificationFailure extends MachineFailure
+{
+    public function __construct(
+        public readonly string $errorCode,
+        public readonly bool $retryable,
+    ) {}
+}
+```
+
+### Step 2: Wire the parent
+
+```php ignore
+'verifying' => [
+    'machine' => VerificationMachine::class,
+    'input'   => VerificationInput::class,
+    'failure' => VerificationFailure::class,
+    '@done'   => 'verified',
+    '@fail'   => 'verification_failed',
+],
+```
+
+### Step 3: Build the child
+
+Now build the child machine knowing exactly what it receives and what it must produce. The contracts serve as acceptance criteria.
+
+This approach works especially well when different team members build the parent and child machines -- the contracts are the handoff artifact.
 
 ## Anti-Pattern: Mega-Machine
 
@@ -63,7 +116,7 @@ A machine this size is impossible to visualise, test comprehensively, or reason 
 'states' => [
     'validating' => [
         'machine' => ValidationMachine::class,
-        'with'    => ['orderId'],
+        'input'    => ['orderId'],
         '@done'   => 'awaiting_payment',
         '@fail'   => 'validation_failed',
     ],
@@ -72,13 +125,13 @@ A machine this size is impossible to visualise, test comprehensively, or reason 
     ],
     'processing_payment' => [
         'machine' => PaymentMachine::class,
-        'with'    => ['orderId', 'orderTotal'],
+        'input'    => ['orderId', 'orderTotal'],
         '@done'   => 'shipping',
         '@fail'   => 'payment_failed',
     ],
     'shipping' => [
         'machine' => ShippingMachine::class,
-        'with'    => ['orderId'],
+        'input'    => ['orderId'],
         '@done'   => 'completed',
         '@fail'   => 'shipping_failed',
     ],
@@ -165,13 +218,13 @@ class OrderWorkflowMachine extends Machine
                 'states'  => [
                     'processing_payment' => [
                         'machine' => PaymentMachine::class,
-                        'with'    => ['orderId', 'orderTotal'],
+                        'input'    => ['orderId', 'orderTotal'],
                         '@done'   => 'shipping',
                         '@fail'   => 'payment_failed',
                     ],
                     'shipping' => [
                         'machine' => ShippingMachine::class,
-                        'with'    => ['orderId'],
+                        'input'    => ['orderId'],
                         '@done'   => 'completed',
                         '@fail'   => 'shipping_failed',
                     ],
@@ -248,7 +301,7 @@ The machine owns the expiration timer, the notification action, and the state tr
 
 2. **Aim for 5-15 states per machine.** Fewer suggests the machine is too granular. More suggests it needs decomposition.
 
-3. **Minimize cross-machine data.** Pass only the IDs and values the child needs via `with`. Return results via `@done` payload.
+3. **Minimize cross-machine data.** Pass only the IDs and values the child needs via `input`. Return results via `@done` payload.
 
 4. **Test children in isolation first.** Verify the child machine works correctly before integrating with the parent.
 
@@ -258,5 +311,5 @@ The machine owns the expiration timer, the notification action, and the state tr
 
 - [Machine Delegation](/advanced/machine-delegation) -- delegation mechanics
 - [Async Delegation](/advanced/async-delegation) -- `job` key for async children
-- [Delegation Data Flow](/advanced/delegation-data-flow) -- `with` and `@done` payload
+- [Delegation Data Flow](/advanced/delegation-data-flow) -- `input` and `@done` payload
 - [Delegation Testing](/testing/delegation-testing) -- testing with `Machine::fake()`

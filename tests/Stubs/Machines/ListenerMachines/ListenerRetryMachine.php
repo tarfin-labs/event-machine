@@ -25,7 +25,7 @@ class ListenerRetryMachine extends Machine
                 ],
                 'listen' => [
                     'entry' => [
-                        ThrowOnceAction::class => ['queue' => true],
+                        [ThrowOnceAction::class, '@queue' => true],
                     ],
                 ],
                 'states' => [

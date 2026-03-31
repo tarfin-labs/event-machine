@@ -17,7 +17,7 @@ class CalculatorMachine extends Machine
             config: [
                 'initial' => 'ready',
                 'context' => [
-                    'result' => 0,
+                    'total' => 0,
                 ],
                 'states' => [
                     'ready' => [
@@ -33,16 +33,16 @@ class CalculatorMachine extends Machine
             behavior: [
                 'actions' => [
                     'additionAction' => function (ContextManager $c, EventDefinition $e): void {
-                        $c->result = $c->result + $e->payload['value'];
+                        $c->total = $c->total + $e->payload['value'];
                     },
                     'subtractionAction' => function (ContextManager $ctx, EventDefinition $evt): void {
-                        $ctx->result = $ctx->result - $evt->payload['value'];
+                        $ctx->total = $ctx->total - $evt->payload['value'];
                     },
                     'multiplicationAction' => function (ContextManager $contextManager, EventDefinition $eventDefinition): void {
-                        $contextManager->result = $contextManager->result * $eventDefinition->payload['value'];
+                        $contextManager->total = $contextManager->total * $eventDefinition->payload['value'];
                     },
                     'divisionAction' => function (ContextManager $manager, EventDefinition $event): void {
-                        $manager->result = $manager->result / $event->payload['value'];
+                        $manager->total = $manager->total / $event->payload['value'];
                     },
                 ],
             ],

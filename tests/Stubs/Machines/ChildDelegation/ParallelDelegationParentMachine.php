@@ -25,7 +25,7 @@ class ParallelDelegationParentMachine extends Machine
                 'id'      => 'parallel_delegation_parent',
                 'initial' => 'idle',
                 'context' => [
-                    'result' => null,
+                    'output' => null,
                 ],
                 'states' => [
                     'idle' => [

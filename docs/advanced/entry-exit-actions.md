@@ -19,11 +19,13 @@ Entry and exit actions are lifecycle hooks that execute when entering or leaving
 
 ## Multiple Actions
 
+Both inline keys and FQCN class references work interchangeably in `entry` and `exit` arrays — see [Behavior Resolution](/behaviors/introduction#behavior-resolution).
+
 <!-- doctest-attr: ignore -->
 ```php
 'loading' => [
-    'entry' => ['showSpinnerAction', 'logEntryAction', 'startTimerAction'],
-    'exit' => ['hideSpinnerAction', 'logExitAction', 'stopTimerAction'],
+    'entry' => ['showSpinnerAction', 'logEntryAction', StartTimerAction::class],
+    'exit' => ['hideSpinnerAction', StopTimerAction::class],
 ],
 ```
 
@@ -368,12 +370,12 @@ Entry actions complete before `@always` transitions check:
 
 'actions' => [
     'performCheckAction' => function ($context) {
-        $context->checkResult = performCheck();
+        $context->checkData = performCheck();
     },
 ],
 
 'guards' => [
-    'checkPassedGuard' => fn($ctx) => $ctx->checkResult === 'success',
+    'checkPassedGuard' => fn($ctx) => $ctx->checkData === 'success',
 ],
 ```
 

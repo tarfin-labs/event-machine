@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 
 it('accepts valid listen config', function (): void {
     $definition = MachineDefinition::define(
@@ -41,7 +42,7 @@ it('rejects invalid listen keys', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, "Invalid 'listen' keys: invalid_key");
+})->throws(InvalidStateConfigException::class, "Invalid 'listen' keys: invalid_key");
 
 it('rejects non-array listen value', function (): void {
     MachineDefinition::define(
@@ -54,4 +55,4 @@ it('rejects non-array listen value', function (): void {
             ],
         ],
     );
-})->throws(InvalidArgumentException::class, 'must be an array');
+})->throws(InvalidStateConfigException::class, 'must be an array');

@@ -27,10 +27,10 @@ class ConditionalOnFailMachine extends Machine
                 'id'      => 'conditional_on_fail',
                 'initial' => 'processing',
                 'context' => [
-                    'inventoryResult' => null,
-                    'paymentResult'   => null,
-                    'retryCount'      => 0,
-                    'alertSent'       => false,
+                    'inventoryData' => null,
+                    'paymentData'   => null,
+                    'retryCount'    => 0,
+                    'alertSent'     => false,
                 ],
                 'states' => [
                     'processing' => [

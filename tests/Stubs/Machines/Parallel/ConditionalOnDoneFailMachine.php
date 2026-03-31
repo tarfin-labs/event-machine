@@ -27,8 +27,8 @@ class ConditionalOnDoneFailMachine extends Machine
                 'initial'        => 'idle',
                 'should_persist' => true,
                 'context'        => [
-                    'inventoryResult'  => null,
-                    'paymentResult'    => null,
+                    'inventoryData'    => null,
+                    'paymentData'      => null,
                     'approvalLogged'   => false,
                     'reviewerNotified' => false,
                 ],

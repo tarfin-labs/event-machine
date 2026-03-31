@@ -37,13 +37,13 @@ class ParentOrderMachine extends Machine
                     ],
                     'processing_payment' => [
                         'machine' => ChildPaymentMachine::class,
-                        'with'    => [
+                        'input'   => [
                             'orderId',
                             'amount' => 'totalAmount',
                         ],
                         '@done' => [
                             'target'  => 'completed',
-                            'actions' => 'storePaymentResultAction',
+                            'actions' => 'storePaymentOutputAction',
                         ],
                         '@fail' => 'payment_failed',
                     ],
@@ -57,12 +57,12 @@ class ParentOrderMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'storePaymentResultAction' => function (
+                    'storePaymentOutputAction' => function (
                         ContextManager $context,
                         EventBehavior $event
                     ): void {
-                        $context->set('paymentId', $event->payload['result']['paymentId'] ?? null);
-                        $context->set('receiptUrl', $event->payload['result']['receiptUrl'] ?? null);
+                        $context->set('paymentId', $event->payload['output']['paymentId'] ?? null);
+                        $context->set('receiptUrl', $event->payload['output']['receiptUrl'] ?? null);
                     },
                 ],
             ],

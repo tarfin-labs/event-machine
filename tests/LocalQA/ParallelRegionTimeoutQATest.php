@@ -75,8 +75,8 @@ it('LocalQA: region timeout is no-op when all regions complete before timeout', 
     $ready = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('regionAResult') !== null
-            && $restored->state->context->get('regionBResult') !== null;
+        return $restored->state->context->get('regionAData') !== null
+            && $restored->state->context->get('regionBData') !== null;
     }, timeoutSeconds: 60);
 
     expect($ready)->toBeTrue('Regions not ready');

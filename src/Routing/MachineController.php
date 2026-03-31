@@ -12,11 +12,16 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Validation\ValidationException;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
+use Tarfinlabs\EventMachine\Behavior\MachineFailure;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
+use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
+use Tarfinlabs\EventMachine\Exceptions\MachineOutputInjectionException;
 
 class MachineController extends Controller
 {
@@ -84,7 +89,7 @@ class MachineController extends Controller
         $machine = $machineClass::create();
         $machine->persist();
 
-        return $this->buildResponse($machine->state, $machine, resultKey: null, statusCode: 201);
+        return $this->buildResponse($machine->state, $machine, outputKey: null, statusCode: 201);
     }
 
     /**
@@ -96,13 +101,19 @@ class MachineController extends Controller
 
         $event = $this->resolveEvent($machine, $defaults['_event_type'], $request);
 
+        $outputDef = $defaults['_output'] ?? null;
+        // Inner-array tuple: [[OutputClass::class, 'param' => val]] → treat as parameterized behavior
+        $isInnerArrayTuple = is_array($outputDef) && isset($outputDef[0]) && is_array($outputDef[0]);
+        $outputKey         = is_string($outputDef) || $isInnerArrayTuple ? $outputDef : null;
+        $outputKeys        = is_array($outputDef) && !$isInnerArrayTuple ? $outputDef : null;
+
         return $this->executeEndpoint(
             machine: $machine,
             event: $event,
             actionClass: $defaults['_action_class'] ?? null,
-            resultKey: $defaults['_result_behavior'] ?? null,
+            outputKey: $outputKey,
             statusCode: $defaults['_status_code'] ?? 200,
-            contextKeys: $defaults['_context_keys'] ?? null,
+            outputKeys: $outputKeys,
             includeAvailableEvents: $defaults['_available_events'] ?? true,
         );
     }
@@ -146,9 +157,9 @@ class MachineController extends Controller
         Machine $machine,
         EventBehavior $event,
         ?string $actionClass,
-        ?string $resultKey,
+        string|array|null $outputKey,
         int $statusCode,
-        ?array $contextKeys = null,
+        ?array $outputKeys = null,
         ?bool $includeAvailableEvents = true,
     ): JsonResponse {
         $action = $actionClass !== null
@@ -159,6 +170,20 @@ class MachineController extends Controller
 
         try {
             $state = $machine->send(event: $event);
+        } catch (MachineAlreadyRunningException) {
+            // $machine->state is fresh — send() restores from DB before lock attempt.
+            // GET → 200 (read succeeded), POST/PUT/DELETE → 423 (event not processed).
+            $httpStatus = request()->isMethod('GET') ? 200 : 423;
+
+            return $this->buildResponse(
+                state: $machine->state,
+                machine: $machine,
+                outputKey: $outputKey,
+                statusCode: $httpStatus,
+                outputKeys: $outputKeys,
+                includeAvailableEvents: $includeAvailableEvents,
+                isProcessing: true,
+            );
         } catch (MachineValidationException $e) { // @phpstan-ignore catch.neverThrown
             return response()->json([
                 'message' => $e->getMessage(),
@@ -188,77 +213,131 @@ class MachineController extends Controller
         // Auto-dispatch completion if child reached final state and has a parent
         $this->dispatchChildCompletionIfFinal($machine, $state);
 
-        return $this->buildResponse($state, $machine, $resultKey, $statusCode, $contextKeys, $includeAvailableEvents);
+        return $this->buildResponse(
+            state: $state,
+            machine: $machine,
+            outputKey: $outputKey,
+            statusCode: $statusCode,
+            outputKeys: $outputKeys,
+            includeAvailableEvents: $includeAvailableEvents,
+            isProcessing: false,
+        );
     }
 
     /**
-     * Build the JSON response — either from ResultBehavior or default State serialization.
+     * Build the JSON response with consistent envelope structure.
+     *
+     * Always returns: {data: {id, machineId, state, availableEvents, output, isProcessing}}
      */
     protected function buildResponse(
         State $state,
         Machine $machine,
-        ?string $resultKey,
+        string|array|null $outputKey,
         int $statusCode,
-        ?array $contextKeys = null,
+        ?array $outputKeys = null,
         ?bool $includeAvailableEvents = true,
+        bool $isProcessing = false,
     ): JsonResponse {
-        if ($resultKey !== null) {
-            $result = $this->resolveAndRunResult($resultKey, $state, $machine);
-
-            return response()->json(['data' => $result], $statusCode);
-        }
-
         $rootEventId = $state->history->first()?->root_event_id;
-        $contextData = $state->context->toResponseArray();
 
-        // Filter context keys if specified in endpoint config
-        if ($contextKeys !== null) {
-            $contextData = array_intersect_key($contextData, array_flip($contextKeys));
+        // Resolve output data
+        if ($outputKey !== null) {
+            $outputData = $this->resolveAndRunOutput($outputKey, $state, $machine);
+        } elseif ($outputKeys !== null) {
+            $contextData = array_merge(
+                is_array($state->context->data) ? $state->context->data : [],
+                $state->context->toResponseArray(),
+            );
+            $outputData = array_intersect_key($contextData, array_flip($outputKeys));
+        } else {
+            $outputData = $machine->output();
+
+            // Serialize MachineOutput for JSON response
+            if ($outputData instanceof MachineOutput) {
+                $outputData = $outputData->toArray();
+            }
         }
 
         $response = [
-            'machine_id' => $rootEventId,
-            'value'      => $state->value,
-            'context'    => $contextData,
+            'id'              => $rootEventId,
+            'machineId'       => $state->currentStateDefinition->machine->id ?? null,
+            'state'           => $state->value,
+            'availableEvents' => $state->availableEvents(),
+            'output'          => $outputData,
+            'isProcessing'    => $isProcessing,
         ];
-
-        if ($includeAvailableEvents !== false) {
-            $response['available_events'] = $state->availableEvents();
-        }
 
         return response()->json(['data' => $response], $statusCode);
     }
 
     /**
-     * Resolve and run a ResultBehavior using the InvokableBehavior parameter injection pattern.
-     *
-     * When a ForwardContext is provided, it is injected into the ResultBehavior
-     * so it can access the child machine's state and context.
+     * Resolve and run a OutputBehavior using the InvokableBehavior parameter injection pattern.
      */
-    protected function resolveAndRunResult(
-        string $resultKey,
+    protected function resolveAndRunOutput(
+        string|array $outputKey,
         State $state,
         Machine $machine,
-        ?ForwardContext $forwardContext = null,
+        MachineOutput|MachineFailure|null $childOutput = null,
     ): mixed {
-        $resultClass = class_exists($resultKey)
-            ? $resultKey
-            : ($machine->definition->behavior['results'][$resultKey] ?? null);
+        $configParams = null;
 
-        if ($resultClass === null) {
-            throw new \RuntimeException("Result behavior '{$resultKey}' not found.");
+        // Inner-array tuple: [[OutputClass::class, 'format' => 'json']]
+        if (is_array($outputKey)) {
+            $parsed       = BehaviorTupleParser::parse($outputKey[0], 'endpoint output');
+            $outputKey    = $parsed['definition'];
+            $configParams = $parsed['configParams'] ?: null;
         }
 
-        $resultBehavior = resolve($resultClass);
+        $outputBehavior = $machine->definition->resolveOutputKey($outputKey);
+
+        // Check if OutputBehavior type-hints MachineOutput but no child output is available (forward endpoint contract mismatch)
+        if ($childOutput === null) {
+            $this->validateNoMachineOutputTypeHint($outputBehavior, is_string($outputKey) ? $outputKey : 'unknown', $state);
+        }
 
         $params = InvokableBehavior::injectInvokableBehaviorParameters(
-            actionBehavior: $resultBehavior,
+            actionBehavior: $outputBehavior,
             state: $state,
             eventBehavior: $state->triggeringEvent ?? $state->currentEventBehavior,
-            forwardContext: $forwardContext,
+            childOutput: $childOutput,
+            configParams: $configParams,
         );
 
-        return $resultBehavior(...$params);
+        return $outputBehavior(...$params);
+    }
+
+    /**
+     * Validate that an OutputBehavior doesn't type-hint MachineOutput when no child output is available.
+     *
+     * Throws MachineOutputInjectionException when a forward endpoint OutputBehavior expects
+     * typed child output but the child's state doesn't define a MachineOutput.
+     */
+    private function validateNoMachineOutputTypeHint(object $outputBehavior, string $outputClass, State $state): void
+    {
+        try {
+            $method = new \ReflectionMethod($outputBehavior, '__invoke');
+
+            foreach ($method->getParameters() as $param) {
+                $type = $param->getType();
+
+                if ($type instanceof \ReflectionNamedType && is_subclass_of($type->getName(), MachineOutput::class)) {
+                    $childState        = $state->getForwardedChildState();
+                    $childStateName    = $childState?->currentStateDefinition?->key ?? 'unknown';
+                    $childMachineClass = $childState?->currentStateDefinition?->machine?->machineClass ?? 'unknown';
+
+                    throw MachineOutputInjectionException::missingChildOutput(
+                        outputBehaviorClass: $outputClass,
+                        expectedOutputClass: $type->getName(),
+                        childMachineClass: $childMachineClass,
+                        childStateName: $childStateName,
+                    );
+                }
+            }
+        } catch (MachineOutputInjectionException $e) {
+            throw $e;
+        } catch (\Throwable) {
+            // Reflection failed — skip validation
+        }
     }
 
     /**
@@ -333,6 +412,16 @@ class MachineController extends Controller
                 'type'    => $parentEventType,
                 'payload' => $event->payload ?? [],
             ]);
+        } catch (MachineAlreadyRunningException) {
+            $httpStatus = $request->isMethod('GET') ? 200 : 423;
+
+            return $this->buildForwardedResponse(
+                machine: $machine,
+                state: $machine->state,
+                defaults: $defaults,
+                isProcessing: true,
+                statusCodeOverride: $httpStatus,
+            );
         } catch (MachineValidationException $e) { // @phpstan-ignore catch.neverThrown
             return response()->json([
                 'message' => $e->getMessage(),
@@ -361,63 +450,84 @@ class MachineController extends Controller
         $action?->after();
 
         // 5. Build response with child state info
-        return $this->buildForwardedResponse($machine, $state, $defaults);
+        return $this->buildForwardedResponse(
+            machine: $machine,
+            state: $state,
+            defaults: $defaults,
+            isProcessing: false,
+        );
     }
 
     /**
      * Build response for forwarded endpoints — includes parent + child state.
      */
-    protected function buildForwardedResponse(Machine $machine, State $state, array $defaults): JsonResponse
-    {
-        $resultKey   = $defaults['_result_behavior'] ?? null;
-        $contextKeys = $defaults['_context_keys'] ?? null;
-        $statusCode  = $defaults['_status_code'] ?? 200;
+    protected function buildForwardedResponse(
+        Machine $machine,
+        State $state,
+        array $defaults,
+        bool $isProcessing = false,
+        ?int $statusCodeOverride = null,
+    ): JsonResponse {
+        $outputDef         = $defaults['_output'] ?? null;
+        $isInnerArrayTuple = is_array($outputDef) && isset($outputDef[0]) && is_array($outputDef[0]);
+        $outputKey         = is_string($outputDef) || $isInnerArrayTuple ? $outputDef : null;
+        $outputKeys        = is_array($outputDef) && !$isInnerArrayTuple ? $outputDef : null;
+        $statusCode        = $statusCodeOverride ?? ($defaults['_status_code'] ?? 200);
 
         $childState = $state->getForwardedChildState();
 
-        // Custom result behavior — runs on PARENT with ForwardContext injected
-        if ($resultKey !== null && $childState instanceof State) {
-            $forwardContext = new ForwardContext(
-                childContext: $childState->context,
-                childState: $childState,
-            );
+        // Custom output behavior — runs on PARENT, child's typed output available via injection
+        if ($outputKey !== null) {
+            // Resolve child's typed output for injection into parent's OutputBehavior
+            $childTypedOutput = null;
+            if ($childState instanceof State) {
+                $childOutputResolved = $machine->output();
+                if ($childOutputResolved instanceof MachineOutput) {
+                    $childTypedOutput = $childOutputResolved;
+                }
+            }
 
-            $result = $this->resolveAndRunResult(
-                resultKey: $resultKey,
+            $result = $this->resolveAndRunOutput(
+                outputKey: $outputKey,
                 state: $state,
                 machine: $machine,
-                forwardContext: $forwardContext,
+                childOutput: $childTypedOutput,
             );
 
-            return response()->json(['data' => $result], $statusCode);
+            $rootEventId = $state->history->first()?->root_event_id;
+
+            return response()->json(['data' => [
+                'id'              => $rootEventId,
+                'machineId'       => $state->currentStateDefinition->machine->id ?? null,
+                'state'           => $state->value,
+                'availableEvents' => $state->availableEvents(),
+                'output'          => $result,
+                'isProcessing'    => $isProcessing,
+            ]], $statusCode);
         }
 
-        // Default response: parent state + child state
+        // Default response: parent state + child's resolved output
         $rootEventId = $state->history->first()?->root_event_id;
 
         $response = [
-            'machine_id' => $rootEventId,
-            'value'      => $state->value,
+            'id'              => $rootEventId,
+            'machineId'       => $state->currentStateDefinition->machine->id ?? null,
+            'state'           => $state->value,
+            'availableEvents' => $state->availableEvents(),
+            'output'          => null,
         ];
 
         if ($childState instanceof State) {
-            $childContext = $childState->context->toResponseArray();
+            $childOutput = $childState->context->toResponseArray();
 
-            if ($contextKeys !== null) {
-                $childContext = array_intersect_key($childContext, array_flip($contextKeys));
+            if ($outputKeys !== null) {
+                $childOutput = array_intersect_key($childOutput, array_flip($outputKeys));
             }
 
-            $response['child'] = [
-                'value'   => $childState->value,
-                'context' => $childContext,
-            ];
+            $response['output'] = $childOutput;
         }
 
-        $includeAvailableEvents = $defaults['_available_events'] ?? null;
-
-        if ($includeAvailableEvents !== false) {
-            $response['available_events'] = $state->availableEvents();
-        }
+        $response['isProcessing'] = $isProcessing;
 
         return response()->json(['data' => $response], $statusCode);
     }
@@ -448,6 +558,14 @@ class MachineController extends Controller
 
         $childRecord->markCompleted();
 
+        $resolvedOutput = MachineDefinition::resolveChildOutput(
+            $state->currentStateDefinition,
+            $state->context,
+        );
+
+        $outputData  = $resolvedOutput instanceof MachineOutput ? $resolvedOutput->toArray() : $resolvedOutput;
+        $outputClass = $resolvedOutput instanceof MachineOutput ? $resolvedOutput::class : null;
+
         dispatch(new ChildMachineCompletionJob(
             parentRootEventId: $childRecord->parent_root_event_id,
             parentMachineClass: $childRecord->parent_machine_class ?? $machine->definition->machineClass ?? '',
@@ -455,13 +573,10 @@ class MachineController extends Controller
             childMachineClass: $childRecord->child_machine_class,
             childRootEventId: $rootEventId,
             success: true,
-            result: $machine->result(),
             childContextData: $state->context->data,
-            outputData: MachineDefinition::resolveChildOutput(
-                $state->currentStateDefinition,
-                $state->context,
-            ),
+            outputData: $outputData,
             childFinalState: $state->currentStateDefinition->key,
+            outputClass: $outputClass,
         ));
     }
 }

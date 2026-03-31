@@ -19,7 +19,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateApprov
 // ═══════════════════════════════════════════════════════════════
 
 it('F1: InteractsWithMachines teardown resets fakes', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
     expect(ImmediateChildMachine::isMachineFaked())->toBeTrue();
 
     // Simulate what tearDownInteractsWithMachines() does
@@ -31,7 +31,7 @@ it('F1: InteractsWithMachines teardown resets fakes', function (): void {
 });
 
 it('F2: manual resetMachineFakes still safe alongside trait', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     expect(ImmediateChildMachine::isMachineFaked())->toBeTrue();
 
@@ -63,7 +63,7 @@ it('F4: trait resets InlineBehaviorFake', function (): void {
 });
 
 it('F5: double reset is harmless', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
     CommunicationRecorder::startRecording();
     InlineBehaviorFake::fake('anotherKey');
 
@@ -87,7 +87,7 @@ it('F5: double reset is harmless', function (): void {
 // ═══════════════════════════════════════════════════════════════
 
 it('F6: create() returns stub when faked — isFakedInstance flag is set', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'done']);
+    ImmediateChildMachine::fake(output: ['status' => 'done']);
 
     $machine = ImmediateChildMachine::create();
 
@@ -100,7 +100,7 @@ it('F6: create() returns stub when faked — isFakedInstance flag is set', funct
 });
 
 it('F7: create(state:) returns stub when faked — no DB query', function (): void {
-    ImmediateChildMachine::fake(result: ['outcome' => 'skipped']);
+    ImmediateChildMachine::fake(output: ['outcome' => 'skipped']);
 
     // Without fake: create(state: 'non-existent') would throw RestoringStateException
     // With fake: returns stub without touching the DB
@@ -112,7 +112,7 @@ it('F7: create(state:) returns stub when faked — no DB query', function (): vo
 });
 
 it('F8: send() is no-op on faked instance — no exception, returns state', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     $machine = ImmediateChildMachine::create();
     $state   = $machine->send('SOME_EVENT');
@@ -122,7 +122,7 @@ it('F8: send() is no-op on faked instance — no exception, returns state', func
 });
 
 it('F9: persist() is no-op on faked instance — no DB write', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     $machine = ImmediateChildMachine::create();
     $result  = $machine->persist();
@@ -173,7 +173,7 @@ it('F11: send() works normally on non-faked Machine::withDefinition path', funct
 // ═══════════════════════════════════════════════════════════════
 
 it('F12: assertCreated passes after faked create()', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     ImmediateChildMachine::create();
 
@@ -183,14 +183,14 @@ it('F12: assertCreated passes after faked create()', function (): void {
 });
 
 it('F13: assertCreated fails when not created', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     // Do NOT call create()
     ImmediateChildMachine::assertCreated();
 })->throws(AssertionFailedError::class);
 
 it('F14: assertCreatedTimes validates exact count', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     ImmediateChildMachine::create();
     ImmediateChildMachine::create();
@@ -201,7 +201,7 @@ it('F14: assertCreatedTimes validates exact count', function (): void {
 });
 
 it('F15: assertNotCreated passes when not created', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     // Do NOT call create()
     ImmediateChildMachine::assertNotCreated();
@@ -209,7 +209,7 @@ it('F15: assertNotCreated passes when not created', function (): void {
 });
 
 it('F16: assertSent passes when event sent', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     $machine = ImmediateChildMachine::create();
     $machine->send('COMPLETE');
@@ -219,7 +219,7 @@ it('F16: assertSent passes when event sent', function (): void {
 });
 
 it('F17: assertSent fails when wrong event type', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     $machine = ImmediateChildMachine::create();
     $machine->send('COMPLETE');
@@ -228,7 +228,7 @@ it('F17: assertSent fails when wrong event type', function (): void {
 })->throws(AssertionFailedError::class);
 
 it('F18: assertNotSent passes when event not sent', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     ImmediateChildMachine::create();
     // Do NOT send any event
@@ -238,7 +238,7 @@ it('F18: assertNotSent passes when event not sent', function (): void {
 });
 
 it('F19: assertSentTimes validates count', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     $machine = ImmediateChildMachine::create();
     $machine->send('EVENT_A');
@@ -253,7 +253,7 @@ it('F19: assertSentTimes validates count', function (): void {
 // ═══════════════════════════════════════════════════════════════
 
 it('F20: assertInvoked does NOT pass for create()-only fakes', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     // Only call create() — no child delegation invocation
     ImmediateChildMachine::create();
@@ -263,7 +263,7 @@ it('F20: assertInvoked does NOT pass for create()-only fakes', function (): void
 })->throws(AssertionFailedError::class);
 
 it('F21: assertCreated does NOT pass for child delegation invocations', function (): void {
-    ImmediateApprovedChildMachine::fake(result: ['decision' => 'yes']);
+    ImmediateApprovedChildMachine::fake(output: ['decision' => 'yes']);
 
     // Use inline parent machine that delegates to the faked child
     $definition = MachineDefinition::define(config: [
@@ -340,7 +340,7 @@ it('F22: child delegation still works when create fake is active', function (): 
 // ═══════════════════════════════════════════════════════════════
 
 it('F23: existing Machine::fake() for child delegation unchanged', function (): void {
-    ImmediateApprovedChildMachine::fake(result: ['decision' => 'yes']);
+    ImmediateApprovedChildMachine::fake(output: ['decision' => 'yes']);
 
     $definition = MachineDefinition::define(config: [
         'id'      => 'f23_parent',
@@ -389,7 +389,7 @@ it('F24: TestMachine::fakingChild() still works', function (): void {
 
     $result = $testMachine->fakingChild(
         childClass: ImmediateApprovedChildMachine::class,
-        result: ['decision' => 'yes'],
+        output: ['decision' => 'yes'],
     );
 
     expect($result)->toBe($testMachine)
@@ -427,7 +427,7 @@ it('F25: TestMachine::simulateChildDone() still works', function (): void {
     $testMachine
         ->send('GO')
         ->assertState('delegating')
-        ->simulateChildDone(SimpleChildMachine::class, result: ['status' => 'ok'])
+        ->simulateChildDone(SimpleChildMachine::class, output: ['status' => 'ok'])
         ->assertState('completed');
 });
 
@@ -436,7 +436,7 @@ it('F25: TestMachine::simulateChildDone() still works', function (): void {
 // ═══════════════════════════════════════════════════════════════
 
 it('F26: create(definition: [...]) on faked subclass returns stub — inline definition ignored', function (): void {
-    ImmediateChildMachine::fake(result: ['custom' => 'value']);
+    ImmediateChildMachine::fake(output: ['custom' => 'value']);
 
     // Even though we pass a definition array, the fake intercepts first
     $machine = ImmediateChildMachine::create(definition: [
@@ -465,8 +465,8 @@ it('F27: Machine::test() creates TestMachine with pre-init context', function ()
 });
 
 it('F28: multiple faked classes do not interfere', function (): void {
-    ImmediateChildMachine::fake(result: ['a' => 1]);
-    SimpleChildMachine::fake(result: ['b' => 2]);
+    ImmediateChildMachine::fake(output: ['a' => 1]);
+    SimpleChildMachine::fake(output: ['b' => 2]);
 
     ImmediateChildMachine::create();
 
@@ -488,7 +488,7 @@ it('F28: multiple faked classes do not interfere', function (): void {
 });
 
 it('F29: send() records multiple events', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     $machine = ImmediateChildMachine::create();
     $machine->send('EVENT_ONE');
@@ -505,7 +505,7 @@ it('F29: send() records multiple events', function (): void {
 });
 
 it('F30: faked machine state.value is empty array', function (): void {
-    ImmediateChildMachine::fake(result: ['status' => 'ok']);
+    ImmediateChildMachine::fake(output: ['status' => 'ok']);
 
     $machine = ImmediateChildMachine::create();
 

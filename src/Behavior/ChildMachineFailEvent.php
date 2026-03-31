@@ -31,8 +31,8 @@ class ChildMachineFailEvent extends EventBehavior
      * Get the error code from the child failure.
      *
      * Populated automatically from $exception->getCode(). For structured
-     * error codes (e.g., 'E311'), implement ProvidesFailureContext on your
-     * job and return the code in the output array instead.
+     * error codes (e.g., 'E311'), implement ProvidesFailure on your
+     * job and return the code in the MachineFailure instead.
      */
     public function errorCode(): int|string|null
     {
@@ -65,6 +65,24 @@ class ChildMachineFailEvent extends EventBehavior
         $output = $this->payload['output'] ?? [];
 
         return $key !== null ? data_get($output, $key) : $output;
+    }
+
+    /**
+     * Get the typed MachineFailure instance, if available.
+     *
+     * Returns null when the child's failure was untyped (array or no failure declaration).
+     * Used by InvokableBehavior for typed injection in parent @fail actions.
+     */
+    public function typedFailure(): ?MachineFailure
+    {
+        $failureClass = $this->payload['failure_class'] ?? null;
+        $failureData  = $this->payload['output'] ?? [];
+
+        if ($failureClass === null || !is_subclass_of($failureClass, MachineFailure::class)) {
+            return null;
+        }
+
+        return new $failureClass(...$failureData);
     }
 
     /**

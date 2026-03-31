@@ -19,9 +19,9 @@ class ParallelDispatchDeepContextMachine extends Machine
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
-                    'report'        => [],
-                    'regionAResult' => null,
-                    'regionBResult' => null,
+                    'report'      => [],
+                    'regionAData' => null,
+                    'regionBData' => null,
                 ],
                 'states' => [
                     'processing' => [

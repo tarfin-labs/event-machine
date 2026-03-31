@@ -7,39 +7,103 @@ Machine delegation uses explicit data flow — no implicit sharing between paren
 ```
 Parent Context
     │
-    ├── 'with' filters/maps ──→ Child Context (initial)
-    │                                │
-    │                                ├── Child lives its own lifecycle
-    │                                │   (entry → events → transitions → actions)
-    │                                │
-    │                                └── Child reaches final state
-    │                                      │
-    │                                      ├── 'output' filters (if defined)
-    │                                      └── ResultBehavior (if defined)
+    ├── 'input' resolves ──→ Child Context (initial)
+    │   (MachineInput class,      │
+    │    closure, or array)       ├── Child lives its own lifecycle
+    │                             │   (entry → events → transitions → actions)
+    │                             │
+    │                             └── Child reaches final state
+    │                                   │
+    │                                   ├── 'output' resolves (MachineOutput, OutputBehavior, array)
+    │                                   └── Typed or untyped output
     │
     ├── Available in @done event ◄───────┘
     │     {
-    │       result:        <ResultBehavior output>,
-    │       output:        <filtered context or full context>,
+    │       output:        <MachineOutput DTO, OutputBehavior output, or filtered context>,
+    │       output_class:  <MachineOutput FQCN for typed reconstruction>,
     │       machine_id:    <child's root_event_id>,
     │       machine_class: <child's FQCN>,
     │       final_state:   <child's final state key>,
     │     }
     │
     └── @done actions write to parent context
+        (typed MachineOutput injected by type-hint)
 ```
 
-## Parent → Child: The `with` Key
+## Parent → Child: The `input` Key
 
-The `with` key controls what data the child receives from the parent. Three formats are supported: same-named keys, key mapping, and closures.
+The `input` key controls what data the child receives from the parent. Three formats are supported:
 
-See [Machine Delegation — `with` key](/advanced/machine-delegation#with-context-transfer) for format examples.
+### MachineInput Class (Typed)
 
-Without `with`, the child starts with its own default context. No parent data is transferred automatically.
+<!-- doctest-attr: ignore -->
+```php
+'delegating' => [
+    'machine' => PaymentMachine::class,
+    'input'   => PaymentInput::class,  // auto-resolved from parent context
+],
+```
+
+The framework calls `PaymentInput::fromContext($parentContext)` — constructor param names match camelCase context keys. Missing required params throw `MachineInputValidationException`.
+
+See [Typed Contracts](/advanced/typed-contracts) for MachineInput details.
+
+### Closure Adapter
+
+<!-- doctest-attr: ignore -->
+```php
+'input' => function (ContextManager $ctx): PaymentInput {
+    return new PaymentInput(
+        orderId: $ctx->get('currentOrderId'),   // name mapping
+        amount: $ctx->get('totalAmount'),
+    );
+},
+```
+
+Use closures when parent context key names don't match child's input param names.
+
+### Array Format (Untyped)
+
+<!-- doctest-attr: ignore -->
+```php
+'input' => ['orderId', 'amount'],                  // same-name keys
+'input' => ['amount' => 'totalAmount'],             // key rename mapping
+```
+
+Without `input`, the child starts with its own default context. No parent data is transferred automatically.
+
+### Input Lifecycle
+
+1. **Created** — `ChildMachineJob` (async) or `handleMachineInvoke()` (sync) resolves input
+2. **Validated** — against child's declared `input` type (if child config has `'input' => PaymentInput::class`)
+3. **Merged into context** — input properties auto-merged into child's initial context
+4. **Consumed** — the DTO is gone. Data lives in context from here.
 
 ## Child → Parent: The `output` Key
 
-The `output` key on a final state controls which context values are exposed to the parent. This creates a symmetric data flow: `with` controls input, `output` controls output.
+The `output` key on a state controls which context values are exposed to the parent. Supports four formats:
+
+### MachineOutput Class (Typed)
+
+<!-- doctest-attr: ignore -->
+```php
+'completed' => [
+    'type'   => 'final',
+    'output' => PaymentOutput::class,  // auto-resolved from child context
+],
+```
+
+See [Typed Contracts](/advanced/typed-contracts) for MachineOutput details.
+
+### OutputBehavior Class (Computed)
+
+<!-- doctest-attr: ignore -->
+```php
+'completed' => [
+    'type'   => 'final',
+    'output' => ComputedPaymentOutput::class,  // OutputBehavior with __invoke()
+],
+```
 
 ### Array Format
 
@@ -59,18 +123,16 @@ The `output` key on a final state controls which context values are exposed to t
     'type'   => 'final',
     'output' => fn(ContextManager $ctx) => [
         'paymentId' => $ctx->get('paymentId'),
-        'total'      => $ctx->get('amount') + $ctx->get('tax'),
+        'total'     => $ctx->get('amount') + $ctx->get('tax'),
     ],
 ],
 ```
-
-### No Output Key
 
 When no `output` key is defined, the full child context is returned (default behavior).
 
 ## Child → Parent: The `@done` Event
 
-When the child reaches a final state, `@done` fires with a `ChildMachineDoneEvent` that provides typed accessors:
+When the child reaches a final state, `@done` fires with a `ChildMachineDoneEvent`. With typed contracts, `MachineOutput` is injected by type-hint:
 
 <!-- doctest-attr: no_run -->
 ```php
@@ -78,75 +140,71 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 
+// Typed injection (when child uses MachineOutput)
 class StorePaymentResultAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context, PaymentOutput $output): void
+    {
+        $context->set('paymentId', $output->paymentId);      // IDE autocomplete
+        $context->set('transactionRef', $output->transactionRef);
+    }
+}
+
+// Untyped access (when child uses array output)
+class StorePaymentResultLegacy extends ActionBehavior
 {
     public function __invoke(ContextManager $context, ChildMachineDoneEvent $event): void
     {
-        // Filtered output (respects child's output key)
         $context->set('paymentId', $event->output('paymentId'));
         $context->set('status', $event->output('status'));
-
-        // ResultBehavior output from child (if defined)
-        $context->set('receipt', $event->result('receipt_url'));
-
-        // Child identity
-        $childId    = $event->childMachineId();
-        $childClass = $event->childMachineClass();
-
-        // Which final state the child reached (for @done.{state} routing)
-        $finalState = $event->finalState(); // 'approved', 'rejected', etc.
     }
 }
 ```
 
 | Accessor | Return Type | Description |
 |----------|-------------|-------------|
-| `output(?$key)` | `mixed` | Filtered output (or full context if no `output` key defined) |
-| `result(?$key)` | `mixed` | ResultBehavior output (if defined on final state) |
+| `output(?$key)` | `mixed` | Output data (filtered context, OutputBehavior output, or full context) |
+| `typedOutput()` | `?MachineOutput` | Typed MachineOutput instance (null if untyped) |
 | `childMachineId()` | `string` | Child's `root_event_id` |
 | `childMachineClass()` | `string` | Child's FQCN |
-| `finalState()` | `?string` | The child's final state key name (e.g., `'approved'`). Used for `@done.{state}` routing. |
+| `finalState()` | `?string` | The child's final state key name |
 
 ## Child → Parent: The `@fail` Event
 
-When the child machine throws an exception or reaches a failure state, `@fail` fires with a `ChildMachineFailEvent`:
+When the child throws an exception, `@fail` fires with a `ChildMachineFailEvent`. With typed contracts, `MachineFailure` is injected:
 
 <!-- doctest-attr: no_run -->
 ```php
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
-use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 
+// Typed injection (when child declares 'failure' config key)
 class HandlePaymentFailureAction extends ActionBehavior
 {
-    public function __invoke(ContextManager $context, ChildMachineFailEvent $event): void
+    public function __invoke(ContextManager $context, PaymentFailure $failure): void
     {
-        // Error message from the child failure
-        $context->set('error', $event->errorMessage());
-
-        // Child's context at the time of failure
-        $context->set('failedAmount', $event->output('amount'));
-
-        // Child identity
-        $childId    = $event->childMachineId();
-        $childClass = $event->childMachineClass();
+        $context->set('errorCode', $failure->errorCode);
+        $context->set('errorDetail', $failure->gatewayResponse);
     }
 }
 ```
 
 | Accessor | Return Type | Description |
 |----------|-------------|-------------|
-| `errorMessage()` | `?string` | Error message from exception or manual failure |
+| `errorMessage()` | `?string` | Error message from exception |
+| `errorCode()` | `int\|string\|null` | Error code from exception |
+| `typedFailure()` | `?MachineFailure` | Typed MachineFailure instance (null if untyped) |
 | `childMachineId()` | `string` | Child's `root_event_id` |
 | `childMachineClass()` | `string` | Child's FQCN |
-| `output(?$key)` | `mixed` | Child's context at failure time (full array or single key) |
+| `output(?$key)` | `mixed` | Child's context at failure time |
 
-## with/output Symmetry
+## input/output Symmetry
 
 | Direction | Config Key | Formats | Purpose |
 |-----------|-----------|---------|---------|
-| Parent → Child | `with` | array, rename map, closure | Controls what data child receives |
-| Child → Parent | `output` | array, closure | Controls what data parent receives |
+| Parent → Child | `input` | MachineInput class, closure, array | Controls what data child receives |
+| Child → Parent | `output` | MachineOutput class, OutputBehavior, array, closure | Controls what data parent receives |
+| Child → Parent (error) | `failure` (machine config) | MachineFailure class | Maps exceptions to structured errors |
 
 ## Auto-Injected Context Keys
 
@@ -166,109 +224,55 @@ $context->parentMachineId();     // parent's root_event_id
 $context->parentMachineClass();  // parent's FQCN
 ```
 
-These are stored as separate properties on `ContextManager`, **not** in the `data` array. They don't appear in context diffs or persist beyond the current lifecycle.
+These are stored as separate properties on `ContextManager`, **not** in the `data` array.
 
 ## Forward Response Data Flow
 
-Unlike the `@done` data flow (which modifies parent context), forward responses go **directly to the HTTP response**. The parent context is NOT modified by a forward event.
+Forward events go **directly to the HTTP response**. The parent context is NOT modified.
 
 ```
 Forward Event (HTTP request)
     ├── Validated by child's EventBehavior
     ├── Routed: parent.send() → tryForwardEventToChild() → child.send()
     ├── Child transitions
-    ├── Child State returned to parent
-    └── Response built from parent + child State
-          ├── Default: { machine_id, value, child: { value, context } }
-          ├── contextKeys: filtered child.context
-          └── result: parent's ResultBehavior (ForwardContext injection)
+    ├── Child output resolved via $machine->output()
+    └── Response built
+          ├── Default: { id, state, output: <child's output> }
+          ├── output (array): filtered child context
+          └── output (class): parent's OutputBehavior (child MachineOutput injected)
 ```
 
-The default forward response shape:
-
-```json
-{
-  "data": {
-    "machine_id": "evt_abc123",
-    "value": ["processing_payment"],
-    "child": {
-      "value": ["awaiting_confirmation"],
-      "context": {
-        "cardLast4": "1111",
-        "status": "card_provided"
-      }
-    }
-  }
-}
-```
-
-When `contextKeys` is configured on the forward entry, only the specified keys from the child's context appear in the response. Without `contextKeys`, the full child context is returned.
-
-### Parent ResultBehavior with ForwardContext
-
-When a forward entry specifies a `result` key, the parent's `ResultBehavior` runs instead of the default response. The `ForwardContext` value object is injected, providing type-safe access to the child's `ContextManager` and `State`:
+When a forward entry specifies an `output` class, the parent's `OutputBehavior` runs. The child's typed `MachineOutput` is injected by type-hint:
 
 <!-- doctest-attr: no_run -->
 ```php
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Routing\ForwardContext;
-use Tarfinlabs\EventMachine\Behavior\ResultBehavior;
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 
-class PaymentStepResult extends ResultBehavior
+class PaymentStepOutput extends OutputBehavior
 {
-    public function __invoke(ContextManager $context, ForwardContext $forwardContext): array
+    public function __invoke(ContextManager $context, VerifyingOutput $childOutput): array
     {
         return [
-            'orderId'    => $context->get('orderId'),                             // Parent context
-            'cardLast4'  => $forwardContext->childContext->get('cardLast4'),    // Child context
-            'child_step' => $forwardContext->childState->value[0] ?? null,     // Child state
+            'orderId'   => $context->get('orderId'),        // Parent context
+            'cardLast4' => $childOutput->cardLast4,          // Child typed output
+            'step'      => $childOutput->step,
         ];
     }
 }
 ```
 
-`ForwardContext` is only available in forward endpoint context -- it is not injected in regular endpoints or `@done` actions.
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `childContext` | `ContextManager` | The child machine's context after processing the forwarded event |
-| `childState` | `State` | The child machine's full state (value, context, history) |
-
-### `available_events` in Response
-
-The `State::availableEvents()` method reflects both the parent's own `on` events and the forward events that the child's current state accepts:
-
-```json
-{
-  "available_events": [
-    { "type": "CANCEL", "source": "parent" },
-    { "type": "PROVIDE_CARD", "source": "forward" },
-    { "type": "CONFIRM_PAYMENT", "source": "forward" }
-  ]
-}
-```
-
-Forward events only appear when the child's **current state** has a matching transition. After the child transitions (e.g., from `awaiting_card` to `awaiting_confirmation`), the available forward events update accordingly -- `PROVIDE_CARD` would disappear and only `CONFIRM_PAYMENT` would remain.
-
-Regular (non-forwarded) endpoints include `available_events` in the response by default. Forward endpoints do not include `available_events` in their default response shape. To get `available_events` from a forward endpoint, use a custom `ResultBehavior` with `ForwardContext` injection and call `$forwardContext->childState->availableEvents()`.
-
 ## Testing Data Flow
 
 <!-- doctest-attr: ignore -->
 ```php
-PaymentMachine::fake(result: ['paymentId' => 'pay_123', 'status' => 'settled']);
+PaymentMachine::fake(output: new PaymentOutput(paymentId: 'pay_123', status: 'settled'));
 
 OrderMachine::test()
     ->send('START_PAYMENT')
     ->assertContext('paymentId', 'pay_123');
-
-Machine::resetMachineFakes();
 ```
 
 ::: tip Full Testing Guide
 See [Delegation Testing](/testing/delegation-testing) for more examples.
-:::
-
-::: tip Forward vs @done
-Unlike `@done` data flow, forward responses go directly to the HTTP caller. The parent context is **not** modified -- the child state is included in the response for the caller's benefit, but the parent machine remains in its delegating state.
 :::

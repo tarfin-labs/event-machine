@@ -25,7 +25,7 @@ class AsyncParentMachine extends Machine
                 'initial' => 'idle',
                 'context' => [
                     'orderId' => null,
-                    'result'  => null,
+                    'output'  => null,
                     'error'   => null,
                 ],
                 'states' => [
@@ -37,14 +37,14 @@ class AsyncParentMachine extends Machine
                     ],
                     'processing' => [
                         'machine' => SimpleChildMachine::class,
-                        'with'    => ['orderId'],
+                        'input'   => ['orderId'],
                         'queue'   => 'child-queue',
                         'on'      => [
                             'CANCEL' => 'skipped',
                         ],
                         '@done' => [
                             'target'  => 'completed',
-                            'actions' => 'captureResultAction',
+                            'actions' => 'captureOutputAction',
                         ],
                         '@fail' => [
                             'target'  => 'failed',
@@ -58,8 +58,8 @@ class AsyncParentMachine extends Machine
             ],
             behavior: [
                 'actions' => [
-                    'captureResultAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                        $ctx->set('result', $event->payload['result'] ?? null);
+                    'captureOutputAction' => function (ContextManager $ctx, EventBehavior $event): void {
+                        $ctx->set('childOutput', $event->payload['output'] ?? null);
                     },
                     'captureErrorAction' => function (ContextManager $ctx, EventBehavior $event): void {
                         $ctx->set('error', $event->payload['error_message'] ?? 'unknown');

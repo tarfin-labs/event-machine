@@ -7,6 +7,7 @@ use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 use Tarfinlabs\EventMachine\Support\CompressionManager;
+use Tarfinlabs\EventMachine\Exceptions\ArchiveException;
 
 describe('MachineEventArchive', function (): void {
     beforeEach(function (): void {
@@ -154,7 +155,7 @@ describe('MachineEventArchive', function (): void {
         $emptyCollection = new EventCollection([]);
 
         expect(fn () => MachineEventArchive::archiveEvents($emptyCollection))
-            ->toThrow(InvalidArgumentException::class, 'Cannot archive empty event collection');
+            ->toThrow(ArchiveException::class, 'Cannot archive empty event collection');
     });
 
     it('stores custom compression level', function (): void {

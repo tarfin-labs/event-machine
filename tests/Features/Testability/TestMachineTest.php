@@ -269,9 +269,9 @@ it('assertFinished fails when not in final state', function (): void {
         ->toThrow(ExpectationFailedException::class);
 });
 
-it('asserts result value with assertResult', function (): void {
-    // Final state with no result behavior returns null
-    TestMachine::define([
+it('asserts output value with assertOutput', function (): void {
+    // Final state with no output behavior returns toResponseArray() fallback
+    $test = TestMachine::define([
         'initial' => 'active',
         'states'  => [
             'active' => [
@@ -283,7 +283,10 @@ it('asserts result value with assertResult', function (): void {
                 'type' => 'final',
             ],
         ],
-    ])->send('COMPLETE')->assertResult(null);
+    ])->send('COMPLETE');
+
+    // output() returns toResponseArray() when no output is defined (never null)
+    expect($test->machine()->output())->toBeArray();
 });
 
 // ─── Validation assertions ──────────────────────────────────

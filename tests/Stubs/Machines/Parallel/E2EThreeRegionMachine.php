@@ -26,9 +26,9 @@ class E2EThreeRegionMachine extends Machine
                 'initial'        => 'processing',
                 'should_persist' => true,
                 'context'        => [
-                    'regionAResult' => null,
-                    'regionBResult' => null,
-                    'regionCResult' => null,
+                    'regionAData' => null,
+                    'regionBData' => null,
+                    'regionCData' => null,
                 ],
                 'states' => [
                     'processing' => [

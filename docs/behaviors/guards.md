@@ -51,6 +51,8 @@ class HasItemsGuard extends GuardBehavior
 ],
 ```
 
+Both inline keys and FQCN references work interchangeably — see [Behavior Resolution](/behaviors/introduction#behavior-resolution) for details.
+
 ## Multiple Guards (AND Logic)
 
 All guards must pass for the transition to occur. Guards evaluate in order and **short-circuit** on the first failure:
@@ -135,25 +137,24 @@ class AmountGuard extends GuardBehavior
 ```
 
 ::: tip Available Parameters
-See [Parameter Injection](/behaviors/introduction#parameter-injection) for the full list of injectable parameters (`ContextManager`, `EventBehavior`, `State`, `EventCollection`, `array`).
+See [Parameter Injection](/behaviors/introduction#parameter-injection) for the full list of injectable parameters (`ContextManager`, `EventBehavior`, `State`, `EventCollection`) and [Named Parameters](/behaviors/introduction#named-parameters) for config-defined params.
 :::
 
-## Guard Arguments
+## Guard Parameters
 
-Pass arguments to guards:
+Pass named parameters to guards using tuple syntax:
 
 ```php ignore
-// Configuration
-'guards' => 'minimumAmountGuard:100',
+// Config — parameterized guard is an inner array (tuple)
+'guards' => [[MinimumAmountGuard::class, 'minimum' => 100]],
 
-// Guard implementation
+// Guard — receives typed named parameter
 class MinimumAmountGuard extends GuardBehavior
 {
     public function __invoke(
         ContextManager $context,
-        array $arguments,
+        int $minimum,
     ): bool {
-        $minimum = $arguments[0] ?? 0;
         return $context->amount >= $minimum;
     }
 }
@@ -277,15 +278,14 @@ class HasRoleGuard extends GuardBehavior
 {
     public function __invoke(
         ContextManager $context,
-        array $arguments,
+        string $requiredRole = 'user',
     ): bool {
-        $requiredRole = $arguments[0] ?? 'user';
         return $context->user->hasRole($requiredRole);
     }
 }
 
 // Usage
-'guards' => 'hasRoleGuard:admin',
+'guards' => [[HasRoleGuard::class, 'requiredRole' => 'admin']],
 ```
 
 ### Time-Based Guard

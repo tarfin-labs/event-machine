@@ -39,8 +39,8 @@ it('LocalQA: parallel region entry actions dispatch and run via Horizon', functi
     // Wait for Horizon to process ParallelRegionJobs (entry actions set context)
     $entryActionsRan = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
-        $regionA  = $restored->state->context->get('regionAResult');
-        $regionB  = $restored->state->context->get('regionBResult');
+        $regionA  = $restored->state->context->get('regionAData');
+        $regionB  = $restored->state->context->get('regionBData');
 
         return $regionA !== null && $regionB !== null;
     }, timeoutSeconds: 60);
@@ -57,7 +57,7 @@ it('LocalQA: parallel regions complete via events → @done fires', function ():
     $ready = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('regionAResult') !== null;
+        return $restored->state->context->get('regionAData') !== null;
     }, timeoutSeconds: 60);
 
     expect($ready)->toBeTrue('Regions not ready');
@@ -104,7 +104,7 @@ it('LocalQA: concurrent region completions — locking preserves state', functio
     $ready = LocalQATestCase::waitFor(function () use ($rootEventId) {
         $restored = ParallelDispatchViaEventMachine::create(state: $rootEventId);
 
-        return $restored->state->context->get('regionAResult') !== null;
+        return $restored->state->context->get('regionAData') !== null;
     }, timeoutSeconds: 60);
 
     expect($ready)->toBeTrue();

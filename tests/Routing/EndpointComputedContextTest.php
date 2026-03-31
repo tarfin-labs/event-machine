@@ -21,13 +21,13 @@ beforeEach(function (): void {
 test('endpoint response includes computed context values', function (): void {
     $createResponse = $this->postJson('/api/computed/create');
     $createResponse->assertStatus(201);
-    $machineId = $createResponse->json('data.machine_id');
+    $machineId = $createResponse->json('data.id');
 
     $response = $this->postJson("/api/computed/{$machineId}/start");
 
     $response->assertOk();
 
-    $context = $response->json('data.context');
+    $context = $response->json('data.output');
 
     expect($context)->toHaveKeys(['count', 'status', 'isCountEven', 'displayLabel'])
         ->and($context['count'])->toBe(1)
@@ -37,7 +37,7 @@ test('endpoint response includes computed context values', function (): void {
 
 test('contextKeys filtering includes computed values', function (): void {
     $createResponse = $this->postJson('/api/computed/create');
-    $machineId      = $createResponse->json('data.machine_id');
+    $machineId      = $createResponse->json('data.id');
 
     $this->postJson("/api/computed/{$machineId}/start");
 
@@ -46,7 +46,7 @@ test('contextKeys filtering includes computed values', function (): void {
 
     $response->assertOk();
 
-    $context = $response->json('data.context');
+    $context = $response->json('data.output');
 
     expect($context)->toHaveKeys(['count', 'isCountEven'])
         ->and($context)->not->toHaveKeys(['status', 'displayLabel']);
@@ -54,14 +54,14 @@ test('contextKeys filtering includes computed values', function (): void {
 
 test('contextKeys filtering excludes computed values', function (): void {
     $createResponse = $this->postJson('/api/computed/create');
-    $machineId      = $createResponse->json('data.machine_id');
+    $machineId      = $createResponse->json('data.id');
 
     $this->postJson("/api/computed/{$machineId}/start");
 
     // COMPLETE endpoint has contextKeys: ['count', 'isCountEven']
     $response = $this->postJson("/api/computed/{$machineId}/complete");
 
-    $context = $response->json('data.context');
+    $context = $response->json('data.output');
 
     expect($context)->not->toHaveKey('displayLabel');
 });

@@ -15,14 +15,14 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function alwaysGuardOrderDefinition(array $guardResults): MachineDefinition
+function alwaysGuardOrderDefinition(array $guardOutcomes): MachineDefinition
 {
     $alwaysTransitions = [];
     $states            = [
         'check' => ['on' => []],
     ];
 
-    foreach ($guardResults as $index => $result) {
+    foreach ($guardOutcomes as $index => $result) {
         $targetState = 'target_'.$index;
         $guardKey    = 'guard_'.$index;
 
@@ -37,7 +37,7 @@ function alwaysGuardOrderDefinition(array $guardResults): MachineDefinition
     $states['check']['on']['@always'] = $alwaysTransitions;
 
     $guards = [];
-    foreach ($guardResults as $index => $result) {
+    foreach ($guardOutcomes as $index => $result) {
         $guards['guard_'.$index] = fn (): bool => $result;
     }
 

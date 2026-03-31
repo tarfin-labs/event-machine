@@ -275,7 +275,7 @@ test('calculators can use event data', function (): void {
             'calculators' => [
                 'multiplyNumbersCalculator' => function (ContextManager $context, EventBehavior $event): void {
                     $numbers = $event->payload['numbers'] ?? [];
-                    $context->set('result', array_product($numbers));
+                    $context->set('total', array_product($numbers));
                 },
             ],
         ],
@@ -290,7 +290,7 @@ test('calculators can use event data', function (): void {
     ]);
 
     // 3. Assert
-    expect($state->context->get('result'))->toBe(24);
+    expect($state->context->get('total'))->toBe(24);
 });
 
 test('calculator can have parameters', function (): void {

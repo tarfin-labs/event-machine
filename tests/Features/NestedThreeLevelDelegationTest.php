@@ -24,9 +24,9 @@ it('parent delegates to middle child via simulateChildDone', function (): void {
     ThreeLevelParentMachine::test()
         ->send(['type' => 'START'])
         ->assertState('processing')
-        ->simulateChildDone(MiddleChildMachine::class, result: ['status' => 'ok'])
+        ->simulateChildDone(MiddleChildMachine::class, output: ['status' => 'ok'])
         ->assertState('completed')
-        ->assertContext('result', ['status' => 'ok']);
+        ->assertContext('childOutput', ['status' => 'ok']);
 });
 
 it('parent delegates to middle child and handles failure via simulateChildFail', function (): void {
@@ -130,9 +130,9 @@ it('async three-level: startingAt processing then simulateChildDone', function (
     Queue::fake();
 
     ThreeLevelParentMachine::startingAt(stateId: 'processing')
-        ->simulateChildDone(MiddleChildMachine::class, result: ['paymentId' => 'pay_nested'])
+        ->simulateChildDone(MiddleChildMachine::class, output: ['paymentId' => 'pay_nested'])
         ->assertState('completed')
-        ->assertContext('result', ['paymentId' => 'pay_nested']);
+        ->assertContext('childOutput', ['paymentId' => 'pay_nested']);
 });
 
 it('async parent correctly routes @done with result data from nested chain', function (): void {
@@ -143,12 +143,12 @@ it('async parent correctly routes @done with result data from nested chain', fun
     $testMachine
         ->send(['type' => 'START'])
         ->assertState('processing')
-        ->simulateChildDone(MiddleChildMachine::class, result: [
+        ->simulateChildDone(MiddleChildMachine::class, output: [
             'grandchild_output' => 'deep_value',
             'level'             => 3,
         ])
         ->assertState('completed')
-        ->assertContext('result', [
+        ->assertContext('childOutput', [
             'grandchild_output' => 'deep_value',
             'level'             => 3,
         ]);
@@ -161,7 +161,7 @@ it('inline three-level async with TestMachine::define for parent and child simul
         config: [
             'id'      => 'inline_nested_async',
             'initial' => 'idle',
-            'context' => ['result' => null],
+            'context' => ['childOutput' => null],
             'states'  => [
                 'idle' => [
                     'on' => ['GO' => 'delegating_to_middle'],
@@ -182,7 +182,7 @@ it('inline three-level async with TestMachine::define for parent and child simul
         behavior: [
             'actions' => [
                 'captureAction' => function (ContextManager $ctx, EventBehavior $event): void {
-                    $ctx->set('result', $event->payload['result'] ?? null);
+                    $ctx->set('childOutput', $event->payload['output'] ?? null);
                 },
             ],
         ],
@@ -193,7 +193,7 @@ it('inline three-level async with TestMachine::define for parent and child simul
     $testMachine
         ->send('GO')
         ->assertState('delegating_to_middle')
-        ->simulateChildDone(MiddleChildMachine::class, result: ['nested' => true])
+        ->simulateChildDone(MiddleChildMachine::class, output: ['nested' => true])
         ->assertState('completed')
-        ->assertContext('result', ['nested' => true]);
+        ->assertContext('childOutput', ['nested' => true]);
 });

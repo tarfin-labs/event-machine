@@ -53,6 +53,8 @@ MachineDefinition::define(
 
 ### Class-Based Calculator
 
+Both inline keys and FQCN references work interchangeably — see [Behavior Resolution](/behaviors/introduction#behavior-resolution) for details.
+
 ```php
 use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
 use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
@@ -384,12 +386,12 @@ CalculateTotalCalculator::runWithState($state);
 expect($state->context->get('total'))->toBe(45);
 ```
 
-### With Arguments
+### With Named Parameters
 
 <!-- doctest-attr: ignore -->
 ```php
 $state = State::forTesting(['value' => 10]);
-MultiplyCalculator::runWithState($state, arguments: ['3']);
+MultiplyCalculator::runWithState($state, configParams: ['factor' => 3]);
 expect($state->context->get('value'))->toBe(30);
 ```
 

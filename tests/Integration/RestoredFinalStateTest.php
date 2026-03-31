@@ -34,7 +34,7 @@ it('restored machine at final state reports final type and result works', functi
                 ],
                 'completed' => [
                     'type'   => 'final',
-                    'result' => function (ContextManager $ctx): array {
+                    'output' => function (ContextManager $ctx): array {
                         return ['total' => $ctx->get('amount'), 'status' => 'done'];
                     },
                 ],
@@ -76,7 +76,7 @@ it('restored machine at final state reports final type and result works', functi
     expect($restoredMachine->state->context->get('amount'))->toBe(250);
 
     // result() should work on restored machine
-    expect($restoredMachine->result())->toBe(['total' => 250, 'status' => 'done']);
+    expect($restoredMachine->output())->toBe(['total' => 250, 'status' => 'done']);
 });
 
 it('restored machine at final state has matching value array', function (): void {

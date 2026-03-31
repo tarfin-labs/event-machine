@@ -25,8 +25,8 @@ class ConditionalCompoundOnDoneMachine extends Machine
                 'id'      => 'conditional_compound_on_done',
                 'initial' => 'verification',
                 'context' => [
-                    'inventoryResult'  => null,
-                    'paymentResult'    => null,
+                    'inventoryData'    => null,
+                    'paymentData'      => null,
                     'approvalLogged'   => false,
                     'reviewerNotified' => false,
                 ],

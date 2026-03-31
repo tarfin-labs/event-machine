@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Enums\SourceType;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 use Tarfinlabs\EventMachine\Support\CompressionManager;
+use Tarfinlabs\EventMachine\Exceptions\ArchiveException;
 
 describe('Archive Edge Cases', function (): void {
     beforeEach(function (): void {
@@ -256,7 +257,7 @@ describe('Archive Edge Cases', function (): void {
             $invalidJson = 'this is not json at all {{{';
 
             expect(fn () => CompressionManager::decompress($invalidJson))
-                ->toThrow(InvalidArgumentException::class, 'Data is neither compressed nor valid JSON');
+                ->toThrow(ArchiveException::class, 'Data is neither compressed nor valid JSON');
         });
     });
 

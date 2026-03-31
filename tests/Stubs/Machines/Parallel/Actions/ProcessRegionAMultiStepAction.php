@@ -11,7 +11,7 @@ class ProcessRegionAMultiStepAction extends ActionBehavior
 {
     public function __invoke(ContextManager $context): void
     {
-        $context->set('regionAResult', 'processed_by_a');
+        $context->set('regionAData', 'processed_by_a');
         $this->raise(['type' => 'STEP_1_DONE']);
         $this->raise(['type' => 'STEP_2_DONE']);
     }

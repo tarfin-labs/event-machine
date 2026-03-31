@@ -61,7 +61,7 @@ class ReportCompleteAction extends ActionBehavior
     {
         $this->sendToParent($context, [
             'type'    => 'CHILD_COMPLETE',
-            'payload' => ['result' => 'success'],
+            'payload' => ['status' => 'success'],
         ]);
     }
 }
@@ -92,7 +92,7 @@ class ReportProgressAction extends ActionBehavior
 }
 ```
 
-Both `sendToParent()` and `dispatchToParent()` use `$context->parentMachineId()` and `$context->parentMachineClass()` internally. They throw `RuntimeException` if the machine was not invoked by a parent.
+Both `sendToParent()` and `dispatchToParent()` use `$context->parentMachineId()` and `$context->parentMachineClass()` internally. They throw `NoParentMachineException` if the machine was not invoked by a parent.
 
 ## Progress Reporting Pattern
 
@@ -103,7 +103,7 @@ Combine `dispatchToParent()` with the parent's `on` map for bidirectional commun
 // Parent config — receives progress updates while child runs
 'batch_processing' => [
     'machine' => BatchProcessMachine::class,
-    'with'    => ['items'],
+    'input'    => ['items'],
     'queue'   => 'batch',
     '@done'   => 'completed',
     '@fail'   => 'failed',

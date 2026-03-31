@@ -20,18 +20,6 @@ class ChildMachineDoneEvent extends EventBehavior
     }
 
     /**
-     * Get the child's ResultBehavior output.
-     *
-     * @param  string|null  $key  Dot-notation key to retrieve a specific value.
-     */
-    public function result(?string $key = null): mixed
-    {
-        $result = $this->payload['result'] ?? null;
-
-        return $key !== null ? data_get($result, $key) : $result;
-    }
-
-    /**
      * Get the child's output data.
      *
      * If the child machine defines an `output` key on its final state, returns
@@ -44,6 +32,24 @@ class ChildMachineDoneEvent extends EventBehavior
         $output = $this->payload['output'] ?? [];
 
         return $key !== null ? data_get($output, $key) : $output;
+    }
+
+    /**
+     * Get the typed MachineOutput instance, if available.
+     *
+     * Returns null when the child's output was untyped (array).
+     * Used by InvokableBehavior for typed injection in parent @done actions.
+     */
+    public function typedOutput(): ?MachineOutput
+    {
+        $outputClass = $this->payload['output_class'] ?? null;
+        $outputData  = $this->payload['output'] ?? [];
+
+        if ($outputClass === null || !is_subclass_of($outputClass, MachineOutput::class)) {
+            return null;
+        }
+
+        return new $outputClass(...$outputData);
     }
 
     /**
@@ -99,7 +105,6 @@ class ChildMachineDoneEvent extends EventBehavior
     public static function forTesting(array $attributes = []): static
     {
         return static::forChild(array_merge([
-            'result'        => [],
             'output'        => [],
             'machine_id'    => 'test',
             'machine_class' => 'TestMachine',

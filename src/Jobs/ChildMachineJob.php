@@ -12,8 +12,11 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Models\MachineChild;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
+use Tarfinlabs\EventMachine\Behavior\MachineFailure;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\InvalidMachineClassException;
 
 /**
  * Queue job that creates and runs a child machine asynchronously.
@@ -61,7 +64,7 @@ class ChildMachineJob implements ShouldQueue
     public function handle(): void
     {
         if (!class_exists($this->childMachineClass) || !is_subclass_of($this->childMachineClass, Machine::class)) {
-            throw new \InvalidArgumentException("Machine class '{$this->childMachineClass}' must exist and extend ".Machine::class.'.');
+            throw InvalidMachineClassException::mustExtendMachine($this->childMachineClass);
         }
 
         // 1. Update tracking record to running (skip for fire-and-forget).
@@ -128,6 +131,15 @@ class ChildMachineJob implements ShouldQueue
         if ($childMachine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
             $childRecord->markCompleted();
 
+            // Resolve output and serialize MachineOutput for typed reconstruction
+            $resolvedOutput = MachineDefinition::resolveChildOutput(
+                $childMachine->state->currentStateDefinition,
+                $childMachine->state->context,
+            );
+
+            $outputData  = $resolvedOutput instanceof MachineOutput ? $resolvedOutput->toArray() : $resolvedOutput;
+            $outputClass = $resolvedOutput instanceof MachineOutput ? $resolvedOutput::class : null;
+
             // Dispatch completion job to route @done to parent
             dispatch(new ChildMachineCompletionJob(
                 parentRootEventId: $this->parentRootEventId,
@@ -136,13 +148,10 @@ class ChildMachineJob implements ShouldQueue
                 childMachineClass: $this->childMachineClass,
                 childRootEventId: $childRootEventId,
                 success: true,
-                result: $childMachine->result(),
                 childContextData: $childMachine->state->context->data,
-                outputData: MachineDefinition::resolveChildOutput(
-                    $childMachine->state->currentStateDefinition,
-                    $childMachine->state->context,
-                ),
+                outputData: $outputData,
                 childFinalState: $childMachine->state->currentStateDefinition->key,
+                outputClass: $outputClass,
             ));
         }
 
@@ -162,6 +171,25 @@ class ChildMachineJob implements ShouldQueue
         $childRecord = MachineChild::find($this->machineChildId);
         $childRecord?->markFailed();
 
+        // Resolve typed failure if child declares a failure class
+        $outputData   = null;
+        $failureClass = null;
+        $childMachine = $this->childMachineClass;
+
+        if (class_exists($childMachine) && method_exists($childMachine, 'definition')) {
+            try {
+                $definition   = $childMachine::definition();
+                $failureClass = $definition->failureClass;
+
+                if ($failureClass !== null && is_subclass_of($failureClass, MachineFailure::class)) {
+                    $failure    = $failureClass::fromException($exception);
+                    $outputData = $failure->toArray();
+                }
+            } catch (\Throwable) {
+                // Failed to resolve failure — proceed with raw exception data
+            }
+        }
+
         // Dispatch completion job with error payload to route @fail on parent
         dispatch(new ChildMachineCompletionJob(
             parentRootEventId: $this->parentRootEventId,
@@ -172,6 +200,8 @@ class ChildMachineJob implements ShouldQueue
             success: false,
             errorMessage: $exception->getMessage(),
             errorCode: $exception->getCode(),
+            outputData: $outputData,
+            failureClass: $failureClass,
         ));
     }
 }

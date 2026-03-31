@@ -89,7 +89,7 @@ test('each dispatched job processes its raised events before releasing lock', fu
 
     // Verify context was updated (entry action ran successfully)
     $restored = ParallelDispatchMachine::create(state: $rootEventId);
-    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionAData'))->toBe('processed_by_a');
     expect($restored->state->isInParallelState())->toBeTrue();
 });
 

@@ -174,3 +174,40 @@ Two `SendToMachineJob`s dispatched simultaneously to the same parallel machine c
 - **Unit tests (sync queue, parallel_dispatch=false)**: no lock — avoids re-entrant deadlocks
 - **Unit tests (sync queue, parallel_dispatch=true)**: locked — tests can verify lock behavior
 Re-entrant locking via `Machine::$heldLockIds` prevents deadlock in sync dispatch chains: `send() → ChildMachineJob → ChildMachineCompletionJob → send()` on same parent.
+
+### Async forward endpoint responses do NOT contain child state
+In v9, forwarded endpoint HTTP responses return the parent's envelope `{id, machineId, state, availableEvents, output}`. The child processes the forwarded event asynchronously via Horizon. The immediate response does NOT include child state/context.
+
+**Pattern for testing forward endpoints in QA:**
+1. Send forward request → assert 200
+2. `waitFor()` child to process (restore child machine, check state)
+3. Verify child context via restore, NOT from HTTP response
+
+```php
+// WRONG — child state not in immediate response
+$response = $this->postJson("/api/forward/{$machineId}/provide-card", [...]);
+$data = $response->json('data.child'); // ← NULL in async mode!
+
+// CORRECT — wait for async processing, then verify via restore
+$response->assertStatus(200);
+$childUpdated = LocalQATestCase::waitFor(function () use ($machineId) {
+    $child = MachineChild::where('parent_root_event_id', $machineId)->first();
+    $childMachine = ChildMachine::create(state: $child->child_root_event_id);
+    return str_contains(implode(',', $childMachine->state->value), 'expected_state');
+}, timeoutSeconds: 30);
+```
+
+### MachineOutput must be serialized before queue dispatch
+`resolveChildOutput()` can return a `MachineOutput` instance (not just array). Before passing to `ChildMachineCompletionJob`, always serialize:
+```php
+$resolved = MachineDefinition::resolveChildOutput($state, $context);
+$outputData  = $resolved instanceof MachineOutput ? $resolved->toArray() : $resolved;
+$outputClass = $resolved instanceof MachineOutput ? $resolved::class : null;
+```
+This applies in: `ChildMachineJob::handle()`, `MachineController::dispatchChildCompletionIfFinal()`, `MachineDefinition::tryForwardEventToChild()`, `ChildMachineCompletionJob::propagateChainCompletion()`.
+
+### Failure propagation in deep delegation must carry upstream success flag
+When `ChildMachineCompletionJob::propagateChainCompletion()` dispatches to the grandparent, it must pass the correct `success` flag. If the middle machine reached a `failed` final state (because its child failed), the propagation to the grandparent must use `success: false` — not always `true`.
+
+### Horizon config for QA: minProcesses=4, maxProcesses=8, tries=3
+Auto-scaling to 1 worker causes queue backlog. Set `minProcesses=4` minimum for reliable QA runs. `tries=3` ensures transient failures (lock contention) are retried.

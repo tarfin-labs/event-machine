@@ -119,6 +119,142 @@ $restored->state->matches('approved'); // true
 $restored->state->context->orderId; // Original value
 ```
 
+## Querying Machines
+
+Use `Machine::query()` to find machine instances by state without querying internal tables directly:
+
+<!-- doctest-attr: ignore -->
+```php
+// Find all instances in a specific state (leaf match):
+$results = OrderMachine::query()
+    ->inState('awaiting_payment')
+    ->get();
+
+// Multiple states (OR):
+$results = OrderMachine::query()
+    ->inAnyState(['awaiting_payment', 'processing'])
+    ->get();
+
+// Non-final (resumable) instances:
+$results = OrderMachine::query()
+    ->active()
+    ->latest()
+    ->paginate(20);
+
+// Exclude specific states:
+$results = OrderMachine::query()
+    ->notInState('idle')
+    ->notInFinalState()
+    ->get();
+
+// Parallel: instance must be in ALL given states (AND across regions):
+$results = CarSalesMachine::query()
+    ->inAllStates(['awaiting_personal_info', 'awaiting_payment'])
+    ->get();
+
+// Only completed/rejected machines (final states):
+$results = OrderMachine::query()
+    ->inFinalState()
+    ->get();
+
+// Time-based filtering:
+$results = OrderMachine::query()
+    ->active()
+    ->enteredAfter(now()->subDay())     // entered current state in the last 24h
+    ->oldest()                          // earliest first
+    ->get();
+
+$results = OrderMachine::query()
+    ->inState('awaiting_payment')
+    ->enteredBefore(now()->subWeek())   // stale — waiting for over a week
+    ->latest()
+    ->paginate(10);
+```
+
+### Query Results
+
+`get()` returns a collection of lightweight `MachineQueryResult` objects — full Machine restoration is lazy:
+
+<!-- doctest-attr: ignore -->
+```php
+$result = OrderMachine::query()->inState('pending')->first();
+
+$result->machineId;       // root_event_id
+$result->stateId;         // current state ID
+$result->stateEnteredAt;  // Carbon timestamp
+$result->stateIds;        // all active state IDs (parallel machines have multiple)
+
+$result->machine();       // lazy: restore full Machine instance (cached)
+$result->context();       // lazy: restore and return ContextManager
+```
+
+### State Matching
+
+The `inState()` method supports multiple matching strategies:
+
+| Input | Strategy | Example |
+|-------|----------|---------|
+| `'awaiting_payment'` | Leaf match (default) | Matches `order.checkout.awaiting_payment` |
+| `'order.checkout.awaiting_payment'` | Exact match | Full dot-notation ID |
+| `'checkout'` | Parent match | Matches any descendant of a compound/parallel state |
+| `'checkout.*'` | Wildcard | Pattern with `*` → SQL `LIKE` |
+
+If a state name cannot be resolved, an `InvalidStateQueryException` is thrown. See [Exceptions Reference](/reference/exceptions#invalidstatequeryexception) for details.
+
+### Parallel State Deduplication
+
+Parallel machines have multiple rows in `machine_current_states` (one per active region). The query builder automatically deduplicates — each instance appears once in results. Use `stateIds` to see all active states:
+
+<!-- doctest-attr: ignore -->
+```php
+$result = ParallelMachine::query()->inState('processing')->first();
+
+$result->stateIds;  // ['machine.processing.region_a.working', 'machine.processing.region_b.idle']
+$result->stateId;   // most recently entered state
+```
+
+### Fluent Methods
+
+| Method | Behavior |
+|--------|----------|
+| `inState($state)` | AND — instance must match (subquery). Multiple calls = AND. |
+| `inAnyState($states)` | OR — instance must match any (closure-isolated). |
+| `inAllStates($states)` | AND — instance must match all (parallel regions). |
+| `notInState($state)` | Exclude instances matching this state. |
+| `active()` | Alias for `notInFinalState()`. |
+| `notInFinalState()` | Exclude instances in any FINAL state. |
+| `inFinalState()` | Only instances in a FINAL state. |
+| `latest()` | Order by most recently entered state (desc). |
+| `oldest()` | Order by earliest entered state (asc). |
+| `enteredBefore($date)` | Filter: state entered before the given Carbon date. |
+| `enteredAfter($date)` | Filter: state entered after the given Carbon date. |
+
+### Terminal Methods
+
+| Method | Returns |
+|--------|---------|
+| `get()` | `Collection<MachineQueryResult>` |
+| `first()` | `?MachineQueryResult` |
+| `count()` | `int` (deduplicated) |
+| `paginate($perPage)` | `LengthAwarePaginator` |
+| `pluckMachineIds()` | `Collection<string>` (root_event_ids) |
+
+::: tip Resume Endpoint
+The query builder is ideal for "resume application" features:
+<!-- doctest-attr: ignore -->
+```php
+public function resumable(): JsonResponse
+{
+    return response()->json(
+        OrderMachine::query()
+            ->active()
+            ->latest()
+            ->paginate(20)
+    );
+}
+```
+:::
+
 ## Incremental Context Storage
 
 Context is stored incrementally to minimize database size:
@@ -230,36 +366,85 @@ Non-transactional events won't roll back on failure. Use with caution.
 
 ## Distributed Locking
 
-EventMachine uses distributed locking to prevent concurrent modifications:
+EventMachine uses a database-backed mutex (`MachineLockManager` + `machine_locks` table) to prevent concurrent state mutations. A unique constraint on `root_event_id` guarantees that only one process can hold the lock for a given machine instance at any time.
+
+### When Locking is Active
+
+Locking is enabled when either condition is true:
+
+- **Async queue driver** (`config('queue.default') !== 'sync'`) -- concurrent workers can mutate the same machine
+- **Parallel dispatch enabled** (`config('machine.parallel_dispatch.enabled')` is `true`) -- even with sync queue, tests can verify lock behavior
+
+When using the sync queue driver without parallel dispatch, there is no concurrency risk, so locking is skipped entirely to avoid overhead.
+
+### Lock Acquisition
+
+`Machine::send()` acquires a lock before processing the event:
 
 <!-- doctest-attr: ignore -->
 ```php
-// Machine A
-$machineA = OrderMachine::create(state: $rootId);
+use Tarfinlabs\EventMachine\Locks\MachineLockManager;
 
-// Machine B (same root_event_id)
+// Behind the scenes in Machine::send()
+$lockHandle = MachineLockManager::acquire(
+    rootEventId: $rootEventId,
+    timeout: 0,   // Non-blocking — fails immediately if lock is held
+    ttl: 60,      // Lock expires after 60 seconds (stale lock protection)
+    context: 'send',
+);
+```
+
+- **`timeout: 0`** -- non-blocking mode. If the lock is already held, a `MachineLockTimeoutException` is thrown immediately (wrapped as `MachineAlreadyRunningException`).
+- **`ttl: 60`** -- the lock auto-expires after 60 seconds. This protects against stale locks from crashed processes. Configurable via `config('machine.parallel_dispatch.lock_ttl')`.
+
+The lock is always released in a `finally` block after `persist()` and validation guard handling, ensuring cleanup even when exceptions occur.
+
+### Concurrent Access Example
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
+
+// Two queue workers restore the same machine instance
+$machineA = OrderMachine::create(state: $rootId);
 $machineB = OrderMachine::create(state: $rootId);
 
-// Concurrent access
-$machineA->send(['type' => 'APPROVE']); // Acquires lock
+// Worker A acquires the lock and processes the event
+$machineA->send(['type' => 'APPROVE']);
 
+// Worker B attempts to send concurrently — lock is held, fails immediately
 try {
-    $machineB->send(['type' => 'REJECT']); // Waits for lock or throws
+    $machineB->send(['type' => 'REJECT']);
 } catch (MachineAlreadyRunningException $e) {
-    // Handle concurrent access
+    // Machine is currently being mutated by another process.
+    // The job will be retried by the queue worker.
 }
 ```
 
-### Lock Configuration
+### Re-entrant Lock Support
 
-Lock timeout is 60 seconds with a 5-second wait:
+Sync dispatch chains can cause the same process to call `send()` on a machine that is already locked by itself -- for example: `send()` -> `ChildMachineJob` -> `ChildMachineCompletionJob` -> `send()` on the same parent.
+
+`Machine::$heldLockIds` tracks which `root_event_id` values are locked by the current process. When a re-entrant call is detected, lock acquisition is skipped to prevent deadlock.
+
+### Stale Lock Cleanup
+
+Expired locks (`expires_at < now()`) are cleaned up automatically during lock acquisition. This cleanup is rate-limited to once every 5 seconds to avoid thundering herd effects when many workers compete simultaneously.
+
+### HTTP Endpoints
+
+HTTP endpoints handle `MachineAlreadyRunningException` gracefully, returning an appropriate error response. See [Endpoints](/laravel-integration/endpoints) for details.
+
+When `block()` times out, `MachineLockTimeoutException` is thrown internally. `Machine` catches it and re-throws as `MachineAlreadyRunningException` — which is the exception callers see. In parallel dispatch mode, `MachineLockTimeoutException` is also caught by `ListenerJob`, which releases the job back to the queue for retry.
+
+Lock configuration for parallel dispatch is in `config/machine.php`:
 
 <!-- doctest-attr: ignore -->
 ```php
-// Behind the scenes
-Cache::lock("machine:{$rootEventId}", 60)->block(5, function () {
-    // Process event
-});
+'parallel_dispatch' => [
+    'lock_timeout' => 60,  // seconds before lock expires
+    'lock_ttl'     => 5,   // seconds to wait for lock acquisition
+],
 ```
 
 ## Internal Events

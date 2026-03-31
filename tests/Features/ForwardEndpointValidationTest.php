@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
+use Tarfinlabs\EventMachine\Exceptions\InvalidEndpointDefinitionException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ProvideCardEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\FqcnForwardParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\ForwardEndpoint\ForwardChildEndpointMachine;
@@ -41,7 +43,7 @@ test('it rejects forward array config with unknown keys', function (): void {
                 'events' => ['START' => TestStartEvent::class],
             ],
         );
-    })->toThrow(InvalidArgumentException::class, 'unknown keys');
+    })->toThrow(InvalidStateConfigException::class, 'unknown keys');
 });
 
 test('it rejects forward with uri not starting with slash', function (): void {
@@ -70,7 +72,7 @@ test('it rejects forward with uri not starting with slash', function (): void {
                 'events' => ['START' => TestStartEvent::class],
             ],
         );
-    })->toThrow(InvalidArgumentException::class, "uri must start with '/'");
+    })->toThrow(InvalidStateConfigException::class, "uri must start with '/'");
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -98,7 +100,7 @@ test('it rejects forward without queue', function (): void {
                 'events' => ['START' => TestStartEvent::class],
             ],
         );
-    })->toThrow(InvalidArgumentException::class, 'forward');
+    })->toThrow(InvalidStateConfigException::class, 'forward');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -125,7 +127,7 @@ test('it rejects forward with fire-and-forget (queue without @done)', function (
                 'events' => ['START' => TestStartEvent::class],
             ],
         );
-    })->toThrow(InvalidArgumentException::class, 'forward');
+    })->toThrow(InvalidStateConfigException::class, 'forward');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -163,7 +165,7 @@ test('it rejects forward event that also appears in parent endpoints', function 
             ],
             endpoints: ['START', 'PROVIDE_CARD'],
         );
-    })->toThrow(InvalidArgumentException::class, 'endpoints');
+    })->toThrow(InvalidEndpointDefinitionException::class, 'endpoints');
 });
 
 test('it rejects forward event that also appears in parent behavior.events', function (): void {
@@ -191,7 +193,7 @@ test('it rejects forward event that also appears in parent behavior.events', fun
                 ],
             ],
         );
-    })->toThrow(InvalidArgumentException::class, 'behavior.events');
+    })->toThrow(InvalidEndpointDefinitionException::class, 'behavior.events');
 });
 
 test('it rejects forward FQCN that resolves to same type as parent endpoint', function (): void {
@@ -228,7 +230,7 @@ test('it rejects forward FQCN that resolves to same type as parent endpoint', fu
             ],
             endpoints: ['START', 'PROVIDE_CARD'],
         );
-    })->toThrow(InvalidArgumentException::class, 'endpoints');
+    })->toThrow(InvalidEndpointDefinitionException::class, 'endpoints');
 });
 
 test('it rejects same forward event in two delegating states', function (): void {
@@ -262,7 +264,7 @@ test('it rejects same forward event in two delegating states', function (): void
                 'events' => ['START' => TestStartEvent::class],
             ],
         );
-    })->toThrow(InvalidArgumentException::class, 'multiple delegating states');
+    })->toThrow(InvalidEndpointDefinitionException::class, 'multiple delegating states');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -301,8 +303,8 @@ test('error message for endpoint overlap includes clear migration instructions',
             endpoints: ['START', 'PROVIDE_CARD'],
         );
 
-        $this->fail('Expected InvalidArgumentException was not thrown.');
-    } catch (InvalidArgumentException $e) {
+        $this->fail('Expected InvalidEndpointDefinitionException was not thrown.');
+    } catch (InvalidEndpointDefinitionException $e) {
         expect($e->getMessage())
             ->toContain('endpoints')
             ->toContain("Remove 'PROVIDE_CARD'")
@@ -336,8 +338,8 @@ test('error message for behavior.events overlap includes clear removal instructi
             ],
         );
 
-        $this->fail('Expected InvalidArgumentException was not thrown.');
-    } catch (InvalidArgumentException $e) {
+        $this->fail('Expected InvalidEndpointDefinitionException was not thrown.');
+    } catch (InvalidEndpointDefinitionException $e) {
         expect($e->getMessage())
             ->toContain('behavior.events')
             ->toContain("Remove 'PROVIDE_CARD'")

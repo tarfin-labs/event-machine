@@ -97,8 +97,8 @@ MachineDefinition::define(
         'events' => [
             'ADD_ITEM' => AddItemEvent::class,
         ],
-        'results' => [
-            'orderSummaryResult' => OrderSummaryResult::class,
+        'outputs' => [
+            'orderSummaryOutput' => OrderSummaryOutput::class,
         ],
         'context' => OrderContext::class,
     ],
@@ -113,7 +113,7 @@ MachineDefinition::define(
 | `guards` | Conditions controlling transitions |
 | `calculators` | Context computations before guards |
 | `events` | Custom event classes |
-| `results` | Final state output computation |
+| `outputs` | Final state output computation |
 | `context` | Custom ContextManager class |
 
 ### Inline vs Class Behaviors
@@ -142,9 +142,12 @@ Each state supports these keys:
 | `entry` | string\|array | Actions on state entry |
 | `exit` | string\|array | Actions on state exit |
 | `type` | string | State type (`'final'`) |
-| `result` | string | Result behavior for final states |
+| `output` | string\|array | Output behavior for final states |
 | `initial` | string | Initial child state |
 | `states` | array | Child state definitions |
+| `machine` | string (FQCN) | Child machine class for delegation |
+| `input` | string\|array\|Closure | Data to pass to child machine. MachineInput FQCN, array, or closure. (renamed from `with` in v9) |
+| `failure` | string (FQCN) | MachineFailure class for typed error data on child `@fail` |
 | `meta` | array | Custom metadata |
 | `description` | string | Human-readable description |
 
@@ -370,7 +373,7 @@ MachineDefinition::define(
             'delivered' => [
                 'type' => 'final',
                 'entry' => 'sendDeliveryConfirmationAction',
-                'result' => 'orderSummaryResult',
+                'output' => 'orderSummaryOutput',
                 'meta' => ['completed' => true],
             ],
         ],
@@ -399,8 +402,8 @@ MachineDefinition::define(
             'hasAddressGuard' => HasAddressGuard::class,
             'paymentValidGuard' => PaymentValidGuard::class,
         ],
-        'results' => [
-            'orderSummaryResult' => OrderSummaryResult::class,
+        'outputs' => [
+            'orderSummaryOutput' => OrderSummaryOutput::class,
         ],
     ],
 );
@@ -496,7 +499,7 @@ EventMachine accepts both verbose and shorthand forms for common configuration p
 // Verbose — with actions
 '@done' => [
     'target'  => 'completed',
-    'actions' => CaptureResultAction::class,
+    'actions' => CaptureOutputAction::class,
 ],
 
 // Per-final-state routing

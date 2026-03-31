@@ -136,8 +136,8 @@ test('deeply nested context keys merge correctly (plan #36)', function (): void 
     expect($report['turmob']['checked_at'])->toBe('2026-03-08');
 
     // Top-level keys also preserved
-    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
-    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionAData'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionBData'))->toBe('processed_by_b');
 });
 
 // ============================================================
@@ -454,7 +454,7 @@ test('entry action raises multiple events → all processed in order (plan #60)'
     // Both raised events should have been processed in order:
     // pending → (STEP_1_DONE) → step_1 → (STEP_2_DONE) → finished
     expect($restored->state->value)->toContain('parallel_dispatch_multi_raise.processing.region_a.finished');
-    expect($restored->state->context->get('regionAResult'))->toBe('processed_by_a');
+    expect($restored->state->context->get('regionAData'))->toBe('processed_by_a');
 });
 
 // ============================================================
@@ -480,7 +480,7 @@ test('compound onDone completes in one region, then sibling fails → context pr
 
     // Verify B's context is persisted
     $afterB = ParallelDispatchWithFailMachine::create(state: $rootEventId);
-    expect($afterB->state->context->get('regionBResult'))->toBe('processed_by_b');
+    expect($afterB->state->context->get('regionBData'))->toBe('processed_by_b');
 
     // Transition B to final
     $afterB->send('REGION_B_DONE');
@@ -499,7 +499,7 @@ test('compound onDone completes in one region, then sibling fails → context pr
     expect($restored->state->currentStateDefinition->id)->toBe('parallel_dispatch_with_fail.failed');
 
     // Region B's completed context should be preserved
-    expect($restored->state->context->get('regionBResult'))->toBe('processed_by_b');
+    expect($restored->state->context->get('regionBData'))->toBe('processed_by_b');
 });
 
 // ============================================================

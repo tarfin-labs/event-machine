@@ -17,16 +17,19 @@ use Tarfinlabs\EventMachine\Support\ArrayUtils;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
+use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Illuminate\Contracts\Database\Eloquent\Castable;
 use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
 use Tarfinlabs\EventMachine\Traits\ResolvesBehaviors;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Query\MachineQueryBuilder;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionTimeoutJob;
 use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
@@ -51,7 +54,7 @@ class Machine implements Castable, JsonSerializable, Stringable
     /** Whether parallel region jobs were dispatched to the queue in this lifecycle */
     public bool $dispatched = false;
 
-    /** @var array<class-string, array{result: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>, creations: list<array>, sends: list<array>}> Machine-level fakes for testing. */
+    /** @var array<class-string, array{output: mixed, output_class: string|null, fail: bool, error: string|null, finalState: string|null, invocations: list<array>, creations: list<array>, sends: list<array>}> Machine-level fakes for testing. */
     private static array $machineFakes = [];
 
     /**
@@ -123,6 +126,17 @@ class Machine implements Castable, JsonSerializable, Stringable
         throw MachineDefinitionNotFoundException::build();
     }
 
+    /**
+     * Create a fluent query builder for finding machine instances by state.
+     */
+    public static function query(): MachineQueryBuilder
+    {
+        return new MachineQueryBuilder(
+            machineClass: static::class,
+            definition: static::definition(),
+        );
+    }
+
     // endregion
 
     // region Event Handling
@@ -178,7 +192,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         $machine->isFakedInstance           = true;
 
         $machine->state = new State(
-            context: new ContextManager(data: $fake['result'] ?? []),
+            context: new ContextManager(data: $fake['output'] ?? []),
             currentStateDefinition: null,
         );
 
@@ -782,25 +796,28 @@ class Machine implements Castable, JsonSerializable, Stringable
      *
      * Works for both sync and async delegation.
      *
-     * @param  array|null  $result  The fake result to return via @done.
      * @param  bool  $fail  Whether to trigger @fail instead of @done.
      * @param  string|null  $error  The error message for @fail.
      * @param  string|null  $finalState  The child's final state key — determines which `@done.{state}` route fires on the parent.
      */
     public static function fake(
-        ?array $result = null,
+        array|MachineOutput|null $output = null,
         bool $fail = false,
         ?string $error = null,
         ?string $finalState = null,
     ): void {
+        $outputData  = $output instanceof MachineOutput ? $output->toArray() : $output;
+        $outputClass = $output instanceof MachineOutput ? $output::class : null;
+
         self::$machineFakes[static::class] = [
-            'result'      => $result,
-            'fail'        => $fail,
-            'error'       => $error,
-            'finalState'  => $finalState,
-            'invocations' => [],
-            'creations'   => [],
-            'sends'       => [],
+            'output'       => $outputData,
+            'output_class' => $outputClass,
+            'fail'         => $fail,
+            'error'        => $error,
+            'finalState'   => $finalState,
+            'invocations'  => [],
+            'creations'    => [],
+            'sends'        => [],
         ];
     }
 
@@ -815,7 +832,7 @@ class Machine implements Castable, JsonSerializable, Stringable
     /**
      * Get the fake configuration for a machine class.
      *
-     * @return array{result: mixed, fail: bool, error: ?string, finalState: ?string, invocations: list<array>, creations: list<array>, sends: list<array>}|null
+     * @return array{output: mixed, output_class: string|null, fail: bool, error: string|null, finalState: string|null, invocations: list<array>, creations: list<array>, sends: list<array>}|null
      */
     public static function getMachineFake(?string $class = null): ?array
     {
@@ -1106,40 +1123,127 @@ class Machine implements Castable, JsonSerializable, Stringable
      *
      * @return mixed The result of the state machine.
      */
-    public function result(): mixed
+    /**
+     * Get the state-aware output of the machine.
+     *
+     * Resolution chain:
+     * 1. Current atomic state has output → run it
+     * 2. Parent compound state has output → run it (walk up hierarchy)
+     * 3. None found → return toResponseArray()
+     *
+     * Works on ANY state, not just final states.
+     */
+    public function output(): mixed
     {
         $currentStateDefinition = $this->state->currentStateDefinition;
-        $behaviorDefinition     = $this->definition->behavior[BehaviorType::Result->value];
+        $behaviorDefinition     = $this->definition->behavior[BehaviorType::Output->value];
 
-        if ($currentStateDefinition->type !== StateDefinitionType::FINAL) {
-            return null;
-        }
+        // Walk the hierarchy: current state → parent → grandparent...
+        $stateToCheck = $currentStateDefinition;
 
-        $id = $currentStateDefinition->id;
-        if (!isset($behaviorDefinition[$id])) {
-            return null;
-        }
-
-        $resultBehavior = $behaviorDefinition[$id];
-        $arguments      = null;
-
-        if (!is_callable($resultBehavior)) {
-            if (str_contains((string) $resultBehavior, ':')) {
-                [$resultBehavior, $arguments] = explode(':', (string) $resultBehavior);
-                $arguments                    = explode(',', $arguments);
+        // For parallel states, check the parallel state itself first
+        if ($this->state->isInParallelState()) {
+            if (isset($behaviorDefinition[$currentStateDefinition->id])) {
+                return $this->resolveOutputBehavior($behaviorDefinition[$currentStateDefinition->id]);
             }
 
-            $resultBehavior = resolve($resultBehavior);
+            // Parallel state output from config (not registered in behavior array)
+            if ($currentStateDefinition->output !== null) {
+                return $this->resolveOutputDefinition($currentStateDefinition->output);
+            }
+
+            return $this->state->context->toResponseArray();
+        }
+
+        // Non-parallel: check current atomic state, then walk up hierarchy
+        while ($stateToCheck instanceof StateDefinition) {
+            // Check behavior registry (registered via initializeResults for final states)
+            if (isset($behaviorDefinition[$stateToCheck->id])) {
+                return $this->resolveOutputBehavior($behaviorDefinition[$stateToCheck->id]);
+            }
+
+            // Check state config output (for non-final states)
+            if ($stateToCheck->output !== null) {
+                return $this->resolveOutputDefinition($stateToCheck->output);
+            }
+
+            $stateToCheck = $stateToCheck->parent;
+        }
+
+        // Fallback: toResponseArray()
+        return $this->state->context->toResponseArray();
+    }
+
+    /**
+     * Resolve an output behavior (class reference, inline key, or callable).
+     */
+    private function resolveOutputBehavior(mixed $outputBehavior): mixed
+    {
+        $arguments    = null;
+        $configParams = null;
+
+        // Inner-array tuple: [[FormatOutput::class, 'format' => 'json']]
+        if (is_array($outputBehavior) && isset($outputBehavior[0]) && is_array($outputBehavior[0])) {
+            $parsed         = BehaviorTupleParser::parse($outputBehavior[0], 'output');
+            $outputBehavior = $parsed['definition'];
+            $configParams   = $parsed['configParams'] ?: null;
+        }
+
+        // MachineOutput class — auto-resolve from context (before container resolution)
+        if (is_string($outputBehavior) && is_subclass_of($outputBehavior, MachineOutput::class)) {
+            return $outputBehavior::fromContext($this->state->context);
+        }
+
+        if (!is_callable($outputBehavior)) {
+            if (is_string($outputBehavior) && str_contains($outputBehavior, ':')) {
+                @trigger_error('The colon syntax "behavior:arg1,arg2" is deprecated since tarfin-labs/event-machine 9.0. Use named params tuple [[Class::class, \'param\' => value]] instead.', E_USER_DEPRECATED);
+                [$outputBehavior, $colonArgs] = explode(':', $outputBehavior, 2);
+                $arguments                    = explode(',', $colonArgs);
+            }
+
+            $outputBehavior = is_string($outputBehavior)
+                ? $this->definition->resolveOutputKey($outputBehavior)
+                : resolve($outputBehavior);
         }
 
         $params = InvokableBehavior::injectInvokableBehaviorParameters(
-            actionBehavior: $resultBehavior,
+            actionBehavior: $outputBehavior,
             state: $this->state,
             eventBehavior: $this->state->triggeringEvent ?? $this->state->currentEventBehavior,
             actionArguments: $arguments,
+            configParams: $configParams,
         );
 
-        return $resultBehavior(...$params);
+        return $outputBehavior(...$params);
+    }
+
+    /**
+     * Resolve an output definition (array filter, inner-array tuple, or callable).
+     */
+    private function resolveOutputDefinition(string|array|\Closure $output): mixed
+    {
+        // Inner-array tuple: [[FormatOutput::class, 'format' => 'json']]
+        if (is_array($output) && isset($output[0]) && is_array($output[0])) {
+            return $this->resolveOutputBehavior($output);
+        }
+
+        // Array of strings → filter context to these keys
+        if (is_array($output)) {
+            if ($output === []) {
+                return [];
+            }
+
+            // Build full context data: merge toResponseArray() (typed + computed) with raw data (inline)
+            $contextData = array_merge(
+                is_array($this->state->context->data) ? $this->state->context->data : [],
+                $this->state->context->toResponseArray(),
+            );
+
+            return array_intersect_key($contextData, array_flip($output));
+        }
+
+        // String (class reference or inline key) or Closure → resolve via behavior system
+        return $this->resolveOutputBehavior($output);
     }
 
     // region Private Methods

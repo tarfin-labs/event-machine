@@ -435,7 +435,7 @@ class OrderController extends Controller
         // Sequential mode or no pending dispatches — machine already finished
         return response()->json([
             'status' => 'completed',
-            'result' => $machine->state->context->get('result'),
+            'data' => $machine->state->context->get('data'),
         ]);
     }
 }

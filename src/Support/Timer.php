@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Support;
 
+use Tarfinlabs\EventMachine\Exceptions\InvalidTimerDefinitionException;
+
 /**
  * Duration-only value object for time-based event configuration.
  *
@@ -16,7 +18,7 @@ class Timer
         private readonly int $totalSeconds,
     ) {
         if ($this->totalSeconds <= 0) {
-            throw new \InvalidArgumentException("Timer duration must be positive, got {$this->totalSeconds} seconds.");
+            throw InvalidTimerDefinitionException::nonPositiveDuration($this->totalSeconds);
         }
     }
 

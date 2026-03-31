@@ -27,7 +27,7 @@ class FullConfigForwardParentMachine extends Machine
                     'processing' => [
                         'machine' => ForwardChildEndpointMachine::class,
                         'queue'   => 'default',
-                        'with'    => ['orderId'],
+                        'input'   => ['orderId'],
                         'forward' => [
                             ProvideCardEvent::class => [
                                 'child_event'      => 'PROVIDE_CARD',
@@ -35,8 +35,7 @@ class FullConfigForwardParentMachine extends Machine
                                 'method'           => 'PATCH',
                                 'middleware'       => ['throttle:10'],
                                 'action'           => ForwardEndpointAction::class,
-                                'result'           => PaymentStepResult::class,
-                                'contextKeys'      => ['cardLast4'],
+                                'output'           => PaymentStepOutput::class,
                                 'status'           => 202,
                                 'available_events' => false,
                             ],
@@ -52,8 +51,8 @@ class FullConfigForwardParentMachine extends Machine
                 'events' => [
                     'START' => TestStartEvent::class,
                 ],
-                'results' => [
-                    'paymentStepResult' => PaymentStepResult::class,
+                'outputs' => [
+                    'paymentStepOutput' => PaymentStepOutput::class,
                 ],
             ],
             endpoints: ['START'],

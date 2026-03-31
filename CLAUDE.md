@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Artisan Commands
 - `php artisan machine:xstate` - Export machine definition to XState v5 JSON for Stately Studio
-- `php artisan machine:validate-config` - Validate machine configuration
+- `php artisan machine:validate` - Validate machine configuration
 - `php artisan machine:process-timers` - Sweep command for after/every timers (auto-registered)
 - `php artisan machine:process-scheduled` - Process scheduled events (called by MachineScheduler)
 - `php artisan machine:timer-status` - Display timer status for machine instances
@@ -51,12 +51,13 @@ EventMachine is a Laravel package for creating event-driven state machines, heav
 **Machine** (`src/Actor/Machine.php`): Runtime instance that executes state machines:
 - State persistence and restoration
 - Event handling and transitions (`send()`, `transition()`)
-- `result()` — computes final output via `ResultBehavior` (uses `triggeringEvent` for correct payload)
+- `output()` — computes final output via `OutputBehavior` (uses `triggeringEvent` for correct payload)
 - `availableEvents()` — returns event types valid from the current state
 - Machine delegation (sync/async child machines, fire-and-forget)
 - Cross-machine communication (`sendTo`, `dispatchTo`, `sendToParent`, `dispatchToParent`, `raise`)
 - Machine faking for tests (`Machine::fake()`)
 - Machine identity (`$context->machineId()`, `$context->parentMachineId()`)
+- Machine querying (`Machine::query()` — fluent API for finding instances by state)
 
 **State** (`src/Actor/State.php`): Represents current machine state:
 - Current state definition and value array (supports parallel regions)
@@ -72,9 +73,9 @@ All machine behaviors extend `InvokableBehavior` (parameter injection by type-hi
 - **Guards** (`GuardBehavior` / `ValidationGuardBehavior`): Control transition execution with conditions
 - **Calculators** (`CalculatorBehavior`): Pre-compute values before guards/actions in a transition
 - **Events** (`EventBehavior`): Define event structure, validation, and payload types
-- **Results** (`ResultBehavior`): Compute final state machine outputs (used by `Machine::result()` and HTTP endpoints)
+- **Outputs** (`OutputBehavior`): Compute final state machine outputs (used by `$machine->output()` and HTTP endpoints)
 
-Behaviors can be defined as classes or inline closures. All support parameter injection: `ContextManager`, `EventBehavior`, `State`, `EventCollection`, `ForwardContext`.
+Behaviors can be defined as classes or inline closures. All support parameter injection: `ContextManager`, `EventBehavior`, `State`, `EventCollection`, `MachineOutput`, `MachineFailure`.
 
 **Guard purity enforcement:** Guards must be pure (no I/O, no context mutation). EventMachine enforces this at runtime via context snapshot/restore — before evaluating guards on a transition branch, context is snapshotted; if any guard fails, context is restored. This prevents side-effect leakage between branches in multi-path transitions. Calculators always run before guards to pre-compute values guards may need.
 
@@ -90,10 +91,10 @@ The `listen` key in machine config supports lifecycle hooks:
 
 `src/Routing/` provides a full HTTP API layer for machines:
 - **`MachineRouter::register()`** — Registers Laravel routes from machine endpoint definitions
-- **`EndpointDefinition`** — Parses endpoint config: `uri`, `method`, `action`, `result`, `middleware`, `status`, `contextKeys`
+- **`EndpointDefinition`** — Parses endpoint config: `uri`, `method`, `action`, `output`, `middleware`, `status`
 - **`ForwardedEndpointDefinition`** — Auto-generated routes that forward events to child machines
-- **`ForwardContext`** — Type-hintable in `ResultBehavior` to access child context in forwarded endpoints
-- **`MachineController`** — Handles model-bound, machine-id-bound, stateless, create, and forwarded routes
+- **`MachineOutput`** — Type-hintable in parent @done actions for typed child output injection
+- **`MachineController`** — Handles model-bound, machine-id-bound, stateless, create, and forwarded routes. Graceful `MachineAlreadyRunningException` handling: GET returns 200 + snapshot, POST returns 423 Locked. `isProcessing` flag in all endpoint responses.
 
 ### Parallel States
 
@@ -194,7 +195,7 @@ MachineDefinition::define(
         'guards' => [...],
         'calculators' => [...],
         'events' => [...],
-        'results' => [...],
+        'outputs' => [...],
     ],
     endpoints: [...],
     schedules: [...],
@@ -207,7 +208,7 @@ All behaviors should extend appropriate base classes:
 - Guards extend `GuardBehavior` or `ValidationGuardBehavior`
 - Calculators extend `CalculatorBehavior`
 - Events extend `EventBehavior`
-- Results extend `ResultBehavior`
+- Outputs extend `OutputBehavior`
 
 ### Testing Patterns
 - **Entry points**: `MyMachine::test()`, `MyMachine::startingAt('state')` — NOT `TestMachine::create()` (deprecated)
@@ -237,16 +238,17 @@ All code, tests, and documentation **must** follow the naming conventions define
 ## Package Structure
 
 - `src/Actor/` - Runtime machine and state classes
-- `src/Behavior/` - Base behavior classes (Action, Guard, Calculator, Event, Result)
+- `src/Behavior/` - Base behavior classes (Action, Guard, Calculator, Event, Output, MachineInput, MachineOutput, MachineFailure)
 - `src/Commands/` - Artisan commands (timers, schedules, cache, xstate, archive)
-- `src/Contracts/` - Interfaces (ScheduleResolver, ReturnsResult, ProvidesFailureContext)
+- `src/Contracts/` - Interfaces (ScheduleResolver, ReturnsOutput, ProvidesFailure)
 - `src/Definition/` - Machine definition, state, transition, timer, schedule definitions
 - `src/Enums/` - Type definitions and constants
 - `src/Exceptions/` - Custom exception classes
 - `src/Jobs/` - Queue jobs (ChildMachineJob, SendToMachineJob, ChildJobJob, ParallelRegionJob, ListenerJob, ArchiveSingleMachineJob, etc.)
 - `src/Locks/` - Machine lock manager for concurrent access
 - `src/Models/` - Eloquent models (MachineEvent, MachineChild, MachineCurrentState, MachineTimerFire, MachineEventArchive)
-- `src/Routing/` - HTTP endpoint routing (MachineRouter, MachineController, EndpointDefinition, ForwardedEndpointDefinition, ForwardContext)
+- `src/Query/` - Machine query builder (MachineQueryBuilder, MachineQueryResult)
+- `src/Routing/` - HTTP endpoint routing (MachineRouter, MachineController, EndpointDefinition, ForwardedEndpointDefinition)
 - `src/Scheduling/` - Schedule registration (MachineScheduler)
 - `src/Services/` - Business logic services (ArchiveService)
 - `src/Support/` - Value objects and utilities (Timer, CompressionManager, MachineDiscovery, ArrayUtils)

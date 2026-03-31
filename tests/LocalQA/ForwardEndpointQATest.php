@@ -54,7 +54,7 @@ function createAndStartParent(LocalQATestCase $test, string $prefix = '/api/forw
 {
     $createResponse = $test->postJson("{$prefix}/create");
     $createResponse->assertStatus(201);
-    $machineId = $createResponse->json('data.machine_id');
+    $machineId = $createResponse->json('data.id');
 
     $test->postJson("{$prefix}/{$machineId}/start");
 
@@ -86,19 +86,33 @@ it('LocalQA: forward via HTTP endpoint delivers PROVIDE_CARD to async child', fu
 
     $response->assertStatus(200);
 
-    // Verify child state in response
-    $data = $response->json('data');
-    expect($data)->toHaveKey('child');
+    // In async mode, child processes via Horizon — immediate response may not have child state.
+    // Wait for child to process the forwarded event.
+    $childUpdated = LocalQATestCase::waitFor(function () use ($machineId) {
+        $child = MachineChild::where('parent_root_event_id', $machineId)->first();
+        if (!$child || !$child->child_root_event_id) {
+            return false;
+        }
 
-    $childValue = $data['child']['value'] ?? [];
-    expect(implode(',', $childValue))->toContain('awaiting_confirmation');
+        // Restore child and check if it received the forwarded event
+        try {
+            $childMachine = ForwardChildEndpointMachine::create(state: $child->child_root_event_id);
+
+            return str_contains(implode(',', $childMachine->state->value), 'awaiting_confirmation');
+        } catch (Throwable) {
+            return false;
+        }
+    }, timeoutSeconds: 30, description: 'child receives PROVIDE_CARD and transitions to awaiting_confirmation');
+
+    expect($childUpdated)->toBeTrue('Child did not reach awaiting_confirmation after forward');
 
     // Verify child context was updated by storeCardAction
-    $childContext = $data['child']['context'] ?? [];
-    expect($childContext['data']['cardLast4'] ?? $childContext['cardLast4'] ?? null)->toBe('4242');
+    $child        = MachineChild::where('parent_root_event_id', $machineId)->first();
+    $childMachine = ForwardChildEndpointMachine::create(state: $child->child_root_event_id);
+    expect($childMachine->state->context->get('cardLast4'))->toBe('4242');
 });
 
-it('LocalQA: forward via HTTP with ResultBehavior returns custom response', function (): void {
+it('LocalQA: forward via HTTP with OutputBehavior returns custom response', function (): void {
     $machineId = createAndStartParent($this);
 
     // Step 1: Forward PROVIDE_CARD (no result, default response)
@@ -106,19 +120,32 @@ it('LocalQA: forward via HTTP with ResultBehavior returns custom response', func
         'payload' => ['cardNumber' => '4242424242424242'],
     ])->assertStatus(200);
 
-    // Step 2: Forward CONFIRM_PAYMENT (has result: PaymentStepResult)
+    // Wait for child to process PROVIDE_CARD before sending next forward
+    $childRecord      = MachineChild::where('parent_root_event_id', $machineId)->first();
+    $provideProcessed = LocalQATestCase::waitFor(function () use ($childRecord) {
+        try {
+            $child = ForwardChildEndpointMachine::create(state: $childRecord->child_root_event_id);
+
+            return str_contains(implode(',', $child->state->value), 'awaiting_confirmation');
+        } catch (Throwable) {
+            return false;
+        }
+    }, timeoutSeconds: 30, description: 'child processes PROVIDE_CARD before CONFIRM_PAYMENT');
+
+    expect($provideProcessed)->toBeTrue('Child did not reach awaiting_confirmation');
+
+    // Step 2: Forward CONFIRM_PAYMENT (has output: PaymentStepOutput)
     $response = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
         'payload' => ['confirmationCode' => 'ABC123'],
     ]);
 
     $response->assertStatus(200);
 
-    $data = $response->json('data');
-
-    // PaymentStepResult returns: order_id, card_last4, child_step
-    expect($data)->toHaveKey('cardLast4')
-        ->and($data['cardLast4'])->toBe('4242');
-    expect($data)->toHaveKey('childStep');
+    // In async mode, the forward response runs PaymentStepOutput on the parent context.
+    // PaymentStepOutput returns orderId from parent context. Output is in data.output.
+    $output = $response->json('data.output');
+    expect($output)->toBeArray()
+        ->and($output)->toHaveKey('orderId');
 
     // Wait for child completion → parent @done
     $parentCompleted = LocalQATestCase::waitFor(function () use ($machineId) {
@@ -128,6 +155,10 @@ it('LocalQA: forward via HTTP with ResultBehavior returns custom response', func
     }, timeoutSeconds: 60);
 
     expect($parentCompleted)->toBeTrue('Parent did not transition to completed via @done');
+
+    // Verify child had the card data by restoring from DB
+    $childMachine = ForwardChildEndpointMachine::create(state: $childRecord->child_root_event_id);
+    expect($childMachine->state->context->get('cardLast4'))->toBe('4242');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -137,7 +168,7 @@ it('LocalQA: forward via HTTP with ResultBehavior returns custom response', func
 it('LocalQA: forward returns error when parent not in delegating state', function (): void {
     // Create parent but DON'T send START (stays in idle)
     $createResponse = $this->postJson('/api/forward-parent/create');
-    $machineId      = $createResponse->json('data.machine_id');
+    $machineId      = $createResponse->json('data.id');
 
     // Try to forward — parent is in idle, not processing
     $response = $this->postJson("/api/forward-parent/{$machineId}/provide-card", [
@@ -254,31 +285,55 @@ it('LocalQA: forward with custom URI + method + action works via real HTTP', fun
 });
 
 // ═══════════════════════════════════════════════════════════════
-//  P1: Parent ResultBehavior receives both parent and child context
+//  P1: Parent OutputBehavior receives both parent and child context
 // ═══════════════════════════════════════════════════════════════
 
-it('LocalQA: parent ResultBehavior receives both parent and child context via HTTP', function (): void {
+it('LocalQA: parent OutputBehavior receives parent context, child data verified via restore', function (): void {
     $machineId = createAndStartParent($this);
 
-    // Forward PROVIDE_CARD → child stores card_last4
+    // Forward PROVIDE_CARD → child stores cardLast4
     $this->postJson("/api/forward-parent/{$machineId}/provide-card", [
         'payload' => ['cardNumber' => '5555555555554444'],
     ])->assertStatus(200);
 
-    // Forward CONFIRM_PAYMENT (has result: PaymentStepResult using ForwardContext)
+    // Wait for child to process PROVIDE_CARD before sending CONFIRM_PAYMENT
+    $childRecord      = MachineChild::where('parent_root_event_id', $machineId)->first();
+    $provideProcessed = LocalQATestCase::waitFor(function () use ($childRecord) {
+        try {
+            $child = ForwardChildEndpointMachine::create(state: $childRecord->child_root_event_id);
+
+            return str_contains(implode(',', $child->state->value), 'awaiting_confirmation');
+        } catch (Throwable) {
+            return false;
+        }
+    }, timeoutSeconds: 30, description: 'child processes PROVIDE_CARD before CONFIRM_PAYMENT');
+
+    expect($provideProcessed)->toBeTrue('Child did not reach awaiting_confirmation');
+
+    // Forward CONFIRM_PAYMENT (has output: PaymentStepOutput)
     $response = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
         'payload' => ['confirmationCode' => 'CTX-TEST'],
     ]);
 
     $response->assertStatus(200);
-    $data = $response->json('data');
 
-    // PaymentStepResult reads parent context (order_id) and child context (card_last4)
-    // order_id comes from parent context (default null)
-    expect($data)->toHaveKey('orderId')
-        ->and($data)->toHaveKey('cardLast4')
-        ->and($data['cardLast4'])->toBe('4444')
-        ->and($data)->toHaveKey('childStep');
+    // PaymentStepOutput runs on parent context — returns orderId in data.output
+    $output = $response->json('data.output');
+    expect($output)->toBeArray()
+        ->and($output)->toHaveKey('orderId');
+
+    // Wait for child to process CONFIRM_PAYMENT and verify child context via restore
+    $childUpdated = LocalQATestCase::waitFor(function () use ($childRecord) {
+        try {
+            $child = ForwardChildEndpointMachine::create(state: $childRecord->child_root_event_id);
+
+            return $child->state->context->get('cardLast4') === '4444';
+        } catch (Throwable) {
+            return false;
+        }
+    }, timeoutSeconds: 30, description: 'child context contains cardLast4=4444');
+
+    expect($childUpdated)->toBeTrue('Child did not have correct cardLast4 in context');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -317,15 +372,15 @@ it('LocalQA: parent CANCEL orphans child, subsequent forward fails', function ()
 it('LocalQA: available_events updates correctly through full forward lifecycle', function (): void {
     // 1. Create parent → check initial available_events
     $createResponse = $this->postJson('/api/forward-parent/create');
-    $machineId      = $createResponse->json('data.machine_id');
+    $machineId      = $createResponse->json('data.id');
 
-    $createEvents = $createResponse->json('data.available_events');
+    $createEvents = $createResponse->json('data.availableEvents');
     $createTypes  = array_column($createEvents ?? [], 'type');
     expect($createTypes)->toContain('START');
 
     // 2. Send START → processing state (child dispatched)
     $startResponse = $this->postJson("/api/forward-parent/{$machineId}/start");
-    $startEvents   = $startResponse->json('data.available_events');
+    $startEvents   = $startResponse->json('data.availableEvents');
     $startTypes    = array_column($startEvents ?? [], 'type');
 
     // Should have CANCEL (parent on-event)
@@ -370,10 +425,10 @@ it('LocalQA: available_events updates correctly through full forward lifecycle',
 });
 
 // ═══════════════════════════════════════════════════════════════
-//  P2: ForwardContext carries correct child data
+//  P2: child output carries correct child data
 // ═══════════════════════════════════════════════════════════════
 
-it('LocalQA: ForwardContext carries correct child data through real async flow', function (): void {
+it('LocalQA: child output carries correct child data through real async flow', function (): void {
     $machineId = createAndStartParent($this);
 
     // Forward PROVIDE_CARD with specific card number
@@ -381,17 +436,42 @@ it('LocalQA: ForwardContext carries correct child data through real async flow',
         'payload' => ['cardNumber' => '9876543210987654'],
     ])->assertStatus(200);
 
-    // Forward CONFIRM_PAYMENT (uses PaymentStepResult with ForwardContext)
+    // Wait for child to process PROVIDE_CARD before sending CONFIRM_PAYMENT
+    $childRecord      = MachineChild::where('parent_root_event_id', $machineId)->first();
+    $provideProcessed = LocalQATestCase::waitFor(function () use ($childRecord) {
+        try {
+            $child = ForwardChildEndpointMachine::create(state: $childRecord->child_root_event_id);
+
+            return str_contains(implode(',', $child->state->value), 'awaiting_confirmation');
+        } catch (Throwable) {
+            return false;
+        }
+    }, timeoutSeconds: 30, description: 'child processes PROVIDE_CARD before CONFIRM_PAYMENT');
+
+    expect($provideProcessed)->toBeTrue('Child did not reach awaiting_confirmation');
+
+    // Forward CONFIRM_PAYMENT
     $response = $this->postJson("/api/forward-parent/{$machineId}/confirm-payment", [
         'payload' => ['confirmationCode' => 'FC-VERIFY'],
     ]);
 
     $response->assertStatus(200);
-    $data = $response->json('data');
 
-    // ForwardContext->childContext->get('cardLast4') should be last 4 of card
-    expect($data)->toHaveKey('orderId')
-        ->and($data)->toHaveKey('cardLast4')
-        ->and($data['cardLast4'])->toBe('7654')
-        ->and($data)->toHaveKey('childStep');
+    // In async mode, verify child data by restoring the child machine after processing
+    $childUpdated = LocalQATestCase::waitFor(function () use ($childRecord) {
+        try {
+            $child = ForwardChildEndpointMachine::create(state: $childRecord->child_root_event_id);
+
+            return $child->state->context->get('cardLast4') === '7654';
+        } catch (Throwable) {
+            return false;
+        }
+    }, timeoutSeconds: 30, description: 'child context contains cardLast4=7654');
+
+    expect($childUpdated)->toBeTrue('Child did not have correct cardLast4 in context');
+
+    // Verify parent OutputBehavior response contains orderId in data.output
+    $output = $response->json('data.output');
+    expect($output)->toBeArray()
+        ->and($output)->toHaveKey('orderId');
 });

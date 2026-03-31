@@ -12,6 +12,6 @@ class SetRegionBDeepReportAction extends ActionBehavior
     public function __invoke(ContextManager $context): void
     {
         $context->set('report', ['turmob' => ['status' => 'clean', 'checked_at' => '2026-03-08']]);
-        $context->set('regionBResult', 'processed_by_b');
+        $context->set('regionBData', 'processed_by_b');
     }
 }

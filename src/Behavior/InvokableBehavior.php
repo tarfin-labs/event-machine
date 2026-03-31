@@ -18,11 +18,12 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Traits\Fakeable;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
-use Tarfinlabs\EventMachine\Routing\ForwardContext;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Testing\CommunicationRecorder;
+use Tarfinlabs\EventMachine\Exceptions\NoParentMachineException;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
+use Tarfinlabs\EventMachine\Exceptions\MissingBehaviorParameterException;
 
 /**
  * The abstract class InvokableBehavior defines the common behavior
@@ -129,7 +130,7 @@ abstract class InvokableBehavior
         $parentMachineClass = $context->parentMachineClass();
 
         if ($parentRootEventId === null || $parentMachineClass === null) {
-            throw new \RuntimeException('Cannot sendToParent: this machine was not invoked by a parent.');
+            throw NoParentMachineException::sendToParent();
         }
 
         $this->sendTo(
@@ -156,7 +157,7 @@ abstract class InvokableBehavior
         $parentMachineClass = $context->parentMachineClass();
 
         if ($parentRootEventId === null || $parentMachineClass === null) {
-            throw new \RuntimeException('Cannot dispatchToParent: this machine was not invoked by a parent.');
+            throw NoParentMachineException::dispatchToParent();
         }
 
         $this->dispatchTo(
@@ -254,7 +255,8 @@ abstract class InvokableBehavior
         State $state,
         ?EventBehavior $eventBehavior = null,
         ?array $actionArguments = null,
-        ?ForwardContext $forwardContext = null,
+        MachineOutput|MachineFailure|null $childOutput = null,
+        ?array $configParams = null,
     ): array {
         $invocableBehaviorParameters = [];
 
@@ -279,21 +281,81 @@ abstract class InvokableBehavior
                 $effectiveEvent = $state->triggeringEvent;
             }
 
+            // Resolve typed MachineOutput/MachineFailure from event or childOutput parameter
+            $typedContract = self::resolveTypedContract($typeName, $effectiveEvent)
+                ?? ($childOutput !== null && $typeName !== null && is_a($childOutput, $typeName) ? $childOutput : null);
+
             $value = match (true) {
                 $typeName === null                                                                                                           => null,
-                is_a($typeName, class: ForwardContext::class, allow_string: true)                                                            => $forwardContext,    // ForwardContext (child)
+                $typedContract !== null                                                                                                      => $typedContract,     // MachineOutput / MachineFailure (typed contract)
                 is_a($typeName, class: ContextManager::class, allow_string: true) || is_subclass_of($typeName, class: ContextManager::class) => $state->context,    // ContextManager (parent)
                 is_a($typeName, class: EventBehavior::class, allow_string: true) || is_subclass_of($typeName, class: EventBehavior::class)   => $effectiveEvent,    // EventBehavior (original event for @always)
                 $state instanceof $typeName                                                                                                  => $state,             // State
                 is_a($state->history, $typeName)                                                                                             => $state->history,    // EventCollection
-                $typeName === 'array'                                                                                                        => $actionArguments,   // Behavior Arguments
+                $typeName === 'array' && $actionArguments !== null                                                                           => $actionArguments,   // Behavior Arguments (deprecated colon syntax)
+                $configParams !== null && array_key_exists($parameter->getName(), $configParams)                                             => $configParams[$parameter->getName()], // Named config params
+                $parameter->isDefaultValueAvailable()                                                                                        => $parameter->getDefaultValue(),        // Default value from signature
                 default                                                                                                                      => null,
             };
+
+            // When configParams are active (tuple syntax), throw if a required non-framework param is unresolved
+            if ($value === null
+                && $configParams !== null
+                && !$parameter->isDefaultValueAvailable()
+                && !$parameter->allowsNull()
+                && $typeName !== null
+                && !is_a($typeName, ContextManager::class, true)
+                && !is_subclass_of($typeName, ContextManager::class)
+                && !is_a($typeName, EventBehavior::class, true)
+                && !is_subclass_of($typeName, EventBehavior::class)
+                && !($state instanceof $typeName)
+                && !is_a($state->history, $typeName)
+            ) {
+                $behaviorClass = $actionBehavior instanceof self
+                    ? $actionBehavior::class
+                    : 'Closure';
+
+                throw MissingBehaviorParameterException::build(
+                    behaviorClass: $behaviorClass,
+                    paramName: $parameter->getName(),
+                    paramType: $typeName,
+                );
+            }
 
             $invocableBehaviorParameters[] = $value;
         }
 
         return $invocableBehaviorParameters;
+    }
+
+    /**
+     * Resolve a typed MachineOutput or MachineFailure from the event, if type-hinted.
+     *
+     * Returns the typed instance when:
+     * - The parameter type-hints a MachineOutput subclass and event is ChildMachineDoneEvent with typed output
+     * - The parameter type-hints a MachineFailure subclass and event is ChildMachineFailEvent with typed failure
+     */
+    private static function resolveTypedContract(?string $typeName, ?EventBehavior $event): MachineOutput|MachineFailure|null
+    {
+        if ($typeName === null || !$event instanceof EventBehavior) {
+            return null;
+        }
+
+        // MachineOutput injection from ChildMachineDoneEvent
+        if (is_subclass_of($typeName, MachineOutput::class) && $event instanceof ChildMachineDoneEvent) {
+            $typed = $event->typedOutput();
+
+            return ($typed instanceof $typeName) ? $typed : null;
+        }
+
+        // MachineFailure injection from ChildMachineFailEvent
+        if (is_subclass_of($typeName, MachineFailure::class) && $event instanceof ChildMachineFailEvent) {
+            $typed = $event->typedFailure();
+
+            return ($typed instanceof $typeName) ? $typed : null;
+        }
+
+        return null;
     }
 
     /**

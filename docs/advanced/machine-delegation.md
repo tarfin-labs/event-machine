@@ -23,21 +23,21 @@ class OrderWorkflowMachine extends Machine
                 'initial' => 'validating',
                 'context' => [
                     'orderId'       => null,
-                    'paymentResult' => null,
+                    'paymentData' => null,
                 ],
                 'states' => [
                     'validating' => [
                         'machine' => ValidationMachine::class,
-                        'with'    => ['orderId'],
+                        'input'    => ['orderId'],
                         '@done'   => [
                             'target'  => 'processing_payment',
-                            'actions' => 'storeValidationResultAction',
+                            'actions' => 'storeValidationOutputAction',
                         ],
                         '@fail' => 'validation_failed',
                     ],
                     'processing_payment' => [
                         'machine' => PaymentMachine::class,
-                        'with'    => ['orderId'],
+                        'input'    => ['orderId'],
                         '@done'   => 'completed',
                         '@fail'   => 'payment_failed',
                     ],
@@ -57,8 +57,9 @@ class OrderWorkflowMachine extends Machine
 
 | Key | Type | Required | Description |
 |-----|------|----------|-------------|
-| `machine` | `string` (FQCN) | Yes | Child machine class. Must extend `Machine`. |
-| `with` | `array\|Closure` | No | Data to pass from parent context to child. |
+| `machine` | `string` (FQCN) | Yes | Child machine class. Must extend `Machine`. Throws `InvalidMachineClassException` if the class doesn't exist or doesn't extend `Machine`. |
+| `input` | `string\|array\|Closure` | No | Data to pass from parent context to child. Accepts MachineInput FQCN, array, or closure. (renamed from `with` in v9) |
+| `failure` | `string` (FQCN) | No | MachineFailure class for typed error data on `@fail`. |
 | `@done` | `string\|array` | No | Fires when child reaches a final state. Absence signals fire-and-forget. |
 | `@done.{state}` | `string\|array` | No | Fires when child reaches the specific final state `{state}`. Same format as `@done`. |
 | `@fail` | `string\|array` | No | Fires when child fails. Not valid without `@done` or `@done.{state}`. |
@@ -68,30 +69,94 @@ class OrderWorkflowMachine extends Machine
 | `on` | `array` | No | Additional events the parent can handle while child is running. |
 | `target` | `string` | No | Fire-and-forget + immediate transition. Requires `queue`. Mutually exclusive with `@done`. |
 
-## `with` — Context Transfer
+## `input` — Context Transfer
 
-The `with` key controls what data flows from parent context to child context. Three formats are supported:
+::: warning Renamed from `with` in v9
+The `with` key has been renamed to `input` to align with the typed contract system. `with` is still accepted as an alias but will be removed in a future release.
+:::
+
+The `input` key controls what data flows from parent context to child context. Four formats are supported:
 
 <!-- doctest-attr: ignore -->
 ```php
 // Format 1: Same-named keys
-'with' => ['orderId', 'totalAmount'],
+'input' => ['orderId', 'totalAmount'],
 // Child context receives: { orderId: ..., totalAmount: ... }
 
 // Format 2: Key mapping (child_key => parent_key)
-'with' => [
+'input' => [
     'id'     => 'orderId',        // child sees 'id', parent has 'orderId'
     'amount' => 'totalAmount',    // child sees 'amount', parent has 'totalAmount'
 ],
 
 // Format 3: Dynamic (closure)
-'with' => fn (ContextManager $ctx) => [
+'input' => fn (ContextManager $ctx) => [
     'orderId' => $ctx->get('orderId'),
     'amount'  => $ctx->get('totalAmount') * 100,
 ],
+
+// Format 4: MachineInput class (typed contract)
+'input' => PaymentInput::class,
+// Resolved from parent context, validated, merged into child context
 ```
 
-Without `with`, the child starts with its own default context. No parent data is transferred automatically.
+Without `input`, the child starts with its own default context. No parent data is transferred automatically.
+
+### MachineInput -- Typed Input Contract
+
+A `MachineInput` class defines a typed contract for what data the child expects:
+
+```php ignore
+use Tarfinlabs\EventMachine\Behavior\MachineInput;
+
+class PaymentInput extends MachineInput
+{
+    public function __construct(
+        public readonly string $orderId,
+        public readonly int $amount,
+    ) {}
+}
+```
+
+```php ignore
+'processing_payment' => [
+    'machine' => PaymentMachine::class,
+    'input'   => PaymentInput::class,
+    '@done'   => 'completed',
+    '@fail'   => 'payment_failed',
+],
+```
+
+The MachineInput is constructed from the parent context (matching constructor parameter names to context keys), validated, and its properties are merged into the child's initial context.
+
+## `failure` -- Typed Failure Contract
+
+The `failure` key declares a `MachineFailure` class that structures the error data passed to the parent's `@fail` handler:
+
+```php ignore
+use Tarfinlabs\EventMachine\Behavior\MachineFailure;
+
+class PaymentFailure extends MachineFailure
+{
+    public function __construct(
+        public readonly string $errorCode,
+        public readonly bool $retryable,
+        public readonly ?string $gatewayRef = null,
+    ) {}
+}
+```
+
+```php ignore
+'processing_payment' => [
+    'machine' => PaymentMachine::class,
+    'input'   => PaymentInput::class,
+    'failure' => PaymentFailure::class,
+    '@done'   => 'completed',
+    '@fail'   => 'payment_failed',
+],
+```
+
+The parent's `@fail` actions and guards receive the `MachineFailure` instance via `ChildMachineFailEvent->output()`.
 
 ## `@done` — Child Completion
 
@@ -105,7 +170,7 @@ When the child machine reaches a final state, the parent's `@done` transition fi
 // With actions
 '@done' => [
     'target'  => 'next_state',
-    'actions' => 'handleResultAction',
+    'actions' => 'handleOutputAction',
 ],
 
 // Multi-branch guarded fork
@@ -123,7 +188,7 @@ When a child machine has multiple final states with different meanings, use `@do
 ```php
 'verifying' => [
     'machine' => VerificationMachine::class,
-    'with'    => ['applicantId'],
+    'input'    => ['applicantId'],
 
     '@done.approved' => 'processing',
     '@done.rejected' => 'declined',
@@ -163,9 +228,9 @@ If a guard on `@done.approved` fails, resolution falls through to the `@done` ca
 When using `@done.{state}` without a `@done` catch-all, all child final states must be covered. Run `php artisan machine:validate` to verify — it throws if any child final state is uncovered.
 :::
 
-### Accessing Child Result Data
+### Accessing Child Output Data
 
-When `@done` fires, the event is a `ChildMachineDoneEvent` with typed accessors for `output()`, `result()`, `childMachineId()`, and `childMachineClass()`. When `@fail` fires, the event is a `ChildMachineFailEvent` with `errorMessage()`, `output()`, and identity accessors.
+When `@done` fires, the event is a `ChildMachineDoneEvent` with typed accessors for `output()`, `childMachineId()`, and `childMachineClass()`. When `@fail` fires, the event is a `ChildMachineFailEvent` with `errorMessage()`, `output()`, and identity accessors.
 
 See [Data Flow — `@done` Event](/advanced/delegation-data-flow#child-parent-the-done-event) and [Data Flow — `@fail` Event](/advanced/delegation-data-flow#child-parent-the-fail-event) for typed accessor examples.
 
@@ -209,7 +274,7 @@ Only meaningful in async mode. Fires when the child doesn't complete within the 
 
 ## Fire-and-Forget
 
-When you need to spawn a child machine without tracking its result, omit `@done`. The child runs independently — its completion or failure does not affect the parent.
+When you need to spawn a child machine without tracking its output, omit `@done`. The child runs independently — its completion or failure does not affect the parent.
 
 ### Stay in State (primary pattern)
 
@@ -219,7 +284,7 @@ The state spawns the child on entry and continues functioning normally with its 
 ```php
 'suspended' => [
     'machine' => AuditMachine::class,
-    'with'    => ['userId'],
+    'input'    => ['userId'],
     'queue'   => 'background',
     // No @done → fire-and-forget
     'on' => ['REACTIVATE' => 'active'],
@@ -236,7 +301,7 @@ Use `@always` to immediately transition after spawning the child:
 ```php
 'dispatching_audit' => [
     'machine' => AuditMachine::class,
-    'with'    => ['userId'],
+    'input'    => ['userId'],
     'queue'   => 'background',
     'on'      => ['@always' => 'suspended'],
 ],
@@ -250,7 +315,7 @@ Alternatively, use `target` for an explicit fire-and-forget transition (consiste
 ```php
 'dispatching_audit' => [
     'machine' => AuditMachine::class,
-    'with'    => ['userId'],
+    'input'    => ['userId'],
     'queue'   => 'background',
     'target'  => 'suspended',
 ],
@@ -260,7 +325,8 @@ Alternatively, use `target` for an explicit fire-and-forget transition (consiste
 
 - Fire-and-forget requires `queue` — the child must run asynchronously.
 - `@done` absence is the signal — no new keyword needed.
-- `@fail`, `@timeout`, `output`, and `forward` are not valid without `@done`.
+- `@fail`, `@timeout`, `output`, and `forward` are not valid without `@done`. Violating these constraints throws `InvalidStateConfigException`.
+- A state cannot have both `machine` and `type: 'parallel'` — `InvalidStateConfigException` is thrown.
 - The child still persists its own `MachineEvent` records (observability).
 - The child receives parent identity (`sendToParent()` still works).
 
@@ -286,7 +352,7 @@ By default, child machines run **synchronously** (inline). Add `queue` to run th
 
 **Sync vs Async:**
 - **Sync (default):** Child runs inline. Parent transitions to `@done` immediately after child completes. Simplest option.
-- **Async (queue):** Child runs on a queue worker. Parent stays in the delegating state until a `ChildMachineCompletionJob` arrives with the result.
+- **Async (queue):** Child runs on a queue worker. Parent stays in the delegating state until a `ChildMachineCompletionJob` arrives with the output.
 
 ## `forward` — Event Forwarding
 
@@ -323,7 +389,7 @@ This means an entry action can `raise()` an event that transitions the machine a
 'validating' => [
     'entry'   => 'checkCacheAction',      // May raise CACHE_HIT
     'machine' => ValidationMachine::class,
-    'with'    => ['orderId'],
+    'input'    => ['orderId'],
     '@done'   => 'processing',
     'on'      => [
         'CACHE_HIT' => 'processing',      // Bypasses delegation entirely
@@ -347,8 +413,8 @@ Use `Machine::fake()` to short-circuit child machines in tests:
 ```php
 use Tarfinlabs\EventMachine\Actor\Machine;
 
-// Fake a child machine to return a specific result
-PaymentMachine::fake(result: ['paymentId' => 'pay_123']);
+// Fake a child machine to return a specific output
+PaymentMachine::fake(output: ['paymentId' => 'pay_123']);
 
 // Run the parent machine — child is short-circuited
 $machine = OrderWorkflowMachine::create();
@@ -368,7 +434,7 @@ Machine::resetMachineFakes();
 ```
 
 `Machine::fake()` options:
-- `result: array` — The result the child "returns" via `@done`
+- `output: array` — The output the child "returns" via `@done`
 - `fail: true` — Child triggers `@fail` instead of `@done`
 - `error: string` — Error message for `@fail`
 - `finalState: string` — The child's final state key — determines which `@done.{state}` route fires on the parent

@@ -264,7 +264,7 @@ Run children inline for simple cases, or dispatch to a queue for external I/O an
 ```php
 'processing_payment' => [
     'machine' => PaymentMachine::class,
-    'with'    => ['orderId', 'totalAmount'],
+    'input'    => ['orderId', 'totalAmount'],
     'queue'   => 'payments',
     '@done'   => [
         'target'  => 'shipping',
@@ -281,7 +281,7 @@ Run children inline for simple cases, or dispatch to a queue for external I/O an
 <!-- doctest-attr: ignore -->
 ```php
 // Test without running the real child machine
-PaymentMachine::fake(result: ['paymentId' => 'pay_123']);
+PaymentMachine::fake(output: ['paymentId' => 'pay_123']);
 
 $machine = OrderWorkflowMachine::create();
 $machine->send(['type' => 'START']);
@@ -524,7 +524,7 @@ MachineDefinition::define(
         'APPROVE' => [
             'method'     => 'PATCH',
             'middleware'  => ['auth:admin'],
-            'result'     => 'approvalResult',
+            'output'     => 'approvalOutput',
         ],
         'CANCEL'  => [
             'action' => CancelEndpointAction::class,
