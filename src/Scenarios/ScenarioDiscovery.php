@@ -44,7 +44,7 @@ class ScenarioDiscovery
             }
 
             if ($eventType !== null) {
-                return $scenario->event() === $eventType;
+                return $scenario->eventType() === $eventType;
             }
 
             return true;
@@ -79,7 +79,7 @@ class ScenarioDiscovery
         $grouped = [];
 
         foreach ($scenarios as $scenario) {
-            $eventKey = $scenario->event();
+            $eventKey = $scenario->eventType();
 
             $grouped[$eventKey][] = [
                 'slug'        => $scenario->slug(),
