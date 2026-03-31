@@ -587,7 +587,7 @@ class MachineController extends Controller
             'slug'        => $scenario->slug(),
             'description' => $scenario->description(),
             'source'      => $scenario->source(),
-            'event'       => $scenario->event(),
+            'event'       => $scenario->eventType(),
             'target'      => $scenario->target(),
             'params'      => $scenario->resolvedParams(),
         ])->values()->all();
@@ -614,7 +614,7 @@ class MachineController extends Controller
             'slug'        => $scenario->slug(),
             'description' => $scenario->description(),
             'source'      => $scenario->source(),
-            'event'       => $scenario->event(),
+            'event'       => $scenario->eventType(),
             'target'      => $scenario->target(),
             'params'      => $scenario->resolvedParams(),
         ]]);
