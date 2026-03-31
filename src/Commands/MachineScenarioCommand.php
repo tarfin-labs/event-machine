@@ -121,22 +121,7 @@ class MachineScenarioCommand extends Command
             namespace: $scenarioNamespace,
         );
 
-        // Dry run
-        if ($this->option('dry-run')) {
-            $this->line($content);
-
-            return self::SUCCESS;
-        }
-
-        // Write file
-        if (!is_dir($scenarioDir)) {
-            mkdir($scenarioDir, 0755, true);
-        }
-
-        file_put_contents($scenarioFile, $content);
-        $this->info("Created: {$scenarioFile}");
-
-        // Deep target info
+        // Deep target info — shown for both --dry-run and normal mode
         if ($deepTarget !== null) {
             $this->line('');
             $this->warn("Deep target detected: {$target}");
@@ -160,7 +145,24 @@ class MachineScenarioCommand extends Command
                     $this->line('  - '.$cs->slug().' ('.$cs::class.')');
                 }
             }
+
+            $this->line('');
         }
+
+        // Dry run
+        if ($this->option('dry-run')) {
+            $this->line($content);
+
+            return self::SUCCESS;
+        }
+
+        // Write file
+        if (!is_dir($scenarioDir)) {
+            mkdir($scenarioDir, 0755, true);
+        }
+
+        file_put_contents($scenarioFile, $content);
+        $this->info("Created: {$scenarioFile}");
 
         return self::SUCCESS;
     }

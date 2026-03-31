@@ -763,8 +763,8 @@ class ScenarioPlayer
 
         // Entry actions
         foreach ($stateDefinition->entry ?? [] as $entryDef) {
-            $action = $entryDef['action'] ?? null;
-            if ($action !== null && is_subclass_of($action, InvokableBehavior::class)) {
+            $action = is_string($entryDef) ? $entryDef : ($entryDef['action'] ?? null);
+            if ($action !== null && is_string($action) && is_subclass_of($action, InvokableBehavior::class)) {
                 $behaviors[$action] = 'entry action';
             }
         }

@@ -59,7 +59,7 @@ class ScenarioScaffolder
             protected string \$source      = '{$source}';
             protected string \$event       = {$eventRef};
             protected string \$target      = '{$target}';
-            protected string \$description = ''; // TODO: describe this scenario
+            protected string \$description = 'TODO: describe this scenario';
 
             protected function plan(): array
             {

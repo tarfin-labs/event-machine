@@ -386,9 +386,15 @@ class ScenarioPathResolver
 
         $actions = [];
         foreach ($state->entry as $entryDef) {
-            $action = $entryDef['action'] ?? null;
-            if ($action !== null) {
-                $actions[] = $action;
+            if (is_string($entryDef)) {
+                // Plain string format: 'entry' => SomeAction::class
+                $actions[] = $entryDef;
+            } elseif (is_array($entryDef)) {
+                // Array format: 'entry' => [['action' => SomeAction::class, ...]]
+                $action = $entryDef['action'] ?? null;
+                if ($action !== null) {
+                    $actions[] = $action;
+                }
             }
         }
 

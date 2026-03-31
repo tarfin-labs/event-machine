@@ -252,14 +252,12 @@ test('resolveDeepTarget returns null for direct (non-deep) target', function ():
 
 test('entry actions populated in ScenarioPathStep', function (): void {
     $resolver = scenarioResolver();
-    // processing has entry: ProcessAction::class
-    // Note: getEntryActions() parses entry definitions with ['action' => '...'] format.
-    // Plain string entries (like ProcessAction::class) are stored as raw strings,
-    // so entryActions is populated only when entry uses array format.
+    // processing has entry: ProcessAction::class (plain string format)
     $path = $resolver->resolve('idle', MachineScenario::START, 'reviewing');
 
     $processingStep = collect($path->steps)->first(fn (ScenarioPathStep $s) => $s->stateKey === 'processing');
 
     expect($processingStep)->not->toBeNull()
-        ->and($processingStep->entryActions)->toBeArray();
+        ->and($processingStep->entryActions)->not->toBeEmpty()
+        ->and($processingStep->entryActions[0])->toContain('ProcessAction');
 });

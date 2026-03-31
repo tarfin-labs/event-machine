@@ -25,7 +25,18 @@ class ScenarioDiscovery
     {
         $scenarioClasses = self::discoverClasses($machineClass);
 
-        return collect($scenarioClasses)->map(fn (string $class): MachineScenario => new $class());
+        return collect($scenarioClasses)
+            ->map(function (string $class): ?MachineScenario {
+                try {
+                    return new $class();
+                } catch (\Throwable) {
+                    // Skip scenarios that fail to construct (e.g., missing/invalid properties).
+                    // These are caught by machine:scenario-validate command during validation.
+                    return null;
+                }
+            })
+            ->filter()
+            ->values();
     }
 
     /**
