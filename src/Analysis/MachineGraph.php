@@ -161,11 +161,26 @@ class MachineGraph
             return [];
         }
 
-        $outcomes    = [];
-        $transitions = $state->transitionDefinitions ?? [];
+        $outcomes = [];
 
-        foreach (array_keys($transitions) as $event) {
-            if (str_starts_with((string) $event, '@done') || $event === '@fail' || $event === '@timeout') {
+        // Check dedicated properties
+        if ($state->onDoneTransition instanceof TransitionDefinition) {
+            $outcomes[] = '@done';
+        }
+        foreach (array_keys($state->onDoneStateTransitions) as $doneState) {
+            $outcomes[] = "@done.{$doneState}";
+        }
+        if ($state->onFailTransition instanceof TransitionDefinition) {
+            $outcomes[] = '@fail';
+        }
+        if ($state->onTimeoutTransition instanceof TransitionDefinition) {
+            $outcomes[] = '@timeout';
+        }
+
+        // Also check transitionDefinitions (for 'on' key definitions)
+        foreach (array_keys($state->transitionDefinitions ?? []) as $event) {
+            if ((str_starts_with((string) $event, '@done') || $event === '@fail' || $event === '@timeout')
+                && !in_array($event, $outcomes, true)) {
                 $outcomes[] = $event;
             }
         }
