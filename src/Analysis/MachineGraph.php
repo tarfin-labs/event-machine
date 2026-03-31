@@ -86,6 +86,50 @@ class MachineGraph
     }
 
     /**
+     * Find a state by full or partial route using suffix matching.
+     *
+     * @throws \InvalidArgumentException If route is ambiguous or not found.
+     */
+    public function resolveState(string $route): StateDefinition
+    {
+        // 1. Try exact match in idMap
+        if (isset($this->definition->idMap[$route])) {
+            return $this->definition->idMap[$route];
+        }
+
+        // 2. Try with machine prefix
+        $prefixed = $this->definition->id.'.'.$route;
+        if (isset($this->definition->idMap[$prefixed])) {
+            return $this->definition->idMap[$prefixed];
+        }
+
+        // 3. Suffix matching — find all states ending with the given route
+        $matches = [];
+        $suffix  = '.'.$route;
+
+        foreach ($this->definition->idMap as $id => $state) {
+            if (str_ends_with((string) $id, $suffix) || $id === $route) {
+                $matches[] = $state;
+            }
+        }
+
+        if (count($matches) === 1) {
+            return $matches[0];
+        }
+
+        if (count($matches) > 1) {
+            $ids = array_map(fn (StateDefinition $s): string => $s->id, $matches);
+            throw new \InvalidArgumentException(
+                "Ambiguous state route '{$route}'. Matches: ".implode(', ', $ids)
+            );
+        }
+
+        throw new \InvalidArgumentException(
+            "State route '{$route}' not found in {$this->definition->id} definition."
+        );
+    }
+
+    /**
      * Get the underlying machine definition.
      */
     public function definition(): MachineDefinition
