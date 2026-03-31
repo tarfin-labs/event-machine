@@ -11,7 +11,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('machine_current_states', function (Blueprint $table) {
-            $table->string('scenario_class')->nullable()->after('machine_value');
+            $table->string('scenario_class')->nullable()->after('state_entered_at');
             $table->json('scenario_params')->nullable()->after('scenario_class');
         });
     }
