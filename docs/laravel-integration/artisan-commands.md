@@ -294,6 +294,117 @@ Clear machine discovery cache.
 php artisan machine:clear
 ```
 
+## machine:paths
+
+Enumerate all paths through a machine definition. Static analysis — no database needed.
+
+```bash
+# Console output
+php artisan machine:paths "App\Machines\OrderMachine"
+
+# JSON output for CI
+php artisan machine:paths "App\Machines\OrderMachine" --json
+
+# Increase path limit for large machines (default: 1000)
+php artisan machine:paths "App\Machines\LargeMachine" --max-paths=5000
+```
+
+### What It Shows
+
+- Machine stats: states, events, guards, actions, calculators, job actors, child machines, timers
+- Child machine and job actor names with async/sync mode and queue info
+- All terminal paths grouped by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END
+- Child machine/job class names on invoke state steps
+- Parallel state per-region paths with combination count
+- Guard and action details per path
+- Unhandled child outcome warnings (child final states without parent @done.{state} routes)
+
+### Example Output
+
+```
+OrderMachine — Path Analysis
+════════════════════════════
+
+  States: 4 (2 atomic, 2 final)
+  Events: 1
+  Guards: 0
+  Actions: 1
+  Job actors: 1
+    processing → PaymentJob (queue: default)
+  Child machines: 0
+  Timers: 0
+  Terminal paths: 2
+
+HAPPY PATHS (→ completed): 1 path
+──────────────────────────────────
+  #1  → idle
+      → [START] processing (PaymentJob)
+      → [@done] completed
+      Actions: capturePaymentAction
+
+FAIL PATHS (→ failed): 1 path
+──────────────────────────────
+  #2  → idle
+      → [START] processing (PaymentJob)
+      → [@fail] failed
+```
+
+Child machine and job class names appear in parentheses after the invoke state (e.g., `processing (PaymentJob)`). The stats section lists each delegation with its async/sync mode and queue name.
+
+If a child machine has final states that the parent doesn't handle via `@done.{state}` routing (and no catch-all `@done`), a warning is shown at the end:
+
+```
+⚠ UNHANDLED CHILD OUTCOMES:
+  processing → PaymentChildMachine
+    Child final states: approved, rejected, expired
+    Parent handles: @done.approved
+    Unhandled: rejected, expired
+```
+
+## machine:coverage
+
+Report path coverage for a machine definition. Reads coverage data produced by tests.
+
+```bash
+# Run tests first to generate coverage data
+composer test
+
+# Then report coverage
+php artisan machine:coverage "App\Machines\OrderMachine"
+
+# JSON output
+php artisan machine:coverage "App\Machines\OrderMachine" --json
+
+# Fail CI if below threshold
+php artisan machine:coverage "App\Machines\OrderMachine" --min=100
+
+# Custom coverage file location
+php artisan machine:coverage "App\Machines\OrderMachine" --from=path/to/coverage.json
+```
+
+### Coverage Matching
+
+The command compares enumerated paths (static analysis) against observed paths (test runtime) using state-sequence matching. Enable tracking in tests with `PathCoverageTracker::enable()` and record paths via `TestMachine::assertFinished()`.
+
+### Example Output
+
+```
+OrderMachine — Path Coverage
+════════════════════════════
+
+  Coverage: 1/2 paths (50.0%)
+
+  ✓ #1  idle→[START]→processing→[@done]→completed
+         Tested by: order_completes_successfully
+
+  ✗ #2  idle→[START]→processing→[@fail]→failed
+
+UNTESTED: 1 path
+  → idle
+  → [START] processing
+  → [@fail] failed
+```
+
 ## Scheduling Commands
 
 Add commands to your scheduler:

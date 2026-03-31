@@ -26,6 +26,7 @@ use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Definition\TimerDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
@@ -81,12 +82,16 @@ class TestMachine
 
         $machine = $machineClass::create();
 
+        // Disable persistence for in-memory testing (matches withContext/startingAt behavior)
+        $machine->definition->shouldPersist = false;
+
         foreach ($context as $key => $value) {
             $machine->state->context->set($key, $value);
         }
 
         $instance                 = new self($machine);
         $instance->fakedBehaviors = array_merge($instance->fakedBehaviors, $preInitFakes);
+        $instance->trackStateEntry();
 
         return $instance;
     }
@@ -448,9 +453,7 @@ class TestMachine
 
         $this->machine->send($event);
 
-        if ($this->machine->definition->shouldPersist === false) {
-            $this->trackStateEntry();
-        }
+        $this->trackStateEntry();
 
         return $this;
     }
@@ -483,6 +486,17 @@ class TestMachine
             "Expected state [{$expected}] but got {$actual}"
         );
 
+        // Complete path coverage tracking if the matched state is FINAL
+        if (PathCoverageTracker::isEnabled()) {
+            $currentType = $this->machine->state->currentStateDefinition?->type;
+
+            if ($currentType === StateDefinitionType::FINAL) {
+                PathCoverageTracker::completePath(
+                    $this->machine->definition->machineClass ?? $this->machine::class,
+                );
+            }
+        }
+
         return $this;
     }
 
@@ -504,6 +518,12 @@ class TestMachine
             $this->machine->state->currentStateDefinition?->type,
             'Expected a final state'
         );
+
+        if (PathCoverageTracker::isEnabled()) {
+            PathCoverageTracker::completePath(
+                $this->machine->definition->machineClass ?? $this->machine::class,
+            );
+        }
 
         return $this;
     }
@@ -1189,6 +1209,25 @@ class TestMachine
         if ($currentId !== $this->lastTrackedStateId) {
             $this->inMemoryStateEnteredAt = now();
             $this->lastTrackedStateId     = $currentId;
+
+            // Path coverage tracking
+            if (PathCoverageTracker::isEnabled()) {
+                // Use triggeringEvent (preserves original event through @always chains
+                // and internal event processing) or currentEventBehavior as fallback.
+                $trackingEvent = $this->machine->state->triggeringEvent?->type
+                    ?? $this->machine->state->currentEventBehavior?->type;
+
+                // Filter out internal events (they start with the machine ID prefix)
+                if ($trackingEvent !== null && str_contains($trackingEvent, '.state.')) {
+                    $trackingEvent = null;
+                }
+
+                PathCoverageTracker::recordTransition(
+                    machineClass: $this->machine->definition->machineClass ?? $this->machine::class,
+                    stateId: $currentId,
+                    eventType: $trackingEvent,
+                );
+            }
 
             // Keep: all fires for current state (any status)
             // Keep: historical fires for old states (fired/exhausted) — for assertions

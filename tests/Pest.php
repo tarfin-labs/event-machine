@@ -13,7 +13,7 @@ uses(
     RefreshDatabase::class,
     InteractsWithMachines::class,
 )->in(
-    'Actor', 'Architecture', 'Behavior', 'Commands', 'Definition',
+    'Actor', 'Analysis', 'Architecture', 'Behavior', 'Commands', 'Definition',
     'E2E', 'Examples', 'Features', 'Integration', 'Jobs',
     'Models', 'Query', 'Routing', 'Services', 'Support',
 );

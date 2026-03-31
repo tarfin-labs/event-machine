@@ -20,6 +20,7 @@ use Tarfinlabs\EventMachine\Jobs\ChildMachineJob;
 use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\MachineOutput;
+use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
@@ -29,6 +30,7 @@ use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineTimeoutJob;
 use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Routing\MachineEndpointAction;
+use Tarfinlabs\EventMachine\Analysis\PathEnumerationResult;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineDoneEvent;
 use Tarfinlabs\EventMachine\Behavior\ChildMachineFailEvent;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
@@ -2971,6 +2973,16 @@ class MachineDefinition
     // endregion
 
     // region Public Methods
+
+    /**
+     * Enumerate all paths through this machine definition.
+     *
+     * Convenience wrapper around PathEnumerator.
+     */
+    public function enumeratePaths(): PathEnumerationResult
+    {
+        return (new PathEnumerator($this))->enumerate();
+    }
 
     /**
      * Transition the state machine to a new state based on an event.
