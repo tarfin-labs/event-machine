@@ -117,8 +117,10 @@ class ScenarioPlayer
                         'payload' => $eventPayload,
                     ]);
                 } catch (MissingMachineContextException $e) {
+                    $contextHints = $this->buildRequiredContextHints($machine);
+
                     throw new MissingMachineContextException(
-                        message: $e->getMessage()."\n\nHint: add a context override in the plan() for the relevant state.",
+                        message: $e->getMessage()."\n\n".$contextHints,
                         code: $e->getCode(),
                         previous: $e,
                     );
@@ -740,6 +742,66 @@ class ScenarioPlayer
         }
 
         return [(string) $continue, []];
+    }
+
+    /**
+     * Build detailed required context hints from behaviors at the current state.
+     * Inspects $requiredContext static property on InvokableBehavior subclasses
+     * used in the current state's transitions and entry actions.
+     */
+    private function buildRequiredContextHints(Machine $machine): string
+    {
+        $state           = $machine->state;
+        $stateDefinition = $state->currentStateDefinition;
+
+        if ($stateDefinition === null) {
+            return 'Hint: add a context override in the plan() for the relevant state.';
+        }
+
+        $hints     = [];
+        $behaviors = [];
+
+        // Entry actions
+        foreach ($stateDefinition->entry ?? [] as $entryDef) {
+            $action = $entryDef['action'] ?? null;
+            if ($action !== null && is_subclass_of($action, InvokableBehavior::class)) {
+                $behaviors[$action] = 'entry action';
+            }
+        }
+
+        // Transition guards and actions
+        foreach ($stateDefinition->transitionDefinitions ?? [] as $transition) {
+            foreach ($transition->branches ?? [] as $branch) {
+                foreach ($branch->guards ?? [] as $guard) {
+                    if (is_string($guard) && is_subclass_of($guard, InvokableBehavior::class)) {
+                        $behaviors[$guard] = 'guard';
+                    }
+                }
+                foreach ($branch->actions ?? [] as $action) {
+                    if (is_string($action) && is_subclass_of($action, InvokableBehavior::class)) {
+                        $behaviors[$action] = 'action';
+                    }
+                }
+            }
+        }
+
+        // Check $requiredContext on each behavior
+        foreach ($behaviors as $behaviorClass => $type) {
+            /** @var class-string<InvokableBehavior> $behaviorClass */
+            if ($behaviorClass::$requiredContext !== []) {
+                $fields = [];
+                foreach ($behaviorClass::$requiredContext as $key => $typeHint) {
+                    $fields[] = is_string($key) ? "{$key} ({$typeHint})" : $typeHint;
+                }
+                $hints[] = '  → '.class_basename($behaviorClass)." ({$type}): ".implode(', ', $fields);
+            }
+        }
+
+        if ($hints === []) {
+            return 'Hint: add a context override in the plan() for the relevant state.';
+        }
+
+        return "Required context for behaviors at '{$stateDefinition->route}':\n".implode("\n", $hints)."\n\nHint: add overrides for these behaviors in your plan().";
     }
 
     /**
