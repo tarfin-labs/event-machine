@@ -126,11 +126,26 @@ abstract class MachineScenario
     }
 
     /**
-     * Get the resolved event.
+     * Get the raw event value (class FQCN or type string, as declared).
      */
     public function event(): string
     {
         return $this->event;
+    }
+
+    /**
+     * Get the resolved event type string.
+     * If $event is an EventBehavior class, resolves via getType().
+     */
+    public function eventType(): string
+    {
+        $event = $this->event;
+
+        if (class_exists($event) && method_exists($event, 'getType')) {
+            return $event::getType();
+        }
+
+        return $event;
     }
 
     /**
