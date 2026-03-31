@@ -62,6 +62,38 @@ class ScenarioScaffolder
     }
 
     /**
+     * Find child scenarios matching a deep target.
+     * Returns matching scenario class name or null.
+     */
+    public function discoverChildScenario(string $childMachineClass, string $childTarget): ?string
+    {
+        $childScenarios = ScenarioDiscovery::forMachine($childMachineClass);
+
+        $matching = $childScenarios->filter(
+            fn (MachineScenario $s): bool => $s->target() === $childTarget
+        );
+
+        if ($matching->count() === 1) {
+            return $matching->first()::class;
+        }
+
+        return null; // None found or multiple — caller handles
+    }
+
+    /**
+     * Find ALL child scenarios matching a deep target (for selection).
+     *
+     * @return list<MachineScenario>
+     */
+    public function discoverChildScenarios(string $childMachineClass, string $childTarget): array
+    {
+        return ScenarioDiscovery::forMachine($childMachineClass)
+            ->filter(fn (MachineScenario $s): bool => $s->target() === $childTarget)
+            ->values()
+            ->all();
+    }
+
+    /**
      * Generate plan() entries from classified path steps.
      */
     private function generatePlanEntries(ScenarioPath $path): string
