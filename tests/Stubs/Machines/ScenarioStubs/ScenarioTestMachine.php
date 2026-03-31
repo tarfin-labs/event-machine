@@ -7,11 +7,11 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Jobs\ProcessJob;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\RejectEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsValidGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Actions\ProcessAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\RejectEvent;
 
 /**
  * Minimal machine covering all 5 state classifications + child machine delegation.
@@ -68,10 +68,10 @@ class ScenarioTestMachine extends Machine
                         ],
                     ],
                     'processing' => [
-                        'job'   => ProcessJob::class,
-                        'entry' => ProcessAction::class,
-                        '@done' => 'reviewing',
-                        '@fail' => 'failed',
+                        'job'      => ProcessJob::class,
+                        'entry'    => ProcessAction::class,
+                        '@done'    => 'reviewing',
+                        '@fail'    => 'failed',
                         '@timeout' => [
                             'target'  => 'timed_out',
                             'timeout' => 5000,
@@ -86,21 +86,21 @@ class ScenarioTestMachine extends Machine
                         ],
                     ],
                     'delegating' => [
-                        'machine' => ScenarioTestChildMachine::class,
-                        '@done'   => 'delegation_complete',
+                        'machine'     => ScenarioTestChildMachine::class,
+                        '@done'       => 'delegation_complete',
                         '@done.error' => 'delegation_error',
-                        '@fail'   => 'delegation_failed',
+                        '@fail'       => 'delegation_failed',
                     ],
                     'parallel_check' => [
-                        'type'  => 'parallel',
-                        'on'    => [
+                        'type' => 'parallel',
+                        'on'   => [
                             'SKIP_CHECK' => 'skipped',
                         ],
                         '@done' => [
                             'target' => 'all_checked',
                             'guards' => IsValidGuard::class,
                         ],
-                        '@fail' => 'check_failed',
+                        '@fail'  => 'check_failed',
                         'states' => [
                             'region_a' => [
                                 'initial' => 'checking_a',
@@ -139,8 +139,8 @@ class ScenarioTestMachine extends Machine
                             'FINISH' => 'approved',
                         ],
                     ],
-                    'check_failed'        => ['type' => 'final'],
-                    'skipped'             => ['type' => 'final'],
+                    'check_failed' => ['type' => 'final'],
+                    'skipped'      => ['type' => 'final'],
                 ],
             ],
             behavior: [

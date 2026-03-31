@@ -26,7 +26,7 @@ class DelegationOutcomeScenario extends MachineScenario
                 IsEligibleGuard::class => true,
             ],
             'processing' => '@done',
-            'reviewing' => [
+            'reviewing'  => [
                 '@continue' => 'DELEGATE',
             ],
             'delegating' => '@done',

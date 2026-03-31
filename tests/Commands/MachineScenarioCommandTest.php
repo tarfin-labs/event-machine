@@ -8,26 +8,26 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachi
 
 test('auto-adds Scenario suffix when missing', function (): void {
     $this->artisan('machine:scenario', [
-        'name'    => 'AtApproved',
-        'machine' => ScenarioTestMachine::class,
-        'source'  => 'reviewing',
-        'event'   => 'APPROVE',
-        'target'  => 'approved',
+        'name'      => 'AtApproved',
+        'machine'   => ScenarioTestMachine::class,
+        'source'    => 'reviewing',
+        'event'     => 'APPROVE',
+        'target'    => 'approved',
         '--dry-run' => true,
     ])->assertSuccessful()
-      ->expectsOutputToContain('AtApprovedScenario');
+        ->expectsOutputToContain('AtApprovedScenario');
 });
 
 test('does not double-add suffix', function (): void {
     $this->artisan('machine:scenario', [
-        'name'    => 'AtApprovedScenario',
-        'machine' => ScenarioTestMachine::class,
-        'source'  => 'reviewing',
-        'event'   => 'APPROVE',
-        'target'  => 'approved',
+        'name'      => 'AtApprovedScenario',
+        'machine'   => ScenarioTestMachine::class,
+        'source'    => 'reviewing',
+        'event'     => 'APPROVE',
+        'target'    => 'approved',
         '--dry-run' => true,
     ])->assertSuccessful()
-      ->expectsOutputToContain('AtApprovedScenario');
+        ->expectsOutputToContain('AtApprovedScenario');
 });
 
 // ── Machine validation ───────────────────────────────────────────────────────
@@ -164,7 +164,7 @@ test('correct namespace derived from machine namespace + Scenarios', function ()
         'target'    => 'approved',
         '--dry-run' => true,
     ])->assertSuccessful()
-      ->expectsOutputToContain('Scenarios');
+        ->expectsOutputToContain('Scenarios');
 });
 
 test('file already exists — returns FAILURE with Use --force hint', function (): void {
@@ -202,7 +202,7 @@ test('--dry-run prints generated PHP to stdout, does NOT write file', function (
         'target'    => 'approved',
         '--dry-run' => true,
     ])->assertSuccessful()
-      ->expectsOutputToContain('class AtApprovedScenario');
+        ->expectsOutputToContain('class AtApprovedScenario');
 });
 
 test('--dry-run returns SUCCESS exit code', function (): void {
@@ -227,7 +227,7 @@ test('generated file has correct properties', function (): void {
         'target'    => 'approved',
         '--dry-run' => true,
     ])->assertSuccessful()
-      ->expectsOutputToContain('AtApprovedScenario');
+        ->expectsOutputToContain('AtApprovedScenario');
 });
 
 test('generated file has plan() with entries matching path classifications', function (): void {
@@ -239,7 +239,7 @@ test('generated file has plan() with entries matching path classifications', fun
         'target'    => 'approved',
         '--dry-run' => true,
     ])->assertSuccessful()
-      ->expectsOutputToContain('plan()');
+        ->expectsOutputToContain('plan()');
 });
 
 test('generated file imports all referenced classes', function (): void {
@@ -251,7 +251,7 @@ test('generated file imports all referenced classes', function (): void {
         'target'    => 'approved',
         '--dry-run' => true,
     ])->assertSuccessful()
-      ->expectsOutputToContain('use ');
+        ->expectsOutputToContain('use ');
 });
 
 // ── Deep target ──────────────────────────────────────────────────────────────

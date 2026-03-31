@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
-use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
 
 test('tearDown resets ScenarioPlayer overrides (boundClassKeys, inlineKeys, outcomes, isActive)', function (): void {
     // Simulate dirty state — register some overrides

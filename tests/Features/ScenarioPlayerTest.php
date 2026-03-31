@@ -9,32 +9,27 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
-use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
+use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Models\MachineCurrentState;
-use Tarfinlabs\EventMachine\Exceptions\ScenariosDisabledException;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioFailedException;
+use Tarfinlabs\EventMachine\Exceptions\ScenariosDisabledException;
+use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioConfigurationException;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioTargetMismatchException;
-use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\RejectEvent;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsValidGuard;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Actions\ProcessAction;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\HappyPathScenario;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinueLoopScenario;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\FailurePathScenario;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\TimeoutOutcomeScenario;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\OutcomeWithOutputScenario;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\DelegationOutcomeScenario;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\StateAwareOverrideScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\SimpleLinearMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Actions\ProcessAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\HappyPathScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\FailurePathScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinueLoopScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\StateAwareOverrideScenario;
 
 // ── Execute flow ─────────────────────────────────────────────────────────────
 
@@ -59,7 +54,7 @@ test('throws ScenarioConfigurationException when machine is faked', function ():
 test('invalid plan() state route throws ScenarioConfigurationException', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = SimpleLinearMachine::class;
         protected string $source      = 'a';
         protected string $event       = 'GO';
@@ -119,7 +114,7 @@ test('basic execute: send event → reach target state', function (): void {
     $m = Machine::withDefinition($def);
     $m->start();
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class; // Not actually used — player uses provided machine
         protected string $source      = 'idle';
         protected string $event       = 'GO';
@@ -143,9 +138,9 @@ test('target mismatch throws ScenarioTargetMismatchException', function (): void
         'initial' => 'idle',
         'context' => [],
         'states'  => [
-            'idle'  => ['on' => ['GO' => 'middle']],
+            'idle'   => ['on' => ['GO' => 'middle']],
             'middle' => ['on' => ['NEXT' => 'done']],
-            'done'  => ['type' => 'final'],
+            'done'   => ['type' => 'final'],
         ],
     ]);
     $def->shouldPersist = false;
@@ -153,7 +148,7 @@ test('target mismatch throws ScenarioTargetMismatchException', function (): void
     $m = Machine::withDefinition($def);
     $m->start();
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = 'GO';
@@ -178,7 +173,7 @@ test('@start creates machine internally and processes @always chain', function (
         ],
     ]);
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
@@ -241,10 +236,10 @@ test('single @continue step advances to next state', function (): void {
 
     $definition                = clone SimpleLinearMachine::definition();
     $definition->shouldPersist = false;
-    $m = Machine::withDefinition($definition);
+    $m                         = Machine::withDefinition($definition);
     $m->start();
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = SimpleLinearMachine::class;
         protected string $source      = 'a';
         protected string $event       = 'GO';
@@ -269,10 +264,10 @@ test('multiple chained @continue steps reach target', function (): void {
 
     $definition                = clone SimpleLinearMachine::definition();
     $definition->shouldPersist = false;
-    $m = Machine::withDefinition($definition);
+    $m                         = Machine::withDefinition($definition);
     $m->start();
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = SimpleLinearMachine::class;
         protected string $source      = 'a';
         protected string $event       = 'GO';
@@ -298,11 +293,11 @@ test('@continue with payload [EventClass, payload => [...]]', function (): void 
 
     $definition                = clone SimpleLinearMachine::definition();
     $definition->shouldPersist = false;
-    $m = Machine::withDefinition($definition);
+    $m                         = Machine::withDefinition($definition);
     $m->start();
 
     // SimpleLinearMachine: a → GO → b → NEXT → c → DONE → d
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = SimpleLinearMachine::class;
         protected string $source      = 'a';
         protected string $event       = 'GO';
@@ -327,10 +322,10 @@ test('@continue string-only format EventClass::class', function (): void {
 
     $definition                = clone SimpleLinearMachine::definition();
     $definition->shouldPersist = false;
-    $m = Machine::withDefinition($definition);
+    $m                         = Machine::withDefinition($definition);
     $m->start();
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = SimpleLinearMachine::class;
         protected string $source      = 'a';
         protected string $event       = 'GO';
@@ -355,10 +350,10 @@ test('@continue event failure throws ScenarioFailedException', function (): void
 
     $definition                = clone SimpleLinearMachine::definition();
     $definition->shouldPersist = false;
-    $m = Machine::withDefinition($definition);
+    $m                         = Machine::withDefinition($definition);
     $m->start();
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = SimpleLinearMachine::class;
         protected string $source      = 'a';
         protected string $event       = 'GO';
@@ -389,17 +384,17 @@ test('@continue respects max_transition_depth (no infinite loop)', function (): 
         'initial' => 'a',
         'context' => [],
         'states'  => [
-            'a' => ['on' => ['GO'   => 'b']],
+            'a' => ['on' => ['GO' => 'b']],
             'b' => ['on' => ['NEXT' => 'b']], // loops back to b
             'c' => ['type' => 'final'],
         ],
     ]);
     $def->shouldPersist = false;
-    $m = Machine::withDefinition($def);
+    $m                  = Machine::withDefinition($def);
     $m->start();
 
     // Use empty plan (no plan keys to validate against machine class)
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = SimpleLinearMachine::class;
         protected string $source      = 'a';
         protected string $event       = 'GO';
@@ -431,7 +426,7 @@ test('@continue respects max_transition_depth (no infinite loop)', function (): 
 test('guard override (bool true) — guard passes', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
@@ -450,7 +445,7 @@ test('guard override (bool true) — guard passes', function (): void {
     ScenarioPlayer::cleanupOverrides();
 
     // Now register with override
-    $scenario2 = new class extends MachineScenario {
+    $scenario2 = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
@@ -477,7 +472,7 @@ test('guard override (bool true) — guard passes', function (): void {
 test('guard override (bool false) — guard blocks', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
@@ -502,7 +497,7 @@ test('guard override (bool false) — guard blocks', function (): void {
 test('action override (array) — writes key-value to context', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
@@ -534,7 +529,7 @@ test('output override (array) — returns fixed output', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
     // Create a test OutputBehavior subclass
-    $outputClass = new class extends OutputBehavior {
+    $outputClass = new class() extends OutputBehavior {
         public function __invoke(): array
         {
             return ['original' => true];
@@ -544,7 +539,6 @@ test('output override (array) — returns fixed output', function (): void {
 
     $scenario = new class($className) extends MachineScenario {
         private string $outputClass;
-
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
@@ -574,7 +568,7 @@ test('output override (array) — returns fixed output', function (): void {
 test('closure override — delegates to closure', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
@@ -601,7 +595,7 @@ test('closure override — delegates to closure', function (): void {
 test('class replacement override — resolves replacement via container', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
@@ -629,7 +623,7 @@ test('class replacement override — resolves replacement via container', functi
 test('inline guard override (bool) via InlineBehaviorFake', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
@@ -654,7 +648,7 @@ test('inline guard override (bool) via InlineBehaviorFake', function (): void {
 test('inline action override (array) writes to context', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
@@ -679,7 +673,7 @@ test('inline closure override', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
     $called   = false;
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
@@ -719,7 +713,7 @@ test('same guard in two plan states with different bools — last-wins policy ap
 test('same guard in two plan states with identical values — no conflict, single bind', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
@@ -748,7 +742,7 @@ test('same guard in two plan states with identical values — no conflict, singl
 test('cleanup unbinds all class overrides from container after execute', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
@@ -773,7 +767,7 @@ test('cleanup unbinds all class overrides from container after execute', functio
 test('cleanup resets all inline overrides after execute', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'idle';
         protected string $event       = '@start';
@@ -925,17 +919,17 @@ test('validateTarget exact match on state route', function (): void {
     config()->set('machine.scenarios.enabled', true);
 
     $def = MachineDefinition::define(config: [
-        'id' => 'target_exact', 'initial' => 'a', 'context' => [],
+        'id'     => 'target_exact', 'initial' => 'a', 'context' => [],
         'states' => [
             'a' => ['on' => ['GO' => 'b']],
             'b' => ['type' => 'final'],
         ],
     ]);
     $def->shouldPersist = false;
-    $m = Machine::withDefinition($def);
+    $m                  = Machine::withDefinition($def);
     $m->start();
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'a';
         protected string $event       = 'GO';
@@ -953,17 +947,17 @@ test('validateTarget suffix match (plan key omits machine prefix)', function ():
 
     // The target 'b' matches 'target_suffix.b' via suffix matching in validateTarget
     $def = MachineDefinition::define(config: [
-        'id' => 'target_suffix', 'initial' => 'a', 'context' => [],
+        'id'     => 'target_suffix', 'initial' => 'a', 'context' => [],
         'states' => [
             'a' => ['on' => ['GO' => 'b']],
             'b' => ['type' => 'final'],
         ],
     ]);
     $def->shouldPersist = false;
-    $m = Machine::withDefinition($def);
+    $m                  = Machine::withDefinition($def);
     $m->start();
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'a';
         protected string $event       = 'GO';
@@ -1035,17 +1029,17 @@ test('persistScenario skipped when shouldPersist=false — no DB write', functio
     $countBefore = MachineCurrentState::count();
 
     $def = MachineDefinition::define(config: [
-        'id' => 'no_persist', 'initial' => 'a', 'context' => [],
+        'id'     => 'no_persist', 'initial' => 'a', 'context' => [],
         'states' => [
             'a' => ['on' => ['GO' => 'b']],
             'b' => ['type' => 'final'],
         ],
     ]);
     $def->shouldPersist = false;
-    $m = Machine::withDefinition($def);
+    $m                  = Machine::withDefinition($def);
     $m->start();
 
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class;
         protected string $source      = 'a';
         protected string $event       = 'GO';

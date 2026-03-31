@@ -26,7 +26,7 @@ class ChildScenarioRefScenario extends MachineScenario
                 IsEligibleGuard::class => true,
             ],
             'processing' => '@done',
-            'reviewing' => [
+            'reviewing'  => [
                 '@continue' => 'DELEGATE',
             ],
             'delegating' => StartScenario::class,

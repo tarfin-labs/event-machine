@@ -4,15 +4,11 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioConfigurationException;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\HappyPathScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinueLoopScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ParameterizedScenario;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\InvalidScenario;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\StartScenario;
 
 // ── 1. Valid scenario — no exception ─────────────────────────────────────────
 
@@ -29,7 +25,7 @@ test('valid scenario with all properties set — no exception thrown', function 
 
 test('missing $machine throws ScenarioConfigurationException', function (): void {
     expect(function (): void {
-        new class extends MachineScenario {
+        new class() extends MachineScenario {
             protected string $source      = 'idle';
             protected string $event       = '@start';
             protected string $target      = 'done';
@@ -39,12 +35,21 @@ test('missing $machine throws ScenarioConfigurationException', function (): void
 });
 
 test('missing $target throws ScenarioConfigurationException', function (): void {
-    expect(fn () => new InvalidScenario())->toThrow(ScenarioConfigurationException::class);
+    expect(function (): void {
+        new class() extends MachineScenario {
+            protected string $machine = ScenarioTestMachine::class;
+            protected string $source  = 'idle';
+            protected string $event   = '@start';
+
+            // $target intentionally missing
+            protected string $description = 'Missing target';
+        };
+    })->toThrow(ScenarioConfigurationException::class);
 });
 
 test('empty string property throws ScenarioConfigurationException', function (): void {
     expect(function (): void {
-        new class extends MachineScenario {
+        new class() extends MachineScenario {
             protected string $machine     = 'SomeMachine';
             protected string $source      = '';
             protected string $event       = '@start';

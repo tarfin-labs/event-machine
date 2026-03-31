@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios;
 
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
 
 /**
  * Linear happy path: idle → routing → processing(@done) → reviewing → approved.
@@ -27,7 +27,7 @@ class HappyPathScenario extends MachineScenario
                 IsEligibleGuard::class => true,
             ],
             'processing' => '@done',
-            'reviewing' => [
+            'reviewing'  => [
                 '@continue' => ApproveEvent::class,
             ],
         ];

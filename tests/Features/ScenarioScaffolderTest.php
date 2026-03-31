@@ -4,17 +4,13 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Analysis\MachineGraph;
 use Tarfinlabs\EventMachine\Analysis\ScenarioPath;
-use Tarfinlabs\EventMachine\Analysis\ScenarioPathStep;
-use Tarfinlabs\EventMachine\Analysis\StateClassification;
-use Tarfinlabs\EventMachine\Analysis\ScenarioPathResolver;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
-use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioScaffolder;
+use Tarfinlabs\EventMachine\Analysis\ScenarioPathResolver;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\SubmitEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\SubmitEvent;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
 
 function scaffoldPath(string $source, string $event, string $target): ScenarioPath
 {
@@ -40,8 +36,8 @@ test('scaffold() generates valid PHP with namespace, imports, class', function (
 
     expect($output)->toContain('namespace App\\Machines\\Scenarios')
         ->and($output)->toContain('class AtApprovedScenario extends MachineScenario')
-        ->and($output)->toContain("protected string \$source")
-        ->and($output)->toContain("protected string \$target")
+        ->and($output)->toContain('protected string $source')
+        ->and($output)->toContain('protected string $target')
         ->and($output)->toContain('declare(strict_types=1)');
 });
 

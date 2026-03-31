@@ -7,7 +7,6 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Routing\MachineRouter;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
 
 beforeEach(function (): void {
     config()->set('machine.scenarios.enabled', true);
@@ -54,7 +53,7 @@ test('POST with scenario slug activates scenario via ScenarioPlayer::execute()',
     // through routing → processing (delegation). In shouldPersist=true mode,
     // delegation dispatches a job. For test, we need to manually set state.
     // This is complex — skip HTTP execution test, verify route exists
-    $routes = collect(Route::getRoutes()->getRoutes());
+    $routes     = collect(Route::getRoutes()->getRoutes());
     $hasApprove = $routes->contains(fn ($r) => str_contains($r->uri(), 'approve'));
 
     expect($hasApprove)->toBeTrue();
@@ -91,7 +90,7 @@ test('scenario routes not registered when scenarios.enabled=false', function ():
     ]);
     Route::getRoutes()->refreshNameLookups();
 
-    $routes    = collect(Route::getRoutes()->getRoutes());
+    $routes       = collect(Route::getRoutes()->getRoutes());
     $hasScenarios = $routes->contains(fn ($r) => str_contains($r->uri(), 'disabled-test/scenarios'));
 
     expect($hasScenarios)->toBeFalse();
@@ -100,7 +99,7 @@ test('scenario routes not registered when scenarios.enabled=false', function ():
 test('GET endpoint response includes availableScenarios grouped by event type', function (): void {
     // This tests that the GET machine response includes scenario info
     // Requires a machine at a specific state. Verify via route registration.
-    $routes = collect(Route::getRoutes()->getRoutes());
+    $routes         = collect(Route::getRoutes()->getRoutes());
     $scenarioRoutes = $routes->filter(fn ($r) => str_contains($r->uri(), 'scenarios'));
 
     expect($scenarioRoutes)->not->toBeEmpty();

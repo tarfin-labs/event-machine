@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios;
 
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
 
 /**
@@ -24,7 +24,7 @@ class ParameterizedScenario extends MachineScenario
     {
         return [
             'amount' => ['required', 'integer', 'min:1'],
-            'note' => [
+            'note'   => [
                 'type'  => 'string',
                 'rules' => ['nullable', 'string', 'max:255'],
                 'label' => 'Optional note',
@@ -39,7 +39,7 @@ class ParameterizedScenario extends MachineScenario
                 IsEligibleGuard::class => true,
             ],
             'processing' => '@done',
-            'reviewing' => [
+            'reviewing'  => [
                 '@continue' => ApproveEvent::class,
             ],
         ];

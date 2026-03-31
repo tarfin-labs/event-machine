@@ -24,7 +24,7 @@ test('mix of valid/invalid — correct pass/fail counts', function (): void {
     $this->artisan('machine:scenario-validate', [
         'machine' => ScenarioTestMachine::class,
     ])->expectsOutputToContain('passed')
-      ->expectsOutputToContain('failed');
+        ->expectsOutputToContain('failed');
 });
 
 test('returns SUCCESS (exit 0) when all pass', function (): void {
@@ -85,7 +85,7 @@ test('--scenario=slug filters to single scenario by slug', function (): void {
         'machine'    => ScenarioTestMachine::class,
         '--scenario' => 'happy-path-scenario',
     ])->assertSuccessful()
-      ->expectsOutputToContain('happy-path-scenario');
+        ->expectsOutputToContain('happy-path-scenario');
 });
 
 test('--scenario=ClassName filters by class basename', function (): void {

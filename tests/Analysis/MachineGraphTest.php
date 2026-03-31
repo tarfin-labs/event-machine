@@ -6,9 +6,7 @@ use Tarfinlabs\EventMachine\Analysis\MachineGraph;
 use Tarfinlabs\EventMachine\Analysis\StateClassification;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsValidGuard;
 
 // ── classifyState ────────────────────────────────────────────────────────────
 
@@ -57,8 +55,8 @@ test('classifyState returns INTERACTIVE for plain state with events', function (
 // ── transitionsFrom ──────────────────────────────────────────────────────────
 
 test('transitionsFrom includes parent chain transitions', function (): void {
-    $graph      = new MachineGraph(ScenarioTestMachine::definition());
-    $state      = $graph->resolveState('reviewing');
+    $graph       = new MachineGraph(ScenarioTestMachine::definition());
+    $state       = $graph->resolveState('reviewing');
     $transitions = $graph->transitionsFrom($state);
 
     // reviewing has own events: APPROVE, REJECT, START_PARALLEL, DELEGATE
@@ -72,8 +70,8 @@ test('transitionsFrom child overrides parent for same event key', function (): v
     // parallel_check has SKIP_CHECK on its own level
     // Region states also have their own transitions, no overlap to test directly.
     // The mechanism is: child transitions are added first, parent added only if key not seen.
-    $graph      = new MachineGraph(ScenarioTestMachine::definition());
-    $state      = $graph->resolveState('parallel_check');
+    $graph       = new MachineGraph(ScenarioTestMachine::definition());
+    $state       = $graph->resolveState('parallel_check');
     $transitions = $graph->transitionsFrom($state);
 
     expect($transitions)->toHaveKey('SKIP_CHECK');
@@ -186,8 +184,8 @@ test('availableEventsFrom excludes @always, includes named events', function ():
 });
 
 test('alwaysBranchGuards returns guard class names per @always branch', function (): void {
-    $graph   = new MachineGraph(ScenarioTestMachine::definition());
-    $state   = $graph->resolveState('routing');
+    $graph    = new MachineGraph(ScenarioTestMachine::definition());
+    $state    = $graph->resolveState('routing');
     $branches = $graph->alwaysBranchGuards($state);
 
     // routing has 2 @always branches: [IsEligibleGuard] → processing, [] → blocked

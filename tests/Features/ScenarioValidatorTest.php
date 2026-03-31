@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioValidator;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\StartScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\HappyPathScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinueLoopScenario;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\StartScenario;
 
 function makeScenario(array $overrides = []): MachineScenario
 {
@@ -171,7 +171,7 @@ test('child scenario $machine doesn\'t match delegation target', function (): vo
     // delegating delegates to ScenarioTestChildMachine
     // StartScenario targets ScenarioTestChildMachine — correct match
     // Let's create a scenario that targets a different machine
-    $wrongScenario = new class extends MachineScenario {
+    $wrongScenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestMachine::class; // Wrong! Should be child machine
         protected string $source      = 'idle';
         protected string $event       = MachineScenario::START;
@@ -211,7 +211,7 @@ test('no path from source to target returns error', function (): void {
 });
 
 test('@continue event class doesn\'t exist (FQCN)', function (): void {
-    $scenario  = makeScenario([
+    $scenario = makeScenario([
         'plan' => ['reviewing' => ['@continue' => 'NonExistent\\Event\\Class']],
     ]);
     $validator = new ScenarioValidator($scenario);
@@ -222,7 +222,7 @@ test('@continue event class doesn\'t exist (FQCN)', function (): void {
 });
 
 test('@continue event not available from its state', function (): void {
-    $scenario  = makeScenario([
+    $scenario = makeScenario([
         'plan' => ['reviewing' => ['@continue' => 'NONEXISTENT_EVENT']],
     ]);
     $validator = new ScenarioValidator($scenario);
@@ -234,7 +234,7 @@ test('@continue event not available from its state', function (): void {
 
 test('@continue direction — event doesn\'t lead toward target', function (): void {
     // REJECT from reviewing leads to 'rejected', not 'approved'
-    $scenario  = makeScenario([
+    $scenario = makeScenario([
         'plan' => ['reviewing' => ['@continue' => 'REJECT']],
     ]);
     $validator = new ScenarioValidator($scenario);

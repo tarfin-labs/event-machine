@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios;
 
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsValidGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
 
 /**
  * @start scenario for ScenarioTestChildMachine.
@@ -24,8 +24,8 @@ class StartScenario extends MachineScenario
     {
         return [
             'verifying' => [
-                'outcome'            => '@done',
-                IsValidGuard::class  => true,
+                'outcome'           => '@done',
+                IsValidGuard::class => true,
             ],
         ];
     }

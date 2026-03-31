@@ -9,7 +9,7 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 /**
  * Simple linear machine for scenario @continue tests.
- * a → GO → b → NEXT → c → DONE → d (final)
+ * a → GO → b → NEXT → c → DONE → d (final).
  */
 class SimpleLinearMachine extends Machine
 {

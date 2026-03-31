@@ -7,7 +7,6 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\RejectEvent;
 
 /**
  * Failure path: idle → routing → processing(@fail) → failed.

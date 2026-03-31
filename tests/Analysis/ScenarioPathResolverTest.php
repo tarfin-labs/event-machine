@@ -5,15 +5,15 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Analysis\MachineGraph;
 use Tarfinlabs\EventMachine\Analysis\ScenarioPath;
 use Tarfinlabs\EventMachine\Analysis\ScenarioPathStep;
+use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Analysis\StateClassification;
 use Tarfinlabs\EventMachine\Analysis\ScenarioPathResolver;
-use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Exceptions\NoScenarioPathFoundException;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Jobs\ProcessJob;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
 
 function scenarioResolver(string $machineClass = ScenarioTestMachine::class): ScenarioPathResolver
 {
@@ -77,7 +77,7 @@ test('path through job actor @done', function (): void {
     $paths = $resolver->resolveAll('idle', MachineScenario::START, 'reviewing');
 
     expect($paths)->not->toBeEmpty();
-    $steps = $paths[0]->steps;
+    $steps          = $paths[0]->steps;
     $processingStep = collect($steps)->first(fn (ScenarioPathStep $s) => $s->stateKey === 'processing');
 
     expect($processingStep)->not->toBeNull()
@@ -103,7 +103,7 @@ test('path through job actor @fail', function (): void {
     $paths = $resolver->resolveAll('idle', MachineScenario::START, 'failed');
 
     expect($paths)->not->toBeEmpty();
-    $steps = $paths[0]->steps;
+    $steps    = $paths[0]->steps;
     $failStep = collect($steps)->last();
 
     expect($failStep->stateKey)->toBe('failed');
@@ -134,7 +134,7 @@ test('path through child machine delegation @done', function (): void {
 test('path through parallel @done', function (): void {
     $resolver = scenarioResolver();
     // reviewing → START_PARALLEL → parallel_check(@done) → all_checked
-    $path = $resolver->resolve('reviewing', 'START_PARALLEL', 'all_checked');
+    $path         = $resolver->resolve('reviewing', 'START_PARALLEL', 'all_checked');
     $parallelStep = collect($path->steps)->first(fn (ScenarioPathStep $s) => $s->stateKey === 'parallel_check');
 
     expect($parallelStep)->not->toBeNull()

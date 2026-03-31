@@ -5,10 +5,11 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
-use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsValidGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\StartScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
 
 beforeEach(function (): void {
     config()->set('machine.scenarios.enabled', true);
@@ -19,7 +20,7 @@ test('child reaches final state → returns State', function (): void {
     // ScenarioTestChildMachine: idle → @always → verifying (delegation, job skipped)
     // So child doesn't reach final state — returns null.
     // To test reaching final, use a child machine without delegation.
-    $def = \Tarfinlabs\EventMachine\Definition\MachineDefinition::define(config: [
+    $def = MachineDefinition::define(config: [
         'id'      => 'simple_child',
         'initial' => 'idle',
         'context' => [],
@@ -30,7 +31,7 @@ test('child reaches final state → returns State', function (): void {
     ]);
 
     // Create a scenario that targets this simple machine
-    $scenarioClass = new class extends MachineScenario {
+    $scenarioClass = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestChildMachine::class;
         protected string $source      = 'idle';
         protected string $event       = MachineScenario::START;
@@ -66,7 +67,7 @@ test('child pauses at interactive state → returns null', function (): void {
 
     // Actually, for a proper test we need a child machine with an interactive state.
     // Let's create a simple child scenario that targets a non-final state.
-    $scenario = new class extends MachineScenario {
+    $scenario = new class() extends MachineScenario {
         protected string $machine     = ScenarioTestChildMachine::class;
         protected string $source      = 'idle';
         protected string $event       = MachineScenario::START;
@@ -98,14 +99,14 @@ test('child pauses at interactive state → returns null', function (): void {
 test('child machine created with shouldPersist=false', function (): void {
     // executeChildScenario creates child with shouldPersist=false
     // We verify this by checking that no MachineCurrentState is created
-    $countBefore = \Tarfinlabs\EventMachine\Models\MachineCurrentState::count();
+    $countBefore = MachineCurrentState::count();
 
     ScenarioPlayer::executeChildScenario(
         childScenarioClass: StartScenario::class,
         childMachineClass: ScenarioTestChildMachine::class,
     );
 
-    expect(\Tarfinlabs\EventMachine\Models\MachineCurrentState::count())->toBe($countBefore);
+    expect(MachineCurrentState::count())->toBe($countBefore);
 });
 
 test('child scenario overrides don\'t leak to parent outcomes', function (): void {

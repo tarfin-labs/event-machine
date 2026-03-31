@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\SimpleLinearMachine;
 
 beforeEach(function (): void {
     ScenarioDiscovery::resetCache();
@@ -23,7 +22,7 @@ test('forMachine discovers scenarios from Scenarios/ directory', function (): vo
 
 test('forMachine returns empty when no Scenarios/ directory', function (): void {
     // AbcMachine lives in tests/Stubs/Machines/ which has no Scenarios/ subdirectory
-    $scenarios = ScenarioDiscovery::forMachine(\Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine::class);
+    $scenarios = ScenarioDiscovery::forMachine(AbcMachine::class);
 
     expect($scenarios)->toBeEmpty();
 });
@@ -64,7 +63,7 @@ test('resetCache clears cache — next call rediscovers', function (): void {
 
 test('cache is keyed by machineClass — different machines don\'t share cache', function (): void {
     $main = ScenarioDiscovery::forMachine(ScenarioTestMachine::class);
-    $abc  = ScenarioDiscovery::forMachine(\Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine::class);
+    $abc  = ScenarioDiscovery::forMachine(AbcMachine::class);
 
     // ScenarioTestMachine has scenarios, AbcMachine has none — different counts
     expect($main->count())->toBeGreaterThan(0)
