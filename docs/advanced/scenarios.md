@@ -162,6 +162,43 @@ public function machine(): string
 
 The base class checks: method first, property fallback.
 
+### `@start` — Transient Initial States
+
+Child machines often have transient initial states (`idle → @always → ...`). There's no external event to send — the machine auto-starts. Use `MachineScenario::START` as the event:
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
+
+class AtReportSavedFromStartScenario extends MachineScenario
+{
+    protected string $machine = FindeksMachine::class;
+    protected string $source  = 'idle';                   // Initial state
+    protected string $event   = MachineScenario::START;   // Special: no event sent
+    protected string $target  = 'report_saved';
+
+    protected function plan(): array
+    {
+        return [
+            'checking_existing_report' => [
+                HasExistingReportGuard::class => false,
+            ],
+            'querying_phones' => '@done',
+            // ...
+        ];
+    }
+}
+```
+
+When `$event` is `@start`, ScenarioPlayer creates a fresh machine and processes the `@always` chain with overrides active. No `$machine` parameter needed:
+
+<!-- doctest-attr: ignore -->
+```php
+$scenario = new AtReportSavedFromStartScenario();
+$player   = new ScenarioPlayer($scenario);
+$state    = $player->execute(); // Creates machine internally
+```
+
 ## Writing plan()
 
 Every `plan()` key is a **full state route**. The **value type** determines what happens at that state:
@@ -893,6 +930,8 @@ Scenario overrides live in the Laravel container — process-scoped. When async 
 | **Transient as target** | Invalid — `$target` must be a settleable state |
 | **Path coverage** | Scenario-driven paths recorded normally by `PathCoverageTracker` |
 | **Fire-and-forget** | Dispatches suppressed during scenario mode |
+| **Parallel as target** | Target `'verification'` matches child routes like `verification.findeks.completed` — segment containment check |
+| **`@start` event** | Creates fresh machine and processes `@always` chain — for transient initial states |
 
 ## Error Handling
 
