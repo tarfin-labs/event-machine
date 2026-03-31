@@ -599,6 +599,16 @@ The trait automatically enables tracking, cleans stale data from previous runs, 
 
 Each machine is analyzed independently (compositional verification). Run `machine:paths` on child machines separately to see their internal paths.
 
+#### Large Machines
+
+Machines with mutual state cycles (e.g., approved ↔ rejected) can generate thousands of valid paths. Use `--max-paths` to control enumeration:
+
+```bash
+php artisan machine:paths "App\Machines\LargeMachine" --max-paths=5000
+```
+
+Default limit is 1000. The command warns when the limit is reached.
+
 #### Path Types
 
 Enumerated paths are classified by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END.
