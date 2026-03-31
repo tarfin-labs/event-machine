@@ -577,6 +577,16 @@ Key features: leaf/exact/parent/wildcard state matching, `active()`/`notInFinalS
 
 See [Querying Machines](https://eventmachine.dev/laravel-integration/persistence#querying-machines) for full documentation.
 
+### Bug Fixes in 9.0
+
+These production bugs were discovered and fixed during QA testing with real Horizon:
+
+- **`SendToMachineJob` event retry** — `NoTransitionDefinitionFoundException` previously logged a warning and silently dropped the event. Now uses `release(2)` to retry, with `$tries=25` and `$maxExceptions=3` to handle lock contention. Events are no longer lost when the target machine hasn't yet reached the correct state.
+- **`MachineOutput` serialization** — `resolveChildOutput()` can return a `MachineOutput` instance, but `ChildMachineCompletionJob` expects `?array`. Fixed in `ChildMachineJob`, `MachineController`, `MachineDefinition::tryForwardEventToChild()`, and `ChildMachineCompletionJob::propagateChainCompletion()`.
+- **Deep delegation failure propagation** — `ChildMachineCompletionJob::propagateChainCompletion()` always passed `success: true` to the grandparent, even when the middle machine failed. Now correctly propagates the failure flag.
+- **Archived parent auto-restore** — `ChildMachineCompletionJob` caught all `Throwable` and silently discarded when the parent was archived. Now catches `RestoringStateException` specifically and attempts archive auto-restore before routing `@done`/`@fail`.
+- **Job actor test mode** — `handleJobInvoke()` and `handleAsyncMachineInvoke()` dispatched real jobs even in test mode (`shouldPersist=false`), causing infinite loops with sync queue when entering chained job states. Now skips dispatch in test mode — use `simulateChildDone()`/`simulateChildFail()` to step through job states.
+
 ---
 
 ## From 7.x to 8.0
