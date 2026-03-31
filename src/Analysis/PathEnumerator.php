@@ -145,9 +145,15 @@ class PathEnumerator
 
         $visitedIds[$state->id] = true;
 
-        // 4. Suffix memoization — if we've explored this (state + visitedIds) before,
+        // 4. Suffix memoization — if we've explored this state before,
         //    replay cached suffixes instead of re-exploring.
-        $cacheKey = $state->id.'|'.implode(',', array_keys($visitedIds));
+        //    Key is stateId only (not visitedIds). This means cycle detection
+        //    results from the first exploration are reused, which may miss some
+        //    LOOP variations when the same state is reached via different prefixes.
+        //    The tradeoff is acceptable: it prevents exponential explosion in
+        //    large machines (117+ states) while producing correct results for
+        //    non-cyclic portions of the graph.
+        $cacheKey = $state->id;
 
         if (isset($this->suffixCache[$cacheKey])) {
             $prefixLength = count($steps);
@@ -426,9 +432,12 @@ class PathEnumerator
         TransitionDefinition $alwaysTransition,
         array $remainingTransitions,
     ): void {
-        $isUnguarded = !$this->isAllBranchesGuarded($alwaysTransition)
-            && count($alwaysTransition->branches ?? []) === 1
-            && ($alwaysTransition->branches[0]->guards === null || $alwaysTransition->branches[0]->guards === []);
+        // @always is guaranteed to fire if ANY branch has no guard (unguarded fallback).
+        // In runtime, getFirstValidTransitionBranch() tries branches in order — if all
+        // guarded branches fail, the unguarded fallback is always taken. So guard-fail
+        // continuation (enumerating remaining events) is only needed when ALL branches
+        // have guards (every branch could fail).
+        $hasUnguardedFallback = !$this->isAllBranchesGuarded($alwaysTransition);
 
         // Enumerate @always guard-pass forks
         foreach ($alwaysTransition->branches ?? [] as $index => $branch) {
@@ -447,8 +456,8 @@ class PathEnumerator
             );
         }
 
-        // If unguarded @always: exclusive — don't enumerate remaining transitions
-        if ($isUnguarded) {
+        // If @always has an unguarded fallback: it always fires — remaining transitions unreachable
+        if ($hasUnguardedFallback) {
             return;
         }
 

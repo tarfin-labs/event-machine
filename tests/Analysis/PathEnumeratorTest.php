@@ -378,6 +378,47 @@ test('unhandled outcomes: catch-all @done covers all child final states', functi
 //  Duplicate path detection
 // ═══════════════════════════════════════════
 
+test('multi-branch @always with unguarded fallback is exclusive — no guard-fail continuation', function (): void {
+    // Pattern from ApplicationMachine: @always with multiple guarded branches + unguarded fallback.
+    // The fallback guarantees @always ALWAYS fires — remaining events are unreachable.
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'always_fallback_test',
+        'initial' => 'resolver',
+        'states'  => [
+            'resolver' => [
+                'on' => [
+                    '@always' => [
+                        ['target' => 'path_a', 'guards' => 'guardA'],
+                        ['target' => 'path_b', 'guards' => 'guardB'],
+                        ['target' => 'path_c'], // unguarded fallback — always taken if guards fail
+                    ],
+                    'SHOULD_NOT_BE_REACHED' => 'unreachable',
+                ],
+            ],
+            'path_a'      => ['type' => 'final'],
+            'path_b'      => ['type' => 'final'],
+            'path_c'      => ['type' => 'final'],
+            'unreachable' => ['type' => 'final'],
+        ],
+    ], behavior: [
+        'guards' => [
+            'guardA' => fn (): bool => true,
+            'guardB' => fn (): bool => true,
+        ],
+    ]);
+
+    $result = (new PathEnumerator($definition))->enumerate();
+
+    // 3 @always branches → 3 HAPPY paths. NO guard-fail continuation.
+    // SHOULD_NOT_BE_REACHED is unreachable because @always always fires.
+    expect($result->happyPaths())->toHaveCount(3)
+        ->and($result->guardBlockPaths())->toHaveCount(0)
+        ->and($result->deadEndPaths())->toHaveCount(0);
+
+    $terminals = array_map(fn ($p) => $p->terminalStateId, $result->happyPaths());
+    expect($terminals)->not->toContain('always_fallback_test.unreachable');
+});
+
 test('LOOP paths include the cycle target step to distinguish different loops', function (): void {
     // Machine with a job actor that has both @done (loop) and @fail retry (loop)
     // Both cycle back to already-visited states but via different events.
