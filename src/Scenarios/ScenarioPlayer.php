@@ -17,6 +17,7 @@ use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\ScenariosDisabledException;
+use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioConfigurationException;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioTargetMismatchException;
 
@@ -57,6 +58,12 @@ class ScenarioPlayer
         // Step 1: Validate environment
         $this->validateEnvironment();
 
+        // Step 1b: Guard against Machine::fake() — scenarios require real execution
+        $machineClass = $this->scenario->machine();
+        if (method_exists($machineClass, 'isMachineFaked') && $machineClass::isMachineFaked()) {
+            throw ScenarioConfigurationException::machineFaked($machineClass);
+        }
+
         // Step 3: Parse plan() — validate state routes
         $this->validatePlanKeys($this->scenario->machine()::definition());
 
@@ -75,10 +82,18 @@ class ScenarioPlayer
             self::registerOverrides($this->scenario);
 
             // Step 7: Send trigger event
-            $state = $machine->send([
-                'type'    => $this->scenario->event(),
-                'payload' => $eventPayload,
-            ]);
+            try {
+                $state = $machine->send([
+                    'type'    => $this->scenario->event(),
+                    'payload' => $eventPayload,
+                ]);
+            } catch (MissingMachineContextException $e) {
+                throw new MissingMachineContextException(
+                    message: $e->getMessage()."\n\nHint: add a context override in the plan() for the relevant state.",
+                    code: $e->getCode(),
+                    previous: $e,
+                );
+            }
 
             // Step 8: @continue loop — placeholder
 
@@ -156,10 +171,16 @@ class ScenarioPlayer
     /**
      * Register behavior overrides in the container.
      * Called during execute() and during async restoration (§9).
+     *
+     * When the same behavior key appears in multiple plan() states with DIFFERENT
+     * values, detectStateAwareOverrides() identifies the conflict. For now, the
+     * last state's value is used (simple last-wins policy). True state-aware
+     * routing at invocation time requires engine support and is deferred.
      */
     public static function registerOverrides(MachineScenario $scenario): void
     {
-        $plan = $scenario->resolvedPlan();
+        $plan       = $scenario->resolvedPlan();
+        $stateAware = self::detectStateAwareOverrides($plan);
 
         foreach ($plan as $value) {
             if (!is_array($value)) {
@@ -175,6 +196,10 @@ class ScenarioPlayer
                     if ($key === 'output') {
                         continue;
                     }
+                    // Skip conflicting keys — handled below with last-value policy
+                    if (isset($stateAware[$key])) {
+                        continue;
+                    }
                     self::bindOverride($key, $override);
                 }
 
@@ -186,10 +211,80 @@ class ScenarioPlayer
                 if ($behaviorKey === '@continue') {
                     continue; // @continue is not a behavior override
                 }
+                // Skip conflicting keys — handled below with last-value policy
+                if (isset($stateAware[$behaviorKey])) {
+                    continue;
+                }
 
                 self::bindOverride($behaviorKey, $override);
             }
         }
+
+        // State-aware overrides: bind the last state's value.
+        // When the same behavior appears in multiple states with different values,
+        // the last occurrence in plan() order wins. Full per-invocation state routing
+        // is deferred until the engine exposes current state context during behavior resolution.
+        foreach ($stateAware as $key => $stateOverrides) {
+            $lastOverride = end($stateOverrides);
+            self::bindOverride($key, $lastOverride);
+        }
+    }
+
+    /**
+     * Detect same-behavior-different-values across states.
+     *
+     * Returns a map of behaviorKey → [stateRoute => override] for behavior keys
+     * that appear in multiple plan() states with differing values.
+     *
+     * @param  array<string, mixed>  $plan
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private static function detectStateAwareOverrides(array $plan): array
+    {
+        $behaviorStates = []; // behaviorKey → [stateRoute => override]
+
+        foreach ($plan as $stateRoute => $value) {
+            if (!is_array($value)) {
+                continue;
+            }
+            if (isset($value['outcome'])) {
+                continue;
+            }
+            foreach ($value as $key => $override) {
+                if ($key === '@continue') {
+                    continue;
+                }
+                $behaviorStates[$key][$stateRoute] = $override;
+            }
+        }
+
+        // Only return keys that appear in multiple states with different values
+        $conflicts = [];
+
+        foreach ($behaviorStates as $key => $stateOverrides) {
+            if (count($stateOverrides) <= 1) {
+                continue;
+            }
+
+            // Check if all values are identical
+            $values  = array_values($stateOverrides);
+            $allSame = true;
+            $counter = count($values);
+
+            for ($i = 1; $i < $counter; $i++) {
+                if ($values[$i] !== $values[0]) {
+                    $allSame = false;
+                    break;
+                }
+            }
+
+            if (!$allSame) {
+                $conflicts[$key] = $stateOverrides;
+            }
+        }
+
+        return $conflicts;
     }
 
     /**
