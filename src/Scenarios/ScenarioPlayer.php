@@ -85,7 +85,7 @@ class ScenarioPlayer
             // Step 7: Send trigger event
             try {
                 $state = $machine->send([
-                    'type'    => $this->scenario->event(),
+                    'type'    => $this->resolveEventType($this->scenario->event()),
                     'payload' => $eventPayload,
                 ]);
             } catch (MissingMachineContextException $e) {
@@ -116,7 +116,7 @@ class ScenarioPlayer
 
                 try {
                     $state = $machine->send([
-                        'type'    => $eventClass,
+                        'type'    => $this->resolveEventType($eventClass),
                         'payload' => $payload,
                     ]);
                 } catch (\Throwable $e) {
@@ -617,5 +617,18 @@ class ScenarioPlayer
         }
 
         return [(string) $continue, []];
+    }
+
+    /**
+     * Resolve an event class FQCN to its event type string.
+     * If it's an EventBehavior subclass, calls getType(). Otherwise returns as-is.
+     */
+    private function resolveEventType(string $event): string
+    {
+        if (class_exists($event) && method_exists($event, 'getType')) {
+            return $event::getType();
+        }
+
+        return $event;
     }
 }
