@@ -37,7 +37,8 @@ Chain configuration methods before sending events to customize machine behavior 
 ->faking(['calcTax' => fn(ContextManager $ctx) => $ctx->set('tax', 0)])  // inline: custom replacement
 ->withoutPersistence()                                            // skip DB writes
 ->withoutParallelDispatch()                                       // run regions sequentially
-->withScenario('rush_order')                                      // set scenario type
+// Scenarios are activated via HTTP endpoints, not TestMachine.
+// See /advanced/scenarios for the QA workflow.
 ```
 
 ## Sending Events
