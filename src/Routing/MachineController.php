@@ -18,6 +18,7 @@ use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -176,8 +177,10 @@ class MachineController extends Controller
 
         // Activate scenario overrides if a scenario slug is present in the request.
         // Must be called before send() so overrides are registered before the event is processed.
+        $scenarioActive = false;
         if ($request instanceof Request && $machine->definition->machineClass !== null) {
-            $this->maybeRegisterScenarioOverrides($request, $machine->definition->machineClass, $machine);
+            $scenario       = $this->maybeRegisterScenarioOverrides($request, $machine->definition->machineClass, $machine);
+            $scenarioActive = $scenario instanceof MachineScenario;
         }
 
         try {
@@ -214,6 +217,12 @@ class MachineController extends Controller
             }
 
             throw $e;
+        } finally {
+            // Cleanup scenario overrides from container — prevents leaking into
+            // subsequent requests in long-running processes (Octane, queue workers).
+            if ($scenarioActive) {
+                ScenarioPlayer::cleanupOverrides();
+            }
         }
 
         if ($action !== null) {
@@ -627,10 +636,16 @@ class MachineController extends Controller
         $scenarioSlug = $request->input('scenario');
 
         if ($scenarioSlug === null) {
-            // No scenario — deactivate any active scenario
+            // No scenario — deactivate only if there was a previously active scenario.
+            // Avoids unnecessary DB writes on every non-scenario request.
             $rootEventId = $machine->state->history?->first()?->root_event_id;
             if ($rootEventId !== null) {
-                ScenarioPlayer::deactivateScenario($rootEventId);
+                $currentState = MachineCurrentState::where('root_event_id', $rootEventId)
+                    ->whereNotNull('scenario_class')
+                    ->first(['root_event_id']);
+                if ($currentState !== null) {
+                    ScenarioPlayer::deactivateScenario($rootEventId);
+                }
             }
 
             return null;
