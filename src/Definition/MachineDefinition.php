@@ -1460,6 +1460,16 @@ class MachineDefinition
             return;
         }
 
+        // Scenario replay: intercept delegation with plan() outcomes or child scenarios.
+        // Must be checked BEFORE any dispatch logic — prevents real job/machine creation.
+        if (ScenarioPlayer::isActive()) {
+            $stateRoute = $stateDefinition->route ?? $stateDefinition->id;
+
+            if ($this->handleScenarioOutcome($state, $stateDefinition, $stateRoute)) {
+                return;
+            }
+        }
+
         $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
 
         // Job actor: dispatch as Laravel job
@@ -1781,6 +1791,100 @@ class MachineDefinition
 
             $this->routeChildDoneEvent($state, $stateDefinition, $doneEvent);
         }
+    }
+
+    /**
+     * Handle a delegation state during scenario replay.
+     * Checks plan() for an outcome or child scenario reference.
+     *
+     * @return bool True if scenario handled the delegation (caller should return).
+     */
+    protected function handleScenarioOutcome(State $state, StateDefinition $stateDefinition, string $stateRoute): bool
+    {
+        $outcome       = ScenarioPlayer::getOutcome($stateRoute);
+        $childScenario = ScenarioPlayer::getChildScenario($stateRoute);
+
+        if ($outcome === null && $childScenario === null) {
+            return false; // No scenario override — proceed with real delegation
+        }
+
+        $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
+        $delegateClass    = $invokeDefinition->isJob()
+            ? $invokeDefinition->jobClass
+            : $invokeDefinition->machineClass;
+
+        // Record delegation start
+        $state->setInternalEventBehavior(
+            type: InternalEvent::CHILD_MACHINE_START,
+            placeholder: $delegateClass,
+        );
+
+        if ($childScenario !== null) {
+            // Child scenario reference — execute child with its own scenario
+            $childState = ScenarioPlayer::executeChildScenario(
+                childScenarioClass: $childScenario,
+                childMachineClass: $invokeDefinition->machineClass,
+            );
+
+            if ($childState instanceof State) {
+                // Child reached final state — simulate @done to parent
+                $state->setInternalEventBehavior(
+                    type: InternalEvent::CHILD_MACHINE_DONE,
+                    placeholder: $delegateClass,
+                );
+
+                $doneEvent = ChildMachineDoneEvent::forChild([
+                    'output'        => $childState->context->data,
+                    'machine_id'    => '',
+                    'machine_class' => $invokeDefinition->machineClass,
+                    'final_state'   => $childState->currentStateDefinition?->key ?? '',
+                ]);
+
+                $this->routeChildDoneEvent($state, $stateDefinition, $doneEvent);
+            }
+            // Child paused at interactive state — parent stays in delegation state
+
+            return true;
+        }
+
+        // Outcome simulation — parse outcome string/array
+        $outcomeString = is_array($outcome) ? ($outcome['outcome'] ?? '@done') : $outcome;
+        $outputData    = is_array($outcome) ? ($outcome['output'] ?? []) : [];
+
+        if (str_starts_with((string) $outcomeString, '@fail')) {
+            $state->setInternalEventBehavior(
+                type: InternalEvent::CHILD_MACHINE_FAIL,
+                placeholder: $delegateClass,
+            );
+
+            $failEvent = ChildMachineFailEvent::forChild([
+                'error_message' => 'Scenario simulated failure',
+                'machine_id'    => '',
+                'machine_class' => $delegateClass,
+                'output'        => $outputData,
+            ]);
+
+            $this->routeChildFailEvent($state, $stateDefinition, $failEvent);
+        } else {
+            // @done or @done.{finalState}
+            $finalState = str_contains((string) $outcomeString, '.') ? mb_substr((string) $outcomeString, 6) : '';
+
+            $state->setInternalEventBehavior(
+                type: InternalEvent::CHILD_MACHINE_DONE,
+                placeholder: $delegateClass,
+            );
+
+            $doneEvent = ChildMachineDoneEvent::forChild([
+                'output'        => $outputData,
+                'machine_id'    => '',
+                'machine_class' => $delegateClass,
+                'final_state'   => $finalState,
+            ]);
+
+            $this->routeChildDoneEvent($state, $stateDefinition, $doneEvent);
+        }
+
+        return true;
     }
 
     /**
