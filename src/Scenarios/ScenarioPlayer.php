@@ -63,7 +63,7 @@ class ScenarioPlayer
      * 10. Build ScenarioOutput
      * 11. Cleanup → placeholder for plan-engine epic
      */
-    public function execute(Machine $machine, array $eventPayload = [], ?string $rootEventId = null): State
+    public function execute(?Machine $machine = null, array $eventPayload = [], ?string $rootEventId = null): State
     {
         // Step 1: Validate environment
         $this->validateEnvironment();
@@ -75,10 +75,10 @@ class ScenarioPlayer
         }
 
         // Step 3: Parse plan() — validate state routes
-        $this->validatePlanKeys($this->scenario->machine()::definition());
+        $this->validatePlanKeys($machineClass::definition());
 
         // Step 4: Persist scenario to DB (only when machine persists)
-        if ($rootEventId !== null && $this->shouldPersist($machine)) {
+        if ($rootEventId !== null && $machine instanceof Machine && $this->shouldPersist($machine)) {
             $this->persistScenario($rootEventId);
         }
 
@@ -92,18 +92,37 @@ class ScenarioPlayer
             // The engine queries these during handleMachineInvoke() to intercept delegations.
             $classified = $this->classifyPlanValues();
 
-            // Step 7: Send trigger event
-            try {
-                $state = $machine->send([
-                    'type'    => $this->scenario->eventType(),
-                    'payload' => $eventPayload,
-                ]);
-            } catch (MissingMachineContextException $e) {
-                throw new MissingMachineContextException(
-                    message: $e->getMessage()."\n\nHint: add a context override in the plan() for the relevant state.",
-                    code: $e->getCode(),
-                    previous: $e,
-                );
+            // Step 7: Send trigger event (or create machine for @start scenarios)
+            if ($this->scenario->event() === MachineScenario::START) {
+                // @start: create a fresh machine — @always chain runs with overrides active.
+                // Used for child machines with transient initial states (idle → @always → ...).
+                $definition                = clone $machineClass::definition();
+                $definition->shouldPersist = false;
+                $definition->machineClass  = $machineClass;
+
+                $machine = Machine::withDefinition($definition);
+                $machine->start();
+                $state = $machine->state;
+            } else {
+                if (!$machine instanceof Machine) {
+                    throw ScenarioConfigurationException::missingProperty(
+                        class: $this->scenario::class,
+                        property: 'machine (no Machine instance provided and event is not @start)',
+                    );
+                }
+
+                try {
+                    $state = $machine->send([
+                        'type'    => $this->scenario->eventType(),
+                        'payload' => $eventPayload,
+                    ]);
+                } catch (MissingMachineContextException $e) {
+                    throw new MissingMachineContextException(
+                        message: $e->getMessage()."\n\nHint: add a context override in the plan() for the relevant state.",
+                        code: $e->getCode(),
+                        previous: $e,
+                    );
+                }
             }
 
             // Step 8: @continue loop
