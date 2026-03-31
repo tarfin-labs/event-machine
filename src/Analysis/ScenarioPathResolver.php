@@ -106,6 +106,7 @@ class ScenarioPathResolver
             invokeClass: $this->getInvokeClass($startState),
             availableEvents: $this->graph->availableEventsFrom($startState),
             availableDoneStates: $this->graph->delegationOutcomes($startState),
+            entryActions: $this->getEntryActions($startState),
         );
 
         // Check if start IS the target
@@ -141,6 +142,7 @@ class ScenarioPathResolver
                     invokeClass: $this->getInvokeClass($nextState),
                     availableEvents: $this->graph->availableEventsFrom($nextState),
                     availableDoneStates: $this->graph->delegationOutcomes($nextState),
+                    entryActions: $this->getEntryActions($nextState),
                 );
 
                 $newPath                    = [...$currentPath, $step];
@@ -329,6 +331,28 @@ class ScenarioPathResolver
         }
 
         return null;
+    }
+
+    /**
+     * Get entry action names from a state definition.
+     *
+     * @return list<string>
+     */
+    private function getEntryActions(StateDefinition $state): array
+    {
+        if ($state->entry === null || $state->entry === []) {
+            return [];
+        }
+
+        $actions = [];
+        foreach ($state->entry as $entryDef) {
+            $action = $entryDef['action'] ?? null;
+            if ($action !== null) {
+                $actions[] = $action;
+            }
+        }
+
+        return $actions;
     }
 
     /**
