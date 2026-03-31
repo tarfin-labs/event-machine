@@ -33,11 +33,14 @@ class PathEnumerator
     /** @var array<string, list<array{suffixSteps: list<PathStep>, type: PathType, terminalStateId: ?string}>> */
     private array $suffixCache = [];
 
+    private readonly MachineGraph $graph;
+
     public function __construct(
         private readonly MachineDefinition $definition,
         int $maxPaths = 1000,
     ) {
         $this->maxPaths = $maxPaths;
+        $this->graph    = new MachineGraph($definition);
     }
 
     /**
@@ -345,7 +348,7 @@ class PathEnumerator
     private function handleAtomic(StateDefinition $state, array $steps, array $visitedIds): void
     {
         // Step 1: Collect all transitions (own + inherited via parent chain)
-        $transitions      = $this->collectAllTransitions($state);
+        $transitions      = $this->graph->transitionsFrom($state);
         $hasMachineInvoke = $state->hasMachineInvoke();
 
         // Step 2: Dead-end detection
@@ -375,46 +378,6 @@ class PathEnumerator
 
         // Step 4: Enumerate remaining transitions
         $this->enumerateTransitions($state, $steps, $visitedIds, $transitions);
-    }
-
-    /**
-     * Collect all transitions for an atomic state, including inherited ones.
-     *
-     * Walks up the parent chain (mirroring findTransitionDefinition() bubbling)
-     * and adds transitions for events not already seen at a lower level.
-     *
-     * @return array<string, TransitionDefinition> Keyed by event type.
-     */
-    private function collectAllTransitions(StateDefinition $state): array
-    {
-        $transitions = [];
-
-        // Start with the state's own transitions
-        if ($state->transitionDefinitions !== null) {
-            foreach ($state->transitionDefinitions as $event => $transition) {
-                $transitions[$event] = $transition;
-            }
-        }
-
-        // Walk up parent chain INCLUDING root — add transitions for events NOT already seen.
-        // The root state (order === 0) can have machine-level `on` transitions that are
-        // inherited by all children (e.g., TERMINATED → terminated). Runtime's
-        // findTransitionDefinition() checks root transitions, so we must too.
-        $current = $state->parent;
-
-        while ($current instanceof StateDefinition) {
-            if ($current->transitionDefinitions !== null) {
-                foreach ($current->transitionDefinitions as $event => $transition) {
-                    if (!isset($transitions[$event])) {
-                        $transitions[$event] = $transition;
-                    }
-                }
-            }
-
-            $current = $current->parent;
-        }
-
-        return $transitions;
     }
 
     /**
