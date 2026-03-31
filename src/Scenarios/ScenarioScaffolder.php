@@ -33,6 +33,17 @@ class ScenarioScaffolder
 
         $importsBlock = implode("\n", array_map(fn (string $i): string => "use {$i};", $imports));
 
+        // Extract trigger event payload hint
+        $triggerPayloadHint   = '';
+        $triggerPayloadFields = $this->extractEventPayloadFields($event);
+        if ($triggerPayloadFields !== []) {
+            $fields = [];
+            foreach ($triggerPayloadFields as $field => $type) {
+                $fields[] = " *   - {$field}: {$type}";
+            }
+            $triggerPayloadHint = "\n     *\n     * Trigger event payload:\n".implode("\n", $fields);
+        }
+
         return <<<PHP
         <?php
 
@@ -42,6 +53,8 @@ class ScenarioScaffolder
 
         {$importsBlock}
 
+        /**{$triggerPayloadHint}
+         */
         class {$scenarioName} extends MachineScenario
         {
             protected string \$machine     = {$shortMachine}::class;
@@ -119,16 +132,20 @@ class ScenarioScaffolder
 
     private function scaffoldTransientEntry(ScenarioPathStep $step): string
     {
-        $guards = [];
+        $lines = [];
         foreach ($step->guards as $guard) {
-            $short    = class_exists($guard) ? class_basename($guard).'::class' : "'{$guard}'";
-            $guards[] = "                {$short} => false, // TODO: adjust";
+            $short   = class_exists($guard) ? class_basename($guard).'::class' : "'{$guard}'";
+            $lines[] = "                {$short} => false, // TODO: adjust";
+        }
+        foreach ($step->entryActions as $action) {
+            $short   = class_exists($action) ? class_basename($action).'::class' : "'{$action}'";
+            $lines[] = "                // {$short} => [], // TODO: entry action override (if it accesses context models)";
         }
 
-        $guardsBlock = implode("\n", $guards);
-        $comment     = "            // ── {$step->stateKey} ── @always, guards: [".implode(', ', array_map(class_basename(...), $step->guards)).']';
+        $linesBlock = implode("\n", $lines);
+        $comment    = "            // ── {$step->stateKey} ── @always, guards: [".implode(', ', array_map(class_basename(...), $step->guards)).']';
 
-        return "{$comment}\n            '{$step->stateRoute}' => [\n{$guardsBlock}\n            ],";
+        return "{$comment}\n            '{$step->stateRoute}' => [\n{$linesBlock}\n            ],";
     }
 
     private function scaffoldDelegationEntry(ScenarioPathStep $step): string
@@ -163,6 +180,12 @@ class ScenarioScaffolder
         $otherEvents = array_slice($events, 1);
         $alsoComment = $otherEvents !== [] ? ' // Also: '.implode(', ', array_map(class_basename(...), $otherEvents)) : '';
 
+        $entryHints = '';
+        foreach ($step->entryActions as $action) {
+            $short = class_exists($action) ? class_basename($action).'::class' : "'{$action}'";
+            $entryHints .= "\n                // {$short} => [], // TODO: entry action override (if it accesses context models)";
+        }
+
         $comment = "            // ── {$step->stateKey} ── interactive, @continue to reach target";
 
         // Check if event has rules() for payload extraction
@@ -175,10 +198,10 @@ class ScenarioScaffolder
             }
             $payloadBlock = implode("\n", $payloadEntries);
 
-            return "{$comment}\n            '{$step->stateRoute}' => [\n                '@continue' => [{$firstShort}, 'payload' => [\n{$payloadBlock}\n                ]],{$alsoComment}\n            ],";
+            return "{$comment}\n            '{$step->stateRoute}' => [\n                '@continue' => [{$firstShort}, 'payload' => [\n{$payloadBlock}\n                ]],{$alsoComment}{$entryHints}\n            ],";
         }
 
-        return "{$comment}\n            '{$step->stateRoute}' => [\n                '@continue' => {$firstShort},{$alsoComment}\n            ],";
+        return "{$comment}\n            '{$step->stateRoute}' => [\n                '@continue' => {$firstShort},{$alsoComment}{$entryHints}\n            ],";
     }
 
     /**
