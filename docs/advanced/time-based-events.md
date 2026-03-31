@@ -160,30 +160,46 @@ Timer events are processed by a sweep command (`machine:process-timers`) that ru
 | Deployment-friendly | New timer configs automatically apply to existing instances |
 | PHP-native | Cron is PHP's natural timer mechanism |
 
+### Registration
+
+Register timer sweeps in `routes/console.php` for each machine that uses `@after` or `@every` timers:
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Scheduling\MachineTimer;
+
+MachineTimer::register(OrderMachine::class);          // everyMinute (default)
+MachineTimer::register(BillingMachine::class)
+    ->everyFiveMinutes()                              // custom frequency
+    ->environments(['production', 'staging']);
+```
+
+`register()` returns Laravel's `SchedulingEvent` for full fluent chaining (`->withoutOverlapping()` and `->runInBackground()` are applied by default).
+
 ### How It Works
 
-1. `MachineServiceProvider` auto-discovers Machine classes with timer-configured transitions
-2. Registers `machine:process-timers` per class with Laravel Scheduler
-3. User adds **nothing** to Kernel.php
-4. Sweep command queries `machine_current_states` table for instances past deadline
-5. Dispatches `SendToMachineJob` for eligible instances via `Bus::batch`
+1. You register each timer machine in `routes/console.php` via `MachineTimer::register()`
+2. Laravel Scheduler runs `machine:process-timers --class=X` at the configured frequency
+3. Sweep command queries `machine_current_states` table for instances past deadline
+4. Dispatches `SendToMachineJob` for eligible instances via `Bus::batch`
 
 ### Implicit Cancel
 
 Timers have no explicit cancel. When a machine leaves the state, the sweep simply won't find it anymore — natural cancellation.
 
-## Timer Resolution
+## Timer Configuration
 
-Configure sweep frequency in `config/machine.php`:
+Configure sweep behavior in `config/machine.php`:
 
 <!-- doctest-attr: ignore -->
 ```php
 'timers' => [
-    'resolution' => 'everyMinute',           // default
     'batch_size' => 100,                     // instances per query batch
     'backpressure_threshold' => 10000,       // skip sweep if queue exceeds
 ],
 ```
+
+Sweep frequency is set per machine via `MachineTimer::register()` (default: `everyMinute`).
 
 ## Inter-Machine Integration
 
@@ -245,8 +261,6 @@ Guards work exactly like standard guarded transitions. `after`/`every` fires onc
 |---------|-------------|
 | `machine:process-timers --class=X` | Run timer sweep for a machine class (`--class` is required) |
 | `machine:timer-status` | Show timer status for all instances |
-| `machine:cache` | Cache machine discovery for production |
-| `machine:clear` | Clear machine cache (fall back to runtime discovery) |
 
 ## Transition Key Reference
 
@@ -265,15 +279,6 @@ If a timer sweep is missed (deployment, server restart, queue saturation trigger
 
 - **`after` timers:** Fire as soon as the next sweep runs after the deadline. No events are lost — the deadline check is absolute (`state_entered_at <= now - delay`).
 - **`every` timers:** The next fire happens on the first sweep after `last_fired_at + interval`. The effective interval becomes `configured_interval + missed_sweep_duration`. There is **no catch-up mechanism** — missed intervals are not retroactively fired.
-
-### Production Deployment
-
-You **must** run `php artisan machine:cache` as part of your deployment pipeline. Without the cache file, timer sweeps are not registered in production (the runtime PhpParser scan is disabled outside `local`/`testing` environments for performance).
-
-```bash
-# Add to your deploy script (after composer install):
-php artisan machine:cache
-```
 
 ### Backpressure
 

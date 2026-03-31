@@ -278,22 +278,6 @@ php artisan machine:timer-status
 
 Shows: root_event_id, machine class, state, entered_at, timer key, last fired, fire count, status.
 
-## machine:cache
-
-Cache machine class discovery for production. Prevents filesystem scanning on every sweep.
-
-```bash
-php artisan machine:cache
-```
-
-## machine:clear
-
-Clear machine discovery cache.
-
-```bash
-php artisan machine:clear
-```
-
 ## machine:paths
 
 Enumerate all paths through a machine definition. Static analysis — no database needed.

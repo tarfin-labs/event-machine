@@ -661,6 +661,47 @@ These production bugs were discovered and fixed during QA testing with real Hori
 - **Archived parent auto-restore** — `ChildMachineCompletionJob` caught all `Throwable` and silently discarded when the parent was archived. Now catches `RestoringStateException` specifically and attempts archive auto-restore before routing `@done`/`@fail`.
 - **Job actor test mode** — `handleJobInvoke()` and `handleAsyncMachineInvoke()` dispatched real jobs even in test mode (`shouldPersist=false`), causing infinite loops with sync queue when entering chained job states. Now skips dispatch in test mode — use `simulateChildDone()`/`simulateChildFail()` to step through job states.
 
+### 9.3.0 — Explicit Timer Registration
+
+**Breaking change:** Timer sweep auto-discovery removed. Machines with `@after` or `@every` timers must register explicitly.
+
+**Why:** The auto-discovery scanned every PHP file in `app/` using PhpParser on every application boot. In large projects (4000+ files), this added ~3.7 seconds per boot — multiplied by every PHPUnit test.
+
+**Before (v9.2):**
+<!-- doctest-attr: ignore -->
+```php
+// Nothing needed — timers auto-discovered (3.7s per boot without cache)
+// Production required: php artisan machine:cache
+```
+
+**After (v9.3):**
+<!-- doctest-attr: ignore -->
+```php
+// routes/console.php
+use Tarfinlabs\EventMachine\Scheduling\MachineTimer;
+
+MachineTimer::register(OrderMachine::class);          // everyMinute (default)
+MachineTimer::register(BillingMachine::class)
+    ->everyFiveMinutes();                             // custom frequency
+```
+
+**Migration steps:**
+
+1. Search your machine definitions for `'after'` and `'every'` keys — these are your timer machines
+2. Add one `MachineTimer::register(YourMachine::class)` line per timer machine in `routes/console.php`
+3. Remove `php artisan machine:cache` from CI/CD pipelines and deploy scripts
+4. Delete `bootstrap/cache/machines.php` from production servers (if present)
+
+**Removed:**
+
+| Component | Replacement |
+|-----------|-------------|
+| `machine:cache` command | No longer needed |
+| `machine:clear` command | No longer needed |
+| `MachineDiscovery` class | Not needed — explicit registration |
+| `TimerResolution` enum | Frequency set via fluent API |
+| `config('machine.timers.resolution')` | `MachineTimer::register()->everyMinute()` |
+
 ---
 
 ## From 7.x to 8.0
