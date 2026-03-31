@@ -222,26 +222,6 @@ it('sends notification and updates DB on approve', function () {
 });
 ```
 
-## Recipe: Scenario Testing
-
-Test different machine scenarios with `withScenario()` (sets the `scenarioType` context key). See [Scenarios](/advanced/scenarios#testing-with-scenarios) for the production payload-based approach.
-
-<!-- doctest-attr: ignore -->
-```php
-it('follows default flow without scenario', function () {
-    OrderMachine::test()
-        ->send('SUBMIT')
-        ->assertState('review');
-});
-
-it('follows rush scenario', function () {
-    OrderMachine::test()
-        ->withScenario('rush')
-        ->send('SUBMIT')
-        ->assertState('processing');  // skips review in rush scenario
-});
-```
-
 ## Recipe: Entry/Exit Action Assertions
 
 Verify entry and exit actions ran during transitions using `faking()` + `assertBehaviorRan()`:
