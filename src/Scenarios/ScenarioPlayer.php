@@ -71,9 +71,6 @@ class ScenarioPlayer
         // Step 3: Parse plan() — validate state routes
         $this->validatePlanKeys($this->scenario->machine()::definition());
 
-        // Step 3b: Classify plan() values
-        $this->classifyPlanValues();
-
         // Step 4: Persist scenario to DB (only when machine persists)
         if ($rootEventId !== null && $this->shouldPersist($machine)) {
             $this->persistScenario($rootEventId);
@@ -552,7 +549,7 @@ class ScenarioPlayer
 
         // Check if any current state route matches or contains the target
         foreach ($currentRoutes as $route) {
-            if ($route === $target || str_contains($route, '.'.$target) || str_ends_with($route, '.'.$target)) {
+            if ($route === $target || str_ends_with($route, '.'.$target)) {
                 return;
             }
         }
