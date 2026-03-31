@@ -1851,7 +1851,21 @@ class MachineDefinition
         $outcomeString = is_array($outcome) ? ($outcome['outcome'] ?? '@done') : $outcome;
         $outputData    = is_array($outcome) ? ($outcome['output'] ?? []) : [];
 
-        if (str_starts_with((string) $outcomeString, '@fail')) {
+        if ($outcomeString === '@timeout') {
+            $state->setInternalEventBehavior(
+                type: InternalEvent::CHILD_MACHINE_FAIL,
+                placeholder: $delegateClass,
+            );
+
+            $timeoutEvent = ChildMachineFailEvent::forChild([
+                'error_message' => 'Scenario simulated timeout',
+                'machine_id'    => '',
+                'machine_class' => $delegateClass,
+                'output'        => $outputData,
+            ]);
+
+            $this->routeChildTimeoutEvent($state, $stateDefinition, $timeoutEvent);
+        } elseif (str_starts_with((string) $outcomeString, '@fail')) {
             $state->setInternalEventBehavior(
                 type: InternalEvent::CHILD_MACHINE_FAIL,
                 placeholder: $delegateClass,
