@@ -187,6 +187,16 @@ class MachineRouter
                         ->setDefaults(['_machine_class' => $machineClass]);
                 }
 
+                if (config('machine.scenarios.enabled', false)) {
+                    Route::get('/scenarios', [MachineController::class, 'handleScenarioList'])
+                        ->name("{$namePrefix}.scenarios.index")
+                        ->setDefaults(['_machine_class' => $machineClass]);
+
+                    Route::get('/scenarios/{slug}/describe', [MachineController::class, 'handleScenarioDescribe'])
+                        ->name("{$namePrefix}.scenarios.describe")
+                        ->setDefaults(['_machine_class' => $machineClass]);
+                }
+
                 $modelParam = $model !== null ? Str::camel(class_basename($model)) : null;
 
                 if ($modelParam !== null && ($modelFor !== [] || $forwardedEndpoints !== [])) {
