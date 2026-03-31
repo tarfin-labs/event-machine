@@ -23,37 +23,35 @@ The resulting machine is **indistinguishable** from one that arrived at that sta
 ### 1. Scaffold a scenario
 
 ```bash
-php artisan machine:scenario AtCheckingProtocol CarSalesMachine \
-    awaiting_customer_start CustomerStartedEvent checking_protocol
+php artisan machine:scenario AtShipping OrderMachine \
+    pending SubmitOrderEvent shipping
 ```
 
 This analyzes the machine definition, finds the path from source to target, and generates:
 
-`app/Machines/CarSales/Scenarios/AtCheckingProtocolScenario.php`
+`app/Machines/Order/Scenarios/AtShippingScenario.php`
 
 ### 2. Review and adjust the generated plan
 
 <!-- doctest-attr: ignore -->
 ```php
-class AtCheckingProtocolScenario extends MachineScenario
+class AtShippingScenario extends MachineScenario
 {
-    protected string $machine     = CarSalesMachine::class;
-    protected string $source      = 'awaiting_customer_start';
-    protected string $event       = CustomerStartedEvent::class;
-    protected string $target      = 'checking_protocol';
-    protected string $description = 'At checking protocol — children completed';
+    protected string $machine     = OrderMachine::class;
+    protected string $source      = 'pending';
+    protected string $event       = SubmitOrderEvent::class;
+    protected string $target      = 'shipping';
+    protected string $description = 'At shipping — payment completed, ready to ship';
 
     protected function plan(): array
     {
         return [
+            // @always guard: skip eligibility check
             'eligibility_check' => [
-                IsFarmerNotEligibleGuard::class => false,
+                IsBlacklistedGuard::class => false,
             ],
-            'verification.findeks.running' => '@done.report_saved',
-            'verification.turmob.verifying' => '@done',
-            'verification' => [
-                'isFindeksRegionCompletedGuard' => true,
-            ],
+            // Child machine: simulate payment completion
+            'processing_payment' => '@done',
         ];
     }
 }
@@ -68,14 +66,14 @@ MACHINE_SCENARIOS_ENABLED=true
 ### 4. Activate via endpoint
 
 ```http
-POST /api/car-sales/{applicationId}/customer-started
+POST /api/orders/{orderId}/submit
 {
-    "type": "CustomerStartedEvent",
-    "scenario": "at-checking-protocol-scenario"
+    "type": "SubmitOrderEvent",
+    "scenario": "at-shipping-scenario"
 }
 ```
 
-The machine processes the event with overrides active, arrives at `checking_protocol`, and returns the final state.
+The machine processes the event with overrides active, arrives at `shipping`, and returns the final state.
 
 ### 5. Validate
 
@@ -89,29 +87,30 @@ Every scenario extends `MachineScenario` with 5 identity properties and an optio
 
 <!-- doctest-attr: ignore -->
 ```php
-class AtVerificationScenario extends MachineScenario
+class AtShippingScenario extends MachineScenario
 {
     /** Which machine this scenario targets. */
-    protected string $machine = CarSalesMachine::class;
+    protected string $machine = OrderMachine::class;
 
     /** State the machine must be in BEFORE the event. */
-    protected string $source = 'awaiting_customer_start';
+    protected string $source = 'pending';
 
     /** Event that triggers this scenario. */
-    protected string $event = CustomerStartedEvent::class;
+    protected string $event = SubmitOrderEvent::class;
 
     /** Where the machine should end up after execution. */
-    protected string $target = 'verification';
+    protected string $target = 'shipping';
 
     /** Human-readable description shown in endpoint responses. */
-    protected string $description = 'At verification — farmer eligible';
+    protected string $description = 'At shipping — payment completed';
 
     protected function plan(): array
     {
         return [
             'eligibility_check' => [
-                IsFarmerNotEligibleGuard::class => false,
+                IsBlacklistedGuard::class => false,
             ],
+            'processing_payment' => '@done',
         ];
     }
 }
@@ -121,11 +120,11 @@ class AtVerificationScenario extends MachineScenario
 
 | Property | Type | Example | Purpose |
 |----------|------|---------|---------|
-| `$machine` | `class-string` | `CarSalesMachine::class` | Which machine this scenario targets |
-| `$source` | `string` | `'awaiting_customer_start'` | Full state route — where the machine is BEFORE the event |
-| `$event` | `string` | `CustomerStartedEvent::class` | Which event triggers this scenario |
-| `$target` | `string` | `'checking_protocol'` | Full state route — where the machine should end up |
-| `$description` | `string` | `'At checking protocol'` | Human-readable, shown in endpoint responses |
+| `$machine` | `class-string` | `OrderMachine::class` | Which machine this scenario targets |
+| `$source` | `string` | `'pending'` | Full state route — where the machine is BEFORE the event |
+| `$event` | `string` | `SubmitOrderEvent::class` | Which event triggers this scenario |
+| `$target` | `string` | `'shipping'` | Full state route — where the machine should end up |
+| `$description` | `string` | `'At shipping'` | Human-readable, shown in endpoint responses |
 
 Multiple scenarios can share the same `(source, event)` with different targets. The **slug** (derived from the class name) disambiguates.
 
@@ -136,13 +135,13 @@ Multiple scenarios can share the same `(source, event)` with different targets. 
 <!-- doctest-attr: ignore -->
 ```php
 // Bad — ambiguous, could exist in multiple parallel regions
-protected string $source = 'awaiting_vehicle_and_pricing';
+protected string $source = 'awaiting_confirmation';
 
 // Good — unambiguous full path
-protected string $source = 'data_collection.retailer.awaiting_vehicle_and_pricing';
+protected string $source = 'checkout.payment.awaiting_confirmation';
 ```
 
-For root-level states (e.g., `routing`, `eligibility_check`), the leaf key IS the full route.
+For root-level states (e.g., `pending`, `shipping`), the leaf key IS the full route.
 
 ### Properties vs Methods
 
@@ -151,12 +150,12 @@ Properties are the default. Methods can be used when computed values are needed:
 <!-- doctest-attr: ignore -->
 ```php
 // Default — property assignment (recommended)
-protected string $machine = CarSalesMachine::class;
+protected string $machine = OrderMachine::class;
 
 // Alternative — method override (when computation is needed)
 public function machine(): string
 {
-    return config('machines.car_sales.class');
+    return config('machines.order.class');
 }
 ```
 
@@ -220,11 +219,11 @@ protected function plan(): array
 {
     return [
         'routing' => [
-            CustomerContextCalculator::class => ['farmer' => $mockFarmer],
-            HasConsentGuard::class => true,
+            OrderTotalCalculator::class => ['customer' => $mockCustomer],
+            HasAgreedToTermsGuard::class => true,
         ],
         'eligibility_check' => [
-            IsFarmerNotEligibleGuard::class => false,
+            IsBlacklistedGuard::class => false,
         ],
     ];
 }
@@ -247,15 +246,15 @@ Both class-based behaviors (`ClassName::class => value`) and inline behaviors (`
 ```php
 'eligibility_check' => [
     // Bool shorthand
-    IsFarmerNotEligibleGuard::class => false,
+    IsBlacklistedGuard::class => false,
 
     // Closure with DI
-    HasConsentGuard::class => function (ContextManager $ctx): bool {
-        return $ctx->get('farmer')->hasValidConsent();
+    HasAgreedToTermsGuard::class => function (ContextManager $ctx): bool {
+        return $ctx->get('customer')->hasAgreedToTerms();
     },
 
     // Reusable scenario behavior class
-    IsCustomerInfoCompleteGuard::class => IsCustomerInfoCompleteGuardScenario::class,
+    IsProfileCompleteGuard::class => IsProfileCompleteGuardScenario::class,
 ],
 ```
 
@@ -265,11 +264,11 @@ Both class-based behaviors (`ClassName::class => value`) and inline behaviors (`
 ```php
 'calculating_prices' => [
     // Array shorthand — key-value pairs written to context
-    CheckProtocolAction::class => ['protocolEligible' => true],
+    ProcessReviewAction::class => ['reviewApproved' => true],
 
     // Closure with DI
-    StoreApplicationAction::class => function (ContextManager $ctx) {
-        $ctx->set('applicationId', 'APP-' . Str::random());
+    CreateOrderAction::class => function (ContextManager $ctx) {
+        $ctx->set('orderId', 'ORD-' . Str::random());
     },
 
     // Reusable scenario behavior class
@@ -283,14 +282,14 @@ Both class-based behaviors (`ClassName::class => value`) and inline behaviors (`
 ```php
 'routing' => [
     // Array shorthand — pre-set context values
-    CustomerContextCalculator::class => [
-        'farmer'   => $mockFarmer,
-        'retailer' => $mockRetailer,
+    OrderTotalCalculator::class => [
+        'customer' => $mockCustomer,
+        'merchant' => $mockMerchant,
     ],
 
     // Closure with DI
-    RetailerContextCalculator::class => function (ContextManager $ctx) {
-        $ctx->set('retailer', Retailer::find(7));
+    OrderTotalCalculator::class => function (ContextManager $ctx) {
+        $ctx->set('merchant', Merchant::find(7));
     },
 ],
 ```
@@ -312,10 +311,10 @@ When the same behavior appears under multiple states with different values, Scen
 <!-- doctest-attr: ignore -->
 ```php
 'routing' => [
-    HasConsentGuard::class => true,
+    HasAgreedToTermsGuard::class => true,
 ],
 'info_checking' => [
-    HasConsentGuard::class => false,
+    HasAgreedToTermsGuard::class => false,
 ],
 ```
 
@@ -329,8 +328,8 @@ protected function plan(): array
 {
     return [
         // Simple outcome
-        'verification.findeks.running' => '@done.report_saved',
-        'verification.turmob.verifying' => '@done',
+        'payment_verification.payment.processing' => '@done.completed',
+        'payment_verification.identity.checking' => '@done',
 
         // Job actor outcome
         'querying_phones' => '@done',
@@ -342,9 +341,9 @@ protected function plan(): array
 
 <!-- doctest-attr: ignore -->
 ```php
-'verification.findeks.running' => [
-    'outcome' => '@done.report_saved',
-    'output'  => ['reportId' => 'RPT-001', 'score' => 1400],
+'payment_verification.payment.processing' => [
+    'outcome' => '@done.completed',
+    'output'  => ['transactionId' => 'TXN-001', 'amount' => 9999],
 ],
 ```
 
@@ -354,7 +353,7 @@ protected function plan(): array
 ```php
 'polling' => [
     'outcome' => '@done',
-    IsPinRequiredGuard::class => true,
+    IsOtpRequiredGuard::class => true,
 ],
 ```
 
@@ -382,10 +381,10 @@ protected function plan(): array
 {
     return [
         'eligibility_check' => [
-            IsFarmerNotEligibleGuard::class => false,
+            IsBlacklistedGuard::class => false,
         ],
-        'verification.turmob.verifying' => '@done',
-        'verification.findeks.running'  => AtAwaitingPinScenario::class,
+        'payment_verification.identity.checking' => '@done',
+        'payment_verification.payment.processing' => AtAwaitingOtpScenario::class,
     ];
 }
 ```
@@ -394,25 +393,25 @@ The child scenario is a standalone `MachineScenario` for the child machine:
 
 <!-- doctest-attr: ignore -->
 ```php
-class AtAwaitingPinScenario extends MachineScenario
+class AtAwaitingOtpScenario extends MachineScenario
 {
-    protected string $machine     = FindeksMachine::class;
+    protected string $machine     = PaymentMachine::class;
     protected string $source      = 'idle';
     protected string $event       = 'MACHINE_START';
-    protected string $target      = 'awaiting_pin';
-    protected string $description = 'FindeksMachine at awaiting_pin';
+    protected string $target      = 'awaiting_otp';
+    protected string $description = 'PaymentMachine at awaiting_otp';
 
     protected function plan(): array
     {
         return [
-            'checking_existing_report' => [
-                HasExistingReportGuard::class => false,
+            'checking_existing_payment' => [
+                HasExistingPaymentGuard::class => false,
             ],
-            'querying_phones' => '@done',
-            'requesting'      => '@done',
-            'polling' => [
+            'authorizing' => '@done',
+            'processing'  => '@done',
+            'confirming' => [
                 'outcome' => '@done',
-                IsPinRequiredGuard::class => true,
+                IsOtpRequiredGuard::class => true,
             ],
         ];
     }
@@ -422,14 +421,14 @@ class AtAwaitingPinScenario extends MachineScenario
 **What happens:**
 1. ScenarioPlayer intercepts child machine dispatch
 2. Creates the child machine, applies the child scenario's `plan()` overrides
-3. Child reaches `awaiting_pin` — interactive state, waits for input
-4. Child **pauses** — parent stays at `verification.findeks.running`
+3. Child reaches `awaiting_otp` — interactive state, waits for input
+4. Child **pauses** — parent stays at `payment_verification.payment.processing`
 5. Forward endpoints become active — QA can send events to the child
 
 | plan() value | Child state | Forward endpoints |
 |-------------|-------------|-------------------|
-| `'@done.report_saved'` | Completed (simulated) | **Not active** — child didn't run |
-| `AtAwaitingPinScenario::class` | Running, paused | **Active** — child is real, waiting for input |
+| `'@done.completed'` | Completed (simulated) | **Not active** — child didn't run |
+| `AtAwaitingOtpScenario::class` | Running, paused | **Active** — child is real, waiting for input |
 
 ### @continue — Multi-Step Scenarios
 
@@ -439,28 +438,28 @@ When a scenario needs to traverse **multiple interactive states** in a single ac
 ```php
 class AtAllocationScenario extends MachineScenario
 {
-    protected string $machine     = CarSalesMachine::class;
-    protected string $source      = 'awaiting_customer_start';
-    protected string $event       = CustomerStartedEvent::class;
+    protected string $machine     = OrderMachine::class;
+    protected string $source      = 'pending';
+    protected string $event       = SubmitOrderEvent::class;
     protected string $target      = 'allocation';
-    protected string $description = 'Full journey — all checks passed, protocol approved';
+    protected string $description = 'Full journey — all checks passed, review approved';
 
     protected function plan(): array
     {
         return [
             'eligibility_check' => [
-                IsFarmerNotEligibleGuard::class => false,
+                IsBlacklistedGuard::class => false,
             ],
-            'verification.findeks.running'  => '@done.report_saved',
-            'verification.turmob.verifying' => '@done',
-            'verification' => [
-                'isFindeksRegionCompletedGuard' => true,
+            'payment_verification.payment.processing'  => '@done.completed',
+            'payment_verification.identity.checking' => '@done',
+            'payment_verification' => [
+                'isPaymentRegionCompletedGuard' => true,
             ],
-            // Machine arrives at checking_protocol — interactive state.
-            // Auto-send ProtocolPassedEvent to continue toward target.
-            'checking_protocol' => [
-                '@continue' => ProtocolPassedEvent::class,
-                CheckProtocolAction::class => ['protocolEligible' => true],
+            // Machine arrives at under_review — interactive state.
+            // Auto-send ReviewApprovedEvent to continue toward target.
+            'under_review' => [
+                '@continue' => ReviewApprovedEvent::class,
+                ProcessReviewAction::class => ['reviewApproved' => true],
             ],
         ];
     }
@@ -470,11 +469,11 @@ class AtAllocationScenario extends MachineScenario
 **Flow:**
 
 ```
-1. QA sends CustomerStartedEvent with scenario
-2. Machine: awaiting_customer_start → eligibility_check → verification (parallel)
-3. Delegations simulated → checking_protocol
-4. ScenarioPlayer: @continue → auto-send ProtocolPassedEvent
-5. Machine: checking_protocol → allocation
+1. QA sends SubmitOrderEvent with scenario
+2. Machine: pending → eligibility_check → payment_verification (parallel)
+3. Delegations simulated → under_review
+4. ScenarioPlayer: @continue → auto-send ReviewApprovedEvent
+5. Machine: under_review → allocation
 6. ScenarioPlayer: no @continue at allocation → stop
 7. Target validation: machine at allocation === $target
 ```
@@ -484,10 +483,10 @@ class AtAllocationScenario extends MachineScenario
 <!-- doctest-attr: ignore -->
 ```php
 // Event class only — no payload
-'@continue' => ProtocolPassedEvent::class,
+'@continue' => ReviewApprovedEvent::class,
 
 // Event class + payload
-'@continue' => [ProtocolPassedEvent::class, 'payload' => ['source' => 'auto']],
+'@continue' => [ReviewApprovedEvent::class, 'payload' => ['source' => 'auto']],
 
 // With scenario params
 '@continue' => [OtpSubmittedEvent::class, 'payload' => [
@@ -499,9 +498,9 @@ class AtAllocationScenario extends MachineScenario
 
 <!-- doctest-attr: ignore -->
 ```php
-'checking_protocol' => [
-    '@continue'                    => ProtocolPassedEvent::class,
-    CheckProtocolAction::class     => ['protocolEligible' => true],
+'under_review' => [
+    '@continue'                    => ReviewApprovedEvent::class,
+    ProcessReviewAction::class     => ['reviewApproved' => true],
     HasValidDocumentsGuard::class  => true,
 ],
 ```
@@ -523,12 +522,12 @@ protected function plan(): array
 {
     return [
         'eligibility_check' => [
-            IsFarmerNotEligibleGuard::class => false,
+            IsBlacklistedGuard::class => false,
         ],
-        'verification.findeks.running'  => '@done.report_saved',
-        'verification.turmob.verifying' => '@done',
-        'verification' => [
-            'isFindeksRegionCompletedGuard' => true,
+        'payment_verification.payment.processing'  => '@done.completed',
+        'payment_verification.identity.checking' => '@done',
+        'payment_verification' => [
+            'isPaymentRegionCompletedGuard' => true,
         ],
     ];
 }
@@ -538,13 +537,13 @@ protected function plan(): array
 
 <!-- doctest-attr: ignore -->
 ```php
-// Findeks pauses at OTP, Turmob completes
-'verification.findeks.running'  => AtAwaitingPinScenario::class,
-'verification.turmob.verifying' => '@done',
+// Payment pauses at OTP, identity check completes
+'payment_verification.payment.processing'  => AtAwaitingOtpScenario::class,
+'payment_verification.identity.checking' => '@done',
 
-// Findeks completes, Turmob fails → test @fail path
-'verification.findeks.running'  => '@done.report_saved',
-'verification.turmob.verifying' => '@fail',
+// Payment completes, identity check fails → test @fail path
+'payment_verification.payment.processing'  => '@done.completed',
+'payment_verification.identity.checking' => '@fail',
 ```
 
 ### Fire-and-Forget Delegation
@@ -559,11 +558,11 @@ Scenarios can accept parameters from the frontend via `params()` and `param()`:
 ```php
 class AtRejectedScenario extends MachineScenario
 {
-    protected string $machine     = CarSalesMachine::class;
-    protected string $source      = 'checking_protocol';
-    protected string $event       = ProtocolRejectedEvent::class;
+    protected string $machine     = OrderMachine::class;
+    protected string $source      = 'under_review';
+    protected string $event       = ReviewRejectedEvent::class;
     protected string $target      = 'rejected';
-    protected string $description = 'Application rejected with specific reason';
+    protected string $description = 'Order rejected with specific reason';
 
     protected function params(): array
     {
@@ -571,12 +570,12 @@ class AtRejectedScenario extends MachineScenario
             // Rich definition — frontend renders a dropdown
             'reason' => [
                 'type'   => 'enum',
-                'values' => ['GENERAL', 'INSUFFICIENT_INCOME', 'CREDIT_SCORE_LOW'],
+                'values' => ['GENERAL', 'INSUFFICIENT_FUNDS', 'CREDIT_SCORE_LOW'],
                 'label'  => 'Rejection Reason',
                 'rules'  => ['required'],
             ],
             // Plain rules — frontend renders a generic input
-            'findeksScore' => ['integer', 'min:0', 'max:1900'],
+            'creditScore' => ['integer', 'min:0', 'max:1900'],
         ];
     }
 
@@ -586,7 +585,7 @@ class AtRejectedScenario extends MachineScenario
             'allocation' => [
                 RejectAction::class => [
                     'rejectionReason' => $this->param('reason'),
-                    'findeksScore'    => $this->param('findeksScore', 750),
+                    'creditScore'     => $this->param('creditScore', 750),
                 ],
             ],
         ];
@@ -619,15 +618,15 @@ Parameters are sent by the frontend in `scenarioParams` and validated before `pl
 
 | Type | Pattern | Example |
 |------|---------|---------|
-| Machine scenario | `At{Target}Scenario` | `AtCheckingProtocolScenario` |
-| Behavior scenario | `{OriginalName}Scenario` | `HasConsentGuardScenario` |
+| Machine scenario | `At{Target}Scenario` | `AtReviewScenario` |
+| Behavior scenario | `{OriginalName}Scenario` | `HasAgreedToTermsGuardScenario` |
 
 **Machine scenario names** are descriptive — typically the target state. When multiple scenarios target the same state via different paths, disambiguate:
 
-- `AtVerificationScenario` — unique target, sufficient
-- `AtVerificationViaConsentScenario` — same target, different source/event
+- `AtPaymentVerificationScenario` — unique target, sufficient
+- `AtPaymentVerificationViaConsentScenario` — same target, different source/event
 
-**Behavior scenario names** mirror the original behavior name with `Scenario` suffix. This enables search: `HasConsent` finds both `HasConsentGuard` and `HasConsentGuardScenario`.
+**Behavior scenario names** mirror the original behavior name with `Scenario` suffix. This enables search: `HasAgreedToTerms` finds both `HasAgreedToTermsGuard` and `HasAgreedToTermsGuardScenario`.
 
 ## Endpoint Integration
 
@@ -645,10 +644,10 @@ A machine can be running normally without any scenario. At **any state**, QA can
 ### Request Format
 
 ```http
-POST /api/car-sales/{applicationId}/customer-started
+POST /api/orders/{orderId}/submit
 {
-    "type": "CustomerStartedEvent",
-    "scenario": "at-checking-protocol-scenario",
+    "type": "SubmitOrderEvent",
+    "scenario": "at-review-scenario",
     "scenarioParams": {}
 }
 ```
@@ -656,13 +655,13 @@ POST /api/car-sales/{applicationId}/customer-started
 With parameters:
 
 ```http
-POST /api/car-sales/{applicationId}/protocol-rejected
+POST /api/orders/{orderId}/review-rejected
 {
-    "type": "ProtocolRejectedEvent",
+    "type": "ReviewRejectedEvent",
     "scenario": "at-rejected-scenario",
     "scenarioParams": {
-        "reason": "INSUFFICIENT_INCOME",
-        "findeksScore": 1200
+        "reason": "INSUFFICIENT_FUNDS",
+        "creditScore": 1200
     }
 }
 ```
@@ -675,13 +674,13 @@ After any successful transition, the response includes `availableScenarios` grou
 {
     "data": {
         "id": "evt_01HXYZ...",
-        "machineId": "car_sales",
-        "state": ["car_sales.checking_protocol"],
-        "availableEvents": ["ProtocolPassedEvent", "ProtocolRejectedEvent"],
+        "machineId": "order",
+        "state": ["order.under_review"],
+        "availableEvents": ["ReviewApprovedEvent", "ReviewRejectedEvent"],
         "output": {},
         "isProcessing": false,
         "availableScenarios": {
-            "ProtocolPassedEvent": [
+            "ReviewApprovedEvent": [
                 {
                     "slug": "at-approved-scenario",
                     "description": "Fast-forward to approved",
@@ -689,7 +688,7 @@ After any successful transition, the response includes `availableScenarios` grou
                     "params": {}
                 }
             ],
-            "ProtocolRejectedEvent": [
+            "ReviewRejectedEvent": [
                 {
                     "slug": "at-rejected-scenario",
                     "description": "Rejection with specific reason",
@@ -697,7 +696,7 @@ After any successful transition, the response includes `availableScenarios` grou
                     "params": {
                         "reason": {
                             "type": "enum",
-                            "values": ["GENERAL", "INSUFFICIENT_INCOME"],
+                            "values": ["GENERAL", "INSUFFICIENT_FUNDS"],
                             "label": "Rejection Reason",
                             "rules": ["required"],
                             "required": true
@@ -724,16 +723,16 @@ When scenarios are enabled, `MachineRouter` registers two additional routes:
 Each machine's scenarios live under its own `Scenarios/` directory:
 
 ```
-app/Machines/CarSales/
-├── CarSalesMachine.php
+app/Machines/Order/
+├── OrderMachine.php
 ├── Guards/
 ├── Actions/
 └── Scenarios/
-    ├── AtVerificationScenario.php
-    ├── AtCheckingProtocolScenario.php
-    └── AtCheckingProtocolScenario/
+    ├── AtPaymentVerificationScenario.php
+    ├── AtReviewScenario.php
+    └── AtReviewScenario/
         └── Guards/
-            └── IsFarmerNotEligibleGuardScenario.php
+            └── IsBlacklistedGuardScenario.php
 ```
 
 `ScenarioDiscovery` finds scenarios by scanning the `Scenarios/` directory relative to the machine class file — no boot-time scanning, no caching needed.
@@ -755,8 +754,8 @@ php artisan machine:scenario
 **Example:**
 
 ```bash
-php artisan machine:scenario AtAllocation CarSalesMachine \
-    awaiting_customer_start CustomerStartedEvent allocation
+php artisan machine:scenario AtAllocation OrderMachine \
+    pending SubmitOrderEvent allocation
 ```
 
 The command:
@@ -770,12 +769,12 @@ The command:
 When BFS finds multiple paths, the command presents them:
 
 ```
-Found 2 paths from awaiting_customer_start to allocation:
+Found 2 paths from pending to allocation:
 
-  [0] awaiting_customer_start → eligibility_check → verification → checking_protocol → allocation
+  [0] pending → eligibility_check → payment_verification → under_review → allocation
       3 overrides, 2 delegation outcomes, 1 @continue
 
-  [1] awaiting_customer_start → eligibility_check → manual_review → allocation
+  [1] pending → eligibility_check → manual_review → allocation
       2 overrides, 0 delegation outcomes, 0 @continue
 
 Use --path=N to select. Using path [0].
@@ -786,8 +785,8 @@ Use --path=N to select. Using path [0].
 When the target is inside a child machine, use `{region}.{childState}` syntax:
 
 ```bash
-php artisan machine:scenario AtFindeksBirthDateCorrection CarSalesMachine \
-    idle CarSalesApplicationStartedEvent findeks.awaiting_birth_date_correction
+php artisan machine:scenario AtPaymentDateCorrection OrderMachine \
+    pending SubmitOrderEvent payment.awaiting_date_correction
 ```
 
 The command resolves the delegation boundary, discovers matching child scenarios, and references them in the parent's `plan()`. If no child scenario exists, it suggests the command to create one.
@@ -835,10 +834,10 @@ php artisan machine:scenario-validate
 | `$target` is not transient | `Target 'eligibility_check' is transient (@always)` |
 | `$event` valid from `$source` | `Event not available from source` |
 | All `plan()` routes exist | `State route 'eligibilty_check' not found` |
-| Behavior classes exist | `Guard class 'IsFarmerNotEligibleGard' not found` |
+| Behavior classes exist | `Guard class 'IsBlacklistedGard' not found` |
 | Delegation outcomes on delegation states only | `Has outcome '@done' but is not a delegation state` |
 | `@continue` on non-delegation states only | `Has @continue but is a delegation state` |
-| Child scenario machine matches delegation | `AtAwaitingPinScenario targets FindeksMachine but delegates to TurmobMachine` |
+| Child scenario machine matches delegation | `AtAwaitingOtpScenario targets PaymentMachine but delegates to IdentityCheckMachine` |
 
 **Level 2 — Path validation:**
 
@@ -846,19 +845,19 @@ php artisan machine:scenario-validate
 |-------|---------------|
 | Path exists from source to target | `No path from 'idle' to 'allocation' via 'StartEvent'` |
 | `@continue` events lead toward target | Directional check |
-| Deep target child scenario exists | `No scenario found for FindeksMachine targeting 'awaiting_pin'` |
+| Deep target child scenario exists | `No scenario found for PaymentMachine targeting 'awaiting_otp'` |
 
 ### Output
 
 ```
 Validating scenarios...
 
-CarSalesMachine (5 scenarios)
-  ✓ AtVerificationScenario                idle → verification
-  ✓ AtCheckingProtocolScenario            idle → checking_protocol
-  ✗ AtAllocationScenario                  idle → allocation
-    State route 'checking_protocols' not found in machine definition
-  ✓ AtRejectedScenario                    checking_protocol → rejected
+OrderMachine (5 scenarios)
+  ✓ AtPaymentVerificationScenario         pending → payment_verification
+  ✓ AtReviewScenario                      pending → under_review
+  ✗ AtAllocationScenario                  pending → allocation
+    State route 'under_reviews' not found in machine definition
+  ✓ AtRejectedScenario                    under_review → rejected
 
 4 passed, 1 failed
 ```
@@ -903,7 +902,7 @@ Scenario overrides live in the Laravel container — process-scoped. When async 
 ### Lifecycle
 
 1. Machine running normally → `scenario_class = null`
-2. QA sends event with `scenario` → `scenario_class = 'AtCheckingProtocolScenario'`
+2. QA sends event with `scenario` → `scenario_class = 'AtReviewScenario'`
 3. Async jobs restore machine → find `scenario_class` → hydrate → register overrides
 4. QA sends next event WITHOUT scenario → `scenario_class = null` → real behavior resumes
 5. QA sends next event with DIFFERENT scenario → new overrides replace old
@@ -930,7 +929,7 @@ Scenario overrides live in the Laravel container — process-scoped. When async 
 | **Transient as target** | Invalid — `$target` must be a settleable state |
 | **Path coverage** | Scenario-driven paths recorded normally by `PathCoverageTracker` |
 | **Fire-and-forget** | Dispatches suppressed during scenario mode |
-| **Parallel as target** | Target `'verification'` matches child routes like `verification.findeks.completed` — segment containment check |
+| **Parallel as target** | Target `'payment_verification'` matches child routes like `payment_verification.payment.completed` — segment containment check |
 | **`@start` event** | Creates fresh machine and processes `@always` chain — for transient initial states |
 
 ## Error Handling
@@ -947,7 +946,7 @@ Scenario overrides live in the Laravel container — process-scoped. When async 
 When a `MissingMachineContextException` is thrown during replay, it is enriched with a hint:
 
 ```
-`farmer` is missing in context.
+`customer` is missing in context.
 
 Hint: add a context override in the plan() for the relevant state.
 ```
