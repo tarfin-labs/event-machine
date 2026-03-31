@@ -16,6 +16,7 @@ use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Exceptions\ScenarioFailedException;
 use Tarfinlabs\EventMachine\Exceptions\ScenariosDisabledException;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioConfigurationException;
@@ -95,7 +96,37 @@ class ScenarioPlayer
                 );
             }
 
-            // Step 8: @continue loop — placeholder
+            // Step 8: @continue loop
+            $classified    = $this->classifyPlanValues();
+            $maxDepth      = config('machine.max_transition_depth', 100);
+            $continueCount = 0;
+
+            while ($continueCount < $maxDepth) {
+                $currentRoute = $this->resolveCurrentRoute($state);
+                $continue     = $this->findContinueForState($currentRoute, $classified['overrides']);
+
+                if ($continue === null) {
+                    break;
+                }
+
+                $continueCount++;
+
+                // Parse @continue value
+                [$eventClass, $payload] = $this->parseContinueValue($continue);
+
+                try {
+                    $state = $machine->send([
+                        'type'    => $eventClass,
+                        'payload' => $payload,
+                    ]);
+                } catch (\Throwable $e) {
+                    throw ScenarioFailedException::continueEventFailed(
+                        state: $currentRoute,
+                        event: $eventClass,
+                        reason: $e->getMessage(),
+                    );
+                }
+            }
 
             // Step 9: Validate target
             $this->validateTarget($state);
@@ -506,5 +537,64 @@ class ScenarioPlayer
             expected: $target,
             actual: implode(', ', $currentRoutes),
         );
+    }
+
+    /**
+     * Get the current state route for @continue matching.
+     * For simple machines, value has one entry like ['machine.state'].
+     * For parallel, multiple entries — use the first for @continue matching.
+     */
+    private function resolveCurrentRoute(State $state): string
+    {
+        $routes = $state->value;
+
+        return $routes[0] ?? '';
+    }
+
+    /**
+     * Find @continue directive for the given state route.
+     */
+    private function findContinueForState(string $currentRoute, array $overrides): mixed
+    {
+        foreach ($overrides as $stateRoute => $value) {
+            if (!is_array($value)) {
+                continue;
+            }
+            if (!isset($value['@continue'])) {
+                continue;
+            }
+            // Match: exact route or suffix match
+            $fullRoute = str_contains((string) $stateRoute, '.') ? $stateRoute : '';
+            if ($currentRoute === $stateRoute
+                || str_ends_with($currentRoute, '.'.$stateRoute)
+                || $currentRoute === $fullRoute) {
+                return $value['@continue'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Parse @continue value into [eventClass, payload].
+     *
+     * Formats:
+     *   'EventClass::class'                        → [EventClass, []]
+     *   [EventClass::class, 'payload' => [...]]    → [EventClass, [...]]
+     */
+    private function parseContinueValue(mixed $continue): array
+    {
+        if (is_string($continue)) {
+            return [$continue, []];
+        }
+
+        if (is_array($continue)) {
+            $eventClass = $continue[0] ?? $continue[array_key_first($continue)];
+            $payload    = $continue['payload'] ?? [];
+
+            return [$eventClass, $payload];
+        }
+
+        return [(string) $continue, []];
     }
 }
