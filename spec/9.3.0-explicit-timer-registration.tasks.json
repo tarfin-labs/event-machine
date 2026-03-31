@@ -1,0 +1,178 @@
+{
+  "version": 1,
+  "spec": "spec/9.3.0-explicit-timer-registration.md",
+  "created_at": "2026-03-31T11:50:59.107429Z",
+  "updated_at": "2026-03-31T11:52:06.0087Z",
+  "workflow": {},
+  "coverage": {
+    "total_sections": 0,
+    "mapped_sections": 0,
+    "context_only": [],
+    "unmapped": []
+  },
+  "tasks": [
+    {
+      "id": "create-timer-class",
+      "title": "Create MachineTimer class",
+      "status": "open",
+      "depends_on": [],
+      "estimate_minutes": 8,
+      "acceptance": "MachineTimer::register() exists. Returns SchedulingEvent. Defaults applied.",
+      "source_sections": [
+        "### Implementation"
+      ],
+      "source_lines": "59-78",
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "write-timer-tests",
+      "title": "Write MachineTimer unit tests",
+      "status": "open",
+      "depends_on": [
+        "create-timer-class"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "9 tests per spec table pass.",
+      "source_sections": [
+        "### New Unit Tests — `MachineTimerTest.php`"
+      ],
+      "source_lines": "138-154",
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "delete-boot-override",
+      "title": "Delete boot override from ServiceProvider",
+      "status": "open",
+      "depends_on": [
+        "create-timer-class"
+      ],
+      "estimate_minutes": 5,
+      "acceptance": "MachineServiceProvider has no boot() override.",
+      "source_sections": [
+        "### What Gets Deleted"
+      ],
+      "source_lines": "80-91",
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "delete-discovery",
+      "title": "Delete MachineDiscovery class",
+      "status": "open",
+      "depends_on": [
+        "delete-boot-override"
+      ],
+      "estimate_minutes": 3,
+      "acceptance": "MachineDiscovery class file deleted.",
+      "source_sections": [
+        "### What Gets Deleted"
+      ],
+      "source_lines": "80-91",
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "delete-timer-resolution",
+      "title": "Delete TimerResolution enum",
+      "status": "open",
+      "depends_on": [
+        "delete-boot-override"
+      ],
+      "estimate_minutes": 2,
+      "acceptance": "TimerResolution enum file deleted.",
+      "source_sections": [
+        "### What Gets Deleted"
+      ],
+      "source_lines": "80-91",
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "delete-cache-commands",
+      "title": "Delete cache and clear commands",
+      "status": "open",
+      "depends_on": [
+        "delete-discovery"
+      ],
+      "estimate_minutes": 5,
+      "acceptance": "Both commands and their test deleted.",
+      "source_sections": [
+        "### Deleted Tests"
+      ],
+      "source_lines": "156-158",
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "remove-config-resolution",
+      "title": "Remove timers.resolution config",
+      "status": "open",
+      "depends_on": [
+        "delete-boot-override"
+      ],
+      "estimate_minutes": 3,
+      "acceptance": "Config key removed from machine.php.",
+      "source_sections": [
+        "### What Gets Deleted"
+      ],
+      "source_lines": "80-91",
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "update-docs",
+      "title": "Update documentation for v9.3",
+      "status": "open",
+      "depends_on": [
+        "delete-cache-commands",
+        "remove-config-resolution"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "4 doc files updated per spec.",
+      "source_sections": [
+        "### Documentation Updates"
+      ],
+      "source_lines": "164-169",
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "run-quality",
+      "title": "Run composer quality gate",
+      "status": "open",
+      "depends_on": [
+        "write-timer-tests",
+        "update-docs",
+        "delete-timer-resolution"
+      ],
+      "estimate_minutes": 5,
+      "acceptance": "composer quality passes.",
+      "source_sections": [
+        "## Implementation Order"
+      ],
+      "source_lines": "182-192",
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    }
+  ]
+}
