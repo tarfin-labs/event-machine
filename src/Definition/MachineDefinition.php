@@ -635,6 +635,8 @@ class MachineDefinition
     /**
      * Retrieves the scenario state if scenario is enabled and available; otherwise, returns the current state.
      *
+     * @deprecated Use MachineScenario classes with the new scenario system instead. Will be removed in the next major version.
+     *
      * @param  State  $state  The current state.
      * @param  EventBehavior|array|null  $eventBehavior  The optional event behavior or event data.
      *
