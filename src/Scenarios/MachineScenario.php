@@ -17,6 +17,13 @@ use Tarfinlabs\EventMachine\Exceptions\ScenarioConfigurationException;
  */
 abstract class MachineScenario
 {
+    /**
+     * Special event value for scenarios starting at the machine's initial state.
+     * When $event is '@start', ScenarioPlayer creates a fresh machine and processes
+     * the initial @always chain with overrides active — no explicit event is sent.
+     */
+    public const START = '@start';
+
     /** Which machine this scenario targets (class-string). */
     protected string $machine;
 
