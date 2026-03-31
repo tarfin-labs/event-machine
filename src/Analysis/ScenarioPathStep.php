@@ -22,6 +22,7 @@ readonly class ScenarioPathStep
      * @param  ?string  $invokeClass  Child machine or job FQCN (DELEGATION states only).
      * @param  array<string>  $availableEvents  Events available FROM this state (INTERACTIVE states).
      * @param  array<string>  $availableDoneStates  @done.{state} options (DELEGATION states).
+     * @param  array<string>  $entryActions  Entry action class/key names on this state (for scaffold TODO hints).
      */
     public function __construct(
         public string $stateRoute,
@@ -33,5 +34,6 @@ readonly class ScenarioPathStep
         public ?string $invokeClass = null,
         public array $availableEvents = [],
         public array $availableDoneStates = [],
+        public array $entryActions = [],
     ) {}
 }
