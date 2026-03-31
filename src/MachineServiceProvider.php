@@ -47,6 +47,7 @@ class MachineServiceProvider extends PackageServiceProvider
             ->hasMigration('create_machine_children_table')
             ->hasMigration('create_machine_current_states_table')
             ->hasMigration('create_machine_timer_fires_table')
+            ->hasMigration('add_scenario_columns_to_machine_current_states_table')
             ->hasCommand(ArchiveEventsCommand::class)
             ->hasCommand(ArchiveStatusCommand::class)
             ->hasCommand(MachineConfigValidatorCommand::class)
