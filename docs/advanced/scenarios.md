@@ -33,29 +33,7 @@ This analyzes the machine definition, finds the path from source to target, and 
 
 ### 2. Review and adjust the generated plan
 
-<!-- doctest-attr: ignore -->
-```php
-class AtShippingScenario extends MachineScenario
-{
-    protected string $machine     = OrderMachine::class;
-    protected string $source      = 'pending';
-    protected string $event       = SubmitOrderEvent::class;
-    protected string $target      = 'shipping';
-    protected string $description = 'At shipping — payment completed, ready to ship';
-
-    protected function plan(): array
-    {
-        return [
-            // @always guard: skip eligibility check
-            'eligibility_check' => [
-                IsBlacklistedGuard::class => false,
-            ],
-            // Child machine: simulate payment completion
-            'processing_payment' => '@done',
-        ];
-    }
-}
-```
+The scaffolder generates a `plan()` with override entries for each intermediate state. Review the generated file, adjust guard/action overrides and delegation outcomes. See [MachineScenario Class](#machinescenario-class) below for the full class structure.
 
 ### 3. Enable scenarios in staging
 
@@ -143,23 +121,23 @@ protected string $source = 'checkout.payment.awaiting_confirmation';
 
 For root-level states (e.g., `pending`, `shipping`), the leaf key IS the full route.
 
-### Properties vs Methods
+### Accessing Properties
 
-Properties are the default. Methods can be used when computed values are needed:
+Properties are set as `protected` class fields. Public getter methods (`machine()`, `source()`, `event()`, `target()`, `description()`) return these values. Override a getter when you need computed values:
 
 <!-- doctest-attr: ignore -->
 ```php
 // Default — property assignment (recommended)
 protected string $machine = OrderMachine::class;
 
-// Alternative — method override (when computation is needed)
+// Alternative — override the getter (when computation is needed)
 public function machine(): string
 {
     return config('machines.order.class');
 }
 ```
 
-The base class checks: method first, property fallback.
+The getters return the property value directly. Override the getter method when you need runtime computation.
 
 ### `@start` — Transient Initial States
 

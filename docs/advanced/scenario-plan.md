@@ -199,7 +199,7 @@ class AtAwaitingOtpScenario extends MachineScenario
 {
     protected string $machine     = PaymentMachine::class;
     protected string $source      = 'idle';
-    protected string $event       = 'MACHINE_START';
+    protected string $event       = MachineScenario::START;
     protected string $target      = 'awaiting_otp';
     protected string $description = 'PaymentMachine at awaiting_otp';
 
@@ -316,7 +316,7 @@ Behavior overrides are registered first, then `@continue` fires.
 
 ## Parallel States
 
-Specify each region's delegation separately. Only regions you mention are controlled — unmentioned delegations run normally:
+Specify each region's delegation separately. Only regions you mention are controlled — unmentioned delegations execute real delegation (child machine or job runs via queue, requiring external services to be available in staging):
 
 <!-- doctest-attr: ignore -->
 ```php

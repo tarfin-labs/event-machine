@@ -29,6 +29,11 @@ The command:
 3. Generates appropriate `plan()` entries with TODO comments
 4. Writes the file to `Scenarios/` next to the machine class
 
+**Options:**
+- `--dry-run` — prints generated PHP to stdout without writing the file
+- `--force` — overwrites an existing scenario file (without it, the command fails if the file exists)
+- `--path=N` — when multiple paths exist from source to target, selects path by index (default: 0). The command lists all paths with signatures and stats when multiple are found.
+
 ### Multiple Paths
 
 When BFS finds multiple paths, the command presents them:
@@ -83,9 +88,11 @@ When a `@continue` event has `EventBehavior::rules()`, payload fields are extrac
 
 ```bash
 php artisan machine:scenario-validate
-    {machine?}        # Specific machine (optional — all if omitted)
-    {--scenario=}     # Single scenario by class or slug
+    {machine?}        # Specific machine FQCN (optional — auto-discovers all if omitted)
+    {--scenario=}     # Filter: slug, class basename, or FQCN
 ```
+
+When `{machine}` is omitted, the command auto-discovers all Machine subclasses that have a `Scenarios/` directory (via Composer classmap, falls back to `app/Machines` file scan).
 
 ### What It Validates
 

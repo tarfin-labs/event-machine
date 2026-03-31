@@ -95,6 +95,29 @@ The field is built by `ScenarioDiscovery::groupedByEvent()` which scans the `Sce
 
 When `MACHINE_SCENARIOS_ENABLED=false` (default), the `availableScenarios` field is **not present** in the response — zero overhead in production.
 
+## Scenario Deactivation
+
+When a POST request arrives **without** a `scenario` field, the controller checks if the machine had a previously active scenario (via `scenario_class` column in `machine_current_states`). If so, it clears the columns — the machine returns to normal (non-scenario) behavior:
+
+```http
+POST /api/orders/{orderId}/review-approved
+{
+    "type": "ReviewApprovedEvent"
+}
+```
+
+No `scenario` field → previous scenario deactivated. QA can resume manual testing at any point.
+
+## Error Handling
+
+| Condition | HTTP Status | Error |
+|-----------|-------------|-------|
+| Unknown scenario slug | 422 | `ScenarioFailedException` — scenario not found |
+| Machine not at scenario's `$source` state | 422 | `ScenarioFailedException::sourceMismatch()` |
+| Request `type` doesn't match scenario's `$event` | 422 | `ScenarioFailedException::eventMismatch()` |
+| Target not reached after execution | 422 | `ScenarioTargetMismatchException` |
+| Machine is faked (`Machine::fake()`) | 500 | `ScenarioConfigurationException` |
+
 ## File Organization
 
 Each machine's scenarios live under its own `Scenarios/` directory:

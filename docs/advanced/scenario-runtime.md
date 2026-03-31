@@ -16,10 +16,9 @@ Scenarios are disabled by default. Enable in staging only:
 | Gating point | Behavior when disabled |
 |-------------|----------------------|
 | `ScenarioPlayer` | Throws `ScenariosDisabledException` |
-| `MachineRouter` | Scenario routes not registered |
-| `MachineController::buildResponse()` | `availableScenarios` omitted |
-| `MachineController::executeEndpoint()` | `scenario` field silently ignored |
-| `Machine::create()` restoration | `scenario_class` query skipped |
+| `MachineController::buildResponse()` | `availableScenarios` field omitted from response |
+| `MachineController::maybeRegisterScenarioOverrides()` | Returns `null` immediately — `scenario` field in request silently ignored |
+| `Machine::create()` restoration | `scenario_class` column not read |
 
 Zero overhead in production.
 
@@ -68,15 +67,37 @@ Scenario overrides live in the Laravel container — process-scoped. When async 
 |-----------|------|
 | `ScenariosDisabledException` | `MACHINE_SCENARIOS_ENABLED=false` |
 | `ScenarioConfigurationException` | Invalid state route, delegation outcome on non-delegation state, missing properties, invalid params, machine is faked |
-| `ScenarioFailedException` | Guard rejection during replay, `@continue` event rejected |
+| `ScenarioFailedException` | Guard rejection during replay, `@continue` event rejected, source mismatch (controller), event mismatch (controller) |
 | `ScenarioTargetMismatchException` | Machine did not reach `$target` after execution |
 | `NoScenarioPathFoundException` | Scaffold command: no path from source to target |
 | `AmbiguousScenarioPathException` | Scaffold command: multiple paths exist |
 
-When a `MissingMachineContextException` is thrown during replay, it is enriched with a hint:
+When a `MissingMachineContextException` is thrown during replay, it is enriched with hints from `$requiredContext` properties on guards and entry actions at the current state:
 
 ```
 `customer` is missing in context.
 
-Hint: add a context override in the plan() for the relevant state.
+Hint: The following behaviors at state 'eligibility_check' require context keys:
+  - IsEligibleGuard (guard): requires userId (int)
+  - StoreApplicationAction (entry action): requires applicationId (string)
+Add context overrides in plan() for the relevant state.
 ```
+
+## ScenarioPlayer Static API
+
+| Method | Purpose |
+|--------|---------|
+| `ScenarioPlayer::isActive()` | Returns `true` during scenario execution — engine checks this to suppress fire-and-forget dispatches |
+| `ScenarioPlayer::getOutcome(string $stateRoute)` | Returns delegation outcome for a state (used by engine during delegation interception) |
+| `ScenarioPlayer::getChildScenario(string $stateRoute)` | Returns child scenario class for nested delegation |
+| `ScenarioPlayer::cleanupOverrides()` | Unbinds all container overrides, clears outcomes/childScenarios, resets inline fakes. Runs in `finally` block after every `execute()` |
+| `ScenarioPlayer::deactivateScenario(string $rootEventId)` | Clears `scenario_class`/`scenario_params` columns in `machine_current_states` |
+
+## Testing
+
+The `InteractsWithMachines` trait auto-resets scenario state after each test:
+
+- `ScenarioPlayer::cleanupOverrides()` — unbinds overrides, clears static state
+- `ScenarioDiscovery::resetCache()` — clears discovery cache
+
+No manual cleanup needed in tests that use `InteractsWithMachines`.

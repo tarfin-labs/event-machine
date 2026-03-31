@@ -148,19 +148,18 @@ This enables search: `HasConsent` finds both `HasConsentGuard` and `HasConsentGu
 
 ## File Organization
 
-Place scenario behaviors next to the scenario that uses them:
+Place scenario behaviors next to the scenario that uses them in a subdirectory named after the scenario. For simple scenarios (all inline overrides), a single file is sufficient. See [Scenario Endpoints — File Organization](/advanced/scenario-endpoints#file-organization) for the full directory structure.
 
-```
-app/Machines/CarSales/
-└── Scenarios/
-    ├── AtVerificationScenario.php
-    └── AtCheckingProtocolScenario/
-        ├── AtCheckingProtocolScenario.php
-        └── Guards/
-            └── IsCustomerInfoCompleteGuardScenario.php
-```
+## Inline vs Class-Based Overrides
 
-For simple scenarios (all inline overrides), a single file is sufficient. Create a subdirectory only when the scenario has class-based behavior overrides.
+The override mechanism differs based on whether the behavior key is a class FQCN or a camelCase inline key:
+
+| Key format | Example | Override mechanism |
+|-----------|---------|-------------------|
+| **FQCN** (class-based) | `IsEligibleGuard::class => false` | `App::bind()` — container resolution swapped |
+| **camelCase** (inline) | `'isEligibleGuard' => false` | `InlineBehaviorFake::fake()` — inline interception |
+
+Both support the same value forms (bool, array, closure, class). The engine resolves the correct mechanism automatically based on the key format.
 
 ## Override Form Comparison
 
