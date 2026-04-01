@@ -75,7 +75,7 @@ it('LocalQA: executeChildScenario with real delegation — child reaches final s
  */
 function createMachineAtReviewing(): string
 {
-    $machine = ScenarioTestMachine::create(context: ['userId' => 1, 'eligible' => true]);
+    $machine = ScenarioTestMachine::create();
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
@@ -234,7 +234,7 @@ it('LocalQA: @continue loop executes via HTTP endpoint', function (): void {
 // ═══════════════════════════════════════════════════════════════
 
 it('LocalQA: scenario deactivation — next event without slug clears DB columns', function (): void {
-    $machine = ScenarioTestMachine::create(context: ['userId' => 1, 'eligible' => true]);
+    $machine = ScenarioTestMachine::create();
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 
@@ -297,7 +297,7 @@ it('LocalQA: forward endpoint active after child scenario pauses at interactive'
 });
 
 it('LocalQA: Machine::create(state: $rootEventId) restores scenario from DB', function (): void {
-    $machine = ScenarioTestMachine::create(context: ['userId' => 1, 'eligible' => true]);
+    $machine = ScenarioTestMachine::create();
     $machine->persist();
     $rootEventId = $machine->state->history->first()->root_event_id;
 

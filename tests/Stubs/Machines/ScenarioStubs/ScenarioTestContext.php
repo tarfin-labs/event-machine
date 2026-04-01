@@ -9,7 +9,7 @@ use Tarfinlabs\EventMachine\ContextManager;
 class ScenarioTestContext extends ContextManager
 {
     public function __construct(
-        public ?int $userId = null,
+        public ?int $userId = 1,
         public bool $eligible = true,
         public bool $processed = false,
         public ?string $result = null,
