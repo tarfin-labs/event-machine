@@ -236,6 +236,16 @@ POST /api/orders/{orderId}/confirm-pin
 
 The old scenario (with its continuation) is replaced by the new scenario. The new scenario runs its `plan()` from the current state. This allows QA to change direction mid-flow without manually deactivating.
 
+### Continuation Branching
+
+At a selective pause point (an interactive state without `@continue`), QA sees both `activeScenario` and `availableScenarios` in the response. This creates a **branch point** where QA can:
+
+- **Continue** — send the event without a scenario slug → continuation overrides apply
+- **Branch** — send the event with a different scenario slug → new scenario replaces the active one
+- **Go manual** — send `scenario: null` → continuation deactivated, real behavior resumes
+
+This is powerful for testing multiple paths from the same intermediate state without restarting the entire flow.
+
 ## Error Handling
 
 | Condition | HTTP Status | Error |

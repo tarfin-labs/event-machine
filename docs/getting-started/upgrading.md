@@ -33,6 +33,34 @@ Each section below has step-by-step migration instructions with before/after exa
 
 ---
 
+## From 9.5.x to 9.6.0
+
+### Callable Delegation Outcome
+
+Scenario `plan()` and `continuation()` outcome values can now be a `Closure` for runtime-conditional outcomes. The Closure uses `InvokableBehavior` parameter injection — type-hint what you need:
+
+<!-- doctest-attr: ignore -->
+```php
+'confirming_pin' => [
+    'outcome' => function (ContextManager $context): string {
+        return $context->pin === now()->format('dmy') ? '@done' : '@fail';
+    },
+    IsPinRetryableGuard::class => true,
+],
+```
+
+See [Callable Outcome](/advanced/scenario-plan#callable-outcome) for details.
+
+### Bug Fix: Guard Overrides in Outcome Arrays
+
+Guard and action class keys in outcome arrays (e.g., `IsPinRetryableGuard::class => true` alongside `'outcome' => '@fail'`) were previously silently ignored. They are now extracted and registered as behavior overrides, so they take effect during `@fail`/`@done` routing.
+
+### Validator: Outcome Arrays on Non-Delegation States
+
+`machine:scenario-validate` now correctly rejects outcome arrays (`['outcome' => '...']`) on non-delegation states. Previously only bare string outcomes (`'@done'`) were caught.
+
+---
+
 ## From 9.4.x to 9.5.0
 
 ### Explicit Scenario Deactivation (`scenario: null`)

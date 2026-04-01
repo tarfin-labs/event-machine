@@ -168,12 +168,35 @@ protected function plan(): array
 | With guard override | `['outcome' => '@done', Guard::class => true]` | `@done` transition has guards |
 | Failure | `'@fail'` | Test failure path |
 | Timeout | `'@timeout'` | Test timeout path |
+| Callable | `['outcome' => fn(ContextManager $c) => '...']` | Runtime-conditional outcome |
 
 **How it works:**
 1. ScenarioPlayer intercepts delegation dispatch
 2. Does NOT run the delegated machine/job
 3. Simulates the completion by sending the declared outcome to the parent
 4. Parent's `@done`/`@fail`/`@timeout` transition fires with the declared output
+
+### Callable Outcome
+
+When the outcome depends on runtime data (e.g., a PIN entered by QA), use a `Closure` instead of a static string. The Closure uses `InvokableBehavior` parameter injection — type-hint what you need:
+
+<!-- doctest-attr: ignore -->
+```php
+'confirming_pin' => [
+    'outcome' => function (ContextManager $context): string {
+        $pin         = $context->pin;
+        $expectedPin = now()->format('dmy');  // DDMMYY
+        return $pin === $expectedPin ? '@done' : '@fail';
+    },
+    IsPinRetryableGuard::class => true,  // applied when @fail routes
+],
+```
+
+The Closure runs at delegation time, after entry actions have populated the context. Injectable parameters: `ContextManager`, `State`, `EventBehavior`, `EventCollection`.
+
+Must return a valid outcome string: `'@done'`, `'@done.{state}'`, `'@fail'`, or `'@timeout'`.
+
+Guard and action overrides in the same array (like `IsPinRetryableGuard::class => true` above) are extracted and registered as behavior overrides, so they take effect when `@fail`/`@done` routing evaluates guards.
 
 ## Child Machine Scenarios
 
@@ -315,6 +338,14 @@ Behavior overrides are registered first, then `@continue` fires.
 - `@continue` is only valid on **non-delegation states**
 - ScenarioPlayer loops until no `@continue` match or `max_transition_depth` is reached
 - If a `@continue` event fails, `ScenarioFailedException` is thrown
+
+### Selective Pause
+
+Intentionally omitting `@continue` from an interactive state creates a **selective pause** — the scenario loop stops, the machine stays at that state, and QA interacts with the real endpoint. After QA acts, the continuation overrides resume from the next state.
+
+This is a deliberate design choice: the scenario designer selects which states QA must interact with (real behavior) and which are automated (via `@continue`).
+
+**Example:** In a Findeks flow, QA must enter a real PIN at `awaiting_pin` (no `@continue`), but the subsequent `confirming_pin → polling → saving_report` chain is automated by continuation overrides.
 
 ## Parallel States
 

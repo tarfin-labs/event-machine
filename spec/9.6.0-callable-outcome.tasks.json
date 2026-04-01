@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.0-callable-outcome.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-01T18:37:45.715009Z",
+  "updated_at": "2026-04-01T18:41:18.741636Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "agentic-commits"
@@ -167,7 +167,7 @@
       "id": "qa-test",
       "title": "Write QA test #10 for callable outcome",
       "description": "QA test: callable outcome with correct PIN returns @done (reaches final success), wrong PIN returns @fail (reaches retry state). Two sequential runs in one test.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "test",
         "qa"
@@ -180,16 +180,16 @@
       "source_sections": null,
       "source_lines": "205-209",
       "started_at": "2026-04-01T18:37:45.715009Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-01T18:41:12.816935Z",
+      "closed_reason": "QA test #10 passes: correct PIN now()-\u003eformat('dmy') → @done → completed. Wrong PIN '000000' → @fail + IsRetryableGuard=true → waiting (retry). Both in single test with 2 machines. ConfirmEvent + endpoint added. 11 QA tests, 2594 total.",
+      "gate_passed_at": "2026-04-01T18:41:12.816935Z",
+      "commit_sha": "abe1aa30"
     },
     {
       "id": "docs",
       "title": "Update documentation for callable outcome feature",
       "description": "Add Callable Outcome section to scenario-plan.md: API, Closure signature, example with Findeks PIN, when to use. Update upgrading.md with 9.6.0 section.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "docs"
       ],
@@ -200,7 +200,7 @@
       "acceptance": "scenario-plan.md has Callable Outcome section with API example and Closure signature. scenario-plan.md has Selective Pause pattern in @continue section (intentional omission = QA interaction point). scenario-endpoints.md has Continuation Branching pattern in Scenario Switching section (pause point + availableScenarios = branch point). upgrading.md has 9.6.0 section documenting callable outcome + guard override extraction bugfix.",
       "source_sections": null,
       "source_lines": "211-217",
-      "started_at": null,
+      "started_at": "2026-04-01T18:41:18.741636Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,
