@@ -33,6 +33,39 @@ Each section below has step-by-step migration instructions with before/after exa
 
 ---
 
+## From 9.4.x to 9.5.0
+
+### Explicit Scenario Deactivation (`scenario: null`)
+
+You can now explicitly deactivate an active continuation scenario by sending `scenario: null` in the request payload. Previously, the only ways to deactivate were switching to a different scenario or waiting for a final state.
+
+```http
+POST /api/orders/{orderId}/confirm-pin
+{
+    "type": "PIN_CONFIRMED",
+    "scenario": null
+}
+```
+
+This is useful when QA wants to exit a continuation mid-flow and test real behavior without overrides. See [Explicit Deactivation](/advanced/scenario-endpoints#explicit-deactivation-with-scenario-null).
+
+::: tip `scenario: null` vs omitting `scenario`
+- **Omitting `scenario`**: continuation auto-restores and applies overrides
+- **`scenario: null`**: continuation deactivated, real behavior used
+:::
+
+### Scaffold `continuation()` Stub
+
+`php artisan machine:scenario` now generates a `continuation()` method stub when the target state is **interactive**. This reminds you to define Phase 2 overrides for subsequent requests after the machine reaches the target.
+
+Non-interactive targets (final, transient) do not generate the stub.
+
+### Bug Fix: `json_decode` on Eloquent-Cast Column
+
+Fixed a double-decoding bug where `scenario_params` (which has an Eloquent `'array'` cast) was passed through `json_decode()` again in `maybeRegisterScenarioOverrides()`. This caused a `TypeError` when the column contained a non-null value.
+
+---
+
 ## From 9.3.x to 9.4.0
 
 ### New: Machine Scenarios
