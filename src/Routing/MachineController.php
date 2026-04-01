@@ -604,14 +604,30 @@ class MachineController extends Controller
         $scenarioSlug = $request->input('scenario');
 
         if ($scenarioSlug === null) {
-            // No scenario — deactivate only if there was a previously active scenario.
-            // Avoids unnecessary DB writes on every non-scenario request.
+            // No scenario slug — check for active continuation in DB.
             $rootEventId = $machine->state->history?->first()?->root_event_id;
             if ($rootEventId !== null) {
                 $currentState = MachineCurrentState::where('root_event_id', $rootEventId)
                     ->whereNotNull('scenario_class')
-                    ->first(['root_event_id']);
+                    ->first(['scenario_class', 'scenario_params']);
+
                 if ($currentState !== null) {
+                    $scenarioClass = $currentState->scenario_class;
+
+                    if (is_string($scenarioClass) && class_exists($scenarioClass)) {
+                        $scenario = new $scenarioClass();
+
+                        if ($scenario->hasContinuation()) {
+                            $scenario->hydrateParams(
+                                json_decode($currentState->scenario_params ?? '[]', true) ?? []
+                            );
+                            $scenario->isContinuation = true;
+
+                            return $scenario;
+                        }
+                    }
+
+                    // No continuation — deactivate
                     ScenarioPlayer::deactivateScenario($rootEventId);
                 }
             }
