@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.0-callable-outcome.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-01T18:21:13.330216Z",
+  "updated_at": "2026-04-01T18:22:48.315941Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "agentic-commits"
@@ -34,7 +34,7 @@
       "id": "extract-overrides",
       "title": "Extract behavior overrides from outcome arrays in classifyPlanValues()",
       "description": "When an outcome array contains class-keyed entries (guards, actions) alongside 'outcome', extract them into $overrides so they get registered in the container. This is a bug fix — currently these overrides are silently ignored.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "impl",
         "bugfix",
@@ -46,16 +46,16 @@
       "source_sections": null,
       "source_lines": "82-108,114-138",
       "started_at": "2026-04-01T18:21:13.330216Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-01T18:22:43.775754Z",
+      "closed_reason": "classifyPlanValues() extracts class-keyed entries from outcome arrays into $overrides via array_filter with ARRAY_FILTER_USE_BOTH. Keys 'outcome' and 'output' excluded. 2585 tests pass, 0 PHPStan errors.",
+      "gate_passed_at": "2026-04-01T18:22:43.775754Z",
+      "commit_sha": "9ff79b45"
     },
     {
       "id": "callable-resolve",
       "title": "Resolve Closure outcome in handleScenarioOutcome()",
       "description": "In MachineDefinition::handleScenarioOutcome(), when the outcome value is a Closure, resolve it via new resolveCallableOutcome() helper that uses InvokableBehavior parameter injection. Signature: fn(ContextManager $context, ...): string.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "impl",
         "definition"
@@ -67,7 +67,7 @@
       "acceptance": "handleScenarioOutcome() resolves Closure outcome via resolveCallableOutcome() helper using InvokableBehavior::injectInvokableBehaviorParameters(). Closure can type-hint ContextManager, State, EventBehavior. Returns '@done', '@fail', or '@timeout' string.",
       "source_sections": null,
       "source_lines": "96-108",
-      "started_at": null,
+      "started_at": "2026-04-01T18:22:48.315941Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,

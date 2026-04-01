@@ -1859,9 +1859,12 @@ class MachineDefinition
             return true;
         }
 
-        // Outcome simulation — parse outcome string/array
-        $outcomeString = is_array($outcome) ? ($outcome['outcome'] ?? '@done') : $outcome;
-        $outputData    = is_array($outcome) ? ($outcome['output'] ?? []) : [];
+        // Outcome simulation — parse outcome string/array, resolve Closure via InvokableBehavior injection
+        $rawOutcome    = is_array($outcome) ? ($outcome['outcome'] ?? '@done') : $outcome;
+        $outcomeString = $rawOutcome instanceof \Closure
+            ? $this->resolveCallableOutcome($rawOutcome, $state)
+            : $rawOutcome;
+        $outputData = is_array($outcome) ? ($outcome['output'] ?? []) : [];
 
         if ($outcomeString === '@timeout') {
             $state->setInternalEventBehavior(
@@ -1911,6 +1914,20 @@ class MachineDefinition
         }
 
         return true;
+    }
+
+    /**
+     * Resolve a Closure outcome using InvokableBehavior parameter injection.
+     */
+    private function resolveCallableOutcome(\Closure $closure, State $state): string
+    {
+        $parameters = InvokableBehavior::injectInvokableBehaviorParameters(
+            actionBehavior: $closure,
+            state: $state,
+            eventBehavior: $state->triggeringEvent,
+        );
+
+        return $closure(...$parameters);
     }
 
     /**
