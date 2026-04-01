@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.0-callable-outcome.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-01T18:00:45.993643Z",
+  "updated_at": "2026-04-01T18:11:56.609755Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "agentic-commits"
@@ -54,7 +54,7 @@
     {
       "id": "callable-resolve",
       "title": "Resolve Closure outcome in handleScenarioOutcome()",
-      "description": "In MachineDefinition::handleScenarioOutcome(), when the outcome value is a Closure, call it with ContextManager to get the outcome string. Signature: fn(ContextManager $context): string.",
+      "description": "In MachineDefinition::handleScenarioOutcome(), when the outcome value is a Closure, resolve it via new resolveCallableOutcome() helper that uses InvokableBehavior parameter injection. Signature: fn(ContextManager $context, ...): string.",
       "status": "open",
       "tags": [
         "impl",
@@ -64,7 +64,7 @@
         "extract-overrides"
       ],
       "estimate_minutes": 5,
-      "acceptance": "handleScenarioOutcome() resolves Closure outcome via $rawOutcome($state-\u003econtext). Returns '@done', '@fail', or '@timeout' string. Downstream routing unchanged.",
+      "acceptance": "handleScenarioOutcome() resolves Closure outcome via resolveCallableOutcome() helper using InvokableBehavior::injectInvokableBehaviorParameters(). Closure can type-hint ContextManager, State, EventBehavior. Returns '@done', '@fail', or '@timeout' string.",
       "source_sections": null,
       "source_lines": "96-108",
       "started_at": null,
@@ -131,7 +131,7 @@
         "extract-overrides"
       ],
       "estimate_minutes": 12,
-      "acceptance": "7 tests pass in ScenarioPlayerTest.php: #1 callable→@done, #2 callable→@fail, #3 context access, #4 callable+guard override, #5 static+guard override (bugfix), #6 @done.{state}, #7 @timeout.",
+      "acceptance": "7 tests pass in ScenarioPlayerTest.php: #1 callable→@done, #2 callable→@fail, #3 InvokableBehavior injection (ContextManager+State+EventBehavior), #4 callable+guard override, #5 static+guard override (bugfix), #6 @done.{state}, #7 @timeout.",
       "source_sections": null,
       "source_lines": "186-196",
       "started_at": null,
