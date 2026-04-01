@@ -193,3 +193,26 @@ it('LocalQA: no continuation scenario in DB — normal behavior', function (): v
     $data = $response->json('data');
     expect($data['activeScenario'] ?? null)->toBeNull();
 });
+
+it('LocalQA: explicit scenario:null deactivates active continuation', function (): void {
+    $rootEventId = createPersistedAtReviewing();
+
+    // Verify continuation is active in DB
+    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+    expect($cs->scenario_class)->toBe(ContinuationScenario::class);
+
+    // POST with explicit scenario:null — should deactivate, not auto-restore
+    $response = $this->postJson("/api/cont-qa/{$rootEventId}/approve", [
+        'type'     => 'APPROVE',
+        'scenario' => null,
+    ]);
+
+    $response->assertOk();
+
+    // Continuation deactivated — scenario_class cleared
+    $cs->refresh();
+    expect($cs->scenario_class)->toBeNull();
+
+    // Machine handled event normally (no overrides) — reached approved
+    expect(str_contains($cs->state_id, 'approved'))->toBeTrue();
+});
