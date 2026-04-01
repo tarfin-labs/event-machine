@@ -181,9 +181,41 @@ abstract class MachineScenario
     }
 
     /**
-     * Get the resolved plan.
+     * Continuation plan — overrides applied on subsequent requests after target is reached.
+     * Keyed by state route, same format as plan().
+     * Return empty array for single-shot scenarios (default).
+     *
+     * @return array<string, mixed>
      */
+    protected function continuation(): array
+    {
+        return [];
+    }
+
     /**
+     * Whether this scenario has a continuation phase.
+     */
+    public function hasContinuation(): bool
+    {
+        return $this->continuation() !== [];
+    }
+
+    /**
+     * Get the resolved continuation plan.
+     *
+     * @return array<string, mixed>
+     */
+    public function resolvedContinuation(): array
+    {
+        return $this->continuation();
+    }
+
+    /** Set by MachineController when restoring continuation from DB. */
+    public bool $isContinuation = false;
+
+    /**
+     * Get the resolved plan.
+     *
      * @return array<string, mixed>
      */
     public function resolvedPlan(): array
