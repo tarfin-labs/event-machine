@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Jobs\ProcessJob;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\RejectEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsValidGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\DelegateEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Actions\ProcessAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
 
@@ -145,8 +146,9 @@ class ScenarioTestMachine extends Machine
             ],
             behavior: [
                 'events' => [
-                    'APPROVE' => ApproveEvent::class,
-                    'REJECT'  => RejectEvent::class,
+                    'APPROVE'  => ApproveEvent::class,
+                    'REJECT'   => RejectEvent::class,
+                    'DELEGATE' => DelegateEvent::class,
                 ],
             ],
             endpoints: [
