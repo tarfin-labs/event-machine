@@ -509,7 +509,7 @@ class ExportXStateCommand extends Command
 
             return [
                 'name'   => $this->resolveBehaviorName($class),
-                'params' => $params ?: null,
+                'params' => $params !== [] ? $params : null,
             ];
         }
 

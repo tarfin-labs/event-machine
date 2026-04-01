@@ -86,7 +86,7 @@ class PathCoverageTracker
 
         $files = glob($dir.'/coverage_*.json');
 
-        foreach ($files ?: [] as $file) {
+        foreach ($files !== false ? $files : [] as $file) {
             unlink($file);
         }
     }

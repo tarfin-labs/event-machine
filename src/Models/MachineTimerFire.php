@@ -36,11 +36,11 @@ class MachineTimerFire extends Model
 
     public $keyType = 'string';
 
-    public const STATUS_ACTIVE = 'active';
+    public const string STATUS_ACTIVE = 'active';
 
-    public const STATUS_FIRED = 'fired';
+    public const string STATUS_FIRED = 'fired';
 
-    public const STATUS_EXHAUSTED = 'exhausted';
+    public const string STATUS_EXHAUSTED = 'exhausted';
 
     protected $fillable = [
         'root_event_id',

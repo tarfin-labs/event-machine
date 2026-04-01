@@ -35,7 +35,7 @@ class ArchiveService
         }
 
         // Check if already archived
-        if (MachineEventArchive::find($rootEventId)) {
+        if (MachineEventArchive::find($rootEventId) !== null) {
             return null;
         }
 
@@ -81,7 +81,7 @@ class ArchiveService
     {
         $archive = MachineEventArchive::find($rootEventId);
 
-        if (!$archive) {
+        if ($archive === null) {
             return null;
         }
 
@@ -165,7 +165,7 @@ class ArchiveService
 
         $archive = MachineEventArchive::find($rootEventId);
 
-        if (!$archive || !$archive->last_restored_at) {
+        if ($archive === null || $archive->last_restored_at === null) {
             return true;
         }
 
@@ -247,7 +247,7 @@ class ArchiveService
                 ->where('root_event_id', $rootEventId)
                 ->first();
 
-            if (!$archive) {
+            if ($archive === null) {
                 return false;
             }
 

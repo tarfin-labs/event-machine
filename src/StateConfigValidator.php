@@ -14,27 +14,27 @@ use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
 class StateConfigValidator
 {
     /** Allowed keys at different levels of the machine configuration */
-    private const ALLOWED_ROOT_KEYS = [
+    private const array ALLOWED_ROOT_KEYS = [
         'id', 'version', 'initial', 'status_events', 'context', 'states', 'on', 'type',
         'meta', 'entry', 'exit', 'description', 'scenarios_enabled',
         'should_persist', 'delimiter', 'listen', 'input', 'failure',
     ];
 
-    private const ALLOWED_LISTEN_KEYS = ['entry', 'exit', 'transition'];
+    private const array ALLOWED_LISTEN_KEYS = ['entry', 'exit', 'transition'];
 
-    private const ALLOWED_STATE_KEYS = [
+    private const array ALLOWED_STATE_KEYS = [
         'id', 'on', 'states', 'initial', 'type', 'meta', 'entry', 'exit', 'description', 'output', '@done', '@fail',
         'machine', 'input', 'forward', 'queue', 'connection', '@timeout', 'retry', 'output',
         'job', 'target',
     ];
 
-    private const ALLOWED_TRANSITION_KEYS = [
+    private const array ALLOWED_TRANSITION_KEYS = [
         'target', 'guards', 'actions', 'description', 'calculators',
         'after', 'every', 'max', 'then',
     ];
 
     /** Valid state types matching StateDefinitionType enum */
-    private const VALID_STATE_TYPES = [
+    private const array VALID_STATE_TYPES = [
         'atomic', 'compound', 'parallel', 'final',
     ];
 
@@ -503,12 +503,12 @@ class StateConfigValidator
         }
 
         // forward requires queue (only valid in async mode)
-        if (!empty($stateConfig['forward']) && !isset($stateConfig['queue'])) {
+        if (isset($stateConfig['forward']) && $stateConfig['forward'] !== [] && !isset($stateConfig['queue'])) {
             throw InvalidStateConfigException::forwardRequiresQueue($path);
         }
 
         // Validate Format 3 forward array entries
-        if (!empty($stateConfig['forward'])) {
+        if (isset($stateConfig['forward']) && $stateConfig['forward'] !== []) {
             $allowedForwardKeys = ['child_event', 'uri', 'method', 'middleware', 'action', 'output', 'status', 'available_events'];
 
             foreach ($stateConfig['forward'] as $key => $value) {
@@ -543,7 +543,7 @@ class StateConfigValidator
                 throw InvalidStateConfigException::fireAndForgetCannotHaveOutput($path);
             }
 
-            if (!empty($stateConfig['forward'])) {
+            if (isset($stateConfig['forward']) && $stateConfig['forward'] !== []) {
                 throw InvalidStateConfigException::fireAndForgetCannotHaveForward($path);
             }
         }
@@ -584,7 +584,7 @@ class StateConfigValidator
             throw InvalidStateConfigException::jobAndParallelConflict($path);
         }
 
-        if (!empty($stateConfig['forward'])) {
+        if (isset($stateConfig['forward']) && $stateConfig['forward'] !== []) {
             throw InvalidStateConfigException::forwardWithJobNotAllowed($path);
         }
 

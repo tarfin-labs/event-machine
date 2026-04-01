@@ -312,7 +312,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         // Sync queue without parallel_dispatch has no concurrency risk — skip lock to
         // avoid overhead and re-entrant deadlocks in sync dispatch chains.
         $shouldLock = config('queue.default') !== 'sync'
-            || config('machine.parallel_dispatch.enabled', false);
+            || config('machine.parallel_dispatch.enabled', false) === true;
 
         if ($this->state instanceof State && $this->definition->shouldPersist && $shouldLock) {
             $rootEventId = $this->state->history->first()->root_event_id;
@@ -478,7 +478,7 @@ class Machine implements Castable, JsonSerializable, Stringable
                 }
 
                 // If there are changes, update the incremental context to the current event's context.
-                if (!empty($changes)) {
+                if ($changes !== []) {
                     $incrementalContext = ArrayUtils::recursiveMerge($incrementalContext, $machineEvent->context);
                 }
 
@@ -645,7 +645,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      */
     protected function restoreContext(array $persistedContext): ContextManager
     {
-        if (!empty($this->definition->behavior['context'])) {
+        if (is_string($this->definition->behavior['context'])) {
             /** @var ContextManager $contextClass */
             $contextClass = $this->definition->behavior['context'];
 
@@ -1179,7 +1179,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      */
     public function __toString(): string
     {
-        return (string) ($this->state->history->first()->root_event_id ?? '');
+        return $this->state->history->first()->root_event_id ?? '';
     }
 
     // endregion
@@ -1270,7 +1270,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         if (is_array($outputBehavior) && isset($outputBehavior[0]) && is_array($outputBehavior[0])) {
             $parsed         = BehaviorTupleParser::parse($outputBehavior[0], 'output');
             $outputBehavior = $parsed['definition'];
-            $configParams   = $parsed['configParams'] ?: null;
+            $configParams   = $parsed['configParams'] !== [] ? $parsed['configParams'] : null;
         }
 
         // MachineOutput class — auto-resolve from context (before container resolution)

@@ -61,7 +61,8 @@ abstract class MachineOutput
         $reflection = new ReflectionClass(static::class);
 
         foreach ($reflection->getConstructor()->getParameters() as $param) {
-            $result[$param->getName()] = $this->{$param->getName()};
+            $property                  = $reflection->getProperty($param->getName());
+            $result[$param->getName()] = $property->getValue($this);
         }
 
         return $result;

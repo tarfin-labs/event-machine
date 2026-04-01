@@ -278,7 +278,7 @@ class MachineQueryBuilder
      */
     public function count(): int
     {
-        return (int) $this->query->count(DB::raw('DISTINCT root_event_id'));
+        return $this->query->count(DB::raw('DISTINCT root_event_id'));
     }
 
     /**

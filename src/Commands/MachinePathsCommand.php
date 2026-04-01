@@ -137,7 +137,7 @@ class MachinePathsCommand extends Command
                     ? (str_contains($p->terminalStateId, '.') ? substr($p->terminalStateId, strrpos($p->terminalStateId, '.') + 1) : $p->terminalStateId)
                     : null,
                 $paths,
-            )));
+            ), static fn (?string $v): bool => $v !== null));
 
             $this->line('');
             $header = $label

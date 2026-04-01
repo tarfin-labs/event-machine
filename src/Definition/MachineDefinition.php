@@ -50,13 +50,13 @@ class MachineDefinition
     // region Public Properties
 
     /** The default id for the root machine definition. */
-    public const DEFAULT_ID = 'machine';
+    public const string DEFAULT_ID = 'machine';
 
     /** The default delimiter used for constructing the global id by concatenating state definition local IDs. */
-    public const STATE_DELIMITER = '.';
+    public const string STATE_DELIMITER = '.';
 
     /** The maximum recursive transition depth allowed within a single macrostep (Rhapsody default). */
-    public const DEFAULT_MAX_TRANSITION_DEPTH = 100;
+    public const int DEFAULT_MAX_TRANSITION_DEPTH = 100;
 
     /** The root state definition for this machine definition. */
     public StateDefinition $root;
@@ -166,7 +166,7 @@ class MachineDefinition
             $parallelDispatchEnabled = false;
         }
 
-        if ($parallelDispatchEnabled) {
+        if ($parallelDispatchEnabled === true) {
             $this->validateParallelDispatchConfig();
         }
 
@@ -530,7 +530,7 @@ class MachineDefinition
      */
     protected function shouldDispatchParallel(StateDefinition $parallelState): bool
     {
-        if (!config('machine.parallel_dispatch.enabled', false)) {
+        if (config('machine.parallel_dispatch.enabled', false) !== true) {
             return false;
         }
 
@@ -723,7 +723,7 @@ class MachineDefinition
         }
 
         // If a context class is provided, use it to create the context
-        if (!empty($this->behavior['context'])) {
+        if (is_string($this->behavior['context'])) {
             /** @var ContextManager $contextClass */
             $contextClass = $this->behavior['context'];
 
@@ -2242,7 +2242,7 @@ class MachineDefinition
         $state->setInternalEventBehavior(type: InternalEvent::LISTEN_ENTRY_START);
 
         foreach ($this->listen['entry'] as $listener) {
-            $configParams = $listener['configParams'] ?: null;
+            $configParams = $listener['configParams'] !== [] ? $listener['configParams'] : null;
 
             if ($listener['queue'] !== false) {
                 $this->dispatchListenerJob($listener['action'], $state, $configParams, $listener['queue']);
@@ -2277,7 +2277,7 @@ class MachineDefinition
         $state->setInternalEventBehavior(type: InternalEvent::LISTEN_EXIT_START);
 
         foreach ($this->listen['exit'] as $listener) {
-            $configParams = $listener['configParams'] ?: null;
+            $configParams = $listener['configParams'] !== [] ? $listener['configParams'] : null;
 
             if ($listener['queue'] !== false) {
                 $this->dispatchListenerJob($listener['action'], $state, $configParams, $listener['queue']);
@@ -2313,7 +2313,7 @@ class MachineDefinition
         $state->setInternalEventBehavior(type: InternalEvent::LISTEN_TRANSITION_START);
 
         foreach ($this->listen['transition'] as $listener) {
-            $configParams = $listener['configParams'] ?: null;
+            $configParams = $listener['configParams'] !== [] ? $listener['configParams'] : null;
 
             if ($listener['queue'] !== false) {
                 $this->dispatchListenerJob($listener['action'], $state, $configParams, $listener['queue']);
@@ -3368,7 +3368,7 @@ class MachineDefinition
             // Named params tuple: [ActionClass::class, 'value' => 100]
             $parsed           = BehaviorTupleParser::parse($actionDefinition, 'actions');
             $actionDefinition = $parsed['definition'];
-            $configParams     = $parsed['configParams'] ?: null;
+            $configParams     = $parsed['configParams'] !== [] ? $parsed['configParams'] : null;
         } elseif (str_contains($actionDefinition, ':')) {
             // Deprecated colon syntax: 'actionName:arg1,arg2'
             @trigger_error('The colon syntax "behavior:arg1,arg2" is deprecated since tarfin-labs/event-machine 9.0. Use named params tuple [[Class::class, \'param\' => value]] instead.', E_USER_DEPRECATED);

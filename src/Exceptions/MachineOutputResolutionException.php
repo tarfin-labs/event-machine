@@ -16,7 +16,7 @@ class MachineOutputResolutionException extends RuntimeException
         string $paramName,
         array $availableKeys,
     ): self {
-        $keyList = implode(', ', $availableKeys) ?: '(empty)';
+        $keyList = $availableKeys !== [] ? implode(', ', $availableKeys) : '(empty)';
 
         return new self(
             "{$outputClass} output resolution failed: missing required field '{$paramName}' — context has: [{$keyList}]"

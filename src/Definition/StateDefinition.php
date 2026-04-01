@@ -574,7 +574,7 @@ class StateDefinition
      */
     public function getStateDefinitionType(): StateDefinitionType
     {
-        if (!empty($this->config['type']) && $this->config['type'] === 'final') {
+        if (isset($this->config['type']) && $this->config['type'] === 'final') {
             if ($this->stateDefinitions !== null) {
                 throw InvalidStateConfigException::finalStateCannotHaveChildStates($this->id);
             }
@@ -582,7 +582,7 @@ class StateDefinition
             return StateDefinitionType::FINAL;
         }
 
-        if (!empty($this->config['type']) && $this->config['type'] === 'parallel') {
+        if (isset($this->config['type']) && $this->config['type'] === 'parallel') {
             if ($this->stateDefinitions === null) {
                 throw InvalidParallelStateDefinitionException::requiresChildStates($this->id);
             }

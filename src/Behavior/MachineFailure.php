@@ -20,7 +20,7 @@ use Tarfinlabs\EventMachine\Exceptions\MachineFailureResolutionException;
 abstract class MachineFailure
 {
     /** Known Throwable property getters for auto-mapping. */
-    private const THROWABLE_GETTERS = [
+    private const array THROWABLE_GETTERS = [
         'message'  => 'getMessage',
         'code'     => 'getCode',
         'previous' => 'getPrevious',
@@ -45,7 +45,13 @@ abstract class MachineFailure
             $name = $param->getName();
 
             if (isset(self::THROWABLE_GETTERS[$name])) {
-                $params[$name] = $e->{self::THROWABLE_GETTERS[$name]}();
+                $params[$name] = match (self::THROWABLE_GETTERS[$name]) {
+                    'getMessage'  => $e->getMessage(),
+                    'getCode'     => $e->getCode(),
+                    'getPrevious' => $e->getPrevious(),
+                    'getFile'     => $e->getFile(),
+                    'getLine'     => $e->getLine(),
+                };
             } elseif ($param->isDefaultValueAvailable()) {
                 $params[$name] = $param->getDefaultValue();
             } elseif ($param->getType()?->allowsNull()) {
@@ -70,7 +76,8 @@ abstract class MachineFailure
         $reflection = new ReflectionClass(static::class);
 
         foreach ($reflection->getConstructor()->getParameters() as $param) {
-            $result[$param->getName()] = $this->{$param->getName()};
+            $property                  = $reflection->getProperty($param->getName());
+            $result[$param->getName()] = $property->getValue($this);
         }
 
         return $result;

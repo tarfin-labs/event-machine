@@ -47,11 +47,11 @@ class MachineController extends Controller
         $model          = $route->parameter($modelParam);
         $modelAttribute = $route->defaults['_model_attribute'] ?? null;
 
-        if ($model === null || $modelAttribute === null) {
+        if (!is_object($model) || $modelAttribute === null) {
             abort(500, 'Route model or model attribute not found for model-bound endpoint.');
         }
 
-        $machine = $model->{$modelAttribute};
+        $machine = data_get($model, $modelAttribute);
 
         return $this->handleEndpoint($machine, $request);
     }
@@ -330,7 +330,7 @@ class MachineController extends Controller
         if (is_array($outputKey)) {
             $parsed       = BehaviorTupleParser::parse($outputKey[0], 'endpoint output');
             $outputKey    = $parsed['definition'];
-            $configParams = $parsed['configParams'] ?: null;
+            $configParams = $parsed['configParams'] !== [] ? $parsed['configParams'] : null;
         }
 
         $outputBehavior = $machine->definition->resolveOutputKey($outputKey);
@@ -402,11 +402,11 @@ class MachineController extends Controller
         $model          = $route->parameter($modelParam);
         $modelAttribute = $route->defaults['_model_attribute'] ?? null;
 
-        if ($model === null || $modelAttribute === null) {
+        if (!is_object($model) || $modelAttribute === null) {
             abort(500, 'Route model or model attribute not found for forwarded model-bound endpoint.');
         }
 
-        $machine = $model->{$modelAttribute};
+        $machine = data_get($model, $modelAttribute);
 
         return $this->executeForwardedEndpoint($machine, $request);
     }

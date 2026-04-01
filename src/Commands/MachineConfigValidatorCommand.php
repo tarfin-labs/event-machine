@@ -43,7 +43,7 @@ class MachineConfigValidatorCommand extends Command
         }
 
         $machines = $this->argument(key: 'machine');
-        if (empty($machines)) {
+        if ($machines === null || $machines === []) {
             $this->error(string: 'Please provide a machine class name or use --all option.');
 
             return;
@@ -61,7 +61,7 @@ class MachineConfigValidatorCommand extends Command
             /** @var Machine $fullClassName */
             $fullClassName = $this->resolveFullClassName($machineClass, $machines);
 
-            if (!$fullClassName) {
+            if ($fullClassName === null) {
                 $this->error(string: "Machine class '{$machineClass}' not found.");
 
                 return;
@@ -132,7 +132,7 @@ class MachineConfigValidatorCommand extends Command
         $paths        = [];
         $composerJson = $this->getComposerConfig();
 
-        if (!$composerJson) {
+        if ($composerJson === null) {
             return $paths;
         }
 
