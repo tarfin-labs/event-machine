@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.0-callable-outcome.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-01T18:41:18.741636Z",
+  "updated_at": "2026-04-01T18:43:51.24513Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "agentic-commits"
@@ -189,7 +189,7 @@
       "id": "docs",
       "title": "Update documentation for callable outcome feature",
       "description": "Add Callable Outcome section to scenario-plan.md: API, Closure signature, example with Findeks PIN, when to use. Update upgrading.md with 9.6.0 section.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "docs"
       ],
@@ -201,10 +201,10 @@
       "source_sections": null,
       "source_lines": "211-217",
       "started_at": "2026-04-01T18:41:18.741636Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-01T18:43:51.245125Z",
+      "closed_reason": "scenario-plan.md: Callable Outcome subsection with API example + Closure injection + guard extraction. Selective Pause pattern under @continue section. scenario-endpoints.md: Continuation Branching pattern under Scenario Switching. upgrading.md: 9.6.0 section with callable outcome, guard override bugfix, validator improvement. 2594 tests.",
+      "gate_passed_at": "2026-04-01T18:43:51.245125Z",
+      "commit_sha": "8ea9b060"
     }
   ]
 }
