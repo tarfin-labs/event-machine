@@ -13,6 +13,10 @@ class InvalidRouterConfigException extends LogicException
         return new self("MachineRouter: 'only' and 'except' cannot be used together.");
     }
 
+    /**
+     * @param  array<int, string>  $unknown
+     * @param  array<int, string>  $available
+     */
     public static function unknownEventTypes(string $filterKey, array $unknown, array $available): self
     {
         return new self(sprintf(
@@ -23,6 +27,9 @@ class InvalidRouterConfigException extends LogicException
         ));
     }
 
+    /**
+     * @param  array<int, string>  $eventTypes
+     */
     public static function forwardedInMachineIdFor(array $eventTypes): self
     {
         return new self(sprintf(
@@ -32,6 +39,9 @@ class InvalidRouterConfigException extends LogicException
         ));
     }
 
+    /**
+     * @param  array<int, string>  $eventTypes
+     */
     public static function forwardedInModelFor(array $eventTypes): self
     {
         return new self(sprintf(
@@ -41,6 +51,9 @@ class InvalidRouterConfigException extends LogicException
         ));
     }
 
+    /**
+     * @param  array<int, string>  $orphans
+     */
     public static function orphanedMachineIdFor(array $orphans, string $context): self
     {
         return new self(sprintf(
@@ -50,6 +63,9 @@ class InvalidRouterConfigException extends LogicException
         ));
     }
 
+    /**
+     * @param  array<int, string>  $orphans
+     */
     public static function orphanedModelFor(array $orphans, string $context): self
     {
         return new self(sprintf(
@@ -64,6 +80,9 @@ class InvalidRouterConfigException extends LogicException
         return new self("MachineRouter: 'model' and 'attribute' are required when 'modelFor' is set.");
     }
 
+    /**
+     * @param  array<int, string>  $overlap
+     */
     public static function overlappingBindingModes(array $overlap): self
     {
         return new self(

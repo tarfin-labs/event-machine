@@ -205,7 +205,7 @@ class PathCoverageTracker
             return;
         }
 
-        /** @var array<class-string, list<array{signature: string, test: string, steps: list}>> $data */
+        /** @var array<class-string, list<array{signature: string, test: string, steps: list<array{state: string, event: string|null}>}>> $data */
         $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
 
         self::$observedPaths = $data;
@@ -235,7 +235,7 @@ class PathCoverageTracker
                 continue;
             }
 
-            /** @var array<class-string, list<array{signature: string, test: string, steps: list}>> $data */
+            /** @var array<class-string, list<array{signature: string, test: string, steps: list<array{state: string, event: string|null}>}>> $data */
             $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
 
             foreach ($data as $machineClass => $paths) {

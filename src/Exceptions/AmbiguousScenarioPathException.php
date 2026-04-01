@@ -14,6 +14,9 @@ class AmbiguousScenarioPathException extends RuntimeException
     /** @var list<string> */
     public array $pathSignatures = [];
 
+    /**
+     * @param  list<string>  $signatures
+     */
     public static function multiplePaths(string $source, string $target, array $signatures): self
     {
         $instance = new self(

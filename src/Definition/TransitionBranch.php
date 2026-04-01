@@ -23,10 +23,10 @@ class TransitionBranch
     /** The target state definition for this transition branch, or null if there is no target. */
     public ?StateDefinition $target;
 
-    /** The calculators to be executed before guards in this transition branch. */
+    /** @var array<int, string|array<int|string, mixed>|\Closure>|null The calculators to be executed before guards in this transition branch. */
     public ?array $calculators = null;
 
-    /** The guards to be checked before this transition branch is taken. */
+    /** @var array<int, string|array<int|string, mixed>|\Closure>|null The guards to be checked before this transition branch is taken. */
     public ?array $guards = null;
 
     /**
@@ -45,6 +45,9 @@ class TransitionBranch
 
     /**
      * Constructs a new TransitionBranch instance.
+     */
+    /**
+     * @param  null|string|array<string|int, mixed>  $transitionBranchConfig
      */
     public function __construct(
         public null|string|array $transitionBranchConfig,
@@ -167,7 +170,7 @@ class TransitionBranch
     /**
      * Adds inline behavior definitions to machine's behavior.
      *
-     * @param  array  $inlineBehaviors  An array of inline behaviors.
+     * @param  array<int, string|array<int|string, mixed>|\Closure>  $inlineBehaviors  An array of inline behaviors.
      * @param  BehaviorType  $behaviorType  The type of behavior.
      */
     protected function initializeInlineBehaviors(array $inlineBehaviors, BehaviorType $behaviorType): void

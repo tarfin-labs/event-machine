@@ -88,7 +88,7 @@ class ChildMachineFailEvent extends EventBehavior
     /**
      * Create an instance for internal use.
      *
-     * @param  array  $payload  The payload containing error_message, machine_id, machine_class, output.
+     * @param  array<string, mixed>  $payload  The payload containing error_message, machine_id, machine_class, output.
      */
     public static function forChild(array $payload): static
     {
@@ -106,7 +106,7 @@ class ChildMachineFailEvent extends EventBehavior
      * Only the data you care about needs to be provided — machine identity
      * fields are filled with harmless defaults.
      *
-     * @param  array  $attributes  Payload keys to override (error_message, output, machine_id, machine_class).
+     * @param  array<string, mixed>  $attributes  Payload keys to override (error_message, output, machine_id, machine_class).
      */
     public static function forTesting(array $attributes = []): static
     {

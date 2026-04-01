@@ -39,7 +39,7 @@ abstract class MachineScenario
     /** Human-readable description shown in endpoint responses. */
     protected string $description;
 
-    /** Validated scenario parameters. */
+    /** @var array<string, mixed> Validated scenario parameters. */
     private array $resolvedParams = [];
 
     public function __construct()
@@ -53,6 +53,9 @@ abstract class MachineScenario
      * string starting with @ → delegation outcome,
      * MachineScenario class → child scenario reference.
      */
+    /**
+     * @return array<string, mixed>
+     */
     protected function plan(): array
     {
         return [];
@@ -63,6 +66,9 @@ abstract class MachineScenario
      * Each key is a parameter name. Value is either:
      *   - plain array: Laravel validation rules only (e.g., ['required', 'string'])
      *   - assoc array: rich definition with optional type/values/label + rules key.
+     */
+    /**
+     * @return array<string, mixed>
      */
     protected function params(): array
     {
@@ -81,6 +87,9 @@ abstract class MachineScenario
      * Hydrate scenario with validated parameters.
      * Extracts validation rules from both plain and rich param definitions,
      * runs Laravel validation, stores resolved values.
+     */
+    /**
+     * @param  array<string, mixed>  $rawParams
      */
     public function hydrateParams(array $rawParams): void
     {
@@ -174,6 +183,9 @@ abstract class MachineScenario
     /**
      * Get the resolved plan.
      */
+    /**
+     * @return array<string, mixed>
+     */
     public function resolvedPlan(): array
     {
         return $this->plan();
@@ -181,6 +193,9 @@ abstract class MachineScenario
 
     /**
      * Get the resolved params definition (for endpoint response serialization).
+     */
+    /**
+     * @return array<string, mixed>
      */
     public function resolvedParams(): array
     {
@@ -190,6 +205,9 @@ abstract class MachineScenario
     /**
      * Get the validated (hydrated) parameter values.
      */
+    /**
+     * @return array<string, mixed>
+     */
     public function validatedParams(): array
     {
         return $this->resolvedParams;
@@ -198,6 +216,11 @@ abstract class MachineScenario
     /**
      * Extract validation rules from param definitions.
      * Plain array = rules directly. Rich definition = extract 'rules' key.
+     */
+    /**
+     * @param  array<string, mixed>  $paramDefs
+     *
+     * @return array<string, mixed>
      */
     private function extractValidationRules(array $paramDefs): array
     {

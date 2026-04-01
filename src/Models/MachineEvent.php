@@ -23,17 +23,19 @@ use Tarfinlabs\EventMachine\Database\Factories\MachineEventFactory;
  * @property Carbon $created_at The timestamp when the event was created.
  * @property SourceType $source The source type of the event (Internal or External).
  * @property string $type The type of the event.
- * @property array $payload The payload data of the event.
+ * @property array<string, mixed> $payload The payload data of the event.
  * @property int $version The version of the event.
  * @property string $machine_id The unique identifier of the machine that generated the event.
- * @property array $machine_value Machine state after the event.
+ * @property array<int, string> $machine_value Machine state after the event.
  * @property string $root_event_id The unique identifier of the root event in event sequence.
- * @property array $context The context data of the event.
- * @property array $meta The metadata of the event.
+ * @property array<string, mixed> $context The context data of the event.
+ * @property array<string, mixed> $meta The metadata of the event.
  */
 class MachineEvent extends Model
 {
+    /** @use HasFactory<MachineEventFactory> */
     use HasFactory;
+
     use HasUlids;
 
     public $timestamps = false;
@@ -88,8 +90,6 @@ class MachineEvent extends Model
 
     /**
      * Create a new instance of MachineEventFactory.
-     *
-     * @return MachineEventFactory The newly created MachineEventFactory instance.
      */
     protected static function newFactory(): MachineEventFactory
     {
@@ -103,7 +103,7 @@ class MachineEvent extends Model
      * EventCollection. This allows for additional methods to be available
      * on the collection of MachineEvent models.
      *
-     * @param  array  $models  An array of MachineEvent models.
+     * @param  array<int, MachineEvent>  $models  An array of MachineEvent models.
      *
      * @return EventCollection A new instance of EventCollection.
      */

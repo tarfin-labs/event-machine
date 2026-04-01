@@ -82,7 +82,7 @@ class ChildMachineDoneEvent extends EventBehavior
     /**
      * Create an instance for internal use.
      *
-     * @param  array  $payload  The payload containing result, output, machine_id, machine_class.
+     * @param  array<string, mixed>  $payload  The payload containing result, output, machine_id, machine_class.
      */
     public static function forChild(array $payload): static
     {
@@ -100,7 +100,7 @@ class ChildMachineDoneEvent extends EventBehavior
      * Only the data you care about needs to be provided — machine identity
      * fields are filled with harmless defaults.
      *
-     * @param  array  $attributes  Payload keys to override (result, output, machine_id, machine_class, final_state).
+     * @param  array<string, mixed>  $attributes  Payload keys to override (result, output, machine_id, machine_class, final_state).
      */
     public static function forTesting(array $attributes = []): static
     {

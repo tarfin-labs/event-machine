@@ -76,6 +76,9 @@ class ArchiveSingleMachineJob implements ShouldBeUnique, ShouldQueue
         });
     }
 
+    /**
+     * @param  array<string, mixed>  $config
+     */
     protected function archiveMachine(array $config): void
     {
         $archiveService   = new ArchiveService($config);

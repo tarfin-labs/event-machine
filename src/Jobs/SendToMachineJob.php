@@ -45,7 +45,7 @@ class SendToMachineJob implements ShouldQueue
     /**
      * @param  string  $machineClass  FQCN of the target Machine subclass.
      * @param  string  $rootEventId  The target machine's root_event_id.
-     * @param  array  $event  The event to send (array with 'type' and optional 'payload').
+     * @param  array<string, mixed>  $event  The event to send (array with 'type' and optional 'payload').
      */
     public function __construct(
         public readonly string $machineClass,

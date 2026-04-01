@@ -12,7 +12,9 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 
 class MachineClassVisitor extends NodeVisitorAbstract
 {
-    private array $machineClasses     = [];
+    /** @var array<int, string> */
+    private array $machineClasses = [];
+
     private ?string $currentNamespace = null;
 
     public function setCurrentFile(string $file): void
@@ -41,6 +43,9 @@ class MachineClassVisitor extends NodeVisitorAbstract
         return null;
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function getMachineClasses(): array
     {
         return $this->machineClasses;

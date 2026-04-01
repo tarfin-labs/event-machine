@@ -16,7 +16,7 @@ abstract class EventBuilder
 {
     protected Faker $faker;
 
-    /** @var array<int, Closure|array> */
+    /** @var array<int, Closure|array<string, mixed>> */
     private array $states = [];
 
     public function __construct()
@@ -38,7 +38,7 @@ abstract class EventBuilder
      * The base implementation provides sensible defaults (type from event class,
      * empty payload, version 1) — same as forTesting().
      *
-     * @return array{type: string, payload: array, version: int}
+     * @return array{type: string, payload: array<string, mixed>, version: int}
      */
     protected function definition(): array
     {
@@ -63,6 +63,9 @@ abstract class EventBuilder
      * Add a state mutation — equivalent to Factory::state().
      * Returns a clone for immutable chaining.
      */
+    /**
+     * @param  Closure|array<string, mixed>  $state
+     */
     public function state(Closure|array $state): static
     {
         $clone           = clone $this;
@@ -73,6 +76,9 @@ abstract class EventBuilder
 
     /**
      * Build the EventBehavior instance — equivalent to Factory::make().
+     */
+    /**
+     * @param  array<string, mixed>  $attributes
      */
     public function make(array $attributes = []): EventBehavior
     {
@@ -85,6 +91,11 @@ abstract class EventBuilder
     /**
      * Get the raw attribute array — equivalent to Factory::raw().
      * Useful for validation testing with validateAndCreate().
+     */
+    /**
+     * @param  array<string, mixed>  $attributes
+     *
+     * @return array<string, mixed>
      */
     public function raw(array $attributes = []): array
     {

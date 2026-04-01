@@ -22,6 +22,8 @@ class MachineInvokeDefinition
      * @param  string  $machineClass  The FQCN of the child machine definition (empty string for job actors).
      * @param  array|Closure|string|null  $input  Input configuration: MachineInput class, closure, or array (3 formats).
      * @param  array  $forward  Event types to forward to the child machine.
+     * @param  array<int|string, string>|Closure|string|null  $input  The input mapping for the child machine.
+     * @param  array<int|string, mixed>  $forward  The forwarded endpoint definitions.
      * @param  bool  $async  Whether the child runs asynchronously.
      * @param  string|null  $queue  Queue name for async execution.
      * @param  string|null  $connection  Queue connection for async execution.
@@ -61,7 +63,7 @@ class MachineInvokeDefinition
      *
      * @param  ContextManager  $parentContext  The parent machine's context.
      *
-     * @return array The resolved child context data.
+     * @return array<string, mixed> The resolved child context data.
      */
     public function resolveChildContext(ContextManager $parentContext): array
     {

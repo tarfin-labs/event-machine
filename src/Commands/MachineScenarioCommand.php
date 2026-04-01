@@ -137,7 +137,7 @@ class MachineScenarioCommand extends Command
             if ($childScenarios === []) {
                 $childMachineShort = class_basename($deepTarget['childMachine']);
                 $this->warn('No child scenario found. Create one with:');
-                $this->line('  php artisan machine:scenario At'.ucfirst((string) $deepTarget['childTarget'])." {$deepTarget['childMachine']} idle MACHINE_START {$deepTarget['childTarget']}");
+                $this->line('  php artisan machine:scenario At'.ucfirst($deepTarget['childTarget'])." {$deepTarget['childMachine']} idle MACHINE_START {$deepTarget['childTarget']}");
             } else {
                 $this->info('Found '.count($childScenarios).' matching child scenario(s):');
 

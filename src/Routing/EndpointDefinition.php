@@ -13,6 +13,10 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
  */
 class EndpointDefinition
 {
+    /**
+     * @param  null|string|array<int, string>|\Closure  $output
+     * @param  array<int, string>  $middleware
+     */
     public function __construct(
         public readonly string $eventType,
         public readonly string $uri,
@@ -45,6 +49,9 @@ class EndpointDefinition
      *   'FARMER_SAVED' => '/farmer'                   (string shorthand)
      *   'FARMER_SAVED' => ['uri' => '/farmer', ...]   (array config)
      *   FarmerSavedEvent::class => '/farmer'           (event class key)
+     */
+    /**
+     * @param  string|array<string, mixed>|null  $config
      */
     public static function fromConfig(string $key, string|array|null $config = null): self
     {

@@ -75,6 +75,11 @@ class TestMachine
      * on the initial state run with the machine's default context — not these
      * overrides.
      */
+    /**
+     * @param  array<string, mixed>  $context
+     * @param  array<class-string, bool>  $guards
+     * @param  array<class-string, mixed>  $faking
+     */
     public static function create(string $machineClass, array $context = [], array $guards = [], array $faking = []): self
     {
         // Set behavior fakes BEFORE machine creation (solves @always timing)
@@ -105,6 +110,11 @@ class TestMachine
      * so entry actions on the initial state see the injected context.
      * The `guards` and `faking` parameters set behavior fakes BEFORE getInitialState() runs,
      * solving the @always timing problem for both guards and actions.
+     */
+    /**
+     * @param  array<string, mixed>  $context
+     * @param  array<class-string, bool>  $guards
+     * @param  array<class-string, mixed>  $faking
      */
     public static function withContext(string $machineClass, array $context, array $guards = [], array $faking = []): self
     {
@@ -140,6 +150,11 @@ class TestMachine
      * No entry actions, no @always transitions, no job dispatch, no history.
      * Uses the real machine definition — all transitions, guards, and actions
      * are available for subsequent operations.
+     */
+    /**
+     * @param  array<string, mixed>  $context
+     * @param  array<class-string, bool>  $guards
+     * @param  array<class-string, mixed>  $faking
      */
     public static function startingAt(
         string $machineClass,
@@ -231,6 +246,10 @@ class TestMachine
     /**
      * From an inline definition (no persistence, no Machine class).
      */
+    /**
+     * @param  array<string, mixed>  $config
+     * @param  array<string, mixed>  $behavior
+     */
     public static function define(array $config, array $behavior = []): self
     {
         $definition                = MachineDefinition::define(config: $config, behavior: $behavior);
@@ -270,6 +289,9 @@ class TestMachine
      *   - Numeric key + string:         'broadcastAction'             → inline fake (no-op)
      *   - String key + scalar value:    'isValidGuard' => false       → inline fake with return value
      *   - String key + Closure:         'calcTax' => fn(...) => 0     → inline fake with custom replacement
+     */
+    /**
+     * @param  array<int|string, mixed>  $behaviors
      */
     public function faking(array $behaviors): self
     {
@@ -311,7 +333,7 @@ class TestMachine
      * Introspects `$definition->behavior['actions']` and calls `::spy()` on each
      * InvokableBehavior subclass. Inline closures are skipped.
      *
-     * @param  array  $except  Class FQCNs or behavior keys to skip (these run their real logic).
+     * @param  array<int, string>  $except  Class FQCNs or behavior keys to skip (these run their real logic).
      */
     public function fakingAllActions(array $except = []): self
     {
@@ -325,7 +347,7 @@ class TestMachine
      * falsy, so spied guards **fail by default**. Use `guards:` parameter on
      * `withContext()`/`create()` to set explicit return values for guards that must pass.
      *
-     * @param  array  $except  Class FQCNs or behavior keys to skip.
+     * @param  array<int, string>  $except  Class FQCNs or behavior keys to skip.
      */
     public function fakingAllGuards(array $except = []): self
     {
@@ -335,7 +357,7 @@ class TestMachine
     /**
      * Fake all class-based behaviors (actions + guards + calculators).
      *
-     * @param  array  $except  Class FQCNs or behavior keys to skip.
+     * @param  array<int, string>  $except  Class FQCNs or behavior keys to skip.
      */
     public function fakingAllBehaviors(array $except = []): self
     {
@@ -348,6 +370,9 @@ class TestMachine
 
     /**
      * Internal: fake all class-based behaviors of a specific type.
+     */
+    /**
+     * @param  array<int, string>  $except
      */
     private function fakingAllOfType(string $type, array $except): self
     {
@@ -444,6 +469,9 @@ class TestMachine
     /**
      * Send an event. Accepts EventBehavior, array, or string shorthand.
      */
+    /**
+     * @param  EventBehavior|array<string, mixed>|string  $event
+     */
     public function send(EventBehavior|array|string $event): self
     {
         if (is_string($event)) {
@@ -459,6 +487,9 @@ class TestMachine
 
     /**
      * Send multiple events in sequence.
+     */
+    /**
+     * @param  array<int, EventBehavior|array<string, mixed>|string>  $events
      */
     public function sendMany(array $events): self
     {
@@ -603,6 +634,9 @@ class TestMachine
         return $this;
     }
 
+    /**
+     * @param  array<string, mixed>  $subset
+     */
     public function assertContextIncludes(array $subset): self
     {
         foreach ($subset as $key => $value) {
@@ -619,6 +653,9 @@ class TestMachine
     /**
      * Send + assertState in one call.
      */
+    /**
+     * @param  EventBehavior|array<string, mixed>|string  $event
+     */
     public function assertTransition(EventBehavior|array|string $event, string $expectedState): self
     {
         return $this->send($event)->assertState($expectedState);
@@ -630,6 +667,9 @@ class TestMachine
      * Note: Cannot detect self-transitions (target === source) since the state
      * value array is identical before and after. Use assertTransition() with
      * explicit state checks for self-transition scenarios.
+     */
+    /**
+     * @param  EventBehavior|array<string, mixed>|string  $event
      */
     public function assertGuarded(EventBehavior|array|string $event): self
     {
@@ -657,6 +697,9 @@ class TestMachine
      * Sends the event, verifies state did not change, and checks the guard's
      * fail event appears in history. Handles both inline guard keys (camelCase)
      * and FQCN guards (uses classBasename).
+     */
+    /**
+     * @param  EventBehavior|array<string, mixed>|string  $event
      */
     public function assertGuardedBy(EventBehavior|array|string $event, string $guardName): self
     {
@@ -697,6 +740,9 @@ class TestMachine
 
     /**
      * Assert an event raises MachineValidationException.
+     */
+    /**
+     * @param  EventBehavior|array<string, mixed>|string  $event
      */
     public function assertValidationFailed(EventBehavior|array|string $event, ?string $errorKey = null): self
     {
@@ -778,7 +824,7 @@ class TestMachine
         foreach ($this->machine->state->history as $event) {
             if (isset($event->machine_value)) {
                 foreach ($event->machine_value as $stateValue) {
-                    $segments = explode('.', (string) $stateValue);
+                    $segments = explode('.', $stateValue);
                     foreach ($segments as $segment) {
                         if (!in_array($segment, $visitedStates, true)) {
                             $visitedStates[] = $segment;
@@ -814,7 +860,7 @@ class TestMachine
     // ═══════════════════════════════════════════
 
     /**
-     * @param  array<array{event: string|array, state: string, context?: array}>  $steps
+     * @param  array<int, array{event: string|array<string, mixed>, state: string, context?: array<string, mixed>}>  $steps
      */
     public function assertPath(array $steps): self
     {
@@ -962,6 +1008,8 @@ class TestMachine
      * diagnostic tool when state mutation is acceptable.
      *
      * Returns an associative array of guard names => bool (true = passed, false = failed).
+     *
+     * @param  EventBehavior|array<string, mixed>|string  $event
      *
      * @return array<string, bool>
      */
@@ -1587,6 +1635,9 @@ class TestMachine
     /**
      * Assert the exact set of available event types (order-independent).
      */
+    /**
+     * @param  array<int, string>  $expectedTypes
+     */
     public function assertAvailableEvents(array $expectedTypes): self
     {
         $available   = $this->machine->state->availableEvents();
@@ -1678,6 +1729,9 @@ class TestMachine
      *
      * Tracked for selective cleanup in resetFakes().
      */
+    /**
+     * @param  array<string, mixed>|null  $output
+     */
     public function fakingChild(
         string $childClass,
         ?array $output = null,
@@ -1742,6 +1796,9 @@ class TestMachine
 
     /**
      * Assert a child machine was invoked with context containing the expected subset.
+     */
+    /**
+     * @param  array<string, mixed>  $expectedContext
      */
     public function assertChildInvokedWith(string $childClass, array $expectedContext): self
     {
@@ -1824,6 +1881,9 @@ class TestMachine
      * Works for both machine delegation (`machine:` key) and job actors (`job:` key).
      * The `output` parameter populates the `output()` accessor on ChildMachineDoneEvent.
      */
+    /**
+     * @param  array<string, mixed>|MachineOutput  $output
+     */
     public function simulateChildDone(
         string $childClass,
         array|MachineOutput $output = [],
@@ -1872,6 +1932,9 @@ class TestMachine
      * Simulate async child failure without real queues.
      *
      * Works for both machine delegation (`machine:` key) and job actors (`job:` key).
+     */
+    /**
+     * @param  array<string, mixed>|MachineFailure  $output
      */
     public function simulateChildFail(
         string $childClass,

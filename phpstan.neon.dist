@@ -1,5 +1,5 @@
 parameters:
-    level: 5
+    level: 6
     strictRules:
         dynamicCallOnStaticMethod: false
     paths:
@@ -44,5 +44,15 @@ parameters:
         - identifier: method.childReturnType
           path: src/Actor/Machine.php
         - identifier: method.childReturnType
+          path: src/Models/MachineEvent.php
+
+        # Spatie Data collect() override: generic types cannot be specified in PHP union return types
+        - identifier: missingType.generics
+          path: src/Behavior/EventBehavior.php
+
+        # Intentional narrowing of parent method parameter types
+        - identifier: method.childParameterType
+          path: src/ContextManager.php
+        - identifier: method.childParameterType
           path: src/Models/MachineEvent.php
 

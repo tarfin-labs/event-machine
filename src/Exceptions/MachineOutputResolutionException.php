@@ -11,6 +11,9 @@ use RuntimeException;
  */
 class MachineOutputResolutionException extends RuntimeException
 {
+    /**
+     * @param  array<int, string>  $availableKeys
+     */
     public static function missingField(
         string $outputClass,
         string $paramName,

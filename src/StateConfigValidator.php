@@ -45,6 +45,8 @@ class StateConfigValidator
      * It validates the root level configuration and recursively validates
      * all nested states and their transitions.
      *
+     * @param  array<string, mixed>|null  $config
+     *
      * @throws InvalidStateConfigException When configuration validation fails
      */
     public static function validate(?array $config): void
@@ -79,6 +81,8 @@ class StateConfigValidator
 
     /**
      * Validates root level configuration.
+     *
+     * @param  array<string, mixed>  $config
      *
      * @throws InvalidStateConfigException
      */
@@ -150,6 +154,8 @@ class StateConfigValidator
      * The validation order is important: we validate nested states first,
      * then process the transitions to ensure proper context.
      *
+     * @param  array<string, mixed>|null  $stateConfig
+     *
      * @throws InvalidStateConfigException When state configuration is invalid
      */
     private static function validateStateConfig(?array $stateConfig, string $path): void
@@ -201,8 +207,8 @@ class StateConfigValidator
 
         // Validate @done.{state} configurations (before machine config, so coverage check sees valid keys)
         foreach ($stateConfig as $key => $value) {
-            if (str_starts_with((string) $key, '@done.')) {
-                $suffix = substr((string) $key, 6);
+            if (str_starts_with($key, '@done.')) {
+                $suffix = substr($key, 6);
 
                 if ($suffix === '') {
                     throw InvalidStateConfigException::emptyDoneDotSuffix($path);
@@ -256,6 +262,9 @@ class StateConfigValidator
      *
      * @throws InvalidStateConfigException
      */
+    /**
+     * @param  array<string, mixed>  $stateConfig
+     */
     private static function validateStateType(array $stateConfig, string $path): void
     {
         if (!in_array($stateConfig['type'], haystack: self::VALID_STATE_TYPES, strict: true)) {
@@ -267,6 +276,9 @@ class StateConfigValidator
      * Validates final state constraints.
      *
      * @throws InvalidStateConfigException
+     */
+    /**
+     * @param  array<string, mixed>  $stateConfig
      */
     private static function validateFinalState(array $stateConfig, string $path): void
     {
@@ -283,6 +295,9 @@ class StateConfigValidator
      * Validates parallel state constraints.
      *
      * @throws InvalidStateConfigException|InvalidParallelStateDefinitionException
+     */
+    /**
+     * @param  array<string, mixed>  $stateConfig
      */
     private static function validateParallelState(array $stateConfig, string $path): void
     {
@@ -303,6 +318,9 @@ class StateConfigValidator
      *
      * @throws InvalidStateConfigException
      */
+    /**
+     * @param  array<string, mixed>  $stateConfig
+     */
     private static function validateStateActions(array $stateConfig, string $path): void
     {
         foreach (['entry', 'exit'] as $actionType) {
@@ -320,6 +338,8 @@ class StateConfigValidator
      *
      * This method processes both standard event names and Event class names as transition triggers.
      * It ensures that all transitions are properly formatted and contain valid configuration.
+     *
+     * @param  array<string, mixed>|null  $parentState
      *
      * @throws InvalidStateConfigException When transitions configuration is invalid
      */
@@ -394,6 +414,9 @@ class StateConfigValidator
     /**
      * Validates the configuration of a single transition.
      */
+    /**
+     * @param  array<string, mixed>  $transitionConfig
+     */
     private static function validateTransitionConfig(
         array &$transitionConfig,
         string $path,
@@ -411,6 +434,9 @@ class StateConfigValidator
 
     /**
      * Validates and normalizes transition behaviors (guards, actions, calculators).
+     */
+    /**
+     * @param  array<string, mixed>  $transitionConfig
      */
     private static function validateTransitionBehaviors(
         array &$transitionConfig,
@@ -436,6 +462,9 @@ class StateConfigValidator
 
     /**
      * Validates guarded transitions with multiple conditions.
+     */
+    /**
+     * @param  array<int, mixed>  $conditions
      */
     private static function validateGuardedTransitions(array $conditions, string $path, string $eventName): void
     {
@@ -487,6 +516,9 @@ class StateConfigValidator
      * Validates machine delegation configuration.
      *
      * @throws InvalidStateConfigException
+     */
+    /**
+     * @param  array<string, mixed>  $stateConfig
      */
     private static function validateMachineConfig(array $stateConfig, string $path): void
     {
@@ -568,6 +600,9 @@ class StateConfigValidator
      *
      * @throws InvalidStateConfigException
      */
+    /**
+     * @param  array<string, mixed>  $stateConfig
+     */
     private static function validateJobConfig(array $stateConfig, string $path): void
     {
         $jobClass = $stateConfig['job'];
@@ -602,6 +637,9 @@ class StateConfigValidator
      *
      * @throws InvalidStateConfigException If the value is neither string, array, nor null.
      */
+    /**
+     * @return array<int, mixed>|null
+     */
     private static function normalizeArrayOrString(mixed $value): ?array
     {
         if ($value === null) {
@@ -622,10 +660,13 @@ class StateConfigValidator
     /**
      * Check if config contains any @done.{state} keys.
      */
+    /**
+     * @param  array<string, mixed>  $config
+     */
     private static function hasDoneDotKeys(array $config): bool
     {
         foreach (array_keys($config) as $key) {
-            if (str_starts_with((string) $key, '@done.')) {
+            if (str_starts_with($key, '@done.')) {
                 return true;
             }
         }
@@ -640,13 +681,16 @@ class StateConfigValidator
      *
      * @throws InvalidStateConfigException When child final states are uncovered.
      */
+    /**
+     * @param  array<string, mixed>  $stateConfig
+     */
     private static function validateChildFinalStateCoverage(array $stateConfig, string $path): void
     {
         $doneStateKeys = [];
 
         foreach (array_keys($stateConfig) as $key) {
-            if (str_starts_with((string) $key, '@done.')) {
-                $doneStateKeys[] = substr((string) $key, 6);
+            if (str_starts_with($key, '@done.')) {
+                $doneStateKeys[] = substr($key, 6);
             }
         }
 
@@ -689,6 +733,9 @@ class StateConfigValidator
      * @param  string  $parallelPath  The dot-path of the parallel state
      *
      * @throws InvalidStateConfigException When a cross-region transition is detected
+     */
+    /**
+     * @param  array<string, mixed>  $regions
      */
     private static function validateNoCrossRegionTransitions(array $regions, string $parallelPath): void
     {
@@ -736,7 +783,7 @@ class StateConfigValidator
     /**
      * Collect all transition targets from a set of states.
      *
-     * @param  array<string, array|null>  $states
+     * @param  array<string, array<string, mixed>|null>  $states
      *
      * @return array<array{0: string, 1: string}> List of [sourceStateName, targetStateName] pairs
      */
@@ -810,7 +857,9 @@ class StateConfigValidator
     /**
      * Collect root-level final state key names from a machine config.
      *
-     * @return array<string>
+     * @param  array<string, mixed>  $config
+     *
+     * @return array<int, string>
      */
     private static function collectFinalStateKeys(array $config): array
     {

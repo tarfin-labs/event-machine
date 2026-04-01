@@ -13,6 +13,10 @@ namespace Tarfinlabs\EventMachine\Routing;
  */
 class ForwardedEndpointDefinition
 {
+    /**
+     * @param  null|string|array<int, string>|\Closure  $output
+     * @param  array<int, string>  $middleware
+     */
     public function __construct(
         public readonly string $parentEventType,
         public readonly string $childEventType,

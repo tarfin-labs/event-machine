@@ -8,8 +8,12 @@ use Tarfinlabs\EventMachine\Exceptions\ArchiveException;
 
 class CompressionManager
 {
+    /** @var array<string, mixed>|null */
     protected static ?array $config = null;
 
+    /**
+     * @return array<string, mixed>
+     */
     protected static function getConfig(): array
     {
         if (self::$config === null) {

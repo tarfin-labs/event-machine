@@ -44,7 +44,7 @@ class ChildMachineJob implements ShouldQueue
      * @param  string  $parentStateId  The parent state that invoked this child.
      * @param  string  $childMachineClass  FQCN of the child machine.
      * @param  string  $machineChildId  The MachineChild tracking record ID (empty for fire-and-forget).
-     * @param  array  $childContext  Resolved context from parent's `with` config.
+     * @param  array<string, mixed>  $childContext  Resolved context from parent's `with` config.
      * @param  int  $retry  Number of retry attempts (from machine config).
      * @param  bool  $fireAndForget  Whether this is a fire-and-forget invocation (no @done).
      */

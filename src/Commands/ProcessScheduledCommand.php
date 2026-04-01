@@ -86,6 +86,9 @@ class ProcessScheduledCommand extends Command
      * We cross-check against machine_current_states to ensure the IDs
      * belong to this machine class (handles conditional machine mapping).
      */
+    /**
+     * @return Collection<int, string>
+     */
     protected function resolveInstances(
         ScheduleDefinition $scheduleDef,
         MachineDefinition $definition,
@@ -106,6 +109,9 @@ class ProcessScheduledCommand extends Command
      *
      * Cross-checks returned IDs against machine_current_states
      * to filter out IDs belonging to a different machine class.
+     */
+    /**
+     * @return Collection<int, string>
      */
     protected function resolveViaResolver(
         ScheduleDefinition $scheduleDef,
@@ -148,6 +154,9 @@ class ProcessScheduledCommand extends Command
      *
      * - Root-level `on` handler → send to ALL instances of this machine class
      * - State-level handlers → send only to instances in those states
+     */
+    /**
+     * @return Collection<int, string>
      */
     protected function resolveViaAutoDetect(
         MachineDefinition $definition,

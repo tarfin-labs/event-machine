@@ -27,7 +27,7 @@ class TransitionDefinition
 {
     // region Public Properties
 
-    /** The transition branches for this transition, or null if there is no target. */
+    /** @var array<int, TransitionBranch>|null The transition branches for this transition, or null if there is no target. */
     public ?array $branches = null;
 
     /** The description of the transition. */
@@ -49,7 +49,7 @@ class TransitionDefinition
     /**
      * Constructs a new TransitionDefinition instance.
      *
-     * @param  null|string|array  $transitionConfig  The configuration for this transition.
+     * @param  null|string|array<string|int, mixed>  $transitionConfig  The configuration for this transition.
      * @param  StateDefinition  $source  The source state definition for this transition.
      * @param  string  $event  The event triggering this transition.
      */
@@ -157,7 +157,7 @@ class TransitionDefinition
      * This method checks if the provided array has numeric keys and array values, indicating
      * that it contains multiple guarded transitions based on different guards.
      *
-     * @param  array|string|null  $transitionConfig  The transition configuration to examine.
+     * @param  array<string|int, mixed>|string|null  $transitionConfig  The transition configuration to examine.
      *
      * @return bool True if the configuration represents a multi-path guarded transition, false otherwise.
      */
@@ -209,7 +209,7 @@ class TransitionDefinition
                 return null;
             }
 
-            if (!isset($branch->guards)) {
+            if ($branch->guards === null) {
                 return $branch;
             }
 

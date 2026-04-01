@@ -78,6 +78,9 @@ class ExportXStateCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function buildMachineNode(MachineDefinition $definition): array
     {
         $node = [
@@ -137,6 +140,9 @@ class ExportXStateCommand extends Command
         return $node;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function buildStateNode(StateDefinition $stateDefinition): array
     {
         $node = [];
@@ -290,6 +296,9 @@ class ExportXStateCommand extends Command
      *
      * Maps: machine → src, with → input, queue/timeout/forward → meta.eventMachine.
      */
+    /**
+     * @return array<string, mixed>
+     */
     private function buildInvokeNode(StateDefinition $stateDefinition): array
     {
         $invokeDefinition = $stateDefinition->getMachineInvokeDefinition();
@@ -341,6 +350,9 @@ class ExportXStateCommand extends Command
         return $invoke;
     }
 
+    /**
+     * @param  array<string, mixed>  $node
+     */
     private function addTransitions(array &$node, StateDefinition $stateDefinition): void
     {
         if ($stateDefinition->transitionDefinitions === null) {
@@ -367,6 +379,9 @@ class ExportXStateCommand extends Command
         }
     }
 
+    /**
+     * @return array<int|string, mixed>|string
+     */
     private function buildTransitionConfig(TransitionDefinition $transitionDefinition, StateDefinition $source): array|string
     {
         if ($transitionDefinition->branches === null || $transitionDefinition->branches === []) {
@@ -397,6 +412,9 @@ class ExportXStateCommand extends Command
         return $branches;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function buildBranchConfig(TransitionBranch $branch, StateDefinition $source): array
     {
         $config = [];
@@ -471,6 +489,9 @@ class ExportXStateCommand extends Command
     /**
      * Format a behavior for XState export.
      * Returns a plain string for parameterless, or {type, params} for parameterized.
+     */
+    /**
+     * @return array<string, mixed>|string
      */
     private function formatBehaviorForExport(mixed $behavior): array|string
     {
@@ -552,6 +573,9 @@ class ExportXStateCommand extends Command
      *
      * Handles both array-based context and typed ContextManager subclasses.
      */
+    /**
+     * @return array<string, mixed>
+     */
     private function extractContext(MachineDefinition $definition): array
     {
         // Typed ContextManager class is moved to behavior['context'] during setupContextManager()
@@ -576,6 +600,9 @@ class ExportXStateCommand extends Command
      * We map MachineInput → types.input, MachineOutput (from final states) → types.output.
      * MachineFailure has no XState equivalent — stored in meta.eventMachine.failure.
      */
+    /**
+     * @return array<string, mixed>
+     */
     private function extractTypedContracts(MachineDefinition $definition): array
     {
         $types = [];
@@ -591,6 +618,9 @@ class ExportXStateCommand extends Command
     /**
      * Extract EventMachine-specific metadata (failure class) not supported by XState v5.
      * Stored under meta.eventMachine to avoid collision with XState standard keys.
+     */
+    /**
+     * @return array<string, mixed>
      */
     private function extractEventMachineMeta(MachineDefinition $definition): array
     {
@@ -615,6 +645,9 @@ class ExportXStateCommand extends Command
      *
      * Returns { propertyName: defaultValue } matching XState's types pattern:
      *   types: { input: {} as { orderId: string; amount: number } }
+     */
+    /**
+     * @return array<string, mixed>
      */
     private function reflectContractProperties(string $class): array
     {
@@ -642,6 +675,9 @@ class ExportXStateCommand extends Command
 
     /**
      * Extract properties and their default values from a typed ContextManager subclass.
+     */
+    /**
+     * @return array<string, mixed>
      */
     private function extractTypedContext(string $contextClass): array
     {
@@ -703,6 +739,9 @@ class ExportXStateCommand extends Command
      *
      * This is included as meta information for documentation purposes,
      * since XState only references behaviors by name.
+     */
+    /**
+     * @return array<string, mixed>
      */
     private function buildBehaviorCatalog(MachineDefinition $definition): array
     {
@@ -806,6 +845,9 @@ class ExportXStateCommand extends Command
 
     /**
      * Infer a TypeScript-compatible type string from Laravel validation rules.
+     */
+    /**
+     * @param  array<int, mixed>  $rules
      */
     private function inferTypeFromRules(array $rules): string
     {
@@ -941,6 +983,11 @@ class ExportXStateCommand extends Command
      * Recursively convert empty arrays to stdClass objects so they encode as {} in JSON.
      *
      * State nodes like `"processed": {}` should be empty objects, not empty arrays.
+     */
+    /**
+     * @param  array<string, mixed>  $data
+     *
+     * @return array<string, mixed>|\stdClass
      */
     private function convertEmptyArraysToObjects(array $data): array|\stdClass
     {

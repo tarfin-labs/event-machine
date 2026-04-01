@@ -38,7 +38,7 @@ class ChildJobJob implements ShouldQueue
      * @param  string  $parentMachineClass  FQCN of the parent machine.
      * @param  string  $parentStateId  The parent state that invoked the job.
      * @param  string  $jobClass  FQCN of the job to run.
-     * @param  array  $jobData  Data to pass to the job constructor.
+     * @param  array<string, mixed>  $jobData  Data to pass to the job constructor.
      * @param  bool  $fireAndForget  Whether this is a fire-and-forget job (no @done).
      * @param  string|null  $machineChildId  Tracking record ID.
      */

@@ -99,7 +99,7 @@ class MachineDefinition
      */
     public ?array $events = null;
 
-    /** Represents a queue for storing events that raised during the execution of the transition. */
+    /** @var Collection<int, EventBehavior|array<string, mixed>> Represents a queue for storing events that raised during the execution of the transition. */
     public Collection $eventQueue;
 
     /** The initial state definition for this machine definition. */
@@ -117,7 +117,7 @@ class MachineDefinition
     /** Root event ID for state restoration (set by Machine::start). */
     public ?string $rootEventId = null;
 
-    /** Pending parallel region dispatches (consumed by Machine::send after persist). */
+    /** @var array<int, array<string, mixed>> Pending parallel region dispatches (consumed by Machine::send after persist). */
     public array $pendingParallelDispatches = [];
 
     /** @var array<string, EndpointDefinition>|null Parsed endpoint definitions. */
@@ -136,10 +136,13 @@ class MachineDefinition
     /**
      * Create a new machine definition with the given arguments.
      *
-     * @param  array|null  $config  The raw configuration array used to create the machine definition.
-     * @param  array|null  $behavior  The implementation of the machine behavior that defined in the machine definition.
+     * @param  array<string, mixed>|null  $config  The raw configuration array used to create the machine definition.
+     * @param  array<string, mixed>|null  $behavior  The implementation of the machine behavior that defined in the machine definition.
      * @param  string  $id  The id of the machine.
      * @param  string|null  $version  The version of the machine.
+     * @param  array<string, mixed>|null  $scenarios  The scenario definitions.
+     * @param  array<int|string, mixed>|null  $endpoints  The endpoint definitions.
+     * @param  array<int|string, mixed>|null  $schedules  The schedule definitions.
      * @param  string  $delimiter  The string delimiter for serializing the path to a string.
      */
     private function __construct(
@@ -337,8 +340,11 @@ class MachineDefinition
     /**
      * Define a new machine with the given configuration and behavior.
      *
-     * @param  ?array  $config  The raw configuration array used to create the machine.
-     * @param  array|null  $behavior  An array of behavior options.
+     * @param  array<string, mixed>|null  $config  The raw configuration array used to create the machine.
+     * @param  array<string, mixed>|null  $behavior  An array of behavior options.
+     * @param  array<string, mixed>|null  $scenarios  The scenario definitions.
+     * @param  array<int|string, mixed>|null  $endpoints  The endpoint definitions.
+     * @param  array<int|string, mixed>|null  $schedules  The schedule definitions.
      *
      * @return self The created machine definition.
      */
@@ -368,7 +374,7 @@ class MachineDefinition
     /**
      * Initializes an empty behavior array with empty events, actions and guard arrays.
      *
-     * @return array An empty behavior array with empty events, actions and guard arrays.
+     * @return array<string, array<string, mixed>> An empty behavior array with empty events, actions and guard arrays.
      */
     protected static function initializeEmptyBehavior(): array
     {
@@ -388,7 +394,7 @@ class MachineDefinition
      * If no configuration is provided, the configuration will be set to null.
      * The $options parameter is set with the current `Machine` and machine id.
      *
-     * @param  array|null  $config  The configuration for the root state definition.
+     * @param  array<string, mixed>|null  $config  The configuration for the root state definition.
      *
      * @return StateDefinition The created root state definition.
      */
@@ -432,6 +438,8 @@ class MachineDefinition
      * Build the initial state for the machine.
      *
      * For parallel states, enters all regions simultaneously.
+     *
+     * @param  EventBehavior|array<string, mixed>|null  $event
      *
      * @return ?State The initial state of the machine.
      */
@@ -637,7 +645,7 @@ class MachineDefinition
      * @deprecated Use MachineScenario classes with the new scenario system instead. Will be removed in the next major version.
      *
      * @param  State  $state  The current state.
-     * @param  EventBehavior|array|null  $eventBehavior  The optional event behavior or event data.
+     * @param  EventBehavior|array<string, mixed>|null  $eventBehavior  The optional event behavior or event data.
      *
      * @return State|null The scenario state if scenario is enabled and found, otherwise returns the current state.
      */
@@ -816,13 +824,16 @@ class MachineDefinition
      * Resolves through the machine's event registry for both
      * raw event arrays and EventBehavior instances.
      */
+    /**
+     * @param  EventBehavior|array<string, mixed>  $event
+     */
     public function createEventBehavior(EventBehavior|array $event, State $state): EventBehavior
     {
         return $this->initializeEvent($event, $state);
     }
 
     /**
-     * @param  EventBehavior|array  $event  The event to initialize.
+     * @param  EventBehavior|array<string, mixed>  $event  The event to initialize.
      * @param  State  $state  The state in which the event is occurring.
      *
      * @return EventBehavior The initialized EventBehavior instance.
@@ -1329,6 +1340,9 @@ class MachineDefinition
      * setCurrentStateDefinition, the parallel value array is wiped. This method
      * maps the changed region state back into the original parallel array and
      * fixes machine_value snapshots in history events recorded during the mutation.
+     */
+    /**
+     * @param  array<int, string>  $originalValues
      */
     public function restoreParallelValues(
         State $state,
@@ -2200,6 +2214,9 @@ class MachineDefinition
      * or MACHINE_EXIT_START — clearly distinguishing machine lifecycle
      * from state lifecycle in the event history.
      */
+    /**
+     * @param  array<int, string|array<int|string, mixed>>  $actions
+     */
     protected function runRootLifecycleActions(
         array $actions,
         State $state,
@@ -2333,6 +2350,9 @@ class MachineDefinition
      * Records LISTEN_QUEUE_DISPATCHED internal event and dispatches ListenerJob.
      * Returns early if no rootEventId (persistence off).
      */
+    /**
+     * @param  array<string, mixed>|null  $configParams
+     */
     protected function dispatchListenerJob(
         string $action,
         State $state,
@@ -2378,6 +2398,8 @@ class MachineDefinition
      * Supports: string shorthand, tuples with @queue and named params.
      *
      * @queue accepts bool|string: true = default queue, 'queue-name' = specific queue, false/omitted = sync.
+     *
+     * @param  array<string, mixed>|null  $config
      */
     protected function parseListenConfig(?array $config): void
     {
@@ -3121,6 +3143,9 @@ class MachineDefinition
      *
      * @throws MaxTransitionDepthExceededException If the recursive transition depth exceeds the configured limit.
      */
+    /**
+     * @param  EventBehavior|array<string, mixed>  $event
+     */
     public function transition(
         EventBehavior|array $event,
         ?State $state = null,
@@ -3352,6 +3377,10 @@ class MachineDefinition
      * @param  EventBehavior|null  $eventBehavior  The event (optional).
      *
      * @throws \ReflectionException
+     */
+    /**
+     * @param  string|array<int|string, mixed>  $actionDefinition
+     * @param  array<string, mixed>|null  $configParams
      */
     public function runAction(
         string|array $actionDefinition,

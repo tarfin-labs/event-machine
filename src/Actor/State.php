@@ -105,7 +105,7 @@ class State implements \JsonSerializable
     /**
      * Create a lightweight State instance for testing without a full MachineDefinition.
      *
-     * @param  array|ContextManager  $context  Context data as an array or ContextManager instance.
+     * @param  array<string, mixed>|ContextManager  $context  Context data as an array or ContextManager instance.
      * @param  StateDefinition|null  $currentStateDefinition  Optional state definition.
      * @param  EventBehavior|null  $currentEventBehavior  Optional event behavior.
      */
@@ -146,7 +146,7 @@ class State implements \JsonSerializable
      *
      * @param  InternalEvent  $type  The internal event type.
      * @param  string|null  $placeholder  The optional placeholder parameter.
-     * @param  array|null  $payload  The optional payload array.
+     * @param  array<string, mixed>|null  $payload  The optional payload array.
      *
      * @return self The current object instance.
      */

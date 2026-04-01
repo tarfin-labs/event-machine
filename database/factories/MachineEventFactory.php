@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  * The MachineEventFactory class is responsible for generating machine event data for testing purposes.
  * It extends the Factory class and uses the MachineEvent model.
  *
- * @template TModel of MachineEvent
+ * @extends Factory<MachineEvent>
  */
 class MachineEventFactory extends Factory
 {

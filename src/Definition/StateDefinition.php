@@ -125,8 +125,8 @@ class StateDefinition
     /**
      * Create a new state definition with the given configuration and options.
      *
-     * @param  ?array  $config  The raw configuration array used to create the state definition.
-     * @param  ?array  $options  The `options` array for configuring the state definition.
+     * @param  array<string|int, mixed>|null  $config  The raw configuration array used to create the state definition.
+     * @param  array<string, mixed>|null  $options  The `options` array for configuring the state definition.
      */
     public function __construct(
         public ?array $config,
@@ -238,6 +238,9 @@ class StateDefinition
     /**
      * Initialize the options for this state definition.
      */
+    /**
+     * @param  array<string, mixed>|null  $options
+     */
     protected function initializeOptions(?array $options): void
     {
         $this->parent  = $options['parent'] ?? null;
@@ -337,11 +340,11 @@ class StateDefinition
      *
      * @param  StateDefinition  $stateDefinition  The state definition to process.
      *
-     * @return array|null An array of TransitionDefinition objects, keyed by event names.
+     * @return array<string, TransitionDefinition>|null An array of TransitionDefinition objects, keyed by event names.
      */
     protected function createTransitionDefinitions(StateDefinition $stateDefinition): ?array
     {
-        /** @var null|array $transitions */
+        /** @var null|array<string, TransitionDefinition> $transitions */
         $transitions = null;
 
         if (

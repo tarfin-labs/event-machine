@@ -73,7 +73,7 @@ class InlineBehaviorFake
      * Called at invocation sites. Records the call if tracked.
      *
      * @param  string  $key  The bare behavior key (colon-stripped by the engine before this call)
-     * @param  array  $parameters  The positional parameters injected by injectInvokableBehaviorParameters()
+     * @param  array<int, mixed>  $parameters  The positional parameters injected by injectInvokableBehaviorParameters()
      *
      * @return bool True if the original should be SKIPPED (fake mode).
      */

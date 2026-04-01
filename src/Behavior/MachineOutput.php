@@ -54,6 +54,8 @@ abstract class MachineOutput
 
     /**
      * Serialize for ChildMachineDoneEvent payload, HTTP response envelope, and queue transport.
+     *
+     * @return array<string, mixed>
      */
     public function toArray(): array
     {

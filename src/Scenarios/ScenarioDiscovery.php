@@ -75,7 +75,7 @@ class ScenarioDiscovery
     /**
      * Group available scenarios by event type for endpoint response.
      *
-     * @return array<string, list<array{slug: string, description: string, target: string, params: array}>>
+     * @return array<string, list<array{slug: string, description: string, target: string, params: array<string, mixed>}>>
      */
     public static function groupedByEvent(string $machineClass, string $currentState): array
     {
@@ -181,6 +181,9 @@ class ScenarioDiscovery
      * Serialize params definition for endpoint response.
      * Normalizes both plain and rich formats, auto-derives 'required' flag.
      */
+    /**
+     * @return array<string, mixed>
+     */
     private static function serializeParams(MachineScenario $scenario): array
     {
         $paramDefs  = $scenario->resolvedParams();
@@ -206,6 +209,9 @@ class ScenarioDiscovery
 
     /**
      * Check if a rules array contains 'required'.
+     */
+    /**
+     * @param  array<int, mixed>  $rules
      */
     private static function isRequired(array $rules): bool
     {

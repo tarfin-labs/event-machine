@@ -23,7 +23,7 @@ class ContextManager extends Data
     /**
      * Create a new ContextManager instance.
      *
-     * @param  Optional|array  $data  An optional initial array of key-value pairs.
+     * @param  Optional|array<string, mixed>  $data  An optional initial array of key-value pairs.
      */
     public function __construct(
         #[ArrayType]
@@ -139,7 +139,7 @@ class ContextManager extends Data
      * static from() method and returns it.
      * If validation fails, it throws a MachineContextValidationException.
      *
-     * @param  array|Arrayable  $payload  The payload to be validated and created from.
+     * @param  array<string, mixed>|Arrayable<string, mixed>  $payload  The payload to be validated and created from.
      *
      * @return static A new instance of the class created from the payload.
      */

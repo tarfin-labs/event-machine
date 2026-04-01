@@ -16,6 +16,10 @@ class InvalidStateConfigException extends LogicException
 {
     // ── Root config ────────────────────────────────────────────────────
 
+    /**
+     * @param  array<int, string>  $keys
+     * @param  array<int, string>  $allowed
+     */
     public static function invalidRootKeys(array $keys, array $allowed): self
     {
         return new self(
@@ -36,6 +40,10 @@ class InvalidStateConfigException extends LogicException
         return new self(message: "The 'listen' configuration must be an array.");
     }
 
+    /**
+     * @param  array<int, string>  $keys
+     * @param  array<int, string>  $allowed
+     */
     public static function invalidListenKeys(array $keys, array $allowed): self
     {
         return new self(
@@ -54,6 +62,10 @@ class InvalidStateConfigException extends LogicException
         );
     }
 
+    /**
+     * @param  array<int, string>  $keys
+     * @param  array<int, string>  $allowed
+     */
     public static function invalidStateKeys(string $path, array $keys, array $allowed): self
     {
         return new self(
@@ -62,6 +74,9 @@ class InvalidStateConfigException extends LogicException
         );
     }
 
+    /**
+     * @param  array<int, string>  $allowed
+     */
     public static function invalidStateType(string $path, string $type, array $allowed): self
     {
         return new self(
@@ -153,6 +168,10 @@ class InvalidStateConfigException extends LogicException
         );
     }
 
+    /**
+     * @param  array<int, string>  $keys
+     * @param  array<int, string>  $allowed
+     */
     public static function invalidTransitionKeys(string $path, string $event, array $keys, array $allowed): self
     {
         return new self(
@@ -219,6 +238,10 @@ class InvalidStateConfigException extends LogicException
         );
     }
 
+    /**
+     * @param  array<int, string>  $unknownKeys
+     * @param  array<int, string>  $allowed
+     */
     public static function invalidForwardKeys(string $path, string $entry, array $unknownKeys, array $allowed): self
     {
         return new self(
@@ -284,6 +307,9 @@ class InvalidStateConfigException extends LogicException
         );
     }
 
+    /**
+     * @param  array<int, string>  $states
+     */
     public static function uncoveredChildFinalStates(string $path, string $machineClass, array $states): self
     {
         return new self(

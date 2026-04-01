@@ -37,7 +37,7 @@ class ScenarioPlayer
     /** @var list<string> Class-based behavior keys bound in container during this execution. */
     private static array $boundClassKeys = [];
 
-    /** @var array<string, string|array> Delegation outcomes from classified plan (stateRoute => outcome). */
+    /** @var array<string, string|array<string, mixed>> Delegation outcomes from classified plan (stateRoute => outcome). */
     private static array $outcomes = [];
 
     /** @var array<string, class-string<MachineScenario>> Child scenario references from classified plan. */
@@ -62,6 +62,9 @@ class ScenarioPlayer
      * 9. Validate target
      * 10. Build ScenarioOutput
      * 11. Cleanup → placeholder for plan-engine epic
+     */
+    /**
+     * @param  array<string, mixed>  $eventPayload
      */
     public function execute(?Machine $machine = null, array $eventPayload = [], ?string $rootEventId = null): State
     {
@@ -178,7 +181,7 @@ class ScenarioPlayer
      * Get the delegation outcome for a state route, if defined in plan().
      * Called by MachineDefinition during invoke handling.
      *
-     * @return string|array|null Outcome string ('@done', '@fail', '@timeout') or array with 'outcome' key, or null.
+     * @return string|array<string, mixed>|null Outcome string ('@done', '@fail', '@timeout') or array with 'outcome' key, or null.
      */
     public static function getOutcome(string $stateRoute): string|array|null
     {
@@ -270,6 +273,9 @@ class ScenarioPlayer
      * The child machine is created with shouldPersist=false to avoid DB dependency
      * during scenario replay. Child's plan() overrides (guards, outcomes) and the
      * parent's existing overrides are both active in the container.
+     */
+    /**
+     * @param  array<string, mixed>  $input
      */
     public static function executeChildScenario(
         string $childScenarioClass,
@@ -528,9 +534,15 @@ class ScenarioPlayer
     /**
      * Create an ActionBehavior proxy that writes key-value pairs to context.
      */
+    /**
+     * @param  array<string, mixed>  $data
+     */
     private static function createContextWriteProxy(array $data): ActionBehavior
     {
         return new class($data) extends ActionBehavior {
+            /**
+             * @param  array<string, mixed>  $contextData
+             */
             public function __construct(private readonly array $contextData)
             {
                 parent::__construct();
@@ -548,14 +560,23 @@ class ScenarioPlayer
     /**
      * Create an OutputBehavior proxy that returns a fixed array.
      */
+    /**
+     * @param  array<string, mixed>  $data
+     */
     private static function createOutputProxy(array $data): OutputBehavior
     {
         return new class($data) extends OutputBehavior {
+            /**
+             * @param  array<string, mixed>  $outputData
+             */
             public function __construct(private readonly array $outputData)
             {
                 parent::__construct();
             }
 
+            /**
+             * @return array<string, mixed>
+             */
             public function __invoke(): array
             {
                 return $this->outputData;
@@ -627,8 +648,8 @@ class ScenarioPlayer
      * Classify each plan() value using the detection table (spec §5).
      *
      * @return array{
-     *     overrides: array<string, array>,
-     *     outcomes: array<string, string|array>,
+     *     overrides: array<string, array<string, mixed>>,
+     *     outcomes: array<string, string|array<string, mixed>>,
      *     childScenarios: array<string, class-string<MachineScenario>>,
      * }
      */
@@ -712,6 +733,9 @@ class ScenarioPlayer
     /**
      * Find @continue directive for the given state route.
      */
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
     private function findContinueForState(string $currentRoute, array $overrides): mixed
     {
         foreach ($overrides as $stateRoute => $value) {
@@ -722,7 +746,7 @@ class ScenarioPlayer
                 continue;
             }
             // Match: exact route or suffix match
-            $fullRoute = str_contains((string) $stateRoute, '.') ? $stateRoute : '';
+            $fullRoute = str_contains($stateRoute, '.') ? $stateRoute : '';
             if ($currentRoute === $stateRoute
                 || str_ends_with($currentRoute, '.'.$stateRoute)
                 || $currentRoute === $fullRoute) {
@@ -739,6 +763,9 @@ class ScenarioPlayer
      * Formats:
      *   'EventClass::class'                        → [EventClass, []]
      *   [EventClass::class, 'payload' => [...]]    → [EventClass, [...]]
+     */
+    /**
+     * @return array{0: string, 1: array<string, mixed>}
      */
     private function parseContinueValue(mixed $continue): array
     {
@@ -790,7 +817,7 @@ class ScenarioPlayer
                     }
                 }
                 foreach ($branch->actions ?? [] as $action) {
-                    if (is_string($action) && is_subclass_of($action, InvokableBehavior::class)) {
+                    if (is_subclass_of($action, InvokableBehavior::class)) {
                         $behaviors[$action] = 'action';
                     }
                 }

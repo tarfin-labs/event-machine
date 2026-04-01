@@ -298,6 +298,9 @@ class MachineQueryBuilder
      * for the requested page. Suitable for hundreds to low-thousands
      * of active instances per machine class.
      */
+    /**
+     * @return LengthAwarePaginator<int, MachineQueryResult>
+     */
     public function paginate(int $perPage = 15): LengthAwarePaginator
     {
         $total   = $this->count();

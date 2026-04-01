@@ -15,10 +15,10 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
  */
 class CommunicationRecorder
 {
-    /** @var list<array{machineClass: string, rootEventId: string, event: EventBehavior|array}> */
+    /** @var list<array{machineClass: string, rootEventId: string, event: EventBehavior|array<string, mixed>}> */
     private static array $sendToRecords = [];
 
-    /** @var list<array{event: EventBehavior|array}> */
+    /** @var list<array{event: EventBehavior|array<string, mixed>}> */
     private static array $raiseRecords = [];
 
     private static bool $recording = false;
@@ -38,6 +38,9 @@ class CommunicationRecorder
         return self::$recording;
     }
 
+    /**
+     * @param  EventBehavior|array<string, mixed>  $event
+     */
     public static function recordSendTo(string $machineClass, string $rootEventId, EventBehavior|array $event): void
     {
         self::$sendToRecords[] = [
@@ -47,6 +50,9 @@ class CommunicationRecorder
         ];
     }
 
+    /**
+     * @param  EventBehavior|array<string, mixed>  $event
+     */
     public static function recordRaise(EventBehavior|array $event): void
     {
         self::$raiseRecords[] = [
@@ -55,7 +61,7 @@ class CommunicationRecorder
     }
 
     /**
-     * @return list<array{machineClass: string, rootEventId: string, event: EventBehavior|array}>
+     * @return list<array{machineClass: string, rootEventId: string, event: EventBehavior|array<string, mixed>}>
      */
     public static function getSendToRecords(?string $machineClass = null): array
     {
@@ -70,7 +76,7 @@ class CommunicationRecorder
     }
 
     /**
-     * @return list<array{event: EventBehavior|array}>
+     * @return list<array{event: EventBehavior|array<string, mixed>}>
      */
     public static function getRaiseRecords(?string $eventType = null): array
     {

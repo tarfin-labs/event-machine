@@ -270,6 +270,9 @@ class ProcessTimersCommand extends Command
     /**
      * Dispatch SendToMachineJob for a collection of instances via Bus::batch.
      */
+    /**
+     * @param  Collection<int, \stdClass>  $instances
+     */
     protected function dispatchTimerJobs(string $machineClass, string $eventName, Collection $instances): void
     {
         $jobs = $instances->map(fn (object $instance): SendToMachineJob => new SendToMachineJob(

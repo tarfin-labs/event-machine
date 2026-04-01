@@ -52,7 +52,7 @@ abstract class EventBehavior extends Data
      * Creates a new instance of the class.
      *
      * @param  null|string|Optional  $type  The type of the object. Default is null.
-     * @param  null|array|Optional  $payload  The payload to be associated with the object. Default is null.
+     * @param  null|array<string, mixed>|Optional  $payload  The payload to be associated with the object. Default is null.
      * @param  mixed  $actor  Actor performing the event. Default is null.
      * @param  int|Optional  $version  The version number of the object. Default is 1.
      * @param  SourceType  $source  The source type of the object. Default is SourceType::EXTERNAL.
@@ -158,6 +158,8 @@ abstract class EventBehavior extends Data
     /**
      * Override only() to return static type for fluent interface.
      * Uses parent implementation which correctly returns EventBehavior instance.
+     *
+     * @param  string  ...$args
      */
     public function only(...$args): static
     {
@@ -167,6 +169,8 @@ abstract class EventBehavior extends Data
     /**
      * Override except() to return static type for fluent interface.
      * Uses parent implementation which correctly returns EventBehavior instance.
+     *
+     * @param  string  ...$args
      */
     public function except(...$args): static
     {
@@ -210,7 +214,7 @@ abstract class EventBehavior extends Data
      * Create an event instance for testing with sensible defaults.
      * Override in concrete classes for domain-specific defaults.
      *
-     * @param  array  $attributes  Attributes to merge with defaults.
+     * @param  array<string, mixed>  $attributes  Attributes to merge with defaults.
      */
     public static function forTesting(array $attributes = []): static
     {

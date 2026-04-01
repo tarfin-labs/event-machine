@@ -12,8 +12,7 @@ use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
 
 /**
- * @template TGet
- * @template TSet
+ * @implements CastsAttributes<Machine|null, string|Machine|null>
  */
 class MachineCast implements CastsAttributes
 {
@@ -51,8 +50,8 @@ class MachineCast implements CastsAttributes
     /**
      * Transform the attribute to its underlying model values.
      *
-     * @param  TSet|null  $value
-     * @param  array<mixed>  $attributes
+     * @param  string|Machine|null  $value
+     * @param  array<string, mixed>  $attributes
      */
     public function set(Model $model, string $key, mixed $value, array $attributes): ?string
     {

@@ -95,6 +95,8 @@ class ScenarioPathResolver
      * BFS from a start state to the target, building classified ScenarioPath steps.
      *
      * @param  list<ScenarioPath>  $results  Accumulated results (passed by reference).
+     * @param  array<int, string>  $startGuards
+     * @param  array<int, string>  $startActions
      */
     private function bfs(
         StateDefinition $startState,
@@ -171,7 +173,7 @@ class ScenarioPathResolver
     /**
      * Get reachable next states from current state (based on classification).
      *
-     * @return list<array{0: StateDefinition, 1: string, 2: array, 3: array}> [state, event, guards, actions]
+     * @return list<array{0: StateDefinition, 1: string, 2: array<int, string>, 3: array<int, string>}> [state, event, guards, actions]
      */
     private function getNextStates(StateDefinition $state): array
     {
@@ -298,6 +300,9 @@ class ScenarioPathResolver
      * Input: 'findeks.awaiting_birth_date_correction'
      * Output: ['parentTarget' => 'verification', 'childMachine' => FindeksMachine::class, 'childTarget' => 'awaiting_birth_date_correction']
      * Returns null if target is not a deep target.
+     */
+    /**
+     * @return array{parentTarget: string, childMachine: class-string, childTarget: string}|null
      */
     public function resolveDeepTarget(string $target): ?array
     {

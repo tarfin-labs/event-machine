@@ -145,6 +145,9 @@ class MachineController extends Controller
      * the `payload` wrapper that POST JSON bodies naturally have. This method
      * wraps them so validation rules targeting `payload.*` work uniformly.
      */
+    /**
+     * @return array<string, mixed>
+     */
     protected function resolveRequestData(Request $request): array
     {
         $data = $request->all();
@@ -158,6 +161,10 @@ class MachineController extends Controller
 
     /**
      * Execute the endpoint lifecycle: action.before -> send -> action.after -> response.
+     */
+    /**
+     * @param  string|array<int, string>|null  $outputKey
+     * @param  array<int, string>|null  $outputKeys
      */
     protected function executeEndpoint(
         Machine $machine,
@@ -253,6 +260,10 @@ class MachineController extends Controller
      *
      * Always returns: {data: {id, machineId, state, availableEvents, output, isProcessing}}
      */
+    /**
+     * @param  string|array<int, string>|null  $outputKey
+     * @param  array<int, string>|null  $outputKeys
+     */
     protected function buildResponse(
         State $state,
         Machine $machine,
@@ -316,6 +327,9 @@ class MachineController extends Controller
 
     /**
      * Resolve and run a OutputBehavior using the InvokableBehavior parameter injection pattern.
+     */
+    /**
+     * @param  string|array<int, string>  $outputKey
      */
     protected function resolveAndRunOutput(
         string|array $outputKey,
@@ -499,6 +513,9 @@ class MachineController extends Controller
 
     /**
      * Build response for forwarded endpoints — includes parent + child state.
+     */
+    /**
+     * @param  array<string, mixed>  $defaults
      */
     protected function buildForwardedResponse(
         Machine $machine,

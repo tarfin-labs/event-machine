@@ -15,6 +15,9 @@ use Tarfinlabs\EventMachine\Models\MachineEventArchive;
 
 class ArchiveService
 {
+    /**
+     * @param  array<string, mixed>  $config
+     */
     public function __construct(
         protected array $config = []
     ) {
@@ -178,7 +181,9 @@ class ArchiveService
      * Batch archive multiple machine instances.
      * Events are always moved to archive (removed from active table after successful archival).
      *
-     * @param  array<string>  $rootEventIds  Array of root_event_ids to archive
+     * @param  array<int, string>  $rootEventIds  Array of root_event_ids to archive
+     *
+     * @return array{archived: list<array<string, mixed>>, failed: list<array<string, mixed>>, skipped: list<array<string, mixed>>}
      */
     public function batchArchive(array $rootEventIds, ?int $compressionLevel = null): array
     {

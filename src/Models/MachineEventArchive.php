@@ -8,6 +8,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Tarfinlabs\EventMachine\EventCollection;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Tarfinlabs\EventMachine\Support\CompressionManager;
 use Tarfinlabs\EventMachine\Exceptions\ArchiveException;
@@ -33,7 +34,9 @@ use Tarfinlabs\EventMachine\Exceptions\ArchiveException;
  */
 class MachineEventArchive extends Model
 {
+    /** @use HasFactory<Factory<MachineEventArchive>> */
     use HasFactory;
+
     use HasUlids;
 
     public $timestamps    = false;
@@ -126,6 +129,7 @@ class MachineEventArchive extends Model
 
         $eventsData = json_decode($decompressed, true, 512, JSON_THROW_ON_ERROR);
 
+        /** @var array<int, array<string, mixed>> $eventsData */
         $events = collect($eventsData)->map(function (array $eventData): MachineEvent {
             return new MachineEvent($eventData);
         });

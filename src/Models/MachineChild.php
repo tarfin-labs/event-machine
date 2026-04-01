@@ -72,6 +72,8 @@ class MachineChild extends Model
     /**
      * Scope to filter by parent machine.
      */
+    /** @param  Builder<MachineChild>  $query
+     *  @return Builder<MachineChild> */
     protected function scopeForParent(Builder $query, string $parentRootEventId): Builder
     {
         return $query->where('parent_root_event_id', $parentRootEventId);
@@ -80,6 +82,8 @@ class MachineChild extends Model
     /**
      * Scope to filter by child machine.
      */
+    /** @param  Builder<MachineChild>  $query
+     *  @return Builder<MachineChild> */
     protected function scopeForChild(Builder $query, string $childRootEventId): Builder
     {
         return $query->where('child_root_event_id', $childRootEventId);
@@ -88,6 +92,8 @@ class MachineChild extends Model
     /**
      * Scope to filter by status.
      */
+    /** @param  Builder<MachineChild>  $query
+     *  @return Builder<MachineChild> */
     protected function scopeWithStatus(Builder $query, string $status): Builder
     {
         return $query->where('status', $status);
@@ -96,6 +102,8 @@ class MachineChild extends Model
     /**
      * Scope to filter active (non-terminal) children.
      */
+    /** @param  Builder<MachineChild>  $query
+     *  @return Builder<MachineChild> */
     protected function scopeActive(Builder $query): Builder
     {
         return $query->whereIn('status', [self::STATUS_PENDING, self::STATUS_RUNNING]);

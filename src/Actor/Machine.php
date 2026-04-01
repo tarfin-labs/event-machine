@@ -154,7 +154,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * provided definition and state. If the definition is `null`, it attempts
      * to retrieve the definition using the `definition()` method.
      *
-     * @param  MachineDefinition|array|null  $definition  The definition to initialize the machine with.
+     * @param  MachineDefinition|array<string, mixed>|null  $definition  The definition to initialize the machine with.
      * @param  State|string|null  $state  The initial state of the machine.
      *
      * @return self The newly created and initialized machine instance.
@@ -214,7 +214,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * Guards and faking are applied before getInitialState() runs,
      * solving @always timing issues.
      *
-     * @param  array  $context  Context values to inject before machine start.
+     * @param  array<string, mixed>  $context  Context values to inject before machine start.
      * @param  array<class-string, mixed>  $guards  Guard class => return value pairs (pre-init).
      * @param  array<class-string>  $faking  Behavior classes to spy before init.
      */
@@ -230,7 +230,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * Uses the real definition — all transitions, guards, and actions available.
      *
      * @param  string  $stateId  The state to start at (resolved from idMap).
-     * @param  array  $context  Context values to inject.
+     * @param  array<string, mixed>  $context  Context values to inject.
      * @param  array<class-string, mixed>  $guards  Guard class => return value pairs.
      * @param  array<class-string>  $faking  Behavior classes to spy.
      */
@@ -278,7 +278,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * updates the machine's state and handles validation guards. If the event
      * should be persisted, it calls the `persist()` method.
      *
-     * @param  EventBehavior|array|string  $event  The event to send to the machine.
+     * @param  EventBehavior|array<string, mixed>|string  $event  The event to send to the machine.
      *
      * @return State The updated state of the machine.
      *
@@ -639,7 +639,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * context data. It utilizes the behavior configuration of the machine's
      * definition or defaults to the `ContextManager` class.
      *
-     * @param  array  $persistedContext  The persisted context data.
+     * @param  array<string, mixed>  $persistedContext  The persisted context data.
      *
      * @return ContextManager The restored context manager instance.
      */
@@ -661,7 +661,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      * For parallel states (multiple values), finds the common parallel ancestor.
      * For non-parallel states (single value), returns the state definition directly.
      *
-     * @param  array  $machineValue  The machine value containing the ID(s) of the state definition(s).
+     * @param  array<int, string|int>  $machineValue  The machine value containing the ID(s) of the state definition(s).
      *
      * @return StateDefinition The restored current state definition.
      */
@@ -679,7 +679,7 @@ class Machine implements Castable, JsonSerializable, Stringable
     /**
      * Find the common parallel ancestor for multiple active states.
      *
-     * @param  array  $machineValue  Array of active state IDs.
+     * @param  array<int, string|int>  $machineValue  Array of active state IDs.
      *
      * @return StateDefinition The common parallel ancestor.
      */
@@ -818,6 +818,7 @@ class Machine implements Castable, JsonSerializable, Stringable
      *
      * Works for both sync and async delegation.
      *
+     * @param  array<string, mixed>|MachineOutput|null  $output  The output data for @done.
      * @param  bool  $fail  Whether to trigger @fail instead of @done.
      * @param  string|null  $error  The error message for @fail.
      * @param  string|null  $finalState  The child's final state key — determines which `@done.{state}` route fires on the parent.
@@ -925,6 +926,8 @@ class Machine implements Castable, JsonSerializable, Stringable
 
     /**
      * Record a machine invocation for assertion tracking.
+     *
+     * @param  array<string, mixed>  $context
      */
     public static function recordMachineInvocation(string $class, array $context): void
     {
@@ -936,7 +939,7 @@ class Machine implements Castable, JsonSerializable, Stringable
     /**
      * Get recorded invocations for a faked machine.
      *
-     * @return list<array>
+     * @return list<array<string, mixed>>
      */
     public static function getMachineInvocations(?string $class = null): array
     {
@@ -991,6 +994,8 @@ class Machine implements Castable, JsonSerializable, Stringable
      *
      * Checks that at least one invocation's context contains all key-value
      * pairs from the expected array (subset match, not exact).
+     *
+     * @param  array<string, mixed>  $expected
      */
     public static function assertInvokedWith(array $expected): void
     {
@@ -1303,6 +1308,8 @@ class Machine implements Castable, JsonSerializable, Stringable
 
     /**
      * Resolve an output definition (array filter, inner-array tuple, or callable).
+     *
+     * @param  string|array<int|string, mixed>|\Closure  $output
      */
     private function resolveOutputDefinition(string|array|\Closure $output): mixed
     {

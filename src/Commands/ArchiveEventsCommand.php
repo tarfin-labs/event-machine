@@ -72,6 +72,9 @@ class ArchiveEventsCommand extends Command
      * Previous NOT EXISTS approach caused 400+ second queries on 57GB tables.
      * GROUP BY + HAVING reduces this to ~100ms by avoiding correlated subqueries.
      */
+    /**
+     * @return Collection<int, string>
+     */
     protected function findEligibleMachines(Carbon $cutoffDate, int $limit): Collection
     {
         return MachineEvent::query()
@@ -88,6 +91,9 @@ class ArchiveEventsCommand extends Command
             ->pluck('root_event_id');
     }
 
+    /**
+     * @param  Collection<int, string>  $machines
+     */
     protected function dispatchJobs(Collection $machines, bool $sync): int
     {
         $queue = config('machine.archival.advanced.queue');
@@ -121,6 +127,9 @@ class ArchiveEventsCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * @param  Collection<int, string>  $machines
+     */
     protected function showDryRun(Collection $machines): int
     {
         $this->info('Dry Run - Would dispatch:');

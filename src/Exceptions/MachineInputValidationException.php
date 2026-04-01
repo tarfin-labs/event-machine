@@ -11,6 +11,9 @@ use RuntimeException;
  */
 class MachineInputValidationException extends RuntimeException
 {
+    /**
+     * @param  array<int, string>  $availableKeys
+     */
     public static function missingField(
         string $inputClass,
         string $paramName,

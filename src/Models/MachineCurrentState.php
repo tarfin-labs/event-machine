@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Builder;
  * @property string $state_id The current state ID.
  * @property Carbon $state_entered_at When the instance entered this state.
  * @property ?string $scenario_class Active scenario FQCN (null when no scenario).
- * @property ?array $scenario_params Validated scenario parameters (null when no params).
+ * @property ?array<string, mixed> $scenario_params Validated scenario parameters (null when no params).
  */
 class MachineCurrentState extends Model
 {
@@ -51,6 +51,8 @@ class MachineCurrentState extends Model
     /**
      * Scope: instances of a specific machine class in a specific state.
      */
+    /** @param  Builder<MachineCurrentState>  $query
+     *  @return Builder<MachineCurrentState> */
     public function scopeForSweep(Builder $query, string $machineClass, string $stateId): Builder
     {
         return $query
@@ -61,6 +63,8 @@ class MachineCurrentState extends Model
     /**
      * Scope: instances that entered the state before a given deadline.
      */
+    /** @param  Builder<MachineCurrentState>  $query
+     *  @return Builder<MachineCurrentState> */
     public function scopePastDeadline(Builder $query, Carbon $deadline): Builder
     {
         return $query->where('state_entered_at', '<=', $deadline);
@@ -69,6 +73,8 @@ class MachineCurrentState extends Model
     /**
      * Scope: all states for a specific instance.
      */
+    /** @param  Builder<MachineCurrentState>  $query
+     *  @return Builder<MachineCurrentState> */
     public function scopeForInstance(Builder $query, string $rootEventId): Builder
     {
         return $query->where('root_event_id', $rootEventId);

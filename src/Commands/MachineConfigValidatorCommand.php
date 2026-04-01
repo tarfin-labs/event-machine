@@ -82,6 +82,9 @@ class MachineConfigValidatorCommand extends Command
         }
     }
 
+    /**
+     * @return array<int, string>
+     */
     protected function findMachineClasses(): array
     {
         $searchPaths = $this->getSearchPaths();
@@ -109,6 +112,9 @@ class MachineConfigValidatorCommand extends Command
         return array_unique(array_merge(...$machines));
     }
 
+    /**
+     * @return array<int, string>
+     */
     protected function getSearchPaths(): array
     {
         $paths = $this->isInPackageDevelopment()
@@ -127,6 +133,9 @@ class MachineConfigValidatorCommand extends Command
         return !str_contains($this->getPackageRootPath(), '/vendor/');
     }
 
+    /**
+     * @return array<int, string>
+     */
     protected function getPackageDevelopmentPaths(): array
     {
         $paths        = [];
@@ -156,6 +165,9 @@ class MachineConfigValidatorCommand extends Command
         return $paths;
     }
 
+    /**
+     * @return array<int, string>
+     */
     protected function getProjectPaths(): array
     {
         $paths = [];
@@ -171,6 +183,9 @@ class MachineConfigValidatorCommand extends Command
 
     /**
      * @throws \JsonException
+     */
+    /**
+     * @return array<string, mixed>|null
      */
     protected function getComposerConfig(): ?array
     {
@@ -200,6 +215,9 @@ class MachineConfigValidatorCommand extends Command
         return dirname($reflection->getFileName(), levels: 3);
     }
 
+    /**
+     * @param  array<int, string>  $machines
+     */
     protected function resolveFullClassName(string $shortName, array $machines): ?string
     {
         // If it's already a full class name

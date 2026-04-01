@@ -44,7 +44,7 @@ abstract class InvokableBehavior
     /**
      * Constructs a new instance of the class.
      *
-     * @param  Collection|null  $eventQueue  The event queue collection. Default is null.
+     * @param  Collection<int, EventBehavior|array<string, mixed>>|null  $eventQueue  The event queue collection. Default is null.
      */
     public function __construct(protected ?Collection $eventQueue = null)
     {
@@ -56,7 +56,7 @@ abstract class InvokableBehavior
     /**
      * Raises an event by adding it to the event queue.
      *
-     * @param  EventBehavior|array  $eventBehavior  The event definition object to be raised.
+     * @param  EventBehavior|array<string, mixed>  $eventBehavior  The event definition object to be raised.
      */
     public function raise(EventBehavior|array $eventBehavior): void
     {
@@ -74,7 +74,7 @@ abstract class InvokableBehavior
      *
      * @param  string  $machineClass  The FQCN of the target Machine subclass.
      * @param  string  $rootEventId  The target machine's root_event_id.
-     * @param  EventBehavior|array  $event  The event to send.
+     * @param  EventBehavior|array<string, mixed>  $event  The event to send.
      */
     public function sendTo(string $machineClass, string $rootEventId, EventBehavior|array $event): void
     {
@@ -98,7 +98,7 @@ abstract class InvokableBehavior
      *
      * @param  string  $machineClass  The FQCN of the target Machine subclass.
      * @param  string  $rootEventId  The target machine's root_event_id.
-     * @param  EventBehavior|array  $event  The event to send.
+     * @param  EventBehavior|array<string, mixed>  $event  The event to send.
      */
     public function dispatchTo(string $machineClass, string $rootEventId, EventBehavior|array $event): void
     {
@@ -120,7 +120,7 @@ abstract class InvokableBehavior
      * Throws if called on a machine that was not invoked by a parent.
      *
      * @param  ContextManager  $context  The child machine's context (contains parent identity).
-     * @param  EventBehavior|array  $event  The event to send to the parent.
+     * @param  EventBehavior|array<string, mixed>  $event  The event to send to the parent.
      *
      * @throws \RuntimeException If this machine has no parent.
      */
@@ -147,7 +147,7 @@ abstract class InvokableBehavior
      * Throws if called on a machine that was not invoked by a parent.
      *
      * @param  ContextManager  $context  The child machine's context (contains parent identity).
-     * @param  EventBehavior|array  $event  The event to send to the parent.
+     * @param  EventBehavior|array<string, mixed>  $event  The event to send to the parent.
      *
      * @throws \RuntimeException If this machine has no parent.
      */
@@ -244,9 +244,10 @@ abstract class InvokableBehavior
      * @param  callable  $actionBehavior  The invokable behavior to inject parameters for.
      * @param  State  $state  The state object used for parameter matching.
      * @param  EventBehavior|null  $eventBehavior  The event behavior used for parameter matching. (Optional)
-     * @param  array|null  $actionArguments  The action arguments used for parameter matching. (Optional)
+     * @param  array<int|string, mixed>|null  $actionArguments  The action arguments used for parameter matching. (Optional)
+     * @param  array<string, mixed>|null  $configParams  Configuration parameters. (Optional)
      *
-     * @return array The injected invokable behavior parameters.
+     * @return array<int, mixed> The injected invokable behavior parameters.
      *
      * @throws \ReflectionException
      */
@@ -377,7 +378,7 @@ abstract class InvokableBehavior
      *
      * @param  State  $state  The state to run against.
      * @param  EventBehavior|null  $eventBehavior  Optional event behavior.
-     * @param  array|null  $arguments  Optional behavior arguments.
+     * @param  array<string, mixed>|null  $arguments  Optional behavior arguments.
      *
      * @return bool|Collection<int, mixed>|mixed Guards return bool, calculators
      *                                           mutate context and return void (→ eventQueue Collection), actions return
@@ -410,7 +411,7 @@ abstract class InvokableBehavior
 
     // ─── Raised Event Assertions ─────────────────────────────
 
-    /** @var array<class-string, Collection> Per-class raised events from last runWithState() call. */
+    /** @var array<class-string, Collection<int, EventBehavior|array<string, mixed>>> Per-class raised events from last runWithState() call. */
     private static array $raisedEventsPerClass = [];
 
     /**

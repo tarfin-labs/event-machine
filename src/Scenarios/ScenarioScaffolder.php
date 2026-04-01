@@ -242,6 +242,9 @@ class ScenarioScaffolder
     /**
      * Collect all use imports needed by the generated file.
      */
+    /**
+     * @return array<int, string>
+     */
     private function collectImports(string $machineClass, string $event, ScenarioPath $path): array
     {
         $imports = [

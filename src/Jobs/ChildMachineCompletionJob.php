@@ -46,10 +46,10 @@ class ChildMachineCompletionJob implements ShouldQueue
      * @param  string  $childMachineClass  FQCN of the child machine.
      * @param  string|null  $childRootEventId  The child's root_event_id (null on pre-start failure).
      * @param  bool  $success  Whether the child completed successfully.
-     * @param  array  $childContextData  The child's final context data (for @done fallback).
+     * @param  array<string, mixed>  $childContextData  The child's final context data (for @done fallback).
      * @param  string|null  $errorMessage  Error message (for @fail).
      * @param  int|string|null  $errorCode  Error code from the exception (for @fail).
-     * @param  array|null  $outputData  The child's output (from final state `output` behavior or key filter).
+     * @param  array<string, mixed>|null  $outputData  The child's output (from final state `output` behavior or key filter).
      * @param  string|null  $outputClass  FQCN of MachineOutput subclass (for typed reconstruction on parent side).
      * @param  string|null  $failureClass  FQCN of MachineFailure subclass (for typed reconstruction on parent side).
      */

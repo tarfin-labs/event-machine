@@ -69,6 +69,8 @@ abstract class MachineFailure
 
     /**
      * Serialize for ChildMachineFailEvent payload and queue transport.
+     *
+     * @return array<string, mixed>
      */
     public function toArray(): array
     {

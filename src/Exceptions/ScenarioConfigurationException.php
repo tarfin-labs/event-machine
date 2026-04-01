@@ -53,6 +53,9 @@ class ScenarioConfigurationException extends LogicException
         );
     }
 
+    /**
+     * @param  array<int, string>  $errors
+     */
     public static function invalidScenarioParams(string $scenarioClass, array $errors): self
     {
         return new self(
