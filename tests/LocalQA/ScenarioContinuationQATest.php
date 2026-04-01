@@ -239,3 +239,34 @@ it('LocalQA: multi-pause continuation — 3 HTTP requests', function (): void {
     );
     expect($cs->scenario_class)->toBeNull();
 });
+
+it('LocalQA: delegation chain — continuation @done propagates to final state', function (): void {
+    // ContinuationScenario: continuation overrides delegating → @done
+    // This tests the delegation chain: DELEGATE → delegating (child machine intercepted by
+    // ScenarioPlayer) → @done → delegation_complete (final)
+    $rootEventId = createPersistedAtReviewing();
+
+    // Verify machine starts at reviewing with continuation active
+    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+    expect(str_contains($cs->state_id, 'reviewing'))->toBeTrue();
+    expect($cs->scenario_class)->toBe(ContinuationScenario::class);
+
+    // POST DELEGATE → continuation intercepts child machine dispatch with @done outcome
+    $response = $this->postJson("/api/cont-qa/{$rootEventId}/delegate", [
+        'type' => 'DELEGATE',
+    ]);
+    $response->assertOk();
+
+    // Child @done propagated → machine reached delegation_complete
+    $cs->refresh();
+    expect(str_contains($cs->state_id, 'delegation_complete'))->toBeTrue(
+        'Expected delegation_complete after @done chain, got: '.$cs->state_id
+    );
+
+    // Final state → scenario deactivated
+    expect($cs->scenario_class)->toBeNull();
+
+    // Response reflects final state
+    $data = $response->json('data');
+    expect(str_contains(implode(',', $data['state']), 'delegation_complete'))->toBeTrue();
+});
