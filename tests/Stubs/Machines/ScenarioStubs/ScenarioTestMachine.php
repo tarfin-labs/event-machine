@@ -152,6 +152,7 @@ class ScenarioTestMachine extends Machine
             endpoints: [
                 'APPROVE',
                 'REJECT',
+                'DELEGATE',
             ],
         );
     }

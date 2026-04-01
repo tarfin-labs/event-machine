@@ -1,0 +1,187 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Route;
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Routing\MachineRouter;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
+use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinuationScenario;
+
+uses(LocalQATestCase::class);
+
+beforeEach(function (): void {
+    LocalQATestCase::cleanTables();
+    config()->set('machine.scenarios.enabled', true);
+    ScenarioDiscovery::resetCache();
+    Machine::resetMachineFakes();
+
+    // Register routes for all tests
+    MachineRouter::register(ScenarioTestMachine::class, [
+        'prefix'       => '/api/cont-qa',
+        'machineIdFor' => ['APPROVE', 'REJECT', 'DELEGATE'],
+        'name'         => 'cont-qa',
+    ]);
+    Route::getRoutes()->refreshNameLookups();
+    Route::getRoutes()->refreshActionLookups();
+});
+
+/**
+ * Helper: create persisted machine at 'reviewing' with ContinuationScenario active in DB.
+ *
+ * Creates machine via ScenarioPlayer (shouldPersist=false for speed),
+ * then manually persists and sets scenario_class in DB.
+ */
+function createPersistedAtReviewing(): string
+{
+    // Phase 1: Use ScenarioPlayer to reach reviewing
+    $scenario = new ContinuationScenario();
+    $player   = new ScenarioPlayer($scenario);
+    $state    = $player->execute();
+
+    // The state is in memory — we need to create a real persisted machine at 'reviewing'
+    // ScenarioPlayer runs with shouldPersist=false, so no DB records.
+    // Instead: create a real machine, send events to reach 'reviewing', then set scenario_class.
+
+    // Simpler approach: create machine, it auto-starts at idle → @always → routing → processing
+    // In test mode, processing (job state) skips dispatch and stays there.
+    // We need to use startingAt to place at reviewing directly, then persist.
+    $testMachine = ScenarioTestMachine::startingAt(stateId: 'reviewing');
+    $machine     = $testMachine->machine();
+
+    // Force persist
+    $machine->definition->shouldPersist = true;
+    $machine->persist();
+
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // Set scenario_class in DB so controller detects continuation
+    MachineCurrentState::where('root_event_id', $rootEventId)
+        ->update([
+            'scenario_class'  => ContinuationScenario::class,
+            'scenario_params' => json_encode([]),
+        ]);
+
+    return $rootEventId;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Scenario Continuation — HTTP Endpoint Tests
+// ═══════════════════════════════════════════════════════════════
+
+it('LocalQA: full lifecycle — continuation via HTTP reaches final state', function (): void {
+    $rootEventId = createPersistedAtReviewing();
+
+    // POST DELEGATE without scenario slug → continuation should auto-activate
+    $response = $this->postJson("/api/cont-qa/{$rootEventId}/delegate", [
+        'type' => 'DELEGATE',
+    ]);
+
+    $response->assertOk();
+
+    // Machine should reach delegation_complete via continuation
+    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+    expect(str_contains($cs->state_id, 'delegation_complete'))->toBeTrue(
+        'Expected delegation_complete, got: '.$cs->state_id
+    );
+
+    // Scenario deactivated (final state)
+    expect($cs->scenario_class)->toBeNull();
+});
+
+it('LocalQA: POST APPROVE without slug — continuation active but APPROVE goes direct to final', function (): void {
+    $rootEventId = createPersistedAtReviewing();
+
+    // APPROVE goes to 'approved' (final) — no delegation involved
+    // Continuation covers 'delegating', not 'approved'
+    // Machine reaches final → scenario deactivated
+    $response = $this->postJson("/api/cont-qa/{$rootEventId}/approve", [
+        'type' => 'APPROVE',
+    ]);
+
+    $response->assertOk();
+
+    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+    expect(str_contains($cs->state_id, 'approved'))->toBeTrue();
+    expect($cs->scenario_class)->toBeNull();
+});
+
+it('LocalQA: scenario switch — new scenario replaces active continuation', function (): void {
+    $rootEventId = createPersistedAtReviewing();
+
+    // Send with a different scenario slug — ContinueLoopScenario
+    $response = $this->postJson("/api/cont-qa/{$rootEventId}/approve", [
+        'type'     => 'APPROVE',
+        'scenario' => 'continue-loop-scenario',
+    ]);
+
+    $response->assertOk();
+
+    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+    expect(str_contains($cs->state_id, 'approved'))->toBeTrue();
+});
+
+it('LocalQA: response includes activeScenario when continuation is active', function (): void {
+    $rootEventId = createPersistedAtReviewing();
+
+    // GET to check response format
+    $response = $this->getJson("/api/cont-qa/{$rootEventId}/approve");
+    $data     = $response->json('data');
+
+    // activeScenario should be present (ContinuationScenario has continuation)
+    expect($data)->toHaveKey('activeScenario');
+    expect($data['activeScenario']['hasContinuation'])->toBeTrue();
+    expect($data['activeScenario']['slug'])->toBe('continuation-scenario');
+});
+
+it('LocalQA: response activeScenario absent after reaching final state', function (): void {
+    $rootEventId = createPersistedAtReviewing();
+
+    // Send DELEGATE → continuation → delegation_complete (final)
+    $response = $this->postJson("/api/cont-qa/{$rootEventId}/delegate", [
+        'type' => 'DELEGATE',
+    ]);
+
+    $response->assertOk();
+
+    $data = $response->json('data');
+    // After final state, activeScenario should be null/absent
+    expect($data['activeScenario'] ?? null)->toBeNull();
+});
+
+it('LocalQA: availableScenarios shows alongside activeScenario', function (): void {
+    $rootEventId = createPersistedAtReviewing();
+
+    $response = $this->getJson("/api/cont-qa/{$rootEventId}/approve");
+    $data     = $response->json('data');
+
+    // Both fields should be present simultaneously
+    expect($data)->toHaveKey('availableScenarios');
+    expect($data)->toHaveKey('activeScenario');
+});
+
+it('LocalQA: no continuation scenario in DB — normal behavior', function (): void {
+    // Create machine at reviewing WITHOUT scenario_class in DB
+    $testMachine                        = ScenarioTestMachine::startingAt(stateId: 'reviewing');
+    $machine                            = $testMachine->machine();
+    $machine->definition->shouldPersist = true;
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    // POST APPROVE without slug, no scenario in DB → normal behavior
+    $response = $this->postJson("/api/cont-qa/{$rootEventId}/approve", [
+        'type' => 'APPROVE',
+    ]);
+
+    $response->assertOk();
+
+    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+    expect(str_contains($cs->state_id, 'approved'))->toBeTrue();
+
+    $data = $response->json('data');
+    expect($data['activeScenario'] ?? null)->toBeNull();
+});
