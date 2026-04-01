@@ -14,11 +14,16 @@ use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Behavior\MachineFailure;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Exceptions\ScenarioFailedException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
 use Tarfinlabs\EventMachine\Exceptions\MachineOutputInjectionException;
@@ -115,6 +120,7 @@ class MachineController extends Controller
             statusCode: $defaults['_status_code'] ?? 200,
             outputKeys: $outputKeys,
             includeAvailableEvents: $defaults['_available_events'] ?? true,
+            request: $request,
         );
     }
 
@@ -161,6 +167,7 @@ class MachineController extends Controller
         int $statusCode,
         ?array $outputKeys = null,
         ?bool $includeAvailableEvents = true,
+        ?Request $request = null,
     ): JsonResponse {
         $action = $actionClass !== null
             ? resolve($actionClass)->withMachineContext($machine, $machine->state)
@@ -168,8 +175,27 @@ class MachineController extends Controller
 
         $action?->before();
 
+        // Activate scenario overrides if a scenario slug is present in the request.
+        // Must be called before send() so overrides are registered before the event is processed.
+        $scenario = null;
+        if ($request instanceof Request && $machine->definition->machineClass !== null) {
+            $scenario = $this->maybeRegisterScenarioOverrides($request, $machine->definition->machineClass, $machine);
+        }
+
         try {
-            $state = $machine->send(event: $event);
+            if ($scenario instanceof MachineScenario) {
+                // Scenario active: use ScenarioPlayer::execute() for full scenario flow
+                // (override registration, delegation interception, @continue loop, target validation).
+                $rootEventId = $machine->state->history?->first()?->root_event_id;
+                $player      = new ScenarioPlayer($scenario);
+                $state       = $player->execute(
+                    machine: $machine,
+                    eventPayload: $event->payload ?? [],
+                    rootEventId: $rootEventId,
+                );
+            } else {
+                $state = $machine->send(event: $event);
+            }
         } catch (MachineAlreadyRunningException) {
             // $machine->state is fresh — send() restores from DB before lock attempt.
             // GET → 200 (read succeeded), POST/PUT/DELETE → 423 (event not processed).
@@ -184,12 +210,7 @@ class MachineController extends Controller
                 includeAvailableEvents: $includeAvailableEvents,
                 isProcessing: true,
             );
-        } catch (MachineValidationException $e) { // @phpstan-ignore catch.neverThrown
-            return response()->json([
-                'message' => $e->getMessage(),
-                'errors'  => method_exists($e, 'errors') ? $e->errors() : [],
-            ], 422);
-        } catch (ValidationException $e) { // @phpstan-ignore catch.neverThrown
+        } catch (MachineValidationException|ValidationException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
                 'errors'  => $e->errors(),
@@ -202,6 +223,9 @@ class MachineController extends Controller
             }
 
             throw $e;
+        } finally {
+            // ScenarioPlayer::execute() handles its own cleanup in finally.
+            // For the non-scenario path, no cleanup needed.
         }
 
         if ($action !== null) {
@@ -266,6 +290,26 @@ class MachineController extends Controller
             'output'          => $outputData,
             'isProcessing'    => $isProcessing,
         ];
+
+        if ((bool) config('machine.scenarios.enabled', false) && $machine->definition->machineClass !== null) {
+            $availableScenarios = [];
+
+            foreach ($state->value as $currentStateRoute) {
+                $grouped = ScenarioDiscovery::groupedByEvent(
+                    machineClass: $machine->definition->machineClass,
+                    currentState: $currentStateRoute,
+                );
+
+                foreach ($grouped as $eventType => $scenarios) {
+                    $availableScenarios[$eventType] = array_merge(
+                        $availableScenarios[$eventType] ?? [],
+                        $scenarios,
+                    );
+                }
+            }
+
+            $response['availableScenarios'] = $availableScenarios;
+        }
 
         return response()->json(['data' => $response], $statusCode);
     }
@@ -422,12 +466,7 @@ class MachineController extends Controller
                 isProcessing: true,
                 statusCodeOverride: $httpStatus,
             );
-        } catch (MachineValidationException $e) { // @phpstan-ignore catch.neverThrown
-            return response()->json([
-                'message' => $e->getMessage(),
-                'errors'  => method_exists($e, 'errors') ? $e->errors() : [],
-            ], 422);
-        } catch (ValidationException $e) { // @phpstan-ignore catch.neverThrown
+        } catch (MachineValidationException|ValidationException $e) { // @phpstan-ignore catch.neverThrown, catch.neverThrown
             return response()->json([
                 'message' => $e->getMessage(),
                 'errors'  => $e->errors(),
@@ -530,6 +569,88 @@ class MachineController extends Controller
         $response['isProcessing'] = $isProcessing;
 
         return response()->json(['data' => $response], $statusCode);
+    }
+
+    /**
+     * Read scenario from request, validate, and activate overrides.
+     * Returns the scenario instance or null if no scenario in request.
+     */
+    private function maybeRegisterScenarioOverrides(
+        Request $request,
+        string $machineClass,
+        Machine $machine,
+    ): ?MachineScenario {
+        if (!(bool) config('machine.scenarios.enabled', false)) {
+            return null; // Silently ignored when disabled
+        }
+
+        $scenarioSlug = $request->input('scenario');
+
+        if ($scenarioSlug === null) {
+            // No scenario — deactivate only if there was a previously active scenario.
+            // Avoids unnecessary DB writes on every non-scenario request.
+            $rootEventId = $machine->state->history?->first()?->root_event_id;
+            if ($rootEventId !== null) {
+                $currentState = MachineCurrentState::where('root_event_id', $rootEventId)
+                    ->whereNotNull('scenario_class')
+                    ->first(['root_event_id']);
+                if ($currentState !== null) {
+                    ScenarioPlayer::deactivateScenario($rootEventId);
+                }
+            }
+
+            return null;
+        }
+
+        // Resolve scenario by slug
+        $scenario = ScenarioDiscovery::resolveBySlug($machineClass, $scenarioSlug);
+
+        if (!$scenario instanceof MachineScenario) {
+            abort(404, "Scenario '{$scenarioSlug}' not found.");
+        }
+
+        // Validate $source matches current state
+        $currentRoutes = $machine->state->value;
+        $sourceMatch   = false;
+        foreach ($currentRoutes as $route) {
+            if ($route === $scenario->source() || str_ends_with($route, '.'.$scenario->source())) {
+                $sourceMatch = true;
+                break;
+            }
+        }
+
+        if (!$sourceMatch) {
+            throw ScenarioFailedException::sourceMismatch(
+                expected: $scenario->source(),
+                actual: implode(', ', $currentRoutes),
+            );
+        }
+
+        // Validate $event matches the event being sent
+        $eventType         = $request->input('type', '');
+        $scenarioEventType = $scenario->eventType();
+        if ($eventType !== '' && $eventType !== $scenarioEventType) {
+            // Also check class FQCN match
+            $eventTypeResolved = class_exists($eventType) && method_exists($eventType, 'getType')
+                ? $eventType::getType()
+                : $eventType;
+            if ($eventTypeResolved !== $scenarioEventType) {
+                throw ScenarioFailedException::eventMismatch(
+                    expected: $scenarioEventType,
+                    actual: $eventTypeResolved,
+                );
+            }
+        }
+
+        // Hydrate params
+        $scenarioParams = $request->input('scenarioParams', []);
+        $scenario->hydrateParams($scenarioParams);
+
+        // Note: ScenarioPlayer::execute() handles override registration, delegation
+        // interception, @continue loop, and target validation. No need to call
+        // registerOverrides() here — it's called inside execute().
+
+        return $scenario;
     }
 
     /**

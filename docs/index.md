@@ -599,6 +599,49 @@ $order->state->history->count();           // 847
 <div class="feature-section">
 <div class="feature-text">
 
+## Scenarios for QA
+
+**Navigate complex state flows in staging — instantly.** Define behavior overrides and delegation outcomes once in a `MachineScenario` class, activate from existing endpoints. Arrive at any state with a fully functional machine.
+
+No manual multi-step setup. No developer assistance. QA selects a scenario, sends one event, machine arrives at the target state with real transitions and real event history.
+
+[Scenarios &rarr;](/advanced/scenarios)
+
+</div>
+<div class="feature-code">
+
+<!-- doctest-attr: ignore -->
+```php
+class AtCheckingProtocolScenario extends MachineScenario
+{
+    protected string $machine     = CarSalesMachine::class;
+    protected string $source      = 'awaiting_customer_start';
+    protected string $event       = CustomerStartedEvent::class;
+    protected string $target      = 'checking_protocol';
+    protected string $description = 'At checking protocol — children completed';
+
+    protected function plan(): array
+    {
+        return [
+            'eligibility_check' => [
+                IsFarmerNotEligibleGuard::class => false,
+            ],
+            'verification.findeks.running'  => '@done.report_saved',
+            'verification.turmob.verifying' => '@done',
+            'verification' => [
+                'isFindeksRegionCompletedGuard' => true,
+            ],
+        ];
+    }
+}
+```
+
+</div>
+</div>
+
+<div class="feature-section">
+<div class="feature-text">
+
 ## Find Any Machine, Instantly
 
 **Query machines by state with a fluent API.** No more raw SQL against `machine_current_states`. Find all machines awaiting payment, filter by date, paginate results — with automatic parallel state deduplication.

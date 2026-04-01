@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Testing;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 
 /**
  * Auto-resets all EventMachine test state after each test.
@@ -23,5 +25,7 @@ trait InteractsWithMachines
         CommunicationRecorder::reset();
         InlineBehaviorFake::resetAll();
         InvokableBehavior::resetAllFakes();
+        ScenarioPlayer::cleanupOverrides();
+        ScenarioDiscovery::resetCache();
     }
 }

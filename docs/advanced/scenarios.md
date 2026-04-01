@@ -1,499 +1,224 @@
 # Scenarios
 
-Scenarios allow you to define alternative state machine configurations that can be activated at runtime. They're useful for A/B testing, feature flags, and environment-specific behavior.
+> Behavior overrides activated through existing machine endpoints — enabling QA and product teams to navigate complex state flows in staging without manual multi-step setup.
 
-## Basic Usage
+## What Are Scenarios?
 
-### Enabling Scenarios
+Complex machines like `CarSalesMachine` have deep state hierarchies with parallel child delegations, API integrations, and multi-step guard chains. To test a feature at state `checking_protocol`, a human must:
 
-<!-- doctest-attr: ignore -->
-```php
-use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
-MachineDefinition::define(
-    config: [
-        'initial' => 'state_a',
-        'scenarios_enabled' => true,  // Enable scenarios
-        'states' => [
-            'state_a' => [
-                'on' => ['EVENT' => 'state_b'],
-            ],
-            'state_b' => [],
-        ],
-    ],
-    scenarios: [
-        'test' => [
-            'state_a' => [
-                'on' => [
-                    'EVENT' => 'state_c',  // Different target in 'test' scenario
-                ],
-            ],
-        ],
-        'beta' => [
-            'state_a' => [
-                'on' => [
-                    'EVENT' => [
-                        'target' => 'state_b',
-                        'actions' => 'betaAction',  // Additional action
-                    ],
-                ],
-            ],
-        ],
-    ],
-);
+1. Trigger `START_APPLICATION` with valid models
+2. Grant consent, pass eligibility check
+3. Wait for `FindeksMachine` to complete (6+ steps, external API calls)
+4. Wait for `TurmobMachine` to complete
+5. Both parallel regions must finish, guard check passes
+
+This requires 10+ manual steps, 2 child machines, and multiple API calls. Product teams and QA cannot do this in staging without developer assistance.
+
+**Scenarios solve this:** define behavior overrides and delegation outcomes once, activate from existing frontend endpoints via a `scenario` field, arrive at the desired state with a fully functional machine.
+
+The resulting machine is **indistinguishable** from one that arrived at that state organically — real transitions, real event history, real context mutations.
+
+## Quick Start
+
+### 1. Scaffold a scenario
+
+```bash
+php artisan machine:scenario AtShipping OrderMachine \
+    pending SubmitOrderEvent shipping
 ```
 
-### Activating a Scenario
+This analyzes the machine definition, finds the path from source to target, and generates:
 
-Include `scenarioType` in the event payload:
+`app/Machines/Order/Scenarios/AtShippingScenario.php`
 
-<!-- doctest-attr: ignore -->
-```php
-// Normal flow
-$machine->send(['type' => 'EVENT']);
-// Goes to state_b
+### 2. Review and adjust the generated plan
 
-// Test scenario
-$machine->send([
-    'type' => 'EVENT',
-    'payload' => ['scenarioType' => 'test'],
-]);
-// Goes to state_c
-
-// Beta scenario
-$machine->send([
-    'type' => 'EVENT',
-    'payload' => ['scenarioType' => 'beta'],
-]);
-// Goes to state_b with betaAction
-```
-
-## Scenario Configuration
-
-Scenarios can override:
-
-### Transitions
+The scaffolder generates a `plan()` with override entries for each intermediate state. Here is an example of what it produces:
 
 <!-- doctest-attr: ignore -->
 ```php
-'scenarios' => [
-    'express' => [
-        'pending' => [
-            'on' => [
-                'SUBMIT' => 'express_processing',  // Different target
-            ],
-        ],
-    ],
-],
-```
-
-### Actions
-
-<!-- doctest-attr: ignore -->
-```php
-'scenarios' => [
-    'debug' => [
-        'processing' => [
-            'on' => [
-                'COMPLETE' => [
-                    'target' => 'completed',
-                    'actions' => ['logDebugAction', 'sendNotificationAction'],
-                ],
-            ],
-        ],
-    ],
-],
-```
-
-### Entry/Exit Actions
-
-<!-- doctest-attr: ignore -->
-```php
-'scenarios' => [
-    'monitoring' => [
-        'active' => [
-            'entry' => ['defaultEntryAction', 'recordMetricsAction'],
-            'exit' => ['defaultExitAction', 'flushMetricsAction'],
-        ],
-    ],
-],
-```
-
-### Guards
-
-<!-- doctest-attr: ignore -->
-```php
-'scenarios' => [
-    'lenient' => [
-        'validating' => [
-            'on' => [
-                'SUBMIT' => [
-                    'target' => 'submitted',
-                    'guards' => 'lenientValidationGuard',  // Less strict
-                ],
-            ],
-        ],
-    ],
-],
-```
-
-## Practical Examples
-
-### A/B Testing
-
-<!-- doctest-attr: ignore -->
-```php
-use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
-MachineDefinition::define(
-    config: [
-        'id' => 'checkout',
-        'initial' => 'cart',
-        'scenarios_enabled' => true,
-        'states' => [
-            'cart' => [
-                'on' => ['CHECKOUT' => 'shipping'],
-            ],
-            'shipping' => [
-                'on' => ['CONTINUE' => 'payment'],
-            ],
-            'payment' => [
-                'on' => ['PAY' => 'confirmation'],
-            ],
-            'confirmation' => ['type' => 'final'],
-            'express_checkout' => [
-                'on' => ['COMPLETE' => 'confirmation'],
-            ],
-        ],
-    ],
-    scenarios: [
-        'express_flow' => [
-            'cart' => [
-                'on' => [
-                    'CHECKOUT' => 'express_checkout',  // Skip shipping/payment
-                ],
-            ],
-        ],
-        'upsell_flow' => [
-            'payment' => [
-                'on' => [
-                    'PAY' => [
-                        'target' => 'confirmation',
-                        'actions' => 'showUpsellOfferAction',
-                    ],
-                ],
-            ],
-        ],
-    ],
-);
-
-// Usage based on user segment
-$scenario = $user->isInTestGroup('express') ? 'express_flow' : null;
-
-$machine->send([
-    'type' => 'CHECKOUT',
-    'payload' => [
-        'scenarioType' => $scenario,
-    ],
-]);
-```
-
-### Feature Flags
-
-<!-- doctest-attr: ignore -->
-```php
-use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
-MachineDefinition::define(
-    config: [
-        'scenarios_enabled' => true,
-        'states' => [
-            'processing' => [
-                'on' => [
-                    'COMPLETE' => 'legacy_completion',
-                ],
-            ],
-            'legacy_completion' => ['type' => 'final'],
-            'new_completion' => [
-                'entry' => 'enhancedCompletionFlowAction',
-                'type' => 'final',
-            ],
-        ],
-    ],
-    scenarios: [
-        'new_completion_feature' => [
-            'processing' => [
-                'on' => [
-                    'COMPLETE' => 'new_completion',
-                ],
-            ],
-        ],
-    ],
-);
-
-// Activate based on feature flag
-$machine->send([
-    'type' => 'COMPLETE',
-    'payload' => [
-        'scenarioType' => feature('new_completion') ? 'new_completion_feature' : null,
-    ],
-]);
-```
-
-### Environment-Specific Behavior
-
-<!-- doctest-attr: ignore -->
-```php
-use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
-MachineDefinition::define(
-    config: [
-        'scenarios_enabled' => true,
-        'states' => [
-            'sending' => [
-                'entry' => 'sendEmailAction',
-                'on' => ['SENT' => 'completed'],
-            ],
-        ],
-    ],
-    scenarios: [
-        'testing' => [
-            'sending' => [
-                'entry' => 'mockSendEmailAction',  // Don't actually send
-            ],
-        ],
-        'staging' => [
-            'sending' => [
-                'entry' => ['sendEmailAction', 'logToSlackAction'],  // Extra logging
-            ],
-        ],
-    ],
-);
-
-// Activate based on environment
-$scenario = match (app()->environment()) {
-    'testing' => 'testing',
-    'staging' => 'staging',
-    default => null,
-};
-
-$machine->send([
-    'type' => 'SEND',
-    'payload' => ['scenarioType' => $scenario],
-]);
-```
-
-### Multi-Tenant Customization
-
-<!-- doctest-attr: ignore -->
-```php
-use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
-MachineDefinition::define(
-    config: [
-        'id' => 'approval',
-        'scenarios_enabled' => true,
-        'states' => [
-            'pending' => [
-                'on' => ['APPROVE' => 'approved'],
-            ],
-            'approved' => ['type' => 'final'],
-            'dual_approved' => ['type' => 'final'],
-        ],
-    ],
-    scenarios: [
-        'tenant_enterprise' => [
-            'pending' => [
-                'on' => [
-                    'APPROVE' => [
-                        'target' => 'awaiting_second_approval',
-                        'guards' => 'isFirstApprovalGuard',
-                    ],
-                ],
-            ],
-            'awaiting_second_approval' => [
-                'on' => [
-                    'APPROVE' => 'dual_approved',
-                ],
-            ],
-        ],
-    ],
-);
-
-// Activate based on tenant
-$scenario = $tenant->requiresDualApproval() ? 'tenant_enterprise' : null;
-```
-
-## Complete Example
-
-<!-- doctest-attr: ignore -->
-```php
-use Tarfinlabs\EventMachine\Actor\Machine; // [!code hide]
-use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
-class OrderMachine extends Machine
+protected function plan(): array
 {
-    public static function definition(): MachineDefinition
+    return [
+        'eligibility_check' => [
+            IsBlacklistedGuard::class => false,      // guard override — fixed bool
+        ],
+        'payment_processing' => '@done.completed',   // delegation — simulate child @done
+        'identity_verification' => '@done',           // delegation — simulate job @done
+        'review' => [
+            '@continue' => ReviewApprovedEvent::class, // interactive — auto-send event
+            ProcessReviewAction::class => ['reviewApproved' => true],
+            HasValidDocumentsGuard::class => true,
+        ],
+    ];
+}
+```
+
+Review the generated file, adjust guard/action overrides and delegation outcomes. See [MachineScenario Class](#machinescenario-class) below for the full class structure.
+
+### 3. Enable scenarios in staging
+
+```env
+MACHINE_SCENARIOS_ENABLED=true
+```
+
+### 4. Activate via endpoint
+
+```http
+POST /api/orders/{orderId}/submit
+{
+    "type": "SubmitOrderEvent",
+    "scenario": "at-shipping-scenario"
+}
+```
+
+The machine processes the event with overrides active, arrives at `shipping`, and returns the final state.
+
+### 5. Validate
+
+```bash
+php artisan machine:scenario-validate
+```
+
+## How It Works
+
+ScenarioPlayer sends the trigger event with behavior overrides active — guards return fixed booleans instead of evaluating real conditions, actions write mock context values instead of calling external services, and delegation outcomes are intercepted so child machines and jobs are never dispatched. After the trigger event is processed, ScenarioPlayer checks if the machine landed on a state with an `@continue` directive; if so, it automatically sends the specified event and repeats until no more `@continue` entries match. At the end, ScenarioPlayer validates that the machine reached the declared `$target` state — throwing `ScenarioFailedException` if it did not. Because the overrides operate within the real machine engine (not a simulation), the machine produces real `MachineEvent` records, real context mutations, and real state transitions — the resulting event history is indistinguishable from a machine that arrived at that state through organic user interaction.
+
+## MachineScenario Class
+
+Every scenario extends `MachineScenario` with 5 identity properties and an optional `plan()` method:
+
+<!-- doctest-attr: ignore -->
+```php
+class AtShippingScenario extends MachineScenario
+{
+    /** Which machine this scenario targets. */
+    protected string $machine = OrderMachine::class;
+
+    /** State the machine must be in BEFORE the event. */
+    protected string $source = 'pending';
+
+    /** Event that triggers this scenario. */
+    protected string $event = SubmitOrderEvent::class;
+
+    /** Where the machine should end up after execution. */
+    protected string $target = 'shipping';
+
+    /** Human-readable description shown in endpoint responses. */
+    protected string $description = 'At shipping — payment completed';
+
+    protected function plan(): array
     {
-        return MachineDefinition::define(
-            config: [
-                'id' => 'order',
-                'initial' => 'pending',
-                'scenarios_enabled' => true,
-                'context' => ['count' => 1],
-                'states' => [
-                    'pending' => [
-                        'on' => [
-                            'SUBMIT' => [
-                                'target' => 'processing',
-                                'actions' => 'incrementAction',
-                            ],
-                        ],
-                    ],
-                    'processing' => [
-                        'on' => ['COMPLETE' => 'completed'],
-                    ],
-                    'completed' => ['type' => 'final'],
-                    'fast_completed' => ['type' => 'final'],
-                ],
+        return [
+            'eligibility_check' => [
+                IsBlacklistedGuard::class => false,
             ],
-            behavior: [
-                'actions' => [
-                    'incrementAction' => fn($ctx) => $ctx->count++,
-                    'decrementAction' => fn($ctx) => $ctx->count--,
-                ],
-            ],
-            scenarios: [
-                'test' => [
-                    'pending' => [
-                        'on' => [
-                            'SUBMIT' => [
-                                'target' => 'fast_completed',  // Skip processing
-                                'actions' => 'decrementAction', // Different action
-                            ],
-                        ],
-                        'exit' => ['decrementAction'],  // Additional exit action
-                    ],
-                ],
-            ],
-        );
+            'processing_payment' => '@done',
+        ];
     }
 }
-
-// Usage
-$machine = OrderMachine::create();
-
-// Normal flow
-$machine->send(['type' => 'SUBMIT']);
-// count = 2, state = processing
-
-// Test scenario
-$testMachine = OrderMachine::create();
-$testMachine->send([
-    'type' => 'SUBMIT',
-    'payload' => ['scenarioType' => 'test'],
-]);
-// count = -1 (decremented twice: exit + action), state = fast_completed
 ```
 
-## Testing with Scenarios
+### Identity Properties
 
-Two approaches: payload-based (production) and `withScenario()` (test helper).
+| Property | Type | Example | Purpose |
+|----------|------|---------|---------|
+| `$machine` | `class-string` | `OrderMachine::class` | Which machine this scenario targets |
+| `$source` | `string` | `'pending'` | Full state route — where the machine is BEFORE the event |
+| `$event` | `string` | `SubmitOrderEvent::class` | Which event triggers this scenario |
+| `$target` | `string` | `'shipping'` | Full state route — where the machine should end up |
+| `$description` | `string` | `'At shipping'` | Human-readable, shown in endpoint responses |
 
-### Payload approach (production-style)
+Multiple scenarios can share the same `(source, event)` with different targets. The **slug** (derived from the class name) disambiguates.
 
-Pass `scenarioType` in the event payload — this is how production code triggers scenarios:
+### Full State Route Requirement
+
+`$source`, `$target`, and `plan()` keys must use the **full state route** (dot-notation path):
 
 <!-- doctest-attr: ignore -->
 ```php
-it('uses test scenario when specified', function () {
-    $machine = OrderMachine::create();
+// Bad — ambiguous, could exist in multiple parallel regions
+protected string $source = 'awaiting_confirmation';
 
-    $machine->send([
-        'type' => 'SUBMIT',
-        'payload' => ['scenarioType' => 'test'],
-    ]);
-
-    expect($machine->state->matches('fast_completed'))->toBeTrue()
-        ->and($machine->state->context->count)->toBe(-1);
-});
-
-it('uses default flow without scenario', function () {
-    $machine = OrderMachine::create();
-
-    $machine->send(['type' => 'SUBMIT']);
-
-    expect($machine->state->matches('processing'))->toBeTrue()
-        ->and($machine->state->context->count)->toBe(2);
-});
+// Good — unambiguous full path
+protected string $source = 'checkout.payment.awaiting_confirmation';
 ```
 
-### TestMachine approach (fluent)
+For root-level states (e.g., `pending`, `shipping`), the leaf key IS the full route.
 
-`withScenario()` sets the `scenarioType` context key before sending events — same effect, less boilerplate:
+### Accessing Properties
+
+Properties are set as `protected` class fields. Public getter methods (`machine()`, `source()`, `event()`, `target()`, `description()`) return these values. Override a getter when you need computed values:
 
 <!-- doctest-attr: ignore -->
 ```php
-OrderMachine::test()
-    ->withScenario('rush')
-    ->send('SUBMIT')
-    ->assertState('processing');
+// Default — property assignment (recommended)
+protected string $machine = OrderMachine::class;
+
+// Alternative — override the getter (when computation is needed)
+public function machine(): string
+{
+    return config('machines.order.class');
+}
 ```
 
-::: tip Full Testing Guide
-For more testing recipes and patterns, see [Recipes](/testing/recipes).
-:::
+The getters return the property value directly. Override the getter method when you need runtime computation.
 
-## Best Practices
+### `@start` — Transient Initial States
 
-### 1. Use Descriptive Scenario Names
+Child machines often have transient initial states (`idle → @always → ...`). There's no external event to send — the machine auto-starts. Use `MachineScenario::START` as the event:
 
 <!-- doctest-attr: ignore -->
 ```php
-'scenarios' => [
-    'ab_test_checkout_v2' => [...],
-    'enterprise_tier' => [...],
-    'staging_debug' => [...],
-],
+use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
+
+class AtReportSavedFromStartScenario extends MachineScenario
+{
+    protected string $machine = FindeksMachine::class;
+    protected string $source  = 'idle';                   // Initial state
+    protected string $event   = MachineScenario::START;   // Special: no event sent
+    protected string $target  = 'report_saved';
+
+    protected function plan(): array
+    {
+        return [
+            'checking_existing_report' => [
+                HasExistingReportGuard::class => false,
+            ],
+            'querying_phones' => '@done',
+            // ...
+        ];
+    }
+}
 ```
 
-### 2. Document Scenario Differences
+When `$event` is `@start`, ScenarioPlayer creates a fresh machine and processes the `@always` chain with overrides active. No `$machine` parameter needed:
 
 <!-- doctest-attr: ignore -->
 ```php
-'scenarios' => [
-    // Skips validation for testing
-    'skip_validation' => [
-        'validating' => [
-            'on' => ['@always' => 'approved'],
-        ],
-    ],
-],
+$scenario = new AtReportSavedFromStartScenario();
+$player   = new ScenarioPlayer($scenario);
+$state    = $player->execute(); // Creates machine internally
 ```
 
-### 3. Keep Scenarios Minimal
+## Naming Conventions
 
-Override only what's necessary:
+| Type | Pattern | Example |
+|------|---------|---------|
+| Machine scenario | `At{Target}Scenario` | `AtReviewScenario` |
+| Behavior scenario | `{OriginalName}Scenario` | `HasAgreedToTermsGuardScenario` |
 
-<!-- doctest-attr: ignore -->
-```php
-// Good - minimal override
-'scenarios' => [
-    'test' => [
-        'pending' => [
-            'on' => ['SUBMIT' => 'fast_track'],
-        ],
-    ],
-],
+**Machine scenario names** are descriptive — typically the target state. When multiple scenarios target the same state via different paths, disambiguate:
 
-// Avoid - duplicating entire configuration
-```
+- `AtPaymentVerificationScenario` — unique target, sufficient
+- `AtPaymentVerificationViaConsentScenario` — same target, different source/event
 
-### 4. Use Scenarios for Testing
+**Behavior scenario names** mirror the original behavior name with `Scenario` suffix. This enables search: `HasAgreedToTerms` finds both `HasAgreedToTermsGuard` and `HasAgreedToTermsGuardScenario`.
 
-<!-- doctest-attr: ignore -->
-```php
-// In tests
-$machine->send([
-    'type' => 'SUBMIT',
-    'payload' => ['scenarioType' => 'test'],
-]);
-```
+## Next Steps
 
-::: tip Detailed Guide
-For comprehensive design guidelines with Do/Don't examples, see [State Design](/best-practices/state-design).
-:::
+- **[Override Behaviors](/advanced/scenario-behaviors)** — How to write and use scenario behavior overrides
+- **[Writing plan()](/advanced/scenario-plan)** — Complete plan() authoring guide
+- **[Endpoint Integration](/advanced/scenario-endpoints)** — HTTP activation and availableScenarios response
+- **[Scaffold & Validation](/advanced/scenario-commands)** — `machine:scenario` and `machine:scenario-validate` commands
+- **[Runtime & Engine](/advanced/scenario-runtime)** — Gating, async propagation, error handling

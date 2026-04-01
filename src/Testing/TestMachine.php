@@ -405,8 +405,7 @@ class TestMachine
     /**
      * Set the scenario type for scenario-aware machines.
      *
-     * Sets the 'scenarioType' context key which MachineDefinition::getScenarioStateIfAvailable()
-     * reads to route to scenario-specific states.
+     * @deprecated Use MachineScenario classes with the new scenario system instead. Will be removed in the next major version.
      */
     public function withScenario(string $scenarioName): self
     {

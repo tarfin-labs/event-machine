@@ -18,6 +18,8 @@ use Illuminate\Database\Eloquent\Builder;
  * @property string $machine_class The FQCN of the machine.
  * @property string $state_id The current state ID.
  * @property Carbon $state_entered_at When the instance entered this state.
+ * @property ?string $scenario_class Active scenario FQCN (null when no scenario).
+ * @property ?array $scenario_params Validated scenario parameters (null when no params).
  */
 class MachineCurrentState extends Model
 {
@@ -38,9 +40,12 @@ class MachineCurrentState extends Model
         'machine_class',
         'state_id',
         'state_entered_at',
+        'scenario_class',
+        'scenario_params',
     ];
     protected $casts = [
         'state_entered_at' => 'datetime',
+        'scenario_params'  => 'array',
     ];
 
     /**

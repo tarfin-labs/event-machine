@@ -161,6 +161,26 @@ class MachineQueryBuilder
     }
 
     /**
+     * Filter instances with an active scenario.
+     */
+    public function whereHasScenario(): self
+    {
+        $this->query->whereNotNull('scenario_class');
+
+        return $this;
+    }
+
+    /**
+     * Filter instances with a specific active scenario.
+     */
+    public function whereScenario(string $scenarioClass): self
+    {
+        $this->query->where('scenario_class', $scenarioClass);
+
+        return $this;
+    }
+
+    /**
      * Only instances where a state_id is a FINAL type.
      */
     public function inFinalState(): self

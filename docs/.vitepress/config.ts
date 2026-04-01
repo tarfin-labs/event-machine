@@ -103,7 +103,18 @@ export default withMermaid(
             { text: 'Handling Events', link: '/building/handling-events' },
             { text: 'Configuration', link: '/building/configuration' },
             { text: 'Custom Context Classes', link: '/advanced/custom-context' },
-            { text: 'Scenarios', link: '/advanced/scenarios' }
+            {
+              text: 'Scenarios',
+              collapsed: true,
+              items: [
+                { text: 'Overview', link: '/advanced/scenarios' },
+                { text: 'Override Behaviors', link: '/advanced/scenario-behaviors' },
+                { text: 'Writing plan()', link: '/advanced/scenario-plan' },
+                { text: 'Endpoint Integration', link: '/advanced/scenario-endpoints' },
+                { text: 'Scaffold & Validation', link: '/advanced/scenario-commands' },
+                { text: 'Runtime & Engine', link: '/advanced/scenario-runtime' },
+              ]
+            }
           ]
         },
         {

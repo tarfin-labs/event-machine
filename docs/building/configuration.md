@@ -16,7 +16,6 @@ MachineDefinition::define(
         'context' => [...],
         'states' => [...],
         'should_persist' => true,
-        'scenarios_enabled' => false,
     ],
 );
 ```
@@ -33,7 +32,7 @@ MachineDefinition::define(
 | `states` | array | Required | State definitions |
 | `on` | array | `null` | Root-level transitions |
 | `should_persist` | bool | `true` | Enable database persistence |
-| `scenarios_enabled` | bool | `false` | Enable scenario branching |
+| ~~`scenarios_enabled`~~ | ~~bool~~ | ~~`false`~~ | ~~Deprecated — use `config/machine.php` `scenarios.enabled` instead~~ |
 
 ### Machine ID
 
@@ -210,53 +209,20 @@ With `should_persist => true` (default):
 
 ## Scenarios Configuration
 
-Enable dynamic state branching:
+Scenarios are configured in `config/machine.php`, not in the machine definition:
 
-```php no_run
-MachineDefinition::define(
-    config: [
-        'id' => 'payment',
-        'initial' => 'pending',
-        'scenarios_enabled' => true,
-        'states' => [
-            'pending' => [
-                'on' => ['PAY' => 'processing'],
-            ],
-            'processing' => [],
-            'completed' => ['type' => 'final'],
-        ],
-    ],
-    scenarios: [
-        'card' => [
-            'processing' => [
-                'on' => [
-                    'AUTHORIZE' => 'completed',
-                    'DECLINE' => 'failed',
-                ],
-            ],
-        ],
-        'bank_transfer' => [
-            'processing' => [
-                'on' => [
-                    'CONFIRM' => 'completed',
-                    'TIMEOUT' => 'failed',
-                ],
-            ],
-        ],
-    ],
-);
+```php ignore
+// config/machine.php
+'scenarios' => [
+    'enabled' => env('MACHINE_SCENARIOS_ENABLED', false),
+],
 ```
 
-Select scenario via event payload:
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `scenarios.enabled` | `bool` | `false` | Enable scenario system. Set to `true` in staging only. |
 
-```php no_run
-$machine->send([
-    'type' => 'PAY',
-    'payload' => [
-        'scenarioType' => 'card',
-    ],
-]);
-```
+When enabled, scenarios provide behavior overrides for QA and staging environments via `MachineScenario` classes. See [Scenarios](/advanced/scenarios) for full documentation.
 
 ## Configuration Validation
 
@@ -309,7 +275,6 @@ MachineDefinition::define(
         'delimiter' => '.',
         'context' => OrderContext::class,
         'should_persist' => true,
-        'scenarios_enabled' => false,
         'states' => [
             'cart' => [
                 'description' => 'Shopping cart',

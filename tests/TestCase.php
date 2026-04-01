@@ -47,6 +47,9 @@ class TestCase extends Orchestra
         $currentStatesMigration = include __DIR__.'/../database/migrations/create_machine_current_states_table.php.stub';
         $currentStatesMigration->up();
 
+        $scenarioColumnsMigration = include __DIR__.'/../database/migrations/add_scenario_columns_to_machine_current_states_table.php.stub';
+        $scenarioColumnsMigration->up();
+
         $timerFiresMigration = include __DIR__.'/../database/migrations/create_machine_timer_fires_table.php.stub';
         $timerFiresMigration->up();
 

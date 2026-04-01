@@ -24,7 +24,8 @@ Consistent naming makes your state machines easier to read, maintain, and debug.
 | Event payload keys | camelCase | `$descriptiveName` | `transactionId` |
 | Config keys | snake_case | `{descriptive_name}` | `should_persist` |
 | Inline behavior key | camelCase | `{descriptiveName}{Type}` | `sendEmailAction` |
-| Scenario name | snake_case | `{descriptive_name}` | `express_checkout` |
+| Machine scenario class | PascalCase | `At{Target}Scenario` | `AtCheckingProtocolScenario` |
+| Behavior scenario class | PascalCase | `{OriginalName}Scenario` | `HasConsentGuardScenario` |
 | Eloquent column | snake_case | `{domain}_mre` | `order_workflow_mre` |
 | Endpoint action class | PascalCase | `{DescriptiveName}EndpointAction` | `CancelEndpointAction` |
 | Endpoint action inline key | camelCase | `{descriptiveName}EndpointAction` | `cancelEndpointAction` |
@@ -884,44 +885,21 @@ Data flowing between parent and child machines uses `camelCase`:
 
 ## Scenarios
 
-Scenario names use `snake_case` with descriptive, domain-specific identifiers:
-
-```php no_run
-MachineDefinition::define(
-    config: [
-        'scenarios_enabled' => true,
-        'states' => [
-            'idle' => [
-                'on' => [
-                    'ORDER_SUBMITTED' => [
-                        [
-                            'target'       => 'express_processing',
-                            'scenarioType' => 'express_checkout',
-                        ],
-                        [
-                            'target'       => 'standard_processing',
-                            'scenarioType' => 'standard_checkout',
-                        ],
-                    ],
-                ],
-            ],
-        ],
-    ],
-);
-```
-
-Good scenario names describe the **business variant**, not technical details:
+Machine scenario class names use PascalCase with the target state and `Scenario` suffix. Behavior scenario class names mirror the original behavior with `Scenario` suffix:
 
 ```php ignore
-// Descriptive business variants
-'express_checkout'      // fast-track order flow
-'enterprise_onboarding' // multi-step enterprise setup
-'ab_test_v2'            // A/B test variant
+// Machine scenarios — named by target state
+AtCheckingProtocolScenario      // target: checking_protocol
+AtVerificationScenario          // target: verification
+AtVerificationViaConsentScenario // disambiguated: same target, different path
 
-// Avoid generic names
-'scenario_1'            // → describe what makes it different
-'test'                  // → describe the business case
+// Behavior scenarios — mirror original name
+HasConsentGuardScenario         // overrides HasConsentGuard
+StoreApplicationActionScenario  // overrides StoreApplicationAction
+CustomerContextCalculatorScenario // overrides CustomerContextCalculator
 ```
+
+See [Scenarios — Naming Conventions](/advanced/scenarios#naming-conventions) for details.
 
 ## Configuration Keys
 
@@ -935,13 +913,12 @@ MachineDefinition::define(
         'context'           => [...],
         'states'            => [...],
         'should_persist'    => true,
-        'scenarios_enabled' => false,
     ],
 );
 ```
 
 ::: info Internal Keys — `@` Prefix Convention
-Internal framework keys use the `@` prefix: `@always`, `@done`, `@fail`. These are distinct from user-defined event types (`SCREAMING_SNAKE_CASE`) and state names (`snake_case`). The only remaining XState-inherited camelCase key is `scenarioType`.
+Internal framework keys use the `@` prefix: `@always`, `@done`, `@fail`. These are distinct from user-defined event types (`SCREAMING_SNAKE_CASE`) and state names (`snake_case`).
 :::
 
 ## Endpoints

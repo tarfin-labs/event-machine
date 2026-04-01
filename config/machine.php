@@ -99,6 +99,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Scenario Settings
+    |--------------------------------------------------------------------------
+    |
+    | Scenarios allow QA and product teams to navigate complex state flows in
+    | staging by activating behavior overrides through existing endpoints.
+    | Disabled by default — zero overhead in production.
+    |
+    */
+    'scenarios' => [
+        // Enable/disable scenarios globally. Set to true in staging only.
+        'enabled' => env('MACHINE_SCENARIOS_ENABLED', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Infinite Loop Protection
     |--------------------------------------------------------------------------
     |

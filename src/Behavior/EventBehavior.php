@@ -129,6 +129,8 @@ abstract class EventBehavior extends Data
     /**
      * Retrieves the scenario value from the payload.
      *
+     * @deprecated Use MachineScenario classes with the new scenario system instead. Will be removed in the next major version.
+     *
      * @return string|null The scenario value if available, otherwise null.
      */
     public function getScenario(): ?string

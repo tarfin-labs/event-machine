@@ -24,9 +24,11 @@ use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Illuminate\Contracts\Database\Eloquent\Castable;
 use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
 use Tarfinlabs\EventMachine\Traits\ResolvesBehaviors;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Query\MachineQueryBuilder;
+use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
@@ -592,6 +594,22 @@ class Machine implements Castable, JsonSerializable, Stringable
         // Without this, machineId() returns null after state reload in send() or any restore path.
         $rootEventId = $machineEvents->first()->root_event_id;
         $state->context->setMachineIdentity($rootEventId);
+
+        // Restore scenario overrides if active (§9 Async Propagation)
+        if ((bool) config('machine.scenarios.enabled', false)) {
+            $scenarioRecord = MachineCurrentState::where('root_event_id', $rootEventId)
+                ->whereNotNull('scenario_class')
+                ->first(['scenario_class', 'scenario_params']);
+
+            if ($scenarioRecord !== null) {
+                $scenarioClass = $scenarioRecord->scenario_class;
+                if (class_exists($scenarioClass) && is_subclass_of($scenarioClass, MachineScenario::class)) {
+                    $scenario = new $scenarioClass();
+                    $scenario->hydrateParams($scenarioRecord->scenario_params ?? []);
+                    ScenarioPlayer::registerOverrides($scenario);
+                }
+            }
+        }
 
         return $state;
     }
