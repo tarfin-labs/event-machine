@@ -172,6 +172,65 @@ class ScenarioPlayer
         return $state;
     }
 
+    /**
+     * Execute Phase 2 (continuation) — applies continuation overrides for subsequent requests.
+     *
+     * Unlike execute(): no source/target validation, accepts any event type,
+     * deactivates on final state, keeps scenario active on interactive state.
+     *
+     * @param  array<string, mixed>  $eventPayload
+     */
+    public function executeContinuation(
+        Machine $machine,
+        array $eventPayload,
+        string $rootEventId,
+        string $eventType,
+    ): State {
+        self::$isActive = true;
+
+        try {
+            self::registerOverrides($this->scenario, useContinuation: true);
+            $classified = $this->classifyPlanValues(useContinuation: true);
+
+            // Send the event (whatever QA sent — not the scenario's declared event)
+            $state = $machine->send([
+                'type'    => $eventType,
+                'payload' => $eventPayload,
+            ]);
+
+            // @continue loop — same logic as execute()
+            $continueCount = 0;
+            $maxDepth      = (int) config('machine.max_transition_depth', 100);
+
+            while ($continueCount < $maxDepth) {
+                $currentRoute = $this->resolveCurrentRoute($state);
+                $continue     = $this->findContinueForState($currentRoute, $classified['overrides']);
+
+                if ($continue === null) {
+                    break;
+                }
+
+                $continueCount++;
+                [$eventClass, $payload] = $this->parseContinueValue($continue);
+
+                $state = $machine->send([
+                    'type'    => $this->resolveEventType($eventClass),
+                    'payload' => $payload,
+                ]);
+            }
+
+            // Deactivate if final state reached
+            if ($state->currentStateDefinition->type === StateDefinitionType::FINAL) {
+                self::deactivateScenario($rootEventId);
+            }
+
+            return $state;
+        } finally {
+            self::cleanupOverrides();
+            self::$isActive = false;
+        }
+    }
+
     public static function isActive(): bool
     {
         return self::$isActive;
