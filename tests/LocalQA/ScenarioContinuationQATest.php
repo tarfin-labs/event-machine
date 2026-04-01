@@ -11,6 +11,7 @@ use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinuationScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\MultiPauseContinuationScenario;
 
 uses(LocalQATestCase::class);
 
@@ -23,7 +24,7 @@ beforeEach(function (): void {
     // Register routes for all tests
     MachineRouter::register(ScenarioTestMachine::class, [
         'prefix'       => '/api/cont-qa',
-        'machineIdFor' => ['APPROVE', 'REJECT', 'DELEGATE'],
+        'machineIdFor' => ['APPROVE', 'REJECT', 'DELEGATE', 'START_PARALLEL', 'FINISH'],
         'name'         => 'cont-qa',
     ]);
     Route::getRoutes()->refreshNameLookups();
@@ -36,20 +37,8 @@ beforeEach(function (): void {
  * Creates machine via ScenarioPlayer (shouldPersist=false for speed),
  * then manually persists and sets scenario_class in DB.
  */
-function createPersistedAtReviewing(): string
+function createPersistedAtReviewing(string $scenarioClass = ContinuationScenario::class): string
 {
-    // Phase 1: Use ScenarioPlayer to reach reviewing
-    $scenario = new ContinuationScenario();
-    $player   = new ScenarioPlayer($scenario);
-    $state    = $player->execute();
-
-    // The state is in memory — we need to create a real persisted machine at 'reviewing'
-    // ScenarioPlayer runs with shouldPersist=false, so no DB records.
-    // Instead: create a real machine, send events to reach 'reviewing', then set scenario_class.
-
-    // Simpler approach: create machine, it auto-starts at idle → @always → routing → processing
-    // In test mode, processing (job state) skips dispatch and stays there.
-    // We need to use startingAt to place at reviewing directly, then persist.
     $testMachine = ScenarioTestMachine::startingAt(stateId: 'reviewing');
     $machine     = $testMachine->machine();
 
@@ -62,7 +51,7 @@ function createPersistedAtReviewing(): string
     // Set scenario_class in DB so controller detects continuation
     MachineCurrentState::where('root_event_id', $rootEventId)
         ->update([
-            'scenario_class'  => ContinuationScenario::class,
+            'scenario_class'  => $scenarioClass,
             'scenario_params' => [],
         ]);
 
@@ -215,4 +204,38 @@ it('LocalQA: explicit scenario:null deactivates active continuation', function (
 
     // Machine handled event normally (no overrides) — reached approved
     expect(str_contains($cs->state_id, 'approved'))->toBeTrue();
+});
+
+it('LocalQA: multi-pause continuation — 3 HTTP requests', function (): void {
+    // Machine at reviewing with MultiPauseContinuationScenario
+    $rootEventId = createPersistedAtReviewing(MultiPauseContinuationScenario::class);
+
+    // Request 2: POST START_PARALLEL without slug → continuation auto-activates
+    // Continuation overrides: parallel_check → [IsValidGuard => true]
+    // Flow: reviewing → parallel_check → regions auto-complete → @done (guard=true) → all_checked
+    $response = $this->postJson("/api/cont-qa/{$rootEventId}/start-parallel", [
+        'type' => 'START_PARALLEL',
+    ]);
+
+    $response->assertOk();
+
+    // Machine pauses at all_checked (interactive) — scenario still active
+    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+    expect(str_contains($cs->state_id, 'all_checked'))->toBeTrue(
+        'Expected all_checked, got: '.$cs->state_id
+    );
+    expect($cs->scenario_class)->toBe(MultiPauseContinuationScenario::class);
+
+    // Request 3: POST FINISH → approved (final) → scenario deactivated
+    $response = $this->postJson("/api/cont-qa/{$rootEventId}/finish", [
+        'type' => 'FINISH',
+    ]);
+
+    $response->assertOk();
+
+    $cs->refresh();
+    expect(str_contains($cs->state_id, 'approved'))->toBeTrue(
+        'Expected approved, got: '.$cs->state_id
+    );
+    expect($cs->scenario_class)->toBeNull();
 });
