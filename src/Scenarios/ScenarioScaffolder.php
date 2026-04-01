@@ -148,7 +148,7 @@ class ScenarioScaffolder
 
     private function scaffoldDelegationEntry(ScenarioPathStep $step): string
     {
-        $invokeShort     = $step->invokeClass ? class_basename($step->invokeClass) : 'unknown';
+        $invokeShort     = $step->invokeClass !== null ? class_basename($step->invokeClass) : 'unknown';
         $comment         = "            // ── {$step->stateKey} ── delegation: {$invokeShort}";
         $outcomes        = $step->availableDoneStates;
         $outcomesComment = $outcomes !== [] ? ' // Available: '.implode(', ', $outcomes) : '';

@@ -596,7 +596,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         $state->context->setMachineIdentity($rootEventId);
 
         // Restore scenario overrides if active (§9 Async Propagation)
-        if (config('machine.scenarios.enabled', false)) {
+        if ((bool) config('machine.scenarios.enabled', false)) {
             $scenarioRecord = MachineCurrentState::where('root_event_id', $rootEventId)
                 ->whereNotNull('scenario_class')
                 ->first(['scenario_class', 'scenario_params']);

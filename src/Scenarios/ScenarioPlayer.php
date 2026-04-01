@@ -513,7 +513,10 @@ class ScenarioPlayer
     private static function createBoolGuardProxy(bool $value): GuardBehavior
     {
         return new class($value) extends GuardBehavior {
-            public function __construct(private readonly bool $returnValue) {}
+            public function __construct(private readonly bool $returnValue)
+            {
+                parent::__construct();
+            }
 
             public function __invoke(): bool
             {
@@ -528,7 +531,10 @@ class ScenarioPlayer
     private static function createContextWriteProxy(array $data): ActionBehavior
     {
         return new class($data) extends ActionBehavior {
-            public function __construct(private readonly array $contextData) {}
+            public function __construct(private readonly array $contextData)
+            {
+                parent::__construct();
+            }
 
             public function __invoke(ContextManager $ctx): void
             {
@@ -545,7 +551,10 @@ class ScenarioPlayer
     private static function createOutputProxy(array $data): OutputBehavior
     {
         return new class($data) extends OutputBehavior {
-            public function __construct(private readonly array $outputData) {}
+            public function __construct(private readonly array $outputData)
+            {
+                parent::__construct();
+            }
 
             public function __invoke(): array
             {
@@ -560,7 +569,10 @@ class ScenarioPlayer
     private static function createClosureProxy(\Closure $handler): InvokableBehavior
     {
         return new class($handler) extends InvokableBehavior {
-            public function __construct(private readonly \Closure $handler) {}
+            public function __construct(private readonly \Closure $handler)
+            {
+                parent::__construct();
+            }
 
             public function __invoke(mixed ...$args): mixed
             {
@@ -656,7 +668,7 @@ class ScenarioPlayer
 
     private function validateEnvironment(): void
     {
-        if (!config('machine.scenarios.enabled', false)) {
+        if (!(bool) config('machine.scenarios.enabled', false)) {
             throw ScenariosDisabledException::disabled();
         }
     }

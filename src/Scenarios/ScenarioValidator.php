@@ -62,8 +62,15 @@ class ScenarioValidator
 
     private function checkPropertiesSet(): void
     {
-        foreach (['machine', 'source', 'event', 'target', 'description'] as $prop) {
-            $value = $this->scenario->{$prop}();
+        $properties = [
+            'machine'     => $this->scenario->machine(),
+            'source'      => $this->scenario->source(),
+            'event'       => $this->scenario->event(),
+            'target'      => $this->scenario->target(),
+            'description' => $this->scenario->description(),
+        ];
+
+        foreach ($properties as $prop => $value) {
             if ($value === '') {
                 $this->errors[] = "Missing required property: \${$prop}";
             }

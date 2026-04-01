@@ -22,7 +22,7 @@ abstract class MachineScenario
      * When $event is '@start', ScenarioPlayer creates a fresh machine and processes
      * the initial @always chain with overrides active — no explicit event is sent.
      */
-    public const START = '@start';
+    public const string START = '@start';
 
     /** Which machine this scenario targets (class-string). */
     protected string $machine;

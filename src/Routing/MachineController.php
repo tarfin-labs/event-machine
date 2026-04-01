@@ -177,14 +177,13 @@ class MachineController extends Controller
 
         // Activate scenario overrides if a scenario slug is present in the request.
         // Must be called before send() so overrides are registered before the event is processed.
-        $scenarioActive = false;
+        $scenario = null;
         if ($request instanceof Request && $machine->definition->machineClass !== null) {
-            $scenario       = $this->maybeRegisterScenarioOverrides($request, $machine->definition->machineClass, $machine);
-            $scenarioActive = $scenario instanceof MachineScenario;
+            $scenario = $this->maybeRegisterScenarioOverrides($request, $machine->definition->machineClass, $machine);
         }
 
         try {
-            if ($scenarioActive && isset($scenario)) {
+            if ($scenario instanceof MachineScenario) {
                 // Scenario active: use ScenarioPlayer::execute() for full scenario flow
                 // (override registration, delegation interception, @continue loop, target validation).
                 $rootEventId = $machine->state->history?->first()?->root_event_id;
@@ -292,7 +291,7 @@ class MachineController extends Controller
             'isProcessing'    => $isProcessing,
         ];
 
-        if (config('machine.scenarios.enabled', false) && $machine->definition->machineClass !== null) {
+        if ((bool) config('machine.scenarios.enabled', false) && $machine->definition->machineClass !== null) {
             $availableScenarios = [];
 
             foreach ($state->value as $currentStateRoute) {
@@ -581,7 +580,7 @@ class MachineController extends Controller
         string $machineClass,
         Machine $machine,
     ): ?MachineScenario {
-        if (!config('machine.scenarios.enabled', false)) {
+        if (!(bool) config('machine.scenarios.enabled', false)) {
             return null; // Silently ignored when disabled
         }
 
