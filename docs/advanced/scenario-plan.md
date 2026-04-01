@@ -437,3 +437,86 @@ Each `params()` entry is either a **plain array** (validation rules only) or an 
 
 Parameters are sent by the frontend in `scenarioParams` and validated before `plan()` is called.
 
+## Continuation — Multi-Request Flows
+
+When a scenario's `$target` is an **interactive state** (QA will send more events after arriving), the scenario needs to control what happens on subsequent requests. This is what `continuation()` is for.
+
+### When to Use
+
+Use `continuation()` when:
+- The target state expects user input (interactive)
+- Subsequent events after the target trigger delegation states or guard-protected transitions that need overrides
+- Without overrides, the next request would hit real external services
+
+### Why a Separate Method
+
+The same state can appear in both Phase 1 (reaching the target) and Phase 2 (after the target) with **different overrides**. PHP arrays cannot have duplicate keys, so a separate method cleanly separates the phases.
+
+**Example:** In a Findeks flow, the `polling` state is visited twice:
+- **Phase 1 (plan):** `IsPinRequiredGuard => true` — PIN is required, machine goes to `awaiting_pin`
+- **Phase 2 (continuation):** `IsPinRequiredGuard => false` — PIN confirmed, machine proceeds to `saving_report`
+
+### Before/After
+
+**Before (two-scenario workaround):**
+
+<!-- doctest-attr: ignore -->
+```php
+// Scenario 1: reach awaiting_pin
+class AtAwaitingPinScenario extends MachineScenario { ... }
+
+// Scenario 2: QA must manually activate this before sending PIN_CONFIRMED
+class AtReportSavedWithPinScenario extends MachineScenario { ... }
+```
+
+QA has to know about both scenarios, select the second one at the right time.
+
+**After (single scenario with continuation):**
+
+<!-- doctest-attr: ignore -->
+```php
+class AtAwaitingPinScenario extends MachineScenario
+{
+    protected string $source = 'awaiting_report_request';
+    protected string $event  = ReportRequestedEvent::class;
+    protected string $target = 'awaiting_pin';
+
+    protected function plan(): array
+    {
+        return [
+            'polling' => [
+                'outcome'                => '@done',
+                IsPinRequiredGuard::class => true,  // Phase 1: PIN required
+            ],
+        ];
+    }
+
+    protected function continuation(): array
+    {
+        return [
+            'confirming_pin' => '@done',
+            'polling'        => [
+                'outcome'                => '@done',
+                IsPinRequiredGuard::class => false,  // Phase 2: PIN done
+            ],
+            'saving_report' => '@done',
+        ];
+    }
+}
+```
+
+QA activates one scenario. After reaching `awaiting_pin`, subsequent requests automatically use continuation overrides.
+
+### Continuation Format
+
+`continuation()` uses the same format as `plan()` — every key is a full state route, values follow the same detection table (behavior overrides, delegation outcomes, `@continue` directives, child scenario references).
+
+### Deactivation
+
+The continuation scenario is automatically deactivated when:
+- The machine reaches a **final state** during continuation execution
+- QA sends a request with a **different scenario slug** (new scenario replaces old)
+- QA sends a request with explicit empty scenario (normal behavior resumes)
+
+If the continuation hits another interactive state (no `@continue` entry), the machine pauses and the scenario stays active for the next request.
+

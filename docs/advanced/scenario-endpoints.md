@@ -97,6 +97,44 @@ The field is built by `ScenarioDiscovery::groupedByEvent()` which scans the `Sce
 
 When `MACHINE_SCENARIOS_ENABLED=false` (default), the `availableScenarios` field is **not present** in the response — zero overhead in production. When enabled but no scenarios match the current state, the field is an empty object `{}`.
 
+### `activeScenario` Field
+
+When a scenario with `continuation()` is active, the response includes an `activeScenario` field:
+
+```json
+{
+    "data": {
+        "id": "evt_01HXYZ...",
+        "state": ["order.awaiting_pin"],
+        "availableEvents": ["PIN_CONFIRMED"],
+        "output": null,
+        "isProcessing": false,
+        "availableScenarios": {
+            "PIN_CONFIRMED": [
+                {"slug": "at-report-saved-with-pin", "description": "PIN confirmed — report saved"}
+            ]
+        },
+        "activeScenario": {
+            "slug": "at-awaiting-pin-scenario",
+            "description": "Findeks — PIN entry required",
+            "hasContinuation": true
+        }
+    }
+}
+```
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `slug` | `string` | Kebab-case identifier of the active scenario |
+| `description` | `string` | Human-readable description from the scenario class |
+| `hasContinuation` | `bool` | Always `true` when present — indicates the scenario will auto-continue |
+
+**`availableScenarios` and `activeScenario` are independent.** Both can appear simultaneously. QA sees:
+- "ScenarioA is active and will continue automatically" (`activeScenario`)
+- "You can also switch to ScenarioB from here" (`availableScenarios`)
+
+When no scenario with continuation is active, `activeScenario` is not present in the response.
+
 ## Scenario Deactivation
 
 When a POST request arrives **without** a `scenario` field, the controller checks if the machine had a previously active scenario (via `scenario_class` column in `machine_current_states`). If so, it clears the columns — the machine returns to normal (non-scenario) behavior:
@@ -109,6 +147,61 @@ POST /api/orders/{orderId}/review-approved
 ```
 
 No `scenario` field → previous scenario deactivated (clears `scenario_class` and `scenario_params` columns in `machine_current_states`). QA can resume manual testing at any point.
+
+**Exception — continuation scenarios:** When a scenario with `continuation()` is active, sending a request without a `scenario` field does **not** deactivate it. Instead, the continuation overrides are applied automatically. To explicitly deactivate a continuation scenario, send a request with a different scenario slug or wait for the machine to reach a final state (auto-deactivation).
+
+### Final-State Auto-Deactivation
+
+When the machine reaches a **final state** during continuation execution, the scenario is automatically deactivated — `scenario_class` and `scenario_params` are cleared from the database. No manual deactivation needed.
+
+## Continuation Flow
+
+A continuation scenario spans multiple HTTP requests:
+
+**Request 1 — Initial activation:**
+```
+POST /endpoint { scenario: "at-awaiting-pin-scenario", type: "REPORT_REQUESTED" }
+
+→ ScenarioPlayer::execute() with plan() overrides
+→ Machine reaches target (awaiting_pin)
+→ Response: activeScenario present, availableScenarios listed
+```
+
+**Request 2, Option A — Continue with active scenario (no slug):**
+```
+POST /endpoint { type: "PIN_CONFIRMED", payload: { pin: "123456" } }
+
+→ Controller detects active continuation in DB
+→ ScenarioPlayer::executeContinuation() with continuation() overrides
+→ Machine advances through mocked states → reaches final state
+→ Scenario auto-deactivated
+→ Response: activeScenario absent
+```
+
+**Request 2, Option B — Switch to different scenario:**
+```
+POST /endpoint { scenario: "at-report-saved-with-pin", type: "PIN_CONFIRMED" }
+
+→ Old scenario deactivated, new scenario activated
+→ ScenarioPlayer::execute() with new scenario's plan()
+→ Response: new activeScenario (if it has continuation)
+```
+
+If the continuation hits another interactive state (no `@continue` entry), the machine pauses and the scenario stays active for a third request, and so on.
+
+## Scenario Switching
+
+When a continuation scenario is active, QA can switch to a different scenario by sending its slug:
+
+```http
+POST /api/orders/{orderId}/confirm-pin
+{
+    "type": "PIN_CONFIRMED",
+    "scenario": "at-report-saved-with-pin"
+}
+```
+
+The old scenario (with its continuation) is replaced by the new scenario. The new scenario runs its `plan()` from the current state. This allows QA to change direction mid-flow without manually deactivating.
 
 ## Error Handling
 

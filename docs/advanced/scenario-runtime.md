@@ -36,6 +36,8 @@ Scenario overrides live in the Laravel container — process-scoped. When async 
 4. QA sends next event WITHOUT scenario → `scenario_class = null` → real behavior resumes
 5. QA sends next event with DIFFERENT scenario → new overrides replace old
 
+**With continuation:** After step 2, if the scenario has `continuation()`, the `scenario_class` persists across requests. Step 4 changes: instead of clearing the scenario, the controller detects `hasContinuation() === true` and dispatches `executeContinuation()` with Phase 2 overrides. The scenario is only cleared when the machine reaches a final state or QA explicitly switches scenarios.
+
 ## Engine Feature Reference
 
 | Feature | Scenario interaction |
@@ -97,6 +99,27 @@ When a scenario fails or produces unexpected state:
 
 5. **Preview with `--dry-run`:** `php artisan machine:scenario AtReview OrderMachine pending SubmitEvent under_review --dry-run` shows the scaffolded plan without writing files — useful for understanding what path the BFS found.
 
+## Continuation Execution
+
+`ScenarioPlayer::executeContinuation()` handles Phase 2 of multi-request scenarios. It differs from `execute()` in several ways:
+
+| Aspect | `execute()` | `executeContinuation()` |
+|--------|-------------|------------------------|
+| Overrides source | `plan()` | `continuation()` |
+| Source validation | Validates machine is at `$source` | No source validation |
+| Target validation | Validates machine reached `$target` | No target validation |
+| Event type | Must match scenario's `$event` | Accepts any event (whatever QA sends) |
+| Final state | N/A (target is non-final) | Auto-deactivates scenario |
+| Interactive state | N/A | Keeps scenario active for next request |
+
+**Override lifecycle across phases:**
+1. Phase 1: `registerOverrides(plan())` → machine reaches target → `cleanupOverrides()` → DB retains `scenario_class`
+2. Phase 2: `registerOverrides(continuation())` → machine advances → `cleanupOverrides()` → DB cleared if final state
+
+Phase 1 overrides never leak into Phase 2. Each phase gets fresh overrides from its respective method.
+
+The `$isContinuation` flag on `MachineScenario` is set by `MachineController` when it restores an active scenario from the database and detects `hasContinuation() === true`. The controller uses this flag to dispatch to `executeContinuation()` instead of `execute()`.
+
 ## ScenarioPlayer Static API
 
 | Method | Purpose |
@@ -106,6 +129,7 @@ When a scenario fails or produces unexpected state:
 | `ScenarioPlayer::getChildScenario(string $stateRoute)` | Returns child scenario class for nested delegation |
 | `ScenarioPlayer::cleanupOverrides()` | Unbinds all container overrides, clears outcomes/childScenarios, resets inline fakes. Runs in `finally` block after every `execute()` |
 | `ScenarioPlayer::deactivateScenario(string $rootEventId)` | Clears `scenario_class`/`scenario_params` columns in `machine_current_states` |
+| `ScenarioPlayer::executeContinuation(...)` | Phase 2 execution — applies `continuation()` overrides, sends QA's event, deactivates on final state |
 
 ## Testing
 

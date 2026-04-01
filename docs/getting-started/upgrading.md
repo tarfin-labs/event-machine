@@ -54,6 +54,21 @@ The old `scenarios_enabled` / `scenarioType` system is deprecated and will be re
 3. Remove `withScenario()` from tests
 4. Create `MachineScenario` classes as replacements
 
+### 9.4.0 — Scenario Continuation
+
+**Non-breaking.** Adds multi-request scenario flows via `continuation()` on `MachineScenario`.
+
+**What changed:**
+- `MachineScenario::continuation()` — new method, returns `[]` by default (existing scenarios unaffected)
+- `MachineScenario::hasContinuation()` / `resolvedContinuation()` — new public methods
+- `MachineScenario::$isContinuation` — new public flag (set by controller internally)
+- `ScenarioPlayer::executeContinuation()` — new method for Phase 2 execution
+- Endpoint responses include `activeScenario` field when a continuation scenario is active
+
+**No migration required.** All changes are additive. Existing scenarios without `continuation()` work exactly as before.
+
+**Optional:** If you have scenarios targeting interactive states that currently require a second scenario for the next step, you can consolidate them by adding `continuation()` to the first scenario. See [Continuation — Multi-Request Flows](/advanced/scenario-plan#continuation-multi-request-flows).
+
 ---
 
 ## From 8.x to 9.0

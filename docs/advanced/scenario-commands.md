@@ -71,6 +71,7 @@ The scaffolder generates classification-specific entries:
 | **Delegation** | `'route' => '@done'` with `// Available: @done.X, @fail, @timeout` |
 | **Parallel** | Region outcomes + `@done` guard override |
 | **Interactive** | `'route' => ['@continue' => Event::class]` with `// Also: OtherEvent` |
+| **Interactive (target)** | `continuation()` stub generated with TODO entries for post-target states |
 
 **Full generated file example:**
 
@@ -166,6 +167,14 @@ php artisan machine:scenario-validate --scenario=App\\Machines\\Order\\Scenarios
 | Delegation outcomes on delegation states only | `Has outcome '@done' but is not a delegation state` |
 | `@continue` on non-delegation states only | `Has @continue but is a delegation state` |
 | Child scenario machine matches delegation | `AtAwaitingOtpScenario targets PaymentMachine but delegates to IdentityCheckMachine` |
+
+**Level 1b — Continuation validation:**
+
+| Check | Example error |
+|-------|---------------|
+| `continuation()` state routes exist in machine | `Continuation state 'confirming_pins' not found` |
+| Continuation behavior classes exist | `Guard class 'IsPinRequiredGard' not found` |
+| Continuation delegation outcomes on delegation states only | `Continuation has '@done' on 'awaiting_pin' which is not a delegation state` |
 
 **Level 2 — Path validation:**
 

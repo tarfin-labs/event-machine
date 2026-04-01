@@ -80,13 +80,34 @@ The machine processes the event with overrides active, arrives at `shipping`, an
 php artisan machine:scenario-validate
 ```
 
+### 6. Add continuation for interactive targets
+
+If your target is an interactive state (QA will send more events after arriving), define `continuation()` so the scenario stays active and applies overrides to subsequent requests:
+
+<!-- doctest-attr: ignore -->
+```php
+protected function continuation(): array
+{
+    return [
+        'confirming_pin' => '@done',
+        'polling'        => [
+            'outcome'                => '@done',
+            IsPinRequiredGuard::class => false,
+        ],
+        'saving_report' => '@done',
+    ];
+}
+```
+
+See [Continuation — Multi-Request Flows](/advanced/scenario-plan#continuation-multi-request-flows) for the full guide.
+
 ## How It Works
 
 ScenarioPlayer sends the trigger event with behavior overrides active — guards return fixed booleans instead of evaluating real conditions, actions write mock context values instead of calling external services, and delegation outcomes are intercepted so child machines and jobs are never dispatched. After the trigger event is processed, ScenarioPlayer checks if the machine landed on a state with an `@continue` directive; if so, it automatically sends the specified event and repeats until no more `@continue` entries match. At the end, ScenarioPlayer validates that the machine reached the declared `$target` state — throwing `ScenarioFailedException` if it did not. Because the overrides operate within the real machine engine (not a simulation), the machine produces real `MachineEvent` records, real context mutations, and real state transitions — the resulting event history is indistinguishable from a machine that arrived at that state through organic user interaction.
 
 ## MachineScenario Class
 
-Every scenario extends `MachineScenario` with 5 identity properties and an optional `plan()` method:
+Every scenario extends `MachineScenario` with 5 identity properties, an optional `plan()` method, and an optional `continuation()` method:
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -130,6 +151,18 @@ class AtShippingScenario extends MachineScenario
 | `$description` | `string` | `'At shipping'` | Human-readable, shown in endpoint responses |
 
 Multiple scenarios can share the same `(source, event)` with different targets. The **slug** (derived from the class name) disambiguates.
+
+### Continuation Methods
+
+When a scenario targets an interactive state (QA will send more events after reaching `$target`), define `continuation()` to keep the scenario active across subsequent requests:
+
+| Method | Return | Purpose |
+|--------|--------|---------|
+| `continuation()` | `array<string, mixed>` | Overrides applied on subsequent requests after target is reached. Same format as `plan()`. Returns `[]` by default (single-shot). |
+| `hasContinuation()` | `bool` | Whether this scenario has a continuation phase (`continuation() !== []`) |
+| `resolvedContinuation()` | `array<string, mixed>` | Public accessor for the resolved continuation plan |
+
+The `$isContinuation` flag (public `bool`, default `false`) is set by `MachineController` when restoring a continuation from the database. It distinguishes initial activation (Phase 1, uses `plan()`) from continuation (Phase 2, uses `continuation()`).
 
 ### Full State Route Requirement
 
