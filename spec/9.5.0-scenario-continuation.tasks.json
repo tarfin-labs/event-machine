@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "spec": "spec/9.4.0-scenario-continuation.md",
+  "spec": "spec/9.5.0-scenario-continuation.md",
   "created_at": "2026-04-01T13:23:44Z",
   "updated_at": "2026-04-01T16:11:49.837262Z",
   "workflow": {
