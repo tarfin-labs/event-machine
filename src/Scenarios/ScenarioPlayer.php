@@ -348,9 +348,9 @@ class ScenarioPlayer
      * last state's value is used (simple last-wins policy). True state-aware
      * routing at invocation time requires engine support and is deferred.
      */
-    public static function registerOverrides(MachineScenario $scenario): void
+    public static function registerOverrides(MachineScenario $scenario, bool $useContinuation = false): void
     {
-        $plan       = $scenario->resolvedPlan();
+        $plan       = $useContinuation ? $scenario->resolvedContinuation() : $scenario->resolvedPlan();
         $stateAware = self::detectStateAwareOverrides($plan);
 
         foreach ($plan as $value) {
@@ -653,9 +653,9 @@ class ScenarioPlayer
      *     childScenarios: array<string, class-string<MachineScenario>>,
      * }
      */
-    private function classifyPlanValues(): array
+    private function classifyPlanValues(bool $useContinuation = false): array
     {
-        $plan           = $this->scenario->resolvedPlan();
+        $plan           = $useContinuation ? $this->scenario->resolvedContinuation() : $this->scenario->resolvedPlan();
         $overrides      = [];
         $outcomes       = [];
         $childScenarios = [];
