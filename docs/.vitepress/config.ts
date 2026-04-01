@@ -108,11 +108,11 @@ export default withMermaid(
               collapsed: true,
               items: [
                 { text: 'Overview', link: '/advanced/scenarios' },
+                { text: 'Override Behaviors', link: '/advanced/scenario-behaviors' },
                 { text: 'Writing plan()', link: '/advanced/scenario-plan' },
                 { text: 'Endpoint Integration', link: '/advanced/scenario-endpoints' },
                 { text: 'Scaffold & Validation', link: '/advanced/scenario-commands' },
                 { text: 'Runtime & Engine', link: '/advanced/scenario-runtime' },
-                { text: 'Scenario Behaviors', link: '/advanced/scenario-behaviors' },
               ]
             }
           ]

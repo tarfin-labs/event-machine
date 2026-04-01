@@ -33,7 +33,28 @@ This analyzes the machine definition, finds the path from source to target, and 
 
 ### 2. Review and adjust the generated plan
 
-The scaffolder generates a `plan()` with override entries for each intermediate state. Review the generated file, adjust guard/action overrides and delegation outcomes. See [MachineScenario Class](#machinescenario-class) below for the full class structure.
+The scaffolder generates a `plan()` with override entries for each intermediate state. Here is an example of what it produces:
+
+<!-- doctest-attr: ignore -->
+```php
+protected function plan(): array
+{
+    return [
+        'eligibility_check' => [
+            IsBlacklistedGuard::class => false,      // guard override — fixed bool
+        ],
+        'payment_processing' => '@done.completed',   // delegation — simulate child @done
+        'identity_verification' => '@done',           // delegation — simulate job @done
+        'review' => [
+            '@continue' => ReviewApprovedEvent::class, // interactive — auto-send event
+            ProcessReviewAction::class => ['reviewApproved' => true],
+            HasValidDocumentsGuard::class => true,
+        ],
+    ];
+}
+```
+
+Review the generated file, adjust guard/action overrides and delegation outcomes. See [MachineScenario Class](#machinescenario-class) below for the full class structure.
 
 ### 3. Enable scenarios in staging
 
@@ -58,6 +79,10 @@ The machine processes the event with overrides active, arrives at `shipping`, an
 ```bash
 php artisan machine:scenario-validate
 ```
+
+## How It Works
+
+ScenarioPlayer sends the trigger event with behavior overrides active — guards return fixed booleans instead of evaluating real conditions, actions write mock context values instead of calling external services, and delegation outcomes are intercepted so child machines and jobs are never dispatched. After the trigger event is processed, ScenarioPlayer checks if the machine landed on a state with an `@continue` directive; if so, it automatically sends the specified event and repeats until no more `@continue` entries match. At the end, ScenarioPlayer validates that the machine reached the declared `$target` state — throwing `ScenarioFailedException` if it did not. Because the overrides operate within the real machine engine (not a simulation), the machine produces real `MachineEvent` records, real context mutations, and real state transitions — the resulting event history is indistinguishable from a machine that arrived at that state through organic user interaction.
 
 ## MachineScenario Class
 
@@ -176,9 +201,24 @@ $player   = new ScenarioPlayer($scenario);
 $state    = $player->execute(); // Creates machine internally
 ```
 
+## Naming Conventions
+
+| Type | Pattern | Example |
+|------|---------|---------|
+| Machine scenario | `At{Target}Scenario` | `AtReviewScenario` |
+| Behavior scenario | `{OriginalName}Scenario` | `HasAgreedToTermsGuardScenario` |
+
+**Machine scenario names** are descriptive — typically the target state. When multiple scenarios target the same state via different paths, disambiguate:
+
+- `AtPaymentVerificationScenario` — unique target, sufficient
+- `AtPaymentVerificationViaConsentScenario` — same target, different source/event
+
+**Behavior scenario names** mirror the original behavior name with `Scenario` suffix. This enables search: `HasAgreedToTerms` finds both `HasAgreedToTermsGuard` and `HasAgreedToTermsGuardScenario`.
+
 ## Next Steps
 
-- **[Writing plan()](/advanced/scenario-plan)** — Behavior overrides, delegation outcomes, child scenarios, @continue, parallel states, parameters
-- **[Endpoint Integration](/advanced/scenario-endpoints)** — QA workflow, request/response format, scenario routes, file organization
+- **[Override Behaviors](/advanced/scenario-behaviors)** — How to write and use scenario behavior overrides
+- **[Writing plan()](/advanced/scenario-plan)** — Complete plan() authoring guide
+- **[Endpoint Integration](/advanced/scenario-endpoints)** — HTTP activation and availableScenarios response
 - **[Scaffold & Validation](/advanced/scenario-commands)** — `machine:scenario` and `machine:scenario-validate` commands
-- **[Runtime & Engine](/advanced/scenario-runtime)** — Environment gating, async propagation, engine feature reference, error handling
+- **[Runtime & Engine](/advanced/scenario-runtime)** — Gating, async propagation, error handling

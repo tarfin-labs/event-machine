@@ -48,9 +48,9 @@ Scenario overrides live in the Laravel container — process-scoped. When async 
 | **Machine::fake()** | Incompatible — `ScenarioConfigurationException` if machine is faked |
 | **Event history** | Real event history created — machine indistinguishable from organic |
 | **Event archival** | Transparent — no special handling |
-| **should_persist** | `scenario_class` column only written when `should_persist=true` |
+| **should_persist** | `scenario_class` column only written when `should_persist=true`. When false (unit tests), scenarios work but async propagation is unavailable. |
 | **Entry/exit actions** | Execute normally — overrides apply same as transition actions |
-| **Event bubbling** | Override key must match state route where transition is **defined** |
+| **Event bubbling** | Override key must match the state route where the transition is **defined**, not where it's inherited from. If a parent state defines a transition and a child state inherits it, the override key must use the parent's route. |
 | **raise() / sendTo()** | Work normally — scenarios scoped to single machine instance |
 | **computedContext()** | Not overridable — override actions that populate dependent context fields |
 | **Lock contention** | Existing lock handling — POST returns 423 Locked |
@@ -58,7 +58,7 @@ Scenario overrides live in the Laravel container — process-scoped. When async 
 | **Transient as target** | Invalid — `$target` must be a settleable state |
 | **Path coverage** | Scenario-driven paths recorded normally by `PathCoverageTracker` |
 | **Fire-and-forget** | Dispatches suppressed during scenario mode |
-| **Parallel as target** | Target `'payment_verification'` matches child routes like `payment_verification.payment.completed` — segment containment check |
+| **Parallel as target** | When the target is a parallel state (e.g., `'payment_verification'`), validation uses segment containment: if any current route contains `'.payment_verification.'` as a segment, it matches. This means `$target = 'payment_verification'` succeeds when the machine is at `order.payment_verification.payment.completed`. |
 | **`@start` event** | Creates fresh machine and processes `@always` chain — for transient initial states |
 
 ## Error Handling
@@ -83,6 +83,20 @@ Hint: The following behaviors at state 'eligibility_check' require context keys:
 Add context overrides in plan() for the relevant state.
 ```
 
+## Debugging Scenarios
+
+When a scenario fails or produces unexpected state:
+
+1. **Check validation first:** `php artisan machine:scenario-validate --scenario=at-review-scenario` catches structural errors (wrong state routes, missing paths, event mismatches).
+
+2. **Read the exception message:** `MissingMachineContextException` is enriched with `$requiredContext` hints from guards and entry actions. `ScenarioTargetMismatchException` shows expected vs actual state.
+
+3. **Inspect `machine_events`:** Scenario execution produces real event history. Query the last events for the `root_event_id` to see which transitions fired and where the machine stopped.
+
+4. **Check `machine_current_states`:** The `scenario_class` column shows if a scenario is still active. If it's `null` when you expect it to be set, the deactivation flow may have cleared it.
+
+5. **Preview with `--dry-run`:** `php artisan machine:scenario AtReview OrderMachine pending SubmitEvent under_review --dry-run` shows the scaffolded plan without writing files — useful for understanding what path the BFS found.
+
 ## ScenarioPlayer Static API
 
 | Method | Purpose |
@@ -101,3 +115,29 @@ The `InteractsWithMachines` trait auto-resets scenario state after each test:
 - `ScenarioDiscovery::resetCache()` — clears discovery cache
 
 No manual cleanup needed in tests that use `InteractsWithMachines`.
+
+**Unit test example — verify scenario reaches target:**
+
+<!-- doctest-attr: ignore -->
+```php
+test('at-review scenario reaches under_review', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    $machine = OrderMachine::create(context: ['orderId' => 1]);
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    $scenario = new AtReviewScenario();
+    $player   = new ScenarioPlayer($scenario);
+    $state    = $player->execute(machine: $machine, rootEventId: $rootEventId);
+
+    expect($state->value)->toContain('order.under_review');
+});
+```
+
+**Validating scenarios in CI:**
+
+```bash
+php artisan machine:scenario-validate --ansi
+# Exit code 1 if any scenario is structurally invalid
+```

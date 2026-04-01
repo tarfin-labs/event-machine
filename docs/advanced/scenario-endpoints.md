@@ -24,6 +24,8 @@ POST /api/orders/{orderId}/submit
 }
 ```
 
+The `scenario` field is the **slug** — the kebab-case version of the scenario class basename (e.g., `AtReviewScenario` → `at-review-scenario`). The `scenarioParams` field contains validated parameters defined in the scenario's `params()` method.
+
 With parameters:
 
 ```http
@@ -93,7 +95,7 @@ When `MACHINE_SCENARIOS_ENABLED=true`, every endpoint response includes an `avai
 
 The field is built by `ScenarioDiscovery::groupedByEvent()` which scans the `Scenarios/` directory relative to the machine class. Only scenarios whose `$source` property matches the current state (exact or suffix match) are included.
 
-When `MACHINE_SCENARIOS_ENABLED=false` (default), the `availableScenarios` field is **not present** in the response — zero overhead in production.
+When `MACHINE_SCENARIOS_ENABLED=false` (default), the `availableScenarios` field is **not present** in the response — zero overhead in production. When enabled but no scenarios match the current state, the field is an empty object `{}`.
 
 ## Scenario Deactivation
 
@@ -106,7 +108,7 @@ POST /api/orders/{orderId}/review-approved
 }
 ```
 
-No `scenario` field → previous scenario deactivated. QA can resume manual testing at any point.
+No `scenario` field → previous scenario deactivated (clears `scenario_class` and `scenario_params` columns in `machine_current_states`). QA can resume manual testing at any point.
 
 ## Error Handling
 

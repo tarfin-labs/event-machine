@@ -148,7 +148,19 @@ This enables search: `HasConsent` finds both `HasConsentGuard` and `HasConsentGu
 
 ## File Organization
 
-Place scenario behaviors next to the scenario that uses them in a subdirectory named after the scenario. For simple scenarios (all inline overrides), a single file is sufficient. See [Scenario Endpoints — File Organization](/advanced/scenario-endpoints#file-organization) for the full directory structure.
+Place scenario behaviors next to the scenario that uses them in a subdirectory named after the scenario:
+
+```
+app/Machines/CarSales/
+└── Scenarios/
+    ├── AtVerificationScenario.php                    # simple — all inline
+    └── AtCheckingProtocolScenario/                   # complex — has behavior classes
+        ├── AtCheckingProtocolScenario.php
+        └── Guards/
+            └── IsCustomerInfoCompleteGuardScenario.php
+```
+
+For simple scenarios (all inline overrides), a single file is sufficient. Create a subdirectory only when the scenario has class-based behavior overrides.
 
 ## Inline vs Class-Based Overrides
 
@@ -160,6 +172,8 @@ The override mechanism differs based on whether the behavior key is a class FQCN
 | **camelCase** (inline) | `'isEligibleGuard' => false` | `InlineBehaviorFake::fake()` — inline interception |
 
 Both support the same value forms (bool, array, closure, class). The engine resolves the correct mechanism automatically based on the key format.
+
+`InlineBehaviorFake` is the testing infrastructure class that intercepts inline behavior closures. When a camelCase key is registered, ScenarioPlayer calls `InlineBehaviorFake::fake($key, $replacement)` which replaces the original closure with the scenario's override during execution. Cleanup is automatic — `ScenarioPlayer::cleanupOverrides()` resets all fakes after each `execute()` call.
 
 ## Override Form Comparison
 

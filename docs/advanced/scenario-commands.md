@@ -72,6 +72,49 @@ The scaffolder generates classification-specific entries:
 | **Parallel** | Region outcomes + `@done` guard override |
 | **Interactive** | `'route' => ['@continue' => Event::class]` with `// Also: OtherEvent` |
 
+**Full generated file example:**
+
+<!-- doctest-attr: ignore -->
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Machines\Order\Scenarios;
+
+use App\Machines\Order\OrderMachine;
+use App\Machines\Order\Events\SubmitOrderEvent;
+use App\Machines\Order\Guards\IsBlacklistedGuard;
+use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
+
+class AtAllocationScenario extends MachineScenario
+{
+    protected string $machine     = OrderMachine::class;
+    protected string $source      = 'pending';
+    protected string $event       = SubmitOrderEvent::class;
+    protected string $target      = 'allocation';
+    protected string $description = 'TODO: describe this scenario';
+
+    protected function plan(): array
+    {
+        return [
+            // ── eligibility_check ── @always, guards: [IsBlacklistedGuard]
+            'eligibility_check' => [
+                IsBlacklistedGuard::class => false, // TODO: adjust
+            ],
+
+            // ── payment_processing ── delegation: PaymentJob
+            'payment_processing' => '@done', // Available: @done, @fail, @timeout
+
+            // ── under_review ── interactive, @continue to reach target
+            'under_review' => [
+                '@continue' => 'ReviewApprovedEvent', // Also: ReviewRejectedEvent
+            ],
+        ];
+    }
+}
+```
+
 When a `@continue` event has `EventBehavior::rules()`, payload fields are extracted:
 
 <!-- doctest-attr: ignore -->
@@ -92,7 +135,20 @@ php artisan machine:scenario-validate
     {--scenario=}     # Filter: slug, class basename, or FQCN
 ```
 
-When `{machine}` is omitted, the command auto-discovers all Machine subclasses that have a `Scenarios/` directory (via Composer classmap, falls back to `app/Machines` file scan).
+When `{machine}` is omitted, the command auto-discovers all Machine subclasses that have a `Scenarios/` directory (via Composer classmap, falls back to `app/Machines` file scan). Ensure autoload is up to date with `composer dump-autoload` if newly added machines aren't found.
+
+**Filter by single scenario:**
+
+```bash
+# By slug
+php artisan machine:scenario-validate App\\Machines\\Order\\OrderMachine --scenario=at-review-scenario
+
+# By class basename
+php artisan machine:scenario-validate App\\Machines\\Order\\OrderMachine --scenario=AtReviewScenario
+
+# By FQCN
+php artisan machine:scenario-validate --scenario=App\\Machines\\Order\\Scenarios\\AtReviewScenario
+```
 
 ### What It Validates
 

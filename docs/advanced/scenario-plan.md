@@ -37,10 +37,12 @@ Both class-based behaviors (`ClassName::class => value`) and inline behaviors (`
 
 | Behavior | Bool | Array (context write) | Closure | Class |
 |----------|------|----------------------|---------|-------|
-| **Guard** | Return value | -- | Must return `bool` | `GuardScenarioBehavior` |
-| **Action** | -- | Key-value to context | `void` | `ActionScenarioBehavior` |
-| **Calculator** | -- | Key-value to context | `void` | `CalculatorScenarioBehavior` |
-| **Output** | -- | Return as output | Must return `mixed` | `OutputScenarioBehavior` |
+| **Guard** | Return value | n/a | Must return `bool` | `GuardScenarioBehavior` |
+| **Action** | n/a | Key-value pairs written to context | `void` | `ActionScenarioBehavior` |
+| **Calculator** | n/a | Key-value pairs written to context | `void` | `CalculatorScenarioBehavior` |
+| **Output** | n/a | Returned as output data | Must return `mixed` | `OutputScenarioBehavior` |
+
+`n/a` = combination not supported for that behavior type.
 
 **Guards:**
 
@@ -108,7 +110,7 @@ Both class-based behaviors (`ClassName::class => value`) and inline behaviors (`
 
 ### Same Behavior, Different Values Per State
 
-When the same behavior appears under multiple states with different values, ScenarioPlayer uses the last state's value (last-wins policy):
+When the same behavior appears under multiple states with different values, ScenarioPlayer uses the last occurrence in `plan()` declaration order (last-wins policy). This is rarely needed — it only matters when the same guard or action runs at multiple intermediate states along the path:
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -350,7 +352,26 @@ protected function plan(): array
 
 ## Fire-and-Forget Delegation
 
-Fire-and-forget delegation (machine with `queue` + no `@done`, or job with `target`) does NOT need entries in `plan()`. The parent transitions immediately. In scenario mode, fire-and-forget dispatches are suppressed.
+Fire-and-forget delegation (machine with `queue` + no `@done`, or job with `target`) does NOT need entries in `plan()`. The parent transitions immediately past the fire-and-forget state. In scenario mode, the actual dispatch is suppressed — no child job/machine runs:
+
+<!-- doctest-attr: ignore -->
+```php
+// Machine config — fire-and-forget: has queue, no @done
+'sending_notification' => [
+    'job'   => SendNotificationJob::class,
+    'queue' => 'notifications',
+    // No @done — parent continues immediately
+],
+
+// Scenario plan — no entry needed for sending_notification
+protected function plan(): array
+{
+    return [
+        'checking_eligibility' => [IsEligibleGuard::class => false],
+        // 'sending_notification' NOT listed — parent skips it automatically
+    ];
+}
+```
 
 ## Scenario Parameters
 
@@ -416,16 +437,3 @@ Each `params()` entry is either a **plain array** (validation rules only) or an 
 
 Parameters are sent by the frontend in `scenarioParams` and validated before `plan()` is called.
 
-## Naming Conventions
-
-| Type | Pattern | Example |
-|------|---------|---------|
-| Machine scenario | `At{Target}Scenario` | `AtReviewScenario` |
-| Behavior scenario | `{OriginalName}Scenario` | `HasAgreedToTermsGuardScenario` |
-
-**Machine scenario names** are descriptive — typically the target state. When multiple scenarios target the same state via different paths, disambiguate:
-
-- `AtPaymentVerificationScenario` — unique target, sufficient
-- `AtPaymentVerificationViaConsentScenario` — same target, different source/event
-
-**Behavior scenario names** mirror the original behavior name with `Scenario` suffix. This enables search: `HasAgreedToTerms` finds both `HasAgreedToTermsGuard` and `HasAgreedToTermsGuardScenario`.
