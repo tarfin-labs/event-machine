@@ -292,6 +292,10 @@ class ScenarioValidator
                 $this->errors[] = "'{$route}' in continuation() has delegation outcome '{$value}' but is not a delegation state";
             }
 
+            if (!$isDelegation && is_array($value) && isset($value['outcome'])) {
+                $this->errors[] = "'{$route}' in continuation() has delegation outcome but is not a delegation state";
+            }
+
             // Check behavior override classes exist
             if (is_array($value) && !isset($value['outcome'])) {
                 foreach (array_keys($value) as $key) {
@@ -320,6 +324,10 @@ class ScenarioValidator
             // Check delegation outcomes on non-delegation states
             if (!$isDelegation && is_string($value) && str_starts_with($value, '@')) {
                 $this->errors[] = "'{$route}' has delegation outcome '{$value}' but is not a delegation state";
+            }
+
+            if (!$isDelegation && is_array($value) && isset($value['outcome'])) {
+                $this->errors[] = "'{$route}' has delegation outcome but is not a delegation state";
             }
 
             // Check @continue on delegation states
