@@ -1,0 +1,210 @@
+{
+  "version": 1,
+  "spec": "spec/9.6.0-callable-outcome.md",
+  "created_at": "0001-01-01T00:00:00Z",
+  "updated_at": "2026-04-01T17:25:44.96263Z",
+  "workflow": {
+    "quality_gate": "composer quality",
+    "commit_strategy": "agentic-commits"
+  },
+  "coverage": {
+    "total_sections": 23,
+    "mapped_sections": 8,
+    "context_only": [
+      "# Callable Delegation Outcome in Scenarios",
+      "## Problem",
+      "### The Findeks PIN Example",
+      "### Current Limitation",
+      "### Additional Limitation: Guard Overrides in Outcome Arrays",
+      "## Proposed Solution",
+      "### Callable Outcome",
+      "### Guard/Action Override Extraction from Outcome Arrays",
+      "## Closure Signature",
+      "## Deactivation / Cleanup",
+      "## What Doesn't Change",
+      "## Breaking Change?",
+      "### 4. Return Value Validation",
+      "## What Gets Added",
+      "## Implementation Order"
+    ],
+    "unmapped": []
+  },
+  "tasks": [
+    {
+      "id": "extract-overrides",
+      "title": "Extract behavior overrides from outcome arrays in classifyPlanValues()",
+      "description": "When an outcome array contains class-keyed entries (guards, actions) alongside 'outcome', extract them into $overrides so they get registered in the container. This is a bug fix — currently these overrides are silently ignored.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "bugfix",
+        "player"
+      ],
+      "depends_on": null,
+      "estimate_minutes": 8,
+      "acceptance": "classifyPlanValues() extracts class-keyed entries from outcome arrays into $overrides. Static test #5 verifies guard override in outcome array is applied during @fail routing. composer quality passes.",
+      "source_sections": null,
+      "source_lines": "82-108,114-138",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "callable-resolve",
+      "title": "Resolve Closure outcome in handleScenarioOutcome()",
+      "description": "In MachineDefinition::handleScenarioOutcome(), when the outcome value is a Closure, call it with ContextManager to get the outcome string. Signature: fn(ContextManager $context): string.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "definition"
+      ],
+      "depends_on": [
+        "extract-overrides"
+      ],
+      "estimate_minutes": 5,
+      "acceptance": "handleScenarioOutcome() resolves Closure outcome via $rawOutcome($state-\u003econtext). Returns '@done', '@fail', or '@timeout' string. Downstream routing unchanged.",
+      "source_sections": null,
+      "source_lines": "96-108",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "validator-closure",
+      "title": "Accept Closure as valid outcome in ScenarioValidator",
+      "description": "In ScenarioValidator's checkPlan() and checkContinuation(), accept Closure as a valid outcome value alongside string outcomes.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "validator"
+      ],
+      "depends_on": [
+        "callable-resolve"
+      ],
+      "estimate_minutes": 5,
+      "acceptance": "ScenarioValidator does not report errors for Closure outcomes in plan() or continuation(). Tests #8-#9 verify.",
+      "source_sections": null,
+      "source_lines": "140-150",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "stub-scenario",
+      "title": "Create CallableOutcomeScenario test stub",
+      "description": "Create a test stub scenario that uses callable outcome on a delegation state. The Closure checks a context value and returns @done or @fail accordingly. Also need a stub machine with a delegation state that has @fail with guarded retry.",
+      "status": "open",
+      "tags": [
+        "test",
+        "stub"
+      ],
+      "depends_on": [
+        "callable-resolve"
+      ],
+      "estimate_minutes": 8,
+      "acceptance": "CallableOutcomeScenario stub exists with callable outcome in plan/continuation. Stub machine has delegation state with @done and guarded @fail routing.",
+      "source_sections": null,
+      "source_lines": "56-75",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "unit-tests",
+      "title": "Write 7 unit tests for callable outcome",
+      "description": "Tests #1-#7: callable @done, callable @fail, context access, callable+guard override, static+guard override (bug fix), @done.{state}, @timeout.",
+      "status": "open",
+      "tags": [
+        "test",
+        "unit"
+      ],
+      "depends_on": [
+        "stub-scenario",
+        "extract-overrides"
+      ],
+      "estimate_minutes": 12,
+      "acceptance": "7 tests pass in ScenarioPlayerTest.php: #1 callable→@done, #2 callable→@fail, #3 context access, #4 callable+guard override, #5 static+guard override (bugfix), #6 @done.{state}, #7 @timeout.",
+      "source_sections": null,
+      "source_lines": "186-196",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "validator-tests",
+      "title": "Write 2 validator tests for Closure acceptance",
+      "description": "Tests #8-#9: callable outcome in plan is valid, callable outcome in continuation is valid.",
+      "status": "open",
+      "tags": [
+        "test",
+        "validator"
+      ],
+      "depends_on": [
+        "validator-closure",
+        "stub-scenario"
+      ],
+      "estimate_minutes": 5,
+      "acceptance": "2 tests pass in ScenarioValidatorTest.php: #8 callable outcome in plan valid, #9 callable outcome in continuation valid.",
+      "source_sections": null,
+      "source_lines": "198-203",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "qa-test",
+      "title": "Write QA test #10 for callable outcome",
+      "description": "QA test: callable outcome with correct PIN returns @done (reaches final success), wrong PIN returns @fail (reaches retry state). Two sequential runs in one test.",
+      "status": "open",
+      "tags": [
+        "test",
+        "qa"
+      ],
+      "depends_on": [
+        "unit-tests"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "QA test #10 passes: correct PIN (now()-\u003eformat('dmy')) → @done → final. Wrong PIN ('000000') → @fail → retry state. Both paths verified in single test.",
+      "source_sections": null,
+      "source_lines": "205-209",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "docs",
+      "title": "Update documentation for callable outcome feature",
+      "description": "Add Callable Outcome section to scenario-plan.md: API, Closure signature, example with Findeks PIN, when to use. Update upgrading.md with 9.6.0 section.",
+      "status": "open",
+      "tags": [
+        "docs"
+      ],
+      "depends_on": [
+        "callable-resolve"
+      ],
+      "estimate_minutes": 8,
+      "acceptance": "scenario-plan.md has Callable Outcome section with API example and Closure signature. upgrading.md has 9.6.0 section documenting callable outcome + guard override extraction bugfix.",
+      "source_sections": null,
+      "source_lines": "211-217",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    }
+  ]
+}
