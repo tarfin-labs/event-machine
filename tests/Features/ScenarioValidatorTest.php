@@ -344,3 +344,37 @@ test('validates continuation delegation outcomes on delegation states', function
         ->and(implode(' ', $errors))->toContain('delegation')
         ->and(implode(' ', $errors))->toContain('continuation()');
 });
+
+test('callable outcome in plan is valid on delegation state', function (): void {
+    $scenario = makeScenario([
+        'plan' => [
+            'processing' => [
+                'outcome' => function (): string {
+                    return '@done';
+                },
+            ],
+        ],
+    ]);
+    $validator = new ScenarioValidator($scenario);
+    $errors    = $validator->validate();
+
+    // processing IS a delegation state — callable outcome should be valid
+    $outcomeErrors = array_filter($errors, fn ($e): bool => str_contains($e, 'delegation outcome'));
+    expect($outcomeErrors)->toBeEmpty();
+});
+
+test('callable outcome in continuation is valid on delegation state', function (): void {
+    $scenario = makeContinuationScenario([
+        'delegating' => [
+            'outcome' => function (): string {
+                return '@done';
+            },
+        ],
+    ]);
+    $validator = new ScenarioValidator($scenario);
+    $errors    = $validator->validate();
+
+    // delegating IS a delegation state — callable outcome should be valid
+    $outcomeErrors = array_filter($errors, fn ($e): bool => str_contains($e, 'delegation outcome'));
+    expect($outcomeErrors)->toBeEmpty();
+});

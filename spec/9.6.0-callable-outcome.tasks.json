@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.0-callable-outcome.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-01T18:30:32.966026Z",
+  "updated_at": "2026-04-01T18:36:11.038248Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "agentic-commits"
@@ -121,7 +121,7 @@
       "id": "unit-tests",
       "title": "Write 7 unit tests for callable outcome",
       "description": "Tests #1-#7: callable @done, callable @fail, context access, callable+guard override, static+guard override (bug fix), @done.{state}, @timeout.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "test",
         "unit"
@@ -135,16 +135,16 @@
       "source_sections": null,
       "source_lines": "186-196",
       "started_at": "2026-04-01T18:30:32.966026Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-01T18:36:04.471005Z",
+      "closed_reason": "7 tests pass: #1 callable→@done, #2 callable→@fail→retry, #3 InvokableBehavior injection (context.result=pin_stateKey proves both ContextManager+State injected), #4 callable+guard override, #5 static+guard override bugfix, #6 @done.error via ScenarioTestMachine, #7 @timeout. 2592 tests total.",
+      "gate_passed_at": "2026-04-01T18:36:04.471005Z",
+      "commit_sha": "949bc1df"
     },
     {
       "id": "validator-tests",
       "title": "Write 2 validator tests for Closure acceptance",
       "description": "Tests #8-#9: callable outcome in plan is valid, callable outcome in continuation is valid.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "test",
         "validator"
@@ -157,7 +157,7 @@
       "acceptance": "2 tests pass in ScenarioValidatorTest.php: #8 callable outcome in plan valid, #9 callable outcome in continuation valid.",
       "source_sections": null,
       "source_lines": "198-203",
-      "started_at": null,
+      "started_at": "2026-04-01T18:36:11.038248Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,
