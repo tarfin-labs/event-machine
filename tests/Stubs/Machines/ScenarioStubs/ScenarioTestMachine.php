@@ -7,12 +7,14 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Jobs\ProcessJob;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\FinishEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\RejectEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsValidGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\DelegateEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Actions\ProcessAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\StartParallelEvent;
 
 /**
  * Minimal machine covering all 5 state classifications + child machine delegation.
@@ -146,15 +148,19 @@ class ScenarioTestMachine extends Machine
             ],
             behavior: [
                 'events' => [
-                    'APPROVE'  => ApproveEvent::class,
-                    'REJECT'   => RejectEvent::class,
-                    'DELEGATE' => DelegateEvent::class,
+                    'APPROVE'        => ApproveEvent::class,
+                    'REJECT'         => RejectEvent::class,
+                    'DELEGATE'       => DelegateEvent::class,
+                    'START_PARALLEL' => StartParallelEvent::class,
+                    'FINISH'         => FinishEvent::class,
                 ],
             ],
             endpoints: [
                 'APPROVE',
                 'REJECT',
                 'DELEGATE',
+                'START_PARALLEL',
+                'FINISH',
             ],
         );
     }
