@@ -37,7 +37,7 @@ class ArchiveEventsCommand extends Command
     {
         $config = config('machine.archival', []);
 
-        if (!($config['enabled'] ?? true)) {
+        if (($config['enabled'] ?? true) === false) {
             $this->error('Archival is disabled. Set MACHINE_EVENTS_ARCHIVAL_ENABLED=true');
 
             return self::FAILURE;
@@ -114,7 +114,7 @@ class ArchiveEventsCommand extends Command
 
         $this->info("Dispatched {$machines->count()} archival jobs.");
 
-        if ($queue) {
+        if ($queue !== null) {
             $this->line("  Queue: {$queue}");
         }
 

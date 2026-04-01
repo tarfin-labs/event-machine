@@ -31,17 +31,17 @@ class MachineChild extends Model
 
     public $timestamps = false;
 
-    public const STATUS_PENDING = 'pending';
+    public const string STATUS_PENDING = 'pending';
 
-    public const STATUS_RUNNING = 'running';
+    public const string STATUS_RUNNING = 'running';
 
-    public const STATUS_COMPLETED = 'completed';
+    public const string STATUS_COMPLETED = 'completed';
 
-    public const STATUS_FAILED = 'failed';
+    public const string STATUS_FAILED = 'failed';
 
-    public const STATUS_CANCELLED = 'cancelled';
+    public const string STATUS_CANCELLED = 'cancelled';
 
-    public const STATUS_TIMED_OUT = 'timed_out';
+    public const string STATUS_TIMED_OUT = 'timed_out';
 
     protected $table    = 'machine_children';
     protected $fillable = [

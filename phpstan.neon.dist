@@ -1,8 +1,7 @@
-includes:
-  - ./vendor/larastan/larastan/extension.neon
-
 parameters:
     level: 5
+    strictRules:
+        dynamicCallOnStaticMethod: false
     paths:
         - src
         - config
@@ -27,7 +26,9 @@ parameters:
         # Strict comparison always true/false - defensive coding
         - identifier: identical.alwaysFalse
         # Boolean expression analysis - PHPDoc type inference
-        - identifier: booleanNot.alwaysFalse
+        -
+            identifier: booleanNot.alwaysFalse
+            reportUnmatched: false
         # is_subclass_of checks - intentional for polymorphism
         -
             identifier: function.impossibleType
@@ -50,4 +51,3 @@ parameters:
         - identifier: attribute.target
         # Covariant return types - Laravel framework patterns
         - identifier: method.childReturnType
-

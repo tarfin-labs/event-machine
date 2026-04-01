@@ -77,7 +77,7 @@ class ChildMachineCompletionJob implements ShouldQueue
             $parentMachine = $this->parentMachineClass::create(state: $this->parentRootEventId);
         } catch (RestoringStateException) {
             // Parent may be archived — attempt auto-restore and retry
-            if (config('machine.archival.enabled')) {
+            if (config('machine.archival.enabled') === true) {
                 $archiveService = new ArchiveService();
                 $restored       = $archiveService->restoreMachine($this->parentRootEventId);
 

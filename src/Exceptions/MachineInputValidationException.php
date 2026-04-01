@@ -16,7 +16,7 @@ class MachineInputValidationException extends RuntimeException
         string $paramName,
         array $availableKeys,
     ): self {
-        $keyList = implode(', ', $availableKeys) ?: '(empty)';
+        $keyList = $availableKeys !== [] ? implode(', ', $availableKeys) : '(empty)';
 
         return new self(
             "{$inputClass} input validation failed: missing required field '{$paramName}' — parent context has: [{$keyList}]"

@@ -14,7 +14,7 @@ class MachineLockManager
 {
     private static float $lastCleanupAt = 0;
 
-    private const CLEANUP_INTERVAL_SECONDS = 5;
+    private const int CLEANUP_INTERVAL_SECONDS = 5;
 
     /**
      * Reset cleanup timer (for testing).

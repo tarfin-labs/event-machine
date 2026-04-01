@@ -182,7 +182,7 @@ abstract class EventBehavior extends Data
     {
         $input = $this->payload ?? [];
 
-        if (!$keys) {
+        if ($keys === null) {
             return $input;
         }
 
@@ -198,7 +198,7 @@ abstract class EventBehavior extends Data
     /**
      * Retrieve data from the instance.
      *
-     * @param  string  $key
+     * @param  string|null  $key
      * @param  mixed  $default
      */
     public function data($key = null, $default = null): mixed

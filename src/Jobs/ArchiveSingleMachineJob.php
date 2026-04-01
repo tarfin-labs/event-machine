@@ -58,7 +58,7 @@ class ArchiveSingleMachineJob implements ShouldBeUnique, ShouldQueue
     {
         $config = config('machine.archival', []);
 
-        if (!($config['enabled'] ?? true)) {
+        if (($config['enabled'] ?? true) === false) {
             return;
         }
 

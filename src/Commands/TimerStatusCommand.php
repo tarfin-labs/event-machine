@@ -37,11 +37,11 @@ class TimerStatusCommand extends Command
             ])
             ->leftJoin('machine_timer_fires', 'machine_timer_fires.root_event_id', '=', 'machine_current_states.root_event_id');
 
-        if ($this->option('class')) {
+        if ($this->option('class') !== null) {
             $query->where('machine_current_states.machine_class', $this->option('class'));
         }
 
-        if ($this->option('state')) {
+        if ($this->option('state') !== null) {
             $query->where('machine_current_states.state_id', $this->option('state'));
         }
 

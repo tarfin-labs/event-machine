@@ -851,7 +851,7 @@ class TestMachine
             });
         Assert::assertNotNull($match, "No active state in region [{$regionId}]");
 
-        $segments  = explode('.', (string) $match);
+        $segments  = explode('.', $match);
         $lastState = end($segments);
         Assert::assertSame(
             $expectedState,
@@ -1267,7 +1267,7 @@ class TestMachine
 
             throw new AssertionFailedError(
                 "Expected event '{$eventName}' in state '{$currentState->id}' to have a timer (after/every), but it has none."
-                .' Events with timers: '.($timerEvents ?: 'none')
+                .' Events with timers: '.($timerEvents !== '' ? $timerEvents : 'none')
             );
         }
 
@@ -1522,7 +1522,7 @@ class TestMachine
         if (!isset($schedules[$eventType])) {
             throw new AssertionFailedError(
                 "Schedule '{$eventType}' is not defined on this machine. "
-                .'Available schedules: '.(empty($schedules) ? 'none' : implode(', ', array_keys($schedules))).'.'
+                .'Available schedules: '.($schedules === [] ? 'none' : implode(', ', array_keys($schedules))).'.'
             );
         }
 
@@ -1539,7 +1539,7 @@ class TestMachine
         if (!isset($schedules[$eventType])) {
             throw new AssertionFailedError(
                 "Schedule '{$eventType}' is not defined on this machine. "
-                .'Available schedules: '.(empty($schedules) ? 'none' : implode(', ', array_keys($schedules))).'.'
+                .'Available schedules: '.($schedules === [] ? 'none' : implode(', ', array_keys($schedules))).'.'
             );
         }
 

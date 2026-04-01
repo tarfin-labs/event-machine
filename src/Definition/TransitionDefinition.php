@@ -225,7 +225,7 @@ class TransitionDefinition
                     // Named params tuple: [GuardClass::class, 'min' => 100, 'max' => 10000]
                     $parsed          = BehaviorTupleParser::parse($guardDefinition, 'guards');
                     $guardDefinition = $parsed['definition'];
-                    $configParams    = $parsed['configParams'] ?: null;
+                    $configParams    = $parsed['configParams'] !== [] ? $parsed['configParams'] : null;
                 } elseif (is_string($guardDefinition) && str_contains($guardDefinition, ':')) {
                     // Deprecated colon syntax: 'guardName:arg1,arg2'
                     @trigger_error('The colon syntax "behavior:arg1,arg2" is deprecated since tarfin-labs/event-machine 9.0. Use named params tuple [[Class::class, \'param\' => value]] instead.', E_USER_DEPRECATED);
@@ -327,7 +327,7 @@ class TransitionDefinition
             if (is_array($calculatorDefinition)) {
                 $parsed               = BehaviorTupleParser::parse($calculatorDefinition, 'calculators');
                 $calculatorDefinition = $parsed['definition'];
-                $configParams         = $parsed['configParams'] ?: null;
+                $configParams         = $parsed['configParams'] !== [] ? $parsed['configParams'] : null;
             } elseif (is_string($calculatorDefinition) && str_contains($calculatorDefinition, ':')) {
                 @trigger_error('The colon syntax "behavior:arg1,arg2" is deprecated since tarfin-labs/event-machine 9.0. Use named params tuple [[Class::class, \'param\' => value]] instead.', E_USER_DEPRECATED);
                 [$calculatorDefinition, $colonArgs] = explode(':', $calculatorDefinition, 2);

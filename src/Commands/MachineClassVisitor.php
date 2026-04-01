@@ -31,7 +31,7 @@ class MachineClassVisitor extends NodeVisitorAbstract
             $extends = $node->extends?->toString();
             if ($extends === 'Machine' || $extends === Machine::class) {
                 $className = $node->name->toString();
-                if ($this->currentNamespace) {
+                if ($this->currentNamespace !== null) {
                     $className = $this->currentNamespace.'\\'.$className;
                 }
                 $this->machineClasses[] = $className;

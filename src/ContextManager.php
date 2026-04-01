@@ -41,7 +41,7 @@ class ContextManager extends Data
     {
         return match (true) {
             static::class === self::class      => Arr::get($this->data, $key),
-            is_subclass_of($this, self::class) => $this->$key,
+            is_subclass_of($this, self::class) => (new \ReflectionProperty($this, $key))->getValue($this),
         };
     }
 
@@ -65,7 +65,7 @@ class ContextManager extends Data
 
         match (true) {
             static::class === self::class      => $this->data[$key] = $value,
-            is_subclass_of($this, self::class) => $this->$key       = $value,
+            is_subclass_of($this, self::class) => (new \ReflectionProperty($this, $key))->setValue($this, $value),
         };
 
         return $value;
@@ -136,7 +136,7 @@ class ContextManager extends Data
      * static from() method and returns it.
      * If validation fails, it throws a MachineContextValidationException.
      *
-     * @param  array<mixed>|Arrayable<string, mixed>  $payload  The payload to be validated and created from.
+     * @param  array|Arrayable  $payload  The payload to be validated and created from.
      *
      * @return static A new instance of the class created from the payload.
      */
