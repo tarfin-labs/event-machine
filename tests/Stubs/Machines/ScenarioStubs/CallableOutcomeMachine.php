@@ -7,6 +7,7 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Jobs\ProcessJob;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ConfirmEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsRetryableGuard;
 
 /**
@@ -63,6 +64,14 @@ class CallableOutcomeMachine extends Machine
                     'failed'    => ['type' => 'final'],
                     'timed_out' => ['type' => 'final'],
                 ],
+            ],
+            behavior: [
+                'events' => [
+                    'CONFIRM' => ConfirmEvent::class,
+                ],
+            ],
+            endpoints: [
+                'CONFIRM',
             ],
         );
     }

@@ -10,7 +10,9 @@ use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\CallableOutcomeMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinuationScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\CallableOutcomeScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\MultiPauseContinuationScenario;
 
 uses(LocalQATestCase::class);
@@ -26,6 +28,11 @@ beforeEach(function (): void {
         'prefix'       => '/api/cont-qa',
         'machineIdFor' => ['APPROVE', 'REJECT', 'DELEGATE', 'START_PARALLEL', 'FINISH'],
         'name'         => 'cont-qa',
+    ]);
+    MachineRouter::register(CallableOutcomeMachine::class, [
+        'prefix'       => '/api/callable-qa',
+        'machineIdFor' => ['CONFIRM'],
+        'name'         => 'callable-qa',
     ]);
     Route::getRoutes()->refreshNameLookups();
     Route::getRoutes()->refreshActionLookups();
@@ -269,4 +276,50 @@ it('LocalQA: delegation chain — continuation @done propagates to final state',
     // Response reflects final state
     $data = $response->json('data');
     expect(str_contains(implode(',', $data['state']), 'delegation_complete'))->toBeTrue();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Callable Outcome Tests
+// ═══════════════════════════════════════════════════════════════
+
+it('LocalQA: callable outcome — correct PIN @done, wrong PIN @fail', function (): void {
+    // Run 1: correct PIN → @done → completed
+    $testMachine                        = CallableOutcomeMachine::startingAt(stateId: 'waiting', context: ['pin' => now()->format('dmy')]);
+    $machine                            = $testMachine->machine();
+    $machine->definition->shouldPersist = true;
+    $machine->persist();
+    $rootEventId1 = $machine->state->history->first()->root_event_id;
+
+    MachineCurrentState::where('root_event_id', $rootEventId1)
+        ->update(['scenario_class' => CallableOutcomeScenario::class, 'scenario_params' => []]);
+
+    $response = $this->postJson("/api/callable-qa/{$rootEventId1}/confirm", [
+        'type' => 'CONFIRM',
+    ]);
+    $response->assertOk();
+
+    $cs1 = MachineCurrentState::where('root_event_id', $rootEventId1)->first();
+    expect(str_contains($cs1->state_id, 'completed'))->toBeTrue(
+        'Expected completed with correct PIN, got: '.$cs1->state_id
+    );
+
+    // Run 2: wrong PIN → @fail + IsRetryableGuard=true → waiting (retry)
+    $testMachine2                        = CallableOutcomeMachine::startingAt(stateId: 'waiting', context: ['pin' => '000000']);
+    $machine2                            = $testMachine2->machine();
+    $machine2->definition->shouldPersist = true;
+    $machine2->persist();
+    $rootEventId2 = $machine2->state->history->first()->root_event_id;
+
+    MachineCurrentState::where('root_event_id', $rootEventId2)
+        ->update(['scenario_class' => CallableOutcomeScenario::class, 'scenario_params' => []]);
+
+    $response2 = $this->postJson("/api/callable-qa/{$rootEventId2}/confirm", [
+        'type' => 'CONFIRM',
+    ]);
+    $response2->assertOk();
+
+    $cs2 = MachineCurrentState::where('root_event_id', $rootEventId2)->first();
+    expect(str_contains($cs2->state_id, 'waiting'))->toBeTrue(
+        'Expected waiting (retry) with wrong PIN, got: '.$cs2->state_id
+    );
 });

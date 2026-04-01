@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.0-callable-outcome.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-01T18:36:11.038248Z",
+  "updated_at": "2026-04-01T18:37:45.715009Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "agentic-commits"
@@ -144,7 +144,7 @@
       "id": "validator-tests",
       "title": "Write 2 validator tests for Closure acceptance",
       "description": "Tests #8-#9: callable outcome in plan is valid, callable outcome in continuation is valid.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "test",
         "validator"
@@ -158,16 +158,16 @@
       "source_sections": null,
       "source_lines": "198-203",
       "started_at": "2026-04-01T18:36:11.038248Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-01T18:37:40.357993Z",
+      "closed_reason": "2 tests pass: #8 callable outcome in plan valid (processing is delegation), #9 callable outcome in continuation valid (delegating is delegation). 2594 tests total.",
+      "gate_passed_at": "2026-04-01T18:37:40.357993Z",
+      "commit_sha": "11c9faab"
     },
     {
       "id": "qa-test",
       "title": "Write QA test #10 for callable outcome",
       "description": "QA test: callable outcome with correct PIN returns @done (reaches final success), wrong PIN returns @fail (reaches retry state). Two sequential runs in one test.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "test",
         "qa"
@@ -179,7 +179,7 @@
       "acceptance": "QA test #10 passes: correct PIN (now()-\u003eformat('dmy')) → @done → final. Wrong PIN ('000000') → @fail → retry state. Both paths verified in single test.",
       "source_sections": null,
       "source_lines": "205-209",
-      "started_at": null,
+      "started_at": "2026-04-01T18:37:45.715009Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,
