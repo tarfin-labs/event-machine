@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.0-callable-outcome.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-01T17:25:44.96263Z",
+  "updated_at": "2026-04-01T18:00:45.993643Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "agentic-commits"
@@ -196,8 +196,8 @@
       "depends_on": [
         "callable-resolve"
       ],
-      "estimate_minutes": 8,
-      "acceptance": "scenario-plan.md has Callable Outcome section with API example and Closure signature. upgrading.md has 9.6.0 section documenting callable outcome + guard override extraction bugfix.",
+      "estimate_minutes": 12,
+      "acceptance": "scenario-plan.md has Callable Outcome section with API example and Closure signature. scenario-plan.md has Selective Pause pattern in @continue section (intentional omission = QA interaction point). scenario-endpoints.md has Continuation Branching pattern in Scenario Switching section (pause point + availableScenarios = branch point). upgrading.md has 9.6.0 section documenting callable outcome + guard override extraction bugfix.",
       "source_sections": null,
       "source_lines": "211-217",
       "started_at": null,
