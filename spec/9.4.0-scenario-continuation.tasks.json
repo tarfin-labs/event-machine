@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.4.0-scenario-continuation.md",
   "created_at": "2026-04-01T13:23:44Z",
-  "updated_at": "2026-04-01T14:19:22.747104Z",
+  "updated_at": "2026-04-01T15:34:00.766837Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "agentic-commits"
@@ -34,6 +34,7 @@
       "estimate_minutes": 5,
       "acceptance": "MachineScenario has continuation(), hasContinuation(), resolvedContinuation(), $isContinuation. Default behavior: continuation()=[], hasContinuation()=false, isContinuation=false.",
       "source_sections": null,
+      "started_at": null,
       "closed_at": "2026-04-01T14:07:38.028431Z",
       "closed_reason": "MachineScenario has continuation() returning [], hasContinuation() returning false, resolvedContinuation(), $isContinuation=false. 2559 tests pass.",
       "gate_passed_at": "2026-04-01T14:07:38.028431Z",
@@ -54,6 +55,7 @@
       "estimate_minutes": 10,
       "acceptance": "3 stub scenario files exist. ContinuationScenario targets reviewing with continuation to delegation_complete. MultiPauseContinuationScenario pauses at all_checked.",
       "source_sections": null,
+      "started_at": null,
       "closed_at": "2026-04-01T14:19:22.747104Z",
       "closed_reason": "3 stub scenarios created. ContinuationScenario: @start→reviewing with delegation continuation. MultiPauseContinuationScenario: reviewing→all_checked pause. ContinuationGuardOnlyScenario: guard-only. composer quality 2559 tests pass.",
       "gate_passed_at": "2026-04-01T14:19:22.747104Z",
@@ -74,6 +76,7 @@
       "estimate_minutes": 10,
       "acceptance": "registerOverrides(useContinuation: true) reads from continuation(). classifyPlanValues(useContinuation: true) classifies continuation entries. Existing behavior unchanged when useContinuation=false.",
       "source_sections": null,
+      "started_at": null,
       "closed_at": "2026-04-01T14:10:00.684727Z",
       "closed_reason": "registerOverrides and classifyPlanValues accept useContinuation:bool. When true, reads from resolvedContinuation(). Default false preserves existing behavior. 2559 tests pass.",
       "gate_passed_at": "2026-04-01T14:10:00.684727Z",
@@ -94,6 +97,7 @@
       "estimate_minutes": 15,
       "acceptance": "executeContinuation() exists with params (Machine, array eventPayload, string rootEventId, string eventType). Uses registerOverrides(useContinuation: true), runs @continue loop, deactivates on FINAL, keeps scenario on interactive. composer quality passes.",
       "source_sections": null,
+      "started_at": null,
       "closed_at": "2026-04-01T14:12:06.21793Z",
       "closed_reason": "executeContinuation(Machine, array, string, string) created in ScenarioPlayer. Uses registerOverrides(useContinuation: true), runs @continue loop, deactivates on FINAL, keeps scenario on interactive. composer quality passes with 2559 tests, 0 errors.",
       "gate_passed_at": "2026-04-01T14:12:06.21793Z",
@@ -103,7 +107,7 @@
       "id": "unit-tests-base",
       "title": "Write 5 base class unit tests",
       "description": "Tests 1-5: continuation() default, hasContinuation() false/true, resolvedContinuation(), isContinuation default. Add to ScenarioPlayerTest.php.",
-      "status": "open",
+      "status": "done",
       "tags": [
         "test",
         "unit"
@@ -114,16 +118,17 @@
       "estimate_minutes": 10,
       "acceptance": "5 tests pass in ScenarioPlayerTest.php. All verify MachineScenario default behavior and ContinuationScenario override.",
       "source_sections": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "started_at": null,
+      "closed_at": "2026-04-01T15:02:52.707228Z",
+      "closed_reason": "5 base class tests pass in ScenarioPlayerTest.php — continuation() default, hasContinuation false/true, resolvedContinuation, isContinuation flag.",
+      "gate_passed_at": "2026-04-01T15:02:52.707228Z",
+      "commit_sha": "5d71fa41"
     },
     {
       "id": "unit-tests-execution",
       "title": "Write 6 executeContinuation unit tests",
       "description": "Tests 6-11: applies continuation overrides, @continue loop, deactivates on final, keeps active on interactive, accepts any event, same state different overrides. Add to ScenarioPlayerTest.php.",
-      "status": "open",
+      "status": "done",
       "tags": [
         "test",
         "unit"
@@ -135,16 +140,17 @@
       "estimate_minutes": 15,
       "acceptance": "6 tests pass. Each tests a different executeContinuation behavior. All use stub scenarios.",
       "source_sections": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "started_at": null,
+      "closed_at": "2026-04-01T15:02:52.707228Z",
+      "closed_reason": "6 executeContinuation tests pass — applies continuation overrides, @continue loop, deactivates on final, keeps on interactive, accepts any event, independent overrides.",
+      "gate_passed_at": "2026-04-01T15:02:52.707228Z",
+      "commit_sha": "5d71fa41"
     },
     {
       "id": "unit-tests-edge",
       "title": "Write 4 edge case unit tests for continuation",
       "description": "Tests 12-15: guard-only continuation, state not in plan, multiple interactive pauses, continuation after parallel @done.",
-      "status": "open",
+      "status": "done",
       "tags": [
         "test",
         "unit"
@@ -156,10 +162,11 @@
       "estimate_minutes": 10,
       "acceptance": "4 edge case tests pass. Guard-only works, unknown state stops loop, multi-pause reuses overrides, parallel @done works.",
       "source_sections": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "started_at": null,
+      "closed_at": "2026-04-01T15:02:52.707228Z",
+      "closed_reason": "4 edge case tests pass — guard-only, unknown state stops loop, multi-pause reuse, parallel @done with continuation.",
+      "gate_passed_at": "2026-04-01T15:02:52.707228Z",
+      "commit_sha": "5d71fa41"
     },
     {
       "id": "controller-detection",
@@ -176,6 +183,7 @@
       "estimate_minutes": 10,
       "acceptance": "maybeRegisterScenarioOverrides() returns scenario with isContinuation=true when DB has continuation scenario. Returns null and deactivates when no continuation. Return type stays ?MachineScenario.",
       "source_sections": null,
+      "started_at": null,
       "closed_at": "2026-04-01T14:13:52.474681Z",
       "closed_reason": "maybeRegisterScenarioOverrides() returns scenario with isContinuation=true when DB has continuation. Returns null and deactivates when no continuation. Return type ?MachineScenario preserved. composer quality 2559 tests pass.",
       "gate_passed_at": "2026-04-01T14:13:52.474681Z",
@@ -197,6 +205,7 @@
       "estimate_minutes": 5,
       "acceptance": "Controller dispatches executeContinuation() when isContinuation=true, execute() otherwise. Existing scenario flow unchanged.",
       "source_sections": null,
+      "started_at": null,
       "closed_at": "2026-04-01T14:15:23.267229Z",
       "closed_reason": "Controller checks scenario-\u003eisContinuation. If true: executeContinuation(). If false: execute(). Existing scenario flow unchanged. composer quality 2559 tests pass.",
       "gate_passed_at": "2026-04-01T14:15:23.267229Z",
@@ -218,6 +227,7 @@
       "estimate_minutes": 10,
       "acceptance": "Response includes activeScenario when continuation is active. activeScenario is null/absent when no continuation. availableScenarios independent from activeScenario.",
       "source_sections": null,
+      "started_at": null,
       "closed_at": "2026-04-01T14:16:56.949116Z",
       "closed_reason": "Response includes activeScenario {slug, description, hasContinuation:true} when DB has continuation scenario. Absent when no continuation. availableScenarios independent. composer quality 2559 tests pass.",
       "gate_passed_at": "2026-04-01T14:16:56.949116Z",
@@ -227,7 +237,7 @@
       "id": "endpoint-tests",
       "title": "Write 7 endpoint tests for continuation",
       "description": "Tests 16-22: activeScenario present/absent, cleared after final, independent from availableScenarios, POST triggers continuation, POST replaces scenario, explicit deactivation.",
-      "status": "open",
+      "status": "done",
       "tags": [
         "test",
         "endpoint"
@@ -240,16 +250,17 @@
       "estimate_minutes": 15,
       "acceptance": "7 endpoint tests pass in ScenarioEndpointTest.php. All verify HTTP response format and controller behavior.",
       "source_sections": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "started_at": null,
+      "closed_at": "2026-04-01T15:02:52.707228Z",
+      "closed_reason": "7 endpoint tests pass — activeScenario present/absent/cleared, simultaneous with availableScenarios, POST triggers continuation, slug replaces, null deactivates.",
+      "gate_passed_at": "2026-04-01T15:02:52.707228Z",
+      "commit_sha": "5d71fa41"
     },
     {
       "id": "validator",
       "title": "Add continuation validation to ScenarioValidator",
       "description": "Validate continuation() state routes exist in definition, guard/action classes exist, delegation outcomes only on delegation states.",
-      "status": "open",
+      "status": "done",
       "tags": [
         "impl",
         "validator"
@@ -260,16 +271,17 @@
       "estimate_minutes": 10,
       "acceptance": "ScenarioValidator validates continuation state routes, classes, and delegation outcomes. 3 validator tests pass.",
       "source_sections": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "started_at": null,
+      "closed_at": "2026-04-01T15:02:52.707228Z",
+      "closed_reason": "ScenarioValidator.checkContinuation() validates state routes, classes, delegation outcomes. 3 tests pass in ScenarioValidatorTest.php.",
+      "gate_passed_at": "2026-04-01T15:02:52.707228Z",
+      "commit_sha": "5d71fa41"
     },
     {
       "id": "qa-tests",
       "title": "Write 7 QA tests for continuation",
       "description": "Tests 26-32: full lifecycle, multiple pauses, delegation chain, deactivation, scenario switch, activeScenario response, availableScenarios alongside. File: ScenarioContinuationQATest.php.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "test",
         "qa"
@@ -281,6 +293,7 @@
       "estimate_minutes": 15,
       "acceptance": "7 QA tests pass against real MySQL endpoints. Full HTTP lifecycle verified. activeScenario and availableScenarios in responses verified.",
       "source_sections": null,
+      "started_at": "2026-04-01T15:34:00.766837Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,
@@ -290,7 +303,7 @@
       "id": "docs",
       "title": "Update 6 documentation files for continuation feature",
       "description": "scenarios.md: Quick Start step 6 + class ref. scenario-plan.md: Continuation section. scenario-endpoints.md: activeScenario + continuation flow + switching. scenario-runtime.md: executeContinuation. scenario-commands.md: scaffold + validate. upgrading.md: 9.4 section.",
-      "status": "open",
+      "status": "done",
       "tags": [
         "docs"
       ],
@@ -301,10 +314,11 @@
       "estimate_minutes": 15,
       "acceptance": "All 6 docs files updated. continuation() and activeScenario documented. Docs build passes.",
       "source_sections": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "started_at": null,
+      "closed_at": "2026-04-01T15:15:14.095939Z",
+      "closed_reason": "All 6 docs files updated: scenarios.md (Quick Start step 6 + class ref), scenario-plan.md (Continuation section), scenario-endpoints.md (activeScenario + continuation flow + switching), scenario-runtime.md (executeContinuation), scenario-commands.md (scaffold + validate), upgrading.md (9.4 section). Docs build passes.",
+      "gate_passed_at": "2026-04-01T15:15:14.095939Z",
+      "commit_sha": "bd3912b3"
     }
   ]
 }
