@@ -44,6 +44,10 @@ class ScenarioScaffolder
             $triggerPayloadHint = "/**\n     * Trigger event payload:\n".implode("\n", $fields)."\n     */\n        ";
         }
 
+        $continuationBlock = $this->shouldGenerateContinuation($path)
+            ? $this->generateContinuationStub()
+            : '';
+
         return <<<PHP
         <?php
 
@@ -67,9 +71,37 @@ class ScenarioScaffolder
         {$planEntries}
                 ];
             }
-        }
+        {$continuationBlock}}
 
         PHP;
+    }
+
+    /**
+     * Check if the target state is interactive — if so, continuation() stub is useful.
+     */
+    private function shouldGenerateContinuation(ScenarioPath $path): bool
+    {
+        $steps    = $path->steps;
+        $lastStep = end($steps);
+
+        return $lastStep !== false && $lastStep->classification === StateClassification::INTERACTIVE;
+    }
+
+    /**
+     * Generate a continuation() method stub.
+     */
+    private function generateContinuationStub(): string
+    {
+        return <<<'STUB'
+
+            protected function continuation(): array
+            {
+                // TODO: define Phase 2 overrides for subsequent requests after reaching target.
+                // Example: 'delegating' => '@done', 'polling' => [IsPinRequiredGuard::class => false]
+                return [];
+            }
+
+        STUB;
     }
 
     /**
