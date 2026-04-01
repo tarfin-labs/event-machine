@@ -373,7 +373,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         } finally {
             if ($acquiredLock && $rootEventId !== null) {
                 unset(self::$heldLockIds[$rootEventId]);
-                $lockHandle?->release();
+                $lockHandle->release();
             }
 
             if ($shouldDispatch) {

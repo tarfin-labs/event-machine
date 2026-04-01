@@ -1592,7 +1592,7 @@ class MachineDefinition
 
         // Dispatch the job
         $childJobJob = new ChildJobJob(
-            parentRootEventId: $state->history?->first()?->root_event_id ?? '',
+            parentRootEventId: $state->history->first()->root_event_id ?? '',
             parentMachineClass: $this->machineClass ?? '',
             parentStateId: $stateDefinition->id,
             jobClass: $jobClass,
@@ -1837,7 +1837,7 @@ class MachineDefinition
                     'output'        => $childState->context->data,
                     'machine_id'    => '',
                     'machine_class' => $invokeDefinition->machineClass,
-                    'final_state'   => $childState->currentStateDefinition?->key ?? '',
+                    'final_state'   => $childState->currentStateDefinition->key ?? '',
                 ]);
 
                 $this->routeChildDoneEvent($state, $stateDefinition, $doneEvent);
@@ -3382,7 +3382,7 @@ class MachineDefinition
             behaviorType: BehaviorType::Action
         );
 
-        $shouldLog = $actionBehavior?->shouldLog ?? false;
+        $shouldLog = $actionBehavior->shouldLog ?? false;
 
         // If the action behavior is callable, execute it with the context and event payload.
         if (!is_callable($actionBehavior)) {

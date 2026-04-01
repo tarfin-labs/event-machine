@@ -238,7 +238,7 @@ class TransitionDefinition
                     behaviorType: BehaviorType::Guard
                 );
 
-                $shouldLog = $guardBehavior?->shouldLog ?? false;
+                $shouldLog = $guardBehavior->shouldLog ?? false;
 
                 if ($guardBehavior instanceof GuardBehavior && !$guardBehavior instanceof MockInterface) {
                     $guardBehavior::validateRequiredContext($state->context);

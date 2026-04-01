@@ -9,45 +9,27 @@ parameters:
     checkOctaneCompatibility: true
     checkModelProperties: true
     ignoreErrors:
-        # False positives or intentional patterns
+        # Config files use env() by design
         - identifier: larastan.noEnvCallsOutsideOfConfig
+        # Testing infrastructure: Machine::$machineFakes static private access
         - identifier: staticClassAccess.privateProperty
+        # Package traits used by consumers, not within src/
         - identifier: trait.unused
-        - identifier: nullsafe.neverNull
-        # Mockery return type issues
+        # Mockery return type issues in Fakeable trait
         - identifier: return.type
           path: src/Traits/Fakeable.php
-        # Collection performance hints - not critical (may not always match)
-        -
-            identifier: larastan.noUnnecessaryCollectionCall
-            reportUnmatched: false
-        # Match expression exhaustive checks - intentional default cases
+        # Intentional default cases in match expressions
         - identifier: match.unhandled
-        # Strict comparison always true/false - defensive coding
+        # Defensive strict comparisons (always false by design)
         - identifier: identical.alwaysFalse
-        # Boolean expression analysis - PHPDoc type inference
-        -
-            identifier: booleanNot.alwaysFalse
-            reportUnmatched: false
-        # is_subclass_of checks - intentional for polymorphism
-        -
-            identifier: function.impossibleType
-            reportUnmatched: false
-        # Static method on dynamic types
-        -
-            identifier: staticMethod.nonObject
-            reportUnmatched: false
-        -
-            identifier: staticMethod.notFound
-            reportUnmatched: false
-        # Dynamic property access from raw queries
+        # Eloquent dynamic properties from raw queries
         - identifier: property.notFound
-        # Method not found on models - traits add methods dynamically
+        # Eloquent magic methods on models
         - identifier: method.notFound
-        # PHPDoc type mismatches - inherited from Laravel
+        # PHPDoc type hints for Laravel static factories (@var Machine)
         - identifier: varTag.nativeType
         - identifier: return.phpDocType
-        # Spatie Laravel Data attribute issues
+        # Spatie Laravel Data attribute target issues
         - identifier: attribute.target
-        # Covariant return types - Laravel framework patterns
+        # Laravel covariant return types
         - identifier: method.childReturnType

@@ -1148,13 +1148,13 @@ class TestMachine
             return;
         }
 
-        $lastFiredAt = $lastFire?->last_fired_at ?? $instance->state_entered_at;
+        $lastFiredAt = $lastFire->last_fired_at ?? $instance->state_entered_at;
 
         if (now()->diffInSeconds($lastFiredAt, absolute: true) < $timer->delaySeconds) {
             return;
         }
 
-        $currentCount = $lastFire?->fire_count ?? 0;
+        $currentCount = $lastFire->fire_count ?? 0;
 
         // Check max/then
         if ($timer->max !== null && $currentCount >= $timer->max) {
@@ -1213,7 +1213,7 @@ class TestMachine
             if (PathCoverageTracker::isEnabled()) {
                 // Use triggeringEvent (preserves original event through @always chains
                 // and internal event processing) or currentEventBehavior as fallback.
-                $trackingEvent = $this->machine->state->triggeringEvent?->type
+                $trackingEvent = $this->machine->state->triggeringEvent->type
                     ?? $this->machine->state->currentEventBehavior?->type;
 
                 // Filter out internal events (they start with the machine ID prefix)

@@ -129,7 +129,7 @@ class ChildMachineTimeoutJob implements ShouldQueue
                 $freshParent->persist();
             });
         } finally {
-            $lockHandle?->release();
+            $lockHandle->release();
         }
     }
 }

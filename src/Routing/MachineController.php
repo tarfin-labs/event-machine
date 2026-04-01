@@ -366,8 +366,8 @@ class MachineController extends Controller
 
                 if ($type instanceof \ReflectionNamedType && is_subclass_of($type->getName(), MachineOutput::class)) {
                     $childState        = $state->getForwardedChildState();
-                    $childStateName    = $childState?->currentStateDefinition?->key ?? 'unknown';
-                    $childMachineClass = $childState?->currentStateDefinition?->machine?->machineClass ?? 'unknown';
+                    $childStateName    = $childState->currentStateDefinition->key ?? 'unknown';
+                    $childMachineClass = $childState->currentStateDefinition?->machine->machineClass ?? 'unknown';
 
                     throw MachineOutputInjectionException::missingChildOutput(
                         outputBehaviorClass: $outputClass,

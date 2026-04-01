@@ -290,7 +290,7 @@ class ScenarioValidator
             // Check child scenario machine match
             if (is_string($value) && class_exists($value) && is_subclass_of($value, MachineScenario::class)) {
                 $childScenario = new $value();
-                $invokeClass   = $state->getMachineInvokeDefinition()?->machineClass ?? '';
+                $invokeClass   = $state->getMachineInvokeDefinition()->machineClass ?? '';
                 if ($childScenario->machine() !== $invokeClass) {
                     $this->errors[] = "Child scenario '{$value}' targets {$childScenario->machine()} but '{$route}' delegates to {$invokeClass}";
                 }

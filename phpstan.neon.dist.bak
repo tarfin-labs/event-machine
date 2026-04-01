@@ -1,0 +1,53 @@
+parameters:
+    level: 5
+    strictRules:
+        dynamicCallOnStaticMethod: false
+    paths:
+        - src
+        - config
+        - database
+    checkOctaneCompatibility: true
+    checkModelProperties: true
+    ignoreErrors:
+        # False positives or intentional patterns
+        - identifier: larastan.noEnvCallsOutsideOfConfig
+        - identifier: staticClassAccess.privateProperty
+        - identifier: trait.unused
+        - identifier: nullsafe.neverNull
+        # Mockery return type issues
+        - identifier: return.type
+          path: src/Traits/Fakeable.php
+        # Collection performance hints - not critical (may not always match)
+        -
+            identifier: larastan.noUnnecessaryCollectionCall
+            reportUnmatched: false
+        # Match expression exhaustive checks - intentional default cases
+        - identifier: match.unhandled
+        # Strict comparison always true/false - defensive coding
+        - identifier: identical.alwaysFalse
+        # Boolean expression analysis - PHPDoc type inference
+        -
+            identifier: booleanNot.alwaysFalse
+            reportUnmatched: false
+        # is_subclass_of checks - intentional for polymorphism
+        -
+            identifier: function.impossibleType
+            reportUnmatched: false
+        # Static method on dynamic types
+        -
+            identifier: staticMethod.nonObject
+            reportUnmatched: false
+        -
+            identifier: staticMethod.notFound
+            reportUnmatched: false
+        # Dynamic property access from raw queries
+        - identifier: property.notFound
+        # Method not found on models - traits add methods dynamically
+        - identifier: method.notFound
+        # PHPDoc type mismatches - inherited from Laravel
+        - identifier: varTag.nativeType
+        - identifier: return.phpDocType
+        # Spatie Laravel Data attribute issues
+        - identifier: attribute.target
+        # Covariant return types - Laravel framework patterns
+        - identifier: method.childReturnType

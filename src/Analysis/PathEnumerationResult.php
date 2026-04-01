@@ -88,7 +88,7 @@ readonly class PathEnumerationResult
     {
         $stats = ['total' => 0, 'atomic' => 0, 'compound' => 0, 'parallel' => 0, 'final' => 0];
 
-        foreach ($this->definition?->idMap ?? [] as $state) {
+        foreach ($this->definition->idMap ?? [] as $state) {
             $stats['total']++;
             match ($state->type) {
                 StateDefinitionType::ATOMIC   => $stats['atomic']++,
@@ -133,7 +133,7 @@ readonly class PathEnumerationResult
     {
         $count = 0;
 
-        foreach ($this->definition?->idMap ?? [] as $state) {
+        foreach ($this->definition->idMap ?? [] as $state) {
             if ($state->hasMachineInvoke() && $state->getMachineInvokeDefinition()?->isJob()) {
                 $count++;
             }
@@ -146,7 +146,7 @@ readonly class PathEnumerationResult
     {
         $count = 0;
 
-        foreach ($this->definition?->idMap ?? [] as $state) {
+        foreach ($this->definition->idMap ?? [] as $state) {
             if ($state->hasMachineInvoke() && !$state->getMachineInvokeDefinition()?->isJob()) {
                 $count++;
             }
@@ -159,7 +159,7 @@ readonly class PathEnumerationResult
     {
         $count = 0;
 
-        foreach ($this->definition?->idMap ?? [] as $state) {
+        foreach ($this->definition->idMap ?? [] as $state) {
             foreach ($state->transitionDefinitions ?? [] as $transition) {
                 if ($transition->timerDefinition !== null) {
                     $count++;
@@ -183,7 +183,7 @@ readonly class PathEnumerationResult
     {
         $result = [];
 
-        foreach ($this->definition?->idMap ?? [] as $state) {
+        foreach ($this->definition->idMap ?? [] as $state) {
             if (!$state->hasMachineInvoke()) {
                 continue;
             }
@@ -219,7 +219,7 @@ readonly class PathEnumerationResult
     {
         $result = [];
 
-        foreach ($this->definition?->idMap ?? [] as $state) {
+        foreach ($this->definition->idMap ?? [] as $state) {
             if (!$state->hasMachineInvoke()) {
                 continue;
             }
@@ -254,7 +254,7 @@ readonly class PathEnumerationResult
     {
         $result = [];
 
-        foreach ($this->definition?->idMap ?? [] as $state) {
+        foreach ($this->definition->idMap ?? [] as $state) {
             if (!$state->hasMachineInvoke()) {
                 continue;
             }

@@ -195,7 +195,7 @@ class ParallelRegionJob implements ShouldQueue
 
             $shouldDispatch = true;
         } finally {
-            $lockHandle?->release();
+            $lockHandle->release();
 
             // 16. Dispatch any new pending parallel jobs (only after successful persist)
             if ($shouldDispatch && isset($freshMachine)) {
@@ -251,7 +251,7 @@ class ParallelRegionJob implements ShouldQueue
 
                 $machine->persist();
             } finally {
-                $lockHandle?->release();
+                $lockHandle->release();
 
                 if (isset($machine)) {
                     $machine->dispatchPendingParallelJobs();

@@ -122,7 +122,7 @@ class ParallelRegionTimeoutJob implements ShouldQueue
 
             $shouldDispatch = true;
         } finally {
-            $lockHandle?->release();
+            $lockHandle->release();
 
             if ($shouldDispatch && isset($freshMachine)) {
                 $freshMachine->dispatchPendingParallelJobs();
