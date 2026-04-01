@@ -113,8 +113,17 @@ class AtAllocationScenario extends MachineScenario
             ],
         ];
     }
+
+    protected function continuation(): array
+    {
+        // TODO: define Phase 2 overrides for subsequent requests after reaching target.
+        // Example: 'delegating' => '@done', 'polling' => [IsPinRequiredGuard::class => false]
+        return [];
+    }
 }
 ```
+
+The `continuation()` stub is only generated when the **target state is interactive** — meaning QA will interact with the machine after reaching the target, and subsequent requests may need overrides. When the target is a final or transient state, no `continuation()` stub is generated. See [Continuation — Multi-Request Flows](/advanced/scenario-plan#continuation-multi-request-flows) for how to fill in the stub.
 
 When a `@continue` event has `EventBehavior::rules()`, payload fields are extracted:
 
