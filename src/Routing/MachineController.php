@@ -330,6 +330,26 @@ class MachineController extends Controller
             }
 
             $response['availableScenarios'] = $availableScenarios;
+
+            // Active scenario with continuation
+            $rootEventId  = $state->history?->first()?->root_event_id;
+            $activeRecord = $rootEventId !== null
+                ? MachineCurrentState::where('root_event_id', $rootEventId)
+                    ->whereNotNull('scenario_class')
+                    ->first(['scenario_class', 'scenario_params'])
+                : null;
+
+            if ($activeRecord !== null && is_string($activeRecord->scenario_class) && class_exists($activeRecord->scenario_class)) {
+                $activeScenario = new ($activeRecord->scenario_class)();
+
+                if ($activeScenario->hasContinuation()) {
+                    $response['activeScenario'] = [
+                        'slug'            => $activeScenario->slug(),
+                        'description'     => $activeScenario->description(),
+                        'hasContinuation' => true,
+                    ];
+                }
+            }
         }
 
         return response()->json(['data' => $response], $statusCode);
