@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.0-callable-outcome.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-01T18:22:48.315941Z",
+  "updated_at": "2026-04-01T18:24:32.535672Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "agentic-commits"
@@ -55,7 +55,7 @@
       "id": "callable-resolve",
       "title": "Resolve Closure outcome in handleScenarioOutcome()",
       "description": "In MachineDefinition::handleScenarioOutcome(), when the outcome value is a Closure, resolve it via new resolveCallableOutcome() helper that uses InvokableBehavior parameter injection. Signature: fn(ContextManager $context, ...): string.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "impl",
         "definition"
@@ -68,10 +68,10 @@
       "source_sections": null,
       "source_lines": "96-108",
       "started_at": "2026-04-01T18:22:48.315941Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-01T18:24:25.724668Z",
+      "closed_reason": "resolveCallableOutcome() helper added to MachineDefinition. Uses InvokableBehavior::injectInvokableBehaviorParameters() with triggeringEvent. handleScenarioOutcome() resolves Closure via instanceof check. 2585 tests, 0 errors.",
+      "gate_passed_at": "2026-04-01T18:24:25.724668Z",
+      "commit_sha": "d1707670"
     },
     {
       "id": "validator-closure",
@@ -99,7 +99,7 @@
       "id": "stub-scenario",
       "title": "Create CallableOutcomeScenario test stub",
       "description": "Create a test stub scenario that uses callable outcome on a delegation state. The Closure checks a context value and returns @done or @fail accordingly. Also need a stub machine with a delegation state that has @fail with guarded retry.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "test",
         "stub"
@@ -111,7 +111,7 @@
       "acceptance": "CallableOutcomeScenario stub exists with callable outcome in plan/continuation. Stub machine has delegation state with @done and guarded @fail routing.",
       "source_sections": null,
       "source_lines": "56-75",
-      "started_at": null,
+      "started_at": "2026-04-01T18:24:32.535672Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,
