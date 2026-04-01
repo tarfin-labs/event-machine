@@ -148,7 +148,31 @@ POST /api/orders/{orderId}/review-approved
 
 No `scenario` field → previous scenario deactivated (clears `scenario_class` and `scenario_params` columns in `machine_current_states`). QA can resume manual testing at any point.
 
-**Exception — continuation scenarios:** When a scenario with `continuation()` is active, sending a request without a `scenario` field does **not** deactivate it. Instead, the continuation overrides are applied automatically. To explicitly deactivate a continuation scenario, send a request with a different scenario slug or wait for the machine to reach a final state (auto-deactivation).
+**Exception — continuation scenarios:** When a scenario with `continuation()` is active, sending a request **without** a `scenario` field does **not** deactivate it. Instead, the continuation overrides are applied automatically.
+
+To explicitly deactivate a continuation scenario, you have three options:
+1. Send `scenario: null` in the request (explicit opt-out)
+2. Send a different scenario slug (switch)
+3. Wait for the machine to reach a final state (auto-deactivation)
+
+### Explicit Deactivation with `scenario: null`
+
+To force-deactivate an active continuation scenario, send `scenario: null` in the request payload:
+
+```http
+POST /api/orders/{orderId}/confirm-pin
+{
+    "type": "PIN_CONFIRMED",
+    "scenario": null
+}
+```
+
+This clears `scenario_class` and `scenario_params` from the database. The event is then processed with **real behavior** — no overrides. This is useful when QA wants to exit a continuation mid-flow and test the real implementation.
+
+::: tip `scenario: null` vs omitting `scenario`
+- **Omitting `scenario`** (no field in payload): continuation auto-restores and applies overrides
+- **`scenario: null`** (field present with null value): continuation deactivated, real behavior used
+:::
 
 ### Final-State Auto-Deactivation
 
@@ -185,6 +209,15 @@ POST /endpoint { scenario: "at-report-saved-with-pin", type: "PIN_CONFIRMED" }
 → Old scenario deactivated, new scenario activated
 → ScenarioPlayer::execute() with new scenario's plan()
 → Response: new activeScenario (if it has continuation)
+```
+
+**Request 2, Option C — Explicit deactivation (scenario: null):**
+```
+POST /endpoint { type: "PIN_CONFIRMED", scenario: null }
+
+→ Controller sees explicit scenario:null → deactivateScenario()
+→ Normal machine->send() — no overrides, real behavior
+→ Response: activeScenario absent
 ```
 
 If the continuation hits another interactive state (no `@continue` entry), the machine pauses and the scenario stays active for a third request, and so on.
