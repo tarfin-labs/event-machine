@@ -48,6 +48,7 @@ class ScenarioValidator
         $this->checkEventValidFromSource($definition, $graph);
         $this->checkPlanStateRoutes($definition);
         $this->checkPlanStructure($definition, $graph);
+        $this->checkContinuation($definition, $graph);
 
         return $this->errors;
     }
@@ -264,6 +265,45 @@ class ScenarioValidator
         }
 
         return $errors;
+    }
+
+    private function checkContinuation(MachineDefinition $definition, MachineGraph $graph): void
+    {
+        $continuation = $this->scenario->resolvedContinuation();
+
+        if ($continuation === []) {
+            return;
+        }
+
+        foreach ($continuation as $route => $value) {
+            // Check state routes exist
+            $found = $definition->idMap[$route] ?? $definition->idMap[$definition->id.'.'.$route] ?? null;
+            if ($found === null) {
+                $this->errors[] = "State route '{$route}' in continuation() not found in machine definition";
+
+                continue;
+            }
+
+            $classification = $graph->classifyState($found);
+            $isDelegation   = $classification === StateClassification::DELEGATION;
+
+            // Check delegation outcomes on non-delegation states
+            if (!$isDelegation && is_string($value) && str_starts_with($value, '@')) {
+                $this->errors[] = "'{$route}' in continuation() has delegation outcome '{$value}' but is not a delegation state";
+            }
+
+            // Check behavior override classes exist
+            if (is_array($value) && !isset($value['outcome'])) {
+                foreach (array_keys($value) as $key) {
+                    if ($key === '@continue') {
+                        continue;
+                    }
+                    if (is_string($key) && str_contains($key, '\\') && !class_exists($key)) {
+                        $this->errors[] = "Behavior class '{$key}' in continuation() at '{$route}' not found";
+                    }
+                }
+            }
+        }
     }
 
     private function checkPlanStructure(MachineDefinition $definition, MachineGraph $graph): void

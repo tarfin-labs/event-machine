@@ -262,3 +262,85 @@ test('all valid paths return empty errors', function (): void {
 
     expect($errors)->toBeEmpty();
 });
+
+// ── Continuation validation ─────────────────────────────────────────────────
+
+function makeContinuationScenario(array $continuation, array $overrides = []): MachineScenario
+{
+    $machine     = $overrides['machine'] ?? ScenarioTestMachine::class;
+    $source      = $overrides['source'] ?? 'idle';
+    $event       = $overrides['event'] ?? MachineScenario::START;
+    $target      = $overrides['target'] ?? 'reviewing';
+    $description = $overrides['description'] ?? 'Test continuation';
+    $plan        = $overrides['plan'] ?? ['processing' => '@done'];
+
+    return new class($machine, $source, $event, $target, $description, $plan, $continuation) extends MachineScenario {
+        /** @var array<string, mixed> */
+        private array $planData;
+
+        /** @var array<string, mixed> */
+        private array $continuationData;
+
+        public function __construct(
+            string $machine,
+            string $source,
+            string $event,
+            string $target,
+            string $description,
+            array $plan,
+            array $continuation,
+        ) {
+            $this->machine          = $machine;
+            $this->source           = $source;
+            $this->event            = $event;
+            $this->target           = $target;
+            $this->description      = $description;
+            $this->planData         = $plan;
+            $this->continuationData = $continuation;
+            parent::__construct();
+        }
+
+        protected function plan(): array
+        {
+            return $this->planData;
+        }
+
+        protected function continuation(): array
+        {
+            return $this->continuationData;
+        }
+    };
+}
+
+test('validates continuation state routes exist in machine definition', function (): void {
+    $scenario  = makeContinuationScenario(['nonexistent_route' => '@done']);
+    $validator = new ScenarioValidator($scenario);
+    $errors    = $validator->validate();
+
+    expect($errors)->not->toBeEmpty()
+        ->and(implode(' ', $errors))->toContain('nonexistent_route')
+        ->and(implode(' ', $errors))->toContain('continuation()');
+});
+
+test('validates continuation guard/action classes exist', function (): void {
+    $scenario = makeContinuationScenario([
+        'delegating' => ['NonExistent\\GuardClass' => true],
+    ]);
+    $validator = new ScenarioValidator($scenario);
+    $errors    = $validator->validate();
+
+    expect($errors)->not->toBeEmpty()
+        ->and(implode(' ', $errors))->toContain('NonExistent\\GuardClass')
+        ->and(implode(' ', $errors))->toContain('continuation()');
+});
+
+test('validates continuation delegation outcomes on delegation states', function (): void {
+    // 'reviewing' is INTERACTIVE, not DELEGATION — @done on it in continuation is an error
+    $scenario  = makeContinuationScenario(['reviewing' => '@done']);
+    $validator = new ScenarioValidator($scenario);
+    $errors    = $validator->validate();
+
+    expect($errors)->not->toBeEmpty()
+        ->and(implode(' ', $errors))->toContain('delegation')
+        ->and(implode(' ', $errors))->toContain('continuation()');
+});

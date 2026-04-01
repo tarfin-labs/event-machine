@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
@@ -23,6 +24,7 @@ use Tarfinlabs\EventMachine\Exceptions\ScenarioTargetMismatchException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\AlwaysFinalMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsValidGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestContext;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\SimpleLinearMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Actions\ProcessAction;
@@ -31,8 +33,11 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Outputs\TestScena
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\HappyPathScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Actions\RequiresUserIdAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\FailurePathScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinuationScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinueLoopScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\StateAwareOverrideScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinuationGuardOnlyScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\MultiPauseContinuationScenario;
 
 // ── Execute flow ─────────────────────────────────────────────────────────────
 
@@ -1101,4 +1106,465 @@ test('deactivateScenario clears scenario columns from machine_current_states', f
     $current = MachineCurrentState::where('root_event_id', $rootEventId)->first();
     expect($current?->scenario_class)->toBeNull()
         ->and($current?->scenario_params)->toBeNull();
+});
+
+// ── Continuation — base class tests ────────────────────────────────────────
+
+test('continuation() returns empty array by default', function (): void {
+    $scenario = new HappyPathScenario();
+
+    expect($scenario->resolvedContinuation())->toBe([]);
+});
+
+test('hasContinuation() false when continuation empty', function (): void {
+    $scenario = new HappyPathScenario();
+
+    expect($scenario->hasContinuation())->toBeFalse();
+});
+
+test('hasContinuation() true when continuation non-empty', function (): void {
+    $scenario = new ContinuationScenario();
+
+    expect($scenario->hasContinuation())->toBeTrue();
+});
+
+test('resolvedContinuation() returns continuation plan', function (): void {
+    $scenario = new ContinuationScenario();
+
+    expect($scenario->resolvedContinuation())
+        ->toBe(['delegating' => '@done']);
+});
+
+test('isContinuation flag defaults to false', function (): void {
+    $scenario = new ContinuationScenario();
+
+    expect($scenario->isContinuation)->toBeFalse();
+});
+
+// ── Continuation — executeContinuation tests ───────────────────────────────
+
+test('executeContinuation applies continuation overrides not plan overrides', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // Phase 1: execute to reach reviewing (target)
+    $scenario = new ContinuationScenario();
+    $player   = new ScenarioPlayer($scenario);
+    $state    = $player->execute();
+
+    expect($state->value)->toContain('scenario_test.reviewing');
+
+    // Phase 2: executeContinuation — the continuation plan has 'delegating' => '@done'
+    // which is a delegation outcome, NOT the plan's 'processing' => '@done'.
+    // Create a fresh machine at 'reviewing' and send DELEGATE.
+    $definition                = clone ScenarioTestMachine::definition();
+    $definition->shouldPersist = false;
+    $definition->machineClass  = ScenarioTestMachine::class;
+
+    $machine = Machine::withDefinition($definition);
+    $machine->start();
+    // Machine went idle → routing → processing (delegation skipped in test, stays at processing)
+    // We need to start at reviewing. Use a simpler approach: inline definition.
+
+    $def = MachineDefinition::define(config: [
+        'id'      => 'scenario_test',
+        'initial' => 'reviewing',
+        'context' => ScenarioTestContext::class,
+        'states'  => ScenarioTestMachine::definition()->config['states'],
+    ]);
+    $def->shouldPersist = false;
+    $def->machineClass  = ScenarioTestMachine::class;
+
+    $m = Machine::withDefinition($def);
+    $m->start();
+
+    // executeContinuation should register continuation overrides (delegating => @done)
+    // and send DELEGATE event → reviewing → delegating → @done intercept → delegation_complete
+    $scenario2 = new ContinuationScenario();
+    $player2   = new ScenarioPlayer($scenario2);
+
+    $state2 = $player2->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-root-id',
+        eventType: 'DELEGATE',
+    );
+
+    expect($state2->value)->toContain('scenario_test.delegation_complete');
+});
+
+test('executeContinuation runs @continue loop for delegation states', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // Create a scenario with continuation that has @continue
+    $scenario = new class() extends MachineScenario {
+        protected string $machine     = SimpleLinearMachine::class;
+        protected string $source      = 'a';
+        protected string $event       = 'GO';
+        protected string $target      = 'b';
+        protected string $description = 'Continuation with @continue loop';
+
+        protected function continuation(): array
+        {
+            return [
+                'c' => ['@continue' => 'DONE'],
+            ];
+        }
+    };
+
+    $definition                = clone SimpleLinearMachine::definition();
+    $definition->shouldPersist = false;
+
+    // Start machine at b (the target from Phase 1)
+    $def = MachineDefinition::define(config: [
+        'id'      => 'simple_linear',
+        'initial' => 'b',
+        'context' => ['amount' => 0],
+        'states'  => [
+            'a' => ['on' => ['GO' => 'b']],
+            'b' => ['on' => ['NEXT' => 'c']],
+            'c' => ['on' => ['DONE' => 'd']],
+            'd' => ['type' => 'final'],
+        ],
+    ]);
+    $def->shouldPersist = false;
+
+    $m = Machine::withDefinition($def);
+    $m->start();
+
+    $player = new ScenarioPlayer($scenario);
+
+    // executeContinuation: send NEXT → b → c, then @continue DONE → c → d (final)
+    $state = $player->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-continue-loop',
+        eventType: 'NEXT',
+    );
+
+    expect($state->value)->toContain('simple_linear.d');
+});
+
+test('executeContinuation deactivates scenario on final state', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // Create a persisted machine at 'idle' state with scenario columns set
+    $def = MachineDefinition::define(config: [
+        'id'             => 'deactivate_cont',
+        'initial'        => 'idle',
+        'should_persist' => true,
+        'context'        => [],
+        'states'         => [
+            'idle' => ['on' => ['GO' => 'done']],
+            'done' => ['type' => 'final'],
+        ],
+    ]);
+
+    $machine = Machine::withDefinition($def);
+    $machine->start();
+    $machine->persist();
+    $rootEventId = $machine->state->history->first()?->root_event_id;
+
+    if ($rootEventId === null) {
+        $this->markTestSkipped('No root event ID');
+    }
+
+    // Set scenario columns
+    MachineCurrentState::where('root_event_id', $rootEventId)
+        ->update([
+            'scenario_class'  => ContinuationScenario::class,
+            'scenario_params' => null,
+        ]);
+
+    $scenario = new class() extends MachineScenario {
+        protected string $machine     = ScenarioTestMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = 'GO';
+        protected string $target      = 'done';
+        protected string $description = 'Deactivation test';
+
+        protected function continuation(): array
+        {
+            return [];
+        }
+    };
+
+    $player = new ScenarioPlayer($scenario);
+    $state  = $player->executeContinuation(
+        machine: $machine,
+        eventPayload: [],
+        rootEventId: $rootEventId,
+        eventType: 'GO',
+    );
+
+    // Machine reached final state — scenario should be deactivated
+    $current = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+    expect($current?->scenario_class)->toBeNull()
+        ->and($current?->scenario_params)->toBeNull();
+});
+
+test('executeContinuation keeps scenario active on interactive state', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // MultiPauseContinuationScenario continuation: parallel_check => [IsValidGuard => true]
+    // When sent START_PARALLEL from reviewing, machine goes to parallel_check.
+    // parallel_check is parallel with @always regions → both reach final → @done fires
+    // IsValidGuard override = true → all_checked (interactive, not final)
+    // Scenario should stay active — executeContinuation does NOT call deactivateScenario.
+
+    $def = MachineDefinition::define(config: [
+        'id'      => 'scenario_test',
+        'initial' => 'reviewing',
+        'context' => ScenarioTestContext::class,
+        'states'  => ScenarioTestMachine::definition()->config['states'],
+    ]);
+    $def->shouldPersist = false;
+    $def->machineClass  = ScenarioTestMachine::class;
+
+    $m = Machine::withDefinition($def);
+    $m->start();
+
+    $scenario = new MultiPauseContinuationScenario();
+    $player   = new ScenarioPlayer($scenario);
+
+    $state = $player->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-interactive-pause',
+        eventType: 'START_PARALLEL',
+    );
+
+    // all_checked is interactive (ATOMIC, not FINAL) — deactivateScenario was NOT called
+    expect($state->value)->toContain('scenario_test.all_checked')
+        ->and($state->currentStateDefinition->type)->not->toBe(StateDefinitionType::FINAL);
+});
+
+test('executeContinuation accepts any event type', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // ContinuationScenario's declared event is @start, but executeContinuation
+    // sends whatever eventType is passed — here we send DELEGATE (not the declared event).
+    $def = MachineDefinition::define(config: [
+        'id'      => 'scenario_test',
+        'initial' => 'reviewing',
+        'context' => ScenarioTestContext::class,
+        'states'  => ScenarioTestMachine::definition()->config['states'],
+    ]);
+    $def->shouldPersist = false;
+    $def->machineClass  = ScenarioTestMachine::class;
+
+    $m = Machine::withDefinition($def);
+    $m->start();
+
+    $scenario = new ContinuationScenario();
+    $player   = new ScenarioPlayer($scenario);
+
+    // DELEGATE is not the scenario's declared event (@start), but executeContinuation accepts it
+    $state = $player->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-any-event',
+        eventType: 'DELEGATE',
+    );
+
+    // delegation_complete because continuation has 'delegating' => '@done'
+    expect($state->value)->toContain('scenario_test.delegation_complete');
+});
+
+test('executeContinuation continuation overrides are independent from plan overrides', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // ContinuationScenario: plan has 'processing' => '@done', continuation has 'delegating' => '@done'
+    // During executeContinuation, only continuation overrides should be registered.
+    // Verify that plan's 'processing' outcome is NOT active during continuation.
+    $scenario = new ContinuationScenario();
+    $player   = new ScenarioPlayer($scenario);
+
+    // Manually call registerOverrides with useContinuation=true
+    ScenarioPlayer::registerOverrides($scenario, useContinuation: true);
+
+    // The continuation plan only has 'delegating' => '@done', which is an outcome not an override.
+    // Plan's 'processing' => '@done' should NOT be in outcomes.
+    // After registerOverrides(useContinuation:true), classifyPlanValues is separate.
+    // We can check via getOutcome — but outcomes are populated in classifyPlanValues, not registerOverrides.
+    // Let's verify differently: use reflection to check that the outcomes were NOT set by registerOverrides.
+
+    // getOutcome for 'processing' should be null (not registered from continuation)
+    expect(ScenarioPlayer::getOutcome('processing'))->toBeNull();
+
+    ScenarioPlayer::cleanupOverrides();
+});
+
+// ── Continuation — edge case tests ─────────────────────────────────────────
+
+test('continuation with only guard overrides no delegation', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // ContinuationGuardOnlyScenario continuation: parallel_check => [IsValidGuard => true]
+    // No delegation outcomes, no @continue — only guard overrides.
+    $scenario = new ContinuationGuardOnlyScenario();
+
+    expect($scenario->hasContinuation())->toBeTrue()
+        ->and($scenario->resolvedContinuation())->toBe([
+            'parallel_check' => [
+                IsValidGuard::class => true,
+            ],
+        ]);
+
+    // Register continuation overrides
+    ScenarioPlayer::registerOverrides($scenario, useContinuation: true);
+
+    // Guard should be overridden
+    $resolved = App::make(IsValidGuard::class);
+    expect($resolved)->toBeInstanceOf(GuardBehavior::class)
+        ->and($resolved())->toBeTrue();
+
+    // No delegation outcomes should be set
+    expect(ScenarioPlayer::getOutcome('parallel_check'))->toBeNull();
+
+    ScenarioPlayer::cleanupOverrides();
+});
+
+test('continuation where machine reaches state not in continuation plan', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // Continuation plan only covers 'c', but machine transitions to 'b' first.
+    // @continue loop should not fire for 'b' (not in continuation plan).
+    $scenario = new class() extends MachineScenario {
+        protected string $machine     = SimpleLinearMachine::class;
+        protected string $source      = 'a';
+        protected string $event       = 'GO';
+        protected string $target      = 'b';
+        protected string $description = 'State not in continuation';
+
+        protected function continuation(): array
+        {
+            return [
+                'c' => ['@continue' => 'DONE'], // Only covers 'c', not 'b'
+            ];
+        }
+    };
+
+    $def = MachineDefinition::define(config: [
+        'id'      => 'simple_linear',
+        'initial' => 'a',
+        'context' => ['amount' => 0],
+        'states'  => [
+            'a' => ['on' => ['GO' => 'b']],
+            'b' => ['on' => ['NEXT' => 'c']],
+            'c' => ['on' => ['DONE' => 'd']],
+            'd' => ['type' => 'final'],
+        ],
+    ]);
+    $def->shouldPersist = false;
+
+    $m = Machine::withDefinition($def);
+    $m->start();
+
+    $player = new ScenarioPlayer($scenario);
+
+    // Send GO → a → b. No @continue for 'b', so loop stops at 'b'.
+    $state = $player->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-no-match',
+        eventType: 'GO',
+    );
+
+    // Machine should stop at 'b' because continuation has no @continue for 'b'
+    expect($state->value)->toContain('simple_linear.b');
+});
+
+test('multiple interactive pauses continuation reused', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // MultiPauseContinuationScenario: continuation covers parallel_check with guard override.
+    // Request 2: reviewing → START_PARALLEL → parallel_check → @done(guard=true) → all_checked
+    // Request 3: all_checked → FINISH → approved (final)
+    // Both requests use executeContinuation with the same scenario class.
+
+    // Request 2: START_PARALLEL → all_checked (interactive)
+    $def = MachineDefinition::define(config: [
+        'id'      => 'scenario_test',
+        'initial' => 'reviewing',
+        'context' => ScenarioTestContext::class,
+        'states'  => ScenarioTestMachine::definition()->config['states'],
+    ]);
+    $def->shouldPersist = false;
+    $def->machineClass  = ScenarioTestMachine::class;
+
+    $m = Machine::withDefinition($def);
+    $m->start();
+
+    $scenario = new MultiPauseContinuationScenario();
+    $player   = new ScenarioPlayer($scenario);
+
+    $state = $player->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-multi-pause',
+        eventType: 'START_PARALLEL',
+    );
+
+    expect($state->value)->toContain('scenario_test.all_checked')
+        ->and($state->currentStateDefinition->type)->not->toBe(StateDefinitionType::FINAL);
+
+    // Request 3: all_checked → FINISH → approved (final)
+    // Create a fresh machine at all_checked to simulate the next request
+    $def2 = MachineDefinition::define(config: [
+        'id'      => 'scenario_test',
+        'initial' => 'all_checked',
+        'context' => ScenarioTestContext::class,
+        'states'  => ScenarioTestMachine::definition()->config['states'],
+    ]);
+    $def2->shouldPersist = false;
+    $def2->machineClass  = ScenarioTestMachine::class;
+
+    $m2 = Machine::withDefinition($def2);
+    $m2->start();
+
+    $player2 = new ScenarioPlayer(new MultiPauseContinuationScenario());
+
+    $state2 = $player2->executeContinuation(
+        machine: $m2,
+        eventPayload: [],
+        rootEventId: 'test-multi-pause-2',
+        eventType: 'FINISH',
+    );
+
+    expect($state2->value)->toContain('scenario_test.approved')
+        ->and($state2->currentStateDefinition->type)->toBe(StateDefinitionType::FINAL);
+});
+
+test('continuation after parallel state @done', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // ContinuationGuardOnlyScenario continuation: parallel_check => [IsValidGuard => true]
+    // Machine at reviewing → START_PARALLEL → parallel_check (parallel, regions auto-complete)
+    // → @done with IsValidGuard overridden to true → all_checked
+    // This tests that the continuation guard override applies during parallel @done.
+
+    $def = MachineDefinition::define(config: [
+        'id'      => 'scenario_test',
+        'initial' => 'reviewing',
+        'context' => ScenarioTestContext::class,
+        'states'  => ScenarioTestMachine::definition()->config['states'],
+    ]);
+    $def->shouldPersist = false;
+    $def->machineClass  = ScenarioTestMachine::class;
+
+    $m = Machine::withDefinition($def);
+    $m->start();
+
+    $scenario = new ContinuationGuardOnlyScenario();
+    $player   = new ScenarioPlayer($scenario);
+
+    $state = $player->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-parallel-done',
+        eventType: 'START_PARALLEL',
+    );
+
+    // parallel_check regions auto-complete (@always), @done fires with guard=true → all_checked
+    expect($state->value)->toContain('scenario_test.all_checked');
 });

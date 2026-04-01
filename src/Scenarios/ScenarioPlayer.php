@@ -163,6 +163,13 @@ class ScenarioPlayer
 
             // Step 9: Validate target
             $this->validateTarget($state);
+
+            // Step 10: Re-persist scenario after state changes
+            // syncCurrentStates deletes old rows and creates new ones without scenario columns.
+            // Re-persist so activeScenario is visible in buildResponse and continuation persists.
+            if ($rootEventId !== null && $rootEventId !== '' && $this->shouldPersist($machine)) {
+                $this->persistScenario($rootEventId);
+            }
         } finally {
             // Step 11: Cleanup — unbind overrides from container
             self::cleanupOverrides();
@@ -219,9 +226,12 @@ class ScenarioPlayer
                 ]);
             }
 
-            // Deactivate if final state reached
+            // Deactivate if final state reached, otherwise re-persist scenario
+            // (syncCurrentStates deletes old rows and creates new ones without scenario columns)
             if ($state->currentStateDefinition->type === StateDefinitionType::FINAL) {
                 self::deactivateScenario($rootEventId);
+            } elseif ($rootEventId !== '' && $this->shouldPersist($machine)) {
+                $this->persistScenario($rootEventId);
             }
 
             return $state;

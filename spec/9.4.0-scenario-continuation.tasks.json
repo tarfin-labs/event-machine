@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.4.0-scenario-continuation.md",
   "created_at": "2026-04-01T13:23:44Z",
-  "updated_at": "2026-04-01T13:28:35.15255Z",
+  "updated_at": "2026-04-01T14:19:22.747104Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "agentic-commits"
@@ -25,7 +25,7 @@
       "id": "base-methods",
       "title": "Add continuation methods to MachineScenario",
       "description": "Add default continuation() returning [], hasContinuation() checking !== [], resolvedContinuation() returning continuation(), and public bool $isContinuation = false flag.",
-      "status": "open",
+      "status": "done",
       "tags": [
         "impl",
         "model"
@@ -34,16 +34,16 @@
       "estimate_minutes": 5,
       "acceptance": "MachineScenario has continuation(), hasContinuation(), resolvedContinuation(), $isContinuation. Default behavior: continuation()=[], hasContinuation()=false, isContinuation=false.",
       "source_sections": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-01T14:07:38.028431Z",
+      "closed_reason": "MachineScenario has continuation() returning [], hasContinuation() returning false, resolvedContinuation(), $isContinuation=false. 2559 tests pass.",
+      "gate_passed_at": "2026-04-01T14:07:38.028431Z",
+      "commit_sha": "0e390117"
     },
     {
       "id": "stub-scenarios",
       "title": "Create 3 continuation stub scenarios for testing",
       "description": "Create ContinuationScenario (basic), MultiPauseContinuationScenario (multiple interactive pauses), ContinuationGuardOnlyScenario (guard-only, no delegation). All in tests/Stubs/Machines/ScenarioStubs/Scenarios/.",
-      "status": "open",
+      "status": "done",
       "tags": [
         "test",
         "stub"
@@ -54,16 +54,16 @@
       "estimate_minutes": 10,
       "acceptance": "3 stub scenario files exist. ContinuationScenario targets reviewing with continuation to delegation_complete. MultiPauseContinuationScenario pauses at all_checked.",
       "source_sections": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-01T14:19:22.747104Z",
+      "closed_reason": "3 stub scenarios created. ContinuationScenario: @start→reviewing with delegation continuation. MultiPauseContinuationScenario: reviewing→all_checked pause. ContinuationGuardOnlyScenario: guard-only. composer quality 2559 tests pass.",
+      "gate_passed_at": "2026-04-01T14:19:22.747104Z",
+      "commit_sha": "b90363b3"
     },
     {
       "id": "register-overrides-param",
       "title": "Add useContinuation param to override registration",
       "description": "Modify ScenarioPlayer::registerOverrides() and classifyPlanValues() to accept useContinuation: bool = false param. When true, use scenario-\u003eresolvedContinuation() instead of resolvedPlan().",
-      "status": "open",
+      "status": "done",
       "tags": [
         "impl",
         "player"
@@ -74,16 +74,16 @@
       "estimate_minutes": 10,
       "acceptance": "registerOverrides(useContinuation: true) reads from continuation(). classifyPlanValues(useContinuation: true) classifies continuation entries. Existing behavior unchanged when useContinuation=false.",
       "source_sections": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-01T14:10:00.684727Z",
+      "closed_reason": "registerOverrides and classifyPlanValues accept useContinuation:bool. When true, reads from resolvedContinuation(). Default false preserves existing behavior. 2559 tests pass.",
+      "gate_passed_at": "2026-04-01T14:10:00.684727Z",
+      "commit_sha": "af8e2fb6"
     },
     {
       "id": "execute-continuation",
       "title": "Create ScenarioPlayer::executeContinuation() method",
       "description": "New method using continuation() for overrides, no source/target validation, accepts any event type, deactivates on final state, keeps active on interactive state. Reuses @continue loop logic.",
-      "status": "open",
+      "status": "done",
       "tags": [
         "impl",
         "player"
@@ -94,10 +94,10 @@
       "estimate_minutes": 15,
       "acceptance": "executeContinuation() exists with params (Machine, array eventPayload, string rootEventId, string eventType). Uses registerOverrides(useContinuation: true), runs @continue loop, deactivates on FINAL, keeps scenario on interactive. composer quality passes.",
       "source_sections": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-01T14:12:06.21793Z",
+      "closed_reason": "executeContinuation(Machine, array, string, string) created in ScenarioPlayer. Uses registerOverrides(useContinuation: true), runs @continue loop, deactivates on FINAL, keeps scenario on interactive. composer quality passes with 2559 tests, 0 errors.",
+      "gate_passed_at": "2026-04-01T14:12:06.21793Z",
+      "commit_sha": "17aec2b0"
     },
     {
       "id": "unit-tests-base",
@@ -165,7 +165,7 @@
       "id": "controller-detection",
       "title": "Modify maybeRegisterScenarioOverrides() to detect continuation from DB",
       "description": "When scenarioSlug is null, check DB for scenario_class with hasContinuation(). If found, set isContinuation=true and return scenario. If no continuation, deactivate as before.",
-      "status": "open",
+      "status": "done",
       "tags": [
         "impl",
         "controller"
@@ -176,16 +176,16 @@
       "estimate_minutes": 10,
       "acceptance": "maybeRegisterScenarioOverrides() returns scenario with isContinuation=true when DB has continuation scenario. Returns null and deactivates when no continuation. Return type stays ?MachineScenario.",
       "source_sections": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-01T14:13:52.474681Z",
+      "closed_reason": "maybeRegisterScenarioOverrides() returns scenario with isContinuation=true when DB has continuation. Returns null and deactivates when no continuation. Return type ?MachineScenario preserved. composer quality 2559 tests pass.",
+      "gate_passed_at": "2026-04-01T14:13:52.474681Z",
+      "commit_sha": "816c5a5a"
     },
     {
       "id": "controller-dispatch",
       "title": "Modify MachineController main flow to dispatch executeContinuation",
       "description": "Check scenario-\u003eisContinuation flag. If true, call player-\u003eexecuteContinuation(). If false, call player-\u003eexecute() as before.",
-      "status": "open",
+      "status": "done",
       "tags": [
         "impl",
         "controller"
@@ -197,16 +197,16 @@
       "estimate_minutes": 5,
       "acceptance": "Controller dispatches executeContinuation() when isContinuation=true, execute() otherwise. Existing scenario flow unchanged.",
       "source_sections": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-01T14:15:23.267229Z",
+      "closed_reason": "Controller checks scenario-\u003eisContinuation. If true: executeContinuation(). If false: execute(). Existing scenario flow unchanged. composer quality 2559 tests pass.",
+      "gate_passed_at": "2026-04-01T14:15:23.267229Z",
+      "commit_sha": "e01e4769"
     },
     {
       "id": "active-scenario-response",
       "title": "Add activeScenario field to endpoint response",
       "description": "In buildResponse(), when scenarios enabled and DB has scenario_class with continuation, add activeScenario: {slug, description, hasContinuation} to response.",
-      "status": "open",
+      "status": "done",
       "tags": [
         "impl",
         "controller",
@@ -218,10 +218,10 @@
       "estimate_minutes": 10,
       "acceptance": "Response includes activeScenario when continuation is active. activeScenario is null/absent when no continuation. availableScenarios independent from activeScenario.",
       "source_sections": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-01T14:16:56.949116Z",
+      "closed_reason": "Response includes activeScenario {slug, description, hasContinuation:true} when DB has continuation scenario. Absent when no continuation. availableScenarios independent. composer quality 2559 tests pass.",
+      "gate_passed_at": "2026-04-01T14:16:56.949116Z",
+      "commit_sha": "7c254ba5"
     },
     {
       "id": "endpoint-tests",
