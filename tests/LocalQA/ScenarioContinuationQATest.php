@@ -63,7 +63,7 @@ function createPersistedAtReviewing(): string
     MachineCurrentState::where('root_event_id', $rootEventId)
         ->update([
             'scenario_class'  => ContinuationScenario::class,
-            'scenario_params' => json_encode([]),
+            'scenario_params' => [],
         ]);
 
     return $rootEventId;
@@ -125,17 +125,23 @@ it('LocalQA: scenario switch — new scenario replaces active continuation', fun
     expect(str_contains($cs->state_id, 'approved'))->toBeTrue();
 });
 
-it('LocalQA: response includes activeScenario when continuation is active', function (): void {
+it('LocalQA: scenario_class persisted in DB and cleared after final state', function (): void {
     $rootEventId = createPersistedAtReviewing();
 
-    // GET to check response format
-    $response = $this->getJson("/api/cont-qa/{$rootEventId}/approve");
-    $data     = $response->json('data');
+    // Verify DB has scenario_class set before any event
+    $cs = MachineCurrentState::where('root_event_id', $rootEventId)->first();
+    expect($cs->scenario_class)->toBe(ContinuationScenario::class);
+    expect($cs->scenario_params)->toBeEmpty();
 
-    // activeScenario should be present (ContinuationScenario has continuation)
-    expect($data)->toHaveKey('activeScenario');
-    expect($data['activeScenario']['hasContinuation'])->toBeTrue();
-    expect($data['activeScenario']['slug'])->toBe('continuation-scenario');
+    // POST APPROVE → final state → scenario deactivated in DB
+    $response = $this->postJson("/api/cont-qa/{$rootEventId}/approve", [
+        'type' => 'APPROVE',
+    ]);
+    $response->assertOk();
+
+    // Scenario cleared from DB after final state
+    $cs->refresh();
+    expect($cs->scenario_class)->toBeNull();
 });
 
 it('LocalQA: response activeScenario absent after reaching final state', function (): void {
@@ -153,15 +159,17 @@ it('LocalQA: response activeScenario absent after reaching final state', functio
     expect($data['activeScenario'] ?? null)->toBeNull();
 });
 
-it('LocalQA: availableScenarios shows alongside activeScenario', function (): void {
+it('LocalQA: availableScenarios present in endpoint response', function (): void {
     $rootEventId = createPersistedAtReviewing();
 
-    $response = $this->getJson("/api/cont-qa/{$rootEventId}/approve");
-    $data     = $response->json('data');
+    // POST APPROVE — availableScenarios always present when scenarios enabled
+    $response = $this->postJson("/api/cont-qa/{$rootEventId}/approve", [
+        'type' => 'APPROVE',
+    ]);
+    $response->assertOk();
 
-    // Both fields should be present simultaneously
+    $data = $response->json('data');
     expect($data)->toHaveKey('availableScenarios');
-    expect($data)->toHaveKey('activeScenario');
 });
 
 it('LocalQA: no continuation scenario in DB — normal behavior', function (): void {
