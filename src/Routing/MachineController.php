@@ -649,7 +649,7 @@ class MachineController extends Controller
 
                         if ($scenario->hasContinuation()) {
                             $scenario->hydrateParams(
-                                json_decode($currentState->scenario_params ?? '[]', true) ?? []
+                                $currentState->scenario_params ?? []
                             );
                             $scenario->isContinuation = true;
 
