@@ -1,0 +1,310 @@
+{
+  "version": 1,
+  "spec": "spec/9.4.0-scenario-continuation.md",
+  "created_at": "2026-04-01T13:23:44Z",
+  "updated_at": "2026-04-01T13:28:35.15255Z",
+  "workflow": {
+    "quality_gate": "composer quality",
+    "commit_strategy": "agentic-commits"
+  },
+  "coverage": {
+    "total_sections": 20,
+    "mapped_sections": 14,
+    "context_only": [
+      "# Scenario Continuation — Multi-Request Scenario Flows",
+      "## Problem",
+      "### The Findeks Example",
+      "### Root Cause",
+      "### Key Design Decisions",
+      "## What Doesn't Change"
+    ],
+    "unmapped": []
+  },
+  "tasks": [
+    {
+      "id": "base-methods",
+      "title": "Add continuation methods to MachineScenario",
+      "description": "Add default continuation() returning [], hasContinuation() checking !== [], resolvedContinuation() returning continuation(), and public bool $isContinuation = false flag.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "model"
+      ],
+      "depends_on": null,
+      "estimate_minutes": 5,
+      "acceptance": "MachineScenario has continuation(), hasContinuation(), resolvedContinuation(), $isContinuation. Default behavior: continuation()=[], hasContinuation()=false, isContinuation=false.",
+      "source_sections": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "stub-scenarios",
+      "title": "Create 3 continuation stub scenarios for testing",
+      "description": "Create ContinuationScenario (basic), MultiPauseContinuationScenario (multiple interactive pauses), ContinuationGuardOnlyScenario (guard-only, no delegation). All in tests/Stubs/Machines/ScenarioStubs/Scenarios/.",
+      "status": "open",
+      "tags": [
+        "test",
+        "stub"
+      ],
+      "depends_on": [
+        "base-methods"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "3 stub scenario files exist. ContinuationScenario targets reviewing with continuation to delegation_complete. MultiPauseContinuationScenario pauses at all_checked.",
+      "source_sections": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "register-overrides-param",
+      "title": "Add useContinuation param to override registration",
+      "description": "Modify ScenarioPlayer::registerOverrides() and classifyPlanValues() to accept useContinuation: bool = false param. When true, use scenario-\u003eresolvedContinuation() instead of resolvedPlan().",
+      "status": "open",
+      "tags": [
+        "impl",
+        "player"
+      ],
+      "depends_on": [
+        "base-methods"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "registerOverrides(useContinuation: true) reads from continuation(). classifyPlanValues(useContinuation: true) classifies continuation entries. Existing behavior unchanged when useContinuation=false.",
+      "source_sections": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "execute-continuation",
+      "title": "Create ScenarioPlayer::executeContinuation() method",
+      "description": "New method using continuation() for overrides, no source/target validation, accepts any event type, deactivates on final state, keeps active on interactive state. Reuses @continue loop logic.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "player"
+      ],
+      "depends_on": [
+        "register-overrides-param"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "executeContinuation() exists with params (Machine, array eventPayload, string rootEventId, string eventType). Uses registerOverrides(useContinuation: true), runs @continue loop, deactivates on FINAL, keeps scenario on interactive. composer quality passes.",
+      "source_sections": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "unit-tests-base",
+      "title": "Write 5 base class unit tests",
+      "description": "Tests 1-5: continuation() default, hasContinuation() false/true, resolvedContinuation(), isContinuation default. Add to ScenarioPlayerTest.php.",
+      "status": "open",
+      "tags": [
+        "test",
+        "unit"
+      ],
+      "depends_on": [
+        "base-methods"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "5 tests pass in ScenarioPlayerTest.php. All verify MachineScenario default behavior and ContinuationScenario override.",
+      "source_sections": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "unit-tests-execution",
+      "title": "Write 6 executeContinuation unit tests",
+      "description": "Tests 6-11: applies continuation overrides, @continue loop, deactivates on final, keeps active on interactive, accepts any event, same state different overrides. Add to ScenarioPlayerTest.php.",
+      "status": "open",
+      "tags": [
+        "test",
+        "unit"
+      ],
+      "depends_on": [
+        "execute-continuation",
+        "stub-scenarios"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "6 tests pass. Each tests a different executeContinuation behavior. All use stub scenarios.",
+      "source_sections": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "unit-tests-edge",
+      "title": "Write 4 edge case unit tests for continuation",
+      "description": "Tests 12-15: guard-only continuation, state not in plan, multiple interactive pauses, continuation after parallel @done.",
+      "status": "open",
+      "tags": [
+        "test",
+        "unit"
+      ],
+      "depends_on": [
+        "execute-continuation",
+        "stub-scenarios"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "4 edge case tests pass. Guard-only works, unknown state stops loop, multi-pause reuses overrides, parallel @done works.",
+      "source_sections": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "controller-detection",
+      "title": "Modify maybeRegisterScenarioOverrides() to detect continuation from DB",
+      "description": "When scenarioSlug is null, check DB for scenario_class with hasContinuation(). If found, set isContinuation=true and return scenario. If no continuation, deactivate as before.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "controller"
+      ],
+      "depends_on": [
+        "base-methods"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "maybeRegisterScenarioOverrides() returns scenario with isContinuation=true when DB has continuation scenario. Returns null and deactivates when no continuation. Return type stays ?MachineScenario.",
+      "source_sections": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "controller-dispatch",
+      "title": "Modify MachineController main flow to dispatch executeContinuation",
+      "description": "Check scenario-\u003eisContinuation flag. If true, call player-\u003eexecuteContinuation(). If false, call player-\u003eexecute() as before.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "controller"
+      ],
+      "depends_on": [
+        "execute-continuation",
+        "controller-detection"
+      ],
+      "estimate_minutes": 5,
+      "acceptance": "Controller dispatches executeContinuation() when isContinuation=true, execute() otherwise. Existing scenario flow unchanged.",
+      "source_sections": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "active-scenario-response",
+      "title": "Add activeScenario field to endpoint response",
+      "description": "In buildResponse(), when scenarios enabled and DB has scenario_class with continuation, add activeScenario: {slug, description, hasContinuation} to response.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "controller",
+        "response"
+      ],
+      "depends_on": [
+        "base-methods"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "Response includes activeScenario when continuation is active. activeScenario is null/absent when no continuation. availableScenarios independent from activeScenario.",
+      "source_sections": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "endpoint-tests",
+      "title": "Write 7 endpoint tests for continuation",
+      "description": "Tests 16-22: activeScenario present/absent, cleared after final, independent from availableScenarios, POST triggers continuation, POST replaces scenario, explicit deactivation.",
+      "status": "open",
+      "tags": [
+        "test",
+        "endpoint"
+      ],
+      "depends_on": [
+        "controller-dispatch",
+        "active-scenario-response",
+        "stub-scenarios"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "7 endpoint tests pass in ScenarioEndpointTest.php. All verify HTTP response format and controller behavior.",
+      "source_sections": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "validator",
+      "title": "Add continuation validation to ScenarioValidator",
+      "description": "Validate continuation() state routes exist in definition, guard/action classes exist, delegation outcomes only on delegation states.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "validator"
+      ],
+      "depends_on": [
+        "base-methods"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "ScenarioValidator validates continuation state routes, classes, and delegation outcomes. 3 validator tests pass.",
+      "source_sections": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "qa-tests",
+      "title": "Write 7 QA tests for continuation",
+      "description": "Tests 26-32: full lifecycle, multiple pauses, delegation chain, deactivation, scenario switch, activeScenario response, availableScenarios alongside. File: ScenarioContinuationQATest.php.",
+      "status": "open",
+      "tags": [
+        "test",
+        "qa"
+      ],
+      "depends_on": [
+        "controller-dispatch",
+        "active-scenario-response"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "7 QA tests pass against real MySQL endpoints. Full HTTP lifecycle verified. activeScenario and availableScenarios in responses verified.",
+      "source_sections": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "docs",
+      "title": "Update 6 documentation files for continuation feature",
+      "description": "scenarios.md: Quick Start step 6 + class ref. scenario-plan.md: Continuation section. scenario-endpoints.md: activeScenario + continuation flow + switching. scenario-runtime.md: executeContinuation. scenario-commands.md: scaffold + validate. upgrading.md: 9.4 section.",
+      "status": "open",
+      "tags": [
+        "docs"
+      ],
+      "depends_on": [
+        "execute-continuation",
+        "active-scenario-response"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "All 6 docs files updated. continuation() and activeScenario documented. Docs build passes.",
+      "source_sections": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    }
+  ]
+}
