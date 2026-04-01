@@ -191,15 +191,25 @@ class MachineController extends Controller
 
         try {
             if ($scenario instanceof MachineScenario) {
-                // Scenario active: use ScenarioPlayer::execute() for full scenario flow
-                // (override registration, delegation interception, @continue loop, target validation).
                 $rootEventId = $machine->state->history?->first()?->root_event_id;
                 $player      = new ScenarioPlayer($scenario);
-                $state       = $player->execute(
-                    machine: $machine,
-                    eventPayload: $event->payload ?? [],
-                    rootEventId: $rootEventId,
-                );
+
+                if ($scenario->isContinuation) {
+                    // Phase 2: continuation — apply continuation overrides, send QA's event
+                    $state = $player->executeContinuation(
+                        machine: $machine,
+                        eventPayload: $event->payload ?? [],
+                        rootEventId: $rootEventId ?? '',
+                        eventType: $event->type,
+                    );
+                } else {
+                    // Phase 1: initial activation — full scenario flow
+                    $state = $player->execute(
+                        machine: $machine,
+                        eventPayload: $event->payload ?? [],
+                        rootEventId: $rootEventId,
+                    );
+                }
             } else {
                 $state = $machine->send(event: $event);
             }
