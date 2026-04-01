@@ -631,10 +631,20 @@ class MachineController extends Controller
             return null; // Silently ignored when disabled
         }
 
+        // Explicit deactivation: request sends scenario:null or scenario:'' → opt-out
+        if ($request->has('scenario') && ($request->input('scenario') === null || $request->input('scenario') === '')) {
+            $rootEventId = $machine->state->history?->first()?->root_event_id;
+            if ($rootEventId !== null) {
+                ScenarioPlayer::deactivateScenario($rootEventId);
+            }
+
+            return null;
+        }
+
         $scenarioSlug = $request->input('scenario');
 
         if ($scenarioSlug === null) {
-            // No scenario slug — check for active continuation in DB.
+            // No scenario param sent — check for active continuation in DB.
             $rootEventId = $machine->state->history?->first()?->root_event_id;
             if ($rootEventId !== null) {
                 $currentState = MachineCurrentState::where('root_event_id', $rootEventId)
