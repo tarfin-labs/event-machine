@@ -13,10 +13,10 @@ use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFakedException;
 trait Fakeable
 {
     /** @var array<class-string, MockInterface> Tracks faked classes for assertions and cleanup. */
-    private static array $fakes = [];
+    protected static array $fakes = [];
 
     /** @var array<class-string, bool> Tracks which fakes are spies (true) vs strict mocks (false). */
-    private static array $spies = [];
+    protected static array $spies = [];
 
     // ─── Creation ─────────────────────────────────
 

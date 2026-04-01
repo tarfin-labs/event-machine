@@ -646,7 +646,7 @@ class Machine implements Castable, JsonSerializable, Stringable
     protected function restoreContext(array $persistedContext): ContextManager
     {
         if (is_string($this->definition->behavior['context'])) {
-            /** @var ContextManager $contextClass */
+            /** @var class-string<ContextManager> $contextClass */
             $contextClass = $this->definition->behavior['context'];
 
             return $contextClass::validateAndCreate($persistedContext);
@@ -747,7 +747,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         }
 
         if (isset($this->definition->behavior[BehaviorType::Event->value][$machineEvent->type])) {
-            /** @var EventBehavior $eventDefinitionClass */
+            /** @var class-string<EventBehavior> $eventDefinitionClass */
             $eventDefinitionClass = $this
                 ->definition
                 ->behavior[BehaviorType::Event->value][$machineEvent->type];

@@ -60,9 +60,7 @@ abstract class EventBehavior extends Data
     public function __construct(
         public null|string|Optional $type = null,
         public null|array|Optional $payload = null,
-        #[WithoutValidation]
         ?bool $isTransactional = null,
-        #[WithoutValidation]
         mixed $actor = null,
         public int|Optional $version = 1,
 

@@ -13,20 +13,14 @@ parameters:
         - identifier: larastan.noEnvCallsOutsideOfConfig
           path: config/
 
-        # Fakeable trait: Mockery return types + static private property access
+        # Fakeable trait: Mockery return types
         - identifier: return.type
-          path: src/Traits/Fakeable.php
-        - identifier: staticClassAccess.privateProperty
           path: src/Traits/Fakeable.php
         # Package traits — used by consumers, not within src/
         - identifier: trait.unused
           path: src/Testing/
         - identifier: trait.unused
           path: src/Traits/
-
-        # ContextManager: intentional match default cases for Spatie Data transforms
-        - identifier: match.unhandled
-          path: src/ContextManager.php
 
         # Defensive identical comparisons — intentional guard clauses
         - identifier: identical.alwaysFalse
@@ -52,22 +46,3 @@ parameters:
         - identifier: method.childReturnType
           path: src/Models/MachineEvent.php
 
-        # PHPDoc @var for Laravel static factories ($machineClass::create())
-        - identifier: varTag.nativeType
-          path: src/Actor/Machine.php
-        - identifier: varTag.nativeType
-          path: src/Casts/MachineCast.php
-        - identifier: varTag.nativeType
-          path: src/Definition/MachineDefinition.php
-        - identifier: varTag.nativeType
-          path: src/Commands/MachineConfigValidatorCommand.php
-
-        # PHPDoc @return type mismatches
-        - identifier: return.phpDocType
-          path: src/Definition/MachineDefinition.php
-        - identifier: return.phpDocType
-          path: src/Definition/TransitionDefinition.php
-
-        # Spatie Laravel Data attribute target
-        - identifier: attribute.target
-          path: src/Behavior/EventBehavior.php

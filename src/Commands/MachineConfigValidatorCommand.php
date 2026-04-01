@@ -58,7 +58,7 @@ class MachineConfigValidatorCommand extends Command
     {
         try {
             $machines = $this->findMachineClasses();
-            /** @var Machine $fullClassName */
+            /** @var class-string<Machine>|null $fullClassName */
             $fullClassName = $this->resolveFullClassName($machineClass, $machines);
 
             if ($fullClassName === null) {

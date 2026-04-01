@@ -194,8 +194,8 @@ class TransitionDefinition
      *
      * @param  EventBehavior  $eventBehavior  The event used to evaluate guards.
      *
-     * @return TransitionDefinition|null The first eligible transition or
-     *                                   null if no eligible transition is found.
+     * @return TransitionBranch|null The first eligible transition branch or
+     *                               null if no eligible transition is found.
      *
      * @throws \ReflectionException
      */

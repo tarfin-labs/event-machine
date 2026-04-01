@@ -42,6 +42,7 @@ class ContextManager extends Data
         return match (true) {
             static::class === self::class      => Arr::get($this->data, $key),
             is_subclass_of($this, self::class) => (new \ReflectionProperty($this, $key))->getValue($this),
+            default                            => throw new \LogicException('Unreachable'),
         };
     }
 
@@ -66,6 +67,7 @@ class ContextManager extends Data
         match (true) {
             static::class === self::class      => $this->data[$key] = $value,
             is_subclass_of($this, self::class) => (new \ReflectionProperty($this, $key))->setValue($this, $value),
+            default                            => throw new \LogicException('Unreachable'),
         };
 
         return $value;
@@ -91,6 +93,7 @@ class ContextManager extends Data
         $hasKey = match (true) {
             static::class === self::class      => Arr::has($this->data, $key),
             is_subclass_of($this, self::class) => property_exists($this, $key),
+            default                            => throw new \LogicException('Unreachable'),
         };
 
         if (!$hasKey || $type === null) {

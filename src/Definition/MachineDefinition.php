@@ -276,7 +276,6 @@ class MachineDefinition
                 continue;
             }
 
-            /** @var MachineDefinition $childDefinition */
             $childDefinition = $invokeDefinition->machineClass::definition();
 
             $resolved = $invokeDefinition->resolveForwardEndpoints($childDefinition);
@@ -724,7 +723,7 @@ class MachineDefinition
 
         // If a context class is provided, use it to create the context
         if (is_string($this->behavior['context'])) {
-            /** @var ContextManager $contextClass */
+            /** @var class-string<ContextManager> $contextClass */
             $contextClass = $this->behavior['context'];
 
             return $contextClass::validateAndCreate($this->config['context'] ?? []);
@@ -1505,7 +1504,6 @@ class MachineDefinition
 
         try {
             // Create child machine without starting, so we can inject context first
-            /** @var Machine $childMachine */
             $childMachine                           = $childMachineClass::withDefinition($childMachineClass::definition());
             $childMachine->definition->machineClass = $childMachineClass;
 
@@ -1908,7 +1906,7 @@ class MachineDefinition
      * matches. If so, restores the child from DB, sends the forwarded event,
      * and dispatches completion if the child reaches a final state.
      *
-     * @return bool True if the event was forwarded, false otherwise.
+     * @return State|null The new state if the event was forwarded, null otherwise.
      */
     protected function tryForwardEventToChild(State $state, StateDefinition $stateDefinition, EventBehavior $eventBehavior): ?State
     {
@@ -1939,8 +1937,7 @@ class MachineDefinition
 
         // Restore and send the forwarded event to the child
         $childMachineClass = $invokeDefinition->machineClass;
-        /** @var Machine $childMachine */
-        $childMachine = $childMachineClass::create(state: $childRecord->child_root_event_id);
+        $childMachine      = $childMachineClass::create(state: $childRecord->child_root_event_id);
 
         // Send the event (possibly renamed) to the child
         $childMachine->send(['type' => $childEventType, 'payload' => $eventBehavior->payload]);
