@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.0-callable-outcome.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-01T18:11:56.609755Z",
+  "updated_at": "2026-04-01T18:18:42.341719Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "agentic-commits"
@@ -76,7 +76,7 @@
     {
       "id": "validator-closure",
       "title": "Accept Closure as valid outcome in ScenarioValidator",
-      "description": "In ScenarioValidator's checkPlan() and checkContinuation(), accept Closure as a valid outcome value alongside string outcomes.",
+      "description": "In ScenarioValidator's checkContinuation() and checkPlanStructure(), add check: outcome arrays (with static or Closure outcome) on non-delegation states are errors. This closes a pre-existing validation gap and naturally accepts Closures on valid delegation states.",
       "status": "open",
       "tags": [
         "impl",
@@ -86,7 +86,7 @@
         "callable-resolve"
       ],
       "estimate_minutes": 5,
-      "acceptance": "ScenarioValidator does not report errors for Closure outcomes in plan() or continuation(). Tests #8-#9 verify.",
+      "acceptance": "checkContinuation() and checkPlanStructure() reject outcome arrays on non-delegation states (closes pre-existing gap). Closure outcomes on delegation states accepted. Tests #8-#9 verify.",
       "source_sections": null,
       "source_lines": "140-150",
       "started_at": null,
