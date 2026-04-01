@@ -251,3 +251,23 @@ test('POST with scenario:null explicit deactivation', function (): void {
     expect($current?->scenario_class)->toBeNull()
         ->and($current?->scenario_params)->toBeNull();
 });
+
+test('POST with explicit scenario:null deactivates active continuation', function (): void {
+    ['machineId' => $machineId] = createPersistedMachineAtStarted($this);
+
+    // Set a continuation scenario in DB (ContinuationScenario has continuation)
+    MachineCurrentState::where('root_event_id', $machineId)
+        ->update([
+            'scenario_class'  => ContinuationScenario::class,
+            'scenario_params' => null,
+        ]);
+
+    // POST with explicit scenario:null — should deactivate continuation, not auto-restore
+    $this->postJson("/api/cont-ep/{$machineId}/complete", [
+        'scenario' => null,
+    ]);
+
+    $current = MachineCurrentState::where('root_event_id', $machineId)->first();
+    expect($current?->scenario_class)->toBeNull()
+        ->and($current?->scenario_params)->toBeNull();
+});
