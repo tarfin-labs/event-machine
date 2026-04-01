@@ -739,6 +739,17 @@ class ScenarioPlayer
             } elseif (is_array($value) && isset($value['outcome'])) {
                 // Delegation outcome with optional output and/or guard overrides
                 $outcomes[$stateRoute] = $value;
+
+                // Extract behavior overrides from outcome array (guard/action class keys)
+                $behaviorKeys = array_filter(
+                    $value,
+                    fn (mixed $v, int|string $k): bool => is_string($k) && $k !== 'outcome' && $k !== 'output' && class_exists($k),
+                    ARRAY_FILTER_USE_BOTH,
+                );
+
+                if ($behaviorKeys !== []) {
+                    $overrides[$stateRoute] = array_merge($overrides[$stateRoute] ?? [], $behaviorKeys);
+                }
             } elseif (is_array($value)) {
                 // Behavior overrides (may include @continue)
                 $overrides[$stateRoute] = $value;

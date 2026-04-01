@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.0-callable-outcome.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-01T18:18:42.341719Z",
+  "updated_at": "2026-04-01T18:21:13.330216Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "agentic-commits"
@@ -34,7 +34,7 @@
       "id": "extract-overrides",
       "title": "Extract behavior overrides from outcome arrays in classifyPlanValues()",
       "description": "When an outcome array contains class-keyed entries (guards, actions) alongside 'outcome', extract them into $overrides so they get registered in the container. This is a bug fix — currently these overrides are silently ignored.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "impl",
         "bugfix",
@@ -45,7 +45,7 @@
       "acceptance": "classifyPlanValues() extracts class-keyed entries from outcome arrays into $overrides. Static test #5 verifies guard override in outcome array is applied during @fail routing. composer quality passes.",
       "source_sections": null,
       "source_lines": "82-108,114-138",
-      "started_at": null,
+      "started_at": "2026-04-01T18:21:13.330216Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,
