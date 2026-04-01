@@ -33,7 +33,7 @@ class CallableOutcomeScenario extends MachineScenario
         return [
             'confirming' => [
                 'outcome' => function (ContextManager $context): string {
-                    $pin         = $context->get('pin') ?? '';
+                    $pin         = $context->pin ?? '';
                     $expectedPin = now()->format('dmy');
 
                     return $pin === $expectedPin ? '@done' : '@fail';

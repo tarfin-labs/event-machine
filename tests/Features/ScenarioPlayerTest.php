@@ -28,13 +28,16 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestConte
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\SimpleLinearMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Actions\ProcessAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\CallableOutcomeMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsRetryableGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Outputs\TestScenarioOutput;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\HappyPathScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Actions\RequiresUserIdAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\FailurePathScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinuationScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinueLoopScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\CallableOutcomeScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\StateAwareOverrideScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinuationGuardOnlyScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\MultiPauseContinuationScenario;
@@ -1567,4 +1570,239 @@ test('continuation after parallel state @done', function (): void {
 
     // parallel_check regions auto-complete (@always), @done fires with guard=true → all_checked
     expect($state->value)->toContain('scenario_test.all_checked');
+});
+
+// ── Callable outcome ────────────────────────────────────────────────────────
+
+test('callable outcome returning @done routes to done state', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    $m = CallableOutcomeMachine::startingAt('waiting', context: ['pin' => now()->format('dmy')])->machine();
+
+    $scenario = new CallableOutcomeScenario();
+    $player   = new ScenarioPlayer($scenario);
+
+    $state = $player->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-callable-done',
+        eventType: 'CONFIRM',
+    );
+
+    expect($state->value)->toContain('callable_outcome_test.completed');
+});
+
+test('callable outcome returning @fail routes to fail state', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // Wrong PIN → @fail, IsRetryableGuard overridden to true → back to waiting
+    $m = CallableOutcomeMachine::startingAt('waiting', context: ['pin' => '000000'])->machine();
+
+    $scenario = new CallableOutcomeScenario();
+    $player   = new ScenarioPlayer($scenario);
+
+    $state = $player->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-callable-fail',
+        eventType: 'CONFIRM',
+    );
+
+    // @fail + IsRetryableGuard=true → waiting (retry)
+    expect($state->value)->toContain('callable_outcome_test.waiting');
+});
+
+test('callable outcome receives injected parameters via InvokableBehavior', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    $receivedContext = null;
+    $receivedState   = null;
+
+    // Anonymous scenario with Closure that captures injected params
+    $scenario = new class() extends MachineScenario {
+        protected string $machine     = CallableOutcomeMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = MachineScenario::START;
+        protected string $target      = 'waiting';
+        protected string $description = 'test injection';
+
+        protected function plan(): array
+        {
+            return [];
+        }
+
+        protected function continuation(): array
+        {
+            return [
+                'confirming' => [
+                    'outcome' => function (ContextManager $context, State $state): string {
+                        // Proof of injection: set result to pin + state key
+                        $context->result = $context->pin.'_'.$state->currentStateDefinition->key;
+
+                        return '@done';
+                    },
+                ],
+            ];
+        }
+    };
+
+    $m      = CallableOutcomeMachine::startingAt('waiting', context: ['pin' => 'test123'])->machine();
+    $player = new ScenarioPlayer($scenario);
+
+    $state = $player->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-injection',
+        eventType: 'CONFIRM',
+    );
+
+    // Verify both ContextManager and State were injected
+    expect($state->context->result)->toBe('test123_confirming');
+});
+
+test('callable outcome with guard overrides in same array', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // Wrong PIN → @fail, guard override in same outcome array should be registered
+    $m = CallableOutcomeMachine::startingAt('waiting', context: ['pin' => 'wrong'])->machine();
+
+    $scenario = new CallableOutcomeScenario();
+    $player   = new ScenarioPlayer($scenario);
+
+    $state = $player->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-guard-override',
+        eventType: 'CONFIRM',
+    );
+
+    // @fail + IsRetryableGuard=true (from outcome array) → waiting
+    // Without the override extraction fix, IsRetryableGuard returns false → failed
+    expect($state->value)->toContain('callable_outcome_test.waiting');
+});
+
+test('static outcome with guard overrides in same array — bug fix', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // Static @fail + guard override in same array
+    $scenario = new class() extends MachineScenario {
+        protected string $machine     = CallableOutcomeMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = MachineScenario::START;
+        protected string $target      = 'waiting';
+        protected string $description = 'test static guard';
+
+        protected function plan(): array
+        {
+            return [];
+        }
+
+        protected function continuation(): array
+        {
+            return [
+                'confirming' => [
+                    'outcome'               => '@fail',
+                    IsRetryableGuard::class => true,
+                ],
+            ];
+        }
+    };
+
+    $m      = CallableOutcomeMachine::startingAt('waiting')->machine();
+    $player = new ScenarioPlayer($scenario);
+
+    $state = $player->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-static-guard',
+        eventType: 'CONFIRM',
+    );
+
+    // @fail + IsRetryableGuard=true → waiting (retry)
+    // Before fix: guard override ignored → IsRetryableGuard=false → failed
+    expect($state->value)->toContain('callable_outcome_test.waiting');
+});
+
+test('callable outcome returning @done.{finalState} routes correctly', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // ScenarioTestMachine has delegating: machine with @done → delegation_complete, @done.error → delegation_error
+    $scenario = new class() extends MachineScenario {
+        protected string $machine     = ScenarioTestMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = MachineScenario::START;
+        protected string $target      = 'reviewing';
+        protected string $description = 'test done substate';
+
+        protected function plan(): array
+        {
+            return [
+                'processing' => '@done',
+            ];
+        }
+
+        protected function continuation(): array
+        {
+            return [
+                'delegating' => [
+                    'outcome' => function (): string {
+                        return '@done.error';
+                    },
+                ],
+            ];
+        }
+    };
+
+    $player = new ScenarioPlayer($scenario);
+    $state  = $player->execute();
+
+    $m     = ScenarioTestMachine::startingAt('reviewing')->machine();
+    $state = $player->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-done-substate',
+        eventType: 'DELEGATE',
+    );
+
+    expect($state->value)->toContain('scenario_test.delegation_error');
+});
+
+test('callable outcome returning @timeout routes correctly', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    $scenario = new class() extends MachineScenario {
+        protected string $machine     = CallableOutcomeMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = MachineScenario::START;
+        protected string $target      = 'waiting';
+        protected string $description = 'test timeout';
+
+        protected function plan(): array
+        {
+            return [];
+        }
+
+        protected function continuation(): array
+        {
+            return [
+                'confirming' => [
+                    'outcome' => function (): string {
+                        return '@timeout';
+                    },
+                ],
+            ];
+        }
+    };
+
+    $m      = CallableOutcomeMachine::startingAt('waiting')->machine();
+    $player = new ScenarioPlayer($scenario);
+
+    $state = $player->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-timeout',
+        eventType: 'CONFIRM',
+    );
+
+    expect($state->value)->toContain('callable_outcome_test.timed_out');
 });

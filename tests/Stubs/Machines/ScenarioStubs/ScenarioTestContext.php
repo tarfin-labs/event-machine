@@ -13,6 +13,7 @@ class ScenarioTestContext extends ContextManager
         public bool $eligible = true,
         public bool $processed = false,
         public ?string $result = null,
+        public ?string $pin = null,
     ) {
         parent::__construct();
     }
