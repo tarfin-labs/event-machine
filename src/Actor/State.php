@@ -547,6 +547,7 @@ class State implements \JsonSerializable
         }
 
         $childRecord = MachineChild::where('parent_root_event_id', $rootEventId)
+            ->where('child_machine_class', $invokeDefinition->machineClass)
             ->where('status', MachineChild::STATUS_RUNNING)
             ->first();
 

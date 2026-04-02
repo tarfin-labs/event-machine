@@ -1964,8 +1964,9 @@ class MachineDefinition
             return null;
         }
 
-        // Find the running child machine from active children
+        // Find the running child machine from active children (filter by machine class for parallel regions)
         $childRecord = MachineChild::forParent($state->history->first()->root_event_id)
+            ->where('child_machine_class', $invokeDefinition->machineClass)
             ->withStatus(MachineChild::STATUS_RUNNING)
             ->first();
 
