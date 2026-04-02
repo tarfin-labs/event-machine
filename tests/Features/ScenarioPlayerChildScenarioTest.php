@@ -178,9 +178,18 @@ test('child scenario with @continue + outcomes — multi-hop pattern', function 
     $isActiveRef->setValue(null, false);
 });
 
+// ── 9.7.0 TDD tests — child scenario persistence + forward endpoint awareness ────
+
 test('child scenario pausing at interactive state persists child to DB', function (): void {
-    // Planned for 9.7.0: child persist on interactive pause + forward endpoint scenario awareness
-    $this->markTestIncomplete('Blocked: requires child persist + forward endpoint scenario awareness (9.7.0)');
+    $this->markTestIncomplete('9.7.0: child persist on interactive pause');
+});
+
+test('child scenario receives parent context via resolveChildContext', function (): void {
+    $this->markTestIncomplete('9.7.0: handleScenarioOutcome must pass resolveChildContext to executeChildScenario');
+});
+
+test('forward endpoint activates child continuation overrides', function (): void {
+    $this->markTestIncomplete('9.7.0: executeForwardedEndpoint must call maybeRegisterScenarioOverrides');
 });
 
 test('child @continue failure throws ScenarioFailedException', function (): void {
