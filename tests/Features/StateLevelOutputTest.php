@@ -115,3 +115,28 @@ it('output with closure returns closure result', function (): void {
 
     expect($test->machine()->output())->toBe(['total' => 590.0]);
 });
+
+it('output array filter works when state also has entry actions', function (): void {
+    $test = TestMachine::define(
+        config: [
+            'initial' => 'active',
+            'context' => ['retailerName' => 'Acme Corp', 'internal' => 'hidden'],
+            'states'  => [
+                'active' => [
+                    'entry'  => ['firstEntryAction', 'secondEntryAction'],
+                    'output' => ['retailerName'],
+                    'on'     => ['DONE' => 'completed'],
+                ],
+                'completed' => ['type' => 'final'],
+            ],
+        ],
+        behavior: [
+            'actions' => [
+                'firstEntryAction'  => fn () => null,
+                'secondEntryAction' => fn () => null,
+            ],
+        ],
+    );
+
+    expect($test->machine()->output())->toBe(['retailerName' => 'Acme Corp']);
+});

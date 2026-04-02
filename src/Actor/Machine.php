@@ -1229,7 +1229,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         // For parallel states, check the parallel state itself first
         if ($this->state->isInParallelState()) {
             if (isset($behaviorDefinition[$currentStateDefinition->id])) {
-                return $this->resolveOutputBehavior($behaviorDefinition[$currentStateDefinition->id]);
+                return $this->resolveOutputDefinition($behaviorDefinition[$currentStateDefinition->id]);
             }
 
             // Parallel state output from config (not registered in behavior array)
@@ -1244,7 +1244,7 @@ class Machine implements Castable, JsonSerializable, Stringable
         while ($stateToCheck instanceof StateDefinition) {
             // Check behavior registry (registered via initializeResults for final states)
             if (isset($behaviorDefinition[$stateToCheck->id])) {
-                return $this->resolveOutputBehavior($behaviorDefinition[$stateToCheck->id]);
+                return $this->resolveOutputDefinition($behaviorDefinition[$stateToCheck->id]);
             }
 
             // Check state config output (for non-final states)
