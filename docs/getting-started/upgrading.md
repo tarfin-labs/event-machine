@@ -33,6 +33,16 @@ Each section below has step-by-step migration instructions with before/after exa
 
 ---
 
+## From 9.6.0 to 9.6.1
+
+### Bug Fix: Child Scenario @continue Loop
+
+`executeChildScenario()` was missing the `@continue` loop — child scenarios with `@continue` directives in their plan would pause at the first interactive state instead of advancing. This affected child scenarios that need to traverse interactive states (e.g., Findeks PIN flow where the child traverses `querying_phones → awaiting_report_request → requesting → polling → awaiting_pin`).
+
+**Fixed:** `executeChildScenario()` now runs the same `@continue` loop as `execute()`, with delegation outcome interception active throughout. Child scenarios with mixed `@continue` + outcome entries now work correctly.
+
+---
+
 ## From 9.5.x to 9.6.0
 
 ### Callable Delegation Outcome

@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.1-child-scenario-continue-loop.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T00:36:28.031328Z",
+  "updated_at": "2026-04-02T00:37:54.414121Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -97,7 +97,7 @@
       "id": "unit-tests",
       "title": "Write unit tests #2-#3 for child @continue",
       "description": "Test #2: multi-hop pattern via MultiHopChildMachine. Test #3: @continue failure throws ScenarioFailedException.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "test",
         "unit"
@@ -111,10 +111,10 @@
       "source_sections": null,
       "source_lines": "152-160",
       "started_at": "2026-04-02T00:36:28.031328Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-02T00:37:48.838069Z",
+      "closed_reason": "#2 multi-hop child (idle→first_job @done→review→@continue APPROVE→second_job @done→completed) passes via MultiHopChildMachine. #3 invalid @continue throws ScenarioFailedException. TDD #1 also passes. 2597 tests.",
+      "gate_passed_at": "2026-04-02T00:37:48.838069Z",
+      "commit_sha": "6105c5cd"
     },
     {
       "id": "qa-test",
@@ -142,7 +142,7 @@
       "id": "docs",
       "title": "Update docs for child @continue bugfix",
       "description": "scenario-runtime.md: executeChildScenario @continue loop. upgrading.md: 9.6.1 section.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "docs"
       ],
@@ -153,7 +153,7 @@
       "acceptance": "scenario-runtime.md documents @continue in executeChildScenario. upgrading.md has 9.6.1.",
       "source_sections": null,
       "source_lines": "176-179",
-      "started_at": null,
+      "started_at": "2026-04-02T00:37:54.414121Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,
