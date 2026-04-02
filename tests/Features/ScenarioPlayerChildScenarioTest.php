@@ -6,7 +6,9 @@ use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
+use Tarfinlabs\EventMachine\Exceptions\ScenarioFailedException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\GrandchildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\MultiHopChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\CallableOutcomeMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\StartScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
@@ -131,6 +133,77 @@ test('child scenario with job actor outcomes — outcomes intercept job dispatch
     // Expected: child reaches completed (FINAL) via @continue + outcome intercept
     expect($state)->not->toBeNull('Child scenario should reach completed via @continue + job outcome intercept')
         ->and($state->value)->toContain('callable_outcome_test.completed');
+
+    ScenarioPlayer::cleanupOverrides();
+    $isActiveRef->setValue(null, false);
+});
+
+test('child scenario with @continue + outcomes — multi-hop pattern', function (): void {
+    // MultiHopChildMachine: idle → first_job (@done→review) → review (APPROVE) → second_job (@done→completed)
+    // Child scenario: first_job @done, review @continue APPROVE, second_job @done
+
+    $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
+    $isActiveRef->setAccessible(true);
+    $isActiveRef->setValue(null, true);
+
+    $childScenarioClass = new class() extends MachineScenario {
+        protected string $machine     = MultiHopChildMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = MachineScenario::START;
+        protected string $target      = 'completed';
+        protected string $description = 'test multi-hop child';
+
+        protected function plan(): array
+        {
+            return [
+                'first_job' => '@done',
+                'review'    => [
+                    '@continue' => 'APPROVE',
+                ],
+                'second_job' => '@done',
+            ];
+        }
+    };
+
+    $state = ScenarioPlayer::executeChildScenario(
+        childScenarioClass: $childScenarioClass::class,
+        childMachineClass: MultiHopChildMachine::class,
+    );
+
+    // idle → first_job (@done) → review → @continue APPROVE → second_job (@done) → completed
+    expect($state)->not->toBeNull('Multi-hop child should reach completed')
+        ->and($state->value)->toContain('multi_hop_child.completed');
+
+    ScenarioPlayer::cleanupOverrides();
+    $isActiveRef->setValue(null, false);
+});
+
+test('child @continue failure throws ScenarioFailedException', function (): void {
+    $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
+    $isActiveRef->setAccessible(true);
+    $isActiveRef->setValue(null, true);
+
+    $childScenarioClass = new class() extends MachineScenario {
+        protected string $machine     = CallableOutcomeMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = MachineScenario::START;
+        protected string $target      = 'completed';
+        protected string $description = 'test invalid continue';
+
+        protected function plan(): array
+        {
+            return [
+                'waiting' => [
+                    '@continue' => 'INVALID_EVENT_THAT_DOES_NOT_EXIST',
+                ],
+            ];
+        }
+    };
+
+    expect(fn () => ScenarioPlayer::executeChildScenario(
+        childScenarioClass: $childScenarioClass::class,
+        childMachineClass: CallableOutcomeMachine::class,
+    ))->toThrow(ScenarioFailedException::class);
 
     ScenarioPlayer::cleanupOverrides();
     $isActiveRef->setValue(null, false);

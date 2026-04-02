@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.1-child-scenario-continue-loop.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T00:35:27.44049Z",
+  "updated_at": "2026-04-02T00:36:28.031328Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -35,7 +35,7 @@
       "id": "stub-machine",
       "title": "Create MultiHopChildMachine test stub",
       "description": "Machine with: idle→@always→first_job(job,@done→review)→review(interactive)→APPROVE→second_job(job,@done→completed)→completed(final).",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "test",
         "stub"
@@ -46,10 +46,10 @@
       "source_sections": null,
       "source_lines": "162-167",
       "started_at": "2026-04-02T00:35:27.44049Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-02T00:36:23.257633Z",
+      "closed_reason": "MultiHopChildMachine: idle→@always→first_job(ProcessJob,@done→review)→review(interactive)→APPROVE→second_job(ProcessJob,@done→completed)→completed(final). 2 job actors, 1 interactive. 2595 tests.",
+      "gate_passed_at": "2026-04-02T00:36:23.257633Z",
+      "commit_sha": "ac5c6c1c"
     },
     {
       "id": "static-helpers",
@@ -97,7 +97,7 @@
       "id": "unit-tests",
       "title": "Write unit tests #2-#3 for child @continue",
       "description": "Test #2: multi-hop pattern via MultiHopChildMachine. Test #3: @continue failure throws ScenarioFailedException.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "test",
         "unit"
@@ -110,7 +110,7 @@
       "acceptance": "#2 multi-hop child reaches final via @continue+outcomes. #3 invalid @continue throws ScenarioFailedException.",
       "source_sections": null,
       "source_lines": "152-160",
-      "started_at": null,
+      "started_at": "2026-04-02T00:36:28.031328Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,
