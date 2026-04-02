@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.7.0-child-scenario-persistence.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T05:13:14.740985Z",
+  "updated_at": "2026-04-02T05:15:10.648158Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -37,7 +37,7 @@
       "id": "child-context",
       "title": "Pass resolveChildContext to executeChildScenario",
       "description": "In handleScenarioOutcome(), call invokeDefinition-\u003eresolveChildContext(state-\u003econtext) and pass result as input to executeChildScenario(). Fixes Bug 2.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "impl",
         "bugfix"
@@ -47,7 +47,7 @@
       "acceptance": "handleScenarioOutcome passes child context via input param. TDD test 'child receives parent context' passes.",
       "source_sections": null,
       "source_lines": "96-113",
-      "started_at": null,
+      "started_at": "2026-04-02T05:15:10.648158Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,

@@ -1833,9 +1833,12 @@ class MachineDefinition
 
         if ($childScenario !== null) {
             // Child scenario reference — execute child with its own scenario
+            $childContext = $invokeDefinition->resolveChildContext($state->context);
+
             $childState = ScenarioPlayer::executeChildScenario(
                 childScenarioClass: $childScenario,
                 childMachineClass: $invokeDefinition->machineClass,
+                input: $childContext,
             );
 
             if ($childState instanceof State) {
