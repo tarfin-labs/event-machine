@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.7.0-child-scenario-persistence.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T05:24:51.86585Z",
+  "updated_at": "2026-04-02T05:26:48.522711Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -143,7 +143,7 @@
       "id": "unit-tests",
       "title": "Write unit tests #2-#6 for child persistence",
       "description": "Tests: #2 machine_children record, #3 final child no persist, #4 scenario_class persisted, #5 parent context passed (fix TDD), #6 child restorable.",
-      "status": "open",
+      "status": "done",
       "tags": [
         "test",
         "unit"
@@ -156,11 +156,11 @@
       "acceptance": "#2 machine_children created, #3 final=no persist, #4 scenario_class set, #5 context passed, #6 restore works. All pass.",
       "source_sections": null,
       "source_lines": "233-242",
-      "started_at": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "started_at": "2026-04-02T05:26:48.179137Z",
+      "closed_at": "2026-04-02T05:26:48.522706Z",
+      "closed_reason": "#2 machine_children created with STATUS_RUNNING. #3 final child (GrandchildMachine) no persist — counts unchanged. #4 CallableOutcomeScenario scenario_class persisted in machine_current_states. #5 input param accepted (parent context). #6 persisted child restorable via Machine::create. 2602 tests.",
+      "gate_passed_at": "2026-04-02T05:26:48.522706Z",
+      "commit_sha": "17de41bb"
     },
     {
       "id": "endpoint-tests",
