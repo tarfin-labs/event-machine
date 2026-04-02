@@ -38,7 +38,6 @@ use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionTimeoutJob;
-use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
@@ -789,12 +788,7 @@ class Machine implements Castable, JsonSerializable, Stringable
             ->history
             ->filter(fn (MachineEvent $machineEvent): bool => $machineEvent->sequence_number > $lastPreviousEventNumber)
             ->filter(fn (MachineEvent $machineEvent): int|false => preg_match("/{$machineId}\.guard\..*\.fail/", $machineEvent->type))
-            ->filter(function (MachineEvent $machineEvent): bool {
-                $failedGuardType  = explode('.', $machineEvent->type)[2];
-                $failedGuardClass = $this->definition->behavior[BehaviorType::Guard->value][$failedGuardType];
-
-                return is_subclass_of($failedGuardClass, ValidationGuardBehavior::class);
-            });
+            ->filter(fn (MachineEvent $machineEvent): bool => isset($machineEvent->payload[$machineEvent->type]));
 
         if ($failedGuardEvents->isNotEmpty()) {
             $errorsWithMessage = [];
