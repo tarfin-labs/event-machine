@@ -6,10 +6,12 @@ use Illuminate\Support\Facades\Route;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Routing\MachineRouter;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
+use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\MultiHopChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\CallableOutcomeMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinuationScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\CallableOutcomeScenario;
@@ -322,4 +324,41 @@ it('LocalQA: callable outcome — correct PIN @done, wrong PIN @fail', function 
     expect(str_contains($cs2->state_id, 'waiting'))->toBeTrue(
         'Expected waiting (retry) with wrong PIN, got: '.$cs2->state_id
     );
+});
+
+it('LocalQA: child scenario with @continue + outcomes reaches target', function (): void {
+    // MultiHopChildMachine: idle → first_job (@done) → review → APPROVE → second_job (@done) → completed
+    // Child scenario uses @continue at review + @done outcomes at both job actors
+
+    $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
+    $isActiveRef->setAccessible(true);
+    $isActiveRef->setValue(null, true);
+
+    $childScenario = new class() extends MachineScenario {
+        protected string $machine     = MultiHopChildMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = MachineScenario::START;
+        protected string $target      = 'completed';
+        protected string $description = 'QA multi-hop child';
+
+        protected function plan(): array
+        {
+            return [
+                'first_job'  => '@done',
+                'review'     => ['@continue' => 'APPROVE'],
+                'second_job' => '@done',
+            ];
+        }
+    };
+
+    $state = ScenarioPlayer::executeChildScenario(
+        childScenarioClass: $childScenario::class,
+        childMachineClass: MultiHopChildMachine::class,
+    );
+
+    expect($state)->not->toBeNull('Child should reach completed via @continue + outcomes')
+        ->and($state->value)->toContain('multi_hop_child.completed');
+
+    ScenarioPlayer::cleanupOverrides();
+    $isActiveRef->setValue(null, false);
 });

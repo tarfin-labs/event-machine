@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.1-child-scenario-continue-loop.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T00:37:54.414121Z",
+  "updated_at": "2026-04-02T00:39:30.161721Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -120,7 +120,7 @@
       "id": "qa-test",
       "title": "Write QA test #4 for child scenario",
       "description": "HTTP endpoint: parent scenario with child ref, child advances via @continue+outcomes to target.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "test",
         "qa"
@@ -132,7 +132,7 @@
       "acceptance": "QA test #4 passes: parent→child flow via HTTP, child reaches target.",
       "source_sections": null,
       "source_lines": "170-172",
-      "started_at": null,
+      "started_at": "2026-04-02T00:39:30.161721Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,
@@ -142,7 +142,7 @@
       "id": "docs",
       "title": "Update docs for child @continue bugfix",
       "description": "scenario-runtime.md: executeChildScenario @continue loop. upgrading.md: 9.6.1 section.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "docs"
       ],
@@ -154,10 +154,10 @@
       "source_sections": null,
       "source_lines": "176-179",
       "started_at": "2026-04-02T00:37:54.414121Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-02T00:39:25.318045Z",
+      "closed_reason": "scenario-runtime.md: executeChildScenario row in static API table. upgrading.md: 9.6.1 section documenting @continue loop bugfix. 2597 tests.",
+      "gate_passed_at": "2026-04-02T00:39:25.318045Z",
+      "commit_sha": "356e973b"
     }
   ]
 }
