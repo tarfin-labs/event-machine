@@ -1839,6 +1839,9 @@ class MachineDefinition
                 childScenarioClass: $childScenario,
                 childMachineClass: $invokeDefinition->machineClass,
                 input: $childContext,
+                parentRootEventId: $state->history->first()?->root_event_id,
+                parentMachineClass: $this->machineClass,
+                parentStateId: $stateDefinition->id,
             );
 
             if ($childState instanceof State) {

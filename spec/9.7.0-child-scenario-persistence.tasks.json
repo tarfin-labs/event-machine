@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.7.0-child-scenario-persistence.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T05:15:10.648158Z",
+  "updated_at": "2026-04-02T05:16:53.986211Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -37,7 +37,7 @@
       "id": "child-context",
       "title": "Pass resolveChildContext to executeChildScenario",
       "description": "In handleScenarioOutcome(), call invokeDefinition-\u003eresolveChildContext(state-\u003econtext) and pass result as input to executeChildScenario(). Fixes Bug 2.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "impl",
         "bugfix"
@@ -48,16 +48,16 @@
       "source_sections": null,
       "source_lines": "96-113",
       "started_at": "2026-04-02T05:15:10.648158Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-02T05:16:49.774691Z",
+      "closed_reason": "handleScenarioOutcome now calls invokeDefinition-\u003eresolveChildContext(state-\u003econtext) and passes result as input to executeChildScenario. TDD test passes (input accepted, child starts with parent data). 2598 tests, 0 errors.",
+      "gate_passed_at": "2026-04-02T05:16:49.774691Z",
+      "commit_sha": "ccc4962d"
     },
     {
       "id": "persist-on-pause",
       "title": "Persist child machine on interactive pause",
       "description": "In executeChildScenario(), when child pauses (not final): set shouldPersist=true, call persist(), create MachineChild record with STATUS_RUNNING, persist scenario_class if hasContinuation(). Null guard on childRootEventId.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "impl",
         "bugfix"
@@ -69,7 +69,7 @@
       "acceptance": "TDD test 'child pausing persists to DB' passes. machine_current_states + machine_children created. scenario_class persisted if continuation.",
       "source_sections": null,
       "source_lines": "58-95",
-      "started_at": null,
+      "started_at": "2026-04-02T05:16:53.986211Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,

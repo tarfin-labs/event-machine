@@ -350,6 +350,9 @@ class ScenarioPlayer
         string $childScenarioClass,
         string $childMachineClass,
         array $input = [],
+        ?string $parentRootEventId = null,
+        ?string $parentMachineClass = null,
+        ?string $parentStateId = null,
     ): ?State {
         /** @var MachineScenario $childScenario */
         $childScenario = new $childScenarioClass();
