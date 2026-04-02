@@ -26,6 +26,7 @@ use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineTimeoutJob;
@@ -1976,8 +1977,11 @@ class MachineDefinition
         $childMachineClass = $invokeDefinition->machineClass;
         $childMachine      = $childMachineClass::create(state: $childRecord->child_root_event_id);
 
-        // Send the event (possibly renamed) to the child
-        $childMachine->send(['type' => $childEventType, 'payload' => $eventBehavior->payload]);
+        // Try continuation first — if child has active continuation, dispatch via executeContinuation
+        if (!$this->tryChildContinuation($childMachine, $childRecord->child_root_event_id, $childEventType, $eventBehavior)) {
+            // Normal (non-scenario) forwarded event
+            $childMachine->send(['type' => $childEventType, 'payload' => $eventBehavior->payload]);
+        }
 
         // If child reached a final state, dispatch completion
         if ($childMachine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
@@ -2007,6 +2011,53 @@ class MachineDefinition
         }
 
         return $childMachine->state;
+    }
+
+    /**
+     * Check if a restored child machine has an active continuation scenario.
+     * If so, dispatch via executeContinuation() instead of plain send().
+     *
+     * Called from tryForwardEventToChild() after child is restored from DB.
+     * Machine::create(state:) already auto-registers overrides via restoreStateFromRootEventId().
+     */
+    private function tryChildContinuation(
+        Machine $childMachine,
+        string $childRootEventId,
+        string $childEventType,
+        EventBehavior $eventBehavior,
+    ): bool {
+        if (!(bool) config('machine.scenarios.enabled', false)) {
+            return false;
+        }
+
+        $record = MachineCurrentState::where('root_event_id', $childRootEventId)
+            ->whereNotNull('scenario_class')
+            ->first(['scenario_class', 'scenario_params']);
+
+        if ($record === null || !is_string($record->scenario_class) || !class_exists($record->scenario_class)) {
+            return false;
+        }
+
+        $scenario = new ($record->scenario_class)();
+
+        if (!$scenario->hasContinuation()) {
+            return false;
+        }
+
+        // hydrateParams MUST precede executeContinuation — continuation loop depends on hydrated state
+        $scenario->hydrateParams($record->scenario_params ?? []);
+        $scenario->isContinuation = true;
+
+        $player = new ScenarioPlayer($scenario);
+
+        $player->executeContinuation(
+            machine: $childMachine,
+            eventPayload: $eventBehavior->payload ?? [],
+            rootEventId: $childRootEventId,
+            eventType: $childEventType,
+        );
+
+        return true;
     }
 
     /**

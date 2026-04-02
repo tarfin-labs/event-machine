@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.7.0-child-scenario-persistence.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T05:18:31.575167Z",
+  "updated_at": "2026-04-02T05:21:00.492089Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -57,7 +57,7 @@
       "id": "persist-on-pause",
       "title": "Persist child machine on interactive pause",
       "description": "In executeChildScenario(), when child pauses (not final): set shouldPersist=true, call persist(), create MachineChild record with STATUS_RUNNING, persist scenario_class if hasContinuation(). Null guard on childRootEventId.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "impl",
         "bugfix"
@@ -70,10 +70,10 @@
       "source_sections": null,
       "source_lines": "58-95",
       "started_at": "2026-04-02T05:16:53.986211Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-02T05:20:55.193151Z",
+      "closed_reason": "Child persisted on interactive pause: shouldPersist=true + persist() + MachineChild::create(STATUS_RUNNING) + scenario_class persisted if hasContinuation(). Null guard on childRootEventId. TDD test passes: machine_current_states + machine_children created. 2599 tests.",
+      "gate_passed_at": "2026-04-02T05:20:55.193151Z",
+      "commit_sha": "b165bb0c"
     },
     {
       "id": "new-params",
@@ -101,7 +101,7 @@
       "id": "forward-continuation",
       "title": "Add tryChildContinuation helper to MachineDefinition",
       "description": "New private tryChildContinuation() method. Called from tryForwardEventToChild() before send(). Checks child's scenario_class, dispatches executeContinuation if active continuation. Add MachineCurrentState import.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "impl",
         "bugfix"
@@ -113,7 +113,7 @@
       "acceptance": "tryChildContinuation() checks child scenario_class, dispatches executeContinuation. MachineCurrentState imported. TDD test 'forward endpoint activates continuation' passes.",
       "source_sections": null,
       "source_lines": "115-195",
-      "started_at": null,
+      "started_at": "2026-04-02T05:21:00.492089Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,
