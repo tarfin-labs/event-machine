@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.1-child-scenario-continue-loop.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T00:32:43.089043Z",
+  "updated_at": "2026-04-02T00:35:27.44049Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -35,7 +35,7 @@
       "id": "stub-machine",
       "title": "Create MultiHopChildMachine test stub",
       "description": "Machine with: idle→@always→first_job(job,@done→review)→review(interactive)→APPROVE→second_job(job,@done→completed)→completed(final).",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "test",
         "stub"
@@ -45,7 +45,7 @@
       "acceptance": "MultiHopChildMachine exists with 2 job actors, 1 interactive state. composer quality passes.",
       "source_sections": null,
       "source_lines": "162-167",
-      "started_at": null,
+      "started_at": "2026-04-02T00:35:27.44049Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,
@@ -75,7 +75,7 @@
       "id": "continue-loop",
       "title": "Add @continue loop to executeChildScenario",
       "description": "Inline plan classification, @continue loop with static helpers, parent outcome restore AFTER loop, try/catch error handling.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "impl",
         "bugfix"
@@ -88,10 +88,10 @@
       "source_sections": null,
       "source_lines": "62-133",
       "started_at": "2026-04-02T00:32:43.089036Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-02T00:35:21.291833Z",
+      "closed_reason": "executeChildScenario() now has @continue loop with: inline plan classification (no classifyPlanValues side effect), parent outcome restore AFTER loop, try/catch with ScenarioFailedException::continueEventFailed(), temporary ScenarioPlayer instance for helper methods. TDD test #1 passes. 2595 tests.",
+      "gate_passed_at": "2026-04-02T00:35:21.291833Z",
+      "commit_sha": "e16d69a4"
     },
     {
       "id": "unit-tests",
