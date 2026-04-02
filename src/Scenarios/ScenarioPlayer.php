@@ -742,14 +742,18 @@ class ScenarioPlayer
     private static function createClosureProxy(\Closure $handler): InvokableBehavior
     {
         return new class($handler) extends InvokableBehavior {
-            public function __construct(private readonly \Closure $handler)
+            /** @var \Closure Exposed for injectInvokableBehaviorParameters — reflects original closure's type hints */
+            public readonly \Closure $scenarioHandler;
+
+            public function __construct(\Closure $handler)
             {
                 parent::__construct();
+                $this->scenarioHandler = $handler;
             }
 
             public function __invoke(mixed ...$args): mixed
             {
-                return ($this->handler)(...$args);
+                return ($this->scenarioHandler)(...$args);
             }
         };
     }

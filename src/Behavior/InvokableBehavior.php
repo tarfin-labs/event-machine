@@ -261,9 +261,16 @@ abstract class InvokableBehavior
     ): array {
         $invocableBehaviorParameters = [];
 
-        $invocableBehaviorReflection = $actionBehavior instanceof self
-            ? new ReflectionMethod($actionBehavior, '__invoke')
-            : new ReflectionFunction($actionBehavior);
+        // For scenario closure proxies, reflect on the original closure (not the variadic __invoke wrapper)
+        $hasScenarioHandler = $actionBehavior instanceof self
+            && property_exists($actionBehavior, 'scenarioHandler')
+            && $actionBehavior->scenarioHandler instanceof \Closure;
+
+        $invocableBehaviorReflection = match (true) {
+            $hasScenarioHandler             => new ReflectionFunction($actionBehavior->scenarioHandler),
+            $actionBehavior instanceof self => new ReflectionMethod($actionBehavior, '__invoke'),
+            default                         => new ReflectionFunction($actionBehavior),
+        };
 
         foreach ($invocableBehaviorReflection->getParameters() as $parameter) {
             $parameterType = $parameter->getType();

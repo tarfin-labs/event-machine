@@ -1806,3 +1806,53 @@ test('callable outcome returning @timeout routes correctly', function (): void {
 
     expect($state->value)->toContain('callable_outcome_test.timed_out');
 });
+
+test('closure guard override receives injected ContextManager via scenarioHandler', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    // Bug: createClosureProxy wraps closure in anonymous class with __invoke(mixed ...$args)
+    // injectInvokableBehaviorParameters sees variadic mixed, injects nothing → $context null
+    // Fix: scenarioHandler property exposes original closure for reflection
+
+    $scenario = new class() extends MachineScenario {
+        protected string $machine     = CallableOutcomeMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = MachineScenario::START;
+        protected string $target      = 'waiting';
+        protected string $description = 'test closure guard injection';
+
+        protected function plan(): array
+        {
+            return [];
+        }
+
+        protected function continuation(): array
+        {
+            return [
+                'confirming' => [
+                    'outcome' => '@fail',
+                    // Closure guard override — type-hints ContextManager
+                    IsRetryableGuard::class => function (ContextManager $context): bool {
+                        // Use context to decide: if pin='retry' → true (retry), else false
+                        return $context->pin === 'retry';
+                    },
+                ],
+            ];
+        }
+    };
+
+    // pin='retry' → closure guard returns true → waiting (retry)
+    $m      = CallableOutcomeMachine::startingAt('waiting', context: ['pin' => 'retry'])->machine();
+    $player = new ScenarioPlayer($scenario);
+
+    $state = $player->executeContinuation(
+        machine: $m,
+        eventPayload: [],
+        rootEventId: 'test-closure-guard',
+        eventType: 'CONFIRM',
+    );
+
+    // If fix works: closure guard received ContextManager, checked pin='retry' → true → waiting
+    // If bug: closure gets null context → TypeError or false → failed
+    expect($state->value)->toContain('callable_outcome_test.waiting');
+});
