@@ -51,6 +51,30 @@ Forward endpoints (`forward` key on delegation states) now detect active continu
 
 Previously, forwarded events always processed with real behavior, even when the child had an active scenario.
 
+### Bug Fix: Continuation Overrides Overwritten by Plan on `send()`
+
+`Machine::send()` calls `restoreStateFromRootEventId()` which re-registered plan overrides — overwriting continuation overrides set by `executeContinuation()`. Guards would use plan values (e.g., `IsPinRequiredGuard=true`) instead of continuation values (`false`).
+
+**Fixed:** `restoreStateFromRootEventId()` now skips override re-registration when `ScenarioPlayer::isActive()` — active scenario execution already has the correct overrides.
+
+### Bug Fix: Closure Override Parameter Injection
+
+Scenario closure overrides (`StoreReportIdAction::class => function (FindeksContext $context) { ... }`) were not receiving injected parameters. `createClosureProxy()` wrapped closures in anonymous class with `__invoke(mixed ...$args)` — `injectInvokableBehaviorParameters` reflected on the variadic signature and injected nothing.
+
+**Fixed:** Proxy now exposes `scenarioHandler` property with the original closure. Parameter injection reflects on the original closure's type hints — `ContextManager` (and subclasses like `FindeksContext`), `State`, `EventBehavior` all inject correctly.
+
+### Bug Fix: Forward Events Missing in Parallel State Response
+
+`availableEventsForParallelState()` only checked `transitionDefinitions` — delegation states' forward events were omitted. Frontend received empty `availableEvents` for parallel states with forwarded child machines.
+
+**Fixed:** Forward event loop added, matching the logic in non-parallel `availableEvents()`.
+
+### Bug Fix: Wrong Child Selection in Parallel Regions
+
+`resolveChildCurrentStateDef()` and `tryForwardEventToChild()` queried `machine_children` by `parent_root_event_id` + `status=running` without filtering by `child_machine_class`. With multiple running children in parallel regions, the wrong child could be selected.
+
+**Fixed:** Added `child_machine_class` filter to both queries.
+
 ---
 
 ## From 9.6.0 to 9.6.1
