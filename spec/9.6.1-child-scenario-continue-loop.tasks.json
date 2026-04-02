@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.1-child-scenario-continue-loop.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T00:39:30.161721Z",
+  "updated_at": "2026-04-02T00:41:21.516606Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -120,7 +120,7 @@
       "id": "qa-test",
       "title": "Write QA test #4 for child scenario",
       "description": "HTTP endpoint: parent scenario with child ref, child advances via @continue+outcomes to target.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "test",
         "qa"
@@ -133,10 +133,10 @@
       "source_sections": null,
       "source_lines": "170-172",
       "started_at": "2026-04-02T00:39:30.161721Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-02T00:41:21.516601Z",
+      "closed_reason": "QA test #4 passes: child scenario reaches completed via @continue+outcomes on MultiHopChildMachine (first_job @done→review→@continue APPROVE→second_job @done→completed). 12/12 QA, 2597 total tests.",
+      "gate_passed_at": "2026-04-02T00:41:21.516601Z",
+      "commit_sha": "3bee4ed7"
     },
     {
       "id": "docs",
