@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
+use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\GrandchildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\CallableOutcomeMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\StartScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\GrandchildDoneScenario;
@@ -90,4 +92,39 @@ test('nested child scenario (grandchild) — delegation within delegation', func
     // GrandchildMachine has no delegation — @always goes straight to final
     expect($state)->toBeInstanceOf(State::class)
         ->and($state->value)->toContain('grandchild.gc_done');
+});
+
+test('child scenario with job actor outcomes — outcomes intercept job dispatch', function (): void {
+    // CallableOutcomeMachine: idle → @always → waiting (interactive) → CONFIRM → confirming (job actor)
+    // Child scenario with @continue at waiting + @done outcome at confirming
+    // If outcomes work: idle → waiting → CONFIRM → confirming (@done) → completed
+    // If bug: confirming stays (job skipped by shouldPersist=false, outcome NOT intercepted)
+
+    $childScenarioClass = new class() extends MachineScenario {
+        protected string $machine     = CallableOutcomeMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = MachineScenario::START;
+        protected string $target      = 'completed';
+        protected string $description = 'test child with job outcome';
+
+        protected function plan(): array
+        {
+            return [
+                'waiting' => [
+                    '@continue' => 'CONFIRM',
+                ],
+                'confirming' => '@done',
+            ];
+        }
+    };
+
+    $state = ScenarioPlayer::executeChildScenario(
+        childScenarioClass: $childScenarioClass::class,
+        childMachineClass: CallableOutcomeMachine::class,
+    );
+
+    // Expected: child reaches completed (FINAL) via outcome intercept
+    // Bug: returns null (child stuck at confirming, job skipped but outcome not intercepted)
+    expect($state)->not->toBeNull('Child scenario should reach completed via job outcome intercept')
+        ->and($state->value)->toContain('callable_outcome_test.completed');
 });
