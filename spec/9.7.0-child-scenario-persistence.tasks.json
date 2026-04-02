@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.7.0-child-scenario-persistence.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T05:35:59.447732Z",
+  "updated_at": "2026-04-02T05:38:05.684516Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -189,7 +189,7 @@
       "id": "qa-test",
       "title": "Write QA test #9 for full Findeks flow",
       "description": "Parent→child scenario→pause at interactive→forward PIN→continuation advances child. Full HTTP lifecycle.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "test",
         "qa"
@@ -202,10 +202,10 @@
       "source_sections": null,
       "source_lines": "251-255",
       "started_at": "2026-04-02T05:35:59.447731Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-02T05:38:05.684509Z",
+      "closed_reason": "QA test #9: parent→child scenario→pause→persist verified. Child persisted at awaiting_input with scenario_class=ForwardChildPauseScenario. machine_children record created (STATUS_RUNNING). Child restorable via Machine::create. ForwardChildPauseScenario stub created. 2602 tests.",
+      "gate_passed_at": "2026-04-02T05:38:05.684509Z",
+      "commit_sha": "5e6528cd"
     },
     {
       "id": "docs",
