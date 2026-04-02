@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.7.0-child-scenario-persistence.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T05:34:29.516534Z",
+  "updated_at": "2026-04-02T05:35:59.447732Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -189,7 +189,7 @@
       "id": "qa-test",
       "title": "Write QA test #9 for full Findeks flow",
       "description": "Parent→child scenario→pause at interactive→forward PIN→continuation advances child. Full HTTP lifecycle.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "test",
         "qa"
@@ -201,7 +201,7 @@
       "acceptance": "QA test #9: parent activates, child pauses, forward PIN triggers continuation, child advances. DB records verified.",
       "source_sections": null,
       "source_lines": "251-255",
-      "started_at": null,
+      "started_at": "2026-04-02T05:35:59.447731Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,
@@ -211,7 +211,7 @@
       "id": "docs",
       "title": "Update docs for child persistence",
       "description": "scenario-runtime.md: child persistence on pause. upgrading.md: 9.7.0 section with 3 bug fixes.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "docs"
       ],
@@ -223,10 +223,10 @@
       "source_sections": null,
       "source_lines": "257-260",
       "started_at": "2026-04-02T05:34:29.516534Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-02T05:35:52.684682Z",
+      "closed_reason": "scenario-runtime.md: updated executeChildScenario row — persist on pause, machine_children, resolveChildContext. upgrading.md: 9.7.0 section — child persist + forward continuation. 2602 tests.",
+      "gate_passed_at": "2026-04-02T05:35:52.684682Z",
+      "commit_sha": "bd7d1930"
     }
   ]
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Routing\MachineRouter;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
@@ -13,8 +14,11 @@ use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\MultiHopChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\CallableOutcomeMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioForwardChildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioForwardParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinuationScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\CallableOutcomeScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ForwardChildPauseScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\MultiPauseContinuationScenario;
 
 uses(LocalQATestCase::class);
@@ -358,6 +362,50 @@ it('LocalQA: child scenario with @continue + outcomes reaches target', function 
 
     expect($state)->not->toBeNull('Child should reach completed via @continue + outcomes')
         ->and($state->value)->toContain('multi_hop_child.completed');
+
+    ScenarioPlayer::cleanupOverrides();
+    $isActiveRef->setValue(null, false);
+});
+
+it('LocalQA: parent→child scenario→pause→persist — child persisted and restorable', function (): void {
+    // Test the persist-on-pause flow: parent scenario with child scenario reference,
+    // child pauses at interactive state, child persisted to DB with scenario_class.
+
+    $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
+    $isActiveRef->setAccessible(true);
+    $isActiveRef->setValue(null, true);
+
+    // Execute child scenario with parent context
+    $childScenario = new ForwardChildPauseScenario();
+    $player        = new ScenarioPlayer($childScenario);
+
+    // ForwardChildPauseScenario: processing(@done) → awaiting_input (pause)
+    $state = ScenarioPlayer::executeChildScenario(
+        childScenarioClass: ForwardChildPauseScenario::class,
+        childMachineClass: ScenarioForwardChildMachine::class,
+        parentRootEventId: 'qa-parent-root',
+        parentMachineClass: ScenarioForwardParentMachine::class,
+        parentStateId: 'delegating',
+    );
+
+    // Child paused at awaiting_input
+    expect($state)->toBeNull();
+
+    // Verify child persisted to DB
+    $childRecord = MachineChild::where('parent_root_event_id', 'qa-parent-root')->first();
+    expect($childRecord)->not->toBeNull()
+        ->and($childRecord->status)->toBe(MachineChild::STATUS_RUNNING);
+
+    // Verify scenario_class persisted (ForwardChildPauseScenario has continuation)
+    $cs = MachineCurrentState::where('root_event_id', $childRecord->child_root_event_id)->first();
+    expect($cs)->not->toBeNull()
+        ->and($cs->scenario_class)->toBe(ForwardChildPauseScenario::class);
+
+    // Verify child restorable
+    $restored = ScenarioForwardChildMachine::create(state: $childRecord->child_root_event_id);
+    expect(str_contains(implode(',', $restored->state->value), 'awaiting_input'))->toBeTrue(
+        'Restored child should be at awaiting_input, got: '.implode(',', $restored->state->value)
+    );
 
     ScenarioPlayer::cleanupOverrides();
     $isActiveRef->setValue(null, false);
