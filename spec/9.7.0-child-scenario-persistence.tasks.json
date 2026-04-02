@@ -1,0 +1,232 @@
+{
+  "version": 1,
+  "spec": "spec/9.7.0-child-scenario-persistence.md",
+  "created_at": "0001-01-01T00:00:00Z",
+  "updated_at": "2026-04-02T05:13:14.740985Z",
+  "workflow": {
+    "quality_gate": "composer quality",
+    "commit_strategy": "tp-commit"
+  },
+  "coverage": {
+    "total_sections": 18,
+    "mapped_sections": 0,
+    "context_only": [
+      "# Child Scenario Persistence + Forward Endpoint Scenario Awareness",
+      "## Problem",
+      "### Bug 1: Child Not Persisted on Pause",
+      "### Bug 2: Child Context Not Passed",
+      "### Bug 3: Forward Endpoint Scenario-Blind",
+      "## Audit: Similar Issues at Other Code Paths",
+      "## Proposed Solution",
+      "### Fix 1: Persist Child on Interactive Pause",
+      "### Fix 2: Pass Child Context from Parent",
+      "### Fix 3: Add Continuation Check to `tryForwardEventToChild()`",
+      "## New Parameters for executeChildScenario",
+      "## What Gets Added",
+      "## What Doesn't Change",
+      "## Testing Plan",
+      "### Unit Tests — `ScenarioPlayerChildScenarioTest.php`",
+      "### Endpoint Tests — `ScenarioEndpointTest.php`",
+      "### QA Test — `ScenarioContinuationQATest.php`",
+      "## Implementation Order"
+    ],
+    "unmapped": []
+  },
+  "tasks": [
+    {
+      "id": "child-context",
+      "title": "Pass resolveChildContext to executeChildScenario",
+      "description": "In handleScenarioOutcome(), call invokeDefinition-\u003eresolveChildContext(state-\u003econtext) and pass result as input to executeChildScenario(). Fixes Bug 2.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "bugfix"
+      ],
+      "depends_on": null,
+      "estimate_minutes": 3,
+      "acceptance": "handleScenarioOutcome passes child context via input param. TDD test 'child receives parent context' passes.",
+      "source_sections": null,
+      "source_lines": "96-113",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "persist-on-pause",
+      "title": "Persist child machine on interactive pause",
+      "description": "In executeChildScenario(), when child pauses (not final): set shouldPersist=true, call persist(), create MachineChild record with STATUS_RUNNING, persist scenario_class if hasContinuation(). Null guard on childRootEventId.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "bugfix"
+      ],
+      "depends_on": [
+        "child-context"
+      ],
+      "estimate_minutes": 8,
+      "acceptance": "TDD test 'child pausing persists to DB' passes. machine_current_states + machine_children created. scenario_class persisted if continuation.",
+      "source_sections": null,
+      "source_lines": "58-95",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "new-params",
+      "title": "Add parent context parameters to executeChildScenario",
+      "description": "Add optional parentRootEventId, parentMachineClass, parentStateId params. Update handleScenarioOutcome caller to pass them.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "refactor"
+      ],
+      "depends_on": [
+        "child-context"
+      ],
+      "estimate_minutes": 3,
+      "acceptance": "executeChildScenario accepts 3 new optional params. handleScenarioOutcome passes all three. Backward compatible.",
+      "source_sections": null,
+      "source_lines": "194-210",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "forward-continuation",
+      "title": "Add tryChildContinuation helper to MachineDefinition",
+      "description": "New private tryChildContinuation() method. Called from tryForwardEventToChild() before send(). Checks child's scenario_class, dispatches executeContinuation if active continuation. Add MachineCurrentState import.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "bugfix"
+      ],
+      "depends_on": [
+        "persist-on-pause"
+      ],
+      "estimate_minutes": 8,
+      "acceptance": "tryChildContinuation() checks child scenario_class, dispatches executeContinuation. MachineCurrentState imported. TDD test 'forward endpoint activates continuation' passes.",
+      "source_sections": null,
+      "source_lines": "115-195",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "stub-forward",
+      "title": "Create forward endpoint stub machines",
+      "description": "ScenarioForwardParentMachine (delegation with forward key) + ScenarioForwardChildMachine (interactive state + event). For tests #7-#9.",
+      "status": "open",
+      "tags": [
+        "test",
+        "stub"
+      ],
+      "depends_on": null,
+      "estimate_minutes": 5,
+      "acceptance": "2 stub machines exist. Parent has forward delegation. Child has interactive state accepting forwarded event.",
+      "source_sections": null,
+      "source_lines": "233-255",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "unit-tests",
+      "title": "Write unit tests #2-#6 for child persistence",
+      "description": "Tests: #2 machine_children record, #3 final child no persist, #4 scenario_class persisted, #5 parent context passed (fix TDD), #6 child restorable.",
+      "status": "open",
+      "tags": [
+        "test",
+        "unit"
+      ],
+      "depends_on": [
+        "persist-on-pause",
+        "new-params"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "#2 machine_children created, #3 final=no persist, #4 scenario_class set, #5 context passed, #6 restore works. All pass.",
+      "source_sections": null,
+      "source_lines": "233-242",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "endpoint-tests",
+      "title": "Write endpoint tests #7-#8 for forward continuation",
+      "description": "Test #7: forward endpoint with continuation activates executeContinuation. Test #8: forward without scenario works normally.",
+      "status": "open",
+      "tags": [
+        "test",
+        "endpoint"
+      ],
+      "depends_on": [
+        "forward-continuation",
+        "stub-forward"
+      ],
+      "estimate_minutes": 8,
+      "acceptance": "#7 forward+continuation dispatches executeContinuation. #8 non-scenario forward unchanged. Both pass.",
+      "source_sections": null,
+      "source_lines": "244-249",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "qa-test",
+      "title": "Write QA test #9 for full Findeks flow",
+      "description": "Parent→child scenario→pause at interactive→forward PIN→continuation advances child. Full HTTP lifecycle.",
+      "status": "open",
+      "tags": [
+        "test",
+        "qa"
+      ],
+      "depends_on": [
+        "endpoint-tests"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "QA test #9: parent activates, child pauses, forward PIN triggers continuation, child advances. DB records verified.",
+      "source_sections": null,
+      "source_lines": "251-255",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "docs",
+      "title": "Update docs for child persistence",
+      "description": "scenario-runtime.md: child persistence on pause. upgrading.md: 9.7.0 section with 3 bug fixes.",
+      "status": "open",
+      "tags": [
+        "docs"
+      ],
+      "depends_on": [
+        "forward-continuation"
+      ],
+      "estimate_minutes": 5,
+      "acceptance": "scenario-runtime.md documents child persist. upgrading.md has 9.7.0 section.",
+      "source_sections": null,
+      "source_lines": "257-260",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    }
+  ]
+}
