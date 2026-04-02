@@ -1,0 +1,163 @@
+{
+  "version": 1,
+  "spec": "spec/9.6.1-child-scenario-continue-loop.md",
+  "created_at": "0001-01-01T00:00:00Z",
+  "updated_at": "2026-04-02T00:27:21.414956Z",
+  "workflow": {
+    "quality_gate": "composer quality",
+    "commit_strategy": "tp-commit"
+  },
+  "coverage": {
+    "total_sections": 16,
+    "mapped_sections": 0,
+    "context_only": [
+      "# Fix: executeChildScenario Missing @continue Loop",
+      "## Problem",
+      "### The Findeks Example",
+      "## Proposed Solution",
+      "## Implementation",
+      "### 1. Promote helper methods to static",
+      "### 2. Replace manual parsing with non-side-effecting classification",
+      "### 3. Move parent restore AFTER @continue loop",
+      "### 4. Error handling",
+      "## What Gets Added",
+      "## What Doesn't Change",
+      "## Testing Plan",
+      "### Unit Tests — `ScenarioPlayerChildScenarioTest.php`",
+      "### Stub Machine",
+      "### QA Test",
+      "## Implementation Order"
+    ],
+    "unmapped": []
+  },
+  "tasks": [
+    {
+      "id": "stub-machine",
+      "title": "Create MultiHopChildMachine test stub",
+      "description": "Machine with: idle→@always→first_job(job,@done→review)→review(interactive)→APPROVE→second_job(job,@done→completed)→completed(final).",
+      "status": "open",
+      "tags": [
+        "test",
+        "stub"
+      ],
+      "depends_on": null,
+      "estimate_minutes": 5,
+      "acceptance": "MultiHopChildMachine exists with 2 job actors, 1 interactive state. composer quality passes.",
+      "source_sections": null,
+      "source_lines": "162-167",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "static-helpers",
+      "title": "Promote 4 helper methods to static",
+      "description": "resolveCurrentRoute(), findContinueForState(), parseContinueValue(), resolveEventType() — private to private static.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "refactor"
+      ],
+      "depends_on": null,
+      "estimate_minutes": 3,
+      "acceptance": "4 methods static. All callers work. 2594+ tests pass.",
+      "source_sections": null,
+      "source_lines": "58-60,140-145",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "continue-loop",
+      "title": "Add @continue loop to executeChildScenario",
+      "description": "Inline plan classification, @continue loop with static helpers, parent outcome restore AFTER loop, try/catch error handling.",
+      "status": "open",
+      "tags": [
+        "impl",
+        "bugfix"
+      ],
+      "depends_on": [
+        "static-helpers"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "TDD test #1 passes. Parent outcomes restored after loop. @continue errors throw ScenarioFailedException.",
+      "source_sections": null,
+      "source_lines": "62-133",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "unit-tests",
+      "title": "Write unit tests #2-#3 for child @continue",
+      "description": "Test #2: multi-hop pattern via MultiHopChildMachine. Test #3: @continue failure throws ScenarioFailedException.",
+      "status": "open",
+      "tags": [
+        "test",
+        "unit"
+      ],
+      "depends_on": [
+        "continue-loop",
+        "stub-machine"
+      ],
+      "estimate_minutes": 8,
+      "acceptance": "#2 multi-hop child reaches final via @continue+outcomes. #3 invalid @continue throws ScenarioFailedException.",
+      "source_sections": null,
+      "source_lines": "152-160",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "qa-test",
+      "title": "Write QA test #4 for child scenario",
+      "description": "HTTP endpoint: parent scenario with child ref, child advances via @continue+outcomes to target.",
+      "status": "open",
+      "tags": [
+        "test",
+        "qa"
+      ],
+      "depends_on": [
+        "unit-tests"
+      ],
+      "estimate_minutes": 8,
+      "acceptance": "QA test #4 passes: parent→child flow via HTTP, child reaches target.",
+      "source_sections": null,
+      "source_lines": "170-172",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    },
+    {
+      "id": "docs",
+      "title": "Update docs for child @continue bugfix",
+      "description": "scenario-runtime.md: executeChildScenario @continue loop. upgrading.md: 9.6.1 section.",
+      "status": "open",
+      "tags": [
+        "docs"
+      ],
+      "depends_on": [
+        "continue-loop"
+      ],
+      "estimate_minutes": 5,
+      "acceptance": "scenario-runtime.md documents @continue in executeChildScenario. upgrading.md has 9.6.1.",
+      "source_sections": null,
+      "source_lines": "176-179",
+      "started_at": null,
+      "closed_at": null,
+      "closed_reason": null,
+      "gate_passed_at": null,
+      "commit_sha": null
+    }
+  ]
+}
