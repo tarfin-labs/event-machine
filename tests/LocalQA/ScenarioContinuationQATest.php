@@ -14,6 +14,7 @@ use Tarfinlabs\EventMachine\Tests\LocalQA\LocalQATestCase;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\MultiHopChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\CallableOutcomeMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsRetryableGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioForwardChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioForwardParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\ContinuationScenario;
@@ -409,4 +410,73 @@ it('LocalQA: parent→child scenario→pause→persist — child persisted and r
 
     ScenarioPlayer::cleanupOverrides();
     $isActiveRef->setValue(null, false);
+});
+
+it('LocalQA: plan vs continuation same guard — continuation override wins after DB restore', function (): void {
+    $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
+    $isActiveRef->setAccessible(true);
+    $isActiveRef->setValue(null, true);
+
+    // Scenario: empty plan (targets waiting), continuation @fail + IsRetryableGuard=false
+    $childScenarioClass = new class() extends MachineScenario {
+        protected string $machine     = CallableOutcomeMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = MachineScenario::START;
+        protected string $target      = 'waiting';
+        protected string $description = 'test guard override after restore';
+
+        protected function plan(): array
+        {
+            return [];
+        }
+
+        protected function continuation(): array
+        {
+            return [
+                'confirming' => [
+                    'outcome'               => '@fail',
+                    IsRetryableGuard::class => false,
+                ],
+            ];
+        }
+    };
+
+    // Phase 1: persist child at waiting
+    ScenarioPlayer::executeChildScenario(
+        childScenarioClass: $childScenarioClass::class,
+        childMachineClass: CallableOutcomeMachine::class,
+        parentRootEventId: 'qa-guard-test',
+        parentMachineClass: 'App\\ParentMachine',
+        parentStateId: 'delegating',
+    );
+
+    $childRecord = MachineChild::where('parent_root_event_id', 'qa-guard-test')->first();
+    expect($childRecord)->not->toBeNull();
+
+    MachineCurrentState::where('root_event_id', $childRecord->child_root_event_id)
+        ->update(['scenario_class' => $childScenarioClass::class, 'scenario_params' => null]);
+
+    // Clean Phase 1
+    ScenarioPlayer::cleanupOverrides();
+    $isActiveRef->setValue(null, false);
+
+    // Phase 2: Restore (plan overrides registered), then executeContinuation (continuation overrides)
+    $restoredChild = CallableOutcomeMachine::create(state: $childRecord->child_root_event_id);
+
+    $scenario = new ($childScenarioClass::class)();
+    $scenario->hydrateParams([]);
+    $scenario->isContinuation = true;
+    $player                   = new ScenarioPlayer($scenario);
+
+    $resultState = $player->executeContinuation(
+        machine: $restoredChild,
+        eventPayload: [],
+        rootEventId: $childRecord->child_root_event_id,
+        eventType: 'CONFIRM',
+    );
+
+    // @fail + IsRetryableGuard=false → failed (NOT waiting/retry)
+    expect(str_contains(implode(',', $resultState->value), 'failed'))->toBeTrue(
+        'Expected failed (guard=false from continuation), got: '.implode(',', $resultState->value)
+    );
 });
