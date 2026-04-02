@@ -465,6 +465,39 @@ class State implements \JsonSerializable
                     }
                 }
             }
+
+            // Forward events from delegation states within parallel regions
+            if ($activeStateDef->hasMachineInvoke()) {
+                $invokeDefinition = $activeStateDef->getMachineInvokeDefinition();
+
+                if ($invokeDefinition !== null && $invokeDefinition->hasForward()) {
+                    $childStateDef = $this->resolveChildCurrentStateDef($invokeDefinition);
+
+                    foreach ($invokeDefinition->forward as $key => $value) {
+                        $parentEventType = is_int($key) ? $value : $key;
+
+                        if (!is_string($parentEventType)) {
+                            continue;
+                        }
+
+                        $childEventType = $invokeDefinition->resolveForwardEvent($parentEventType);
+
+                        if ($childEventType === null) {
+                            continue;
+                        }
+
+                        if ($childStateDef instanceof StateDefinition && $this->childStateAcceptsEvent($childStateDef, $childEventType)) {
+                            $event = ['type' => $parentEventType, 'source' => 'forward'];
+
+                            if ($regionName !== null) {
+                                $event['region'] = $regionName;
+                            }
+
+                            $events[] = $event;
+                        }
+                    }
+                }
+            }
         }
 
         return $events;
