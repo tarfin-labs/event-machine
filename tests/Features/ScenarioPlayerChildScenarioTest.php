@@ -178,6 +178,11 @@ test('child scenario with @continue + outcomes — multi-hop pattern', function 
     $isActiveRef->setValue(null, false);
 });
 
+test('child scenario pausing at interactive state persists child to DB', function (): void {
+    // Planned for 9.7.0: child persist on interactive pause + forward endpoint scenario awareness
+    $this->markTestIncomplete('Blocked: requires child persist + forward endpoint scenario awareness (9.7.0)');
+});
+
 test('child @continue failure throws ScenarioFailedException', function (): void {
     $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
     $isActiveRef->setAccessible(true);
