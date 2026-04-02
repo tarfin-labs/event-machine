@@ -33,6 +33,26 @@ Each section below has step-by-step migration instructions with before/after exa
 
 ---
 
+## From 9.6.x to 9.7.0
+
+### Child Scenario Persistence on Interactive Pause
+
+When a child scenario (referenced in `plan()` via `ChildScenario::class`) pauses at an interactive state, the child machine is now **persisted to DB**. Previously, child scenarios ran entirely in-memory (`shouldPersist=false`) — the child was volatile and forward endpoints could not interact with it.
+
+**What changed:**
+- `executeChildScenario()` persists the child machine when it pauses at a non-final state
+- `machine_children` record created linking parent to child
+- Child's `scenario_class` persisted for continuation support
+- Parent context passed to child via `resolveChildContext()`
+
+### Forward Endpoint Continuation Support
+
+Forward endpoints (`forward` key on delegation states) now detect active continuation scenarios on the child machine. When a forwarded event arrives for a child with `scenario_class` and `hasContinuation()`, the child's continuation overrides are applied via `executeContinuation()`.
+
+Previously, forwarded events always processed with real behavior, even when the child had an active scenario.
+
+---
+
 ## From 9.6.0 to 9.6.1
 
 ### Bug Fix: Child Scenario @continue Loop

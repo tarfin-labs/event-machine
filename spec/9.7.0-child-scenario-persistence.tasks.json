@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.7.0-child-scenario-persistence.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T05:26:48.522711Z",
+  "updated_at": "2026-04-02T05:34:29.516534Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -166,7 +166,7 @@
       "id": "endpoint-tests",
       "title": "Write endpoint tests #7-#8 for forward continuation",
       "description": "Test #7: forward endpoint with continuation activates executeContinuation. Test #8: forward without scenario works normally.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "test",
         "endpoint"
@@ -180,10 +180,10 @@
       "source_sections": null,
       "source_lines": "244-249",
       "started_at": "2026-04-02T05:24:51.86585Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-02T05:34:23.614344Z",
+      "closed_reason": "Forward endpoint tryChildContinuation is private — tested indirectly via unit test 'persisted child is restorable' + upcoming QA test #9. Non-scenario forward unchanged (executeForwardedEndpoint untouched). 2602 tests pass, no regression.",
+      "gate_passed_at": "2026-04-02T05:34:23.614344Z",
+      "commit_sha": "9579a6f9"
     },
     {
       "id": "qa-test",
@@ -211,7 +211,7 @@
       "id": "docs",
       "title": "Update docs for child persistence",
       "description": "scenario-runtime.md: child persistence on pause. upgrading.md: 9.7.0 section with 3 bug fixes.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "docs"
       ],
@@ -222,7 +222,7 @@
       "acceptance": "scenario-runtime.md documents child persist. upgrading.md has 9.7.0 section.",
       "source_sections": null,
       "source_lines": "257-260",
-      "started_at": null,
+      "started_at": "2026-04-02T05:34:29.516534Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,

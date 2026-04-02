@@ -127,7 +127,7 @@ The `$isContinuation` flag on `MachineScenario` is set by `MachineController` wh
 | `ScenarioPlayer::isActive()` | Returns `true` during scenario execution — engine checks this to suppress fire-and-forget dispatches |
 | `ScenarioPlayer::getOutcome(string $stateRoute)` | Returns delegation outcome for a state (used by engine during delegation interception) |
 | `ScenarioPlayer::getChildScenario(string $stateRoute)` | Returns child scenario class for nested delegation |
-| `ScenarioPlayer::executeChildScenario(...)` | Runs a child scenario synchronously with `shouldPersist=false`. Includes `@continue` loop for traversing interactive states and delegation outcome interception for job actors. Parent outcomes saved/restored around child execution |
+| `ScenarioPlayer::executeChildScenario(...)` | Runs a child scenario synchronously. Includes `@continue` loop, delegation outcome interception, parent outcome save/restore. When child pauses at interactive state: persists child to DB, creates `machine_children` record, persists `scenario_class` for continuation. Parent context passed via `resolveChildContext()` |
 | `ScenarioPlayer::cleanupOverrides()` | Unbinds all container overrides, clears outcomes/childScenarios, resets inline fakes. Runs in `finally` block after every `execute()` |
 | `ScenarioPlayer::deactivateScenario(string $rootEventId)` | Clears `scenario_class`/`scenario_params` columns in `machine_current_states` |
 | `ScenarioPlayer::executeContinuation(...)` | Phase 2 execution — applies `continuation()` overrides, sends QA's event, deactivates on final state |
