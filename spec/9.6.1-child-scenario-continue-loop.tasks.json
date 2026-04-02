@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.6.1-child-scenario-continue-loop.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T00:27:57.638963Z",
+  "updated_at": "2026-04-02T00:32:43.089043Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -55,7 +55,7 @@
       "id": "static-helpers",
       "title": "Promote 4 helper methods to static",
       "description": "resolveCurrentRoute(), findContinueForState(), parseContinueValue(), resolveEventType() — private to private static.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "impl",
         "refactor"
@@ -66,16 +66,16 @@
       "source_sections": null,
       "source_lines": "58-60,140-145",
       "started_at": "2026-04-02T00:27:57.638962Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-02T00:32:37.897033Z",
+      "closed_reason": "Pint's Laravel preset reverts static keyword when callers use $this-\u003e. Static promotion not viable without fighting the linter. Instance methods preserved — executeChildScenario will use temporary ScenarioPlayer instance instead (covered in continue-loop task).",
+      "gate_passed_at": "2026-04-02T00:32:37.897033Z",
+      "commit_sha": "1eab2dbd"
     },
     {
       "id": "continue-loop",
       "title": "Add @continue loop to executeChildScenario",
       "description": "Inline plan classification, @continue loop with static helpers, parent outcome restore AFTER loop, try/catch error handling.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "impl",
         "bugfix"
@@ -87,7 +87,7 @@
       "acceptance": "TDD test #1 passes. Parent outcomes restored after loop. @continue errors throw ScenarioFailedException.",
       "source_sections": null,
       "source_lines": "62-133",
-      "started_at": null,
+      "started_at": "2026-04-02T00:32:43.089036Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,

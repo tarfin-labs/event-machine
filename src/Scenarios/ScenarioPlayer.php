@@ -354,15 +354,19 @@ class ScenarioPlayer
         /** @var MachineScenario $childScenario */
         $childScenario = new $childScenarioClass();
 
-        // Classify child plan values to populate outcomes/childScenarios for nested delegation
+        // Save parent state — restored after child completes
         $childPlan            = $childScenario->resolvedPlan();
         $parentOutcomes       = self::$outcomes;
         $parentChildScenarios = self::$childScenarios;
 
         // Register child's behavior overrides (adds to existing parent overrides)
         self::registerOverrides($childScenario);
+
+        // Classify child plan into outcomes, child scenarios, and overrides (with @continue)
+        // Inlined to avoid classifyPlanValues() side effect on self::$outcomes
         $childOutcomes       = [];
         $childChildScenarios = [];
+        $childOverrides      = [];
 
         foreach ($childPlan as $stateRoute => $value) {
             if (is_string($value) && str_starts_with($value, '@')) {
@@ -371,6 +375,19 @@ class ScenarioPlayer
                 $childChildScenarios[$stateRoute] = $value;
             } elseif (is_array($value) && isset($value['outcome'])) {
                 $childOutcomes[$stateRoute] = $value;
+
+                // Extract behavior overrides from outcome array
+                $behaviorKeys = array_filter(
+                    $value,
+                    fn (mixed $v, int|string $k): bool => is_string($k) && $k !== 'outcome' && $k !== 'output' && class_exists($k),
+                    ARRAY_FILTER_USE_BOTH,
+                );
+
+                if ($behaviorKeys !== []) {
+                    $childOverrides[$stateRoute] = $behaviorKeys;
+                }
+            } elseif (is_array($value)) {
+                $childOverrides[$stateRoute] = $value;
             }
         }
 
@@ -395,7 +412,41 @@ class ScenarioPlayer
 
         $childState = $childMachine->state;
 
-        // Restore parent outcomes (child overrides should not leak to parent)
+        // @continue loop — advance through interactive states (child outcomes still active)
+        $childPlayer   = new self($childScenario);
+        $continueCount = 0;
+        $maxDepth      = (int) config('machine.max_transition_depth', 100);
+
+        while ($continueCount < $maxDepth) {
+            $currentRoute = $childPlayer->resolveCurrentRoute($childState);
+            $continue     = $childPlayer->findContinueForState($currentRoute, $childOverrides);
+
+            if ($continue === null) {
+                break;
+            }
+
+            $continueCount++;
+            [$eventClass, $payload] = $childPlayer->parseContinueValue($continue);
+
+            try {
+                $childState = $childMachine->send([
+                    'type'    => $childPlayer->resolveEventType($eventClass),
+                    'payload' => $payload,
+                ]);
+            } catch (\Throwable $e) {
+                // Restore parent outcomes before re-throwing
+                self::$outcomes       = $parentOutcomes;
+                self::$childScenarios = $parentChildScenarios;
+
+                throw ScenarioFailedException::continueEventFailed(
+                    state: $currentRoute,
+                    event: $eventClass,
+                    reason: $e->getMessage(),
+                );
+            }
+        }
+
+        // Restore parent outcomes AFTER loop completes (child outcomes no longer needed)
         self::$outcomes       = $parentOutcomes;
         self::$childScenarios = $parentChildScenarios;
 

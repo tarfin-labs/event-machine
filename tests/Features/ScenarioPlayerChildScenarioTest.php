@@ -97,8 +97,13 @@ test('nested child scenario (grandchild) — delegation within delegation', func
 test('child scenario with job actor outcomes — outcomes intercept job dispatch', function (): void {
     // CallableOutcomeMachine: idle → @always → waiting (interactive) → CONFIRM → confirming (job actor)
     // Child scenario with @continue at waiting + @done outcome at confirming
-    // If outcomes work: idle → waiting → CONFIRM → confirming (@done) → completed
-    // If bug: confirming stays (job skipped by shouldPersist=false, outcome NOT intercepted)
+    // If outcomes work: idle → waiting → @continue CONFIRM → confirming (@done) → completed
+    // If bug: child stuck at waiting (no @continue loop) or confirming (outcome not intercepted)
+
+    // Simulate parent execute() context — isActive must be true for outcome interception
+    $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
+    $isActiveRef->setAccessible(true);
+    $isActiveRef->setValue(null, true);
 
     $childScenarioClass = new class() extends MachineScenario {
         protected string $machine     = CallableOutcomeMachine::class;
@@ -123,8 +128,10 @@ test('child scenario with job actor outcomes — outcomes intercept job dispatch
         childMachineClass: CallableOutcomeMachine::class,
     );
 
-    // Expected: child reaches completed (FINAL) via outcome intercept
-    // Bug: returns null (child stuck at confirming, job skipped but outcome not intercepted)
-    expect($state)->not->toBeNull('Child scenario should reach completed via job outcome intercept')
+    // Expected: child reaches completed (FINAL) via @continue + outcome intercept
+    expect($state)->not->toBeNull('Child scenario should reach completed via @continue + job outcome intercept')
         ->and($state->value)->toContain('callable_outcome_test.completed');
+
+    ScenarioPlayer::cleanupOverrides();
+    $isActiveRef->setValue(null, false);
 });
