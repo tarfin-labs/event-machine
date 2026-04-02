@@ -417,7 +417,10 @@ it('LocalQA: plan vs continuation same guard — continuation override wins afte
     $isActiveRef->setAccessible(true);
     $isActiveRef->setValue(null, true);
 
-    // Scenario: empty plan (targets waiting), continuation @fail + IsRetryableGuard=false
+    // KEY: plan has IsRetryableGuard=TRUE, continuation has FALSE.
+    // Bug: restoreStateFromRootEventId re-registers plan overrides (true)
+    // AFTER executeContinuation registered continuation overrides (false) — plan wins.
+    // Fix: skip re-registration when ScenarioPlayer::isActive().
     $childScenarioClass = new class() extends MachineScenario {
         protected string $machine     = CallableOutcomeMachine::class;
         protected string $source      = 'idle';
@@ -427,7 +430,12 @@ it('LocalQA: plan vs continuation same guard — continuation override wins afte
 
         protected function plan(): array
         {
-            return [];
+            return [
+                'confirming' => [
+                    'outcome'               => '@fail',
+                    IsRetryableGuard::class => true, // plan: guard=true → waiting (retry)
+                ],
+            ];
         }
 
         protected function continuation(): array
@@ -435,7 +443,7 @@ it('LocalQA: plan vs continuation same guard — continuation override wins afte
             return [
                 'confirming' => [
                     'outcome'               => '@fail',
-                    IsRetryableGuard::class => false,
+                    IsRetryableGuard::class => false, // continuation: guard=false → failed
                 ],
             ];
         }
