@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.7.0-child-scenario-persistence.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T05:16:53.986211Z",
+  "updated_at": "2026-04-02T05:18:31.575167Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -79,7 +79,7 @@
       "id": "new-params",
       "title": "Add parent context parameters to executeChildScenario",
       "description": "Add optional parentRootEventId, parentMachineClass, parentStateId params. Update handleScenarioOutcome caller to pass them.",
-      "status": "open",
+      "status": "done",
       "tags": [
         "impl",
         "refactor"
@@ -91,11 +91,11 @@
       "acceptance": "executeChildScenario accepts 3 new optional params. handleScenarioOutcome passes all three. Backward compatible.",
       "source_sections": null,
       "source_lines": "194-210",
-      "started_at": null,
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "started_at": "2026-04-02T05:18:31.202695Z",
+      "closed_at": "2026-04-02T05:18:31.575162Z",
+      "closed_reason": "executeChildScenario accepts parentRootEventId, parentMachineClass, parentStateId (all optional, backward compatible). handleScenarioOutcome passes all three. 2598 tests.",
+      "gate_passed_at": "2026-04-02T05:18:31.575162Z",
+      "commit_sha": "d41b0e3c"
     },
     {
       "id": "forward-continuation",

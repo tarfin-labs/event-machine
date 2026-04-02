@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Actor\State;
+use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
@@ -181,7 +182,46 @@ test('child scenario with @continue + outcomes — multi-hop pattern', function 
 // ── 9.7.0 TDD tests — child scenario persistence + forward endpoint awareness ────
 
 test('child scenario pausing at interactive state persists child to DB', function (): void {
-    $this->markTestIncomplete('9.7.0: child persist on interactive pause');
+    $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
+    $isActiveRef->setAccessible(true);
+    $isActiveRef->setValue(null, true);
+
+    $childScenarioClass = new class() extends MachineScenario {
+        protected string $machine     = CallableOutcomeMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = MachineScenario::START;
+        protected string $target      = 'waiting';
+        protected string $description = 'test child persist';
+
+        protected function plan(): array
+        {
+            return [];
+        }
+    };
+
+    $countBefore = MachineCurrentState::count();
+
+    $state = ScenarioPlayer::executeChildScenario(
+        childScenarioClass: $childScenarioClass::class,
+        childMachineClass: CallableOutcomeMachine::class,
+        parentRootEventId: 'parent-root-001',
+        parentMachineClass: 'App\\Machines\\ParentMachine',
+        parentStateId: 'delegating',
+    );
+
+    expect($state)->toBeNull();
+    expect(MachineCurrentState::count())->toBeGreaterThan($countBefore,
+        'Child paused at interactive state should be persisted to DB'
+    );
+
+    // Verify machine_children record
+    $childRecord = MachineChild::where('parent_root_event_id', 'parent-root-001')->first();
+    expect($childRecord)->not->toBeNull()
+        ->and($childRecord->status)->toBe(MachineChild::STATUS_RUNNING)
+        ->and($childRecord->child_machine_class)->toBe(CallableOutcomeMachine::class);
+
+    ScenarioPlayer::cleanupOverrides();
+    $isActiveRef->setValue(null, false);
 });
 
 test('child scenario receives parent context via resolveChildContext', function (): void {

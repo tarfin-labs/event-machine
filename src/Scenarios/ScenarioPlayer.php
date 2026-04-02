@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
 use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
@@ -458,7 +459,35 @@ class ScenarioPlayer
             return $childState;
         }
 
-        // Child paused at interactive/delegation state — stays running
+        // Child paused at interactive/delegation state — persist for forward endpoint access
+        if ($parentRootEventId !== null && $parentMachineClass !== null && $parentStateId !== null) {
+            $childMachine->definition->shouldPersist = true;
+            $childMachine->persist();
+
+            $childRootEventId = $childMachine->state->history->first()?->root_event_id;
+
+            if ($childRootEventId !== null) {
+                MachineChild::create([
+                    'parent_root_event_id' => $parentRootEventId,
+                    'parent_machine_class' => $parentMachineClass,
+                    'parent_state_id'      => $parentStateId,
+                    'child_root_event_id'  => $childRootEventId,
+                    'child_machine_class'  => $childMachineClass,
+                    'status'               => MachineChild::STATUS_RUNNING,
+                    'created_at'           => now(),
+                ]);
+
+                // Persist scenario for continuation
+                if ($childScenario->hasContinuation()) {
+                    MachineCurrentState::where('root_event_id', $childRootEventId)
+                        ->update([
+                            'scenario_class'  => $childScenarioClass,
+                            'scenario_params' => null,
+                        ]);
+                }
+            }
+        }
+
         return null;
     }
 
