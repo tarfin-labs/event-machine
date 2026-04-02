@@ -2,7 +2,7 @@
   "version": 1,
   "spec": "spec/9.7.0-child-scenario-persistence.md",
   "created_at": "0001-01-01T00:00:00Z",
-  "updated_at": "2026-04-02T05:23:24.709383Z",
+  "updated_at": "2026-04-02T05:24:51.86585Z",
   "workflow": {
     "quality_gate": "composer quality",
     "commit_strategy": "tp-commit"
@@ -123,7 +123,7 @@
       "id": "stub-forward",
       "title": "Create forward endpoint stub machines",
       "description": "ScenarioForwardParentMachine (delegation with forward key) + ScenarioForwardChildMachine (interactive state + event). For tests #7-#9.",
-      "status": "wip",
+      "status": "done",
       "tags": [
         "test",
         "stub"
@@ -134,10 +134,10 @@
       "source_sections": null,
       "source_lines": "233-255",
       "started_at": "2026-04-02T05:23:24.709383Z",
-      "closed_at": null,
-      "closed_reason": null,
-      "gate_passed_at": null,
-      "commit_sha": null
+      "closed_at": "2026-04-02T05:24:46.268817Z",
+      "closed_reason": "ScenarioForwardParentMachine (delegation with forward CONFIRM → /confirm) + ScenarioForwardChildMachine (processing job→awaiting_input interactive→CONFIRM→finalizing job→completed). 2599 tests.",
+      "gate_passed_at": "2026-04-02T05:24:46.268817Z",
+      "commit_sha": "b249ebb1"
     },
     {
       "id": "unit-tests",
@@ -166,7 +166,7 @@
       "id": "endpoint-tests",
       "title": "Write endpoint tests #7-#8 for forward continuation",
       "description": "Test #7: forward endpoint with continuation activates executeContinuation. Test #8: forward without scenario works normally.",
-      "status": "open",
+      "status": "wip",
       "tags": [
         "test",
         "endpoint"
@@ -179,7 +179,7 @@
       "acceptance": "#7 forward+continuation dispatches executeContinuation. #8 non-scenario forward unchanged. Both pass.",
       "source_sections": null,
       "source_lines": "244-249",
-      "started_at": null,
+      "started_at": "2026-04-02T05:24:51.86585Z",
       "closed_at": null,
       "closed_reason": null,
       "gate_passed_at": null,

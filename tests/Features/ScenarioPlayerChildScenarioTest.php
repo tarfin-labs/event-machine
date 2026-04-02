@@ -14,6 +14,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\CallableOutcomeMa
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\StartScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\GrandchildDoneScenario;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\CallableOutcomeScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\PauseAtVerifyingScenario;
 
 beforeEach(function (): void {
@@ -268,16 +269,84 @@ test('child scenario receives parent context via resolveChildContext', function 
     $isActiveRef->setValue(null, false);
 });
 
-test('tryChildContinuation dispatches executeContinuation on child with active scenario', function (): void {
-    // This tests the tryChildContinuation helper indirectly:
-    // When a child is persisted with scenario_class and hasContinuation(),
-    // restoring and sending an event via forward path should use executeContinuation.
-    // Direct test: create a persisted child with scenario_class, restore it,
-    // verify that the scenario overrides from continuation are applied.
+test('child reaching final state does NOT persist', function (): void {
+    $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
+    $isActiveRef->setAccessible(true);
+    $isActiveRef->setValue(null, true);
 
-    // For now, this is validated by the integration/QA test (test #9)
-    // since tryChildContinuation is private and called from tryForwardEventToChild.
-    $this->markTestIncomplete('Validated by QA test #9 — tryChildContinuation is private');
+    $countBefore      = MachineCurrentState::count();
+    $childCountBefore = MachineChild::count();
+
+    // GrandchildMachine reaches gc_done (FINAL) via @always chain
+    $state = ScenarioPlayer::executeChildScenario(
+        childScenarioClass: GrandchildDoneScenario::class,
+        childMachineClass: GrandchildMachine::class,
+        parentRootEventId: 'parent-root-final',
+        parentMachineClass: 'App\\ParentMachine',
+        parentStateId: 'delegating',
+    );
+
+    // Child reached final — should return State, no persistence
+    expect($state)->toBeInstanceOf(State::class);
+    expect(MachineCurrentState::count())->toBe($countBefore);
+    expect(MachineChild::count())->toBe($childCountBefore);
+
+    ScenarioPlayer::cleanupOverrides();
+    $isActiveRef->setValue(null, false);
+});
+
+test('child with continuation persists scenario_class', function (): void {
+    $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
+    $isActiveRef->setAccessible(true);
+    $isActiveRef->setValue(null, true);
+
+    // CallableOutcomeScenario has continuation() — scenario_class should be persisted
+    $state = ScenarioPlayer::executeChildScenario(
+        childScenarioClass: CallableOutcomeScenario::class,
+        childMachineClass: CallableOutcomeMachine::class,
+        parentRootEventId: 'parent-root-cont',
+        parentMachineClass: 'App\\ParentMachine',
+        parentStateId: 'delegating',
+    );
+
+    expect($state)->toBeNull(); // Paused at waiting
+
+    // Find the child's root_event_id from machine_children
+    $childRecord = MachineChild::where('parent_root_event_id', 'parent-root-cont')->first();
+    expect($childRecord)->not->toBeNull();
+
+    // scenario_class should be persisted for continuation
+    $cs = MachineCurrentState::where('root_event_id', $childRecord->child_root_event_id)->first();
+    expect($cs->scenario_class)->toBe(
+        CallableOutcomeScenario::class
+    );
+
+    ScenarioPlayer::cleanupOverrides();
+    $isActiveRef->setValue(null, false);
+});
+
+test('persisted child is restorable via Machine::create', function (): void {
+    $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
+    $isActiveRef->setAccessible(true);
+    $isActiveRef->setValue(null, true);
+
+    ScenarioPlayer::executeChildScenario(
+        childScenarioClass: CallableOutcomeScenario::class,
+        childMachineClass: CallableOutcomeMachine::class,
+        parentRootEventId: 'parent-root-restore',
+        parentMachineClass: 'App\\ParentMachine',
+        parentStateId: 'delegating',
+    );
+
+    $childRecord = MachineChild::where('parent_root_event_id', 'parent-root-restore')->first();
+    expect($childRecord)->not->toBeNull();
+
+    // Restore child from DB
+    $restored = CallableOutcomeMachine::create(state: $childRecord->child_root_event_id);
+    expect($restored->state->value)->toContain('callable_outcome_test.waiting');
+
+    ScenarioPlayer::cleanupOverrides();
+    $isActiveRef->setValue(null, false);
 });
 
 test('child @continue failure throws ScenarioFailedException', function (): void {
