@@ -59,6 +59,7 @@
         "pint": "pint --config=pint.json",
         "test:rector": "rector --dry-run",
         "test:pint": "pint --config=pint.json --test",
+        "test:autoload": "composer dump-autoload --optimize --strict-psr --quiet && composer dump-autoload --quiet",
         "test:phpstan": "phpstan analyse --configuration=phpstan.neon.dist --ansi",
         "test:unit": "pest --parallel --colors=always --order-by=random --testsuite='Tarfinlabs Test Suite'",
         "test:localqa": "pest tests/LocalQA --colors=always --order-by=random",
@@ -70,6 +71,7 @@
         "test": [
             "@test:rector",
             "@test:pint",
+            "@test:autoload",
             "@test:phpstan",
             "@test:unit",
             "@test:types"
