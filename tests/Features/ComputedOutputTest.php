@@ -2,32 +2,9 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
-use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
-
-class ComputedContextManager extends ContextManager
-{
-    public function __construct(
-        public int $subtotal = 0,
-        public int $tax = 0,
-    ) {
-        parent::__construct();
-    }
-
-    protected function computedContext(): array
-    {
-        return ['total' => $this->subtotal + $this->tax];
-    }
-}
-
-class ComputedTestOutput extends OutputBehavior
-{
-    public function __invoke(ComputedContextManager $ctx): array
-    {
-        return ['computedTotal' => $ctx->subtotal + $ctx->tax];
-    }
-}
+use Tarfinlabs\EventMachine\Tests\Stubs\Outputs\ComputedTestOutput;
+use Tarfinlabs\EventMachine\Tests\Stubs\Contexts\ComputedContextManager;
 
 it('output array filter includes computed value from computedContext()', function (): void {
     $test = TestMachine::define([

@@ -2,31 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Tarfinlabs\EventMachine\Tests;
-
 use RuntimeException;
 use Mockery\MockInterface;
 use Tarfinlabs\EventMachine\ContextManager;
 use Mockery\Exception\InvalidCountException;
 use Tarfinlabs\EventMachine\Facades\EventMachine;
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
-
-class TestIncrementAction extends ActionBehavior
-{
-    public function __invoke(ContextManager $context): void
-    {
-        $context->set('count', ($context->get('count') ?? 0) + 1);
-    }
-}
-
-class TestCountGuard extends GuardBehavior
-{
-    public function __invoke(ContextManager $context): bool
-    {
-        return $context->get('count') > 0;
-    }
-}
+use Tarfinlabs\EventMachine\Tests\Stubs\Guards\TestCountGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\TestIncrementAction;
 
 beforeEach(function (): void {
     $this->testAction = new TestIncrementAction();
@@ -311,7 +293,7 @@ it('can chain multiple mock configurations', function (): void {
 
     TestIncrementAction::shouldRun()
         ->once()
-        ->with(\Mockery::type(ContextManager::class))
+        ->with(Mockery::type(ContextManager::class))
         ->andReturnUsing(function (ContextManager $ctx): void {
             $ctx->set('count', $ctx->get('count') * 2);
         });

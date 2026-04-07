@@ -5,40 +5,11 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
-use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior;
+use Tarfinlabs\EventMachine\Tests\Stubs\Guards\MinimumGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\ApplyDiscountAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Calculators\PriceCalculator;
 use Tarfinlabs\EventMachine\Tests\Stubs\Calculators\TotalCalculator;
 use Tarfinlabs\EventMachine\Tests\Stubs\Calculators\AverageCalculator;
-
-class PriceCalculator extends CalculatorBehavior
-{
-    public function __invoke(ContextManager $context): void
-    {
-        $quantity  = $context->get('quantity');
-        $unitPrice = $context->get('unitPrice');
-        $context->set('totalPrice', $quantity * $unitPrice);
-    }
-}
-
-class MinimumGuard extends GuardBehavior
-{
-    public function __invoke(ContextManager $context): bool
-    {
-        return $context->get('totalPrice') >= 100;
-    }
-}
-
-class ApplyDiscountAction extends ActionBehavior
-{
-    public function __invoke(ContextManager $context): void
-    {
-        $totalPrice = $context->get('totalPrice');
-        $finalPrice = (int) ($totalPrice * 0.9); // 10% discount
-
-        $context->set('finalPrice', $finalPrice);
-    }
-}
 
 test('calculator can set context values that guards and actions can use', function (): void {
     // 1. Arrange

@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Support\Timer;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\TargetlessRaiseAction;
 
 // ============================================================
 // Targetless Transition Semantics — Edge-Case Tests
@@ -488,17 +488,6 @@ it('multiple targetless transitions run actions without exit/entry', function ()
 // ------------------------------------------------------------------
 
 // Class-based action required for $this->raise()
-class TargetlessRaiseAction extends ActionBehavior
-{
-    public function __invoke(ContextManager $context): void
-    {
-        $log   = $context->get('log');
-        $log[] = 'raise_action';
-        $context->set('log', $log);
-
-        $this->raise(['type' => 'RAISED_PING']);
-    }
-}
 
 it('targetless transition with raise processes raised event without exit/entry', function (): void {
     $definition = MachineDefinition::define(

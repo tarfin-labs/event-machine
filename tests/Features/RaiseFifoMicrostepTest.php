@@ -3,29 +3,8 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-
-// ============================================================
-// Raise FIFO Microstep Ordering
-// ============================================================
-// When an entry action raises multiple events, they must be
-// processed in FIFO order within the same macrostep. This test
-// verifies that EVENT_A raised before EVENT_B is processed first.
-
-class RaiseTwoEventsAction extends ActionBehavior
-{
-    public function __invoke(ContextManager $context): void
-    {
-        $trace   = $context->get('trace');
-        $trace[] = 'entry_raise_both';
-        $context->set('trace', $trace);
-
-        // Raise EVENT_A first, then EVENT_B
-        $this->raise(['type' => 'EVENT_A']);
-        $this->raise(['type' => 'EVENT_B']);
-    }
-}
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseTwoEventsAction;
 
 test('multiple raised events processed in FIFO order within single macrostep', function (): void {
     $definition = MachineDefinition::define(

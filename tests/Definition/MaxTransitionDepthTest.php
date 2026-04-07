@@ -5,8 +5,11 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseGoAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseGoAAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseGoBAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaiseNextAction;
 use Tarfinlabs\EventMachine\Exceptions\MaxTransitionDepthExceededException;
 
 afterEach(function (): void {
@@ -396,42 +399,6 @@ test('normal event-driven cycle does not trigger depth limit', function (): void
     // 50 transitions: 50 mod 3 = 2, so we end up at state 'c'
     expect($state->matches('c'))->toBeTrue();
 });
-
-// endregion
-
-// region Stub Action Classes
-
-class RaiseGoBAction extends ActionBehavior
-{
-    public function __invoke(ContextManager $context): void
-    {
-        $this->raise(['type' => 'GO_B']);
-    }
-}
-
-class RaiseGoAAction extends ActionBehavior
-{
-    public function __invoke(ContextManager $context): void
-    {
-        $this->raise(['type' => 'GO_A']);
-    }
-}
-
-class RaiseNextAction extends ActionBehavior
-{
-    public function __invoke(ContextManager $context): void
-    {
-        $this->raise(['type' => 'NEXT']);
-    }
-}
-
-class RaiseGoAction extends ActionBehavior
-{
-    public function __invoke(ContextManager $context): void
-    {
-        $this->raise(['type' => 'GO']);
-    }
-}
 
 // endregion
 

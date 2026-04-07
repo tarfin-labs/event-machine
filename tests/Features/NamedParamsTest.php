@@ -8,10 +8,8 @@ use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Jobs\ListenerJob;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
-use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior;
 use Tarfinlabs\EventMachine\Tests\Stubs\Outputs\FormatOutput;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\SetLevelAction;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
@@ -20,30 +18,12 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\NamedParamsMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsAboveThresholdGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\AddValueByParamAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\MultiplyByParamAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Outputs\ContextOnlyTestOutput;
+use Tarfinlabs\EventMachine\Tests\Stubs\Guards\MinAmountValidationGuard;
 use Tarfinlabs\EventMachine\Exceptions\MissingBehaviorParameterException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidBehaviorDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidListenerDefinitionException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\NamedParamsAlwaysMachine;
-
-// ─── Test-local classes ──────────────────────────────────────────────────────
-
-class ContextOnlyTestOutput extends OutputBehavior
-{
-    public function __invoke(ContextManager $ctx): array
-    {
-        return ['total' => $ctx->get('total')];
-    }
-}
-
-class MinAmountValidationGuard extends ValidationGuardBehavior
-{
-    public ?string $errorMessage = 'Amount below minimum';
-
-    public function __invoke(ContextManager $ctx, int $minimum): bool
-    {
-        return $ctx->get('amount') >= $minimum;
-    }
-}
 
 // ═══════════════════════════════════════════════════════════════
 //  §A — Parsing: tuple detection and extraction (Tests 1–10)

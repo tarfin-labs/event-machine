@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\EntryBAndRaiseAutoAdvanceAction;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  SCXML-correct action ordering tests (W3C §3.13)
@@ -502,20 +502,3 @@ it('processes raised events from entry action after entry phase completes', func
             'entry:C',
         ]);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//  Stub Action Classes
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Entry action that logs and raises AUTO_ADVANCE event.
- * Used by test #10 to verify raise is processed after entry completes.
- */
-class EntryBAndRaiseAutoAdvanceAction extends ActionBehavior
-{
-    public function __invoke(ContextManager $context): void
-    {
-        $context->set('actionLog', [...$context->get('actionLog'), 'entry:B']);
-        $this->raise(['type' => 'AUTO_ADVANCE']);
-    }
-}

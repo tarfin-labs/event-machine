@@ -2,76 +2,7 @@
 
 declare(strict_types=1);
 
-use Tarfinlabs\EventMachine\Actor\Machine;
-use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-
-// ═══════════════════════════════════════════════════════════════
-//  Bug: Context lost during parallel state internal transitions
-//
-//  When a transition happens within a child region of a parallel state,
-//  the context values set by the transition's action are lost.
-//  The parallel state does a full exit/entry cycle for internal
-//  transitions, which resets the context.
-// ═══════════════════════════════════════════════════════════════
-
-class ParallelInternalTransitionMachine extends Machine
-{
-    public static function definition(): MachineDefinition
-    {
-        return MachineDefinition::define(
-            config: [
-                'id'      => 'parallel_internal_transition',
-                'initial' => 'processing',
-                'context' => [
-                    'valueFromAction' => null,
-                ],
-                'states' => [
-                    'processing' => [
-                        'type'   => 'parallel',
-                        '@done'  => 'completed',
-                        'states' => [
-                            'region_a' => [
-                                'initial' => 'step_1',
-                                'states'  => [
-                                    'step_1' => [
-                                        'on' => [
-                                            'GO' => [
-                                                'target'  => 'step_2',
-                                                'actions' => 'setValueAction',
-                                            ],
-                                        ],
-                                    ],
-                                    'step_2' => [
-                                        'on' => ['FINISH_A' => 'done'],
-                                    ],
-                                    'done' => ['type' => 'final'],
-                                ],
-                            ],
-                            'region_b' => [
-                                'initial' => 'idle',
-                                'states'  => [
-                                    'idle' => [
-                                        'on' => ['FINISH_B' => 'done'],
-                                    ],
-                                    'done' => ['type' => 'final'],
-                                ],
-                            ],
-                        ],
-                    ],
-                    'completed' => ['type' => 'final'],
-                ],
-            ],
-            behavior: [
-                'actions' => [
-                    'setValueAction' => function (ContextManager $ctx): void {
-                        $ctx->set('valueFromAction', 42);
-                    },
-                ],
-            ],
-        );
-    }
-}
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ParallelInternalTransitionMachine;
 
 it('context set by action survives internal transition within parallel region', function (): void {
     $machine = ParallelInternalTransitionMachine::create();

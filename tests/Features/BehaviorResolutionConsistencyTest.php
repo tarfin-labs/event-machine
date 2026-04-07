@@ -4,21 +4,9 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
-use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\BehaviorNotFoundException;
-
-// ═══════════════════════════════════════════════════════════════
-//  Shared Test Stubs
-// ═══════════════════════════════════════════════════════════════
-
-class DoubleAmountOutput extends OutputBehavior
-{
-    public function __invoke(ContextManager $ctx): array
-    {
-        return ['doubled' => $ctx->get('amount') * 2];
-    }
-}
+use Tarfinlabs\EventMachine\Tests\Stubs\Outputs\DoubleAmountOutput;
 
 // ═══════════════════════════════════════════════════════════════
 //  resolveOutputKey() — Unit Tests

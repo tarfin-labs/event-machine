@@ -4,30 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
-use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
-
-// ═══════════════════════════════════════════════════════════════
-//  MachineOutput / OutputBehavior on parallel states
-//
-//  Verifies that typed output works correctly on parallel states:
-//  - OutputBehavior on the parallel state itself resolves correctly
-//  - $machine->output() returns typed data while in parallel state
-//  - Output composes data from multiple regions' context
-// ═══════════════════════════════════════════════════════════════
-
-class ParallelSummaryOutput extends OutputBehavior
-{
-    public function __invoke(ContextManager $ctx): array
-    {
-        return [
-            'regionAData'    => $ctx->get('regionAData'),
-            'regionBData'    => $ctx->get('regionBData'),
-            'combinedStatus' => ($ctx->get('regionAData') !== null && $ctx->get('regionBData') !== null)
-                ? 'both_complete'
-                : 'in_progress',
-        ];
-    }
-}
+use Tarfinlabs\EventMachine\Tests\Stubs\Outputs\ParallelSummaryOutput;
 
 it('OutputBehavior on parallel state resolves correctly via $machine->output()', function (): void {
     $test = TestMachine::define([

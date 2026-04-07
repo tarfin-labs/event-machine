@@ -4,19 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Testing\TestMachine;
-use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
-
-// ═══════════════════════════════════════════════════════════════
-//  State-Level Output on Non-Final States
-// ═══════════════════════════════════════════════════════════════
-
-class StateLevelTestOutput extends OutputBehavior
-{
-    public function __invoke(ContextManager $ctx): array
-    {
-        return ['computed' => $ctx->get('raw') * 2];
-    }
-}
+use Tarfinlabs\EventMachine\Tests\Stubs\Outputs\StateLevelTestOutput;
 
 it('output array filter on non-final state returns filtered context', function (): void {
     $test = TestMachine::define([

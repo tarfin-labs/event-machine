@@ -2,55 +2,14 @@
 
 declare(strict_types=1);
 
-use Spatie\LaravelData\Optional;
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\IsOddAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsValidatedOddGuard;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsContext;
-
-// === Computed Context Attributes Tests ===
-
-it('can be computed context methods defined', function (): void {
-    $context = new TrafficLightsContext(Optional::create(), Optional::create());
-
-    expect($context->count)->toBe(0);
-    expect($context->isCountEven())->toBeTrue();
-
-    $context->count = 2;
-
-    expect($context->isCountEven())->toBeTrue();
-});
-
-// === Required Context Tests ===
-
-class TestBehaviorWithRequiredContext extends InvokableBehavior
-{
-    public static array $requiredContext = [
-        'user.id'          => 'int',
-        'user.name'        => 'string',
-        'settings.enabled' => 'bool',
-    ];
-
-    public function __invoke(): void {}
-}
-
-class TestBehaviorWithoutRequiredContext extends InvokableBehavior
-{
-    public function __invoke(): void {}
-}
-
-class TestBehaviorWithNestedRequiredContext extends InvokableBehavior
-{
-    public static array $requiredContext = [
-        'deeply.nested.value'   => 'string',
-        'another.nested.number' => 'int',
-    ];
-
-    public function __invoke(): void {}
-}
+use Tarfinlabs\EventMachine\Tests\Stubs\Behaviors\TestBehaviorWithRequiredContext;
+use Tarfinlabs\EventMachine\Tests\Stubs\Behaviors\TestBehaviorWithoutRequiredContext;
+use Tarfinlabs\EventMachine\Tests\Stubs\Behaviors\TestBehaviorWithNestedRequiredContext;
 
 test('hasMissingContext returns null when no required context is defined', function (): void {
     $context = new ContextManager([
