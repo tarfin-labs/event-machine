@@ -15,6 +15,7 @@
     beStrictAboutOutputDuringTests="true"
     cacheDirectory=".phpunit.cache"
     backupStaticProperties="false"
+    defaultTestSuite="Tarfinlabs Test Suite"
 >
   <testsuites>
     <testsuite name="Tarfinlabs Test Suite">
