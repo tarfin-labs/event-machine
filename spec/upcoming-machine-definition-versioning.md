@@ -18,17 +18,19 @@
 9. [Compatibility Analysis](#9-compatibility-analysis)
 10. [Machine Migrations (Laravel Migration Pattern)](#10-machine-migrations-laravel-migration-pattern)
 11. [Migration Execution](#11-migration-execution)
-12. [Completed Instance Reactivation](#12-completed-instance-reactivation)
-13. [Version Lifecycle Management](#13-version-lifecycle-management)
-14. [Artisan Commands](#14-artisan-commands)
-15. [Testing Infrastructure](#15-testing-infrastructure)
-16. [HTTP Endpoint Behavior](#16-http-endpoint-behavior)
-17. [Interaction with Existing Systems](#17-interaction-with-existing-systems)
-18. [Failure Modes and Recovery](#18-failure-modes-and-recovery)
-19. [Configuration](#19-configuration)
-20. [File Structure](#20-file-structure)
-21. [Scenario Matrix](#21-scenario-matrix)
-22. [Quality Gate](#22-quality-gate)
+12. [Gradual Migration](#12-gradual-migration)
+13. [Completed Instance Reactivation](#13-completed-instance-reactivation)
+14. [Event Upcasting](#14-event-upcasting)
+15. [Version Lifecycle Management](#15-version-lifecycle-management)
+16. [Artisan Commands](#16-artisan-commands)
+17. [Testing Infrastructure](#17-testing-infrastructure)
+18. [HTTP Endpoint Behavior](#18-http-endpoint-behavior)
+19. [Interaction with Existing Systems](#19-interaction-with-existing-systems)
+20. [Failure Modes and Recovery](#20-failure-modes-and-recovery)
+21. [Configuration](#21-configuration)
+22. [File Structure](#22-file-structure)
+23. [Scenario Matrix](#23-scenario-matrix)
+24. [Quality Gate](#24-quality-gate)
 
 ---
 
@@ -110,9 +112,13 @@ This design is informed by how major workflow engines solve the same problem:
 | **Version registry** | A machine class's collection of all available definition versions, keyed by version string. |
 | **Compatible instance** | An instance whose current state exists in the target definition, has the same state type, and (if non-final) has at least one outgoing transition with a matching event type. See Section 9.1 for full criteria. Can be migrated without mapping. |
 | **Incompatible instance** | An instance whose current state does not exist in the target definition. Requires a machine migration with state mapping. |
-| **Machine migration** | A developer-defined class (like a Laravel DB migration) mapping source version to target version: state mappings, context transformers, and filters. Lives in `app/Machines/Migrations/`. |
+| **Machine migration** | A developer-defined class (like a Laravel DB migration) with an exhaustive `plan()` declaring what happens to every source state: `auto()`, `to(target)`, or `skip()`. Lives in `app/Machines/Migrations/`. |
 | **Migration event** | A `DEFINITION_MIGRATED` event appended to an instance's history when it is migrated, recording the version transition. |
 | **Drained version** | A definition version with zero active (non-final) instances. Safe to remove from the registry. |
+| **JIT migration** | Just-in-time migration: when an event arrives for an un-migrated instance, the migration is applied inline before (or after) event processing. |
+| **Background sweep** | A scheduled job that gradually migrates dormant instances in configurable batches, respecting backpressure. |
+| **Event upcasting** | Transforming an old-format event payload to the current format via `upcastToV{N}` methods on the EventBehavior class. |
+| **Breaking change** | An event version transition that cannot be automatically upcasted — the sender must provide new required fields. Declared via `BreakingChange` return type. |
 
 ---
 
@@ -539,7 +545,48 @@ The path is configurable via `config/machine.php`:
 
 Discovery: the framework scans this directory, sorts by filename (timestamp order), and checks the `machine_migration_batches` tracking table for which have already been executed.
 
-### 10.3 `MachineMigration` Abstract Class
+### 10.3 `StateMapping` Value Object
+
+Each state in the source definition must be explicitly accounted for in the migration plan. `StateMapping` is a fluent VO that declares what happens to a state:
+
+```php
+class StateMapping
+{
+    /**
+     * Keep the state as-is (exists in both versions, no transform needed).
+     */
+    public static function auto(): self;
+
+    /**
+     * Map to a different state in the target definition.
+     */
+    public static function to(string $target): self;
+
+    /**
+     * Skip this state — instances in this state are NOT migrated.
+     * They continue on the old version until they drain naturally.
+     */
+    public static function skip(): self;
+
+    /**
+     * Attach a context transformer to this state mapping.
+     * Called after state resolution, receives current context, returns modified context.
+     *
+     * @param  Closure(array<string, mixed>): array<string, mixed>  $transformer
+     */
+    public function transformContext(Closure $transformer): self;
+
+    /**
+     * Attach a per-instance filter. Return false to skip this specific instance.
+     * Useful for conditional migration within a state (e.g., only instances created after a date).
+     *
+     * @param  Closure(array<string, mixed>): bool  $filter  Receives context, returns whether to migrate.
+     */
+    public function when(Closure $filter): self;
+}
+```
+
+### 10.4 `MachineMigration` Abstract Class
 
 ```php
 abstract class MachineMigration
@@ -554,55 +601,31 @@ abstract class MachineMigration
     abstract public function to(): string;
 
     /**
-     * State mapping: source state → target state.
+     * Per-state migration plan.
      *
-     * Only needed for states that are renamed or restructured.
-     * States with the same name in both versions are auto-mapped.
+     * EVERY state in the source definition must be declared here.
+     * The framework validates completeness at execution time —
+     * unmapped states throw InvalidMigrationPlanException.
      *
-     * @return array<string, string> source_state => target_state
+     * @return array<string, StateMapping>
      */
-    public function stateMapping(): array
-    {
-        return [];
-    }
+    abstract public function plan(): array;
 
     /**
-     * Context transformer: modify context data during migration.
+     * Whether this migration should include final-state instances.
+     * Override to true for reactivation migrations.
      *
-     * Called after state mapping. Receives the current context and
-     * the target state. Returns modified context.
-     *
-     * @param  array<string, mixed>  $context  Current context data.
-     * @param  string  $fromState  The original state before mapping.
-     * @param  string  $toState  The target state after mapping.
-     *
-     * @return array<string, mixed> Transformed context.
+     * Execution order: includeFinal() controls the DB query filter
+     * (only non-final instances are fetched unless true). Then
+     * each StateMapping's when() filter is evaluated per-instance.
      */
-    public function transformContext(array $context, string $fromState, string $toState): array
+    public function includeFinal(): bool
     {
-        return $context;
-    }
-
-    /**
-     * Filter: which instances should be migrated?
-     *
-     * Return false to skip an instance. Useful for excluding instances
-     * in states that should drain naturally on the old version.
-     *
-     * @param  string  $currentState  The instance's current state.
-     * @param  array<string, mixed>  $context  The instance's current context.
-     *
-     * @return bool Whether to migrate this instance.
-     */
-    public function shouldMigrate(string $currentState, array $context): bool
-    {
-        return true;
+        return false;
     }
 
     /**
      * Post-migration hook: runs after each instance is migrated.
-     *
-     * Use for logging, notifications, or triggering follow-up events.
      */
     public function afterMigrate(string $rootEventId, string $fromState, string $toState): void
     {
@@ -617,33 +640,39 @@ abstract class MachineMigration
     {
         return 500;
     }
-
-    /**
-     * Whether this migration should include final-state instances.
-     * Override to true for reactivation migrations.
-     *
-     * Execution order: includeFinal() controls the DB query filter
-     * (only non-final instances are fetched unless true). Then
-     * shouldMigrate() filters the query results per-instance.
-     */
-    public function includeFinal(): bool
-    {
-        return false;
-    }
 }
 ```
 
+**Key design: `plan()` is exhaustive.** Every state in the source definition must appear. This prevents "forgotten state" bugs — the framework loads the source definition, extracts all state IDs, and validates that `plan()` covers them all. Missing states throw `InvalidMigrationPlanException` at execution time (not at file load — allows scaffolding with TODOs).
+
 **Instance discovery:** The executor queries `machine_current_states` for instances matching `machine_class` and `definition_version = from()`. When `includeFinal()` is false (default), only non-final state rows are included. When `includeFinal()` is true, all rows are included (final-state instances always retain their `machine_current_states` rows — `syncCurrentStates()` never cleans them up). Archived instances are NOT included — use `machine:archive-status --restore` first if needed.
 
-### 10.4 `make:machine-migration` Scaffold Command
+### 10.5 `make:machine-migration` — Definition-Diff-Aware Scaffold
+
+The scaffold command compares the two definitions and generates a pre-filled migration with all states accounted for:
 
 ```
 $ php artisan make:machine-migration OrderMachine --from=1 --to=2
 
-  Created: app/Machines/Migrations/2026_04_03_143200_order_v1_to_v2.php
+ Analyzing OrderMachine v1 → v2...
+
+ v1 states: pending, processing, done
+ v2 states: pending, validating, processing, rejected, done
+
+ ┌──────────────┬───────────────┬──────────────────────────────┐
+ │ v1 State     │ Status        │ Suggested Action             │
+ ├──────────────┼───────────────┼──────────────────────────────┤
+ │ pending      │ ✓ in both     │ auto()                       │
+ │ processing   │ ✓ in both     │ auto()                       │
+ │ done         │ ✓ in both     │ auto() — final in both       │
+ └──────────────┴───────────────┴──────────────────────────────┘
+
+ New in v2 (no migration needed): validating, rejected
+
+ Created: app/Machines/Migrations/2026_04_03_143200_order_v1_to_v2.php
 ```
 
-Generates a timestamped file with the abstract methods pre-filled:
+Generated file — all states pre-filled with `auto()`:
 
 ```php
 <?php
@@ -652,41 +681,90 @@ declare(strict_types=1);
 
 use App\Machines\OrderMachine;
 use Tarfinlabs\EventMachine\Versioning\MachineMigration;
+use Tarfinlabs\EventMachine\Versioning\StateMapping;
 
 return new class extends MachineMigration
 {
-    public function machine(): string
-    {
-        return OrderMachine::class;
-    }
+    public function machine(): string { return OrderMachine::class; }
+    public function from(): string { return '1'; }
+    public function to(): string { return '2'; }
 
-    public function from(): string
-    {
-        return '1';
-    }
-
-    public function to(): string
-    {
-        return '2';
-    }
-
-    public function stateMapping(): array
+    public function plan(): array
     {
         return [
-            // 'old_state' => 'new_state',
+            // ✓ Exists in both v1 and v2
+            'pending'    => StateMapping::auto(),
+            'processing' => StateMapping::auto(),
+            'done'       => StateMapping::auto(),
         ];
-    }
-
-    public function transformContext(array $context, string $fromState, string $toState): array
-    {
-        return $context;
     }
 };
 ```
 
-Note: anonymous class in a file that returns it — exactly like Laravel DB migrations.
+When states are **removed** in the target, the scaffold flags them with `TODO`:
 
-### 10.5 Example: `A → B → C` to `A → B1 → B2 → C`
+```
+$ php artisan make:machine-migration OrderMachine --from=2 --to=3
+
+ Analyzing OrderMachine v2 → v3...
+
+ v2 states: pending, validating, processing, rejected, done
+ v3 states: pending, review, approved, rejected, done
+
+ ┌──────────────┬───────────────┬──────────────────────────────────┐
+ │ v2 State     │ Status        │ Suggested Action                 │
+ ├──────────────┼───────────────┼──────────────────────────────────┤
+ │ pending      │ ✓ in both     │ auto()                           │
+ │ validating   │ ✗ REMOVED     │ must map to v3 state or skip()   │
+ │ processing   │ ✗ REMOVED     │ must map to v3 state or skip()   │
+ │ rejected     │ ✓ in both     │ auto()                           │
+ │ done         │ ✓ in both     │ auto() — final in both           │
+ └──────────────┴───────────────┴──────────────────────────────────┘
+
+ New in v3 (no migration needed): review, approved
+ Type changed: (none)
+
+ Created: app/Machines/Migrations/2026_04_03_150000_order_v2_to_v3.php
+```
+
+Generated file — removed states have `TODO` targets:
+
+```php
+return new class extends MachineMigration
+{
+    public function machine(): string { return OrderMachine::class; }
+    public function from(): string { return '2'; }
+    public function to(): string { return '3'; }
+
+    public function plan(): array
+    {
+        return [
+            // ✓ Exists in both v2 and v3
+            'pending'    => StateMapping::auto(),
+            'rejected'   => StateMapping::auto(),
+            'done'       => StateMapping::auto(),
+
+            // ✗ REMOVED in v3 — must map to a v3 state or skip()
+            // Available v3 targets: pending, review, approved, rejected, done
+            'validating' => StateMapping::to('TODO'),
+            'processing' => StateMapping::to('TODO'),
+        ];
+    }
+};
+```
+
+The framework validates `TODO` targets at execution time — `InvalidMigrationTargetException` is thrown if a `to()` target doesn't exist in the target definition. This forces developers to resolve all TODOs before running.
+
+**Additional diff detection:**
+
+| Diff Type | Scaffold Behavior |
+|-----------|-------------------|
+| State exists in both, same type | `auto()` pre-filled |
+| State exists in both, **type changed** (e.g., ATOMIC → FINAL) | `auto()` with `// ⚠ type changed: atomic → final` comment |
+| State removed in target | `to('TODO')` with available targets listed |
+| State new in target | Listed as informational comment (no migration needed) |
+
+### 10.6 Example: `A → B → C` to `A → B1 → B2 → C`
 
 ```php
 // app/Machines/Migrations/2026_04_01_000000_order_v1_to_v2.php
@@ -697,33 +775,22 @@ return new class extends MachineMigration
     public function from(): string { return '1'; }
     public function to(): string { return '2'; }
 
-    public function stateMapping(): array
+    public function plan(): array
     {
         return [
-            'processing' => 'validating',  // B → B1
-            // 'pending' and 'done' exist in both — auto-mapped
+            'pending' => StateMapping::auto(),
+            'processing' => StateMapping::to('validating')
+                ->transformContext(fn (array $ctx) => [
+                    ...$ctx,
+                    'validationStatus' => 'pending_revalidation',
+                ]),
+            'done' => StateMapping::skip(),  // don't migrate completed instances
         ];
-    }
-
-    public function transformContext(array $context, string $fromState, string $toState): array
-    {
-        if ($toState === 'validating') {
-            // New version expects this key; old instances don't have it
-            $context['validationStatus'] = 'pending_revalidation';
-        }
-
-        return $context;
-    }
-
-    public function shouldMigrate(string $currentState, array $context): bool
-    {
-        // Don't migrate completed instances — let them rest
-        return $currentState !== 'done';
     }
 };
 ```
 
-### 10.6 Example: Final State Reactivation
+### 10.7 Example: Final State Reactivation
 
 ```php
 // app/Machines/Migrations/2026_04_15_000000_order_v2_to_v3_reactivation.php
@@ -734,45 +801,36 @@ return new class extends MachineMigration
     public function from(): string { return '2'; }
     public function to(): string { return '3'; }
 
-    public function stateMapping(): array
+    public function includeFinal(): bool { return true; }
+
+    public function plan(): array
     {
         return [
-            // 'done' was FINAL in v2, now it's ATOMIC with transition to 'post_processing'
-            'done' => 'awaiting_review',
+            'pending'    => StateMapping::auto(),
+            'validating' => StateMapping::to('review'),
+            'processing' => StateMapping::to('review'),
+            'rejected'   => StateMapping::auto(),
+            'done'       => StateMapping::to('awaiting_review')
+                ->transformContext(fn (array $ctx) => [
+                    ...$ctx,
+                    'reactivatedAt'    => now()->toIso8601String(),
+                    'reactivateReason' => 'compliance_review_required',
+                ])
+                ->when(fn (array $ctx) =>
+                    ($ctx['completedAt'] ?? '') > '2026-01-01'
+                ),
         ];
-    }
-
-    public function includeFinal(): bool
-    {
-        return true; // reactivation — include completed instances
-    }
-
-    public function shouldMigrate(string $currentState, array $context): bool
-    {
-        // Only reactivate instances completed after a certain date
-        return $currentState === 'done'
-            && ($context['completedAt'] ?? '') > '2026-01-01';
-    }
-
-    public function transformContext(array $context, string $fromState, string $toState): array
-    {
-        if ($fromState === 'done') {
-            $context['reactivatedAt']    = now()->toIso8601String();
-            $context['reactivateReason'] = 'compliance_review_required';
-        }
-
-        return $context;
     }
 };
 ```
 
-### 10.7 Migration Tracking
+### 10.8 Migration Tracking
 
 Batch-level tracking uses the `machine_migration_batches` table (defined in Section 6.3). Per-instance audit uses `DEFINITION_MIGRATED` events in `machine_events` (no separate per-instance table needed — avoids data duplication).
 
 `MigrationExecutor::execute()` writes a `machine_migration_batches` row after processing all instances for a migration, recording the aggregate counts.
 
-### 10.8 Pending Migrations
+### 10.9 Pending Migrations
 
 ```
 $ php artisan machine:migrate-status
@@ -789,7 +847,7 @@ $ php artisan machine:migrate-status
 
 Running `php artisan machine:migrate` executes all pending migrations in timestamp order, exactly like `php artisan migrate`.
 
-### 10.9 Selective Migration
+### 10.10 Selective Migration
 
 ```bash
 # Run all pending migrations
@@ -848,8 +906,8 @@ For each instance matching the migration's filter:
 1. **Acquire lock** — same lock mechanism as `Machine::send()`, using the configured lock TTL (`versioning.migration_lock_ttl`, default 30s). If lock unavailable, record as failed with reason `lock_unavailable`. Lock-failed instances are retried on subsequent `machine:migrate --retry-failed` invocations (NOT automatically retried within the same `execute()` call).
 2. **Load current state** — read `machine_current_states` for the instance's state + `definition_version` (fast lookup), then load only the **last event** from `machine_events` for authoritative context data. Full event history restore is NOT needed — migration only requires current state and context, not replay. For parallel-dispatch machines where `machine_current_states` may be stale, the last event's `machine_value` is authoritative.
 3. **Validate version** — confirm instance is on `migration->from()` version (from last event's `definition_version`)
-4. **Resolve target state** — apply `stateMapping()`. For parallel states, apply mapping per-region independently (see Section 11.8). If current state has no explicit mapping, auto-map: verify the state passes ALL Section 9.1 compatibility criteria (exists, same type, matching event types) in the target definition. If auto-map validation fails, record as failed with `IncompatibleMigrationException`.
-5. **Transform context** — call `migration->transformContext()`. If transformer throws, record as failed (exception message in `MigrationFailure::reason`, full exception logged via `Log::error()`).
+4. **Resolve state mapping** — look up the instance's current state in `migration->plan()`. If the state is not in `plan()`, throw `InvalidMigrationPlanException` (exhaustive coverage required). If `StateMapping::skip()`, skip this instance. If `StateMapping::auto()`, verify the state passes ALL Section 9.1 compatibility criteria in the target definition. If `StateMapping::to($target)`, verify target exists in target definition. For parallel states, apply per-region independently (see Section 11.8). Evaluate `StateMapping::when()` filter if present — if it returns false, skip this instance.
+5. **Transform context** — call `StateMapping::transformContext()` closure if attached. If transformer throws, record as failed (exception message in `MigrationFailure::reason`, full exception logged via `Log::error()`).
 6. **Validate target state** — confirm mapped state exists in target definition, type is correct
 7. **Begin DB transaction** — steps 7a-7c are atomic:
 
@@ -888,18 +946,18 @@ After all instances in a migration are processed, `MigrationExecutor` writes a s
 Parallel state instances have multi-element `machine_value` arrays (e.g., `['region1.stateA', 'region2.stateB']`).
 
 **Rules:**
-- `stateMapping()` applies **per-region** — each region state is mapped independently
+- `plan()` applies **per-region** — each region state is looked up independently
 - Compatibility check must pass for **ALL** region states
 - If any region state is incompatible and has no mapping, the entire instance fails migration
 - The `DEFINITION_MIGRATED` event records the full multi-state `machine_value` array
 
 **Example:**
 ```php
-public function stateMapping(): array
+public function plan(): array
 {
     return [
-        'region1.processing' => 'region1.validating',
-        // region2.waiting stays as-is (auto-mapped)
+        'region1.processing' => StateMapping::to('region1.validating'),
+        'region2.waiting'    => StateMapping::auto(),
     ];
 }
 ```
@@ -995,7 +1053,165 @@ php artisan machine:migrate --async
 
 ---
 
-## 12. Completed Instance Reactivation
+## 12. Gradual Migration
+
+Batch migration (`machine:migrate`) is suitable for planned, one-time migrations. But for production systems with millions of instances, a gradual approach avoids DB pressure and downtime.
+
+### 12.1 Two-Layer Architecture
+
+| Layer | When | How | Instances |
+|-------|------|-----|-----------|
+| **Background sweep** | Scheduled job, runs every N seconds | Picks batch of un-migrated instances, migrates them | Dormant instances |
+| **Just-in-time (JIT)** | When an event arrives for an un-migrated instance | Inline migration inside `Machine::send()` before event processing | Active instances |
+
+Together, these ensure:
+- **Active instances** are migrated instantly on first event (zero delay)
+- **Dormant instances** are gradually migrated by the sweep (no rush)
+- **Archived instances** are migrated when auto-restored (JIT on restore)
+- **No big-bang required** — migration happens organically over time
+
+### 12.2 Background Sweep Job
+
+A scheduled job that runs periodically and migrates a configurable number of instances per tick:
+
+```php
+class MigrationSweepJob implements ShouldQueue
+{
+    public function handle(MigrationExecutor $executor): void
+    {
+        $pendingMigrations = $executor->discoverPending();
+
+        foreach ($pendingMigrations as $migration) {
+            $result = $executor->execute(
+                migration: $migration,
+                batchSize: config('machine.versioning.sweep.batch_size', 100),
+            );
+
+            // Backpressure: stop if system is under load
+            if ($this->isBackpressured()) {
+                return; // continue next tick
+            }
+        }
+    }
+
+    private function isBackpressured(): bool
+    {
+        $queueDepth = Queue::size('default');
+        return $queueDepth > config('machine.versioning.sweep.backpressure_threshold', 1000);
+    }
+}
+```
+
+Registered via `MachineScheduler` (like timer sweep):
+
+```php
+// In MachineServiceProvider or MachineScheduler
+$schedule->job(new MigrationSweepJob())
+    ->everyMinute()
+    ->when(fn () => config('machine.versioning.sweep.enabled', false));
+```
+
+**Key behaviors:**
+- Processes one pending migration at a time (timestamp order)
+- Respects `batchSize()` per migration
+- Stops processing if queue backpressure exceeds threshold
+- Idempotent — already-migrated instances are skipped (version check)
+- Does NOT process archived instances — they are migrated on restore via JIT
+
+### 12.3 Just-in-Time Migration in `Machine::send()`
+
+When an event arrives for an instance that has a pending migration, the migration is applied **inline before event processing**:
+
+```php
+// Inside Machine::send() — after restore, before event processing
+public function send(string|EventBehavior $event, ...): State
+{
+    // 1. Acquire lock
+    // 2. Restore state (pinned version, e.g., v1)
+
+    // 3. JIT migration check
+    $pinnedVersion = $this->state->definitionVersion;
+    $pendingMigration = $this->findPendingMigration($pinnedVersion);
+
+    if ($pendingMigration !== null) {
+        $this->applyJitMigration($pendingMigration);
+        // Instance is now on v2 — definition swapped
+    }
+
+    // 4. Process event against current (possibly migrated) definition
+    // 5. Persist
+    // 6. Release lock
+}
+```
+
+**`applyJitMigration()` flow:**
+
+1. Look up instance's current state in `migration->plan()`
+2. If `StateMapping::skip()` → do NOT migrate, process event on old version
+3. If `StateMapping::auto()` or `StateMapping::to()`:
+   a. Apply state mapping
+   b. Apply context transform (if any)
+   c. Evaluate `when()` filter (if any) — if false, skip migration
+   d. Append `DEFINITION_MIGRATED` event
+   e. Update `machine_current_states` (DELETE+INSERT)
+   f. Swap `$this->definition` to the target version
+4. Event processing continues with the new definition
+
+**All within the same lock** — no race conditions. The lock is already held by `Machine::send()`.
+
+### 12.4 JIT Migration for Archived Instances
+
+When an archived instance receives a new event, the existing auto-restore path (`ArchiveService::restoreMachine()`) fires. After restore, the JIT migration check in `Machine::send()` detects the pending migration and applies it inline.
+
+No special handling needed — the existing auto-restore + JIT migration chain covers this naturally:
+
+```
+Event arrives for archived instance
+→ restoreStateFromRootEventId()
+  → Events not found in active table
+  → restoreFromArchive() (auto-restore)
+  → Events now in active table
+→ JIT migration check → pending migration found → apply
+→ Process event on new version
+```
+
+### 12.5 "Process First, Migrate After" — Event Compatibility
+
+A critical edge case: the incoming event may not be valid in the target version (different payload schema, removed transition). In this case, JIT migration would break event processing.
+
+**Rule: process first, migrate after** when event compatibility is uncertain:
+
+```
+1. Event arrives
+2. Restore (v1)
+3. Pending migration exists
+4. Check: does the event type exist in v2 for the mapped target state?
+5. YES → JIT migrate, then process event on v2
+6. NO → process event on v1 first, then check if resulting state is migratable
+   → If migratable → append DEFINITION_MIGRATED after event processing
+   → If not → leave on v1, sweep will handle later
+```
+
+This ensures events are never rejected due to JIT migration. The instance migrates when safe, stays on old version when not.
+
+### 12.6 Migration Progress Tracking
+
+The sweep job and JIT migration both write to `machine_migration_batches`. Progress can be monitored:
+
+```
+$ php artisan machine:migrate-status
+
+ ┌──────────────────────────────────┬──────────┬───────────┬─────────┬──────────┐
+ │ Migration                        │ Machine  │ Migrated  │ Pending │ Progress │
+ ├──────────────────────────────────┼──────────┼───────────┼─────────┼──────────┤
+ │ 2026_04_01_order_v1_to_v2        │ Order    │ 847,231   │ 12,769  │ 98.5%    │
+ │ 2026_04_15_order_v2_to_v3        │ Order    │ 0         │ 860,000 │ 0.0%     │
+ └──────────────────────────────────┴──────────┴───────────┴─────────┴──────────┘
+```
+
+---
+
+## 13. Completed Instance Reactivation
 
 ### 12.1 Problem
 
@@ -1018,18 +1234,15 @@ class OrderReactivation extends MachineMigration
 
     public function includeFinal(): bool { return true; }
 
-    public function stateMapping(): array
+    public function plan(): array
     {
         return [
-            'done' => 'awaiting_review',  // FINAL → ATOMIC
+            // Other states auto-mapped or skipped as needed...
+            'done' => StateMapping::to('awaiting_review')  // FINAL → ATOMIC
+                ->when(fn (array $ctx) =>
+                    ($ctx['completedAt'] ?? '') > '2026-01-01'
+                ),
         ];
-    }
-
-    public function shouldMigrate(string $currentState, array $context): bool
-    {
-        // Only reactivate completed instances that meet business criteria
-        return $currentState === 'done'
-            && ($context['completedAt'] ?? '') > '2026-01-01';
     }
 }
 ```
@@ -1043,9 +1256,243 @@ The `MigrationExecutor` validates reactivation safety:
 
 ---
 
-## 13. Version Lifecycle Management
+## 14. Event Upcasting
 
-### 13.1 Version States
+### 14.1 Problem
+
+Events are the machine's public API. When an event's payload contract changes across definition versions, external systems sending old-format events will break. Event upcasting provides backward compatibility by transforming old payloads to the current format.
+
+### 14.2 `_eventVersion` Convention
+
+Event payloads can include an optional `_eventVersion` field:
+
+| `_eventVersion` value | Meaning |
+|---|---|
+| Absent | Treated as version `1` (backward compatible — all existing events work unchanged) |
+| `1` | Explicitly v1 format |
+| `2`, `3`, ... | Explicitly that version's format |
+
+For HTTP endpoints, `_eventVersion` is a top-level field in the request body:
+
+```json
+POST /api/orders/01JQKX.../submit
+{
+    "orderId": 1,
+    "amount": 100,
+    "_eventVersion": 1
+}
+```
+
+For programmatic event sending (`Machine::send()`, `sendTo()`, `dispatchTo()`), the event version comes from the `EventBehavior::$version` property on the event class being sent.
+
+### 14.3 Upcast Chain — `upcastToV{N}` Methods
+
+Each version transition is defined as a separate method on the `EventBehavior` class. The method MUST exist for every version from `2` to the current `$version`. Missing methods throw `MissingUpcastDefinitionException` at definition validation time.
+
+```php
+class SubmitEvent extends EventBehavior
+{
+    public int $version = 3; // current version
+
+    public string $orderId;
+    public float $amount;
+    public string $currency;   // added in v2
+    public string $taxNumber;  // added in v3
+
+    // v1 → v2: currency added, can be defaulted
+    protected static function upcastToV2(array $payload): array
+    {
+        $payload['currency'] ??= 'TRY';
+        return $payload;
+    }
+
+    // v2 → v3: taxNumber added, CANNOT be computed
+    protected static function upcastToV3(array $payload): BreakingChange
+    {
+        return BreakingChange::requires('taxNumber');
+    }
+}
+```
+
+**Return type determines behavior:**
+
+| Return type | Meaning |
+|---|---|
+| `array` | Upcast successful — transformed payload returned |
+| `BreakingChange` | Cannot upcast — sender must upgrade to this version |
+
+### 14.4 `BreakingChange` Value Object
+
+```php
+class BreakingChange
+{
+    /**
+     * The transition requires specific fields that the sender must provide.
+     */
+    public static function requires(string ...$fields): self;
+
+    /**
+     * The transition is breaking for a custom reason.
+     */
+    public static function because(string $reason): self;
+
+    /** @return list<string> */
+    public function missingFields(): array;
+
+    public function reason(): string;
+}
+```
+
+### 14.5 Chain Execution
+
+When an event arrives with `_eventVersion` (or absent = 1) lower than the EventBehavior's current `$version`, the framework executes the upcast chain sequentially:
+
+```
+Event: {orderId: 1, amount: 100}, _eventVersion absent (= v1)
+EventBehavior current version: 3
+
+Step 1: upcastToV2({orderId: 1, amount: 100})
+  → returns {orderId: 1, amount: 100, currency: 'TRY'} ✓
+
+Step 2: upcastToV3({orderId: 1, amount: 100, currency: 'TRY'})
+  → returns BreakingChange::requires('taxNumber') ✗
+
+Result: EventUpcastException
+  event: SubmitEvent
+  fromVersion: 1
+  blockedAtVersion: 3
+  successfulUpcastsUpTo: 2
+  missingFields: ['taxNumber']
+  message: "SubmitEvent v1 cannot be upcasted to v3.
+            Successfully upcasted: v1 → v2 (automatic).
+            Blocked at v3: taxNumber must be provided by sender."
+```
+
+If the full chain succeeds (all steps return `array`), the final payload is validated against the current EventBehavior class. If validation still fails, it's a normal validation error (not version-related).
+
+### 14.6 Chain Execution Examples
+
+**v2 event arrives at v3 instance:**
+```
+upcastToV3({orderId: 1, amount: 100, currency: 'EUR'})
+  → BreakingChange::requires('taxNumber')
+
+Error: "SubmitEvent v2 → v3: taxNumber must be provided."
+```
+
+**v3 event arrives at v3 instance:**
+```
+No upcast needed. Validate directly against SubmitEvent.
+Missing taxNumber → normal validation error (not version-related).
+```
+
+**v1 event arrives at v2 instance (no breaking changes):**
+```
+upcastToV2({orderId: 1, amount: 100})
+  → {orderId: 1, amount: 100, currency: 'TRY'} ✓
+
+Full chain succeeded. Validate against SubmitEvent v2. Passes. Process event.
+```
+
+### 14.7 Zero Overhead for v1-Only Events
+
+Most events never evolve. For these:
+- `$version = 1` (default, already exists in EventBehavior)
+- No `upcastToV{N}` methods defined (none needed)
+- No `_eventVersion` in payload (absent = v1)
+- Zero overhead — no upcast chain executed
+- Everything works exactly as today
+
+### 14.8 HTTP Error Response
+
+When upcast fails, the HTTP response includes version-aware information:
+
+```json
+{
+    "error": "event_version_mismatch",
+    "status": 422,
+    "definitionVersion": "2",
+    "event": "SUBMIT",
+    "eventVersion": {
+        "sent": 1,
+        "current": 3,
+        "upcastedTo": 2,
+        "blockedAt": 3
+    },
+    "missingFields": ["taxNumber"],
+    "message": "SubmitEvent v1 cannot be upcasted to v3. taxNumber must be provided."
+}
+```
+
+### 14.9 Interaction with JIT Migration
+
+Event upcasting and JIT migration are independent but complementary:
+
+1. **JIT migration** changes the machine's **definition version** (state mapping, context transform)
+2. **Event upcasting** changes the event's **payload format** (field additions, defaults)
+
+They can both happen in the same `Machine::send()` call:
+
+```
+1. Event arrives: SUBMIT v1 payload, instance pinned to definition v1
+2. JIT migration: instance migrated from definition v1 → v2
+3. Event upcast: SUBMIT payload upcasted from event v1 → v2
+4. Event processed against definition v2 with v2 payload
+```
+
+The order matters: **JIT migration first, then event upcast.** The event is upcasted to the version expected by the (possibly migrated) definition.
+
+### 14.10 Event Version in Persisted Events
+
+The `machine_events.version` column (already exists, currently unused) stores the **original event version as sent by the sender**, not the upcasted version. This preserves the audit trail — you can see "this event was sent as v1 and upcasted to v2."
+
+The upcasted payload is what gets stored in `machine_events.payload` — the actual data that was processed.
+
+### 14.11 Pure Event Version Bump (States Unchanged)
+
+When only the event contract changes (no state changes), a new definition version is still required:
+
+```
+v1: pending → (SUBMIT {orderId, amount})    → processing → done
+v2: pending → (SUBMIT {orderId, amount, currency}) → processing → done
+```
+
+The migration is a pure version bump with all `auto()` states:
+
+```php
+return new class extends MachineMigration
+{
+    public function machine(): string { return OrderMachine::class; }
+    public function from(): string { return '1'; }
+    public function to(): string { return '2'; }
+
+    public function plan(): array
+    {
+        return [
+            'pending'    => StateMapping::auto(),
+            'processing' => StateMapping::auto(),
+            'done'       => StateMapping::auto(),
+        ];
+    }
+};
+```
+
+`make:machine-migration` detects this pattern and suggests adding upcast methods:
+
+```
+ State changes: (none — all states identical)
+ Event changes:
+   SUBMIT: +currency (required in v2, not in v1)
+
+ This is a pure version bump (no state changes).
+ Consider adding upcastToV2() to SubmitEvent for backward compatibility.
+```
+
+---
+
+## 15. Version Lifecycle Management
+
+### 15.1 Version States
 
 A definition version progresses through a lifecycle:
 
@@ -1060,22 +1507,22 @@ active → deprecated → drained → removed
 | **drained** | Zero non-final instances remain. Safe to remove. |
 | **removed** | Definition factory removed from `versions()`. Cannot restore instances (data remains in DB for audit). |
 
-### 13.2 Detecting Drained Versions
+### 15.2 Detecting Drained Versions
 
 ```php
 // Via VersionRegistry
 $registry->isDrained('1'); // queries machine_current_states for non-final instances on version '1'
 ```
 
-### 13.3 Deprecation
+### 15.3 Deprecation
 
 When a new active version is set, the previous active version becomes implicitly deprecated. No explicit API needed — the `active: true` flag on the new version is sufficient.
 
 ---
 
-## 14. Artisan Commands
+## 16. Artisan Commands
 
-### 14.1 `machine:version-status`
+### 16.1 `machine:version-status`
 
 Shows versioning status for a machine class.
 
@@ -1091,7 +1538,7 @@ $ php artisan machine:version-status OrderMachine
  └─────────┴──────────┴────────────┴───────────┴─────────────┘
 ```
 
-### 14.2 `machine:compatibility`
+### 16.2 `machine:compatibility`
 
 Analyzes compatibility between two versions.
 
@@ -1111,7 +1558,7 @@ $ php artisan machine:compatibility OrderMachine --from=1 --to=2
  └──────────────────────────────┴───────┘
 ```
 
-### 14.3 `machine:migrate`
+### 16.3 `machine:migrate`
 
 Executes pending machine migrations — works exactly like `php artisan migrate`:
 
@@ -1140,11 +1587,11 @@ Options:
 - `--retry-failed` — re-run the same migration idempotently (step 3 version check skips already-migrated instances; previously locked instances are retried). No per-instance failure tracking needed — the migration simply re-scans all eligible instances.
 - `--async` — dispatch as queue jobs instead of running synchronously
 
-### 14.4 `machine:migrate-status`
+### 16.4 `machine:migrate-status`
 
 Shows which migrations have been executed and which are pending (like `php artisan migrate:status`).
 
-### 14.5 `make:machine-migration`
+### 16.5 `make:machine-migration`
 
 Scaffold a new migration file (like `php artisan make:migration`):
 
@@ -1154,7 +1601,7 @@ $ php artisan make:machine-migration OrderMachine --from=1 --to=2
   Created: app/Machines/Migrations/2026_04_03_143200_order_v1_to_v2.php
 ```
 
-### 14.6 `machine:validate` Enhancement
+### 16.6 `machine:validate` Enhancement
 
 The existing `machine:validate` command gains version-aware checks:
 
@@ -1165,9 +1612,9 @@ The existing `machine:validate` command gains version-aware checks:
 
 ---
 
-## 15. Testing Infrastructure
+## 17. Testing Infrastructure
 
-### 15.1 `TestMachine` Enhancements
+### 17.1 `TestMachine` Enhancements
 
 ```php
 // Test with a specific version
@@ -1185,8 +1632,8 @@ OrderMachine::test(version: '1')
 ```
 
 **`TestMachine::migrate()` semantics:** This is a lightweight test helper, NOT a full `MigrationExecutor` invocation. It:
-1. Applies `stateMapping()` directly to the TestMachine's internal state
-2. Calls `transformContext()` on the current context
+1. Applies `plan()` state mappings directly to the TestMachine's internal state
+2. Calls `StateMapping::transformContext()` closure if attached
 3. Swaps the pinned definition to the target version
 4. Does NOT acquire locks, persist events, or write to DB
 5. Does NOT evaluate `shouldMigrate()` — always applies (test is explicitly requesting migration)
@@ -1200,23 +1647,22 @@ OrderMachine::test()
     ->assertVersion('2');  // confirms instance is on expected definition version
 ```
 
-### 15.3 Machine Migration Testing
+### 17.3 Machine Migration Testing
 
 ```php
-// Unit test a migration in isolation
-it('maps processing to validating', function () {
+// Unit test a migration plan in isolation
+it('maps processing to validating with context transform', function () {
     $migration = new OrderV1ToV2Migration();
+    $plan      = $migration->plan();
 
-    expect($migration->stateMapping())
-        ->toHaveKey('processing', 'validating');
+    expect($plan['processing'])->toBeInstanceOf(StateMapping::class);
+    expect($plan['processing']->target())->toBe('validating');
+    expect($plan['pending']->isAuto())->toBeTrue();
+    expect($plan['done']->isSkipped())->toBeTrue();
 
-    $context = $migration->transformContext(
-        context: ['orderId' => 123],
-        fromState: 'processing',
-        toState: 'validating',
-    );
-
-    expect($context)->toHaveKey('validationStatus', 'pending_revalidation');
+    // Test context transformer
+    $ctx = $plan['processing']->applyTransform(['orderId' => 123]);
+    expect($ctx)->toHaveKey('validationStatus', 'pending_revalidation');
 });
 ```
 
@@ -1234,15 +1680,15 @@ OrderMachine::fake(version: '1');
 
 Faked machines respect the same version resolution as real machines. `fakingAllActions()`, `fakingAllGuards()`, and `simulateChildDone/Fail/Timeout` work per-version — the faked definition determines which behaviors are available.
 
-### 15.5 `InteractsWithMachines` Reset
+### 17.5 `InteractsWithMachines` Reset
 
 `VersionRegistry` uses a **static cache** keyed by machine class — definitions are resolved once per request/process and reused. The `InteractsWithMachines` trait's `tearDown` calls `VersionRegistry::flush()` to clear this static cache between tests, preventing cross-test contamination.
 
 ---
 
-## 16. HTTP Endpoint Behavior
+## 18. HTTP Endpoint Behavior
 
-### 16.1 Endpoint Version Awareness
+### 18.1 Endpoint Version Awareness
 
 Endpoints operate on the instance's pinned version. When a request hits an endpoint for a restored machine, the correct definition version is used for:
 - Available events computation
@@ -1250,7 +1696,7 @@ Endpoints operate on the instance's pinned version. When a request hits an endpo
 - Action execution
 - Output resolution
 
-### 16.2 Response Envelope
+### 18.2 Response Envelope
 
 The response envelope gains a `definitionVersion` field:
 
@@ -1266,7 +1712,7 @@ The response envelope gains a `definitionVersion` field:
 }
 ```
 
-### 16.3 Create Endpoint
+### 18.3 Create Endpoint
 
 The create endpoint always uses the active version. Optionally, a `definitionVersion` field in the request body can pin to a specific version (useful for testing or gradual rollout):
 
@@ -1285,9 +1731,9 @@ If omitted, the active version is used. Behavior when specified:
 
 ---
 
-## 17. Interaction with Existing Systems
+## 19. Interaction with Existing Systems
 
-### 17.1 Child Machine Delegation
+### 19.1 Child Machine Delegation
 
 When a parent delegates to a child machine:
 - **New child instances** use the child machine's **active version** (independent from parent version)
@@ -1297,19 +1743,21 @@ When a parent delegates to a child machine:
 - **Cross-version output compatibility:** If a child is migrated to a new version with different output shape, the parent's `@done` action must handle both shapes. This is the developer's responsibility — the framework does not validate output shape compatibility across versions.
 - **Parent migration while child is in-flight:** Allowed. The child's `ChildMachineCompletionJob` will restore the parent from the parent's latest `machine_events`, which now has the new `definition_version`. The new version's `@done` handler will be used. If the new version doesn't have a `@done` handler for the child, `NoTransitionDefinitionFoundException` is thrown — same as any other missing transition.
 
-### 17.2 Parallel States
+### 19.2 Parallel States
 
 Parallel region jobs carry `definition_version`. All regions of an instance use the same definition version (they're part of the same machine).
 
-### 17.3 Timers & Schedules
+### 19.3 Timers & Schedules
 
 `machine:process-timers` and `machine:process-scheduled` read from `machine_current_states`. The `definition_version` column ensures the correct definition is loaded when processing timer/schedule events.
 
-### 17.4 Archival
+### 19.4 Archival
 
 `ArchiveService::archiveMachine()` preserves `definition_version` in compressed events. `restoreMachine()` restores it. `CompressionManager` serializes all `MachineEvent` columns (including the new `definition_version`) — no format changes needed. The new column is included automatically in JSON serialization/deserialization.
 
-### 17.5 Scenarios
+**Archived instances and migration:** Archived instances are NOT processed by the background sweep or `machine:migrate` command. When an archived instance is auto-restored (new event arrives, or `ChildMachineCompletionJob` triggers restore), the JIT migration in `Machine::send()` detects the pending migration and applies it inline. This is the most efficient approach — no need to decompress/recompress archives just to bump a version.
+
+### 19.5 Scenarios
 
 Scenarios target the active version by default. A scenario's `$machine` property already identifies the machine class. If a scenario needs to work with a specific version, it can override:
 
@@ -1323,15 +1771,15 @@ class AtCheckingProtocol extends MachineScenario
 
 **ScenarioPlayer integration:** When `$definitionVersion` is set, `ScenarioPlayer` passes it to `Machine::create(definitionVersion: $version)` when starting the scenario. The specified version's definition is used for all transitions, overrides, and `@continue` chains. If the version is not found in the registry, `DefinitionVersionNotFoundException` is thrown at scenario activation time. If `$definitionVersion` is not set, the active version is used (default behavior).
 
-### 17.6 Path Coverage Analysis
+### 19.6 Path Coverage Analysis
 
 `PathEnumerator` operates on a `MachineDefinition` instance. Since each version has its own definition, path enumeration is version-scoped. `machine:paths` gains a `--version` flag.
 
-### 17.7 XState Export
+### 19.7 XState Export
 
 `machine:xstate` gains a `--version` flag. Without it, exports the active version. With it, exports the specified version.
 
-### 17.8 Machine Query
+### 19.8 Machine Query
 
 `Machine::query()` gains a `->version(string $version)` filter:
 
@@ -1344,21 +1792,26 @@ OrderMachine::query()
 
 ---
 
-## 18. Failure Modes and Recovery
+## 20. Failure Modes and Recovery
 
 | Failure | Behavior | Recovery |
 |---------|----------|----------|
 | **Restore with unknown version** | `DefinitionVersionNotFoundException` thrown with message: "Version X not found in registry. Re-add the version factory or migrate instances." | Register the missing version in `versions()`, or migrate instances to a known version |
 | **Migration: lock unavailable** | Instance recorded as failed in `MigrationResult::failures` with reason `lock_unavailable` | Re-run migration with `--retry-failed` |
-| **Migration: incompatible state (no mapping)** | Instance recorded as failed with `IncompatibleMigrationException` | Add mapping to `MachineMigration::stateMapping()` |
+| **Migration: plan() doesn't cover all source states** | `InvalidMigrationPlanException` thrown at execution start (before any instance is processed) | Add missing states to `plan()` — use `make:machine-migration` to scaffold with all states |
+| **Migration: incompatible state (auto() but removed)** | Instance recorded as failed with `IncompatibleMigrationException` | Change `auto()` to `to('target')` or `skip()` in `plan()` |
 | **Migration: target state doesn't exist** | `InvalidMigrationTargetException` thrown | Fix the state mapping |
 | **Migration: context transformer fails** | Instance recorded as failed; exception message in `MigrationFailure::reason`, full exception logged via `Log::error()` | Fix transformer, re-run |
 | **Migration: batch partially fails** | Successful instances remain migrated (committed), failed instances untouched | Re-run — idempotent (already-migrated instances are skipped via version check in step 3) |
 | **Deploy without old version in registry** | Old instances fail to restore | Add old version back to registry, or migrate remaining instances first |
 | **Concurrent migration + normal event processing** | Lock prevents conflict — migration records locked instances as failed | Re-run migration with `--retry-failed` |
 | **Overlapping version ranges in pending migrations** | Second migration skips instances already migrated by first (version check in step 3 rejects them) | Chain migrations: v1→v2, then v2→v3 — not v1→v2 and v1→v3 simultaneously |
+| **JIT migration: event incompatible with target version** | "Process first, migrate after" — event processed on old version, migration deferred | Sweep job will migrate later, or next compatible event triggers JIT |
+| **Event upcast: breaking change in chain** | `EventUpcastException` with details (upcasted-to, blocked-at, missing fields) | Sender must upgrade to current event version |
+| **Event upcast: missing upcastToV{N} method** | `MissingUpcastDefinitionException` at definition validation time | Add the missing `upcastToV{N}` method to the EventBehavior |
+| **Sweep: backpressure threshold exceeded** | Sweep pauses, resumes on next tick | Automatic — no intervention needed |
 
-### 18.1 Rollback
+### 20.1 Rollback
 
 Migration is NOT automatically reversible. To "undo" a migration:
 1. Write a reverse `MachineMigration` (v2 → v1, with inverse state mappings)
@@ -1369,7 +1822,7 @@ The `DEFINITION_MIGRATED` events in `machine_events` and `machine_migration_batc
 
 ---
 
-## 19. Configuration
+## 21. Configuration
 
 ```php
 // config/machine.php
@@ -1391,36 +1844,53 @@ return [
 
         // Lock TTL for migration operations (seconds)
         'migration_lock_ttl' => 30,
+
+        // Just-in-time migration in Machine::send()
+        'jit_migration' => true,
+
+        // Background sweep job settings
+        'sweep' => [
+            'enabled'                => false, // enable in production when migrations are pending
+            'frequency'              => 60,    // seconds between sweep ticks
+            'batch_size'             => 100,   // instances per tick
+            'backpressure_threshold' => 1000,  // max queue depth before pausing
+        ],
     ],
 ];
 ```
 
 ---
 
-## 20. File Structure
+## 22. File Structure
 
 ```
 src/Versioning/
     VersionRegistry.php                — Multi-version definition registry
+    StateMapping.php                   — VO: per-state migration action (auto, to, skip + transform + when)
     MachineMigration.php               — Abstract base for machine migrations (Laravel migration pattern)
-    MigrationExecutor.php              — Discovers + executes machine migrations (batch, lock-aware)
+    MigrationExecutor.php              — Discovers + executes machine migrations (batch, lock-aware, JIT support)
     MigrationResult.php                — VO: migration execution result
     MigrationFailure.php               — VO: per-instance failure detail
     CompatibilityAnalyzer.php          — Analyzes instance compatibility between versions
     CompatibilityReport.php            — VO: compatibility analysis result
+    BreakingChange.php                 — VO: non-upcastable event version transition
 src/Versioning/Exceptions/
     DefinitionVersionNotFoundException.php
     InvalidVersionRegistryException.php
     IncompatibleMigrationException.php
+    InvalidMigrationPlanException.php
     InvalidMigrationTargetException.php
+    EventUpcastException.php           — Thrown when event upcast chain hits a BreakingChange
+    MissingUpcastDefinitionException.php — Thrown when upcastToV{N} method is missing
 src/Jobs/
     MigrationJob.php                   — Async migration via queue
+    MigrationSweepJob.php             — Background sweep: gradual migration with backpressure
 src/Commands/
     MachineVersionStatusCommand.php    — machine:version-status
     MachineCompatibilityCommand.php    — machine:compatibility
     MachineMigrateCommand.php          — machine:migrate (pending migrations, like artisan migrate)
     MachineMigrateStatusCommand.php    — machine:migrate-status
-    MakeMachineMigrationCommand.php    — make:machine-migration (scaffold)
+    MakeMachineMigrationCommand.php    — make:machine-migration (definition-diff-aware scaffold)
 database/migrations/
     add_definition_version_to_machine_events_table.php.stub
     add_definition_version_to_machine_current_states_table.php.stub
@@ -1431,6 +1901,9 @@ tests/Versioning/
     MigrationExecutorTest.php
     MachineMigrationTest.php
     VersionAwareRestoreTest.php
+    JitMigrationTest.php
+    MigrationSweepTest.php
+    EventUpcastTest.php
 tests/Stubs/Versioning/
     VersionedOrderMachine.php          — Test stub: machine with version registry (v1, v2, v3)
     OrderV1ToV2Migration.php           — Test stub: state split migration
@@ -1442,7 +1915,7 @@ app/Machines/Migrations/               — User-land migration files (configurab
 
 ---
 
-## 21. Scenario Matrix
+## 23. Scenario Matrix
 
 Every combination of instance state × definition change × desired behavior:
 
@@ -1450,21 +1923,26 @@ Every combination of instance state × definition change × desired behavior:
 |---|---------------|-------------------|------------------|----------|
 | 1 | Not yet created | Any | Use new definition | Automatic — active version |
 | 2 | In non-final state `S` | `S` exists unchanged in new def | Continue on old version | Version-per-definition (default) |
-| 3 | In non-final state `S` | `S` exists unchanged in new def | Continue on NEW version | Machine migration (auto-map, no state mapping needed) |
+| 3 | In non-final state `S` | `S` exists unchanged in new def | Continue on NEW version | Machine migration with `StateMapping::auto()` |
 | 4 | In non-final state `S` | `S` removed/renamed to `S'` | Continue on old version | Version-per-definition (default) |
-| 5 | In non-final state `S` | `S` removed/renamed to `S'` | Move to new version | Machine migration with `S → S'` mapping |
+| 5 | In non-final state `S` | `S` removed/renamed to `S'` | Move to new version | Machine migration with `StateMapping::to('S'')` |
 | 6 | In non-final state `S` | `S` split into `S1, S2` | Continue on old version | Version-per-definition (default) |
-| 7 | In non-final state `S` | `S` split into `S1, S2` | Move to `S1` in new version | Machine migration with `S → S1` mapping |
+| 7 | In non-final state `S` | `S` split into `S1, S2` | Move to `S1` in new version | Machine migration with `StateMapping::to('S1')` |
 | 8 | In final state `F` | `F` still final in new def | Leave as-is | No action (default) |
-| 9 | In final state `F` | `F` still final in new def | Move to new version | Machine migration (auto-map, `shouldMigrate` includes final) |
-| 10 | In final state `F` | `F` no longer final in new def | Reactivate on new version | Machine migration with `F → F` or `F → S'` mapping, `shouldMigrate` includes final |
-| 11 | In final state `F` | `F` removed in new def | Move to new state in new version | Machine migration with `F → S'` mapping |
-| 12 | Any non-final | Context shape changed | Adapt context | Machine migration with `transformContext()` |
+| 9 | In final state `F` | `F` still final in new def | Move to new version | Machine migration with `auto()`, `includeFinal: true` |
+| 10 | In final state `F` | `F` no longer final in new def | Reactivate on new version | Machine migration with `to('S')` or `auto()`, `includeFinal: true` |
+| 11 | In final state `F` | `F` removed in new def | Move to new state in new version | Machine migration with `to('S')`, `includeFinal: true` |
+| 12 | Any non-final | Context shape changed | Adapt context | Machine migration with `StateMapping::auto()->transformContext(...)` or `to(...)->transformContext(...)` |
 | 13 | Any | No change (same version) | Normal operation | No action — zero overhead |
+| 14 | Any non-final | States unchanged, event payload changed | Accept old-format events | Pure version bump migration + `upcastToV{N}` on EventBehavior |
+| 15 | Any non-final | States unchanged, event payload changed (breaking) | Reject old-format events with clear error | Pure version bump migration + `BreakingChange` in `upcastToV{N}` |
+| 16 | Active (receives events) | Any pending migration | Migrate on next event | JIT migration in `Machine::send()` (Section 12.3) |
+| 17 | Dormant (no events) | Any pending migration | Migrate gradually | Background sweep job (Section 12.2) |
+| 18 | Archived | Any pending migration | Migrate on restore | Auto-restore + JIT migration chain (Section 12.4) |
 
 ---
 
-## 22. Quality Gate
+## 24. Quality Gate
 
 ```
 composer quality
@@ -1487,27 +1965,35 @@ All existing tests must continue to pass. New tests must achieve:
       rows: 8
     - name: "Terminology"
       location: "Section 4"
-      rows: 8
+      rows: 13
+    - name: "Gradual Migration Layers"
+      location: "Section 12.1"
+      rows: 2
+    - name: "Event Upcast Return Types"
+      location: "Section 14.3"
+      rows: 2
     - name: "Version States"
-      location: "Section 13.1"
+      location: "Section 15.1"
       rows: 4
     - name: "Failure Modes"
-      location: "Section 18"
-      rows: 9
+      location: "Section 20"
+      rows: 14
     - name: "Configuration"
-      location: "Section 19"
+      location: "Section 21"
       rows: 3
     - name: "Scenario Matrix"
-      location: "Section 21"
-      rows: 13
+      location: "Section 23"
+      rows: 18
     - name: "Laravel Migration Comparison"
       location: "Section 10.1"
       rows: 12
   code_blocks:
     - name: "VersionRegistry class"
       location: "Section 8.3"
-    - name: "MachineMigration abstract class"
+    - name: "StateMapping VO"
       location: "Section 10.3"
+    - name: "MachineMigration abstract class"
+      location: "Section 10.4"
     - name: "MigrationExecutor service"
       location: "Section 11.1"
     - name: "CompatibilityReport VO"
@@ -1518,9 +2004,17 @@ All existing tests must continue to pass. New tests must achieve:
       location: "Section 11.2 step 7"
     - name: "make:machine-migration scaffold output"
       location: "Section 10.4"
+    - name: "MigrationSweepJob"
+      location: "Section 12.2"
+    - name: "JIT migration in Machine::send()"
+      location: "Section 12.3"
+    - name: "EventBehavior upcast chain"
+      location: "Section 14.3"
+    - name: "BreakingChange VO"
+      location: "Section 14.4"
     - name: "TestMachine enhancements"
-      location: "Section 15.1"
+      location: "Section 17.1"
     - name: "Response envelope"
-      location: "Section 16.2"
+      location: "Section 18.2"
   numbered_lists: []
 -->
