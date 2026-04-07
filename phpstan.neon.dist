@@ -25,8 +25,6 @@ parameters:
         # Defensive identical comparisons — intentional guard clauses
         - identifier: identical.alwaysFalse
           path: src/Definition/StateDefinition.php
-        - identifier: identical.alwaysFalse
-          path: src/Commands/MachineConfigValidatorCommand.php
 
         # Eloquent raw query dynamic properties
         - identifier: property.notFound
@@ -55,4 +53,3 @@ parameters:
           path: src/ContextManager.php
         - identifier: method.childParameterType
           path: src/Models/MachineEvent.php
-
