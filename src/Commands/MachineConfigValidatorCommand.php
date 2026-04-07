@@ -43,7 +43,7 @@ class MachineConfigValidatorCommand extends Command
         }
 
         $machines = $this->argument(key: 'machine');
-        if ($machines === null || $machines === []) {
+        if ($machines === []) {
             $this->error(string: 'Please provide a machine class name or use --all option.');
 
             return;
