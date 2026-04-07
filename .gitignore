@@ -17,3 +17,4 @@ thoughts/
 .beads/
 .emdash.json
 codedb.snapshot
+.allegro.lock
