@@ -1,0 +1,40 @@
+{
+  "name": "event-machine",
+  "version": "9.7.3",
+  "description": "EventMachine — Laravel state machines with event sourcing, parallel states, delegation, timers, and HTTP routing. Ships with full documentation (87 pages) and curated agent cheat-sheets.",
+  "homepage": "https://eventmachine.dev",
+  "repository": "https://github.com/tarfin-labs/event-machine",
+  "author": {
+    "name": "Tarfin Labs",
+    "url": "https://github.com/tarfin-labs"
+  },
+  "skills": [
+    {
+      "name": "event-machine",
+      "path": "../skills/event-machine/SKILL.md",
+      "triggers": [
+        "event-machine",
+        "EventMachine",
+        "tarfin-labs/event-machine",
+        "MachineDefinition",
+        "MachineDefinition::define",
+        "TestMachine",
+        "Machine::test",
+        "Machine::startingAt",
+        "Machine::fake",
+        "ActionBehavior",
+        "GuardBehavior",
+        "CalculatorBehavior",
+        "ValidationGuardBehavior",
+        "ContextManager",
+        "MachineScenario",
+        "MachineRouter",
+        "state machine",
+        "statechart",
+        "XState PHP",
+        "Laravel state machine",
+        "event-driven workflow"
+      ]
+    }
+  ]
+}
