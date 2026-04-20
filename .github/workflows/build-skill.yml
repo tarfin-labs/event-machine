@@ -1,0 +1,53 @@
+name: Build Plugin Distribution
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  plugin-dist:
+    name: Materialize skill and push plugin-dist branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Materialize skill docs
+        run: bash scripts/build-skill.sh
+
+      - name: Create plugin-dist branch
+        run: |
+          set -euo pipefail
+          REF="${GITHUB_REF_NAME}"
+          BRANCH="plugin-dist"
+
+          # Stage the materialized docs that rsync just produced
+          git add -f skills/event-machine/docs
+
+          # Compose an orphan-like branch that mirrors the tagged tree with
+          # the materialized skill on top. We do NOT preserve history on
+          # plugin-dist; it is rebuilt from scratch on every release.
+          git checkout -B "$BRANCH"
+          git commit -m "Release $REF (plugin-dist materialized)"
+          git push --force origin "$BRANCH"
+
+      - name: Summary
+        run: |
+          echo "Published plugin-dist branch for tag ${GITHUB_REF_NAME}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Install with:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "npx skills add tarfin-labs/event-machine#plugin-dist" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
