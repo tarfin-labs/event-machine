@@ -84,7 +84,7 @@ export default withMermaid(
             { text: 'When Not to Use', link: '/getting-started/when-not-to-use' },
             { text: 'Comparison', link: '/getting-started/comparison' },
             { text: 'Installation', link: '/getting-started/installation' },
-            { text: 'Claude Code Skill', link: '/getting-started/claude-code-skill' },
+            { text: 'AI Agent Skill', link: '/getting-started/agent-skill' },
             { text: 'Your First Machine', link: '/getting-started/your-first-machine' },
             { text: 'States & Transitions', link: '/understanding/states-and-transitions' },
             { text: 'Events', link: '/understanding/events' },
