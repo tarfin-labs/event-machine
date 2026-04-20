@@ -81,22 +81,24 @@ php artisan vendor:publish --tag="event-machine-migrations"
 php artisan migrate
 ```
 
-## Claude Code Skill
+## AI Agent Skill
 
-If you use [Claude Code](https://code.claude.com), install the EventMachine skill so your AI agent can write correct, idiomatic EventMachine code — it ships with naming conventions, best practices, testing patterns, and the full VitePress documentation.
+EventMachine ships with an official [Agent Skill](https://agentskills.io) so AI coding agents can write correct, idiomatic EventMachine code — it loads naming conventions, best practices, testing patterns, and the full VitePress documentation on demand.
+
+Install via [`npx skills`](https://github.com/vercel-labs/skills) — works with **45+ agents** including Claude Code, Cursor, GitHub Copilot, Cline, Codex, OpenCode, Gemini CLI, Warp, Amp, and many others:
 
 ```bash
 npx skills add tarfin-labs/event-machine#plugin-dist
 ```
 
-The `plugin-dist` branch is a self-contained, materialized snapshot published on every release tag. It works across platforms and does not rely on symlink resolution.
+The CLI detects your installed agents and wires the skill into the right location. The `plugin-dist` branch is a self-contained, materialized snapshot published automatically on every release tag.
 
 What the skill loads:
 
 - **Immediately** (when the skill triggers): naming conventions, 13 best-practice summaries, core concepts, quick-start snippets, testing API cheat-sheet, Laravel integration map, delegation/parallel gotcha tables.
 - **On demand** (when the agent needs deeper detail): curated cheat-sheets under `references/` and the full 87-page documentation under `docs/`.
 
-Read the full skill guide at [eventmachine.dev/getting-started/claude-code-skill](https://eventmachine.dev/getting-started/claude-code-skill).
+Read the full skill guide at [eventmachine.dev/getting-started/agent-skill](https://eventmachine.dev/getting-started/agent-skill).
 
 
 ## Support Policy
