@@ -1,8 +1,8 @@
-# Claude Code Skill
+# AI Agent Skill
 
-EventMachine ships with an official [Claude Code](https://code.claude.com) **Skill** — a package that teaches AI coding agents how to write correct, idiomatic EventMachine code without relying on stale training data.
+EventMachine ships with an official **Agent Skill** — a package that teaches AI coding agents how to write correct, idiomatic EventMachine code without relying on stale training data.
 
-Once installed, the skill activates whenever you edit a file that uses EventMachine, or whenever you ask Claude to "build a state machine", "write a TestMachine test", "add a parallel state", or similar.
+Once installed, the skill activates whenever you edit a file that uses EventMachine, or whenever you ask your agent to "build a state machine", "write a TestMachine test", "add a parallel state", or similar.
 
 ## Install
 
@@ -10,7 +10,27 @@ Once installed, the skill activates whenever you edit a file that uses EventMach
 npx skills add tarfin-labs/event-machine#plugin-dist
 ```
 
-That's it. `npx skills` is the open agent skills package manager from Vercel Labs. It clones the `plugin-dist` branch of this repository and installs the skill into your Claude Code configuration (per-project by default, or globally with `--global`).
+That's it. [`npx skills`](https://github.com/vercel-labs/skills) is the open agent skills package manager from Vercel Labs. It clones the `plugin-dist` branch of this repository and installs the skill into your agents (per-project by default, or globally with `--global`).
+
+## Supported agents
+
+The skill conforms to the [Agent Skills specification](https://agentskills.io) and works with **45+ agents**, including:
+
+- **Claude Code**
+- **Cursor**
+- **GitHub Copilot**
+- **Cline**
+- **Codex** (OpenAI)
+- **OpenCode**
+- **Gemini CLI** (Google)
+- **Warp** (terminal)
+- **Amp** (Sourcegraph)
+- **Antigravity**
+- **Kimi Code CLI**
+- **Deep Agents**
+- **Firebender**
+
+…and 30+ more. The `npx skills` CLI automatically detects your installed agents and wires the skill into each one's expected location. Browse the full agent list at [skills.sh](https://skills.sh).
 
 ## What the skill provides
 
@@ -18,7 +38,7 @@ The skill is organized around **progressive disclosure** — the most important 
 
 ### Loaded immediately
 
-When Claude detects EventMachine usage, it loads `SKILL.md` into context. This single file includes:
+When your agent detects EventMachine usage, it loads `SKILL.md` into context. This single file includes:
 
 - The complete **naming conventions** table — events, states, classes, context keys, config keys
 - **13 best-practice principles** distilled into one-liners, with five critical expansions (guard purity, action idempotency, event tense, region separation, state explosion)
@@ -69,7 +89,7 @@ npx skills remove event-machine
 
 ## How releases work
 
-The `plugin-dist` branch is an automated artifact, not a source branch — **do not commit to it directly**. A GitHub workflow runs on every semantic-version tag push (`9.7.3`, `10.0.0`, etc.), materializes the VitePress docs into the skill directory, and force-pushes the result to `plugin-dist`. The main branch uses a symlink for developer convenience; the dist branch uses real files so installation works on every platform.
+The `plugin-dist` branch is an automated artifact, not a source branch — **do not commit to it directly**. A GitHub workflow runs on every semantic-version tag push (`9.7.3`, `10.0.0`, etc.), materializes the VitePress docs into the skill directory, and force-pushes the result to `plugin-dist`. The main branch uses a symlink for developer convenience; the dist branch uses real files so installation works on every platform and every agent's installer, regardless of symlink handling.
 
 ## Repository layout
 
@@ -90,13 +110,8 @@ skills/event-machine/
 
 The skill lives alongside the library because the docs, library, and skill must all move together on every release.
 
-## Multi-agent compatibility
-
-`npx skills` supports 45+ agents beyond Claude Code (Cursor, GitHub Copilot, Cline, OpenCode, Codex, Amp, and more). If you use one of those, the same install command works — the CLI detects your agent and wires the skill into the right location. See the [Agent Skills specification](https://agentskills.io) and the [skills registry](https://skills.sh) for details.
-
 ## Learn more
 
-- Install tool: [vercel-labs/skills](https://github.com/vercel-labs/skills)
-- Claude Code: [code.claude.com](https://code.claude.com)
-- Skills spec: [agentskills.io](https://agentskills.io)
+- Install tool: [vercel-labs/skills](https://github.com/vercel-labs/skills) · [skills.sh](https://skills.sh)
+- Agent Skills specification: [agentskills.io](https://agentskills.io)
 - Skill source in this repo: [`skills/event-machine/`](https://github.com/tarfin-labs/event-machine/tree/main/skills/event-machine)
