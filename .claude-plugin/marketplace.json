@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "event-machine",
+  "description": "EventMachine — Laravel state machines with event sourcing, parallel states, delegation, timers, and HTTP routing.",
+  "owner": {
+    "name": "Tarfin Labs",
+    "url": "https://github.com/tarfin-labs"
+  },
+  "plugins": [
+    {
+      "name": "event-machine",
+      "description": "Build, test, and debug event-driven state machines in Laravel. Includes full VitePress documentation (87 pages) and agent-optimized cheat-sheets for testing, delegation, parallel states, and QA setup.",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/event-machine"],
+      "category": "development"
+    }
+  ]
+}
