@@ -81,6 +81,24 @@ php artisan vendor:publish --tag="event-machine-migrations"
 php artisan migrate
 ```
 
+## Claude Code Skill
+
+If you use [Claude Code](https://code.claude.com), install the EventMachine skill so your AI agent can write correct, idiomatic EventMachine code — it ships with naming conventions, best practices, testing patterns, and the full VitePress documentation.
+
+```bash
+npx skills add tarfin-labs/event-machine#plugin-dist
+```
+
+The `plugin-dist` branch is a self-contained, materialized snapshot published on every release tag. It works across platforms and does not rely on symlink resolution.
+
+What the skill loads:
+
+- **Immediately** (when the skill triggers): naming conventions, 13 best-practice summaries, core concepts, quick-start snippets, testing API cheat-sheet, Laravel integration map, delegation/parallel gotcha tables.
+- **On demand** (when the agent needs deeper detail): curated cheat-sheets under `references/` and the full 87-page documentation under `docs/`.
+
+Read the full skill guide at [eventmachine.dev/getting-started/claude-code-skill](https://eventmachine.dev/getting-started/claude-code-skill).
+
+
 ## Support Policy
 
 Only the **latest major version** (currently v7) receives bug fixes and security patches. All previous versions are end of life. See the [Upgrading Guide](https://eventmachine.dev/getting-started/upgrading) for step-by-step migration from any version.
