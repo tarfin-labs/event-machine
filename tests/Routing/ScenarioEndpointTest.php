@@ -252,6 +252,34 @@ test('POST with scenario:null explicit deactivation', function (): void {
         ->and($current?->scenario_params)->toBeNull();
 });
 
+// ── Event mismatch detection ────────────────────────────────────────────────
+
+test('scenario attached to wrong endpoint throws event mismatch (POST without type in body)', function (): void {
+    // CompletionScenario expects COMPLETE event, but we attach it to CANCEL endpoint
+    ['machineId' => $machineId] = createPersistedMachineAtStarted($this);
+
+    $response = $this->postJson("/api/cont-ep/{$machineId}/cancel", [
+        'scenario' => 'completion-scenario',
+    ]);
+
+    $response->assertStatus(422);
+    expect($response->json('message'))->toContain('COMPLETE')
+        ->and($response->json('message'))->toContain('CANCEL');
+});
+
+test('scenario attached to correct endpoint succeeds (no mismatch)', function (): void {
+    // CompletionScenario expects COMPLETE event, attach to COMPLETE endpoint — should work
+    ['machineId' => $machineId] = createPersistedMachineAtStarted($this);
+
+    $response = $this->postJson("/api/cont-ep/{$machineId}/complete", [
+        'scenario' => 'completion-scenario',
+    ]);
+
+    // Should not get event mismatch error — scenario activates and machine transitions
+    $response->assertStatus(201);
+    expect($response->json('data.state'))->toContain('test_endpoint.completed');
+});
+
 test('POST with explicit scenario:null deactivates active continuation', function (): void {
     ['machineId' => $machineId] = createPersistedMachineAtStarted($this);
 

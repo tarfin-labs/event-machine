@@ -699,14 +699,16 @@ class MachineController extends Controller
             );
         }
 
-        // Validate $event matches the event being sent
-        $eventType         = $request->input('type', '');
+        // Validate $event matches the endpoint's registered event type.
+        // Use route default (_event_type) as the authoritative source — it's set during
+        // route registration and is available for all HTTP methods (GET, POST, PATCH).
+        $endpointEventType = $request->route()->defaults['_event_type'] ?? '';
         $scenarioEventType = $scenario->eventType();
-        if ($eventType !== '' && $eventType !== $scenarioEventType) {
+        if ($endpointEventType !== '' && $endpointEventType !== $scenarioEventType) {
             // Also check class FQCN match
-            $eventTypeResolved = class_exists($eventType) && method_exists($eventType, 'getType')
-                ? $eventType::getType()
-                : $eventType;
+            $eventTypeResolved = class_exists($endpointEventType) && method_exists($endpointEventType, 'getType')
+                ? $endpointEventType::getType()
+                : $endpointEventType;
             if ($eventTypeResolved !== $scenarioEventType) {
                 throw ScenarioFailedException::eventMismatch(
                     expected: $scenarioEventType,

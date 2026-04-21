@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Exceptions;
 
 use RuntimeException;
+use Illuminate\Http\JsonResponse;
 
 /**
  * Thrown during scenario execution for runtime failures.
@@ -18,6 +19,16 @@ class ScenarioFailedException extends RuntimeException
         string $message,
     ) {
         parent::__construct(message: $message);
+    }
+
+    /**
+     * Render the exception as an HTTP response.
+     */
+    public function render(): JsonResponse
+    {
+        return response()->json([
+            'message' => $this->getMessage(),
+        ], 422);
     }
 
     public static function guardRejection(string $eventType, string $currentState, string $guardClass): self
