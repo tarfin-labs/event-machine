@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use RuntimeException;
 use Mockery\MockInterface;
 use Tarfinlabs\EventMachine\ContextManager;
 use Mockery\Exception\InvalidCountException;
