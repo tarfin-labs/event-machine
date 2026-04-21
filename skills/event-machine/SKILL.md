@@ -411,7 +411,7 @@ Enable dispatch mode via `config/machine.php` → `parallel_dispatch.enabled => 
 - True concurrency — two 5s + 2s regions finish in 5s (not 7s)
 - Last-writer-wins on context — **separate keys per region is mandatory**
 
-### Top 10 gotchas
+### Top 10 gotchas (delegation & parallel)
 
 1. **Guards must be pure** — enforced at runtime via context snapshot/restore across branches.
 2. **`dispatchToParent` is transient** — fire-and-forget job; parent may have already transitioned away → event silently dropped.
@@ -423,6 +423,16 @@ Enable dispatch mode via `config/machine.php` → `parallel_dispatch.enabled => 
 8. **`ValidationGuardBehavior` aborts the whole transition** (422 via endpoints). Plain `GuardBehavior` failure = graceful.
 9. **Job actors (`job` key) skip dispatch in test mode** — use `simulateChildDone()` to step.
 10. **Partial parallel failure: Region A context may be lost** (documented last-writer-wins) — don't assert on surviving region A's context changes when region B failed.
+
+### Scenario gotchas (read before writing any scenario)
+
+1. **Simulated `@fail` does NOT inject typed `MachineFailure`** — the engine synthesizes a generic `ChildMachineFailEvent`. If your `@fail` action type-hints a `MachineFailure` subclass → `TypeError`. Workaround: override the action with a context-write proxy (`StoreFailureAction::class => ['failureReason' => '...']`).
+2. **Overrides are not reachable if guards route around them** — scenarios override behaviors, not path selection. If cache/retry/mode guards take a different branch, the overridden state is never entered. Fix: override branch-controlling guards in the same plan entry.
+3. **Transition actions with I/O fallbacks run during scenarios** — scenarios intercept delegations (job/machine), NOT actions. Entry, exit, and transition actions execute with real side effects unless overridden. An action with a lazy "fallback to API" branch will hit production.
+4. **Missing `continuation()` = real dispatches after target** — if your scenario's target state has event handlers leading to delegations (retry buttons, resend actions), those delegations fire for real without continuation. Red flags: target is an error/failed state with retry, or awaiting state with resend.
+5. **Verify interception via `machine_events` timestamps** — after running a scenario, query `child.*.start` / `child.*.done` for the `root_event_id`. Same-second = scenario intercepted. A gap = real delegation fired (silent bug).
+
+Full details: `docs/advanced/scenario-plan.md` → "Pitfalls" section.
 
 ---
 
@@ -516,6 +526,8 @@ This skill ships with the complete VitePress documentation at `docs/` (materiali
 
 ## 9. Agent Workflow Checklist
 
+### Building / modifying a machine
+
 When a user asks you to build/modify an EventMachine workflow:
 
 1. **Read relevant docs** — start from the navigation table above; don't guess API shapes.
@@ -526,3 +538,17 @@ When a user asks you to build/modify an EventMachine workflow:
 6. **Run the quality gate** — `composer quality` (pint + rector + test). Never just `vendor/bin/pest`.
 7. **Use typed contracts** — `MachineInput`, `MachineOutput`, `MachineFailure` for delegation boundaries.
 8. **Never commit without explicit approval** — especially for tags/releases (no `v` prefix).
+
+### Writing a scenario
+
+When a user asks you to write or debug a scenario:
+
+1. **Read `docs/advanced/scenarios.md` + `docs/advanced/scenario-plan.md`** — especially the "Pitfalls" section.
+2. **Scaffold with `machine:scenario`** — accept the scaffolder's BFS path choices as a starting point.
+3. **Run `machine:paths <Machine>`** — confirm every override state in your plan appears on a reachable path from source to target.
+4. **Override branch-controlling guards** — if the path to your overridden state depends on cache/mode/retry guards, override them to force the intended branch.
+5. **Override actions with typed `MachineFailure` params** — if your scenario uses `@fail` and the `@fail` action type-hints a `MachineFailure` subclass, override the action with a context-write proxy.
+6. **Add `continuation()`** — if the target state has event handlers that lead to delegations (retry, resend, next-step), continuation is mandatory or those delegations fire for real.
+7. **Validate with `machine:scenario-validate`** — catches structural errors (source/event/target mismatch, unreachable paths).
+8. **Unit test with `ScenarioPlayer::execute()`** — catches typed injection failures and unexpected action side-effects before HTTP-level testing.
+9. **Verify interception via `machine_events`** — in integration tests, assert `child.*.start` / `child.*.done` are same-second (proves scenario intercepted, no real dispatch).
