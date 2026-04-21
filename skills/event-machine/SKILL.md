@@ -59,7 +59,7 @@ All 13 pages live under `docs/best-practices/`. Top-level summary:
 | 2 | Event Design | Events are past-tense facts, not commands |
 | 3 | Transition Design | Self-transition to restart; targetless to update context |
 | 4 | Guard Design | Guards MUST be pure — no I/O, no context mutation |
-| 5 | Action Design | Actions are idempotent side effects; never throw to block |
+| 5 | Action Design | Actions are idempotent side effects; never throw to block; keep external I/O in delegations for scenario interception |
 | 6 | Context Design | Lean context; flags that change transitions belong in states |
 | 7 | Event Bubbling | Leaf-first handler resolution — first match wins |
 | 8 | Machine Decomposition | Split on own lifecycle, reuse, complexity, or independent failure |
@@ -87,7 +87,7 @@ public function __invoke(OrderContext $context): bool {
 }
 ```
 
-**Actions never throw to block transitions.** Actions run AFTER guards approve the transition. Throwing in an action does NOT roll back the state change; it leaves the machine in an inconsistent state. Use guards to block; use actions for idempotent side effects (DB writes with idempotency keys, queued notifications, external APIs).
+**Actions never throw to block transitions.** Actions run AFTER guards approve the transition. Throwing in an action does NOT roll back the state change; it leaves the machine in an inconsistent state. Use guards to block; use actions for idempotent side effects (DB writes with idempotency keys, queued notifications, external APIs). **Scenario impact:** actions with lazy I/O fallbacks ("if not in context, call API") fire during scenario runs — scenarios only intercept delegations, not actions. Keep external I/O in job/machine delegations; see `docs/best-practices/action-design.md` → "Scenario-Friendly Design".
 
 **Events are past-tense facts, not commands.** `ORDER_SUBMITTED`, not `SUBMIT_ORDER`. An event represents a state change that already happened. This disambiguates cross-machine communication — you always know who produced what.
 
@@ -486,9 +486,9 @@ This skill ships with the complete VitePress documentation at `docs/` (materiali
 | **Scenarios overview** | `docs/advanced/scenarios.md` |
 | **Scenario commands** | `docs/advanced/scenario-commands.md` |
 | **Scenario behaviors** | `docs/advanced/scenario-behaviors.md` |
-| **Scenario runtime** | `docs/advanced/scenario-runtime.md` |
+| **Scenario runtime + debugging** | `docs/advanced/scenario-runtime.md` — includes 4-tier validation framework and `machine_events` interception verification |
 | **Scenario endpoints** | `docs/advanced/scenario-endpoints.md` |
-| **Scenario plan** | `docs/advanced/scenario-plan.md` |
+| **Scenario plan + pitfalls** | `docs/advanced/scenario-plan.md` — **read "Pitfalls" section before writing any scenario** |
 | **Laravel integration** | `docs/laravel-integration/overview.md` |
 | **Eloquent integration** | `docs/laravel-integration/eloquent-integration.md` |
 | **Persistence** | `docs/laravel-integration/persistence.md` |
