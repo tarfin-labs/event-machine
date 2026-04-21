@@ -182,6 +182,25 @@ Four top-level sections:
 - **Always run `composer quality`** before committing. This replaces the old `composer pint && composer rector && composer test` workflow.
 - After Rector runs, **review what it changed** — Rector may apply refactorings (e.g., `instanceof` checks, type narrowing) that need verification. Check the diff before committing Rector's changes.
 
+### Agent Skill
+This package ships an **agent skill** at `skills/event-machine/`. The skill teaches AI coding agents how to use EventMachine correctly.
+
+Key files:
+- `skills/event-machine/SKILL.md` — Main skill file loaded by agents. Contains naming conventions, best-practice summaries, core concepts, quick-start snippets, testing API, gotcha tables, documentation navigation, and workflow checklists.
+- `skills/event-machine/README.md` — Skill structure guide and update instructions.
+- `skills/event-machine/docs/` — Symlinked to repo `docs/` during development; materialized at release time.
+- `skills/event-machine/references/` — Curated agent cheat-sheets (testing, delegation, parallel, QA setup).
+- `scripts/build-skill.sh` — Materializes symlinked docs into standalone files for distribution.
+- `scripts/restore-skill-symlink.sh` — Restores symlink after build.
+
+**When to update the skill:**
+- **Every release** — the skill is part of the release artifact (distributed via `plugin-dist` branch).
+- **New docs area added** — update the Documentation Navigation table in `SKILL.md` §8.
+- **Core concepts changed** (execution model, lifecycle) — update §3 of `SKILL.md`.
+- **Naming conventions changed** — update §1 of `SKILL.md`.
+- **New gotchas discovered** — add to §7 gotcha lists (delegation/parallel or scenario).
+- **New workflow patterns** — update §9 checklists.
+
 ## Key Development Patterns
 
 ### Machine Definition Structure
