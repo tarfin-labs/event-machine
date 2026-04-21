@@ -222,6 +222,22 @@ POST /endpoint { type: "PIN_CONFIRMED", scenario: null }
 
 If the continuation hits another interactive state (no `@continue` entry), the machine pauses and the scenario stays active for a third request, and so on.
 
+### Forwarded Endpoints
+
+Continuation scenarios work transparently with forwarded endpoints. When a scenario pauses at a delegation state with `forward` configuration (e.g., `awaiting_pin` with a PIN confirmation forward route), the forwarded endpoint loads the active continuation from the database and applies overrides before processing:
+
+```
+POST /api/orders/{orderId}/findeks/pin-confirmed  (forwarded endpoint)
+{ payload: { pin: "123456" } }
+
+→ Controller loads parent's active continuation from DB
+→ ScenarioPlayer::executeContinuation() with continuation() overrides
+→ Forward event processed with delegation interception active
+→ Child machine jobs not dispatched (scenario-simulated)
+```
+
+No `scenario` slug is needed in forwarded endpoint requests — the continuation is detected automatically from the parent machine's `scenario_class` in the database.
+
 ## Scenario Switching
 
 When a continuation scenario is active, QA can switch to a different scenario by sending its slug:
