@@ -488,7 +488,14 @@ class MachineController extends Controller
 
         $action?->before();
 
-        // 3. Send to parent using PARENT event type (tryForwardEventToChild resolves
+        // 3. Activate scenario continuation if present in DB.
+        //    Must be called before send() so overrides are registered before the event is processed.
+        $scenario = null;
+        if ($machine->definition->machineClass !== null) {
+            $scenario = $this->maybeRegisterScenarioOverrides($request, $machine->definition->machineClass, $machine);
+        }
+
+        // 4. Send to parent using PARENT event type (tryForwardEventToChild resolves
         //    the forward mapping by parent event type, not child event type).
         //    The child EventBehavior was used for validation above; now we send
         //    with parent type + validated payload so the forward mapping works
@@ -496,10 +503,22 @@ class MachineController extends Controller
         $parentEventType = $defaults['_event_type'];
 
         try {
-            $state = $machine->send([
-                'type'    => $parentEventType,
-                'payload' => $event->payload ?? [],
-            ]);
+            if ($scenario instanceof MachineScenario && $scenario->isContinuation) {
+                $rootEventId = $machine->state->history?->first()?->root_event_id;
+                $player      = new ScenarioPlayer($scenario);
+
+                $state = $player->executeContinuation(
+                    machine: $machine,
+                    eventPayload: $event->payload ?? [],
+                    rootEventId: $rootEventId ?? '',
+                    eventType: $parentEventType,
+                );
+            } else {
+                $state = $machine->send([
+                    'type'    => $parentEventType,
+                    'payload' => $event->payload ?? [],
+                ]);
+            }
         } catch (MachineAlreadyRunningException) {
             $httpStatus = $request->isMethod('GET') ? 200 : 423;
 
@@ -510,7 +529,7 @@ class MachineController extends Controller
                 isProcessing: true,
                 statusCodeOverride: $httpStatus,
             );
-        } catch (MachineValidationException|ValidationException $e) { // @phpstan-ignore catch.neverThrown, catch.neverThrown
+        } catch (MachineValidationException|ValidationException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
                 'errors'  => $e->errors(),
