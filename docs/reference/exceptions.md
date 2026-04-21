@@ -316,6 +316,69 @@ failure, decompression failure, invalid data format.
 - **Thrown from:** `MachineEventArchive`, `CompressionManager`
 - **See:** [Event Archival](/laravel-integration/archival)
 
+## Scenario Exceptions
+
+### ScenarioFailedException
+
+Thrown during scenario activation or execution for runtime failures.
+Renders as **422 JSON response** with an actionable error message.
+
+- **Extends:** `RuntimeException`
+- **HTTP status:** 422 (via `render()`)
+- **Thrown from:** `MachineController`, `ScenarioPlayer`
+
+**Factory methods:**
+
+| Method | When |
+|--------|------|
+| `sourceMismatch(expected, actual)` | Machine is not at the scenario's `$source` state |
+| `eventMismatch(expected, actual)` | Endpoint's registered event type doesn't match scenario's `$event` |
+| `guardRejection(eventType, currentState, guardClass)` | A guard rejected during scenario replay |
+| `continueEventFailed(state, event, reason)` | A `@continue` event was rejected by the machine |
+
+- **See:** [Scenario Endpoints](/advanced/scenario-endpoints#error-handling), [Scenario Runtime](/advanced/scenario-runtime)
+
+### ScenarioTargetMismatchException
+
+Thrown when the machine did not reach the scenario's `$target` state
+after execution completed.
+
+- **Extends:** `RuntimeException`
+- **Thrown from:** `ScenarioPlayer`
+- **See:** [Scenario Runtime](/advanced/scenario-runtime)
+
+### ScenarioConfigurationException
+
+Thrown for invalid scenario setup: invalid state route, delegation
+outcome on non-delegation state, missing properties, machine is faked.
+
+- **Extends:** `LogicException`
+- **Thrown from:** `ScenarioPlayer`, `MachineScenario`
+- **See:** [Scenario Plan](/advanced/scenario-plan)
+
+### ScenariosDisabledException
+
+Thrown when scenario execution is attempted but `MACHINE_SCENARIOS_ENABLED`
+is `false`.
+
+- **Extends:** `RuntimeException`
+- **Thrown from:** `ScenarioPlayer`
+
+### NoScenarioPathFoundException
+
+Thrown by the scaffold command when no path exists from source to target.
+
+- **Extends:** `RuntimeException`
+- **Thrown from:** `ScenarioPathResolver`
+
+### AmbiguousScenarioPathException
+
+Thrown by the scaffold command when multiple paths exist from source to
+target and automatic selection is not possible.
+
+- **Extends:** `RuntimeException`
+- **Thrown from:** `MachineScenarioCommand`
+
 ## Testing Exceptions
 
 ### BehaviorNotFakedException

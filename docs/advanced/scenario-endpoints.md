@@ -252,7 +252,7 @@ This is powerful for testing multiple paths from the same intermediate state wit
 |-----------|-------------|-------|
 | Unknown scenario slug | 422 | `ScenarioFailedException` — scenario not found |
 | Machine not at scenario's `$source` state | 422 | `ScenarioFailedException::sourceMismatch()` |
-| Request `type` doesn't match scenario's `$event` | 422 | `ScenarioFailedException::eventMismatch()` |
+| Endpoint's event type doesn't match scenario's `$event` | 422 | `ScenarioFailedException::eventMismatch()` |
 | Target not reached after execution | 422 | `ScenarioTargetMismatchException` |
 | Machine is faked (`Machine::fake()`) | 500 | `ScenarioConfigurationException` |
 
