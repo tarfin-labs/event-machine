@@ -225,9 +225,56 @@ Generally, prefer `raise()` for internal flow control, `sendTo()` when you need 
 
 5. **Keep `raise()` chains linear.** Circular raise chains hit the depth limit. If you need a loop, use explicit events sent from outside the macrostep.
 
+## Scenario-Friendly Design
+
+Scenarios intercept **delegations** (job/machine invoke), not transition actions. Actions attached to transitions, entry, or exit run with real side effects during scenario execution unless explicitly overridden in `plan()`.
+
+An action with a lazy "fallback to real API" branch is a design smell:
+
+<!-- doctest-attr: ignore -->
+```php
+// Anti-pattern: lazy I/O fallback in an action
+public function __invoke(MyContext $ctx): void
+{
+    if ($ctx->queryId !== null) {
+        return;
+    }
+    // This fires during scenario runs if queryId is not pre-populated
+    $ctx->queryId = ExternalApi::getQueryId($ctx->tckn);
+}
+```
+
+Scenarios cannot simulate this without action-level overrides, which partially defeats their purpose. Instead, put external calls into job or machine delegations:
+
+1. **`ProvidesFailure`** gives you typed error handling.
+2. **Scenarios can intercept** the delegation cleanly via `plan()` outcomes.
+3. **Retry/timeout policies** can be expressed declaratively in the machine config.
+
+<!-- doctest-attr: ignore -->
+```php
+// Preferred: external I/O in a dedicated delegation state
+'querying_external_id' => [
+    'job'   => FetchExternalIdJob::class,
+    '@done' => 'processing',
+    '@fail' => 'query_failed',
+],
+```
+
+When refactoring is not feasible, override the action in the scenario's `plan()`:
+
+<!-- doctest-attr: ignore -->
+```php
+'matching_phone' => [
+    MatchAndStoreAction::class => ['queryId' => 'SCENARIO-001'],
+],
+```
+
+See [Scenario Plan: Pitfalls](/advanced/scenario-plan#pitfalls) for more examples.
+
 ## Related
 
 - [Actions](/behaviors/actions) -- reference documentation
 - [Raised Events](/advanced/raised-events) -- `raise()` mechanics
 - [Cross-Machine Messaging](/advanced/sendto) -- `sendTo()` and `dispatchTo()`
 - [Guard Design](./guard-design) -- when to block transitions
+- [Scenario Plan: Pitfalls](/advanced/scenario-plan#pitfalls) -- scenario-specific action gotchas

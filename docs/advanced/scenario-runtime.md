@@ -87,6 +87,21 @@ Add context overrides in plan() for the relevant state.
 
 ## Debugging Scenarios
 
+### Validation Tiers
+
+Scenario issues can be caught at different levels. Work through these tiers in order — each catches a different class of bug:
+
+| Tier | Command / Pattern | Catches |
+|------|-------------------|---------|
+| 1. Structural | `machine:scenario-validate` | Source/event/target mismatch, non-existent state routes, path existence via BFS |
+| 2. Path enumeration | `machine:paths <Machine>` | Verify override states are on reachable paths under intended guard conditions |
+| 3. Unit | `(new ScenarioPlayer(...))->execute()` in a test | Typed injection failures (`TypeError`), unexpected action side-effects, guard/action interactions |
+| 4. Integration | Full HTTP endpoint hit with `?scenario=slug` | End-to-end slug activation, context flow, response shape, real async behavior |
+
+Tier 1 catches most structural problems. Tier 3 catches the remaining runtime issues (typed `MachineFailure` injection, I/O fallbacks in actions) that structural validation cannot detect. If you skip tier 3 and go straight to tier 4, debugging is harder because errors are obscured by HTTP response formatting and async queue timing.
+
+### Step-by-Step
+
 When a scenario fails or produces unexpected state:
 
 1. **Check validation first:** `php artisan machine:scenario-validate --scenario=at-review-scenario` catches structural errors (wrong state routes, missing paths, event mismatches).
@@ -98,6 +113,45 @@ When a scenario fails or produces unexpected state:
 4. **Check `machine_current_states`:** The `scenario_class` column shows if a scenario is still active. If it's `null` when you expect it to be set, the deactivation flow may have cleared it.
 
 5. **Preview with `--dry-run`:** `php artisan machine:scenario AtReview OrderMachine pending SubmitEvent under_review --dry-run` shows the scaffolded plan without writing files — useful for understanding what path the BFS found.
+
+### Verifying Scenario Interception via `machine_events`
+
+After running a scenario, query `machine_events` for the `root_event_id` and check `child.*.start` / `child.*.done` timestamps:
+
+```sql
+SELECT type, created_at FROM machine_events
+WHERE root_event_id = '<root_event_id>'
+  AND type LIKE '%child.%'
+ORDER BY created_at;
+```
+
+**Same-second timestamps** confirm synchronous scenario interception — no queue dispatch, no real I/O:
+
+```
+00:18:20 | car_sales.child.FindeksMachine.start
+00:18:20 | car_sales.child.FindeksMachine.done   ← same second = intercepted
+```
+
+**A gap between start and done** proves the scenario did NOT intercept and a real delegation fired:
+
+```
+00:09:37 | car_sales.child.FindeksMachine.start
+00:25:07 | car_sales.child.FindeksMachine.done   ← 15 min gap = real dispatch
+```
+
+In integration tests, assert this directly:
+
+<!-- doctest-attr: ignore -->
+```php
+$start = MachineEvent::where('root_event_id', $rootId)
+    ->where('type', 'like', '%child.%.start')->first();
+$done = MachineEvent::where('root_event_id', $rootId)
+    ->where('type', 'like', '%child.%.done')->first();
+
+expect($done->created_at->diffInSeconds($start->created_at))->toBe(0);
+```
+
+This check should be in every scenario integration test — it is the most reliable way to confirm that the scenario actually intercepted the delegation instead of letting it run for real.
 
 ## Continuation Execution
 

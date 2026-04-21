@@ -101,6 +101,14 @@ protected function continuation(): array
 
 See [Continuation — Multi-Request Flows](/advanced/scenario-plan#continuation-multi-request-flows) for the full guide.
 
+::: warning When continuation() is required
+Add `continuation()` whenever your scenario's target state has event handlers that lead to delegation states. If the user can click a button, submit a form, or trigger a retry from your target state — and that event leads to a job or child machine — that delegation will hit the real service without continuation.
+
+**Red flags:** scenario target is a "failed" or "error" state with a retry button, or an "awaiting" state with a resend action. Both almost always need `continuation()`.
+
+**Symptom of missing continuation:** the HTTP response after a user action shows the state transitioning (e.g., `failed` to `retrying`) with `isProcessing: false` — meaning a real async dispatch is in flight. Query `machine_events` for `child.*.start` / `child.*.done` timestamps: same-second confirms scenario interception, a gap proves a real delegation fired.
+:::
+
 ## How It Works
 
 ScenarioPlayer sends the trigger event with behavior overrides active — guards return fixed booleans instead of evaluating real conditions, actions write mock context values instead of calling external services, and delegation outcomes are intercepted so child machines and jobs are never dispatched. After the trigger event is processed, ScenarioPlayer checks if the machine landed on a state with an `@continue` directive; if so, it automatically sends the specified event and repeats until no more `@continue` entries match. At the end, ScenarioPlayer validates that the machine reached the declared `$target` state — throwing `ScenarioFailedException` if it did not. Because the overrides operate within the real machine engine (not a simulation), the machine produces real `MachineEvent` records, real context mutations, and real state transitions — the resulting event history is indistinguishable from a machine that arrived at that state through organic user interaction.

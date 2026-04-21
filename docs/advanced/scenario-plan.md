@@ -479,6 +479,10 @@ Use `continuation()` when:
 - Subsequent events after the target trigger delegation states or guard-protected transitions that need overrides
 - Without overrides, the next request would hit real external services
 
+::: warning Missing continuation is a silent bug
+If your target state has event handlers that lead to delegations (retry buttons, resend actions, next-step submissions), the user action will dispatch a real job/machine without scenario interception. The symptom is subtle: the HTTP response returns successfully but a real async dispatch is in flight. See [When continuation() is required](/advanced/scenarios#_6-add-continuation-for-interactive-targets) for detection techniques.
+:::
+
 ### Why a Separate Method
 
 The same state can appear in both Phase 1 (reaching the target) and Phase 2 (after the target) with **different overrides**. PHP arrays cannot have duplicate keys, so a separate method cleanly separates the phases.
@@ -550,4 +554,103 @@ The continuation scenario is automatically deactivated when:
 - QA sends a request with explicit empty scenario (normal behavior resumes)
 
 If the continuation hits another interactive state (no `@continue` entry), the machine pauses and the scenario stays active for the next request.
+
+## Pitfalls
+
+Common mistakes when writing scenarios. Each of these produces confusing runtime errors because the scenario _activates_ successfully but fails during execution.
+
+### Simulated `@fail` does not inject typed `MachineFailure`
+
+When a delegation state has a `@fail` transition whose action type-hints a `MachineFailure` subclass:
+
+<!-- doctest-attr: ignore -->
+```php
+// Machine config
+'checking_phone' => [
+    'job'   => CheckPhoneJob::class,
+    '@fail' => [
+        'target'  => 'failed',
+        'actions' => StoreFailureReasonAction::class,
+    ],
+],
+
+// Action expects typed failure
+public function __invoke(FindeksContext $ctx, FindeksFailure $failure): void { ... }
+```
+
+A scenario with `'checking_phone' => '@fail'` will throw `TypeError` at runtime. The engine synthesizes a generic `ChildMachineFailEvent` with `error_message: 'Scenario simulated failure'` — it does not construct your `MachineFailure` subclass because it cannot know its shape.
+
+**Workaround:** override the action with a context-write proxy so the real action never runs:
+
+<!-- doctest-attr: ignore -->
+```php
+'checking_phone' => [
+    'outcome' => '@fail',
+    StoreFailureReasonAction::class => [
+        'failureReason' => 'Scenario simulated failure',
+        'isSuccessful'  => false,
+    ],
+],
+```
+
+Array-valued action overrides generate a proxy with only a `ContextManager $ctx` parameter, bypassing the typed injection entirely.
+
+### Overrides are not reachable if guards route around them
+
+Scenarios override behaviors, not branch selection. If the path to your overridden state depends on guards, the engine may take a different branch and never reach your override — silently.
+
+<!-- doctest-attr: ignore -->
+```php
+// Machine has two branches at checking_cache:
+// [HasCacheGuard=true]  → matching_phone (cache hit, no API call)
+// [HasCacheGuard=false]  → querying_phone (fresh API query)
+
+// Scenario wants to override querying_phone, but doesn't control the guard:
+'phone_resolution.querying_phone' => '@done',  // never reached if cache exists
+```
+
+If the test customer has cached data, the machine takes the cache branch and the override is never applied. The scenario "succeeds" but the real API call in `matching_phone` fires.
+
+**Fix:** override the branch-controlling guards to force the intended path:
+
+<!-- doctest-attr: ignore -->
+```php
+'phone_resolution.checking_cache' => [
+    HasCacheGuard::class => false,    // force the no-cache branch
+],
+'phone_resolution.querying_phone' => '@done',
+```
+
+After writing a scenario, run `php artisan machine:paths <MachineClass>` to confirm your override states appear on a path from source to target. If the graph has cache/retry/fast-path branches, the guards that control them must be overridden in the same plan.
+
+### Transition actions with I/O fallbacks run during scenarios
+
+Scenarios intercept **delegations** (job/machine invoke), not transition actions. Entry, exit, and transition actions execute with real side effects during scenario runs unless explicitly overridden.
+
+<!-- doctest-attr: ignore -->
+```php
+// This action has a lazy I/O fallback — dangerous in scenarios
+public function __invoke(MyContext $ctx, EventBehavior $event): void
+{
+    if ($ctx->queryId !== null) {
+        return;  // context already has it
+    }
+    $ctx->queryId = ExternalApi::getQueryId(...);  // real API call
+}
+```
+
+If the scenario does not pre-populate `queryId` in context, the fallback fires and hits production.
+
+**Fix options:**
+
+1. **Override the action** in `plan()` with a context-write proxy:
+
+<!-- doctest-attr: ignore -->
+```php
+'matching_phone' => [
+    MatchAndStoreAction::class => ['queryId' => 'SCENARIO-001'],
+],
+```
+
+2. **Refactor the I/O** into a dedicated delegation state that scenarios can intercept cleanly. This is the preferred long-term fix — see [Action Design: Scenario-Friendly Design](/best-practices/action-design#scenario-friendly-design).
 
