@@ -11,6 +11,33 @@ EventMachine is a PHP/Laravel package for event-driven state machines inspired b
 
 ---
 
+## 0. How to Use This Skill
+
+This skill contains **the full EventMachine documentation** in `docs/` plus agent-specific cheat-sheets in `references/`. Sections 1-7 below are a starting point — every non-trivial task should include reading the relevant `docs/` file(s) before writing code.
+
+**Three levels of detail:**
+- **This file (SKILL.md)** — conventions, principles, gotchas, quick reference. Start here.
+- **`references/`** — distilled agent cheat-sheets by task type. Use for quick pattern lookup when writing code.
+- **`docs/`** — canonical, human-authored documentation. Read for deep understanding. Always authoritative.
+
+**Proactive doc-reading triggers** — before writing code, read based on your task:
+
+| Task | Read first |
+|------|-----------|
+| Write a scenario | `docs/advanced/scenarios.md` + `docs/advanced/scenario-plan.md` (Pitfalls section) |
+| Debug scenario not intercepting | `docs/advanced/scenario-runtime.md` (Debugging Scenarios + machine_events verification) |
+| Design state topology | `docs/best-practices/state-design.md` + `docs/building/defining-states.md` |
+| Add machine/job delegation | `docs/advanced/machine-delegation.md` + `docs/advanced/async-delegation.md` |
+| Add parallel states | `docs/advanced/parallel-states/index.md` + `docs/best-practices/parallel-patterns.md` |
+| Write tests | `docs/testing/overview.md` + `docs/testing/recipes.md` |
+| Debug transition issues | `docs/reference/execution-model.md` + `docs/testing/troubleshooting.md` |
+| Wire HTTP endpoints | `docs/laravel-integration/endpoints.md` |
+| Anything with @done/@fail/@timeout | `docs/advanced/machine-delegation.md` + `docs/advanced/typed-contracts.md` |
+
+Skip doc-reading only for mechanical changes (rename, typo, simple extraction).
+
+---
+
 ## 1. Naming Conventions (MEMORIZE — agents break this most)
 
 | Element                 | Style                  | Pattern                              | Example                        |
@@ -101,6 +128,15 @@ public function __invoke(OrderContext $context): bool {
 - **Integration** — `Machine::test()` / `Machine::startingAt()` — flow through state transitions
 - **E2E** — real DB, real queue (SQLite/sync) — persistence + restoration round-trips
 - **LocalQA** — real MySQL + Redis + Horizon — async queues, parallel dispatch, timers under load (`tests/LocalQA/`, excluded from `composer test`)
+
+### Anti-patterns (agents from other frameworks try these)
+
+1. **Don't call `$machine->send()` inside an action** — use `raise()` for internal events, or return context changes. `send()` is the external API; actions are inside the macrostep.
+2. **Don't put external API calls in actions** — use a job delegation state with `@done`/`@fail`. Actions with I/O are invisible to scenarios and lack retry/timeout policies.
+3. **Don't manually construct `MachineEvent` instances** — use `send()` / `raise()`. The engine manages event sourcing, context diffs, and persistence.
+4. **Don't use nested `send()` from inside a transition** — use `@continue` in scenarios, or `raise()` for event chains within a macrostep.
+5. **Don't put transition logic in actions** — use guards to decide IF a transition fires, actions for side effects AFTER it fires.
+6. **Don't share context keys across parallel regions** — last-writer-wins silently. Each region owns its keys.
 
 ---
 
@@ -340,17 +376,19 @@ MachineRouter::register(OrderMachine::class, [
 
 ### Artisan commands
 
-| Command | Purpose |
-|---------|---------|
-| `machine:xstate` | Export machine to XState v5 JSON (Stately Studio viz) |
-| `machine:validate` | Validate machine config |
-| `machine:process-timers` | Sweep due `after`/`every` timers (auto-registered schedule) |
-| `machine:process-scheduled` | Fire scheduled events |
-| `machine:timer-status` | Show timer state per instance |
-| `machine:paths` | Enumerate all paths (static analysis) |
-| `machine:coverage` | Path coverage report |
-| `machine:archive-events` | Archive old events (fan-out, `--dry-run`, `--sync`) |
-| `machine:archive-status` | Archive stats; `--restore=<rootEventId>` |
+| Command | Purpose | When to use |
+|---------|---------|-------------|
+| `machine:validate` | Validate machine config | After editing machine definition — catches config errors before runtime |
+| `machine:paths` | Enumerate all paths (static analysis) | After writing a scenario — confirm override states are on reachable paths |
+| `machine:scenario-validate` | Validate scenario structure | After every scenario file change — catches source/event/target mismatches |
+| `machine:scenario` | Scaffold a new scenario | Starting a new scenario — generates plan from BFS path analysis |
+| `machine:coverage` | Path coverage report | Before adding transitions — verify no dead paths created |
+| `machine:xstate` | Export to XState v5 JSON (Stately Studio) | For team discussion — visualize state topology |
+| `machine:process-timers` | Sweep due `after`/`every` timers | Auto-registered — runs on schedule |
+| `machine:process-scheduled` | Fire scheduled events | Auto-registered — runs on schedule |
+| `machine:timer-status` | Show timer state per instance | Debugging timer issues — check fire counts and next-fire times |
+| `machine:archive-events` | Archive old events (`--dry-run`, `--sync`) | Maintenance — reduce `machine_events` table size |
+| `machine:archive-status` | Archive stats; `--restore=<rootEventId>` | After archiving — verify or restore specific machines |
 
 ### Querying machines
 
@@ -434,13 +472,44 @@ Enable dispatch mode via `config/machine.php` → `parallel_dispatch.enabled => 
 
 Full details: `docs/advanced/scenario-plan.md` → "Pitfalls" section.
 
+### Error glossary (common errors → quick fix)
+
+| Error | Likely cause | Fix |
+|-------|-------------|-----|
+| `TypeError: Argument must be of type <MachineFailure>, null given` | Scenario `@fail` doesn't inject typed failure | Override the action with context-write proxy |
+| `ScenarioFailedException: Event mismatch` | Scenario slug attached to wrong endpoint | Check scenario's `$event` matches endpoint's registered event type |
+| `ScenarioFailedException: Source mismatch` | Machine not in expected source state | Check `$source` property vs current machine state |
+| `NoScenarioPathFoundException` | BFS can't reach target from source | Run `machine:paths` to find actual paths; add guard overrides for branching |
+| `ScenarioTargetMismatchException` | Machine didn't reach `$target` after execution | Check plan overrides force the intended path; override branch guards |
+| `MissingMachineContextException` | Required context key missing | Read the enriched hint in the error; add key via `$requiredContext` or input closure |
+| `MachineAlreadyRunningException` | Concurrent HTTP request to same machine | Normal under load — endpoints return 423 (POST) or 200 (GET) |
+| `MachineValidationException` (422) | `ValidationGuardBehavior` failed | Check validation rules; this is a user-input error, not a bug |
+| `MaxTransitionDepthExceededException` | Infinite `@always` or `raise()` chain | Check for circular guard logic; increase depth limit if legitimate |
+
+Full exception reference: `docs/reference/exceptions.md`
+
 ---
 
 ## 8. Documentation Navigation
 
-This skill ships with the complete VitePress documentation at `docs/` (materialized at release time, symlinked during development).
+This skill ships with the **complete VitePress documentation** at `docs/` (materialized at release time, symlinked during development). The sections above are a starting point — `docs/` is always the authoritative source.
 
-### When to read which file
+### Task-oriented guide (start here)
+
+| Task | Primary reads | Secondary reads | Key gotchas |
+|------|--------------|-----------------|-------------|
+| Write a new scenario | `scenarios.md`, `scenario-plan.md` | `testing/recipes.md` | Simulated @fail typed injection, path divergence, I/O actions |
+| Debug scenario not firing | `scenario-runtime.md` (Debugging) | `machine:paths` + `machine_events` query | See "Verifying scenario interception" |
+| Design new state topology | `best-practices/state-design.md`, `defining-states.md` | `hierarchical-states.md`, `parallel-states/index.md` | State explosion, transient naming |
+| Add delegation (machine/job) | `machine-delegation.md`, `async-delegation.md` | `job-actors.md`, `testing/delegation-testing.md` | @fail typed failure, region isolation |
+| Add parallel states | `parallel-states/index.md`, `parallel-patterns.md` | `parallel-states/parallel-dispatch.md` | Disjoint context keys, dispatch mode |
+| Write tests for existing machine | `testing/overview.md`, `testing/test-machine.md` | `constructor-di.md`, `fakeable-behaviors.md` | Faking at right layer |
+| Wire HTTP endpoints | `laravel-integration/endpoints.md` | `scenario-endpoints.md` | MachineAlreadyRunning handling |
+| Debug transition issues | `reference/execution-model.md` | `testing/troubleshooting.md` | Macrostep ordering, event bubbling |
+
+All paths relative to `docs/advanced/` unless otherwise specified.
+
+### File-by-file reference
 
 | Topic | File |
 |-------|------|
@@ -514,13 +583,17 @@ This skill ships with the complete VitePress documentation at `docs/` (materiali
 | **Execution model (internals)** | `docs/reference/execution-model.md` |
 | **Exceptions** | `docs/reference/exceptions.md` |
 
-### Curated agent cheat-sheets (skill-only synthesized)
+### Agent cheat-sheets (`references/`)
 
-- `references/INDEX.md` — same navigation as above, keyed by task-type (not file name)
-- `references/testing.md` — assertion tables, fake patterns, setup snippets
-- `references/delegation.md` — sync/async decision tree + @done/@fail/@timeout recipes
-- `references/parallel.md` — region design checklist + dispatch gotchas
-- `references/qa-setup.md` — distilled LocalQA setup + workflow (~minimal)
+`docs/` is canonical documentation — read for understanding. `references/` contains **distilled agent-facing cheat-sheets** — read for quick pattern lookup when writing code. When in doubt, start with `references/INDEX.md`.
+
+| File | Use when | Docs equivalent (longer) |
+|------|----------|--------------------------|
+| `references/INDEX.md` | Routing to the right cheat-sheet or doc by task type | Section 8 tables above |
+| `references/testing.md` | Writing assertions, setting up fakes | `docs/testing/overview.md` + `test-machine.md` |
+| `references/delegation.md` | Adding sync/async delegation, @done/@fail/@timeout | `docs/advanced/machine-delegation.md` |
+| `references/parallel.md` | Designing parallel regions, dispatch config | `docs/advanced/parallel-states/index.md` |
+| `references/qa-setup.md` | Setting up LocalQA test environment | `docs/testing/localqa.md` |
 
 ---
 
@@ -530,7 +603,7 @@ This skill ships with the complete VitePress documentation at `docs/` (materiali
 
 When a user asks you to build/modify an EventMachine workflow:
 
-1. **Read relevant docs** — start from the navigation table above; don't guess API shapes.
+1. **Read docs for your task type** — use the trigger table in Section 0 or the task-oriented guide in Section 8. Skip only for mechanical changes (rename, typo).
 2. **Follow naming conventions** (Section 1) — especially event types, states, and context keys.
 3. **Validate design against best-practices** (Section 2) — purity, past-tense events, region separation.
 4. **Prefer class-based behaviors** — DI, typed context, testable. Use inline closures only for trivial one-liners.
