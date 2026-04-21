@@ -81,6 +81,11 @@ class MachineGraph
             return StateClassification::TRANSIENT;
         }
 
+        // Compound states (have child states with an initial)
+        if ($state->type === StateDefinitionType::COMPOUND) {
+            return StateClassification::COMPOUND;
+        }
+
         // Everything else is interactive
         return StateClassification::INTERACTIVE;
     }

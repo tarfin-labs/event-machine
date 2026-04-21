@@ -14,6 +14,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEve
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestChildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioCompoundTestMachine;
 
 function scenarioResolver(string $machineClass = ScenarioTestMachine::class): ScenarioPathResolver
 {
@@ -249,6 +250,47 @@ test('resolveDeepTarget returns null for direct (non-deep) target', function ():
 
     expect($result)->toBeNull();
 });
+
+// ── Compound state traversal ────────────────────────────────────────────────
+
+test('path through compound state via @start', function (): void {
+    $resolver = scenarioResolver(
+        ScenarioCompoundTestMachine::class,
+    );
+
+    // idle → @always → phone_resolution (compound) → checking_phone_cache → @always → matching_phone → PHONE_SELECTED → phones_resolved
+    $path = $resolver->resolve('idle', MachineScenario::START, 'phones_resolved');
+
+    $stateKeys = array_map(fn (ScenarioPathStep $s) => $s->stateKey, $path->steps);
+
+    expect($stateKeys)->toContain('matching_phone')
+        ->and($stateKeys)->toContain('phones_resolved');
+});
+
+test('path through nested compound states (compound inside compound)', function (): void {
+    $resolver = scenarioResolver(
+        ScenarioCompoundTestMachine::class,
+    );
+
+    // reviewing → NEST → outer (compound) → middle (compound) → leaf_checking → @always → leaf_done
+    $path = $resolver->resolve('reviewing', 'NEST', 'leaf_done');
+
+    $stateKeys = array_map(fn (ScenarioPathStep $s) => $s->stateKey, $path->steps);
+
+    expect($stateKeys)->toContain('leaf_done');
+});
+
+test('compound state classified as COMPOUND', function (): void {
+    $graph = new MachineGraph(
+        ScenarioCompoundTestMachine::definition(),
+    );
+
+    $compoundState = $graph->resolveState('phone_resolution');
+
+    expect($graph->classifyState($compoundState))->toBe(StateClassification::COMPOUND);
+});
+
+// ── Entry actions ───────────────────────────────────────────────────────────
 
 test('entry actions populated in ScenarioPathStep', function (): void {
     $resolver = scenarioResolver();

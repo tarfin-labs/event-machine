@@ -256,6 +256,14 @@ class ScenarioPathResolver
                 }
                 break;
 
+            case StateClassification::COMPOUND:
+                // Enter the initial child state (recursive descent through nested compounds)
+                $initialChild = $state->findInitialStateDefinition();
+                if ($initialChild instanceof StateDefinition && $initialChild->id !== $state->id) {
+                    $next[] = [$initialChild, '@entry', [], []];
+                }
+                break;
+
             case StateClassification::INTERACTIVE:
                 // Follow all event transitions
                 $transitions = $this->graph->transitionsFrom($state);

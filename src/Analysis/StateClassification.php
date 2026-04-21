@@ -28,7 +28,12 @@ enum StateClassification: string
     case PARALLEL = 'parallel';
 
     /**
-     * No @always, no delegation, not parallel, not final — waits for external event.
+     * Has child states with an initial — enters initial child automatically.
+     */
+    case COMPOUND = 'compound';
+
+    /**
+     * No @always, no delegation, not parallel, not final, not compound — waits for external event.
      */
     case INTERACTIVE = 'interactive';
 
