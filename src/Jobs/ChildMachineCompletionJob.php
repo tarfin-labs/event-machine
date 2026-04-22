@@ -114,6 +114,27 @@ class ChildMachineCompletionJob implements ShouldQueue
         // For parallel states, currentStateDefinition is the parallel ancestor,
         // not the region's atomic state. Check the value array instead.
         if (!in_array($this->parentStateId, $parentMachine->state->value, true)) {
+            // Parent already transitioned past the invoking state. This usually means
+            // the event was routed in a prior attempt. But if a prior attempt persisted
+            // the state change and then lost the downstream propagation dispatch
+            // (e.g. SIGTERM between commit and Redis push), we must recover here.
+            //
+            // Recovery condition: this machine is in a FINAL state AND is itself a
+            // managed child whose MachineChild row is still RUNNING. propagateChainCompletion
+            // is idempotent — it only dispatches if the row is RUNNING, so calling it
+            // when no recovery is needed is safe.
+            if ($parentMachine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
+                $this->propagateChainCompletion($parentMachine, $this->success);
+            }
+
+            logger()->info('ChildMachineCompletionJob: parent already transitioned, idempotent skip', [
+                'parent_root_event_id' => $this->parentRootEventId,
+                'parent_state_id'      => $this->parentStateId,
+                'current_state'        => $parentMachine->state->value,
+                'child_machine_class'  => $this->childMachineClass,
+                'success'              => $this->success,
+            ]);
+
             return;
         }
 
@@ -141,6 +162,14 @@ class ChildMachineCompletionJob implements ShouldQueue
 
             // Re-check under lock: parent state must still contain the invoking state
             if (!in_array($this->parentStateId, $freshParent->state->value, true)) {
+                logger()->info('ChildMachineCompletionJob: parent transitioned between pre-lock and lock (idempotent skip)', [
+                    'parent_root_event_id' => $this->parentRootEventId,
+                    'parent_state_id'      => $this->parentStateId,
+                    'current_state'        => $freshParent->state->value,
+                    'child_machine_class'  => $this->childMachineClass,
+                    'success'              => $this->success,
+                ]);
+
                 return;
             }
 
@@ -149,6 +178,13 @@ class ChildMachineCompletionJob implements ShouldQueue
             $stateDefinition = $freshParent->definition->idMap[$this->parentStateId] ?? null;
 
             if ($stateDefinition === null) {
+                logger()->warning('ChildMachineCompletionJob: state definition not found in idMap (config drift?)', [
+                    'parent_root_event_id' => $this->parentRootEventId,
+                    'parent_machine_class' => $this->parentMachineClass,
+                    'parent_state_id'      => $this->parentStateId,
+                    'child_machine_class'  => $this->childMachineClass,
+                ]);
+
                 return;
             }
 
@@ -264,12 +300,6 @@ class ChildMachineCompletionJob implements ShouldQueue
             return;
         }
 
-        if ($upstreamSuccess) {
-            $childRecord->markCompleted();
-        } else {
-            $childRecord->markFailed();
-        }
-
         $resolvedOutput = MachineDefinition::resolveChildOutput(
             $machine->state->currentStateDefinition,
             $machine->state->context,
@@ -279,6 +309,9 @@ class ChildMachineCompletionJob implements ShouldQueue
         $outputData  = $resolvedOutput instanceof MachineOutput ? $resolvedOutput->toArray() : $resolvedOutput;
         $outputClass = $resolvedOutput instanceof MachineOutput ? $resolvedOutput::class : null;
 
+        // Dispatch FIRST, mark LAST. If this dispatch is lost (e.g., SIGTERM mid-call),
+        // the MachineChild row remains in RUNNING status. When this job retries,
+        // handle()'s recovery branch detects the orphaned RUNNING row and re-dispatches.
         if ($upstreamSuccess) {
             dispatch(new self(
                 parentRootEventId: $childRecord->parent_root_event_id,
@@ -292,6 +325,8 @@ class ChildMachineCompletionJob implements ShouldQueue
                 childFinalState: $machine->state->currentStateDefinition->key,
                 outputClass: $outputClass,
             ));
+
+            $childRecord->markCompleted();
         } else {
             // Propagate failure: the middle machine captured the error in its context
             // and may define its own failure class for re-wrapping.
@@ -311,6 +346,8 @@ class ChildMachineCompletionJob implements ShouldQueue
                 childFinalState: $machine->state->currentStateDefinition->key,
                 failureClass: $failureClass,
             ));
+
+            $childRecord->markFailed();
         }
     }
 }
