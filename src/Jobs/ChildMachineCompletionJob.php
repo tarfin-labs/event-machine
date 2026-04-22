@@ -124,6 +124,14 @@ class ChildMachineCompletionJob implements ShouldQueue
             // is idempotent — it only dispatches if the row is RUNNING, so calling it
             // when no recovery is needed is safe.
             if ($parentMachine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
+                logger()->warning('ChildMachineCompletionJob: recovering lost propagation from prior attempt', [
+                    'parent_root_event_id' => $this->parentRootEventId,
+                    'parent_state_id'      => $this->parentStateId,
+                    'current_state'        => $parentMachine->state->value,
+                    'child_machine_class'  => $this->childMachineClass,
+                    'success'              => $this->success,
+                ]);
+
                 $this->propagateChainCompletion($parentMachine, $this->success);
             }
 
