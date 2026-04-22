@@ -110,6 +110,7 @@ class HandleFailureAction extends ActionBehavior {
 | 5 | Invoke deferred until after macrostep | If entry actions / raised events transition child away, delegation is skipped entirely (SCXML invoker-05) |
 | 6 | `FailingTestJob` creates `failed_jobs` records in QA | Expected — assert `failed_jobs <= N` not `== 0` |
 | 7 | `MachineOutput` must be serialized before queue dispatch | `ChildMachineCompletionJob` stores `toArray()` + class name; never the object |
+| 8 | Lost child→parent propagation after pod SIGTERM | Fixed in 9.8.5 — `ChildMachineCompletionJob` retries detect orphaned `MachineChild.status='running'` + parent in final state, then re-dispatch. If debugging production stuck children, look for `ChildMachineCompletionJob: recovering lost propagation` (warning) or `parent already transitioned, idempotent skip` (info) log records. |
 
 ## Testing delegation
 
