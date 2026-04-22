@@ -155,6 +155,16 @@ This ordering makes it safe to use `raise()` in entry actions to conditionally b
 
 For detailed usage, see [Machine System Design: Guidelines](/best-practices/machine-system-design#guidelines).
 
+## Propagation Retry Recovery
+
+Child-to-parent `@done`/`@fail` notifications in deep delegation chains are dispatched as `ChildMachineCompletionJob`s via the queue. If one of these jobs is interrupted mid-handle (pod SIGTERM, worker crash, network blip between the state persist and the downstream Redis push), the Laravel queue will retry the job after `retry_after` seconds.
+
+On retry, the job detects that the parent machine has already transitioned past the invoking state and enters a **recovery branch**: if the parent is in a `final` state AND its `MachineChild` row is still in `running` status, the propagation is considered lost and re-dispatched. The `propagateChainCompletion` routine is idempotent — it only dispatches while the `MachineChild` is still `running`, and marks the row terminal after the dispatch succeeds.
+
+This recovery is transparent. Silent return paths now emit structured `logger()->info(...)` records with `parent_root_event_id`, `parent_state_id`, `current_state`, `child_machine_class`, and `success` — look for `ChildMachineCompletionJob: parent already transitioned, idempotent skip` or `ChildMachineCompletionJob: recovering lost propagation` in production logs when diagnosing delegation issues.
+
+Not covered by this mechanism: Redis losing the job entirely (AOF corruption, manual `FLUSHALL`, very long `retry_after`). A durable outbox is tracked for v10.
+
 ## Lock Strategy
 
 EventMachine uses a database-backed distributed lock (`machine_locks` table) to prevent concurrent state mutation:
