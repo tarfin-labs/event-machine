@@ -187,6 +187,10 @@ MachineTimer::register(BillingMachine::class)
 
 Timers have no explicit cancel. When a machine leaves the state, the sweep simply won't find it anymore — natural cancellation.
 
+### No Sliding-Window API — Use Transit States
+
+There is no `Timer::slidingOn(...)` or "renewable" timer API. By design, self-loops do NOT reset `state_entered_at`, so a self-loop with an `after` timer keeps anchoring on the original entry. To reset a deadline on an event, transition through a transit state — see the [Renewable Timers pattern](/best-practices/time-based-patterns#renewable-timers-sliding-windows).
+
 ## Timer Configuration
 
 Configure sweep behavior in `config/machine.php`:
