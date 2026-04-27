@@ -137,6 +137,7 @@ public function __invoke(OrderContext $context): bool {
 4. **Don't use nested `send()` from inside a transition** — use `@continue` in scenarios, or `raise()` for event chains within a macrostep.
 5. **Don't put transition logic in actions** — use guards to decide IF a transition fires, actions for side effects AFTER it fires.
 6. **Don't share context keys across parallel regions** — last-writer-wins silently. Each region owns its keys.
+7. **Don't use a self-loop to reset a timer** — self-loops preserve `state_entered_at` by design. To express "deadline resets on event X", model X as a transition through a transit state. See [Renewable Timers](docs/best-practices/time-based-patterns.md#renewable-timers-sliding-windows).
 
 ---
 
@@ -594,6 +595,7 @@ All paths relative to `docs/advanced/` unless otherwise specified.
 | `references/delegation.md` | Adding sync/async delegation, @done/@fail/@timeout | `docs/advanced/machine-delegation.md` |
 | `references/parallel.md` | Designing parallel regions, dispatch config | `docs/advanced/parallel-states/index.md` |
 | `references/qa-setup.md` | Setting up LocalQA test environment | `docs/testing/localqa.md` |
+| `references/timers.md` | Designing timers, renewable-timer pattern, sliding windows | `docs/best-practices/time-based-patterns.md` + `docs/advanced/time-based-events.md` |
 
 ---
 
