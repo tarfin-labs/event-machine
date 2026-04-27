@@ -252,6 +252,75 @@ If the external service goes down, changes its API, or simply drops the callback
 For every state, ask: **"If the expected event never arrives, what happens?"** If the answer is "the machine hangs forever," you need an `after` transition.
 :::
 
+## Renewable Timers (Sliding Windows)
+
+Sometimes a deadline should reset whenever a specific event arrives — *"the customer has 7 days to respond, but every new counter-offer resets the clock."* The naive approach is a self-loop with the same `after` timer:
+
+### Anti-Pattern: Self-Loop with Hidden Timer Reset
+
+```php ignore
+'awaiting_counter_offer_response' => [
+    'on' => [
+        'COUNTER_OFFER_UPDATED' => [
+            'target'  => 'awaiting_counter_offer_response',  // self-loop
+            'actions' => [UpdateCounterOfferAction::class],
+        ],
+        'COUNTER_OFFER_EXPIRED' => [
+            'target' => 'counter_offer_expired',
+            'after'  => Timer::days(7),
+        ],
+    ],
+],
+```
+
+This does NOT work. EventMachine's persistence layer is intentionally diff-based — when a self-loop produces the same state set, the `machine_current_states` row is preserved (and so is `state_entered_at`). The 7-day sweep keeps anchoring on the original entry time. After 7 wall-clock days the timer fires regardless of how many updates arrived.
+
+This is by design. Self-loops in EventMachine carry "no observable lifecycle change" semantics: timers stay anchored, fired-once flags stay fired. Treating self-loops as silent lifecycle resets would conflict with all the other places they appear (transient routing, no-op event acknowledgement).
+
+### Fix: Model the Renewal as a Real State Transition
+
+Each new offer is a new negotiation lifecycle. Statecharts model lifecycle as state. Use a transient transit state — entered on the renewal event, exits via `@always` back to the waiting state.
+
+```php ignore
+'awaiting_counter_offer_response' => [
+    'on' => [
+        'COUNTER_OFFER_UPDATED'  => 'counter_offer_received',
+        'COUNTER_OFFER_ACCEPTED' => [
+            'target'  => 'approved',
+            'actions' => [ApproveAllocationAction::class],
+        ],
+        'COUNTER_OFFER_EXPIRED'  => [
+            'target' => 'counter_offer_expired',
+            'after'  => Timer::days(7),
+        ],
+    ],
+],
+
+// Transit state — captures the moment a new offer arrives.
+// Entry action processes the update; @always immediately re-enters waiting.
+'counter_offer_received' => [
+    'entry' => [UpdateCounterOfferAction::class],
+    'on'    => ['@always' => 'awaiting_counter_offer_response'],
+],
+
+'counter_offer_expired' => ['type' => 'final'],
+'approved'              => ['type' => 'final'],
+```
+
+Why this is the idiomatic answer (not a workaround):
+
+1. **Self-documenting graph.** The state diagram now shows `awaiting → received → awaiting` cycle. The renewal moment has a name.
+2. **Correct audit trail.** `machine_events` records each `counter_offer_received.enter` — operators can see exactly when the customer's window restarted.
+3. **Timer naturally resets.** The transit state exits the waiting state and re-enters it. `state_entered_at` refreshes via row exchange. No special API needed.
+4. **Generalizes.** If tomorrow you add "send notification when a new offer arrives," the entry-action slot is already there.
+5. **Aligns with statechart theory.** A 7-day-relevant event IS meaningful enough to be a state transition. Hiding it in a self-loop is design malpractice.
+
+### When NOT to use this pattern
+
+If the event genuinely should NOT reset the lifecycle (logging-only, idempotent ack), keep the self-loop. The diff-based persistence is correct for that case — the timer stays anchored, the audit trail doesn't bloat with synthetic transitions.
+
+The decision rule: *"Is this event meaningful enough that an outside observer should see a transition in the audit log?"* If yes, use a transit state. If no, self-loop.
+
 ## Guidelines
 
 1. **`after` for deadlines.** "If nothing happens in X time, do Y."
@@ -265,6 +334,8 @@ For every state, ask: **"If the expected event never arrives, what happens?"** I
 5. **Keep intervals >= 1 minute.** Shorter intervals risk queue backpressure with many instances.
 
 6. **Use scheduled events for batch queries.** One query for all instances is better than per-instance polling.
+
+7. **Renew deadlines via transit states, not self-loops.** Self-loops preserve `state_entered_at` by design. To reset a timer on an event, model the event as a real state transition through a transient state.
 
 ## Related
 
