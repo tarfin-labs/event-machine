@@ -42,6 +42,7 @@ Use this when the user's question points to a capability, not a file. Each entry
 |------|------|
 | Transition after a timeout | `docs/advanced/time-based-events.md` |
 | Recurring event (every N minutes) | `docs/advanced/time-based-events.md` |
+| Renewable timer / sliding window (deadline resets on event) | `docs/best-practices/time-based-patterns.md#renewable-timers-sliding-windows` + `references/timers.md` |
 | Cron-driven batch events | `docs/advanced/scheduled-events.md` |
 | Test time-based flows | `docs/testing/time-based-testing.md` + `docs/testing/scheduled-testing.md` |
 
