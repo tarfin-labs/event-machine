@@ -584,6 +584,7 @@ Full reference: `docs/behaviors/outputs.md`. Cheat-sheet: `references/output-key
 4. **Missing `continuation()` = real dispatches after target** — if your scenario's target state has event handlers leading to delegations (retry buttons, resend actions), those delegations fire for real without continuation. This applies to both normal and forwarded endpoints. Red flags: target is an error/failed state with retry, or awaiting state with resend.
 5. **Verify interception via `machine_events` timestamps** — after running a scenario, query `child.*.start` / `child.*.done` for the `root_event_id`. Same-second = scenario intercepted. A gap = real delegation fired (silent bug).
 6. **Parallel `@continue` lives on leaf states, never on the parallel parent** — the route matcher is suffix-based, and a parallel parent path is always a *prefix* of active child routes. Declaring `@continue` on the parent silently does nothing in 9.10.0 and earlier; 9.10.1+ rejects it at `machine:scenario-validate` time. To fire the parent's transition event (typically a guarded "all regions ready" event), put its `@continue` on a leaf state inside one of the regions — usually the *final* state of one region. The player walks regions in round-robin order, so the other regions advance through their own `@continue`s first. See `docs/advanced/scenario-plan.md` → "Parallel @continue" for the worked pattern.
+7. **Choose inline outcome vs child scenario class deliberately for delegation states** — for `'machine:'` (and `'job:'`) states the plan can either declare an inline outcome (`['outcome' => '@done.X', 'output' => [...]]` — child never runs, fastest, no DB rows) or a child scenario class (`AtSomeStateScenario::class` — child runs with overrides, may pause). Pick the inline form when the child's logic is a black box for this scenario; pick the class form when the child's @always chain / guards / parallel regions are part of what you want to verify. **For `'queue:'` (async) parents the child scenario class form requires 9.10.3+** — earlier versions silently dropped the scenario at dispatch time and the worker booted the child with full I/O.
 
 Full details: `docs/advanced/scenario-plan.md` → "Pitfalls" section.
 
@@ -713,6 +714,7 @@ All paths relative to `docs/advanced/` unless otherwise specified.
 | `references/parallel.md` | Designing parallel regions, dispatch config | `docs/advanced/parallel-states/index.md` |
 | `references/qa-setup.md` | Setting up LocalQA test environment | `docs/testing/localqa.md` |
 | `references/timers.md` | Designing timers, renewable-timer pattern, sliding windows | `docs/best-practices/time-based-patterns.md` + `docs/advanced/time-based-events.md` |
+| `references/scenarios.md` | Writing or debugging `MachineScenario` plans, choosing inline outcome vs child scenario class, async propagation in 9.10.3+ | `docs/advanced/scenarios.md` + `scenario-plan.md` + `scenario-runtime.md` |
 
 ---
 
