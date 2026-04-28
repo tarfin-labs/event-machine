@@ -6,6 +6,7 @@ Environment gating, async propagation, engine feature interactions, and error ha
 
 Scenarios are disabled by default. Enable in staging only:
 
+<!-- doctest-attr: ignore -->
 ```php
 // config/machine.php
 'scenarios' => [

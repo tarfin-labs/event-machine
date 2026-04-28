@@ -32,7 +32,6 @@
         "larastan/larastan": "^3.0",
         "laravel/pint": "^1.0",
         "mrpunyapal/peststan": "^0.2.2",
-        "nunomaduro/pao": "^0.1.5",
         "orchestra/testbench": "^9.0|^10.0",
         "pestphp/pest": "^4.0",
         "pestphp/pest-plugin-arch": "^4.0",

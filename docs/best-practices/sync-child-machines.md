@@ -160,6 +160,7 @@ InvalidOutputDefinitionException: Region states inside a parallel state cannot d
 This is **not** a restriction on sync delegation inside parallel regions — sync delegation works fine there. The error is about the [`'output'` keyword's three semantics](/behaviors/outputs#output-vs-output-array-filter-vs-toresponsearray): adding `'output' =>` to a state inside a parallel region is interpreted as defining that state's own output (meaning 1), which is restricted.
 
 **Wrong:**
+<!-- doctest-attr: ignore -->
 ```php
 // Parent has type: parallel; pricing_region is one of the regions.
 

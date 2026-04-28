@@ -707,6 +707,7 @@ v9 adds automated path coverage analysis — static path enumeration, test-time 
 
 #### New Assertions
 
+<!-- doctest-attr: ignore -->
 ```php
 // Assert all enumerated paths are covered by tests
 FindeksMachine::assertAllPathsCovered();
@@ -719,6 +720,7 @@ FindeksMachine::assertPathCoverage(minimum: 90.0);
 
 Add to your test suite for automatic path coverage tracking. Works with PHPUnit, Pest, and parallel runners (Paratest).
 
+<!-- doctest-attr: ignore -->
 ```php
 // Pest:
 uses(TracksPathCoverage::class)->in('Feature', 'Unit');
