@@ -114,7 +114,35 @@ public function __invoke(OrderContext $context): bool {
 }
 ```
 
-**Actions never throw to block transitions.** Actions run AFTER guards approve the transition. Throwing in an action does NOT roll back the state change; it leaves the machine in an inconsistent state. Use guards to block; use actions for idempotent side effects (DB writes with idempotency keys, queued notifications, external APIs). **Scenario impact:** actions with lazy I/O fallbacks ("if not in context, call API") fire during scenario runs — scenarios only intercept delegations, not actions. Keep external I/O in job/machine delegations; see `docs/best-practices/action-design.md` → "Scenario-Friendly Design".
+**Actions never throw to block transitions.** Actions run AFTER guards approve the transition. Throwing in an action does NOT roll back the state change; it leaves the machine in an inconsistent state. Use guards to block; use actions for idempotent side effects (DB writes with idempotency keys, queued notifications, external APIs).
+
+**Don't** (action-as-flow-control — leaves machine in inconsistent state):
+```php
+class ApplyCounterOfferAction extends ActionBehavior {
+    public function __invoke(OrderContext $context, OrderEvent $event): void {
+        if ($context->retailerId !== $event->payload['retailerId']) {
+            throw new UnauthorizedRetailerException(); // ← anti-pattern
+        }
+        $context->set('counterOffer', $event->payload['amount']);
+    }
+}
+```
+**Do** (guard blocks before transition; action only writes):
+```php
+class IsRetailerAuthorizedGuard extends GuardBehavior {
+    public function __invoke(OrderContext $context, OrderEvent $event): bool {
+        return $context->retailerId === $event->payload['retailerId'];
+    }
+}
+// In transition config:
+'COUNTER_OFFER' => [
+    'target'  => 'awaiting_approval',
+    'guards'  => IsRetailerAuthorizedGuard::class,
+    'actions' => ApplyCounterOfferAction::class,
+],
+```
+
+**Scenario impact:** actions with lazy I/O fallbacks ("if not in context, call API") fire during scenario runs — scenarios only intercept delegations, not actions. Keep external I/O in job/machine delegations; see `docs/best-practices/action-design.md` → "Scenario-Friendly Design".
 
 **Events are past-tense facts, not commands.** `ORDER_SUBMITTED`, not `SUBMIT_ORDER`. An event represents a state change that already happened. This disambiguates cross-machine communication — you always know who produced what.
 
@@ -184,6 +212,42 @@ Transient transitions evaluated automatically on state entry. Use for "if-then r
 ---
 
 ## 4. Quick-Start Snippets
+
+### Closure vs class — when to choose which
+
+EventMachine accepts behaviors as **inline closures** (registered in `behavior.actions/guards/calculators/outputs`) or **classes** (extending `ActionBehavior`/`GuardBehavior`/etc.). Pick based on the work the behavior does, not the agent default.
+
+| Choose **closure** when | Choose **class** when |
+|-------------------------|----------------------|
+| Trivial wire-up: 1-5 lines, only reads/writes context, no I/O | Reusable across multiple machines or transitions |
+| No constructor dependencies | Needs constructor DI (services, repos) |
+| Used in exactly one place | Independently unit-tested |
+| No need for descriptive class names | Behavior-name should be a first-class concept |
+
+```php
+// Closure — preferred for trivial wire-up
+'behavior' => [
+    'actions' => [
+        'wirePricingContextAction' => fn(OrderContext $ctx, ChildMachineDoneEvent $event) => [
+            'baseRate'     => $event->output('baseInterestRate'),
+            'installments' => $event->output('installmentOptions'),
+        ],
+    ],
+],
+
+// Class — when the behavior is reusable, DI'd, or independently tested
+class ChargePaymentAction extends ActionBehavior {
+    public function __construct(private readonly PaymentGateway $gateway) {}
+    public function __invoke(OrderContext $context): void {
+        $result = $this->gateway->charge($context->orderId);
+        $context->set('chargeId', $result->id);
+    }
+}
+```
+
+**Don't reach for a DTO + OutputBehavior subclass + Action class to wire a few keys child→parent.** A closure on the child's final state `'output'` plus an inline `'wireXxxAction'` registered in `behavior.actions` is usually all you need. Save classes for behaviors that earn the boilerplate (DI, reuse, named contracts).
+
+Inline behavior keys still follow naming conventions (Section 1): `{verb}{Obj}{Type}` — `wirePricingContextAction`, `isAmountValidGuard`, `orderTotalCalculator`. The type suffix is mandatory.
 
 ### Minimal machine definition (untyped context)
 
@@ -405,7 +469,16 @@ OrderMachine::query()
 
 ## 7. Delegation & Parallel States — Critical Gotchas
 
-### Sync vs async delegation
+### Sync vs async delegation — config matrix
+
+**The default is sync.** Most users assume async because existing examples include `'queue' =>`. Omit `queue` to run sync.
+
+| Config | Mode | When |
+|---|---|---|
+| `'machine' => X::class` | **sync** (in-process) | sync arithmetic, validation, transformation, fast lookups (<1s) |
+| `'machine' => X::class, 'queue' => 'name'` | **async** (queue dispatch) | external API, polling, retry, multi-step async (seconds-minutes) |
+| `'machine' => X::class, 'queue' => 'name'` + no `@done` | **fire-and-forget** | parent doesn't care about result; child runs independently |
+| `'machine' => X::class` + child uses `ShouldQueue` | **mixed (anti-pattern)** | ambiguous — avoid |
 
 ```php
 'processing_payment' => [
@@ -421,6 +494,10 @@ OrderMachine::query()
 - **Sync** (no `queue`): parent blocks in-process until child hits final
 - **Async** (`queue: true`): parent transitions to delegation state, child runs on worker, `@done` fires on completion
 - **Fire-and-forget**: `queue` key present + NO `@done` — parent continues immediately, child runs independently
+
+::: tip Sync child machines
+Sync child machines that need to do work immediately must have `@always` transitions on their `idle`/`initial` state — `start()` enters the initial state but does NOT fire any event. See `docs/best-practices/sync-child-machines.md` for the canonical bootstrap pattern.
+:::
 
 ### `@done` / `@fail` / `@timeout`
 
@@ -449,6 +526,42 @@ Enable dispatch mode via `config/machine.php` → `parallel_dispatch.enabled => 
 - Each region's entry work runs as a separate `ParallelRegionJob`
 - True concurrency — two 5s + 2s regions finish in 5s (not 7s)
 - Last-writer-wins on context — **separate keys per region is mandatory**
+
+### `output` keyword — three semantics, one keyword
+
+The `'output'` key has **three different meanings** depending on where it appears. Confusing them is the #1 source of `InvalidOutputDefinitionException` errors.
+
+| Where it lives | What it does | Parallel-region restricted? |
+|----------------|--------------|----------------------------|
+| **(1) On a final state of THIS machine** | Defines what `$machine->output()` returns. Restricted on transient states (`@always`) and parallel region states. | ✓ Yes — only the parent parallel state itself can define output |
+| **(2) On a state with `'machine' =>`** (child machine invocation) | Filters / transforms the **child's** final context before injecting into `ChildMachineDoneEvent.output`. Operates on the child machine, not the parent state. | ✗ No — works fine inside parallel regions because it's about the child |
+| **(3) On an endpoint config** | Shapes the HTTP response (any state, not just final). | ✗ No |
+
+**Decision tree:**
+```
+Is this state a final state in MY machine?
+├── Yes → meaning (1). Defines what $machine->output() returns.
+│         Inside parallel region? → only the PARENT parallel state can define output.
+│         Use array filter for simple key picking, OutputBehavior class for computation.
+│
+Does this state have 'machine' => Child::class?
+├── Yes → meaning (2). Defines what the CHILD exposes to the parent.
+│         No parallel restriction. Lives on the parent state but operates on child context.
+│         Format: array filter | closure | OutputBehavior class | MachineOutput DTO.
+│
+Is this an endpoint config?
+└── Yes → meaning (3). Shapes HTTP response. Any state.
+```
+
+**Common mistake:** Adding `'output' => [...]` to a delegation state inside a parallel region, expecting child→parent context merge — but the parser sees it as meaning (1) and throws `InvalidOutputDefinitionException::parallelRegionState`. **Fix:** the child machine itself should declare `output` on its final state (meaning 2 from the child's perspective), and the parent state's `@done` action picks it up via typed `MachineOutput` injection or `ChildMachineDoneEvent::output()`.
+
+**Format choice (meanings 1, 2, and 3):**
+- Plain `['key1', 'key2']` array → context key filter (passes through `toResponseArray()` — note that ModelTransformer serializes Eloquent models to IDs).
+- Closure → custom shape, full control over types.
+- `OutputBehavior::class` → computed output with DI; can return array or `MachineOutput` instance.
+- `MachineOutput::class` → typed DTO with named properties auto-resolved from context.
+
+Full reference: `docs/behaviors/outputs.md`. Cheat-sheet: `references/output-keyword.md`.
 
 ### Top 10 gotchas (delegation & parallel)
 
@@ -591,6 +704,9 @@ All paths relative to `docs/advanced/` unless otherwise specified.
 | File | Use when | Docs equivalent (longer) |
 |------|----------|--------------------------|
 | `references/INDEX.md` | Routing to the right cheat-sheet or doc by task type | Section 8 tables above |
+| `references/anti-patterns.md` | About to write a known anti-pattern (action throws, guard I/O, shared parallel context, output boilerplate) — quick lookup of the alternative | `docs/best-practices/*.md` |
+| `references/output-keyword.md` | Confused by `InvalidOutputDefinitionException` or unsure which of the three `'output'` semantics applies | `docs/behaviors/outputs.md` + `docs/advanced/delegation-data-flow.md` |
+| `references/sync-vs-async-delegation.md` | Adding `'machine' =>` and unsure if it runs sync or async, or bootstrapping a sync child with `@always` on `idle` | `docs/advanced/machine-delegation.md` + `docs/best-practices/sync-child-machines.md` |
 | `references/testing.md` | Writing assertions, setting up fakes | `docs/testing/overview.md` + `test-machine.md` |
 | `references/delegation.md` | Adding sync/async delegation, @done/@fail/@timeout | `docs/advanced/machine-delegation.md` |
 | `references/parallel.md` | Designing parallel regions, dispatch config | `docs/advanced/parallel-states/index.md` |
@@ -608,7 +724,7 @@ When a user asks you to build/modify an EventMachine workflow:
 1. **Read docs for your task type** — use the trigger table in Section 0 or the task-oriented guide in Section 8. Skip only for mechanical changes (rename, typo).
 2. **Follow naming conventions** (Section 1) — especially event types, states, and context keys.
 3. **Validate design against best-practices** (Section 2) — purity, past-tense events, region separation.
-4. **Prefer class-based behaviors** — DI, typed context, testable. Use inline closures only for trivial one-liners.
+4. **Pick closure or class by the work** — closure for trivial wire-up (1-5 lines, no DI, single use); class for reusable, DI'd, or independently tested behavior. See §4 for the decision matrix.
 5. **Write tests at the right layer** — unit for behaviors, integration for flows, E2E for persistence.
 6. **Run the quality gate** — `composer quality` (pint + rector + test). Never just `vendor/bin/pest`.
 7. **Use typed contracts** — `MachineInput`, `MachineOutput`, `MachineFailure` for delegation boundaries.

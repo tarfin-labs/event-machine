@@ -93,3 +93,16 @@ Use this when the user's question points to a capability, not a file. Each entry
 | Full execution model (macrostep semantics) | `docs/reference/execution-model.md` |
 | All package exceptions | `docs/reference/exceptions.md` |
 | Upgrade guide (v6 → v7 → v8 → v9) | `docs/getting-started/upgrading.md` |
+
+## Anti-patterns / Quick Lookups (cheat-sheets)
+
+| Cheat-sheet | When to use |
+|------|-------------|
+| `references/anti-patterns.md` | About to write `if (...) throw` in an action, guard with I/O, shared parallel context, DTO + Output class boilerplate — quick lookup of the "instead" pattern |
+| `references/output-keyword.md` | Confused by `InvalidOutputDefinitionException` or wondering which of three `'output'` semantics applies — three contexts, decision tree, examples |
+| `references/sync-vs-async-delegation.md` | Adding `'machine' =>` and unsure whether it runs sync or async, or how to bootstrap a sync child with `@always` on `idle` |
+| `references/delegation.md` | Adding sync/async delegation, `@done`/`@fail`/`@timeout` patterns, deferred invoke timing |
+| `references/parallel.md` | Designing parallel regions, dispatch config, region isolation rules |
+| `references/timers.md` | Designing timers, renewable-timer pattern, sliding windows |
+| `references/testing.md` | Writing assertions, setting up fakes, four-layer testing strategy |
+| `references/qa-setup.md` | Setting up LocalQA test environment (real MySQL + Redis + Horizon) |
