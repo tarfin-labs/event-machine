@@ -273,6 +273,59 @@ class ScenarioPlayer
     }
 
     /**
+     * Activate scenario context for an async-boot worker process (e.g. ChildMachineJob).
+     *
+     * Restores the same three-step activation that play() performs (isActive=true,
+     * registered behavior overrides, classified outcomes/childScenarios), so a child
+     * machine started in a fresh queue worker process applies its scenario plan
+     * exactly as a sync run does.
+     *
+     * Callers are responsible for invoking deactivate() when done — typically in
+     * a finally block — so static state does not leak across queue jobs in a
+     * long-lived worker process.
+     */
+    public static function activateForAsyncBoot(MachineScenario $scenario): void
+    {
+        // Populate self::$outcomes and self::$childScenarios from the scenario plan.
+        // Mirrors classifyPlanValues() but lives in a static context that does not
+        // require a constructed ScenarioPlayer instance.
+        $plan           = $scenario->resolvedPlan();
+        $outcomes       = [];
+        $childScenarios = [];
+
+        foreach ($plan as $stateRoute => $value) {
+            if (is_string($value) && str_starts_with($value, '@')) {
+                $outcomes[$stateRoute] = $value;
+            } elseif (is_string($value) && class_exists($value) && is_subclass_of($value, MachineScenario::class)) {
+                $childScenarios[$stateRoute] = $value;
+            } elseif (is_array($value) && isset($value['outcome'])) {
+                $outcomes[$stateRoute] = $value;
+            }
+        }
+
+        self::$outcomes       = $outcomes;
+        self::$childScenarios = $childScenarios;
+
+        // Bind behavior overrides (Guard/Action class fakes, inline keys).
+        self::registerOverrides($scenario);
+
+        self::$isActive = true;
+    }
+
+    /**
+     * Tear down scenario context after an async-boot worker finishes its work.
+     *
+     * Mirrors the cleanup performed by play()'s finally block. MUST be called in a
+     * finally block by callers of activateForAsyncBoot() to prevent static state
+     * leaking between queue jobs in the same worker process.
+     */
+    public static function deactivate(): void
+    {
+        self::cleanupOverrides();
+        self::$isActive = false;
+    }
+
+    /**
      * Get the delegation outcome for a state route, if defined in plan().
      * Called by MachineDefinition during invoke handling.
      *
@@ -512,14 +565,14 @@ class ScenarioPlayer
                     'created_at'           => now(),
                 ]);
 
-                // Persist scenario for continuation
-                if ($childScenario->hasContinuation()) {
-                    MachineCurrentState::where('root_event_id', $childRootEventId)
-                        ->update([
-                            'scenario_class'  => $childScenarioClass,
-                            'scenario_params' => null,
-                        ]);
-                }
+                // Persist scenario for subsequent restorations.
+                // Outcome-only scenarios (no @continue) still need the row populated
+                // so async dispatch + restore paths can re-activate the scenario context.
+                MachineCurrentState::where('root_event_id', $childRootEventId)
+                    ->update([
+                        'scenario_class'  => $childScenarioClass,
+                        'scenario_params' => null,
+                    ]);
             }
         }
 
