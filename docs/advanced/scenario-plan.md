@@ -360,6 +360,48 @@ Injectable parameters (same as Callable Outcome): `ContextManager` (or a typed s
 
 **When to use vs. context override:** if the values are **already in context** (written by trigger-event actions), reach for a Closure. If they're test fixtures that should pre-populate context regardless of any action, prefer a context-write override on the source state — it sidesteps the trigger-event chain entirely.
 
+### Parallel @continue
+
+`@continue` works inside parallel states, but two rules apply:
+
+1. **Declare `@continue` on leaf states inside the regions, not on the parallel parent.** The matcher uses suffix matching against active route paths, and the parent path is always a *prefix* of every active route — never a suffix. Putting `@continue` on the parallel parent state silently does nothing in older builds; from event-machine 9.10.1 onwards, `machine:scenario-validate` rejects it with a clear error.
+
+2. **Fire the parent's transition event from a leaf, not from the parent.** When the parallel parent has a guarded transition that depends on every region reaching its final state (e.g. `isReadyForSubmissionGuard` checking `region_a.completed AND region_b.completed`), put the parent event's `@continue` on the *last* leaf in one of the regions. The player walks regions in round-robin order, so by the time it lands on that leaf, the other regions will already have advanced through their own `@continue`s.
+
+<!-- doctest-attr: ignore -->
+```php
+// Parallel: 'data_collection' has two regions (retailer + customer_info).
+// Both must reach final state before the parent's ApplicationSubmittedEvent
+// (guarded by isReadyForSubmissionGuard) is accepted.
+return [
+    // Region: customer_info — drive to completed
+    'data_collection.customer_info.under_review' => [
+        '@continue' => CustomerInfoSubmittedEvent::class,
+    ],
+
+    // Region: retailer — drive to payment_option_selected (its terminal leaf)
+    'data_collection.retailer.awaiting_vehicle_and_pricing' => [
+        '@continue' => [VehicleAndPricingSubmittedEvent::class, 'payload' => [/*...*/]],
+    ],
+    'data_collection.retailer.calculating_prices' => '@done.done',
+    'data_collection.retailer.awaiting_payment_options' => [
+        '@continue' => [PaymentOptionsSelectedEvent::class, 'payload' => [/*...*/]],
+    ],
+
+    // Parent event from a region's final state — by the time the round-robin
+    // reaches customer_info.completed, retailer is already at payment_option_selected,
+    // so isReadyForSubmissionGuard passes.
+    'data_collection.customer_info.completed' => [
+        '@continue' => ApplicationSubmittedEvent::class,
+    ],
+
+    // ❌ Do NOT do this — parallel parent @continue never matches:
+    // 'data_collection' => ['@continue' => ApplicationSubmittedEvent::class],
+];
+```
+
+**How the player walks parallel regions:** every iteration, the player checks each active route in round-robin order (starting one position past the route that fired last). This guarantees fairness — no region can starve others by having more `@continue`s. If a fired event's guard fails and the active configuration doesn't change, the loop stops immediately rather than looping until `max_transition_depth`.
+
 ### Selective Pause
 
 Intentionally omitting `@continue` from an interactive state creates a **selective pause** — the scenario loop stops, the machine stays at that state, and QA interacts with the real endpoint. After QA acts, the continuation overrides resume from the next state.

@@ -134,19 +134,21 @@ class ScenarioPlayer
             // Step 8: @continue loop
             $maxDepth      = config('machine.max_transition_depth', 100);
             $continueCount = 0;
+            $startIndex    = 0;
 
             while ($continueCount < $maxDepth) {
-                $currentRoute = $this->resolveCurrentRoute($state);
-                $continue     = $this->findContinueForState($currentRoute, $classified['overrides']);
-
-                if ($continue === null) {
+                $match = $this->findActiveContinue($state, $classified['overrides'], $startIndex);
+                if ($match === null) {
                     break;
                 }
+                [$matchedIdx, $currentRoute, $continue] = $match;
 
                 $continueCount++;
 
                 // Parse @continue value
                 [$eventClass, $rawPayload] = $this->parseContinueValue($continue);
+
+                $prevValue = $state->value;
 
                 try {
                     $payload = $this->resolveContinuePayload($rawPayload, $state);
@@ -162,6 +164,18 @@ class ScenarioPlayer
                         reason: $e->getMessage(),
                     );
                 }
+
+                // No-progress break: a guarded @continue whose guard fails
+                // would otherwise re-fire forever from the same route. If
+                // send() did not advance the active configuration, stop.
+                if ($state->value === $prevValue) {
+                    break;
+                }
+
+                // Round-robin start point: next iteration begins at the
+                // route after the one that just fired, so each region of
+                // a parallel state gets its turn before we cycle back.
+                $startIndex = $matchedIdx + 1;
             }
 
             // Step 9: Validate target
@@ -211,23 +225,31 @@ class ScenarioPlayer
             // @continue loop — same logic as execute()
             $continueCount = 0;
             $maxDepth      = (int) config('machine.max_transition_depth', 100);
+            $startIndex    = 0;
 
             while ($continueCount < $maxDepth) {
-                $currentRoute = $this->resolveCurrentRoute($state);
-                $continue     = $this->findContinueForState($currentRoute, $classified['overrides']);
-
-                if ($continue === null) {
+                $match = $this->findActiveContinue($state, $classified['overrides'], $startIndex);
+                if ($match === null) {
                     break;
                 }
+                [$matchedIdx, , $continue] = $match;
 
                 $continueCount++;
                 [$eventClass, $rawPayload] = $this->parseContinueValue($continue);
                 $payload                   = $this->resolveContinuePayload($rawPayload, $state);
 
+                $prevValue = $state->value;
+
                 $state = $machine->send([
                     'type'    => $this->resolveEventType($eventClass),
                     'payload' => $payload,
                 ]);
+
+                if ($state->value === $prevValue) {
+                    break;
+                }
+
+                $startIndex = $matchedIdx + 1;
             }
 
             // Deactivate if final state reached, otherwise re-persist scenario
@@ -424,16 +446,18 @@ class ScenarioPlayer
         $continueCount = 0;
         $maxDepth      = (int) config('machine.max_transition_depth', 100);
 
+        $startIndex = 0;
         while ($continueCount < $maxDepth) {
-            $currentRoute = $childPlayer->resolveCurrentRoute($childState);
-            $continue     = $childPlayer->findContinueForState($currentRoute, $childOverrides);
-
-            if ($continue === null) {
+            $match = $childPlayer->findActiveContinue($childState, $childOverrides, $startIndex);
+            if ($match === null) {
                 break;
             }
+            [$matchedIdx, $currentRoute, $continue] = $match;
 
             $continueCount++;
             [$eventClass, $rawPayload] = $childPlayer->parseContinueValue($continue);
+
+            $prevValue = $childState->value;
 
             try {
                 $payload = $childPlayer->resolveContinuePayload($rawPayload, $childState);
@@ -453,6 +477,12 @@ class ScenarioPlayer
                     reason: $e->getMessage(),
                 );
             }
+
+            if ($childState->value === $prevValue) {
+                break;
+            }
+
+            $startIndex = $matchedIdx + 1;
         }
 
         // Restore parent outcomes AFTER loop completes (child outcomes no longer needed)
@@ -891,15 +921,41 @@ class ScenarioPlayer
     }
 
     /**
-     * Get the current state route for @continue matching.
-     * For simple machines, value has one entry like ['machine.state'].
-     * For parallel, multiple entries — use the first for @continue matching.
+     * Find the next @continue match across all active state routes,
+     * starting from $startIndex and wrapping round-robin.
+     *
+     * In parallel states, $state->value contains one entry per active region.
+     * The round-robin start point makes each region's @continue fire in turn
+     * across iterations, so a region whose leaf has a @continue can never
+     * starve other regions. Without it, $state->value[0] always wins and
+     * the second region is silently skipped — see the "Parallel @continue"
+     * section in scenario-plan.md.
+     *
+     * For simple (non-parallel) machines, $state->value has one entry, so
+     * the round-robin is a no-op and this behaves like a single lookup.
+     *
+     * @param  array<string, array<string, mixed>>  $overrides
+     *
+     * @return array{0: int, 1: string, 2: mixed}|null [routeIndex, route, @continue]
      */
-    private function resolveCurrentRoute(State $state): string
+    private function findActiveContinue(State $state, array $overrides, int $startIndex = 0): ?array
     {
-        $routes = $state->value;
+        $routes = array_values($state->value);
+        $count  = count($routes);
+        if ($count === 0) {
+            return null;
+        }
 
-        return $routes[0] ?? '';
+        for ($offset = 0; $offset < $count; $offset++) {
+            $idx      = ($startIndex + $offset) % $count;
+            $route    = $routes[$idx];
+            $continue = $this->findContinueForState($route, $overrides);
+            if ($continue !== null) {
+                return [$idx, $route, $continue];
+            }
+        }
+
+        return null;
     }
 
     /**

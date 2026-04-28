@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Scenarios;
 
 use Tarfinlabs\EventMachine\Analysis\MachineGraph;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Analysis\StateClassification;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -333,6 +334,16 @@ class ScenarioValidator
             // Check @continue on delegation states
             if ($isDelegation && is_array($value) && isset($value['@continue'])) {
                 $this->errors[] = "'{$route}' has @continue but is a delegation state";
+            }
+
+            // Check @continue on parallel parent states — silent no-op in the
+            // player (route matching is suffix-based; parent path is always a
+            // prefix of active child routes, never a suffix). Tell the user
+            // to put the @continue on a leaf state inside one of the regions
+            // (typically the final state of one region, where its event is
+            // accepted by the parent's transition).
+            if ($state->type === StateDefinitionType::PARALLEL && is_array($value) && isset($value['@continue'])) {
+                $this->errors[] = "'{$route}' has @continue but is a parallel parent state — declare @continue on a leaf state inside one of the regions instead";
             }
 
             // Check child scenario machine match

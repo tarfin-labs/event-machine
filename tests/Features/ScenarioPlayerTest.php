@@ -15,6 +15,7 @@ use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioValidator;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioFailedException;
 use Tarfinlabs\EventMachine\Exceptions\ScenariosDisabledException;
@@ -31,6 +32,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Actions\ProcessAc
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\CallableOutcomeMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsRetryableGuard;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ParallelContinueMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Outputs\TestScenarioOutput;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\HappyPathScenario;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Actions\RequiresUserIdAction;
@@ -425,6 +427,104 @@ test('@continue Closure payload returning non-array throws', function (): void {
 
     // The Closure resolution wraps inside @continue's try/catch which rethrows as ScenarioFailedException
     expect(fn () => $player->execute(machine: $m))->toThrow(ScenarioFailedException::class);
+});
+
+// ── Parallel @continue ───────────────────────────────────────────────────────
+
+test('@continue fires for every region in a parallel state', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    $definition                = clone ParallelContinueMachine::definition();
+    $definition->shouldPersist = false;
+    $m                         = Machine::withDefinition($definition);
+    $m->start();
+
+    $scenario = new class() extends MachineScenario {
+        protected string $machine     = ParallelContinueMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = 'BEGIN';
+        protected string $target      = 'completed';
+        protected string $description = 'Parallel @continue — both regions advance';
+
+        protected function plan(): array
+        {
+            return [
+                // Both region leaves carry @continue. The player must walk
+                // every active route in $state->value, not just the first.
+                'work.a.a1' => ['@continue' => 'A_NEXT'],
+                'work.b.b1' => ['@continue' => 'B_NEXT'],
+                // Once both regions are final, fire the parent event from
+                // a region's final state — the parent transition's guard
+                // (isReadyGuard) confirms both regions reached a2/b2.
+                'work.a.a2' => ['@continue' => 'WORK_DONE'],
+            ];
+        }
+    };
+    $player = new ScenarioPlayer($scenario);
+    $state  = $player->execute(machine: $m);
+
+    expect($state->value)->toContain('parallel_continue.completed');
+});
+
+test('@continue with guard-failing transition breaks instead of looping', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    $definition                = clone ParallelContinueMachine::definition();
+    $definition->shouldPersist = false;
+    $m                         = Machine::withDefinition($definition);
+    $m->start();
+
+    // Plan tries to fire WORK_DONE from a1 (before any region advances).
+    // isReadyGuard fails → no transition → state unchanged → player must
+    // detect no-progress and break, NOT loop until max_transition_depth.
+    $scenario = new class() extends MachineScenario {
+        protected string $machine     = ParallelContinueMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = 'BEGIN';
+        protected string $target      = 'completed';
+        protected string $description = 'Premature WORK_DONE — guard fails';
+
+        protected function plan(): array
+        {
+            return [
+                'work.a.a1' => ['@continue' => 'WORK_DONE'],
+            ];
+        }
+    };
+    $player = new ScenarioPlayer($scenario);
+
+    // Target mismatch is the right outcome (machine still in work.a.a1/work.b.b1),
+    // and it must arrive quickly — not after max_transition_depth iterations.
+    $start = microtime(true);
+    expect(fn () => $player->execute(machine: $m))->toThrow(ScenarioTargetMismatchException::class);
+    $elapsed = microtime(true) - $start;
+    expect($elapsed)->toBeLessThan(1.0);  // sanity: no runaway loop
+});
+
+test('@continue on a parallel parent state — validator rejects', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    $scenario = new class() extends MachineScenario {
+        protected string $machine     = ParallelContinueMachine::class;
+        protected string $source      = 'idle';
+        protected string $event       = 'BEGIN';
+        protected string $target      = 'completed';
+        protected string $description = 'Misplaced @continue on parallel parent';
+
+        protected function plan(): array
+        {
+            return [
+                'work' => ['@continue' => 'WORK_DONE'],
+            ];
+        }
+    };
+
+    $validator = new ScenarioValidator($scenario);
+    $errors    = $validator->validate();
+
+    expect($errors)->toContain(
+        "'work' has @continue but is a parallel parent state — declare @continue on a leaf state inside one of the regions instead"
+    );
 });
 
 test('@continue string-only format EventClass::class', function (): void {
