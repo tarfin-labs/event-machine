@@ -752,7 +752,7 @@ describe('§C — All behavior types', function (): void {
                             'APPLY' => [
                                 'actions' => [
                                     [AddValueByParamAction::class, 'value' => 10],
-                                    [SetLevelAction::class, 'level' => 'debug'],
+                                    [SetLevelAction::class, 'level'         => 'debug'],
                                     [MultiplyByParamAction::class, 'factor' => 2],
                                 ],
                             ],
@@ -1467,7 +1467,7 @@ describe('§D — Integration', function (): void {
                     'entry' => [
                         'syncAction',
                         [SetLevelAction::class, '@queue' => true],
-                        ['paramAction', 'label' => 'info'],
+                        ['paramAction', 'label'          => 'info'],
                     ],
                 ],
                 'states' => [

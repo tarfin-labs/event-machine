@@ -727,10 +727,10 @@ class ExportXStateCommand extends Command
 
         return match ($typeName) {
             'int', 'float' => 0,
-            'string' => '',
-            'bool'   => false,
-            'array'  => [],
-            default  => null,
+            'string'       => '',
+            'bool'         => false,
+            'array'        => [],
+            default        => null,
         };
     }
 
