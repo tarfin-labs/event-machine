@@ -14,6 +14,133 @@ Extract a child machine when:
 
 - **Independent failure.** The sub-flow can fail and retry without affecting the parent's state. Payment retries should not force the order back to "submitted".
 
+## When NOT to Use a Machine
+
+Before splitting an existing machine, ask whether the new piece deserves to be a machine **at all**. The criteria above ("own lifecycle, reusable, complex enough, independent failure") lean toward "yes" too easily — they describe when a sub-flow IS a good machine, not when modelling something as a machine adds value over simpler alternatives.
+
+A state machine adds plumbing: event sourcing rows, persistence, restoration logic, delegation jobs, lock acquisition, child-machine bookkeeping. That overhead is worth it for genuine workflows. It's wasted on trivial computation.
+
+| The work is... | Use this instead | Why a machine is overkill |
+|---|---|---|
+| **Pure synchronous arithmetic with a single deterministic output** (price calc, tax calc, format conversion) | Service class or inline closure on the parent | No state to track, no lifecycle, no failure modes the parent cares about. The "machine" is a function with extra steps. |
+| **Single-state-transition operation** (apply a discount, mark as read, append a tag) | An `ActionBehavior` on the parent's transition | One conceptual step → one action. No `@always`, no branches, no events fired in the middle. |
+| **Unconditional sequence of context writes** (set 5 fields based on input) | An action with extracted private methods | A machine adds nothing — there are no decision points. |
+| **Multi-step but all synchronous, no failure modes, one event type each** | A service with explicit step methods, called from one action | If failures don't need their own state, you have a procedure, not a workflow. |
+| **Validation logic** (does this input pass these checks?) | `GuardBehavior` (single check) or `ValidationGuardBehavior` (with structured error) | Validation is a boolean; machines are for state. |
+
+### Smell: 3-state "computation machine"
+
+```php ignore
+// Smell: a machine that exists to wrap a function
+
+class TaxCalculatorMachine extends Machine
+{
+    public static function definition(): MachineDefinition
+    {
+        return MachineDefinition::define(
+            config: [
+                'id'      => 'tax_calculator',
+                'initial' => 'idle',
+                'states'  => [
+                    'idle' => ['on' => ['@always' => 'calculating']],
+                    'calculating' => [
+                        'entry' => CalculateTaxAction::class,
+                        'on'    => ['@always' => 'done'],
+                    ],
+                    'done' => [
+                        'type'   => 'final',
+                        'output' => TaxOutput::class,
+                    ],
+                ],
+            ],
+        );
+    }
+}
+```
+
+If `CalculateTaxAction` is a pure function of its input — and there are no failure modes the parent needs to route on, no retries, no external I/O — this is just a function with three database rows and a calculator's worth of plumbing.
+
+**Fix:** make the parent compute it directly.
+
+```php ignore
+// A calculator runs before guards on the parent's transition.
+'on' => [
+    'ORDER_CONFIRMED' => [
+        'target'      => 'processing',
+        'calculators' => 'taxAmountCalculator',
+    ],
+],
+```
+
+Or, if the computation is reused across machines, factor it as a service:
+
+```php no_run
+class TaxCalculator
+{
+    public function compute(int $subtotal, string $jurisdiction): int
+    {
+        // pure logic
+    }
+}
+
+// inside an action or calculator
+$tax = app(TaxCalculator::class)->compute($subtotal, $jurisdiction);
+$context->set('tax', $tax);
+```
+
+Services are testable, dependency-injectable, and reusable across both machine and non-machine code. Promote to a machine only when the criteria in [When to Split](#when-to-split) actually apply — own lifecycle, reusable across multiple parents, complex internal branching, or independent failure handling.
+
+### Smell: machine with one decision and a happy path
+
+```php ignore
+// Smell: machine with one decision then a flat happy path
+
+'states' => [
+    'checking_eligibility' => [
+        'entry' => CheckEligibilityAction::class,
+        'on'    => [
+            'ELIGIBLE'     => 'applying_discount',
+            'NOT_ELIGIBLE' => 'finalizing',
+        ],
+    ],
+    'applying_discount' => [
+        'entry' => ApplyDiscountAction::class,
+        'on'    => ['@always' => 'finalizing'],
+    ],
+    'finalizing' => [
+        'entry' => FinalizeAction::class,
+        'on'    => ['@always' => 'completed'],
+    ],
+    'completed' => ['type' => 'final'],
+],
+```
+
+One decision is not a workflow. **Fix:** a guard on the parent's transition.
+
+```php ignore
+'on' => [
+    'CHECKOUT' => [
+        'target'  => 'finalized',
+        'guards'  => 'isEligibleForDiscountGuard',
+        'actions' => ['applyDiscountAction', 'finalizeAction'],
+    ],
+    // Or two transitions:
+    'CHECKOUT_ELIGIBLE' => [
+        'target' => 'finalized',
+        'guards' => 'isEligibleForDiscountGuard',
+        'actions' => ['applyDiscountAction', 'finalizeAction'],
+    ],
+    'CHECKOUT_INELIGIBLE' => [
+        'target'  => 'finalized',
+        'actions' => 'finalizeAction',
+    ],
+],
+```
+
+::: tip Promotion criteria
+Promote a procedure to a machine when **at least two** of these become true: (1) the work has its own failure / retry / timeout policy you'd otherwise hard-code into call sites, (2) the work is invoked from 3+ places, (3) the work has 5+ internal states or branches, (4) the work needs to be persisted / restored mid-flight (e.g., waiting on a webhook).
+:::
+
 ## When to Keep Together
 
 Keep states in the same machine when:

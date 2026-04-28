@@ -663,6 +663,100 @@ it('verification parallel state completes when both children finish', function (
 
 Both child machines are faked — they complete immediately when the parent enters the parallel `verification` state. The parent's `@done` guard fires and transitions to `checking_protocol`.
 
+## Recipe: Region Cherry-Picking — Isolated Region with Shared Parent Behaviors {#region-cherry-picking}
+
+Sometimes you want to test a single region of a parallel state in isolation — driving it through events and asserting on its transitions without bringing up the whole parent machine. This is useful when the region has complex internal logic that's expensive to set up via the parent's normal entry path.
+
+The catch: behaviors registered as inline closures in the parent's `behavior.actions` / `behavior.guards` registry are NOT visible to a separately-defined `TestMachine` unless you explicitly pass them through.
+
+**Symptom:** `BehaviorNotFoundException: 'wirePricingContextAction' was not found in behavior registry`.
+
+**Pattern: cherry-pick the region's states + pass the parent's behavior registry through.**
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Testing\TestMachine;
+
+it('pricing region transitions calculating → calculated when child completes', function (): void {
+    // Cherry-pick just the region's states from the parent definition.
+    $regionStates = CarSalesMachine::definition()
+        ->config['states']['processing']['states']['pricing_region'];
+
+    // Build an isolated TestMachine with explicit behavior pass-through.
+    $machine = TestMachine::define(
+        config: [
+            'id'      => 'pricing_region_isolated',
+            'initial' => $regionStates['initial'],
+            'context' => CarSalesContext::class,
+            'states'  => $regionStates['states'],
+        ],
+        behavior: [
+            'context' => CarSalesContext::class,
+            // Without this pass-through, inline closures used in the region don't resolve.
+            'actions'     => CarSalesMachine::definition()->behavior['actions']     ?? [],
+            'guards'      => CarSalesMachine::definition()->behavior['guards']      ?? [],
+            'calculators' => CarSalesMachine::definition()->behavior['calculators'] ?? [],
+        ],
+    );
+
+    PriceCalculatorMachine::fake(output: ['baseRate' => 0.85]);
+
+    $machine
+        ->assertState('calculating')
+        ->send('CHILD_DONE')
+        ->assertState('calculated')
+        ->assertContext('baseRate', 0.85);
+});
+```
+
+**What this gives you:**
+
+- The region's transitions, guards, and entry/exit actions run with their real wiring.
+- Children can be faked with `Machine::fake()`.
+- You don't pay the cost of bringing up the full parent (other regions, top-level entry actions, etc.).
+- Test-failure messages point at the region's state names, not the parent's.
+
+### Reset both layers of fakes
+
+Two fake registries need resetting between tests, and they're separate:
+
+| Registry | What it holds | Reset call |
+|---|---|---|
+| `Machine::$machineFakes` | Stubbed child machines registered via `Machine::fake()` | `Machine::resetMachineFakes()` |
+| `InvokableBehavior::$inlineFakes` | Behavior fakes registered via `MyAction::fake(...)` or `fakingAllActions()` | `InvokableBehavior::resetAllFakes()` |
+
+The `InteractsWithMachines` trait calls **both** in its `tearDown`. If you don't use the trait, you must call both manually:
+
+<!-- doctest-attr: ignore -->
+```php
+use Tests\TestCase;
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+
+class PricingRegionTest extends TestCase
+{
+    protected function tearDown(): void
+    {
+        Machine::resetMachineFakes();        // child machine fakes
+        InvokableBehavior::resetAllFakes();  // inline behavior fakes
+        parent::tearDown();
+    }
+}
+```
+
+::: tip Use `InteractsWithMachines` — it does this for you
+The trait is opt-in (not auto-applied). For most test classes, just `use InteractsWithMachines;` and forget the manual reset. See [Fakeable Behaviors](./fakeable-behaviors).
+:::
+
+### When NOT to cherry-pick
+
+If the region under test reads context that's only initialised by the parent's top-level entry action, the cherry-picked region won't have it. In that case, either:
+
+1. Initialise the context manually in the test setup, or
+2. Test through the full parent (slower but truer).
+
+Cherry-picking shines when the region is genuinely self-contained — most of its inputs come from events or its own initial context, not from sibling regions.
+
 ## State Flow {#state-flow}
 
 ## Recipe: @always Guard Chain Routing

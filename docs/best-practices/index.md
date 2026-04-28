@@ -15,6 +15,7 @@ Designing a state machine is different from writing procedural code. In a statec
 | [Context Design](./context-design) | Lean context; flags that change transitions belong in states |
 | [Event Bubbling](./event-bubbling) | Understand leaf-to-root handler resolution |
 | [Machine Decomposition](./machine-decomposition) | When to split, when to keep together |
+| [Sync Child Machines](./sync-child-machines) | Default-mode delegation, `idle` + `@always` bootstrap, output in parallel regions |
 | [Machine System Design](./machine-system-design) | Communication patterns, hierarchy, timer placement |
 | [Time-Based Patterns](./time-based-patterns) | `after`, `every`, escalation, idempotency |
 | [Parallel Patterns](./parallel-patterns) | Region independence, context separation, `@done` |
