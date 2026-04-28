@@ -257,6 +257,24 @@ class AtAwaitingOtpScenario extends MachineScenario
 | `'@done.completed'` | Completed (simulated) | **Not active** — child didn't run |
 | `AtAwaitingOtpScenario::class` | Running, paused | **Active** — child is real, waiting for input |
 
+### Async Children (with `'queue:'` delegation)
+
+Child scenarios apply transparently to both sync and async (queued) child machines. The dispatch site reads the active child scenario from `ScenarioPlayer` and threads it to `ChildMachineJob`, which activates the scenario context in the worker process before the child boots.
+
+::: warning Requires 9.10.3+
+Earlier versions silently dropped the child scenario at dispatch time — async children booted without scenario context and ran full I/O. If you see a queued child making real external calls despite a scenario plan referencing it, upgrade to 9.10.3 or later.
+:::
+
+**Decision rule — inline outcome vs child scenario class:**
+
+| You want… | Use |
+|-----------|-----|
+| Skip the child entirely; pretend it returned X | Inline outcome (`['outcome' => '@done.X', 'output' => [...]]`) — no child runs, no DB rows, no queue dispatch |
+| Walk the child's state graph but mock its leaf actions | Child scenario class (`AtSomeStateScenario::class`) — child runs with overrides, may pause at interactive states |
+
+The inline form is faster and stricter (no child code path exercised). The class form is the right choice when the child's own logic — its `@always` chain, its guards, its parallel regions — is part of what you want the QA scenario to verify.
+
+
 ## @continue — Multi-Step Scenarios
 
 When a scenario needs to traverse **multiple interactive states** in a single activation, `@continue` auto-sends events at intermediate stops:
