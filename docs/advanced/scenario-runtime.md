@@ -25,19 +25,34 @@ Zero overhead in production.
 
 ## Async Propagation
 
-Scenario overrides live in the Laravel container — process-scoped. When async jobs (parallel regions, queued listeners, child completion) run in separate processes, the scenario must propagate.
+Scenario context is process-scoped — it lives in three pieces of static state inside `ScenarioPlayer`:
 
-**Solution:** `machine_current_states.scenario_class` and `scenario_params` columns. Written during scenario activation, read during `Machine::create()` restoration when `scenarios.enabled=true`. The restored job registers scenario overrides in its own container, then processes its event normally.
+1. `self::$outcomes` and `self::$childScenarios` — the classified plan, read by `getOutcome()` and `getChildScenario()` during delegation interception
+2. Behavior overrides — bound in the Laravel container, read by `InvokableBehaviorFake` when guards/actions/calculators run
+3. `self::$isActive` — gates the interception in `MachineDefinition::handleMachineInvoke`
+
+When work crosses a process boundary (queue dispatch, parallel region, child completion job), all three pieces must be re-established in the destination process. The scenario class travels via the `machine_current_states.scenario_class` column or job constructor payloads, depending on the path.
+
+**Three async paths, three activation routines:**
+
+| Path | Trigger | Activation | Source of scenario class |
+|------|---------|------------|---------------------------|
+| Existing-machine restoration | `Machine::create(state: $rootEventId)` from any worker | `restoreStateFromRootEventId` §9 block | `machine_current_states.scenario_class` row |
+| Fresh async child boot (9.10.3+) | `ChildMachineJob::handle()` for `'queue:'` parent state | `ScenarioPlayer::activateForAsyncBoot()` in `try`, `deactivate()` in `finally` | `ChildMachineJob::$scenarioClass` payload (passed by `MachineDefinition` dispatch site) |
+| Sync child scenario reference | Parent transitions into a state with a child scenario reference in its plan | `ScenarioPlayer::executeChildScenario()` in-process | Resolved from parent's plan; child runs without persistence and synthesizes `@done` if it reaches a final state |
+
+All three paths converge on the same trio (outcomes + overrides + isActive). Without this, leaf-state delegation outcomes silently fail and the child runs full I/O.
 
 ### Lifecycle
 
 1. Machine running normally → `scenario_class = null`
 2. QA sends event with `scenario` → `scenario_class = 'AtReviewScenario'`
-3. Async jobs restore machine → find `scenario_class` → hydrate → register overrides
-4. QA sends next event WITHOUT scenario → `scenario_class = null` → real behavior resumes
-5. QA sends next event with DIFFERENT scenario → new overrides replace old
+3. Async jobs restore machine → find `scenario_class` → hydrate → activate scenario context
+4. Child machine dispatched async (9.10.3+) → `ChildMachineJob` carries `scenarioClass` → worker activates scenario context for child boot, persists `scenario_class` on child row
+5. QA sends next event WITHOUT scenario → `scenario_class = null` → real behavior resumes
+6. QA sends next event with DIFFERENT scenario → new context replaces old
 
-**With continuation:** After step 2, if the scenario has `continuation()`, the `scenario_class` persists across requests. Step 4 changes: instead of clearing the scenario, the controller detects `hasContinuation() === true` and dispatches `executeContinuation()` with Phase 2 overrides. The scenario is only cleared when the machine reaches a final state or QA explicitly switches scenarios.
+**With continuation:** After step 2, if the scenario has `continuation()`, the `scenario_class` persists across requests. Step 5 changes: instead of clearing the scenario, the controller detects `hasContinuation() === true` and dispatches `executeContinuation()` with Phase 2 overrides. The scenario is only cleared when the machine reaches a final state or QA explicitly switches scenarios.
 
 ## Engine Feature Reference
 
@@ -114,6 +129,12 @@ When a scenario fails or produces unexpected state:
 4. **Check `machine_current_states`:** The `scenario_class` column shows if a scenario is still active. If it's `null` when you expect it to be set, the deactivation flow may have cleared it.
 
 5. **Preview with `--dry-run`:** `php artisan machine:scenario AtReview OrderMachine pending SubmitEvent under_review --dry-run` shows the scaffolded plan without writing files — useful for understanding what path the BFS found.
+
+6. **Async child runs full I/O instead of applying the scenario:** the dispatched child machine (parent state with `'queue:'`) made real external calls despite the scenario plan referencing it. Check three things:
+   - **Package version >= 9.10.3** — earlier versions silently dropped child scenarios at async dispatch time
+   - **`config('machine.scenarios.enabled')`** is `true` in the worker's environment (workers may load a different config than HTTP requests)
+   - **`MachineCurrentState.scenario_class`** for the dispatched child is set to your scenario class — if `null`, the dispatch site couldn't resolve the active child scenario for that state route (verify the plan key matches the parent state ID, including any machine prefix)
+
 
 ### Verifying Scenario Interception via `machine_events`
 
