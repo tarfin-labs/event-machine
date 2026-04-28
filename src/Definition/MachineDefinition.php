@@ -1685,6 +1685,14 @@ class MachineDefinition
             $machineChildId = $childRecord->id;
         }
 
+        // Resolve any active child scenario for this delegation state so the
+        // worker can re-activate it on async boot. When ScenarioPlayer is not
+        // active (normal production dispatch), this resolves to null and the
+        // worker runs without scenario context — same as before this fix.
+        $scenarioClass = ScenarioPlayer::isActive()
+            ? ScenarioPlayer::getChildScenario($stateDefinition->id)
+            : null;
+
         // Dispatch child machine job
         $job = new ChildMachineJob(
             parentRootEventId: $state->history->first()->root_event_id,
@@ -1695,6 +1703,7 @@ class MachineDefinition
             childContext: $childContext,
             retry: $invokeDefinition->retry ?? 1,
             fireAndForget: $isFireAndForget,
+            scenarioClass: $scenarioClass,
         );
 
         if ($invokeDefinition->queue !== null) {
