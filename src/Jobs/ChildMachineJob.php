@@ -14,7 +14,10 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Tarfinlabs\EventMachine\Models\MachineChild;
 use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Behavior\MachineFailure;
+use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
+use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\InvalidMachineClassException;
 
@@ -47,6 +50,7 @@ class ChildMachineJob implements ShouldQueue
      * @param  array<string, mixed>  $childContext  Resolved context from parent's `with` config.
      * @param  int  $retry  Number of retry attempts (from machine config).
      * @param  bool  $fireAndForget  Whether this is a fire-and-forget invocation (no @done).
+     * @param  string|null  $scenarioClass  FQCN of an active MachineScenario to apply on async boot.
      */
     public function __construct(
         public readonly string $parentRootEventId,
@@ -57,6 +61,7 @@ class ChildMachineJob implements ShouldQueue
         public readonly array $childContext = [],
         int $retry = 1,
         public readonly bool $fireAndForget = false,
+        public readonly ?string $scenarioClass = null,
     ) {
         $this->tries = $retry;
     }
@@ -67,6 +72,29 @@ class ChildMachineJob implements ShouldQueue
             throw InvalidMachineClassException::mustExtendMachine($this->childMachineClass);
         }
 
+        // Async scenario propagation: when a parent scenario references a child scenario
+        // (or this state has an active scenario at dispatch time), restore that scenario's
+        // overrides + outcomes + isActive flag in this fresh worker process so the child
+        // boot interception path (MachineDefinition::handleScenarioOutcome) can fire.
+        $scenarioActivated = false;
+        if ($this->scenarioClass !== null
+            && class_exists($this->scenarioClass)
+            && is_subclass_of($this->scenarioClass, MachineScenario::class)) {
+            ScenarioPlayer::activateForAsyncBoot(new $this->scenarioClass());
+            $scenarioActivated = true;
+        }
+
+        try {
+            $this->processChild();
+        } finally {
+            if ($scenarioActivated) {
+                ScenarioPlayer::deactivate();
+            }
+        }
+    }
+
+    protected function processChild(): void
+    {
         // 1. Update tracking record to running (skip for fire-and-forget).
         //    Use lockForUpdate to prevent duplicate child creation from
         //    concurrent ChildMachineJob dispatches (race on same machineChildId).
@@ -117,6 +145,7 @@ class ChildMachineJob implements ShouldQueue
         // 4. Fire-and-forget: persist child and stop (no tracking, no completion)
         if ($this->fireAndForget) {
             $childMachine->persist();
+            $this->persistScenarioClassOnRow($childRootEventId);
 
             return;
         }
@@ -126,6 +155,7 @@ class ChildMachineJob implements ShouldQueue
 
         // 6. Persist child state
         $childMachine->persist();
+        $this->persistScenarioClassOnRow($childRootEventId);
 
         // 7. Check if child reached a final state
         if ($childMachine->state->currentStateDefinition->type === StateDefinitionType::FINAL) {
@@ -158,6 +188,24 @@ class ChildMachineJob implements ShouldQueue
         // If child is NOT final, it stays persisted awaiting external events
         // (webhook pattern). Completion will be triggered by the endpoint
         // or forward event that drives the child to a final state.
+    }
+
+    /**
+     * Write the active scenarioClass onto the child's machine_current_states row(s).
+     * This is what the §9 Async Propagation block in Machine::restoreStateFromRootEventId
+     * reads when subsequent SendToMachineJob events restore the child mid-flight.
+     */
+    protected function persistScenarioClassOnRow(string $childRootEventId): void
+    {
+        if ($this->scenarioClass === null) {
+            return;
+        }
+
+        MachineCurrentState::where('root_event_id', $childRootEventId)
+            ->update([
+                'scenario_class'  => $this->scenarioClass,
+                'scenario_params' => null,
+            ]);
     }
 
     public function failed(\Throwable $exception): void
