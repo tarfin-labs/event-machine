@@ -350,6 +350,83 @@ test('@continue with payload [EventClass, payload => [...]]', function (): void 
     expect($state->value)->toContain('simple_linear.c');
 });
 
+test('@continue with Closure payload — invokes closure with parameter injection', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    $definition                = clone SimpleLinearMachine::definition();
+    $definition->shouldPersist = false;
+    $m                         = Machine::withDefinition($definition);
+    $m->start();
+
+    $captured              = new stdClass();
+    $captured->called      = false;
+    $captured->amountSeen  = null;
+    $captured->contextType = null;
+
+    $scenario = new class($captured) extends MachineScenario {
+        protected string $machine     = SimpleLinearMachine::class;
+        protected string $source      = 'a';
+        protected string $event       = 'GO';
+        protected string $target      = 'c';
+        protected string $description = 'Closure payload continue';
+
+        public function __construct(public stdClass $captured)
+        {
+            parent::__construct();
+        }
+
+        protected function plan(): array
+        {
+            $captured = $this->captured;
+
+            return [
+                'b' => ['@continue' => ['NEXT', 'payload' => function (ContextManager $ctx) use ($captured): array {
+                    $captured->called      = true;
+                    $captured->amountSeen  = $ctx->get('amount');
+                    $captured->contextType = $ctx::class;
+
+                    return ['amount' => 999];
+                }]],
+            ];
+        }
+    };
+    $player = new ScenarioPlayer($scenario);
+    $state  = $player->execute(machine: $m);
+
+    expect($captured->called)->toBeTrue();
+    expect($captured->amountSeen)->toBe(0); // SimpleLinearMachine initial context['amount'] = 0
+    expect($captured->contextType)->toBe(ContextManager::class);
+    expect($state->value)->toContain('simple_linear.c');
+});
+
+test('@continue Closure payload returning non-array throws', function (): void {
+    config()->set('machine.scenarios.enabled', true);
+
+    $definition                = clone SimpleLinearMachine::definition();
+    $definition->shouldPersist = false;
+    $m                         = Machine::withDefinition($definition);
+    $m->start();
+
+    $scenario = new class() extends MachineScenario {
+        protected string $machine     = SimpleLinearMachine::class;
+        protected string $source      = 'a';
+        protected string $event       = 'GO';
+        protected string $target      = 'c';
+        protected string $description = 'Bad closure payload';
+
+        protected function plan(): array
+        {
+            return [
+                'b' => ['@continue' => ['NEXT', 'payload' => fn (): string => 'not-an-array']],
+            ];
+        }
+    };
+    $player = new ScenarioPlayer($scenario);
+
+    // The Closure resolution wraps inside @continue's try/catch which rethrows as ScenarioFailedException
+    expect(fn () => $player->execute(machine: $m))->toThrow(ScenarioFailedException::class);
+});
+
 test('@continue string-only format EventClass::class', function (): void {
     config()->set('machine.scenarios.enabled', true);
 

@@ -69,4 +69,11 @@ class ScenarioConfigurationException extends LogicException
             message: "Cannot activate scenario on faked machine '{$machineClass}'. Scenarios require real execution."
         );
     }
+
+    public static function invalidContinuePayloadClosure(string $actualType): self
+    {
+        return new self(
+            message: "@continue payload Closure must return array<string, mixed>, got {$actualType}"
+        );
+    }
 }

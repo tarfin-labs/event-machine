@@ -339,6 +339,27 @@ Behavior overrides are registered first, then `@continue` fires.
 - ScenarioPlayer loops until no `@continue` match or `max_transition_depth` is reached
 - If a `@continue` event fails, `ScenarioFailedException` is thrown
 
+### Closure Payload
+
+When the `@continue` event's payload depends on context populated by earlier transitions (typically by an action that ran during the trigger event), use a `Closure` instead of a static array. The Closure is invoked at `@continue` dispatch time with `InvokableBehavior` parameter injection — same DI semantics as the [Callable Outcome](#callable-outcome) in delegation states:
+
+<!-- doctest-attr: ignore -->
+```php
+'ready' => [
+    '@continue' => [CarSalesApplicationStartedEvent::class, 'payload' => function (CarSalesContext $ctx): array {
+        return [
+            'tckn'      => $ctx->tckn,        // populated by the trigger event's action
+            'phone'     => $ctx->phone,
+            'birthdate' => '1990-01-01',
+        ];
+    }],
+],
+```
+
+Injectable parameters (same as Callable Outcome): `ContextManager` (or a typed subclass), `State`, `EventBehavior`, `EventCollection`. The Closure must return `array<string, mixed>` — returning anything else throws `ScenarioConfigurationException`.
+
+**When to use vs. context override:** if the values are **already in context** (written by trigger-event actions), reach for a Closure. If they're test fixtures that should pre-populate context regardless of any action, prefer a context-write override on the source state — it sidesteps the trigger-event chain entirely.
+
 ### Selective Pause
 
 Intentionally omitting `@continue` from an interactive state creates a **selective pause** — the scenario loop stops, the machine stays at that state, and QA interacts with the real endpoint. After QA acts, the continuation overrides resume from the next state.

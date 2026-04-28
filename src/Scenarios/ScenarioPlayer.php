@@ -146,9 +146,11 @@ class ScenarioPlayer
                 $continueCount++;
 
                 // Parse @continue value
-                [$eventClass, $payload] = $this->parseContinueValue($continue);
+                [$eventClass, $rawPayload] = $this->parseContinueValue($continue);
 
                 try {
+                    $payload = $this->resolveContinuePayload($rawPayload, $state);
+
                     $state = $machine->send([
                         'type'    => $this->resolveEventType($eventClass),
                         'payload' => $payload,
@@ -219,7 +221,8 @@ class ScenarioPlayer
                 }
 
                 $continueCount++;
-                [$eventClass, $payload] = $this->parseContinueValue($continue);
+                [$eventClass, $rawPayload] = $this->parseContinueValue($continue);
+                $payload                   = $this->resolveContinuePayload($rawPayload, $state);
 
                 $state = $machine->send([
                     'type'    => $this->resolveEventType($eventClass),
@@ -430,9 +433,11 @@ class ScenarioPlayer
             }
 
             $continueCount++;
-            [$eventClass, $payload] = $childPlayer->parseContinueValue($continue);
+            [$eventClass, $rawPayload] = $childPlayer->parseContinueValue($continue);
 
             try {
+                $payload = $childPlayer->resolveContinuePayload($rawPayload, $childState);
+
                 $childState = $childMachine->send([
                     'type'    => $childPlayer->resolveEventType($eventClass),
                     'payload' => $payload,
@@ -928,11 +933,16 @@ class ScenarioPlayer
      * Parse @continue value into [eventClass, payload].
      *
      * Formats:
-     *   'EventClass::class'                        → [EventClass, []]
-     *   [EventClass::class, 'payload' => [...]]    → [EventClass, [...]]
+     *   'EventClass::class'                            → [EventClass, []]
+     *   [EventClass::class, 'payload' => [...]]        → [EventClass, [...]]
+     *   [EventClass::class, 'payload' => fn(...) => [...]] → [EventClass, Closure]
+     *
+     * Closure payloads are returned unresolved — call resolveContinuePayload()
+     * with the current State to invoke them with InvokableBehavior parameter
+     * injection (ContextManager, State, EventBehavior, EventCollection).
      */
     /**
-     * @return array{0: string, 1: array<string, mixed>}
+     * @return array{0: string, 1: array<string, mixed>|\Closure}
      */
     private function parseContinueValue(mixed $continue): array
     {
@@ -948,6 +958,41 @@ class ScenarioPlayer
         }
 
         return [(string) $continue, []];
+    }
+
+    /**
+     * Resolve a @continue payload — invokes Closure payloads with parameter
+     * injection (matches Callable Outcome semantics in delegation states).
+     *
+     * Runs at @continue dispatch time, after the previous transition has
+     * populated context. The Closure must return an array<string, mixed>.
+     */
+    /**
+     * @param  array<string, mixed>|\Closure  $payload
+     *
+     * @return array<string, mixed>
+     */
+    private function resolveContinuePayload(mixed $payload, State $state): array
+    {
+        if ($payload instanceof \Closure) {
+            $parameters = InvokableBehavior::injectInvokableBehaviorParameters(
+                actionBehavior: $payload,
+                state: $state,
+                eventBehavior: $state->triggeringEvent,
+            );
+
+            $resolved = $payload(...$parameters);
+
+            if (!is_array($resolved)) {
+                throw ScenarioConfigurationException::invalidContinuePayloadClosure(
+                    actualType: get_debug_type($resolved),
+                );
+            }
+
+            return $resolved;
+        }
+
+        return $payload;
     }
 
     /**
