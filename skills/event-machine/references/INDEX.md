@@ -56,6 +56,8 @@ Use this when the user's question points to a capability, not a file. Each entry
 | Scenario CLI commands | `docs/advanced/scenario-commands.md` |
 | Scenario runtime internals | `docs/advanced/scenario-runtime.md` |
 | Expose scenarios via HTTP | `docs/advanced/scenario-endpoints.md` |
+| Scenario decision rule (inline outcome vs class) | `references/scenarios.md` |
+| Skip async child I/O via scenario | `references/scenarios.md` + `docs/advanced/scenario-plan.md#async-children-with-queue-delegation` |
 
 ## Laravel
 
