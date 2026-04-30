@@ -167,16 +167,27 @@ When `__invoke` is called, parameters are resolved in this order:
 
 ### `@` Prefix Convention
 
-Keys prefixed with `@` are **framework-reserved** metadata — they are stripped before injection and never reach `__invoke`. PHP parameter names cannot start with `@`, so collision is impossible. Currently used: `@queue` in listeners.
+Keys prefixed with `@` are **framework-reserved** metadata — they are stripped before injection and never reach `__invoke`. PHP parameter names cannot start with `@`, so collision is impossible.
+
+**`@queue` is the only `@`-key today, and it is only valid inside `listen.entry`, `listen.exit`, and `listen.transition`.** Using `@queue` (or any `@`-prefixed key) anywhere else — state `entry`/`exit` actions, transition `actions`, `guards`, `calculators`, or output tuples — throws `InvalidBehaviorDefinitionException` at definition time. This avoids the silent footgun where the key would otherwise be filtered out and the action would just run synchronously.
 
 ```php ignore
-// @queue is framework metadata, 'verbose' is a named param
+// ✓ Valid — @queue inside listen config
 'listen' => [
     'entry' => [
         [AuditAction::class, 'verbose' => true, '@queue' => true],
     ],
 ],
+
+// ✗ Invalid — throws InvalidBehaviorDefinitionException since 9.11.0
+'states' => [
+    'idle' => [
+        'entry' => [[AuditAction::class, '@queue' => true]],
+    ],
+],
 ```
+
+For async work in state `entry` actions, see [Async Work in Entry Actions](../building/defining-states.md#async-work-in-entry-actions).
 
 ### Inline Key with Named Params
 
