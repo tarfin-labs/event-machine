@@ -10,6 +10,7 @@ use Tarfinlabs\EventMachine\Enums\InternalEvent;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Routing\EndpointDefinition;
+use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Exceptions\InvalidStateConfigException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidOutputDefinitionException;
 use Tarfinlabs\EventMachine\Exceptions\InvalidParallelStateDefinitionException;
@@ -470,6 +471,8 @@ class StateDefinition
         } else {
             $this->entry = [];
         }
+
+        $this->validateActionTuples($this->entry, 'actions (entry)');
     }
 
     /**
@@ -483,6 +486,27 @@ class StateDefinition
                 : [$this->config['exit']];
         } else {
             $this->exit = [];
+        }
+
+        $this->validateActionTuples($this->exit, 'actions (exit)');
+    }
+
+    /**
+     * Validate action tuples eagerly at definition time.
+     *
+     * Catches misuse of framework-reserved @-prefixed keys (e.g. `@queue`) in state
+     * entry/exit action lists, where they have no effect and would otherwise be silently
+     * dropped at runtime. Mirrors the validation already performed for transition
+     * actions/guards/calculators in TransitionDefinition / TransitionBranch.
+     *
+     * @param  array<int, mixed>  $actions
+     */
+    protected function validateActionTuples(array $actions, string $context): void
+    {
+        foreach ($actions as $action) {
+            if (is_array($action)) {
+                BehaviorTupleParser::parse($action, $context);
+            }
         }
     }
 
