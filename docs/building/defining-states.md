@@ -248,6 +248,76 @@ Queued listeners restore the machine from `rootEventId` on the worker — same a
 If you need data from the exact moment of the transition, use a sync listener that dispatches its own job with the captured data.
 :::
 
+::: warning `@queue` only works in `listen` — not in state actions
+`@queue` is a framework-reserved key that is **only honored inside `listen.entry`, `listen.exit`, and `listen.transition`**. Putting it in a state's `entry`/`exit` action list, in transition `actions`, in `guards`, or in `calculators` is a misuse — and since 9.11.0 EventMachine throws `InvalidBehaviorDefinitionException` at definition time so it cannot fail silently:
+
+```php ignore
+// ❌ Rejected — @queue is silently dropped here, so it is now an error
+'states' => [
+    'approved' => [
+        'entry' => [
+            ApproveAction::class,
+            [CreateInstallmentPromissoryNoteAction::class, '@queue' => true], // throws
+            SendApprovalNotificationAction::class,
+        ],
+    ],
+],
+```
+
+If you need an entry action to run async, choose one of three options below.
+:::
+
+### Async Work in Entry Actions
+
+State `entry` actions always run **synchronously, in array order**, before the machine is persisted. To do work off the request thread you have three options — pick by what your machine has to *do* with the result:
+
+| Option | When to use | How |
+|--------|-------------|-----|
+| **Job actor** (state's `job` key) | The state should transition based on the job's outcome (`@done` / `@fail`). | Replace the action with a Laravel job; route via `@done` / `@fail`. |
+| **Queued listener** (`listen.entry` + `@queue`) | The work should run after entry but doesn't drive a transition. The worker may write back to context (the listener restores the machine from `rootEventId`). | Move the action into `listen.entry` and tag it with `@queue`. |
+| **Inline `dispatch()`** in a regular action | True fire-and-forget — no machine state depends on the result. | Keep the action sync; have it call `dispatch(new MyJob(...))`. |
+
+Example — three async-safe rewrites of the same machine:
+
+```php ignore
+// 1) Job actor — promissory note success/failure decides the next state
+'approved' => [
+    'entry' => [
+        TerminateOtherApplicationsAction::class,
+        ApproveAction::class,
+        CompleteApplicationAction::class,
+        SendApprovalNotificationAction::class,
+    ],
+    'job' => CreateInstallmentPromissoryNoteJob::class,
+    'on'  => [
+        '@done' => 'note_created',
+        '@fail' => 'note_failed',
+    ],
+],
+
+// 2) Queued listener — note creation runs async, machine doesn't wait on it
+'approved' => [
+    'entry'  => [
+        TerminateOtherApplicationsAction::class,
+        ApproveAction::class,
+        CompleteApplicationAction::class,
+        SendApprovalNotificationAction::class,
+    ],
+    'listen' => [
+        'entry' => [[CreateInstallmentPromissoryNoteAction::class, '@queue' => true]],
+    ],
+],
+
+// 3) Inline dispatch — pure fire-and-forget from a regular action
+final class CreateInstallmentPromissoryNoteAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        dispatch(new CreateInstallmentPromissoryNoteJob($context->applicationId));
+    }
+}
+```
+
 ### Execution Order
 
 ```
