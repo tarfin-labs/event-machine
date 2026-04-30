@@ -2323,3 +2323,125 @@ describe('§I — Listener format', function (): void {
         ))->toThrow(InvalidListenerDefinitionException::class);
     });
 });
+
+// ═══════════════════════════════════════════════════════════════
+//  §K — Reserved @-prefix keys (Tests 78–83)
+// ═══════════════════════════════════════════════════════════════
+
+describe('§K — Reserved @-prefix keys', function (): void {
+
+    // Test 78: @queue is rejected in state-level entry actions
+    it('throws when @queue is used in state entry actions', function (): void {
+        expect(fn () => MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => [],
+                'states'  => [
+                    'idle' => [
+                        'entry' => [[SetLevelAction::class, '@queue' => true]],
+                    ],
+                ],
+            ],
+        ))->toThrow(InvalidBehaviorDefinitionException::class, '@queue');
+    });
+
+    // Test 79: @queue is rejected in state-level exit actions
+    it('throws when @queue is used in state exit actions', function (): void {
+        expect(fn () => MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => [],
+                'states'  => [
+                    'idle' => [
+                        'exit' => [[SetLevelAction::class, '@queue' => true]],
+                        'on'   => ['GO' => 'done'],
+                    ],
+                    'done' => [],
+                ],
+            ],
+        ))->toThrow(InvalidBehaviorDefinitionException::class, '@queue');
+    });
+
+    // Test 80: @queue is rejected in transition actions
+    it('throws when @queue is used in transition actions', function (): void {
+        expect(fn () => MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => [],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'GO' => [
+                                'target'  => 'done',
+                                'actions' => [[SetLevelAction::class, '@queue' => true]],
+                            ],
+                        ],
+                    ],
+                    'done' => [],
+                ],
+            ],
+        ))->toThrow(InvalidBehaviorDefinitionException::class, '@queue');
+    });
+
+    // Test 81: @queue is rejected in guards
+    it('throws when @queue is used in guards', function (): void {
+        expect(fn () => MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => [],
+                'states'  => [
+                    'idle' => [
+                        'on' => [
+                            'GO' => [
+                                'target' => 'done',
+                                'guards' => [[IsAmountInRangeGuard::class, '@queue' => true]],
+                            ],
+                        ],
+                    ],
+                    'done' => [],
+                ],
+            ],
+        ))->toThrow(InvalidBehaviorDefinitionException::class, '@queue');
+    });
+
+    // Test 82: error message includes the listener migration hint
+    it('error message points users to listen config and the three async-action options', function (): void {
+        $caught = null;
+
+        try {
+            MachineDefinition::define(
+                config: [
+                    'initial' => 'idle',
+                    'context' => [],
+                    'states'  => [
+                        'idle' => [
+                            'entry' => [[SetLevelAction::class, '@queue' => true]],
+                        ],
+                    ],
+                ],
+            );
+        } catch (InvalidBehaviorDefinitionException $e) {
+            $caught = $e;
+        }
+
+        expect($caught)->not->toBeNull();
+        expect($caught->getMessage())->toContain('@queue');
+        expect($caught->getMessage())->toContain('listen.entry');
+        expect($caught->getMessage())->toContain('job actor');
+    });
+
+    // Test 83: arbitrary @-prefixed keys (forward-compatibility) also rejected in actions
+    it('throws when an unknown @-prefixed key is used in actions', function (): void {
+        expect(fn () => MachineDefinition::define(
+            config: [
+                'initial' => 'idle',
+                'context' => [],
+                'states'  => [
+                    'idle' => [
+                        'entry' => [[SetLevelAction::class, '@something' => true]],
+                    ],
+                ],
+            ],
+        ))->toThrow(InvalidBehaviorDefinitionException::class, '@something');
+    });
+});
