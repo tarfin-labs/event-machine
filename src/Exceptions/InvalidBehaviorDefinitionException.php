@@ -40,4 +40,23 @@ class InvalidBehaviorDefinitionException extends LogicException
             message: "Invalid behavior tuple in {$context} — closures cannot receive named parameters. Use a class-based behavior instead."
         );
     }
+
+    /**
+     * Framework-reserved @-prefixed key (e.g. @queue) used outside its supported context.
+     *
+     * Currently only `@queue` is supported, and only inside `listen.entry` / `listen.exit` /
+     * `listen.transition` config. Using it in state entry/exit actions, transition actions,
+     * guards, calculators, or outputs has no effect at runtime — so it is rejected up-front
+     * to avoid a silent footgun.
+     */
+    public static function reservedKeyInTuple(string $context, string $key): self
+    {
+        $hint = $key === '@queue'
+            ? " '@queue' is only supported inside `listen.entry`, `listen.exit`, or `listen.transition`. For async work in state entry actions, use a job actor (`'job' => MyJob::class`), a queued listener (`'listen' => ['entry' => [[MyAction::class, '@queue' => true]]]`), or call dispatch() inside a regular action."
+            : '';
+
+        return new self(
+            message: "Invalid behavior tuple in {$context} — '{$key}' is a framework-reserved key and is not supported here.{$hint}"
+        );
+    }
 }
