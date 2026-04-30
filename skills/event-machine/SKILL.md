@@ -604,6 +604,27 @@ Full details: `docs/advanced/scenario-plan.md` → "Pitfalls" section.
 
 Full exception reference: `docs/reference/exceptions.md`
 
+### `@queue` works only in `listen` config
+
+`@queue` is a **framework-reserved key inside listener tuples** — `listen.entry`, `listen.exit`, `listen.transition`. Anywhere else (state `entry`/`exit` actions, transition `actions`, `guards`, `calculators`, output tuples) it throws `InvalidBehaviorDefinitionException` at definition time. Before 9.11.0 it was *silently dropped*, which made it look like the action was queued when it actually ran inline.
+
+| Where you see `@queue` | What it does |
+|---|---|
+| `listen.entry`/`exit`/`transition` tuple | ✓ Dispatches a `ListenerJob` to run on a worker |
+| State `entry` / `exit` action tuple | ✗ `InvalidBehaviorDefinitionException` |
+| Transition `actions` / `guards` / `calculators` tuple | ✗ `InvalidBehaviorDefinitionException` |
+| Output / endpoint output tuple | ✗ `InvalidBehaviorDefinitionException` |
+
+**To run an entry action async, pick by what the machine has to do with the result:**
+
+| Option | When to use | How |
+|---|---|---|
+| **Job actor** (state's `job` key) | The state should transition based on the result (`@done` / `@fail`). | Replace the action with a Laravel job; route via `@done` / `@fail`. |
+| **Queued listener** (`listen.entry` + `@queue`) | Work runs after entry but doesn't drive a transition; the worker may write back to context. | Move the action into `listen.entry` with `@queue`. |
+| **Inline `dispatch()`** in a regular action | Pure fire-and-forget — no machine state depends on the result. | Keep the action sync; have it call `dispatch(new MyJob(...))`. |
+
+Full reference: `docs/building/defining-states.md` → "Async Work in Entry Actions".
+
 ---
 
 ## 8. Documentation Navigation
