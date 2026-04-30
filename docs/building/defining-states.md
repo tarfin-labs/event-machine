@@ -171,7 +171,24 @@ Root entry does NOT run on every state change. For that, use [Listeners](#listen
 
 ## Listeners
 
-Listeners are cross-cutting actions that run on every state change without per-state boilerplate. Listener actions use the same resolution mechanism as all other behaviors — both inline keys and FQCN references work interchangeably (see [Behavior Resolution](/behaviors/introduction#behavior-resolution)). Instead of adding `broadcastAction` to 13 states individually, define it once:
+Listeners are **observers**, not behaviors. Actions describe *what the machine does* on entry/exit/transition — they mutate context, raise events, and run as part of the transition itself. Listeners describe *what watches the machine* after the transition is recorded — broadcasts, audit logs, analytics, dashboards. Both hook into the same lifecycle, but they answer different questions, and that difference is what makes one async-safe and the other not.
+
+| | Action | Listener |
+|---|---|---|
+| Role | **Behavior** — part of the transition | **Observer** — runs after the transition is committed |
+| Mutates context | Yes, that's the point | Allowed, but lossy when queued (last-writer-wins) |
+| Sequence-sensitive | Yes — later actions read earlier actions' writes | No — each listener is independent |
+| Failure | Throws can abort the transition | Throws don't undo the transition (failed jobs land in `failed_jobs`) |
+| Async-safe | **No** — context, ordering, and rollback all break | **Yes** — transition is already committed |
+| Typical use | "the user balance must reflect this transition" | "fire a webhook when the order ships" |
+
+::: info Why this distinction matters for `@queue`
+`@queue` exists only on listeners. It is **not** missing on actions by oversight — it is structurally impossible to make safe there. If `entry` action #2 in a list of three were dispatched async, action #3 would race with action #2's context writes, the worker would restore the *current* persisted state (not the dispatch-time state — possibly several transitions later), and any throw on the worker could not abort a transition that has already been recorded. Listeners avoid all three problems because they observe a *committed* transition, so they don't need rollback, don't need ordering with respect to peers, and see the same state on the worker that the dispatcher saw.
+
+For fire-and-forget Job dispatch from inside an entry action, the idiomatic pattern is a thin wrapper Action that calls `dispatch()` — see [Async Work in Entry Actions](#async-work-in-entry-actions).
+:::
+
+Listener actions use the same resolution mechanism as all other behaviors — both inline keys and FQCN references work interchangeably (see [Behavior Resolution](/behaviors/introduction#behavior-resolution)). Instead of adding `broadcastAction` to 13 states individually, define it once:
 
 ```php ignore
 'listen' => [
@@ -183,8 +200,7 @@ Listeners are cross-cutting actions that run on every state change without per-s
 |---------|--------------------------|-------------------------|----------|
 | Scope | One state | Machine lifecycle | Every state |
 | Runs | Each time state is entered/left | Once on start/completion | Each non-transient entry/exit/transition |
-| Purpose | State-specific logic | Machine init/cleanup | Cross-cutting concerns |
-
+| Purpose | State-specific behavior | Machine init/cleanup | Cross-cutting **observers** |
 ### Listener Types
 
 Three listener keys are available:
@@ -271,16 +287,44 @@ If you need an entry action to run async, choose one of three options below.
 
 State `entry` actions always run **synchronously, in array order**, before the machine is persisted. To do work off the request thread you have three options — pick by what your machine has to *do* with the result:
 
-| Option | When to use | How |
-|--------|-------------|-----|
-| **Job actor** (state's `job` key) | The state should transition based on the job's outcome (`@done` / `@fail`). | Replace the action with a Laravel job; route via `@done` / `@fail`. |
-| **Queued listener** (`listen.entry` + `@queue`) | The work should run after entry but doesn't drive a transition. The worker may write back to context (the listener restores the machine from `rootEventId`). | Move the action into `listen.entry` and tag it with `@queue`. |
-| **Inline `dispatch()`** in a regular action | True fire-and-forget — no machine state depends on the result. | Keep the action sync; have it call `dispatch(new MyJob(...))`. |
+| Option | When to use | Cost |
+|--------|-------------|------|
+| **Job actor** (state's `job` key) | The state should transition based on the outcome — you need `@done` / `@fail` routing. | Requires its own state. The framework has to wait somewhere to observe the job's result. |
+| **Queued listener** (`listen.entry` + `@queue`) | Work runs after entry but doesn't drive a transition. The worker may write back to context (the listener restores the machine from `rootEventId`). | One layer of indirection (ListenerJob → restore → run). Last-writer-wins on context if multiple listeners queue concurrently. |
+| **Wrapper Action** (regular action that calls `dispatch()`) | True fire-and-forget — no machine state depends on the result, you don't need machine context on the worker. | One thin class. The cheapest and most common option. |
 
-Example — three async-safe rewrites of the same machine:
+::: tip Wrapper Action — when you don't want a separate state
+You don't need to add a state just to fire-and-forget a job. Write a one-line action that dispatches the job and place it in `entry` like any other action:
 
 ```php ignore
-// 1) Job actor — promissory note success/failure decides the next state
+final class DispatchPromissoryNoteAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        dispatch(new CreateInstallmentPromissoryNoteJob(
+            applicationId: $context->applicationId,
+        ));
+    }
+}
+
+'approved' => [
+    'entry' => [
+        TerminateOtherApplicationsAction::class,
+        ApproveAction::class,
+        CompleteApplicationAction::class,
+        DispatchPromissoryNoteAction::class,  // ← fire-and-forget Job
+        SendApprovalNotificationAction::class,
+    ],
+],
+```
+
+This is also why EventMachine doesn't expose a `'jobs'` slot alongside `'actions'`: a job actor needs its own state because the framework has to wait for `@done` / `@fail`; a fire-and-forget job needs nothing — a wrapper Action expresses it more clearly than a new config key would, and stays inside the existing test/fake infrastructure (`Machine::fakingAllActions(except: [...])`, `Bus::fake()`).
+:::
+
+The same scenario, written as the other two options:
+
+```php ignore
+// Job actor — promissory note success/failure decides the next state
 'approved' => [
     'entry' => [
         TerminateOtherApplicationsAction::class,
@@ -295,7 +339,7 @@ Example — three async-safe rewrites of the same machine:
     ],
 ],
 
-// 2) Queued listener — note creation runs async, machine doesn't wait on it
+// Queued listener — note creation runs async on a worker that restores the machine
 'approved' => [
     'entry'  => [
         TerminateOtherApplicationsAction::class,
@@ -307,15 +351,6 @@ Example — three async-safe rewrites of the same machine:
         'entry' => [[CreateInstallmentPromissoryNoteAction::class, '@queue' => true]],
     ],
 ],
-
-// 3) Inline dispatch — pure fire-and-forget from a regular action
-final class CreateInstallmentPromissoryNoteAction extends ActionBehavior
-{
-    public function __invoke(ContextManager $context): void
-    {
-        dispatch(new CreateInstallmentPromissoryNoteJob($context->applicationId));
-    }
-}
 ```
 
 ### Execution Order
