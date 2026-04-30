@@ -604,9 +604,23 @@ Full details: `docs/advanced/scenario-plan.md` → "Pitfalls" section.
 
 Full exception reference: `docs/reference/exceptions.md`
 
+### Action vs Listener — behavior vs observer
+
+This is the conceptual split that makes `@queue` work on listeners and structurally impossible on actions. Get it wrong and you'll keep wanting to invent a `'jobs'` slot or queue an entry action — neither one exists.
+
+| | Action | Listener |
+|---|---|---|
+| Role | **Behavior** — part of the transition | **Observer** — runs after the transition is committed |
+| Mutates context | Yes, that's the point | Allowed, but lossy when queued (last-writer-wins) |
+| Sequence-sensitive | Yes — later actions read earlier writes | No — each listener is independent |
+| Failure | Throws can abort the transition | Throws don't undo it; failed jobs land in `failed_jobs` |
+| Async-safe | **No** | **Yes** |
+
+Why a queued action is structurally unsafe: the worker would race with later inline actions on the same context, restore the *current* persisted state (not the dispatch-time state — possibly several transitions later), and any throw on the worker could not undo a transition already recorded. Listeners avoid all three because they observe a *committed* transition.
+
 ### `@queue` works only in `listen` config
 
-`@queue` is a **framework-reserved key inside listener tuples** — `listen.entry`, `listen.exit`, `listen.transition`. Anywhere else (state `entry`/`exit` actions, transition `actions`, `guards`, `calculators`, output tuples) it throws `InvalidBehaviorDefinitionException` at definition time. Before 9.11.0 it was *silently dropped*, which made it look like the action was queued when it actually ran inline.
+`@queue` is a framework-reserved key inside listener tuples — `listen.entry`, `listen.exit`, `listen.transition`. Anywhere else (state `entry`/`exit` actions, transition `actions`, `guards`, `calculators`, output tuples) it throws `InvalidBehaviorDefinitionException` at definition time. Before 9.11.0 it was *silently dropped*, which made it look like the action was queued when it actually ran inline.
 
 | Where you see `@queue` | What it does |
 |---|---|
@@ -615,16 +629,35 @@ Full exception reference: `docs/reference/exceptions.md`
 | Transition `actions` / `guards` / `calculators` tuple | ✗ `InvalidBehaviorDefinitionException` |
 | Output / endpoint output tuple | ✗ `InvalidBehaviorDefinitionException` |
 
-**To run an entry action async, pick by what the machine has to do with the result:**
+**Async work in entry actions — pick by what the machine has to do with the result:**
 
-| Option | When to use | How |
+| Option | When to use | Cost |
 |---|---|---|
-| **Job actor** (state's `job` key) | The state should transition based on the result (`@done` / `@fail`). | Replace the action with a Laravel job; route via `@done` / `@fail`. |
-| **Queued listener** (`listen.entry` + `@queue`) | Work runs after entry but doesn't drive a transition; the worker may write back to context. | Move the action into `listen.entry` with `@queue`. |
-| **Inline `dispatch()`** in a regular action | Pure fire-and-forget — no machine state depends on the result. | Keep the action sync; have it call `dispatch(new MyJob(...))`. |
+| **Job actor** (state's `job` key) | Outcome routes the next state via `@done` / `@fail`. | Needs its own state — the framework has to wait for the result. |
+| **Queued listener** (`listen.entry` + `@queue`) | Work runs after entry but doesn't drive a transition. Worker can write back to context. | One layer of indirection (ListenerJob → restore → run). Last-writer-wins on context. |
+| **Wrapper Action** (regular action that calls `dispatch()`) | Pure fire-and-forget — no machine state depends on the result. | One thin class. Cheapest and most common option. |
 
-Full reference: `docs/building/defining-states.md` → "Async Work in Entry Actions".
+::: tip Wrapper Action recipe — fire-and-forget without a separate state
+A user asking "can't I just put `MyJob::class` in `entry`?" wants this:
 
+```php
+final class DispatchPromissoryNoteAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        dispatch(new CreateInstallmentPromissoryNoteJob(applicationId: $context->applicationId));
+    }
+}
+
+'approved' => [
+    'entry' => [..., DispatchPromissoryNoteAction::class, ...],
+],
+```
+
+Don't propose a new `'jobs'` slot — wrapper Actions express fire-and-forget more clearly, stay inside existing fake infrastructure (`Machine::fakingAllActions`, `Bus::fake()`), and don't blur the Action↔Listener semantic split.
+:::
+
+Full reference: `docs/building/defining-states.md` → "Listeners" (semantic split) and "Async Work in Entry Actions" (recipes).
 ---
 
 ## 8. Documentation Navigation
