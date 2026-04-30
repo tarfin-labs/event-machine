@@ -63,10 +63,21 @@ final class BehaviorTupleParser
             throw InvalidBehaviorDefinitionException::closureInTuple($context);
         }
 
-        // Extract config params: string keys, excluding @-prefixed (framework-reserved)
+        // Reject framework-reserved @-prefixed keys outside their supported context.
+        // Currently only `@queue` is supported, and only inside `listen.*` config —
+        // which has its own parser (MachineDefinition::parseListenConfig) and never
+        // reaches BehaviorTupleParser. Anything that lands here with an @-prefix
+        // is misuse and would otherwise be silently dropped.
+        foreach (array_keys($tuple) as $key) {
+            if (is_string($key) && str_starts_with($key, '@')) {
+                throw InvalidBehaviorDefinitionException::reservedKeyInTuple($context, $key);
+            }
+        }
+
+        // Extract config params: string keys (no @-prefix to filter; rejected above)
         $configParams = array_filter(
             $tuple,
-            fn (int|string $k): bool => is_string($k) && !str_starts_with($k, '@'),
+            is_string(...),
             ARRAY_FILTER_USE_KEY,
         );
 
