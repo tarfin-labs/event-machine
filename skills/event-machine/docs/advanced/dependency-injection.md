@@ -1,0 +1,500 @@
+# Dependency Injection
+
+EventMachine uses Laravel's service container for dependency injection in behaviors. This allows you to inject services, repositories, and other dependencies into your actions, guards, calculators, and other behaviors.
+
+## Constructor Injection
+
+Class-based behaviors support constructor injection:
+
+```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+
+class ProcessOrderAction extends ActionBehavior
+{
+    public function __construct(
+        private readonly OrderService $orderService,
+        private readonly PaymentGateway $paymentGateway,
+        private readonly NotificationService $notifications,
+    ) {}
+
+    public function __invoke(ContextManager $context): void
+    {
+        $order = $this->orderService->create($context->items);
+        $this->paymentGateway->charge($order->total);
+        $this->notifications->orderConfirmed($order);
+
+        $context->orderId = $order->id;
+    }
+}
+```
+
+## Parameter Injection
+
+The `__invoke()` method receives injected parameters:
+
+<!-- doctest-attr: ignore -->
+```php
+public function __invoke(
+    ContextManager $context,      // Current context
+    EventBehavior $event,         // Triggering event
+    State $state,                 // Current state
+    EventCollection $history,     // Event history
+): void {
+    // Use injected parameters
+}
+```
+
+### Available Parameters
+
+| Type | Description |
+|------|-------------|
+| `ContextManager` | Machine context (or your custom context class) |
+| `EventBehavior` | The event that triggered the transition |
+| `State` | Current machine state |
+| `EventCollection` | History of all events |
+| Named params | Config-defined parameters matched by name |
+
+### Framework Types + Named Params
+
+Framework types and config-defined named params can coexist in the same `__invoke` signature:
+
+<!-- doctest-attr: ignore -->
+```php
+// Config
+'guards' => [[IsAmountInRangeGuard::class, 'min' => 100, 'max' => 10000]],
+
+// Guard
+public function __invoke(ContextManager $context, int $min, int $max): bool
+{
+    return $context->amount >= $min && $context->amount <= $max;
+}
+```
+
+Resolution order: framework types (matched by type-hint) → named params (matched by name from config) → PHP defaults.
+
+### Partial Injection
+
+Only declare the parameters you need:
+
+<!-- doctest-attr: ignore -->
+```php
+// Only context needed
+public function __invoke(ContextManager $context): void
+{
+    $context->count++;
+}
+
+// Context and event needed
+public function __invoke(
+    ContextManager $context,
+    EventBehavior $event,
+): void {
+    $context->value = $event->payload['value'];
+}
+
+// All parameters
+public function __invoke(
+    ContextManager $context,
+    EventBehavior $event,
+    State $state,
+    EventCollection $history,
+): void {
+    // Full access
+}
+```
+
+## Typed Context Injection
+
+Custom context classes are automatically injected:
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+class OrderContext extends ContextManager
+{
+    public string $orderId = '';
+    public array $items = [];
+}
+
+class ProcessOrderAction extends ActionBehavior
+{
+    public function __invoke(OrderContext $context): void
+    {
+        // $context is typed as OrderContext
+        // Full IDE autocompletion available
+        $orderId = $context->orderId;
+    }
+}
+```
+
+## Union Types for Event Parameters
+
+When a behavior handles multiple event types (e.g., the same action wired to different transitions), use PHP 8 union types in the `__invoke` signature:
+
+<!-- doctest-attr: no_run -->
+```php
+class StoreVehicleInfoAction extends ActionBehavior
+{
+    public function __invoke(
+        CarSalesContext $context,
+        VehicleAndPricingSubmittedEvent|VehicleEditRequestedEvent $event,
+    ): void {
+        // Both events share vehicleId in their payload
+        $vehicleId = $event->data('vehicleId');
+
+        // Discriminate when needed
+        if ($event instanceof VehicleEditRequestedEvent) {
+            $context->set('is_edit', true);
+        }
+    }
+}
+```
+
+The injection system resolves the first matching type in the union — if the actual event is a subclass of any union member, it matches.
+
+::: tip When to use union types vs base EventBehavior
+**Union types** — when the behavior handles 2-3 specific event types and needs their typed payloads.
+
+**Base `EventBehavior`** — when the behavior handles many event types (5+) or doesn't need the event at all. Entry actions on states reachable from many transitions often fall into this category.
+
+**Optional parameter** (`?EventBehavior $event = null`) — for actions on `@always` transitions where the initial state has no triggering event.
+:::
+
+## Guard with Dependencies
+
+```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+class HasPermissionGuard extends GuardBehavior
+{
+    public function __construct(
+        private readonly AuthorizationService $auth,
+    ) {}
+
+    public function __invoke(ContextManager $context): bool
+    {
+        return $this->auth->can($context->userId, 'submit_order');
+    }
+}
+```
+
+## Calculator with Dependencies
+
+```php
+use Tarfinlabs\EventMachine\Behavior\CalculatorBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+class CalculateTaxCalculator extends CalculatorBehavior
+{
+    public function __construct(
+        private readonly TaxService $taxService,
+        private readonly GeoLocationService $geo,
+    ) {}
+
+    public function __invoke(ContextManager $context): void
+    {
+        $location = $this->geo->locate($context->shippingAddress);
+        $taxRate = $this->taxService->getRateForLocation($location);
+
+        $context->taxRate = $taxRate;
+        $context->tax = $context->subtotal * $taxRate;
+    }
+}
+```
+
+## Event Behavior with Dependencies
+
+```php
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+class SubmitOrderEvent extends EventBehavior
+{
+    public function __construct(
+        private readonly RequestValidator $validator,
+    ) {
+        parent::__construct();
+    }
+
+    public static function getType(): string
+    {
+        return 'SUBMIT_ORDER';
+    }
+
+    public function actor(ContextManager $context): mixed
+    {
+        return auth()->user();
+    }
+}
+```
+
+## Output with Dependencies
+
+```php
+use Tarfinlabs\EventMachine\Behavior\OutputBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+class OrderOutputBehavior extends OutputBehavior
+{
+    public function __construct(
+        private readonly ReceiptGenerator $receipts,
+        private readonly OrderRepository $orders,
+    ) {}
+
+    public function __invoke(ContextManager $context): array
+    {
+        $order = $this->orders->find($context->orderId);
+        $receipt = $this->receipts->generate($order);
+
+        return [
+            'order' => $order->toArray(),
+            'receiptUrl' => $receipt->url,
+        ];
+    }
+}
+```
+
+## Practical Examples
+
+### Complete Action with Multiple Services
+
+```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+class CompleteCheckoutAction extends ActionBehavior
+{
+    public function __construct(
+        private readonly OrderRepository $orders,
+        private readonly InventoryService $inventory,
+        private readonly PaymentProcessor $payments,
+        private readonly EmailService $email,
+        private readonly AnalyticsService $analytics,
+    ) {}
+
+    public function __invoke(
+        CheckoutContext $context,
+        EventBehavior $event,
+    ): void {
+        // Create order
+        $order = $this->orders->create([
+            'customer_id' => $context->customerId,
+            'items' => $context->items,
+            'total' => $context->total,
+        ]);
+
+        // Reserve inventory
+        foreach ($context->items as $item) {
+            $this->inventory->reserve($item['id'], $item['quantity']);
+        }
+
+        // Process payment
+        $payment = $this->payments->charge(
+            $context->paymentMethod,
+            $context->total,
+        );
+
+        // Send confirmation
+        $this->email->sendOrderConfirmation($order);
+
+        // Track analytics
+        $this->analytics->track('order_completed', [
+            'order_id' => $order->id,
+            'total' => $order->total,
+        ]);
+
+        // Update context
+        $context->orderId = $order->id;
+        $context->paymentId = $payment->id;
+    }
+}
+```
+
+### Guard with External Service
+
+```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+class CheckInventoryGuard extends GuardBehavior
+{
+    public function __construct(
+        private readonly InventoryService $inventory,
+    ) {}
+
+    public function __invoke(ContextManager $context): bool
+    {
+        foreach ($context->items as $item) {
+            if (!$this->inventory->isAvailable($item['id'], $item['quantity'])) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+```
+
+### Validation Guard with Repository
+
+```php
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+class ValidateUserGuard extends ValidationGuardBehavior
+{
+    public ?string $errorMessage = null;
+
+    public function __construct(
+        private readonly UserRepository $users,
+    ) {}
+
+    public function __invoke(ContextManager $context): bool
+    {
+        $user = $this->users->find($context->userId);
+
+        if (!$user) {
+            $this->errorMessage = 'User not found';
+            return false;
+        }
+
+        if ($user->isSuspended()) {
+            $this->errorMessage = 'User account is suspended';
+            return false;
+        }
+
+        if (!$user->hasVerifiedEmail()) {
+            $this->errorMessage = 'Please verify your email first';
+            return false;
+        }
+
+        return true;
+    }
+}
+```
+
+## Binding Custom Implementations
+
+### In Service Provider
+
+<!-- doctest-attr: ignore -->
+```php
+// app/Providers/AppServiceProvider.php
+public function register(): void
+{
+    $this->app->bind(PaymentGateway::class, StripeGateway::class);
+
+    $this->app->bind(NotificationService::class, function ($app) {
+        return new SlackNotificationService(
+            config('services.slack.webhook_url'),
+        );
+    });
+}
+```
+
+### Environment-Based Binding
+
+<!-- doctest-attr: ignore -->
+```php
+public function register(): void
+{
+    if ($this->app->environment('testing')) {
+        $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
+        $this->app->bind(EmailService::class, FakeEmailService::class);
+    } else {
+        $this->app->bind(PaymentGateway::class, StripeGateway::class);
+        $this->app->bind(EmailService::class, SendGridService::class);
+    }
+}
+```
+
+## Testing with DI
+
+::: tip Full Testing Guide
+For complete constructor DI testing patterns, see [Constructor DI Testing](/testing/constructor-di).
+:::
+
+### Quick Example
+
+<!-- doctest-attr: ignore -->
+```php
+it('processes order with mocked services', function () {
+    // Use $this->mock() — NOT app()->instance()
+    $this->mock(OrderService::class)
+        ->shouldReceive('create')->once()
+        ->andReturn(new Order(['id' => 'order-123']));
+
+    $state = State::forTesting(['items' => [['id' => 1]]]);
+    ProcessOrderAction::runWithState($state);
+
+    expect($state->context->get('orderId'))->toBe('order-123');
+});
+```
+
+For isolated testing, faked behavior patterns, and decision guides, see the
+[full Constructor DI testing guide](/testing/constructor-di).
+
+## Best Practices
+
+### 1. Use Interface Bindings
+
+<!-- doctest-attr: ignore -->
+```php
+// Define interface
+interface PaymentGatewayInterface
+{
+    public function charge(float $amount): PaymentResult;
+}
+
+// Bind in service provider
+$this->app->bind(PaymentGatewayInterface::class, StripeGateway::class);
+
+// Use in behavior
+public function __construct(
+    private readonly PaymentGatewayInterface $payments,
+) {}
+```
+
+### 2. Keep Dependencies Minimal
+
+<!-- doctest-attr: ignore -->
+```php
+// Good - focused dependencies
+public function __construct(
+    private readonly OrderRepository $orders,
+) {}
+
+// Avoid - too many dependencies
+public function __construct(
+    private readonly OrderRepository $orders,
+    private readonly UserRepository $users,
+    private readonly ProductRepository $products,
+    private readonly PaymentService $payments,
+    private readonly ShippingService $shipping,
+    private readonly TaxService $tax,
+    private readonly NotificationService $notifications,
+    private readonly AnalyticsService $analytics,
+) {}
+// Consider breaking into smaller actions
+```
+
+### 3. Use Readonly Properties
+
+<!-- doctest-attr: ignore -->
+```php
+public function __construct(
+    private readonly OrderService $orders,  // readonly prevents reassignment
+) {}
+```
+
+### 4. Inject Interfaces, Not Implementations
+
+<!-- doctest-attr: ignore -->
+```php
+// Good
+public function __construct(
+    private readonly LoggerInterface $logger,
+) {}
+
+// Avoid
+public function __construct(
+    private readonly MonologLogger $logger,
+) {}
+```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Action Design](/best-practices/action-design).
+:::

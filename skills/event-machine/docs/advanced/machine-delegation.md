@@ -1,0 +1,452 @@
+# Machine Delegation
+
+Machine delegation allows a state to **delegate** its work to another machine. When the state is entered, the child machine starts. When the child completes (reaches a final state), the parent's `@done` transition fires.
+
+This follows the same logic as `type: 'parallel'`:
+- **Parallel state:** "This state contains parallel regions; when all reach final, `@done` fires"
+- **Machine delegation:** "This state delegates to another machine; when child reaches final, `@done` fires"
+
+## Basic Example
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+
+class OrderWorkflowMachine extends Machine
+{
+    public static function definition(): MachineDefinition
+    {
+        return MachineDefinition::define(
+            config: [
+                'id'      => 'order_workflow',
+                'initial' => 'validating',
+                'context' => [
+                    'orderId'       => null,
+                    'paymentData' => null,
+                ],
+                'states' => [
+                    'validating' => [
+                        'machine' => ValidationMachine::class,
+                        'input'    => ['orderId'],
+                        '@done'   => [
+                            'target'  => 'processing_payment',
+                            'actions' => 'storeValidationOutputAction',
+                        ],
+                        '@fail' => 'validation_failed',
+                    ],
+                    'processing_payment' => [
+                        'machine' => PaymentMachine::class,
+                        'input'    => ['orderId'],
+                        '@done'   => 'completed',
+                        '@fail'   => 'payment_failed',
+                    ],
+                    'completed'         => ['type' => 'final'],
+                    'validation_failed' => ['type' => 'final'],
+                    'payment_failed'    => ['type' => 'final'],
+                ],
+            ],
+        );
+    }
+}
+```
+
+**Reads as:** "`validating` state delegates to `ValidationMachine`. Passes `orderId` to the child. When the child completes, stores the validation result and transitions to `processing_payment`."
+
+## Config Reference
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `machine` | `string` (FQCN) | Yes | Child machine class. Must extend `Machine`. Throws `InvalidMachineClassException` if the class doesn't exist or doesn't extend `Machine`. |
+| `input` | `string\|array\|Closure` | No | Data to pass from parent context to child. Accepts MachineInput FQCN, array, or closure. (renamed from `with` in v9) |
+| `failure` | `string` (FQCN) | No | MachineFailure class for typed error data on `@fail`. |
+| `@done` | `string\|array` | No | Fires when child reaches a final state. Absence signals fire-and-forget. |
+| `@done.{state}` | `string\|array` | No | Fires when child reaches the specific final state `{state}`. Same format as `@done`. |
+| `@fail` | `string\|array` | No | Fires when child fails. Not valid without `@done` or `@done.{state}`. |
+| `@timeout` | `array` | No | Fires when child doesn't complete within the given time. Async only. Not valid without `@done`. |
+| `queue` | `bool\|string\|array` | No | Run child asynchronously on a queue. **Required** for fire-and-forget. |
+| `forward` | `array` | No | Event types to forward from parent to the running child. Not valid without `@done`. |
+| `on` | `array` | No | Additional events the parent can handle while child is running. |
+| `target` | `string` | No | Fire-and-forget + immediate transition. Requires `queue`. Mutually exclusive with `@done`. |
+
+## `input` — Context Transfer
+
+::: warning Renamed from `with` in v9
+The `with` key has been renamed to `input` to align with the typed contract system. `with` is still accepted as an alias but will be removed in a future release.
+:::
+
+The `input` key controls what data flows from parent context to child context. Four formats are supported:
+
+<!-- doctest-attr: ignore -->
+```php
+// Format 1: Same-named keys
+'input' => ['orderId', 'totalAmount'],
+// Child context receives: { orderId: ..., totalAmount: ... }
+
+// Format 2: Key mapping (child_key => parent_key)
+'input' => [
+    'id'     => 'orderId',        // child sees 'id', parent has 'orderId'
+    'amount' => 'totalAmount',    // child sees 'amount', parent has 'totalAmount'
+],
+
+// Format 3: Dynamic (closure)
+'input' => fn (ContextManager $ctx) => [
+    'orderId' => $ctx->get('orderId'),
+    'amount'  => $ctx->get('totalAmount') * 100,
+],
+
+// Format 4: MachineInput class (typed contract)
+'input' => PaymentInput::class,
+// Resolved from parent context, validated, merged into child context
+```
+
+Without `input`, the child starts with its own default context. No parent data is transferred automatically.
+
+### MachineInput -- Typed Input Contract
+
+A `MachineInput` class defines a typed contract for what data the child expects:
+
+```php ignore
+use Tarfinlabs\EventMachine\Behavior\MachineInput;
+
+class PaymentInput extends MachineInput
+{
+    public function __construct(
+        public readonly string $orderId,
+        public readonly int $amount,
+    ) {}
+}
+```
+
+```php ignore
+'processing_payment' => [
+    'machine' => PaymentMachine::class,
+    'input'   => PaymentInput::class,
+    '@done'   => 'completed',
+    '@fail'   => 'payment_failed',
+],
+```
+
+The MachineInput is constructed from the parent context (matching constructor parameter names to context keys), validated, and its properties are merged into the child's initial context.
+
+## `failure` -- Typed Failure Contract
+
+The `failure` key declares a `MachineFailure` class that structures the error data passed to the parent's `@fail` handler:
+
+```php ignore
+use Tarfinlabs\EventMachine\Behavior\MachineFailure;
+
+class PaymentFailure extends MachineFailure
+{
+    public function __construct(
+        public readonly string $errorCode,
+        public readonly bool $retryable,
+        public readonly ?string $gatewayRef = null,
+    ) {}
+}
+```
+
+```php ignore
+'processing_payment' => [
+    'machine' => PaymentMachine::class,
+    'input'   => PaymentInput::class,
+    'failure' => PaymentFailure::class,
+    '@done'   => 'completed',
+    '@fail'   => 'payment_failed',
+],
+```
+
+The parent's `@fail` actions and guards receive the `MachineFailure` instance via `ChildMachineFailEvent->output()`.
+
+## `@done` — Child Completion
+
+When the child machine reaches a final state, the parent's `@done` transition fires. Uses the standard transition format:
+
+<!-- doctest-attr: ignore -->
+```php
+// String shorthand
+'@done' => 'next_state',
+
+// With actions
+'@done' => [
+    'target'  => 'next_state',
+    'actions' => 'handleOutputAction',
+],
+
+// Multi-branch guarded fork
+'@done' => [
+    ['target' => 'approved', 'guards' => 'isApprovedGuard'],
+    ['target' => 'review',   'actions' => 'requestReviewAction'],
+],
+```
+
+### Per-Final-State Routing
+
+When a child machine has multiple final states with different meanings, use `@done.{state}` to route based on which final state the child reached:
+
+<!-- doctest-attr: ignore -->
+```php
+'verifying' => [
+    'machine' => VerificationMachine::class,
+    'input'    => ['applicantId'],
+
+    '@done.approved' => 'processing',
+    '@done.rejected' => 'declined',
+    '@done.expired'  => 'timed_out',
+
+    '@fail' => 'system_error',
+],
+```
+
+**Reads as:** "`verifying` delegates to `VerificationMachine`. If the child finishes in `approved`, go to `processing`. If `rejected`, go to `declined`. If `expired`, go to `timed_out`."
+
+Each `@done.{state}` supports the same formats as `@done` — string target, config with actions, or multi-branch with guards:
+
+<!-- doctest-attr: ignore -->
+```php
+// Per-state with actions
+'@done.approved' => [
+    'target'  => 'processing',
+    'actions' => 'storeApprovalAction',
+],
+
+// Per-state with guards
+'@done.approved' => [
+    ['target' => 'vip_processing', 'guards' => 'isHighValueGuard'],
+    ['target' => 'standard_processing'],
+],
+```
+
+**Resolution priority:**
+1. `@done.{childFinalState}` — specific match
+2. `@done` — catch-all fallback
+3. No match — no transition
+
+If a guard on `@done.approved` fails, resolution falls through to the `@done` catch-all (if defined).
+
+::: warning Final State Coverage
+When using `@done.{state}` without a `@done` catch-all, all child final states must be covered. Run `php artisan machine:validate` to verify — it throws if any child final state is uncovered.
+:::
+
+### Accessing Child Output Data
+
+When `@done` fires, the event is a `ChildMachineDoneEvent` with typed accessors for `output()`, `childMachineId()`, and `childMachineClass()`. When `@fail` fires, the event is a `ChildMachineFailEvent` with `errorMessage()`, `output()`, and identity accessors.
+
+See [Data Flow — `@done` Event](/advanced/delegation-data-flow#child-parent-the-done-event) and [Data Flow — `@fail` Event](/advanced/delegation-data-flow#child-parent-the-fail-event) for typed accessor examples.
+
+::: tip Time-Based Events
+You can add `after` and `every` timers to transitions on delegation states. `@timeout` (child deadline) and `after`/`every` (state timers) coexist — they serve different purposes. See [Time-Based Events](/advanced/time-based-events).
+:::
+
+## `@fail` — Child Failure
+
+Fires when the child machine throws an exception or reaches a failure state:
+
+<!-- doctest-attr: ignore -->
+```php
+'@fail' => 'error_state',
+
+// With guards for conditional handling
+'@fail' => [
+    ['target' => 'retrying', 'guards' => 'canRetryGuard', 'actions' => 'incrementRetryAction'],
+    ['target' => 'failed',   'actions' => 'logFailureAction'],
+],
+```
+
+## `@timeout` — Child Timeout
+
+Only meaningful in async mode. Fires when the child doesn't complete within the specified time:
+
+<!-- doctest-attr: ignore -->
+```php
+'processing_payment' => [
+    'machine'  => PaymentMachine::class,
+    'queue'    => 'payments',
+    '@done'    => 'shipping',
+    '@fail'    => 'payment_failed',
+    '@timeout' => [
+        'after'   => 300,                // seconds
+        'target'  => 'payment_timed_out',
+        'actions' => 'logTimeoutAction',
+    ],
+],
+```
+
+## Fire-and-Forget
+
+When you need to spawn a child machine without tracking its output, omit `@done`. The child runs independently — its completion or failure does not affect the parent.
+
+### Stay in State (primary pattern)
+
+The state spawns the child on entry and continues functioning normally with its own `on` events:
+
+<!-- doctest-attr: ignore -->
+```php
+'suspended' => [
+    'machine' => AuditMachine::class,
+    'input'    => ['userId'],
+    'queue'   => 'background',
+    // No @done → fire-and-forget
+    'on' => ['REACTIVATE' => 'active'],
+],
+```
+
+**Reads as:** "When entering `suspended`, spawn `AuditMachine` in the background. The state handles its own events normally."
+
+### Spawn and Move On (with @always)
+
+Use `@always` to immediately transition after spawning the child:
+
+<!-- doctest-attr: ignore -->
+```php
+'dispatching_audit' => [
+    'machine' => AuditMachine::class,
+    'input'    => ['userId'],
+    'queue'   => 'background',
+    'on'      => ['@always' => 'suspended'],
+],
+```
+
+### Spawn and Move On (with target)
+
+Alternatively, use `target` for an explicit fire-and-forget transition (consistent with the `job` key pattern):
+
+<!-- doctest-attr: ignore -->
+```php
+'dispatching_audit' => [
+    'machine' => AuditMachine::class,
+    'input'    => ['userId'],
+    'queue'   => 'background',
+    'target'  => 'suspended',
+],
+```
+
+### Rules
+
+- Fire-and-forget requires `queue` — the child must run asynchronously.
+- `@done` absence is the signal — no new keyword needed.
+- `@fail`, `@timeout`, `output`, and `forward` are not valid without `@done`. Violating these constraints throws `InvalidStateConfigException`.
+- A state cannot have both `machine` and `type: 'parallel'` — `InvalidStateConfigException` is thrown.
+- The child still persists its own `MachineEvent` records (observability).
+- The child receives parent identity (`sendToParent()` still works).
+
+## `queue` — Async Execution
+
+By default, child machines run **synchronously** (inline). Add `queue` to run the child on a Laravel queue:
+
+<!-- doctest-attr: ignore -->
+```php
+// Default queue
+'queue' => true,
+
+// Named queue
+'queue' => 'payments',
+
+// Detailed configuration
+'queue' => [
+    'connection' => 'redis',
+    'queue'      => 'payments',
+    'retry'      => 3,
+],
+```
+
+**Sync vs Async:**
+- **Sync (default):** Child runs inline. Parent transitions to `@done` immediately after child completes. Simplest option.
+- **Async (queue):** Child runs on a queue worker. Parent stays in the delegating state until a `ChildMachineCompletionJob` arrives with the output.
+
+## `forward` — Event Forwarding
+
+Forward parent events to the running child machine. Useful when the child needs to receive external updates:
+
+<!-- doctest-attr: ignore -->
+```php
+'processing' => [
+    'machine' => PaymentMachine::class,
+    'queue'   => 'payments',
+    'forward' => [
+        'APPROVE_PAYMENT',                     // Forward as-is
+        'UPDATE_SHIPPING_INFO' => 'UPDATE_INFO', // Rename for child
+    ],
+    '@done' => 'completed',
+],
+```
+
+## Delegation Timing
+
+Child machine invocation is **deferred** until after the macrostep completes. When a state with a `machine` key is entered, the following sequence applies:
+
+1. **Entry actions** run on the target state
+2. **Entry listeners** fire
+3. **Raised events** from entry actions are drained (if any exist, `@always` transitions and internal events are processed first)
+4. **If the state changed** during step 3: delegation is **skipped** -- the machine already left the delegating state
+5. **If the state is unchanged:** `handleMachineInvoke()` runs (sync inline or async dispatch)
+
+This means an entry action can `raise()` an event that transitions the machine away from the delegating state, effectively preventing child machine creation. This is by design -- it follows SCXML invoker-05 macrostep semantics.
+
+### Practical Implication
+
+```php ignore
+'validating' => [
+    'entry'   => 'checkCacheAction',      // May raise CACHE_HIT
+    'machine' => ValidationMachine::class,
+    'input'    => ['orderId'],
+    '@done'   => 'processing',
+    'on'      => [
+        'CACHE_HIT' => 'processing',      // Bypasses delegation entirely
+    ],
+],
+```
+
+If `checkCacheAction` raises `CACHE_HIT`, the machine transitions to `processing` before `ValidationMachine` is ever started.
+
+## Delegation Inside Parallel States
+
+The `machine` key works at any state level, including within parallel regions. Each region runs its own child machine. The region's `@done` fires when its child completes. The parallel state's `@done` fires when **all** regions reach final.
+
+See [Delegation Patterns — Parallel Orchestration](/advanced/delegation-patterns#parallel-orchestration) for a full example.
+
+## Testing with Machine Faking
+
+Use `Machine::fake()` to short-circuit child machines in tests:
+
+<!-- doctest-attr: no_run -->
+```php
+use Tarfinlabs\EventMachine\Actor\Machine;
+
+// Fake a child machine to return a specific output
+PaymentMachine::fake(output: ['paymentId' => 'pay_123']);
+
+// Run the parent machine — child is short-circuited
+$machine = OrderWorkflowMachine::create();
+$machine->send(['type' => 'START']);
+
+// Assert the child was invoked
+PaymentMachine::assertInvoked();
+PaymentMachine::assertInvokedTimes(1);
+PaymentMachine::assertInvokedWith(['orderId' => 'ORD-1']);
+PaymentMachine::assertNotInvoked(); // or verify it was NOT invoked
+
+// Fake a failure
+PaymentMachine::fake(fail: true, error: 'Insufficient funds');
+
+// Reset all fakes
+Machine::resetMachineFakes();
+```
+
+`Machine::fake()` options:
+- `output: array` — The output the child "returns" via `@done`
+- `fail: true` — Child triggers `@fail` instead of `@done`
+- `error: string` — Error message for `@fail`
+- `finalState: string` — The child's final state key — determines which `@done.{state}` route fires on the parent
+
+::: tip Full Testing Guide
+For complete delegation testing patterns including async, forward endpoints, and TestMachine v2 fluent API, see [Inter-Machine Testing](/testing/delegation-testing).
+:::
+
+## Infinite Loop Protection
+
+Each machine — parent and child — has its own independent depth counter. A sync child with a deep `@always` chain does not consume the parent's depth budget.
+
+::: warning Known Limitation
+When `@done` or `@fail` routes the parent to a new state, `@always` transitions on that new state are **not** automatically evaluated. This is because child completion routing uses an internal bypass path (`executeChildTransitionBranch`) that does not go through the standard `transition()` method. This may be addressed in a future release.
+:::
