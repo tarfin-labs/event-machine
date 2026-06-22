@@ -357,13 +357,26 @@ class Machine implements Castable, JsonSerializable, Stringable
                 $event = ['type' => $event];
             }
 
-            $this->state = match (true) {
-                $event->isTransactional ?? false => DB::transaction(fn (): State => $this->definition->transition($event, $this->state)),
-                default                          => $this->definition->transition($event, $this->state)
-            };
+            // For a transactional event, run transition() AND persist() inside the same DB
+            // transaction so a persist() failure rolls back the transition's committed DB
+            // side-effects (action writes + machine_events + current-state sync) together.
+            // Non-transactional events keep the previous unwrapped behavior.
+            if ($event->isTransactional ?? false) {
+                $this->state = DB::transaction(function () use ($event): State {
+                    $this->state = $this->definition->transition($event, $this->state);
 
-            if ($this->definition->shouldPersist) {
-                $this->persist();
+                    if ($this->definition->shouldPersist) {
+                        $this->persist();
+                    }
+
+                    return $this->state;
+                });
+            } else {
+                $this->state = $this->definition->transition($event, $this->state);
+
+                if ($this->definition->shouldPersist) {
+                    $this->persist();
+                }
             }
 
             $this->handleValidationGuards($lastPreviousEventNumber);
@@ -466,33 +479,51 @@ class Machine implements Castable, JsonSerializable, Stringable
         // Get the last event from the state's history.
         $lastHistoryEvent = $this->state->history->last();
 
-        MachineEvent::upsert(
-            values: $this->state->history->map(function (MachineEvent $machineEvent, int $index) use (&$incrementalContext, $lastHistoryEvent): array {
-                // Get the context of the current machine event.
-                $changes = $machineEvent->context;
+        // Walk the FULL in-memory history to rebuild the incremental-context baseline and
+        // produce each row's stored form. This is cheap (in-memory array merges) and is
+        // required to diff the rows that change — but only the dirty slice is upserted.
+        $rows = $this->state->history->map(function (MachineEvent $machineEvent, int $index) use (&$incrementalContext, $lastHistoryEvent): array {
+            // Get the context of the current machine event.
+            $changes = $machineEvent->context;
 
-                // If the current machine event is not the last one, compare its context with the incremental context and get the differences.
-                if ($machineEvent->id !== $lastHistoryEvent->id && $index > 0) {
-                    $changes = ArrayUtils::recursiveDiff($changes, $incrementalContext);
-                }
+            // If the current machine event is not the last one, compare its context with the incremental context and get the differences.
+            // Index 0 (the root event) always keeps its full context — never diffed.
+            if ($machineEvent->id !== $lastHistoryEvent->id && $index > 0) {
+                $changes = ArrayUtils::recursiveDiff($changes, $incrementalContext);
+            }
 
-                // If there are changes, update the incremental context to the current event's context.
-                if ($changes !== []) {
-                    $incrementalContext = ArrayUtils::recursiveMerge($incrementalContext, $machineEvent->context);
-                }
+            // If there are changes, update the incremental context to the current event's context.
+            if ($changes !== []) {
+                $incrementalContext = ArrayUtils::recursiveMerge($incrementalContext, $machineEvent->context);
+            }
 
-                $machineEvent->context = $changes;
+            $machineEvent->context = $changes;
 
-                return array_merge($machineEvent->toArray(), [
-                    'created_at'    => $machineEvent->created_at->toDateTimeString(),
-                    'machine_value' => json_encode($machineEvent->machine_value, JSON_THROW_ON_ERROR),
-                    'payload'       => json_encode($machineEvent->payload, JSON_THROW_ON_ERROR),
-                    'context'       => json_encode($machineEvent->context, JSON_THROW_ON_ERROR),
-                    'meta'          => json_encode($machineEvent->meta, JSON_THROW_ON_ERROR),
-                ]);
-            })->all(),
-            uniqueBy: ['id']
-        );
+            return array_merge($machineEvent->toArray(), [
+                'created_at'    => $machineEvent->created_at->toDateTimeString(),
+                'machine_value' => json_encode($machineEvent->machine_value, JSON_THROW_ON_ERROR),
+                'payload'       => json_encode($machineEvent->payload, JSON_THROW_ON_ERROR),
+                'context'       => json_encode($machineEvent->context, JSON_THROW_ON_ERROR),
+                'meta'          => json_encode($machineEvent->meta, JSON_THROW_ON_ERROR),
+            ]);
+        })->all();
+
+        // Upsert only the dirty rows: the previous tail (downgraded full→diff now that it is
+        // no longer last) plus any newly-appended rows. Rows before the previous tail are
+        // byte-identical to the DB. This keeps the upsert at O(new + 1) rows, well clear of
+        // the prepared-statement placeholder ceiling on long histories.
+        $dirtyRows = array_slice($rows, max(0, $this->state->persistedEventCount - 1));
+
+        if ($dirtyRows !== []) {
+            MachineEvent::upsert(
+                values: $dirtyRows,
+                uniqueBy: ['id']
+            );
+        }
+
+        // Advance the watermark so a subsequent persist() on this in-memory instance writes
+        // only rows appended since.
+        $this->state->persistedEventCount = $this->state->history->count();
 
         // Sync machine_current_states table (diff-based: only update changed states)
         $this->syncCurrentStates();
@@ -584,6 +615,10 @@ class Machine implements Castable, JsonSerializable, Stringable
             history: $machineEvents,
         );
 
+        // Watermark: every loaded row is already persisted. persist() will only re-write
+        // the dirty slice (previous tail downgraded to a diff + any newly-appended rows).
+        $state->persistedEventCount = $machineEvents->count();
+
         // For parallel states, restore the actual multi-value state
         if (count($lastMachineEvent->machine_value) > 1) {
             $state->setValues($lastMachineEvent->machine_value);
@@ -670,6 +705,16 @@ class Machine implements Castable, JsonSerializable, Stringable
     {
         // Single value - non-parallel state
         if (count($machineValue) === 1) {
+            // A machine_value not present in this machine's idMap means the root event
+            // belongs to a different machine definition (foreign / wrong-class machineId).
+            // Throw RestoringStateException (not a raw undefined-key error) so callers can
+            // map it to 404 uniformly with the not-found case.
+            if (!isset($this->definition->idMap[$machineValue[0]])) {
+                throw RestoringStateException::build(
+                    "Machine state '{$machineValue[0]}' does not belong to this machine definition."
+                );
+            }
+
             return $this->definition->idMap[$machineValue[0]];
         }
 
