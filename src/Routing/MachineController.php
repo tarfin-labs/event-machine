@@ -27,6 +27,7 @@ use Tarfinlabs\EventMachine\Exceptions\ScenarioFailedException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
 use Tarfinlabs\EventMachine\Exceptions\MachineOutputInjectionException;
+use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 
 class MachineController extends Controller
 {
@@ -96,6 +97,47 @@ class MachineController extends Controller
 
         return $this->buildResponse($machine->state, $machine, outputKey: null, statusCode: 201);
     }
+    /**
+     * Read-only projection handler ("reads" — the query side).
+     * Route: GET /{machineId}/{uri}.
+     *
+     * Zero-write by construction: restores and reads current state; never constructs
+     * an event, never calls send()/persist(), never acquires a lock.
+     */
+    public function handleSnapshot(Request $request): JsonResponse
+    {
+        $defaults     = $request->route()->defaults;
+        $machineClass = $defaults['_machine_class'];
+        $machineId    = (string) $request->route('machineId');
+
+        try {
+            $machine = $machineClass::create(state: $machineId);
+        } catch (RestoringStateException) {
+            // Covers both "not found" and the wrong-machine-class case (idMap miss is
+            // hardened to throw RestoringStateException in restoreCurrentStateDefinition).
+            return response()->json(['message' => 'Machine not found.'], 404);
+        }
+
+        // Split the configured read output onto buildResponse()'s two parameters using
+        // the same discriminator as handleEndpoint(): a string or inner-array behavior
+        // tuple → outputKey; a plain context-key list → outputKeys; null → neither
+        // (falls back to $machine->output()).
+        $outputDef         = $defaults['_read_output'] ?? null;
+        $isInnerArrayTuple = is_array($outputDef) && isset($outputDef[0]) && is_array($outputDef[0]);
+        $outputKey         = is_string($outputDef) || $isInnerArrayTuple ? $outputDef : null;
+        $outputKeys        = is_array($outputDef) && !$isInnerArrayTuple ? $outputDef : null;
+
+        return $this->buildResponse(
+            state: $machine->state,
+            machine: $machine,
+            outputKey: $outputKey,
+            statusCode: $defaults['_read_status_code'] ?? 200,
+            outputKeys: $outputKeys,
+            includeAvailableEvents: $defaults['_read_available_events'] ?? true,
+            isProcessing: false,
+        );
+    }
+
 
     /**
      * Shared endpoint handler — extracts route defaults and runs the endpoint lifecycle.
@@ -304,13 +346,19 @@ class MachineController extends Controller
         }
 
         $response = [
-            'id'              => $rootEventId,
-            'machineId'       => $state->currentStateDefinition->machine->id ?? null,
-            'state'           => $state->value,
-            'availableEvents' => $state->availableEvents(),
-            'output'          => $outputData,
-            'isProcessing'    => $isProcessing,
+            'id'        => $rootEventId,
+            'machineId' => $state->currentStateDefinition->machine->id ?? null,
+            'state'     => $state->value,
         ];
+
+        // Honor the includeAvailableEvents flag: null/true include availableEvents;
+        // false omits the key entirely (key absent, not present-but-empty).
+        if ($includeAvailableEvents !== false) {
+            $response['availableEvents'] = $state->availableEvents();
+        }
+
+        $response['output']       = $outputData;
+        $response['isProcessing'] = $isProcessing;
 
         if ((bool) config('machine.scenarios.enabled', false) && $machine->definition->machineClass !== null) {
             $availableScenarios = [];
