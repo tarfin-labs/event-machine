@@ -65,6 +65,10 @@ class State implements \JsonSerializable
      * persist(). Drives incremental persistence — only the dirty slice
      * (history[max(0, watermark - 1) ..]) is upserted. 0 for a freshly-created machine.
      * Transient — not persisted.
+     *
+     * Only restoreStateFromRootEventId() sets it. Any State built another way (a fresh
+     * machine, or a scenario/job re-hydration that bypasses restore) keeps it at 0, so that
+     * instance's next persist() writes the full history — correct, just not incremental.
      */
     public int $persistedEventCount = 0;
 
