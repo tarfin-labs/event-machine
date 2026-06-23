@@ -244,7 +244,6 @@ class ChildMachineJob implements ShouldQueue
             parentMachineClass: $this->parentMachineClass,
             parentStateId: $this->parentStateId,
             childMachineClass: $this->childMachineClass,
-            childRootEventId: null,
             success: false,
             errorMessage: $exception->getMessage(),
             errorCode: $exception->getCode(),
