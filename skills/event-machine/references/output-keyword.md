@@ -12,6 +12,10 @@ This sheet is the quick lookup. Full reference: `docs/behaviors/outputs.md` and 
 | **(2) On a state with `'machine' =>`** (delegation) | Filters/transforms the **child's** final context exposed to `@done` | ✗ No — operates on child, not on this state | array filter / closure / OutputBehavior class / MachineOutput DTO |
 | **(3) On an endpoint config** | Shapes HTTP response (any state, not just final) | ✗ No | array filter / closure / OutputBehavior class |
 
+> **Reads reuse semantic (3).** A read route's `output` shapes its HTTP response with the same
+> parsing as an endpoint's `output` — a string or behavior tuple runs an `OutputBehavior`, a
+> plain context-key list filters context, and `null` falls back to `$machine->output()`. See
+> `docs/laravel-integration/reads.md`.
 All three share the same **format syntax**, but they answer different questions:
 
 - (1) "What does my machine return?"

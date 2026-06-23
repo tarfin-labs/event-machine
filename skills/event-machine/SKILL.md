@@ -166,7 +166,8 @@ class IsRetailerAuthorizedGuard extends GuardBehavior {
 5. **Don't put transition logic in actions** — use guards to decide IF a transition fires, actions for side effects AFTER it fires.
 6. **Don't share context keys across parallel regions** — last-writer-wins silently. Each region owns its keys.
 7. **Don't use a self-loop to reset a timer** — self-loops preserve `state_entered_at` by design. To express "deadline resets on event X", model X as a transition through a transit state. See [Renewable Timers](docs/best-practices/time-based-patterns.md#renewable-timers-sliding-windows).
-
+7. **Don't use a self-loop to reset a timer** — self-loops preserve `state_entered_at` by design. To express "deadline resets on event X", model X as a transition through a transit state. See [Renewable Timers](docs/best-practices/time-based-patterns.md#renewable-timers-sliding-windows).
+8. **Don't model a read/status poll as a targetless event** — use [`reads`](docs/laravel-integration/reads.md). Read-as-event runs the full `send()`/`persist()` pipeline and appends rows on every poll, bloating `machine_events` until the persist placeholder ceiling wedges the machine. A read is a query, not an event.
 ---
 
 ## 3. Core Concepts
@@ -438,6 +439,31 @@ MachineRouter::register(OrderMachine::class, [
     'modelFor' => ['SUBMIT', 'APPROVE', 'CANCEL'],
 ]);
 ```
+
+### Reads (read-only projections)
+
+`endpoints` are **commands** (send events, write history). `reads` are **queries** —
+zero-write, GET-only projections of a machine's current state. A read restores the machine and
+returns the standard envelope; it never constructs an event, never calls `send()`/`persist()`,
+never locks, never writes a row. **A read is NOT an event** — never model a status poll or
+"resume" fetch as a targetless event (that bloats `machine_events` and can wedge the machine).
+
+```php
+MachineRouter::register(OrderMachine::class, [
+    'prefix' => 'orders',
+    'reads'  => [
+        'status' => null,                               // GET orders/{machineId}/status
+        'resume' => ['output' => ResumeOutput::class],  // GET orders/{machineId}/resume (shaped)
+    ],
+]);
+```
+
+- Forms: `reads => true` (single default `status`) | associative map (key = URI suffix).
+- Always machineId-bound: `GET {prefix}/{machineId}/{uri}`.
+- Options: `uri`, `output`, `middleware`, `status`, `available_events` (`action`/`method`/unknown keys throw).
+- `output` shapes the response exactly like an endpoint's `output` (context-key list, OutputBehavior, or `null` fallback).
+
+Full reference: `docs/laravel-integration/reads.md`.
 
 ### Artisan commands
 
@@ -732,6 +758,7 @@ All paths relative to `docs/advanced/` unless otherwise specified.
 | **Eloquent integration** | `docs/laravel-integration/eloquent-integration.md` |
 | **Persistence** | `docs/laravel-integration/persistence.md` |
 | **HTTP endpoints** | `docs/laravel-integration/endpoints.md` |
+| **Reads (read-only projections)** | `docs/laravel-integration/reads.md` |
 | **Available events (framework)** | `docs/laravel-integration/available-events.md` |
 | **Archival** | `docs/laravel-integration/archival.md` |
 | **Compression** | `docs/laravel-integration/compression.md` |
