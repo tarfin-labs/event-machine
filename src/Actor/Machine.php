@@ -739,7 +739,11 @@ class Machine implements Castable, JsonSerializable, Stringable
         $firstState = $this->definition->idMap[$machineValue[0]] ?? null;
 
         if ($firstState === null) {
-            return $this->definition->root;
+            // Foreign / unknown machine_value (e.g. a parallel value that belongs to a
+            // different machine definition). Throw so callers map it to 404 uniformly.
+            throw RestoringStateException::build(
+                "Machine state '{$machineValue[0]}' does not belong to this machine definition."
+            );
         }
 
         // Walk up the tree to find a parallel ancestor

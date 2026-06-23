@@ -200,6 +200,7 @@ class MachineRouter
         // Read routes are GET and machineId-bound (/{machineId}{uri}); they can only
         // collide with a GET machineId-bound endpoint of the same resolved path. Compare
         // on exact (method, path) within this registration's group — fail fast.
+        $fwdAreMachineIdBound = $model === null || $attribute === null;
         foreach ($reads as $read) {
             foreach ($endpoints as $eventType => $endpoint) {
                 if (
@@ -208,6 +209,15 @@ class MachineRouter
                     && $endpoint->uri === $read->uri
                 ) {
                     throw InvalidRouterConfigException::readRouteCollision('GET', "/{machineId}{$read->uri}");
+                }
+            }
+
+            // Forwarded endpoints are machineId-bound when the registration has no model binding.
+            if ($fwdAreMachineIdBound) {
+                foreach ($forwardedEndpoints as $fwdEndpoint) {
+                    if ($fwdEndpoint->method === 'GET' && $fwdEndpoint->uri === $read->uri) {
+                        throw InvalidRouterConfigException::readRouteCollision('GET', "/{machineId}{$read->uri}");
+                    }
                 }
             }
         }

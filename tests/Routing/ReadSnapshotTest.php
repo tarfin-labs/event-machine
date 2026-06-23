@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Routing\MachineRouter;
+use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Exceptions\InvalidRouterConfigException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Reads\ReadsMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\GetEndpoint\GetEndpointMachine;
@@ -144,4 +145,23 @@ test('a machineId belonging to a different machine class returns 404', function 
 
     // Restoring a ReadsMachine id under GetEndpointMachine → idMap miss → 404.
     $this->getJson("/api/other/{$id}/status")->assertStatus(404);
+});
+
+test('a read of an archived machine restores transparently and returns 200', function (): void {
+    config([
+        'machine.archival.enabled'                => true,
+        'machine.archival.level'                  => 6,
+        'machine.archival.days_inactive'          => 30,
+        'machine.archival.restore_cooldown_hours' => 24,
+    ]);
+
+    $id = makeReadsInstance();
+
+    app(ArchiveService::class)->archiveMachine($id);
+    expect(MachineEvent::where('root_event_id', $id)->count())->toBe(0); // moved to the archive
+
+    $response = $this->getJson("/api/reads/{$id}/status");
+
+    $response->assertStatus(200);
+    expect($response->json('data.state'))->toBe(['reads_machine.pending']);
 });
