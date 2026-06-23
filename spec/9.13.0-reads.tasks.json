@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "spec": "spec/9.12.0-reads.md",
+  "spec": "spec/9.13.0-reads.md",
   "created_at": "0001-01-01T00:00:00Z",
   "updated_at": "2026-06-23T08:24:56.365587Z",
   "workflow": {
@@ -11,7 +11,7 @@
     "total_sections": 21,
     "mapped_sections": 15,
     "context_only": [
-      "# 9.12.0 — `reads` (read-only HTTP projections) + persist write-path hardening",
+      "# 9.13.0 — `reads` (read-only HTTP projections) + persist write-path hardening",
       "## Motivation",
       "## Concept",
       "## Backward Compatibility \u0026 Migration",
