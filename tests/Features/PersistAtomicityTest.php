@@ -23,7 +23,7 @@ test('a persist failure for a transactional event rolls back the action DB write
     $threw = false;
     try {
         $machine->send(new GoEvent()); // transactional: transition (probe insert) + persist (fails)
-    } catch (\Throwable) {
+    } catch (Throwable) {
         $threw = true;
     }
 

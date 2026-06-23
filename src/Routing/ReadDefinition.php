@@ -19,7 +19,7 @@ use Tarfinlabs\EventMachine\Exceptions\InvalidRouterConfigException;
 class ReadDefinition
 {
     /** @var array<int, string> */
-    private const RECOGNIZED_KEYS = ['uri', 'output', 'middleware', 'status', 'available_events'];
+    private const array RECOGNIZED_KEYS = ['uri', 'output', 'middleware', 'status', 'available_events'];
 
     /**
      * @param  null|string|array<int|string, mixed>  $output

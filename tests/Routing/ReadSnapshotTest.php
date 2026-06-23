@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Tarfinlabs\EventMachine\Models\MachineEvent;
 use Tarfinlabs\EventMachine\Routing\MachineRouter;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Reads\ReadsMachine;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Reads\ReadSummaryOutput;
 use Tarfinlabs\EventMachine\Exceptions\InvalidRouterConfigException;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Reads\ReadsMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\GetEndpoint\GetEndpointMachine;
 
 beforeEach(function (): void {
@@ -101,7 +101,7 @@ test('a read is zero-write — no new machine_events and no lock row', function 
     $after = MachineEvent::count();
 
     expect($after)->toBe($before);
-    expect(\Illuminate\Support\Facades\DB::table('machine_locks')->count())->toBe(0);
+    expect(DB::table('machine_locks')->count())->toBe(0);
 });
 
 // === Output shaping ===

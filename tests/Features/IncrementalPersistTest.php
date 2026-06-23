@@ -10,8 +10,8 @@ test('persist upserts only the dirty slice, not the whole history', function ():
     $machine->send('SUBMIT');               // persists start + submit events
     $rootId = $machine->state->history->first()->root_event_id;
 
-    $restored    = ReadsMachine::create(state: $rootId);
-    $restoredIds = $restored->state->history->pluck('id')->all();
+    $restored     = ReadsMachine::create(state: $rootId);
+    $restoredIds  = $restored->state->history->pluck('id')->all();
     $previousTail = $restored->state->history->last()->id;
 
     DB::flushQueryLog();

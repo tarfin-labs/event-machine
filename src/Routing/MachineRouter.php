@@ -53,10 +53,10 @@ class MachineRouter
         /** @var array<string, null|string|array<string, mixed>> $readsOption */
         $readsOption = is_array($readsOption) ? $readsOption : [];
 
-        $reads = [];
+        $reads        = [];
         $seenReadUris = [];
         foreach ($readsOption as $readKey => $readConfig) {
-            $read = ReadDefinition::fromConfig((string) $readKey, $readConfig);
+            $read = ReadDefinition::fromConfig($readKey, $readConfig);
 
             if (in_array($read->uri, $seenReadUris, true)) {
                 throw InvalidRouterConfigException::duplicateReadUri($read->uri);
@@ -245,7 +245,7 @@ class MachineRouter
                         $handler  = 'handleStateless';
                     }
 
-                    $routeName = "{$namePrefix}.".strtolower($eventType);
+                    $routeName = "{$namePrefix}.".strtolower((string) $eventType);
 
                     $defaults = [
                         '_machine_class'    => $machineClass,
@@ -303,7 +303,7 @@ class MachineRouter
                         $fwdRouteUri,
                         [MachineController::class, $fwdHandler]
                     )
-                        ->name("{$namePrefix}.".strtolower($eventType))
+                        ->name("{$namePrefix}.".strtolower((string) $eventType))
                         ->middleware($fwdEndpoint->middleware)
                         ->setDefaults($fwdDefaults);
                 }

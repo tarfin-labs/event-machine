@@ -23,11 +23,11 @@ use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioFailedException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
 use Tarfinlabs\EventMachine\Exceptions\MachineOutputInjectionException;
-use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 
 class MachineController extends Controller
 {
@@ -97,6 +97,7 @@ class MachineController extends Controller
 
         return $this->buildResponse($machine->state, $machine, outputKey: null, statusCode: 201);
     }
+
     /**
      * Read-only projection handler ("reads" — the query side).
      * Route: GET /{machineId}/{uri}.
@@ -137,7 +138,6 @@ class MachineController extends Controller
             isProcessing: false,
         );
     }
-
 
     /**
      * Shared endpoint handler — extracts route defaults and runs the endpoint lifecycle.
