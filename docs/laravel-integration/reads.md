@@ -58,8 +58,9 @@ When a read's value is an options array:
 | `status` | `int` | `200` | HTTP status code. |
 | `available_events` | `bool \| null` | `null` | `null`/`true` include `availableEvents`; `false` omits the key. |
 
-`action` and `method` are rejected — reads are pure and GET-only. Unknown keys, empty/`/`/
-placeholder URIs, and duplicate URIs all throw `InvalidRouterConfigException` at registration.
+`action` and `method` are rejected — reads are pure and GET-only. Unknown keys, duplicate
+URIs, and invalid URIs (empty, a bare `/`, or containing a route placeholder like `{id}`) all
+throw `InvalidRouterConfigException` at registration.
 
 ## Response Envelope
 
