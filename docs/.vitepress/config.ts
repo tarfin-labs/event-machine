@@ -177,6 +177,7 @@ export default withMermaid(
             { text: 'Eloquent Integration', link: '/laravel-integration/eloquent-integration' },
             { text: 'Persistence', link: '/laravel-integration/persistence' },
             { text: 'Endpoints', link: '/laravel-integration/endpoints' },
+            { text: 'Reads', link: '/laravel-integration/reads' },
             { text: 'Available Events', link: '/laravel-integration/available-events' },
             { text: 'Archival', link: '/laravel-integration/archival' },
             { text: 'Compression', link: '/laravel-integration/compression' },

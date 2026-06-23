@@ -319,6 +319,20 @@ EventMachine uses **deep merge** for context reconstruction:
 Arrays are **replaced**, not merged. If you need to append items, always include the full array in the context change, or store items in a nested object structure.
 :::
 
+### Write-Path Hardening
+
+Persistence writes are incremental on the **write** side too. Each `persist()` re-writes only
+the *dirty slice* of history — the newly-appended events plus the one previous-tail row that
+must be re-encoded as a diff now that it is no longer last. Rows before that are byte-identical
+to what is already stored and are left untouched. This keeps each write at `O(new + 1)` rows
+regardless of how long the history is, so a long-lived machine never approaches the database's
+prepared-statement placeholder ceiling (the failure mode that previously wedged machines with
+very large histories).
+
+Sequence numbers are assigned from `max(sequence_number) + 1` of the in-memory history rather
+than the row count, so they remain collision-free even after old rows have been pruned or
+compacted.
+
 ## Transactional Events
 
 Events can be wrapped in database transactions:
@@ -336,7 +350,10 @@ class CriticalEvent extends EventBehavior
 }
 ```
 
-If any action fails, all database changes roll back:
+If any action fails, all database changes roll back. The event's `persist()` runs **inside** the
+same transaction as the transition, so a persistence failure also rolls back the action's
+already-committed database writes — the machine's recorded state can never drift out of sync
+with its event log:
 
 <!-- doctest-attr: ignore -->
 ```php
