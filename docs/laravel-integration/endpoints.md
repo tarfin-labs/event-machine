@@ -2,6 +2,12 @@
 
 EventMachine can turn your machine events into HTTP endpoints automatically. Define endpoints in your machine, register routes with a single call, and let the framework handle controllers, request validation, and response serialization.
 
+::: tip Commands vs. queries
+`endpoints` are **commands** — they send events and write to history. To expose a machine's
+current state for **reading** (status polls, "resume" screens) without writing anything, use
+[reads](reads.md) — zero-write, GET-only projections.
+:::
+
 ## Why Endpoints?
 
 A typical Laravel application with state machines requires a controller and route for every event:

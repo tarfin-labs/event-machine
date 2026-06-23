@@ -23,6 +23,7 @@ use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 use Tarfinlabs\EventMachine\Support\BehaviorTupleParser;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Jobs\ChildMachineCompletionJob;
+use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\ScenarioFailedException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
@@ -98,6 +99,64 @@ class MachineController extends Controller
     }
 
     /**
+     * Read-only projection handler ("reads" — the query side).
+     * Route: GET /{machineId}/{uri}.
+     *
+     * Zero-write by construction: restores and reads current state; never constructs
+     * an event, never calls send()/persist(), never acquires a lock.
+     */
+    public function handleSnapshot(Request $request): JsonResponse
+    {
+        $defaults     = $request->route()->defaults;
+        $machineClass = $defaults['_machine_class'];
+        $machineId    = (string) $request->route('machineId');
+
+        try {
+            $machine = $machineClass::create(state: $machineId);
+        } catch (RestoringStateException) {
+            // Covers both "not found" and the wrong-machine-class case (idMap miss is
+            // hardened to throw RestoringStateException in restoreCurrentStateDefinition).
+            return response()->json(['message' => 'Machine not found.'], 404);
+        }
+
+        // Split the configured read output onto buildResponse()'s two parameters.
+        $outputDef                = $defaults['_read_output'] ?? null;
+        [$outputKey, $outputKeys] = $this->splitOutputDefinition($outputDef);
+
+        return $this->buildResponse(
+            state: $machine->state,
+            machine: $machine,
+            outputKey: $outputKey,
+            statusCode: $defaults['_read_status_code'] ?? 200,
+            outputKeys: $outputKeys,
+            includeAvailableEvents: $defaults['_read_available_events'] ?? true,
+            isProcessing: false,
+        );
+    }
+
+    /**
+     * Split a configured `output` definition onto buildResponse()'s two parameters.
+     *
+     * Single source of truth for the discriminator shared by handleSnapshot(),
+     * handleEndpoint(), and the forwarded-response path: a string or an inner-array
+     * behavior tuple (`[[OutputClass::class, 'param' => val]]`) → outputKey (run as an
+     * OutputBehavior); a plain context-key list → outputKeys (a context filter); null →
+     * neither (falls back to $machine->output()).
+     *
+     * @return array{0: string|array<int|string, mixed>|null, 1: array<int, string>|null}
+     */
+    private function splitOutputDefinition(mixed $outputDef): array
+    {
+        $isInnerArrayTuple = is_array($outputDef) && isset($outputDef[0]) && is_array($outputDef[0]);
+
+        $outputKey = is_string($outputDef) || $isInnerArrayTuple ? $outputDef : null;
+        /** @var array<int, string>|null $outputKeys */
+        $outputKeys = is_array($outputDef) && !$isInnerArrayTuple ? $outputDef : null;
+
+        return [$outputKey, $outputKeys];
+    }
+
+    /**
      * Shared endpoint handler — extracts route defaults and runs the endpoint lifecycle.
      */
     protected function handleEndpoint(Machine $machine, Request $request): JsonResponse
@@ -106,11 +165,8 @@ class MachineController extends Controller
 
         $event = $this->resolveEvent($machine, $defaults['_event_type'], $request);
 
-        $outputDef = $defaults['_output'] ?? null;
-        // Inner-array tuple: [[OutputClass::class, 'param' => val]] → treat as parameterized behavior
-        $isInnerArrayTuple = is_array($outputDef) && isset($outputDef[0]) && is_array($outputDef[0]);
-        $outputKey         = is_string($outputDef) || $isInnerArrayTuple ? $outputDef : null;
-        $outputKeys        = is_array($outputDef) && !$isInnerArrayTuple ? $outputDef : null;
+        $outputDef                = $defaults['_output'] ?? null;
+        [$outputKey, $outputKeys] = $this->splitOutputDefinition($outputDef);
 
         return $this->executeEndpoint(
             machine: $machine,
@@ -304,13 +360,19 @@ class MachineController extends Controller
         }
 
         $response = [
-            'id'              => $rootEventId,
-            'machineId'       => $state->currentStateDefinition->machine->id ?? null,
-            'state'           => $state->value,
-            'availableEvents' => $state->availableEvents(),
-            'output'          => $outputData,
-            'isProcessing'    => $isProcessing,
+            'id'        => $rootEventId,
+            'machineId' => $state->currentStateDefinition->machine->id ?? null,
+            'state'     => $state->value,
         ];
+
+        // Honor the includeAvailableEvents flag: null/true include availableEvents;
+        // false omits the key entirely (key absent, not present-but-empty).
+        if ($includeAvailableEvents !== false) {
+            $response['availableEvents'] = $state->availableEvents();
+        }
+
+        $response['output']       = $outputData;
+        $response['isProcessing'] = $isProcessing;
 
         if ((bool) config('machine.scenarios.enabled', false) && $machine->definition->machineClass !== null) {
             $availableScenarios = [];
@@ -573,11 +635,9 @@ class MachineController extends Controller
         bool $isProcessing = false,
         ?int $statusCodeOverride = null,
     ): JsonResponse {
-        $outputDef         = $defaults['_output'] ?? null;
-        $isInnerArrayTuple = is_array($outputDef) && isset($outputDef[0]) && is_array($outputDef[0]);
-        $outputKey         = is_string($outputDef) || $isInnerArrayTuple ? $outputDef : null;
-        $outputKeys        = is_array($outputDef) && !$isInnerArrayTuple ? $outputDef : null;
-        $statusCode        = $statusCodeOverride ?? ($defaults['_status_code'] ?? 200);
+        $outputDef                = $defaults['_output'] ?? null;
+        [$outputKey, $outputKeys] = $this->splitOutputDefinition($outputDef);
+        $statusCode               = $statusCodeOverride ?? ($defaults['_status_code'] ?? 200);
 
         $childState = $state->getForwardedChildState();
 

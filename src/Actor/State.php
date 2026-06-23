@@ -59,6 +59,20 @@ class State implements \JsonSerializable
     public ?EventBehavior $triggeringEvent = null;
 
     /**
+     * Persisted-event watermark: the number of history rows already written to the DB.
+     *
+     * Captured at restore time (count of loaded rows) and advanced after each successful
+     * persist(). Drives incremental persistence — only the dirty slice
+     * (history[max(0, watermark - 1) ..]) is upserted. 0 for a freshly-created machine.
+     * Transient — not persisted.
+     *
+     * Only restoreStateFromRootEventId() sets it. Any State built another way (a fresh
+     * machine, or a scenario/job re-hydration that bypasses restore) keeps it at 0, so that
+     * instance's next persist() writes the full history — correct, just not incremental.
+     */
+    public int $persistedEventCount = 0;
+
+    /**
      * Constructs a new instance of the class.
      *
      * @param  ContextManager  $context  The context manager instance.
@@ -179,8 +193,13 @@ class State implements \JsonSerializable
     {
         $this->currentEventBehavior = $currentEventBehavior;
 
-        $id    = Ulid::generate();
-        $count = count($this->history) + 1;
+        $id = Ulid::generate();
+        // Derive the next sequence_number from max(existing) + 1 (not the history count),
+        // so it stays collision-free after the history has been pruned/compacted. Read from
+        // the in-memory history already loaded for this macrostep — no separate query.
+        $count = $this->history->isEmpty()
+            ? 1
+            : ((int) $this->history->max('sequence_number')) + 1;
 
         $rootEventId = $this->history->first()->id ?? $id;
 

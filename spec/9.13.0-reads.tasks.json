@@ -1,0 +1,508 @@
+{
+  "version": 1,
+  "spec": "spec/9.13.0-reads.md",
+  "created_at": "0001-01-01T00:00:00Z",
+  "updated_at": "2026-06-23T08:24:56.365587Z",
+  "workflow": {
+    "review_clean_rounds": 2,
+    "audit_clean_rounds": 2
+  },
+  "coverage": {
+    "total_sections": 21,
+    "mapped_sections": 15,
+    "context_only": [
+      "# 9.13.0 — `reads` (read-only HTTP projections) + persist write-path hardening",
+      "## Motivation",
+      "## Concept",
+      "## Backward Compatibility \u0026 Migration",
+      "## Persist Write-Path Hardening",
+      "## Deliberately Not Included"
+    ],
+    "unmapped": []
+  },
+  "tasks": [
+    {
+      "id": "read-definition-vo",
+      "title": "Create ReadDefinition value object",
+      "status": "done",
+      "tags": [
+        "types"
+      ],
+      "depends_on": [],
+      "estimate_minutes": 12,
+      "acceptance": "- src/Routing/ReadDefinition.php has readonly props name/uri/output/middleware/statusCode/availableEvents\n- fromConfig normalizes null, string URI-shorthand, options array\n- defaults: output null, middleware [], statusCode 200, availableEvents null",
+      "source_sections": [
+        "## ReadDefinition Value Object",
+        "## Read Definition Options"
+      ],
+      "source_lines": "97-139",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "src/Routing/ReadDefinition.php created; fromConfig normalizes 3 forms, defaults applied (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "023d3094"
+    },
+    {
+      "id": "read-definition-validation",
+      "title": "Validate read definition config",
+      "status": "done",
+      "tags": [
+        "validation"
+      ],
+      "depends_on": [
+        "read-definition-vo"
+      ],
+      "estimate_minutes": 12,
+      "acceptance": "- fromConfig throws InvalidRouterConfigException on action/method/unrecognized key\n- URI normalized via slash-trim of uri-or-key — empty, slash-only, placeholder URIs rejected\n- multi-segment URIs allowed",
+      "source_sections": [
+        "## Read Definition Options",
+        "## Router Config Validation"
+      ],
+      "source_lines": "105-124,336-355",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "action/method/unknown-key + invalid-uri rejection; trim-normalized URI; ReadDefinitionTest 11 pass (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "023d3094"
+    },
+    {
+      "id": "build-response-available-events",
+      "title": "Honor includeAvailableEvents in buildResponse",
+      "status": "done",
+      "tags": [
+        "logic"
+      ],
+      "depends_on": [],
+      "estimate_minutes": 8,
+      "acceptance": "- buildResponse omits availableEvents key entirely when includeAvailableEvents false\n- null and true both include availableEvents\n- endpoints available_events now honored",
+      "source_sections": [
+        "## Response Envelope"
+      ],
+      "source_lines": "192-213",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "buildResponse omits availableEvents when includeAvailableEvents===false; null/true include (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "cd3aa779"
+    },
+    {
+      "id": "restore-idmap-hardening",
+      "title": "Throw RestoringStateException on idMap miss",
+      "status": "done",
+      "tags": [
+        "logic"
+      ],
+      "depends_on": [],
+      "estimate_minutes": 8,
+      "acceptance": "- restoreCurrentStateDefinition throws RestoringStateException when machine_value absent from idMap\n- foreign machineId no longer raises raw undefined-key error",
+      "source_sections": [
+        "## Error Handling"
+      ],
+      "source_lines": "236-250",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "restoreCurrentStateDefinition throws RestoringStateException on idMap miss (wrong-class 404) (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "1c87ab20"
+    },
+    {
+      "id": "handle-snapshot-controller",
+      "title": "Add handleSnapshot read handler",
+      "status": "done",
+      "tags": [
+        "logic"
+      ],
+      "depends_on": [
+        "build-response-available-events",
+        "restore-idmap-hardening"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- handleSnapshot restores via create(state:) with no send/persist/lock\n- output split mirrors handleEndpoint (string/inner-tuple outputKey, plain array outputKeys, null fallback)\n- RestoringStateException mapped to 404",
+      "source_sections": [
+        "## Controller — handleSnapshot",
+        "## Output Integration"
+      ],
+      "source_lines": "168-235",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "handleSnapshot restores read-only (no send/persist/lock), output split mirrors handleEndpoint, 404 on RestoringStateException (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "cd3aa779"
+    },
+    {
+      "id": "router-register-reads",
+      "title": "Materialize read routes in register",
+      "status": "done",
+      "tags": [
+        "wiring"
+      ],
+      "depends_on": [
+        "read-definition-vo"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- reads normalized (true to status null) — reads-only proceeds past both content guards — package:discover short-circuits\n- GET machineId-bound route with handleSnapshot, name prefix.read.name, read route defaults set\n- group plus per-read middleware applied",
+      "source_sections": [
+        "## Route Registration",
+        "## API Surface"
+      ],
+      "source_lines": "66-96,140-167",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "register() parses reads (true/assoc), relaxes both content guards, GET machineId route + name + defaults (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "cd3aa779"
+    },
+    {
+      "id": "router-reads-validation",
+      "title": "Validate read route collisions",
+      "status": "done",
+      "tags": [
+        "validation"
+      ],
+      "depends_on": [
+        "router-register-reads",
+        "read-definition-validation"
+      ],
+      "estimate_minutes": 12,
+      "acceptance": "- duplicate normalized read URIs throw InvalidRouterConfigException\n- read colliding with same-method same-path group route throws (exact method+path equality)\n- model/modelFor/machineIdFor orphan validation unaffected by reads",
+      "source_sections": [
+        "## Router Config Validation"
+      ],
+      "source_lines": "336-355",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "duplicate-uri + GET machineId collision throw; model/modelFor unaffected (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "cd3aa779"
+    },
+    {
+      "id": "incremental-persist",
+      "title": "Upsert only dirty rows in persist",
+      "status": "done",
+      "tags": [
+        "logic"
+      ],
+      "depends_on": [],
+      "estimate_minutes": 15,
+      "acceptance": "- persist upserts only history dirty slice from max(0,watermark-1) to end\n- index 0 stays full (never diffed) — previous tail downgraded full to diff\n- last-row full-snapshot invariant preserved",
+      "source_sections": [
+        "### Incremental persist"
+      ],
+      "source_lines": "364-401",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "persist upserts dirty slice array_slice(rows,max(0,watermark-1)); index0 full; last row full (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "1c87ab20"
+    },
+    {
+      "id": "persist-watermark",
+      "title": "Track persisted watermark",
+      "status": "done",
+      "tags": [
+        "logic"
+      ],
+      "depends_on": [
+        "incremental-persist"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "- watermark captured at restore as loaded-row count — 0 for fresh machine\n- watermark advanced to history count after successful persist\n- full in-memory baseline walk retained",
+      "source_sections": [
+        "### Incremental persist"
+      ],
+      "source_lines": "364-401",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "State::persistedEventCount captured at restore, advanced after persist; full baseline walk retained (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "1c87ab20"
+    },
+    {
+      "id": "persist-atomicity",
+      "title": "Persist inside transition transaction",
+      "status": "done",
+      "tags": [
+        "logic"
+      ],
+      "depends_on": [
+        "incremental-persist"
+      ],
+      "estimate_minutes": 12,
+      "acceptance": "- for isTransactional events persist runs inside the same DB transaction as transition\n- non-transactional events unchanged (unwrapped)\n- syncCurrentStates write covered by rollback boundary",
+      "source_sections": [
+        "### Persist atomicity"
+      ],
+      "source_lines": "402-427",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "transactional events run persist inside transition DB::transaction; non-transactional unchanged; PersistAtomicityTest passes (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "1c87ab20"
+    },
+    {
+      "id": "sequence-number-max",
+      "title": "Assign sequence_number from max plus one",
+      "status": "done",
+      "tags": [
+        "logic"
+      ],
+      "depends_on": [],
+      "estimate_minutes": 10,
+      "acceptance": "- new event sequence_number is max in-memory history sequence_number plus one\n- derived from loaded state history with no separate SELECT\n- contiguous histories unaffected",
+      "source_sections": [
+        "### Sequence number assignment"
+      ],
+      "source_lines": "428-443",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "setCurrentEventBehavior uses max(history)+1; SequenceNumberTest passes (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "1c87ab20"
+    },
+    {
+      "id": "test-read-definition",
+      "title": "Unit-test ReadDefinition fromConfig",
+      "status": "done",
+      "tags": [
+        "tests"
+      ],
+      "depends_on": [
+        "read-definition-validation"
+      ],
+      "estimate_minutes": 12,
+      "acceptance": "- tests cover null/string/array value forms and defaults\n- action/method/unknown-key/invalid-uri rejection asserted",
+      "source_sections": [
+        "## Testing"
+      ],
+      "source_lines": "299-335",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "tests/Routing/ReadDefinitionTest.php — 11 tests pass (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "78773f32"
+    },
+    {
+      "id": "test-router-reads",
+      "title": "Test reads route registration",
+      "status": "done",
+      "tags": [
+        "tests"
+      ],
+      "depends_on": [
+        "router-reads-validation"
+      ],
+      "estimate_minutes": 14,
+      "acceptance": "- reads-true and associative forms register GET routes with correct names plus machineId binding\n- reads-only registration registers routes\n- colliding GET read versus endpoint throws",
+      "source_sections": [
+        "## Testing"
+      ],
+      "source_lines": "299-335",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "ReadSnapshotTest registration cases (true/assoc/reads-only/collision/duplicate) pass (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "78773f32"
+    },
+    {
+      "id": "test-handle-snapshot",
+      "title": "Feature-test reads endpoint",
+      "status": "done",
+      "tags": [
+        "tests"
+      ],
+      "depends_on": [
+        "handle-snapshot-controller",
+        "router-register-reads"
+      ],
+      "estimate_minutes": 12,
+      "acceptance": "- read returns envelope state/availableEvents/output with isProcessing false\n- zero-write on active machine (no machine_events rows, no lock row)\n- archived machine read returns 200 via transparent restore",
+      "source_sections": [
+        "## Testing"
+      ],
+      "source_lines": "299-335",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "ReadSnapshotTest envelope + zero-write + archived pass (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "78773f32"
+    },
+    {
+      "id": "test-read-output-shaping",
+      "title": "Test read response shaping",
+      "status": "done",
+      "tags": [
+        "tests"
+      ],
+      "depends_on": [
+        "handle-snapshot-controller"
+      ],
+      "estimate_minutes": 12,
+      "acceptance": "- output routing: context-key list via outputKeys — OutputBehavior/tuple via outputKey — null fallback\n- available_events false omits availableEvents key\n- unknown machineId and wrong-class machineId return 404",
+      "source_sections": [
+        "## Testing"
+      ],
+      "source_lines": "299-335",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "ReadSnapshotTest output routing (array/OutputBehavior), available_events omit, 404 cases pass (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "78773f32"
+    },
+    {
+      "id": "test-incremental-persist",
+      "title": "Test incremental persist",
+      "status": "done",
+      "tags": [
+        "tests"
+      ],
+      "depends_on": [
+        "incremental-persist",
+        "persist-watermark"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- only dirty rows written after restore plus event (rows before previous tail untouched)\n- history over 5462 rows persists new event without QueryException — restored context matches",
+      "source_sections": [
+        "## Testing"
+      ],
+      "source_lines": "299-335",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "IncrementalPersistTest dirty-slice + round-trip pass (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "78773f32"
+    },
+    {
+      "id": "test-persist-atomicity",
+      "title": "Test persist atomicity",
+      "status": "done",
+      "tags": [
+        "tests"
+      ],
+      "depends_on": [
+        "persist-atomicity"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- forced persist failure for transactional event rolls back action DB write\n- no orphan machine_events — machine not wedged (next send succeeds)",
+      "source_sections": [
+        "## Testing"
+      ],
+      "source_lines": "299-335",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "PersistAtomicityTest forced-failure rollback passes (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "78773f32"
+    },
+    {
+      "id": "test-sequence-number",
+      "title": "Test sequence numbering",
+      "status": "done",
+      "tags": [
+        "tests"
+      ],
+      "depends_on": [
+        "sequence-number-max"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "- pruned-history append yields no duplicate sequence_number\n- new number is max plus one",
+      "source_sections": [
+        "## Testing"
+      ],
+      "source_lines": "299-335",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "SequenceNumberTest prune-safe max+1 passes (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "78773f32"
+    },
+    {
+      "id": "docs-reads-page",
+      "title": "Write reads docs page",
+      "status": "done",
+      "tags": [
+        "docs"
+      ],
+      "depends_on": [
+        "handle-snapshot-controller",
+        "router-register-reads"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- docs/laravel-integration/reads.md covers concept, API, examples, optional migration\n- cross-linked with endpoints.md command versus query",
+      "source_sections": [
+        "## Documentation"
+      ],
+      "source_lines": "265-283",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "docs/laravel-integration/reads.md created; endpoints.md cross-link; vitepress nav (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "8c1b3771"
+    },
+    {
+      "id": "docs-persistence-note",
+      "title": "Document write-path hardening",
+      "status": "done",
+      "tags": [
+        "docs"
+      ],
+      "depends_on": [
+        "incremental-persist",
+        "persist-atomicity",
+        "sequence-number-max"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "- persistence.md notes incremental persist, atomicity, max-based sequencing and rationale",
+      "source_sections": [
+        "## Documentation"
+      ],
+      "source_lines": "265-283",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "persistence.md Write-Path Hardening note + transactional persist clarification (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "8c1b3771"
+    },
+    {
+      "id": "skill-reads-update",
+      "title": "Update SKILL.md for reads",
+      "status": "done",
+      "tags": [
+        "skill"
+      ],
+      "depends_on": [
+        "docs-reads-page"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- section 6 reads subsection (query/command split, forms, zero-write, reads-not-events)\n- section 8 nav row for reads.md — section 2 anti-pattern read-as-targetless-event",
+      "source_sections": [
+        "## Agent Skill Update"
+      ],
+      "source_lines": "284-298",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "SKILL.md §6 reads subsection, §8 nav row, §2 anti-pattern (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "8221d99e"
+    },
+    {
+      "id": "skill-references-update",
+      "title": "Update skill references",
+      "status": "done",
+      "tags": [
+        "skill"
+      ],
+      "depends_on": [],
+      "estimate_minutes": 10,
+      "acceptance": "- references/INDEX.md gets routing/reads pointer\n- references/output-keyword.md notes read output as fourth place",
+      "source_sections": [
+        "## Agent Skill Update"
+      ],
+      "source_lines": "284-298",
+      "started_at": "2026-06-23T08:24:56.36542Z",
+      "closed_at": "2026-06-23T08:24:56.36542Z",
+      "closed_reason": "references/INDEX.md reads row; output-keyword.md semantic-3 note (full gate green: phpstan 0, 2656 tests pass, type coverage 100%)",
+      "gate_passed_at": "2026-06-23T08:24:56.36542Z",
+      "commit_sha": "8221d99e"
+    }
+  ]
+}

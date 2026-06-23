@@ -66,6 +66,7 @@ Use this when the user's question points to a capability, not a file. Each entry
 | Attach machine to Eloquent | `docs/laravel-integration/eloquent-integration.md` |
 | Persist & restore machines | `docs/laravel-integration/persistence.md` |
 | Auto-generate HTTP endpoints | `docs/laravel-integration/endpoints.md` |
+| Read machine state without writing (status/resume polls) | `docs/laravel-integration/reads.md` |
 | Archive old events | `docs/laravel-integration/archival.md` + `docs/laravel-integration/compression.md` |
 | Artisan commands reference | `docs/laravel-integration/artisan-commands.md` |
 | Framework lifecycle events | `docs/laravel-integration/available-events.md` |

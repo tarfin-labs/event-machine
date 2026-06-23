@@ -31,6 +31,7 @@ class MachineRouter
      *     name?: string,
      *     only?: string[],
      *     except?: string[],
+     *     reads?: bool|array<string, null|string|array<string, mixed>>,
      * }  $options  Router configuration.
      */
     public static function register(string $machineClass, array $options): void
@@ -43,7 +44,28 @@ class MachineRouter
         $endpoints          = $definition->parsedEndpoints ?? [];
         $forwardedEndpoints = $definition->forwardedEndpoints ?? [];
 
-        if ($endpoints === [] && $forwardedEndpoints === []) {
+        // Parse read-only projections ("reads" — the query side). `reads => true` is
+        // shorthand for a single default `status` read; an array maps key → read config.
+        $readsOption = $options['reads'] ?? null;
+        if ($readsOption === true) {
+            $readsOption = ['status' => null];
+        }
+        /** @var array<string, null|string|array<string, mixed>> $readsOption */
+        $readsOption = is_array($readsOption) ? $readsOption : [];
+
+        $reads        = [];
+        $seenReadUris = [];
+        foreach ($readsOption as $readKey => $readConfig) {
+            $read = ReadDefinition::fromConfig($readKey, $readConfig);
+
+            if (in_array($read->uri, $seenReadUris, true)) {
+                throw InvalidRouterConfigException::duplicateReadUri($read->uri);
+            }
+            $seenReadUris[] = $read->uri;
+            $reads[]        = $read;
+        }
+
+        if ($endpoints === [] && $forwardedEndpoints === [] && $reads === []) {
             return;
         }
 
@@ -110,7 +132,7 @@ class MachineRouter
             );
         }
 
-        if ($endpoints === [] && $forwardedEndpoints === [] && !$create) {
+        if ($endpoints === [] && $forwardedEndpoints === [] && !$create && $reads === []) {
             return;
         }
 
@@ -175,11 +197,36 @@ class MachineRouter
         $middleware = $options['middleware'] ?? [];
         $namePrefix = $options['name'] ?? $definition->id;
 
+        // Read routes are GET and machineId-bound (/{machineId}{uri}); they can only
+        // collide with a GET machineId-bound endpoint of the same resolved path. Compare
+        // on exact (method, path) within this registration's group — fail fast.
+        $fwdAreMachineIdBound = $model === null || $attribute === null;
+        foreach ($reads as $read) {
+            foreach ($endpoints as $eventType => $endpoint) {
+                if (
+                    $endpoint->method === 'GET'
+                    && in_array($eventType, $machineIdFor, true)
+                    && $endpoint->uri === $read->uri
+                ) {
+                    throw InvalidRouterConfigException::readRouteCollision('GET', "/{machineId}{$read->uri}");
+                }
+            }
+
+            // Forwarded endpoints are machineId-bound when the registration has no model binding.
+            if ($fwdAreMachineIdBound) {
+                foreach ($forwardedEndpoints as $fwdEndpoint) {
+                    if ($fwdEndpoint->method === 'GET' && $fwdEndpoint->uri === $read->uri) {
+                        throw InvalidRouterConfigException::readRouteCollision('GET', "/{machineId}{$read->uri}");
+                    }
+                }
+            }
+        }
+
         Route::prefix($prefix)
             ->middleware($middleware)
             ->group(function () use (
                 $endpoints, $forwardedEndpoints, $machineClass, $model, $attribute,
-                $create, $machineIdFor, $modelFor, $namePrefix,
+                $create, $machineIdFor, $modelFor, $namePrefix, $reads,
             ): void {
                 if ($create) {
                     Route::post('/create', [MachineController::class, 'handleCreate'])
@@ -208,7 +255,7 @@ class MachineRouter
                         $handler  = 'handleStateless';
                     }
 
-                    $routeName = "{$namePrefix}.".strtolower($eventType);
+                    $routeName = "{$namePrefix}.".strtolower((string) $eventType);
 
                     $defaults = [
                         '_machine_class'    => $machineClass,
@@ -266,9 +313,23 @@ class MachineRouter
                         $fwdRouteUri,
                         [MachineController::class, $fwdHandler]
                     )
-                        ->name("{$namePrefix}.".strtolower($eventType))
+                        ->name("{$namePrefix}.".strtolower((string) $eventType))
                         ->middleware($fwdEndpoint->middleware)
                         ->setDefaults($fwdDefaults);
+                }
+
+                // Register read-only projections (queries) — GET, machineId-bound,
+                // zero-write. Handled by handleSnapshot (no send/persist/lock).
+                foreach ($reads as $read) {
+                    Route::match(['GET'], "/{machineId}{$read->uri}", [MachineController::class, 'handleSnapshot'])
+                        ->name("{$namePrefix}.read.{$read->name}")
+                        ->middleware($read->middleware)
+                        ->setDefaults([
+                            '_machine_class'         => $machineClass,
+                            '_read_output'           => $read->output,
+                            '_read_status_code'      => $read->statusCode,
+                            '_read_available_events' => $read->availableEvents,
+                        ]);
                 }
             });
     }

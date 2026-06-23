@@ -89,4 +89,49 @@ class InvalidRouterConfigException extends LogicException
             "MachineRouter: events cannot be in both 'machineIdFor' and 'modelFor': ".implode(', ', $overlap)
         );
     }
+
+    public static function forbiddenReadKey(string $key): self
+    {
+        return new self(sprintf(
+            "MachineRouter: read definition cannot contain '%s' — reads are pure GET projections (no actions, GET-only).",
+            $key,
+        ));
+    }
+
+    /**
+     * @param  array<int, string>  $recognized
+     */
+    public static function unknownReadKey(string $key, array $recognized): self
+    {
+        return new self(sprintf(
+            "MachineRouter: unknown read option '%s'. Recognized: %s.",
+            $key,
+            implode(', ', $recognized),
+        ));
+    }
+
+    public static function invalidReadUri(string $uri): self
+    {
+        return new self(sprintf(
+            "MachineRouter: invalid read URI '%s' — must be non-empty, not just '/', and contain no route placeholders ({...}).",
+            $uri,
+        ));
+    }
+
+    public static function duplicateReadUri(string $uri): self
+    {
+        return new self(sprintf(
+            "MachineRouter: duplicate read URI '%s' within one registration.",
+            $uri,
+        ));
+    }
+
+    public static function readRouteCollision(string $method, string $uri): self
+    {
+        return new self(sprintf(
+            "MachineRouter: read route %s '%s' collides with an existing endpoint route in the same group.",
+            $method,
+            $uri,
+        ));
+    }
 }
