@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\Routing\MachineRouter;
 use Tarfinlabs\EventMachine\Services\ArchiveService;
 use Tarfinlabs\EventMachine\Exceptions\InvalidRouterConfigException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Reads\ReadsMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ParallelInternalTransitionMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\GetEndpoint\GetEndpointMachine;
 
 beforeEach(function (): void {
@@ -164,4 +165,19 @@ test('a read of an archived machine restores transparently and returns 200', fun
 
     $response->assertStatus(200);
     expect($response->json('data.state'))->toBe(['reads_machine.pending']);
+});
+
+test('a read of a parallel machine id under a different class returns 404 (multi-value path)', function (): void {
+    // A parallel machine's last event has a multi-element machine_value, so restoring it under
+    // a different machine class hits restoreCurrentStateDefinition()'s parallel branch
+    // (findCommonParallelAncestor) — which must throw RestoringStateException on the idMap miss
+    // and map to 404, just like the single-value path.
+    $parallel = ParallelInternalTransitionMachine::create();
+    $parallel->persist();
+    $rootId = $parallel->state->history->first()->root_event_id;
+
+    expect(count($parallel->state->value))->toBeGreaterThan(1); // confirm multi-value
+
+    // /api/other is registered on GetEndpointMachine (a non-parallel, different class).
+    $this->getJson("/api/other/{$rootId}/status")->assertStatus(404);
 });

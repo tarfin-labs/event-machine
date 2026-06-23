@@ -17,6 +17,13 @@ A read avoids all of that **by construction**: it restores the machine, reads it
 state, and returns the standard response envelope. It never constructs an event, never calls
 `send()`/`persist()`, never acquires a lock, and never writes a row.
 
+::: tip One exception — archived machines
+The zero-write guarantee covers active machines. Reading a machine whose events have been
+moved to the archive triggers the existing transparent auto-restore, which *does* write
+(it pulls events back out of the archive). That is a property of restoration, not of the
+read itself.
+:::
+
 ## Defining Reads
 
 Reads are declared in `MachineRouter::register()`, alongside the rest of the HTTP wiring:

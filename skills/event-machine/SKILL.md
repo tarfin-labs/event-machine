@@ -445,7 +445,8 @@ MachineRouter::register(OrderMachine::class, [
 `endpoints` are **commands** (send events, write history). `reads` are **queries** —
 zero-write, GET-only projections of a machine's current state. A read restores the machine and
 returns the standard envelope; it never constructs an event, never calls `send()`/`persist()`,
-never locks, never writes a row. **A read is NOT an event** — never model a status poll or
+never locks, never writes a row (for active machines — reading an *archived* machine triggers
+the transparent restore, which writes). **A read is NOT an event** — never model a status poll or
 "resume" fetch as a targetless event (that bloats `machine_events` and can wedge the machine).
 
 ```php
