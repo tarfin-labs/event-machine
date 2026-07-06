@@ -354,30 +354,34 @@ class OrderContext extends ContextManager
 ### Entry points
 
 - `MyMachine::test($context = [])` — Boot + return `TestMachine` for fluent chain
+- `MyMachine::testIsolated($context = [])` — Preset: `test()` + `fakingAllActions()` (NOTE: `fakingAllActions(except:)` afterwards throws `LogicException` — use the long form for `except:`)
 - `MyMachine::startingAt('nested.state')` — Skip setup, jump to a specific state
+- `MyMachine::assertTransitions([['from' => ..., 'event' => ..., 'to' => ...], ...])` — Table-driven edge coverage; fresh machine per row; `'to' => null, 'guarded' => true` for blocked edges
+- `YourContext::forTesting(['order' => $order])` — Build a typed context: auto-fills `Optional` properties, sets machine identity (`test-machine-id`); overrides win. Primary tool for typed-context construction.
+  - Needs app model factories on top? Layer them in a per-machine base TestCase `context()` factory — see `docs/testing/recipes.md` § "Base TestCase for Rich Typed Contexts". Never let `makeContext`/`buildContext` copies drift per file.
 - `State::forTesting($context)` — Build a state for unit-testing a single behavior
-  - Rich typed context reused across many test files? Centralize construction in a per-machine base TestCase with one `context(array $overrides = [])` factory (single `Optional` convention) — see `docs/testing/recipes.md` § "Base TestCase for Rich Typed Contexts". Never let `makeContext`/`buildContext` copies drift per file.
-- `MyBehavior::runWithState($state, $event)` — Invoke a behavior directly; unit-level
+- `MyBehavior::runWithState($state, $event)` — Invoke a behavior directly; unit-level. First arg accepts `State`, `ContextManager`, or a plain array (auto-wrapped)
 
 ### Top assertions (expand via `docs/testing/overview.md`)
 
 - `assertState($stateName)` — Current state value matches
 - `assertInState($stateName)` — Like `assertState` but works across parallel regions
 - `assertContext($key, $value)` — Context key matches
-- `assertBehaviorRan(Class::class)` — Action/Calculator/Guard executed
+- `assertBehaviorRan(Class::class)` — Action/Calculator/Guard executed; also accepts an array of mixed FQCNs/inline keys
 - `assertGuarded($event)` — Transition blocked by a guard
 - `assertGuardedBy($event, GuardClass::class)` — Specific guard blocked it
 - `assertHasTimer($eventType)` — Timer registered for event
 - `assertFinished()` — Machine reached a final state
-- `assertRaised(ActionClass::class)` — Action raised an internal event (use `ActionClass::assertRaised()` for isolated)
+- `assertRaised(ActionClass::class)` — Action raised an internal event (use `ActionClass::assertRaised()` for isolated). Returns a fluent object: `->withPayload(['key' => $v])->withoutPayloadKey('old')->validated()` (dot-notation keys, strict `===`)
 - `advanceTimers(Timer::days(7))` — Simulate time; fires due timers
 
 ### Fakes
 
 - `faking([MyAction::class, MyGuard::class])` — Replace behaviors with inspectable spies
+- `spying([A::class, B::class])` — Batch-spy classes fluently (post-init: does NOT observe boot-time entry actions — use the pre-init `faking:` parameter for those)
 - `MyChildMachine::fake(output: new OrderOutput(...), finalState: 'completed')` — Stub child delegation
 - `MyChildMachine::assertInvoked()` / `assertInvokedWith([...])` — Verify child was called
-- `simulateChildDone/Fail/Timeout()` — Drive parent through delegation paths without running child
+- `simulateChildDone/Fail/Timeout()` — Drive parent through delegation paths without running child. `finalState` is now validated against the child's FINAL states (leaf or dotted id accepted; the done event always carries the leaf)
 - `InteractsWithMachines` trait on TestCase — Auto-resets all fakes between tests
 - `CommunicationRecorder` — Inspect `sendTo()` / `raise()` calls without side effects
 
