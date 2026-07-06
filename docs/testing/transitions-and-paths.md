@@ -105,7 +105,6 @@ Semantics:
 :::
 
 ## Hierarchical State Transitions
-## Hierarchical State Transitions
 
 Nested (compound) states are identified with dot notation, where the parent state name and child state name are joined by a dot (e.g., `checkout.shipping`). Use the same notation in `assertState()` and `assertTransition()` to target or verify any level of the hierarchy.
 
@@ -212,7 +211,6 @@ Path coverage is not package-internal tooling — wire it into your Laravel app'
 
 Start with a low `--min` and ratchet it up — turning on `assertAllPathsCovered()` for an existing machine usually surfaces genuinely untested branches (`@fail` routes, guard blocks, timeouts) rather than false gaps.
 
-### Coverage Assertions
 ### Coverage Assertions
 
 <!-- doctest-attr: ignore -->

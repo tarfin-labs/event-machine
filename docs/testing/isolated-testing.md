@@ -144,6 +144,7 @@ Semantics:
 - Events raised as plain arrays work with `withPayload()`/`withoutPayloadKey()` (payload read from the `payload` key), but `validated()` fails on them — it needs an `EventBehavior` instance.
 - A `null` payload is treated as an empty array.
 - When multiple events of the same type were raised, the fluent assertions target the first match; use `assertRaisedCount()` for total-count checks.
+
 For actions that should NOT raise any events:
 
 <!-- doctest-attr: no_run -->
