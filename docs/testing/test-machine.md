@@ -364,7 +364,11 @@ Use `simulateChild*` methods to trigger completion on a parent that is already w
 | `simulateChildTimeout(class)` | Trigger `@timeout` transition as if the child exceeded its deadline |
 
 ::: info
-The `output` parameter populates the `output()` accessor on the event, matching `Machine::fake()` behavior.
+The `output` parameter populates the `output()` accessor on the event, matching `Machine::fake()` behavior. Prefer passing a typed `MachineOutput` instance over a raw array — it is supported directly: `simulateChildDone(PaymentMachine::class, output: new PaymentOutput(id: 'pay_1'))`.
+:::
+
+::: warning finalState is validated
+For machine-delegation children, `finalState` is validated against the child definition's FINAL states — a typo or renamed child final state throws an `AssertionFailedError` listing the child's actual final states. Both the leaf name (`'approved'`) and the full dotted id (`'payment_machine.approved'`) are accepted; either way the done event carries the **leaf** key, exactly like the real completion pipeline (`@done.{state}` routing only ever sees the leaf). Job actors have no state tree, so their `finalState` is not validated.
 :::
 
 **`fakingChild()` vs `simulateChildDone()`:**
