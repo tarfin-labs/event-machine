@@ -167,6 +167,9 @@ class IsRetailerAuthorizedGuard extends GuardBehavior {
 6. **Don't share context keys across parallel regions** — last-writer-wins silently. Each region owns its keys.
 7. **Don't use a self-loop to reset a timer** — self-loops preserve `state_entered_at` by design. To express "deadline resets on event X", model X as a transition through a transit state. See [Renewable Timers](docs/best-practices/time-based-patterns.md#renewable-timers-sliding-windows).
 8. **Don't model a read/status poll as a targetless event** — use [`reads`](docs/laravel-integration/reads.md). Read-as-event runs the full `send()`/`persist()` pipeline and appends rows on every poll, bloating `machine_events` until the persist placeholder ceiling wedges the machine. A read is a query, not an event.
+9. **Don't rebuild machine regions with `TestMachine::define(config: [...])` to start a test deep** — use `MyMachine::startingAt('parent.region.state')`. Hand-copied region configs silently rot when the real machine changes.
+10. **Don't assert full dotted state paths via `$machine->state()->matches('a.b.c')` + `assertTrue`** — use `->assertState('leaf_or_dotted')`; it self-documents failures and feeds path coverage.
+11. **`simulateChildDone()` validates `finalState` against the child definition** — a renamed/typo'd child final state now fails the parent's test (intended, bug-revealing). Leaf name or dotted id accepted; routing always sees the leaf.
 ---
 
 ## 3. Core Concepts
