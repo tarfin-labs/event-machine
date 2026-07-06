@@ -507,7 +507,29 @@ VerificationMachine::startingAt(
 ->assertState('verifying');
 ```
 
-`startingAt()` creates the machine at the given state without running any lifecycle (no entry actions, no `@always`, no job dispatch). The machine uses the real definition — all transitions, guards, and actions are available.
+`startingAt()` creates the machine at the given state without running any lifecycle (no entry actions, no `@always`, no job dispatch). The machine uses the real definition — all transitions, guards, and actions are available. The state id may be a leaf name, a machine-relative dotted path (`'parent.region.leaf'`), or the full id.
+
+### Parallel states
+
+Starting at a parallel state activates **every region at its initial leaf** — matching real parallel-entry semantics — so region events route and `@done` fires when all regions reach their finals. Starting at a leaf (or region) **inside** one region anchors the machine on the parallel parent and initializes all sibling regions at their initial leaves:
+
+<!-- doctest-attr: ignore -->
+```php
+// Parallel parent: both regions live at their initials
+OrderMachine::startingAt('data_collection')          // ['...product.awaiting_selection', '...customer_info.awaiting']
+    ->send(ProductSelectedEvent::forTesting())
+    ->send(CustomerInfoSubmittedEvent::forTesting())
+    ->send(ApplicationSubmittedEvent::forTesting())   // gating guard sees both regions final
+    ->assertState('submitted');
+
+// Leaf inside one region: siblings auto-initialize
+OrderMachine::startingAt('data_collection.product.product_selected')
+    ->send(CustomerInfoSubmittedEvent::forTesting())  // sibling region is live
+    ->send(ApplicationSubmittedEvent::forTesting())
+    ->assertState('submitted');
+```
+
+No more hand-copied region configs to test parallel gating — use the real definition.
 
 ::: tip When to use startingAt() vs withContext()
 - **`withContext()`** — tests the full path from initial state. Entry actions and `@always` run. Use for integration tests that validate the complete flow.
