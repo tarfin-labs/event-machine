@@ -447,6 +447,50 @@ VerificationMachine::test(
 - `guards:` — sets guard return values (`$class::shouldReturn($value)`)
 - `faking:` — spies behavior classes (`$class::spy()`) — prevents real side effects during init
 
+### Batch Spying — spying()
+
+Spy several class-based behaviors in one fluent call instead of N consecutive `SomeAction::spy();` lines:
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->spying([BroadcastStateAction::class, StoreTcknAction::class, StoreCustomerPhoneAction::class])
+    ->send('SUBMIT')
+    ->assertBehaviorRan([StoreTcknAction::class, StoreCustomerPhoneAction::class]);
+```
+
+- Accepts only `InvokableBehavior` subclass FQCNs — inline behavior keys throw `InvalidArgumentException` with a hint to use `InlineBehaviorFake::spy('key')`; an empty array also throws.
+- **Timing**: `spying()` applies AFTER machine initialization — it does NOT observe initial-state entry actions or `@always` chains fired during boot. Use the pre-init `faking:` parameter of `test()`/`startingAt()` when boot-time behaviors must be observed.
+- `spy()` is idempotent — spying a class already spied (e.g. by `fakingAllActions()`) is a harmless no-op.
+
+### Isolated Preset — testIsolated()
+
+`Machine::testIsolated()` bundles the most common isolated-test opener — exactly equivalent to `test($context, faking: $faking)->fakingAllActions()` (persistence is already disabled by `test()`):
+
+<!-- doctest-attr: ignore -->
+```php
+// Before:
+$machine = OrderMachine::test()->withoutPersistence()->fakingAllActions()->send('SUBMIT');
+
+// After:
+$machine = OrderMachine::testIsolated()->send('SUBMIT');
+```
+
+::: warning except: needs the long form
+`fakingAllActions(except:)` with a non-empty `except:` list throws `LogicException` after `testIsolated()` — the preset already spied all actions and spies cannot be selectively undone. Tests needing `except:` must use the long form `test()->fakingAllActions(except: [...])`.
+:::
+
+## Transition Table Assertions
+
+`Machine::assertTransitions()` verifies a state×event→target table — one machine boot per row via `startingAt()`, formalizing the one-edge-per-test pattern. See [Testing Transitions & Paths](/testing/transitions-and-paths#table-driven-transition-testing) for the full reference:
+
+<!-- doctest-attr: ignore -->
+```php
+FindeksMachine::assertTransitions([
+    ['from' => 'findeks.report_retrieval.syncing_phones',  'event' => 'PHONES_SYNCED',   'to' => 'findeks.report_retrieval.checking_consent'],
+    ['from' => 'findeks.awaiting_consent',                  'event' => 'RETRY_REQUESTED', 'to' => null, 'guarded' => true],
+], context: ['tckn' => '12345678901'], faking: [StorePhonesAction::class]);
+```
 ## Starting at a Specific State
 
 Skip path replay and start the machine at any state:
