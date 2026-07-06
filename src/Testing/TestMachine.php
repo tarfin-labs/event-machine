@@ -2111,6 +2111,48 @@ class TestMachine
     }
 
     /**
+     * Validate a simulated finalState against the child machine's FINAL states
+     * and normalize it to the LEAF key the real completion pipeline carries.
+     *
+     * Accepts either the leaf state name or a full dotted id. A bare leaf name
+     * matches ANY final state with that leaf; a dotted id must match a specific
+     * final state's full id. Routing (@done.{state}) only ever sees the leaf.
+     *
+     * @param  class-string<Machine>  $childClass
+     */
+    private function validateChildFinalState(string $childClass, string $finalState): string
+    {
+        $childDefinition = $childClass::definition();
+
+        if (!$childDefinition instanceof MachineDefinition) {
+            throw new AssertionFailedError(
+                "Cannot validate finalState: [{$childClass}] does not expose a machine definition."
+            );
+        }
+
+        /** @var array<string, string> $finalStates full dotted id => leaf key */
+        $finalStates = [];
+        foreach ($childDefinition->idMap as $id => $childStateDefinition) {
+            if ($childStateDefinition->type === StateDefinitionType::FINAL) {
+                $finalStates[(string) $id] = (string) $childStateDefinition->key;
+            }
+        }
+
+        if (isset($finalStates[$finalState])) {
+            return $finalStates[$finalState];
+        }
+
+        if (in_array($finalState, $finalStates, true)) {
+            return $finalState;
+        }
+
+        throw new AssertionFailedError(
+            "Cannot simulate child done: [{$finalState}] is not a final state of [{$childClass}]. "
+            .'Final states: ['.implode(', ', array_keys($finalStates)).'].'
+        );
+    }
+
+    /**
      * Simulate async child completion without real queues.
      *
      * Works for both machine delegation (`machine:` key) and job actors (`job:` key).
@@ -2134,6 +2176,9 @@ class TestMachine
             );
         }
 
+        if ($finalState !== null && is_subclass_of($childClass, Machine::class)) {
+            $finalState = $this->validateChildFinalState($childClass, $finalState);
+        }
         $this->machine->state->setInternalEventBehavior(
             type: InternalEvent::CHILD_MACHINE_DONE,
             placeholder: $childClass,
