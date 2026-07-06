@@ -57,6 +57,9 @@ class TestMachine
     /** @var string|null Last tracked state ID for detecting transitions (in-memory timer mode) */
     private ?string $lastTrackedStateId = null;
 
+    /** Whether fakingAllActions() has already been applied (e.g. by testIsolated()). */
+    private bool $allActionsFaked = false;
+
     private function __construct(Machine $machine)
     {
         $this->machine = $machine;
@@ -337,6 +340,16 @@ class TestMachine
      */
     public function fakingAllActions(array $except = []): self
     {
+        if ($this->allActionsFaked && $except !== []) {
+            throw new \LogicException(
+                'fakingAllActions(except:) cannot be applied after all actions were already faked '
+                .'(e.g. by testIsolated()) — already-applied spies cannot be selectively undone. '
+                .'Use the long form MyMachine::test()->fakingAllActions(except: [...]) instead.'
+            );
+        }
+
+        $this->allActionsFaked = true;
+
         return $this->fakingAllOfType('actions', $except);
     }
 

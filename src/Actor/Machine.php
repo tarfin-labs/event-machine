@@ -239,6 +239,39 @@ class Machine implements Castable, JsonSerializable, Stringable
     }
 
     /**
+     * Create a fully isolated TestMachine: all class-based actions faked, no persistence.
+     *
+     * Exactly equivalent to `static::test($context, faking: $faking)->fakingAllActions()`
+     * (persistence is already disabled by test()). NOTE: `fakingAllActions(except:)`
+     * cannot be applied afterwards — already-applied spies cannot be selectively
+     * undone; use the long form `test()->fakingAllActions(except: [...])` instead.
+     *
+     * @param  array<string, mixed>  $context  Context values to inject before machine start.
+     * @param  array<class-string>  $faking  Behavior classes to spy before init (observes boot-time behaviors).
+     */
+    public static function testIsolated(array $context = [], array $faking = []): TestMachine
+    {
+        return static::test($context, faking: $faking)->fakingAllActions();
+    }
+
+    /**
+     * Verify a state×event→target transition table.
+     *
+     * Boots a fresh machine at each row's `from` state via startingAt(), sends the
+     * event, and asserts the resulting state. Rows run in order; the first failing
+     * row fails the test. Guarded rows (`guarded: true`, `to: null`) assert the
+     * transition was blocked instead.
+     *
+     * @param  array<int, array{from: string, event: string|array<string, mixed>|EventBehavior, to: string|null, context?: array<string, mixed>, guarded?: bool}>  $table
+     * @param  array<string, mixed>  $context  Shared default context for all rows.
+     * @param  array<int, class-string>  $faking  Behaviors to fake for all rows.
+     */
+    public static function assertTransitions(array $table, array $context = [], array $faking = []): void
+    {
+        TestMachine::assertTransitionTable(static::class, $table, $context, $faking);
+    }
+
+    /**
      * Starts the machine with the specified state.
      *
      * This method starts the machine with the given state. If no state is provided,
