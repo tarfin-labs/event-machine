@@ -404,6 +404,205 @@ class TestMachine
     }
 
     /**
+     * Spy multiple class-based behaviors at once.
+     *
+     * Applies AFTER machine initialization — boot-time entry actions and
+     *
+     * @always chains fired during boot are NOT observed. Use the pre-init
+     * `faking:` parameter of test()/startingAt() to observe those.
+     *
+     * @param  array<int, class-string<InvokableBehavior>>  $behaviorClasses
+     */
+    public function spying(array $behaviorClasses): self
+    {
+        if ($behaviorClasses === []) {
+            throw new \InvalidArgumentException(
+                'spying([]) spies nothing — pass at least one InvokableBehavior class.'
+            );
+        }
+
+        foreach ($behaviorClasses as $behaviorClass) {
+            self::validateSpyableEntry($behaviorClass, 'spying');
+
+            $behaviorClass::spy();
+            $this->fakedBehaviors[] = $behaviorClass;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Validate an entry passed to spying() / assertTransitions(faking:).
+     *
+     * @throws \InvalidArgumentException When the entry is not an InvokableBehavior subclass FQCN.
+     */
+    private static function validateSpyableEntry(mixed $entry, string $method): void
+    {
+        if (is_string($entry) && is_subclass_of($entry, InvokableBehavior::class)) {
+            return;
+        }
+
+        $described = is_string($entry) ? $entry : get_debug_type($entry);
+
+        throw new \InvalidArgumentException(
+            "{$method}() accepts only InvokableBehavior subclass FQCNs; got [{$described}]. "
+            ."For inline behaviors use InlineBehaviorFake::spy('key')."
+        );
+    }
+
+    /**
+     * Verify a state×event→target transition table for a machine class.
+     *
+     * @internal Use Machine::assertTransitions() instead.
+     *
+     * @param  class-string<Machine>  $machineClass
+     * @param  array<int, array{from: string, event: string|array<string, mixed>|EventBehavior, to: string|null, context?: array<string, mixed>, guarded?: bool}>  $table
+     * @param  array<string, mixed>  $sharedContext
+     * @param  array<int, class-string>  $faking
+     */
+    public static function assertTransitionTable(string $machineClass, array $table, array $sharedContext = [], array $faking = []): void
+    {
+        self::validateTransitionTable($table, $faking);
+
+        foreach ($table as $index => $row) {
+            $guarded    = $row['guarded'] ?? false;
+            $rowContext = array_replace($sharedContext, $row['context'] ?? []);
+            $eventLabel = self::describeRowEvent($row['event']);
+
+            $testMachine = self::startingAt($machineClass, $row['from'], $rowContext, [], $faking);
+
+            try {
+                $testMachine->send($row['event']);
+            } catch (NoTransitionDefinitionFoundException) {
+                Assert::fail(
+                    "Row {$index}: event [{$eventLabel}] is not handled from state [{$row['from']}]."
+                );
+            } catch (MachineValidationException $exception) {
+                if (!$guarded) {
+                    Assert::fail(
+                        "Row {$index}: transition for [{$eventLabel}] from [{$row['from']}] was rejected by a validation guard: {$exception->getMessage()}"
+                    );
+                }
+
+                self::assertRowRemainedIn($testMachine, $index, $row['from'], $eventLabel);
+
+                continue;
+            }
+
+            $transitionFailed = $testMachine->state()->history->contains(
+                fn (mixed $event): bool => str_contains($event->type, '.transition.') && str_ends_with($event->type, '.fail')
+            );
+
+            if ($guarded) {
+                Assert::assertTrue(
+                    $transitionFailed,
+                    "Row {$index}: expected transition for [{$eventLabel}] from [{$row['from']}] to be blocked, "
+                    .'but machine moved to ['.implode(', ', $testMachine->state()->value).'].'
+                );
+
+                self::assertRowRemainedIn($testMachine, $index, $row['from'], $eventLabel);
+
+                continue;
+            }
+
+            if ($transitionFailed) {
+                Assert::fail(
+                    "Row {$index}: transition for [{$eventLabel}] from [{$row['from']}] was blocked by a guard "
+                    .'— expected it to reach ['.$row['to'].']. Use guarded: true for rows that must be blocked.'
+                );
+            }
+
+            try {
+                $testMachine->assertState($row['to']);
+            } catch (AssertionFailedError $error) {
+                Assert::fail(
+                    "Row {$index}: expected [{$row['from']}] --[{$eventLabel}]--> [{$row['to']}]. {$error->getMessage()}"
+                );
+            }
+        }
+    }
+
+    /**
+     * Up-front row-shape validation for assertTransitionTable().
+     *
+     * @param  array<int, mixed>  $table
+     * @param  array<int, mixed>  $faking
+     */
+    private static function validateTransitionTable(array $table, array $faking): void
+    {
+        if ($table === []) {
+            throw new \InvalidArgumentException('assertTransitions() requires at least one row.');
+        }
+
+        foreach ($faking as $entry) {
+            self::validateSpyableEntry($entry, 'assertTransitions');
+        }
+
+        foreach ($table as $index => $row) {
+            if (!is_array($row)) {
+                throw new \InvalidArgumentException("assertTransitions() row {$index} must be an array.");
+            }
+
+            foreach (['from', 'event', 'to'] as $requiredKey) {
+                if (!array_key_exists($requiredKey, $row)) {
+                    throw new \InvalidArgumentException("assertTransitions() row {$index} is missing the [{$requiredKey}] key.");
+                }
+            }
+
+            if (!is_string($row['from']) || $row['from'] === '') {
+                throw new \InvalidArgumentException("assertTransitions() row {$index}: [from] must be a non-empty state id string.");
+            }
+
+            if (!is_string($row['event']) && !is_array($row['event']) && !$row['event'] instanceof EventBehavior) {
+                throw new \InvalidArgumentException("assertTransitions() row {$index}: [event] must be a string, array, or EventBehavior.");
+            }
+
+            $guarded = $row['guarded'] ?? false;
+            if (!is_bool($guarded)) {
+                throw new \InvalidArgumentException("assertTransitions() row {$index}: [guarded] must be a boolean.");
+            }
+
+            if ($guarded && $row['to'] !== null) {
+                throw new \InvalidArgumentException("assertTransitions() row {$index}: guarded rows must use [to => null].");
+            }
+
+            if (!$guarded && !is_string($row['to'])) {
+                throw new \InvalidArgumentException("assertTransitions() row {$index}: [to => null] requires [guarded => true].");
+            }
+
+            if (isset($row['context']) && !is_array($row['context'])) {
+                throw new \InvalidArgumentException("assertTransitions() row {$index}: [context] must be an array.");
+            }
+        }
+    }
+
+    /**
+     * Assert a blocked row's machine remained in its starting state.
+     */
+    private static function assertRowRemainedIn(self $testMachine, int $index, string $from, string $eventLabel): void
+    {
+        Assert::assertTrue(
+            $testMachine->state()->matches($from),
+            "Row {$index}: transition for [{$eventLabel}] was blocked but machine left [{$from}] "
+            .'and is now in ['.implode(', ', $testMachine->state()->value).'].'
+        );
+    }
+
+    /**
+     * Human-readable event label for assertTransitions() failure messages.
+     *
+     * @param  string|array<string, mixed>|EventBehavior  $event
+     */
+    private static function describeRowEvent(string|array|EventBehavior $event): string
+    {
+        return match (true) {
+            is_string($event)               => $event,
+            $event instanceof EventBehavior => $event->type,
+            default                         => (string) ($event['type'] ?? 'unknown-event'),
+        };
+    }
+
+    /**
      * Validate that an inline behavior key exists in the machine's behavior array.
      *
      * Provides fail-fast typo detection similar to how PHP class loading catches FQCN typos.
