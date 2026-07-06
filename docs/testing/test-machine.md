@@ -117,11 +117,14 @@ Chain configuration methods before sending events to customize machine behavior 
 ```php
 ->assertBehaviorRan(SendEmailAction::class)        // class-based
 ->assertBehaviorRan('broadcastAction')              // inline
+->assertBehaviorRan([SendEmailAction::class, 'broadcastAction'])  // batch — mixed entries allowed
 ->assertBehaviorNotRan(RefundAction::class)
 ->assertBehaviorRanTimes(SendEmailAction::class, 2)
 ->assertBehaviorRanWith(SendEmailAction::class, fn($ctx) => $ctx->get('email') !== null)
 ->assertBehaviorRanWith('myAction', fn(array $params) => $params[0]->get('done'))  // inline: array param
 ```
+
+The array form asserts each entry ran and the failure names the entry that didn't; an empty array throws `InvalidArgumentException`.
 
 ## Available Events Assertions
 
