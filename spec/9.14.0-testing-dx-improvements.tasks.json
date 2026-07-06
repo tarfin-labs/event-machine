@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "spec": "spec/upcoming-testing-dx-improvements.md",
+  "spec": "spec/9.14.0-testing-dx-improvements.md",
   "created_at": "2026-07-06T00:00:00Z",
   "updated_at": "2026-07-06T08:05:21.704982Z",
   "workflow": {
@@ -57,7 +57,7 @@
       "source_lines": "30-66",
       "started_at": "2026-07-06T07:44:12.260037Z",
       "closed_at": "2026-07-06T07:44:12.260037Z",
-      "closed_reason": "ContextManager::forTesting implemented in src/ContextManager.php (Testing Factory region): path detection via ReflectionMethod declaring-class check with InvalidArgumentException for constructor-less subclasses; precedence overrides \u003e native defaults \u003e Optional::create() auto-fill (bare + union via typeAcceptsOptional) \u003e natural failure; unknown keys throw InvalidArgumentException listing valid parameter names; identity via setMachineIdentity unless machineId null; construction via ReflectionClass::newInstanceArgs (no literal new static).",
+      "closed_reason": "ContextManager::forTesting implemented in src/ContextManager.php (Testing Factory region): path detection via ReflectionMethod declaring-class check with InvalidArgumentException for constructor-less subclasses; precedence overrides > native defaults > Optional::create() auto-fill (bare + union via typeAcceptsOptional) > natural failure; unknown keys throw InvalidArgumentException listing valid parameter names; identity via setMachineIdentity unless machineId null; construction via ReflectionClass::newInstanceArgs (no literal new static).",
       "gate_passed_at": "2026-07-06T07:44:12.260037Z",
       "commit_sha": null
     },
@@ -77,7 +77,7 @@
       "source_lines": "43-51,222-232",
       "started_at": "2026-07-06T07:44:12.260037Z",
       "closed_at": "2026-07-06T07:44:12.260037Z",
-      "closed_reason": "tests/Features/ContextForTestingTest.php — 10 tests, 24 assertions, all passing: union+bare Optional auto-fill, override precedence, default-wins over Optional fill, base passthrough, grandchild typed path, no-constructor rejection, unknown-key rejection listing names, machineId default/custom/null, ArgumentCountError passthrough.",
+      "closed_reason": "tests/Features/ContextForTestingTest.php \u2014 10 tests, 24 assertions, all passing: union+bare Optional auto-fill, override precedence, default-wins over Optional fill, base passthrough, grandchild typed path, no-constructor rejection, unknown-key rejection listing names, machineId default/custom/null, ArgumentCountError passthrough.",
       "gate_passed_at": "2026-07-06T07:44:12.260037Z",
       "commit_sha": null
     },
@@ -114,7 +114,7 @@
       "source_lines": "71-77,222-232",
       "started_at": "2026-07-06T07:44:12.260037Z",
       "closed_at": "2026-07-06T07:44:12.260037Z",
-      "closed_reason": "tests/Features/RunWithStateRawContextTest.php — 5 tests passing: array/ContextManager/State inputs produce identical guard results, named-argument call runWithState(state:) works.",
+      "closed_reason": "tests/Features/RunWithStateRawContextTest.php \u2014 5 tests passing: array/ContextManager/State inputs produce identical guard results, named-argument call runWithState(state:) works.",
       "gate_passed_at": "2026-07-06T07:44:12.260037Z",
       "commit_sha": null
     },
@@ -151,7 +151,7 @@
       "source_lines": "106-116,222-232",
       "started_at": "2026-07-06T07:44:12.260037Z",
       "closed_at": "2026-07-06T07:44:12.260037Z",
-      "closed_reason": "tests/Features/AssertTransitionsTest.php — 16 tests passing covering passing table, row-info mismatch message, first-failure abort, guarded rows (guard + validation guard), guarded-but-transitioned, unhandled events (both row kinds), to==from vacuous-pass protection, row context merge, per-row isolation, faking list application, and all shape-validation errors.",
+      "closed_reason": "tests/Features/AssertTransitionsTest.php \u2014 16 tests passing covering passing table, row-info mismatch message, first-failure abort, guarded rows (guard + validation guard), guarded-but-transitioned, unhandled events (both row kinds), to==from vacuous-pass protection, row context merge, per-row isolation, faking list application, and all shape-validation errors.",
       "gate_passed_at": "2026-07-06T07:44:12.260037Z",
       "commit_sha": null
     },
@@ -178,14 +178,14 @@
       "status": "done",
       "depends_on": [],
       "estimate_minutes": 10,
-      "acceptance": "- Machine::testIsolated(array $context = [], array $faking = []) is exactly equivalent to test($context, faking: $faking)-\u003efakingAllActions() and returns TestMachine\n- Calling fakingAllActions with a non-empty except: list after testIsolated throws LogicException directing to the long form; TestMachine tracks whether all-actions faking was applied",
+      "acceptance": "- Machine::testIsolated(array $context = [], array $faking = []) is exactly equivalent to test($context, faking: $faking)->fakingAllActions() and returns TestMachine\n- Calling fakingAllActions with a non-empty except: list after testIsolated throws LogicException directing to the long form; TestMachine tracks whether all-actions faking was applied",
       "source_sections": [
         "### 6.1 Requirements"
       ],
       "source_lines": "129-135",
       "started_at": "2026-07-06T07:44:12.260037Z",
       "closed_at": "2026-07-06T07:44:12.260037Z",
-      "closed_reason": "Machine::testIsolated implemented (src/Actor/Machine.php) as test($context, faking:)-\u003efakingAllActions(); TestMachine tracks $allActionsFaked and fakingAllActions(except: non-empty) afterwards throws LogicException directing to the long form.",
+      "closed_reason": "Machine::testIsolated implemented (src/Actor/Machine.php) as test($context, faking:)->fakingAllActions(); TestMachine tracks $allActionsFaked and fakingAllActions(except: non-empty) afterwards throws LogicException directing to the long form.",
       "gate_passed_at": "2026-07-06T07:44:12.260037Z",
       "commit_sha": null
     },
@@ -224,7 +224,7 @@
       "source_lines": "129-135,222-232",
       "started_at": "2026-07-06T07:44:12.260037Z",
       "closed_at": "2026-07-06T07:44:12.260037Z",
-      "closed_reason": "tests/Features/SpyingTestIsolatedTest.php — 12 tests passing: spying batch + rejections (empty, inline hint), boot-time timing contract (assertNotRan via spying vs assertRan via faking:), testIsolated equivalence with long form, faking passthrough, except: LogicException, redundant no-except call allowed, assertBehaviorRan array (mixed FQCN+inline, failure naming, empty rejection).",
+      "closed_reason": "tests/Features/SpyingTestIsolatedTest.php \u2014 12 tests passing: spying batch + rejections (empty, inline hint), boot-time timing contract (assertNotRan via spying vs assertRan via faking:), testIsolated equivalence with long form, faking passthrough, except: LogicException, redundant no-except call allowed, assertBehaviorRan array (mixed FQCN+inline, failure naming, empty rejection).",
       "gate_passed_at": "2026-07-06T07:44:12.260037Z",
       "commit_sha": null
     },
@@ -261,7 +261,7 @@
       "source_lines": "159-166,222-232",
       "started_at": "2026-07-06T07:44:12.260037Z",
       "closed_at": "2026-07-06T07:44:12.260037Z",
-      "closed_reason": "tests/Features/RaisedEventAssertionTest.php — 11 tests passing: fluent object returned + bare-call BC, dot-notation/strict comparison/array values, missing-key and mismatch messages, empty-subset rejection, withoutPayloadKey both directions, validated() pass + failure surfacing, array-raised payload access + validated rejection, null payload as empty array.",
+      "closed_reason": "tests/Features/RaisedEventAssertionTest.php \u2014 11 tests passing: fluent object returned + bare-call BC, dot-notation/strict comparison/array values, missing-key and mismatch messages, empty-subset rejection, withoutPayloadKey both directions, validated() pass + failure surfacing, array-raised payload access + validated rejection, null payload as empty array.",
       "gate_passed_at": "2026-07-06T07:44:12.260037Z",
       "commit_sha": null
     },
@@ -298,7 +298,7 @@
       "source_lines": "190-197,222-232",
       "started_at": "2026-07-06T07:44:12.260037Z",
       "closed_at": "2026-07-06T07:44:12.260037Z",
-      "closed_reason": "tests/Features/SimulateChildDoneFinalStateTest.php — 5 tests passing: valid leaf routes @done.rejected, dotted id normalizes to leaf (would fall to @done catch-all otherwise), invalid name error listing finals, same-leaf multi-final child (new SameLeafChildMachine stub) accepted, job-actor skip with arbitrary finalState.",
+      "closed_reason": "tests/Features/SimulateChildDoneFinalStateTest.php \u2014 5 tests passing: valid leaf routes @done.rejected, dotted id normalizes to leaf (would fall to @done catch-all otherwise), invalid name error listing finals, same-leaf multi-final child (new SameLeafChildMachine stub) accepted, job-actor skip with arbitrary finalState.",
       "gate_passed_at": "2026-07-06T07:44:12.260037Z",
       "commit_sha": null
     },
@@ -342,7 +342,7 @@
       "source_lines": "198-215",
       "started_at": "2026-07-06T07:50:10.147006Z",
       "closed_at": "2026-07-06T07:50:10.147006Z",
-      "closed_reason": "docs/testing/test-machine.md: 'Batch Spying — spying()' (incl. post-init timing vs pre-init faking:), 'Isolated Preset — testIsolated()' (incl. except: LogicException warning box), assertBehaviorRan array form in Behavior Assertions, new 'Transition Table Assertions' section cross-linking transitions-and-paths, simulateChildDone info box now shows typed MachineOutput + 'finalState is validated' warning with leaf normalization. doctest on file: 0 failures.",
+      "closed_reason": "docs/testing/test-machine.md: 'Batch Spying \u2014 spying()' (incl. post-init timing vs pre-init faking:), 'Isolated Preset \u2014 testIsolated()' (incl. except: LogicException warning box), assertBehaviorRan array form in Behavior Assertions, new 'Transition Table Assertions' section cross-linking transitions-and-paths, simulateChildDone info box now shows typed MachineOutput + 'finalState is validated' warning with leaf normalization. doctest on file: 0 failures.",
       "gate_passed_at": "2026-07-06T07:50:10.147006Z",
       "commit_sha": null
     },
@@ -397,14 +397,14 @@
         "impl-raised-assertion"
       ],
       "estimate_minutes": 15,
-      "acceptance": "- testing-strategy.md gains a 'Migrating Legacy Machine Tests' section with the full five-mapping table: context builders to forTesting, region-mirror TestMachine::define to startingAt, state()-\u003ematches to assertState, spy blocks to spying, payload digging to assertRaised()-\u003ewithPayload()\n- Two anti-pattern subsections show the wrong example next to its replacement (region-mirror TestMachine::define; dotted-path state()-\u003ematches)\n- No new doc file is created and the SKILL.md section-8 navigation table is unchanged",
+      "acceptance": "- testing-strategy.md gains a 'Migrating Legacy Machine Tests' section with the full five-mapping table: context builders to forTesting, region-mirror TestMachine::define to startingAt, state()->matches to assertState, spy blocks to spying, payload digging to assertRaised()->withPayload()\n- Two anti-pattern subsections show the wrong example next to its replacement (region-mirror TestMachine::define; dotted-path state()->matches)\n- No new doc file is created and the SKILL.md section-8 navigation table is unchanged",
       "source_sections": [
         "## 9. Documentation updates"
       ],
       "source_lines": "198-215",
       "started_at": "2026-07-06T07:50:10.147006Z",
       "closed_at": "2026-07-06T07:50:10.147006Z",
-      "closed_reason": "docs/best-practices/testing-strategy.md: new 'Migrating Legacy Machine Tests' section with the full five-mapping table (context builders→forTesting, region-mirror define→startingAt, matches→assertState, spy blocks→spying, payload digging→fluent assertRaised) plus the two anti-pattern subsections showing wrong example next to replacement. No new doc file created; SKILL.md §8 navigation table untouched. doctest: 0 failures.",
+      "closed_reason": "docs/best-practices/testing-strategy.md: new 'Migrating Legacy Machine Tests' section with the full five-mapping table (context builders\u2192forTesting, region-mirror define\u2192startingAt, matches\u2192assertState, spy blocks\u2192spying, payload digging\u2192fluent assertRaised) plus the two anti-pattern subsections showing wrong example next to replacement. No new doc file created; SKILL.md \u00a78 navigation table untouched. doctest: 0 failures.",
       "gate_passed_at": "2026-07-06T07:50:10.147006Z",
       "commit_sha": null
     },
@@ -421,14 +421,14 @@
         "impl-finalstate-validation"
       ],
       "estimate_minutes": 12,
-      "acceptance": "- SKILL.md section 5 gains entries for YourContext::forTesting(), runWithState raw-context forms, testIsolated(), spying(), assertBehaviorRan(array), assertTransitions(), and assertRaised()-\u003ewithPayload()\n- Gotchas added: region-mirror TestMachine::define, dotted-path state()-\u003ematches, and simulateChildDone finalState validation\n- The step-0 prerequisite note in section 5 now points at YourContext::forTesting() as the primary construction tool with the base-TestCase recipe layered above",
+      "acceptance": "- SKILL.md section 5 gains entries for YourContext::forTesting(), runWithState raw-context forms, testIsolated(), spying(), assertBehaviorRan(array), assertTransitions(), and assertRaised()->withPayload()\n- Gotchas added: region-mirror TestMachine::define, dotted-path state()->matches, and simulateChildDone finalState validation\n- The step-0 prerequisite note in section 5 now points at YourContext::forTesting() as the primary construction tool with the base-TestCase recipe layered above",
       "source_sections": [
         "## 10. Agent skill updates"
       ],
       "source_lines": "216-221",
       "started_at": "2026-07-06T07:50:10.147006Z",
       "closed_at": "2026-07-06T07:50:10.147006Z",
-      "closed_reason": "skills/event-machine/SKILL.md §5: added testIsolated, assertTransitions, YourContext::forTesting (as primary tool with base-TestCase layering note updated per §10.3), runWithState raw-context note, assertBehaviorRan array note, fluent assertRaised chain, spying() with timing caveat, simulateChildDone finalState validation note; §2 anti-patterns gained items 9-11 (region-mirror define, dotted matches asserts, finalState validation gotcha) and a pre-existing duplicated item 7 line was fixed.",
+      "closed_reason": "skills/event-machine/SKILL.md \u00a75: added testIsolated, assertTransitions, YourContext::forTesting (as primary tool with base-TestCase layering note updated per \u00a710.3), runWithState raw-context note, assertBehaviorRan array note, fluent assertRaised chain, spying() with timing caveat, simulateChildDone finalState validation note; \u00a72 anti-patterns gained items 9-11 (region-mirror define, dotted matches asserts, finalState validation gotcha) and a pre-existing duplicated item 7 line was fixed.",
       "gate_passed_at": "2026-07-06T07:50:10.147006Z",
       "commit_sha": null
     },
@@ -459,7 +459,7 @@
       "source_lines": "222-241",
       "started_at": "2026-07-06T08:05:21.704952Z",
       "closed_at": "2026-07-06T08:05:21.704982Z",
-      "closed_reason": "composer quality passes end-to-end: pint clean, rector clean, phpstan (level 6 strict) 0 errors, pest 2720 passed / 1 skipped / 0 risky (6856 assertions), type coverage 100.0%. Full vendor/bin/doctest run: 1304 blocks, 365 tested, 0 failures. Release-notes draft at spec/upcoming-testing-dx-improvements-release-notes.md covers all §12 items: runWithState/assertRaised override fatals, four new method names, finalState strictness, testIsolated LogicException.",
+      "closed_reason": "composer quality passes end-to-end: pint clean, rector clean, phpstan (level 6 strict) 0 errors, pest 2720 passed / 1 skipped / 0 risky (6856 assertions), type coverage 100.0%. Full vendor/bin/doctest run: 1304 blocks, 365 tested, 0 failures. Release-notes draft at spec/upcoming-testing-dx-improvements-release-notes.md covers all \u00a712 items: runWithState/assertRaised override fatals, four new method names, finalState strictness, testIsolated LogicException.",
       "gate_passed_at": "2026-07-06T08:05:21.704982Z",
       "commit_sha": null
     }
