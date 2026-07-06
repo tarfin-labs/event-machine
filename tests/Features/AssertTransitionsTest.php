@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\AssertionFailedError;
+use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RecordAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TransitionTableMachine;
 
@@ -134,4 +135,41 @@ it('rejects invalid faking entries', function (): void {
         ['from' => 'idle', 'event' => 'START', 'to' => 'working'],
     ], faking: ['not-a-behavior']))
         ->toThrow(InvalidArgumentException::class, 'InvokableBehavior subclass FQCNs');
+});
+
+it('does not misread @always guard-fail records as blocked event transitions', function (): void {
+    // ROUTE transitions idle -> routing; routing's @always guard fails (allowed=false)
+    // so the machine settles in routing. The @always TRANSITION_FAIL record must
+    // not make this non-guarded row read as "transition blocked by guard".
+    TransitionTableMachine::assertTransitions([
+        ['from' => 'idle', 'event' => 'ROUTE', 'to' => 'routing'],
+    ]);
+});
+
+it('tracks rows in the path coverage tracker like startingAt tests', function (): void {
+    PathCoverageTracker::reset();
+    PathCoverageTracker::enable();
+
+    // A row ending in a FINAL state completes an observed path via assertState.
+    TransitionTableMachine::assertTransitions([
+        ['from' => 'working', 'event' => 'FINISH', 'to' => 'completed'],
+    ]);
+
+    expect(PathCoverageTracker::observedPaths(TransitionTableMachine::class))->not->toBeEmpty();
+
+    PathCoverageTracker::reset();
+});
+
+it('records only the from state for guarded rows in path coverage', function (): void {
+    PathCoverageTracker::reset();
+    PathCoverageTracker::enable();
+
+    // Guarded rows never reach a FINAL state — no completed path is observed.
+    TransitionTableMachine::assertTransitions([
+        ['from' => 'idle', 'event' => 'GUARDED_START', 'to' => null, 'guarded' => true],
+    ]);
+
+    expect(PathCoverageTracker::observedPaths(TransitionTableMachine::class))->toBeEmpty();
+
+    PathCoverageTracker::reset();
 });

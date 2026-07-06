@@ -32,10 +32,19 @@ class TransitionTableMachine extends Machine
                     'idle' => [
                         'on' => [
                             'START'           => 'working',
+                            'ROUTE'           => 'routing',
                             'GUARDED_START'   => ['target' => 'working', 'guards' => 'isAllowedGuard'],
                             'SELF_LOOP'       => ['target' => 'idle', 'guards' => 'isAllowedGuard'],
                             'VALIDATED_START' => ['target' => 'working', 'guards' => AlwaysFailValidationGuard::class],
                             'RECORDED_START'  => ['target' => 'working', 'actions' => RecordAction::class],
+                        ],
+                    ],
+                    'routing' => [
+                        'on' => [
+                            '@always' => [
+                                'target' => 'completed',
+                                'guards' => 'isAllowedGuard',
+                            ],
                         ],
                     ],
                     'working' => [
