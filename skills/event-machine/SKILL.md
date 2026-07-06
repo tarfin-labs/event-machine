@@ -166,7 +166,6 @@ class IsRetailerAuthorizedGuard extends GuardBehavior {
 5. **Don't put transition logic in actions** — use guards to decide IF a transition fires, actions for side effects AFTER it fires.
 6. **Don't share context keys across parallel regions** — last-writer-wins silently. Each region owns its keys.
 7. **Don't use a self-loop to reset a timer** — self-loops preserve `state_entered_at` by design. To express "deadline resets on event X", model X as a transition through a transit state. See [Renewable Timers](docs/best-practices/time-based-patterns.md#renewable-timers-sliding-windows).
-7. **Don't use a self-loop to reset a timer** — self-loops preserve `state_entered_at` by design. To express "deadline resets on event X", model X as a transition through a transit state. See [Renewable Timers](docs/best-practices/time-based-patterns.md#renewable-timers-sliding-windows).
 8. **Don't model a read/status poll as a targetless event** — use [`reads`](docs/laravel-integration/reads.md). Read-as-event runs the full `send()`/`persist()` pipeline and appends rows on every poll, bloating `machine_events` until the persist placeholder ceiling wedges the machine. A read is a query, not an event.
 ---
 
