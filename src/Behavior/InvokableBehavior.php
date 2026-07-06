@@ -383,7 +383,8 @@ abstract class InvokableBehavior
      * then uses injectInvokableBehaviorParameters to match the exact
      * parameter order the engine would provide at runtime.
      *
-     * @param  State  $state  The state to run against.
+     * @param  State|ContextManager|array<string, mixed>  $state  The state to run against — a raw
+     *                                                            ContextManager or context array is wrapped via State::forTesting().
      * @param  EventBehavior|null  $eventBehavior  Optional event behavior.
      * @param  array<string, mixed>|null  $arguments  Optional behavior arguments.
      *
@@ -393,10 +394,14 @@ abstract class InvokableBehavior
      *                                           via $this->raise() during execution.
      */
     public static function runWithState(
-        State $state,
+        State|ContextManager|array $state,
         ?EventBehavior $eventBehavior = null,
         ?array $arguments = null,
     ): mixed {
+        if (!$state instanceof State) {
+            $state = State::forTesting($state);
+        }
+
         $eventQueue = new Collection();
         $instance   = App::make(static::class, ['eventQueue' => $eventQueue]);
 
