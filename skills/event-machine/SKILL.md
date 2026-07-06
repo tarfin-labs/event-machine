@@ -354,6 +354,7 @@ class OrderContext extends ContextManager
 - `MyMachine::test($context = [])` — Boot + return `TestMachine` for fluent chain
 - `MyMachine::startingAt('nested.state')` — Skip setup, jump to a specific state
 - `State::forTesting($context)` — Build a state for unit-testing a single behavior
+  - Rich typed context reused across many test files? Centralize construction in a per-machine base TestCase with one `context(array $overrides = [])` factory (single `Optional` convention) — see `docs/testing/recipes.md` § "Base TestCase for Rich Typed Contexts". Never let `makeContext`/`buildContext` copies drift per file.
 - `MyBehavior::runWithState($state, $event)` — Invoke a behavior directly; unit-level
 
 ### Top assertions (expand via `docs/testing/overview.md`)

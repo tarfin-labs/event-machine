@@ -23,6 +23,10 @@ $state = State::forTesting(['amount' => 100], currentEventBehavior: $event);
 $state = State::forTesting(['count' => 5], currentStateDefinition: $stateDef);
 ```
 
+::: tip Rich typed contexts
+If a typed `ContextManager` subclass is rebuilt across many test files, don't hand-build it per test — centralize construction in a per-machine base TestCase with one `context(array $overrides = [])` factory and one `Optional` convention. See [Recipe: Base TestCase for Rich Typed Contexts](/testing/recipes#recipe-base-testcase-for-rich-typed-contexts).
+:::
+
 ## runWithState()
 
 Uses the **exact same** `injectInvokableBehaviorParameters` DI as the engine. What passes `runWithState()` is guaranteed to receive identical parameters during real execution.
