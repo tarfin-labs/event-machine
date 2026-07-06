@@ -6,9 +6,12 @@ Synthesis of `docs/testing/*`, optimized for agent lookup. Always use `Interacts
 
 ```php
 OrderMachine::test($context = []);           // fluent TestMachine
+OrderMachine::testIsolated($context = []);   // preset: test() + fakingAllActions() (except: needs the long form)
 OrderMachine::startingAt('nested.state');    // skip setup, jump to state
+OrderMachine::assertTransitions([...]);      // table-driven edge coverage (fresh machine per row)
+OrderContext::forTesting(['order' => $o]);   // typed context: auto-fills Optionals + machine identity
 State::forTesting($context);                 // build state for unit tests
-MyBehavior::runWithState($state, $event);    // invoke behavior directly
+MyBehavior::runWithState($state, $event);    // invoke directly; also accepts ContextManager or array
 ```
 
 ## Fluent chain — canonical example
@@ -44,12 +47,14 @@ OrderMachine::test(['total' => 100])
 
 ### Behaviors (Actions / Guards / Calculators)
 - `assertBehaviorRan(Class::class)` / `assertBehaviorNotRan(Class::class)`
+- `assertBehaviorRan([A::class, 'inlineKey'])` — batch, mixed FQCN + inline keys
 - `assertGuarded($event)` — transition was blocked by a guard
 - `assertGuardedBy($event, GuardClass::class)`
 - `assertNotGuarded($event)`
 
 ### Raised / sent
 - `assertRaised(ActionClass::class)` / `ActionClass::assertRaised($event)` (isolated, per-class)
+- `ActionClass::assertRaised($event)->withPayload(['k' => $v])->withoutPayloadKey('old')->validated()` — fluent payload checks (dot-notation keys, strict `===`)
 - `ActionClass::assertRaisedCount(N)`
 - `ActionClass::assertNotRaised($event)`
 - `ActionClass::assertNothingRaised()`
@@ -80,6 +85,15 @@ OrderMachine::test()
     ->send('PAY');
 ```
 
+### Batch-spy without faking everything
+```php
+OrderMachine::test()
+    ->spying([BroadcastStateAction::class, StoreTcknAction::class])  // post-init: misses boot-time entry actions
+    ->send('PAY')
+    ->assertBehaviorRan([BroadcastStateAction::class, StoreTcknAction::class]);
+// Boot-time behaviors need the pre-init parameter: OrderMachine::test(faking: [BootAction::class])
+```
+
 ### Fake ALL (with exceptions)
 ```php
 OrderMachine::test()
@@ -107,6 +121,8 @@ OrderMachine::test()
     ->assertState('shipping');
 
 // Also: ->simulateChildFail(...)   ->simulateChildTimeout(...)
+// finalState is VALIDATED against the child definition's final states
+// (leaf or dotted id accepted; routing always sees the leaf; jobs skip validation)
 ```
 
 ## Four-layer strategy
