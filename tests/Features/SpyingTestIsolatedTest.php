@@ -22,6 +22,11 @@ it('rejects an empty spying list', function (): void {
         ->toThrow(InvalidArgumentException::class, 'spies nothing');
 });
 
+it('rejects non-InvokableBehavior class entries', function (): void {
+    expect(fn () => SpyingProbeMachine::test()->spying([stdClass::class]))
+        ->toThrow(InvalidArgumentException::class, 'InvokableBehavior subclass FQCNs');
+});
+
 it('rejects non-behavior entries with an inline hint', function (): void {
     expect(fn () => SpyingProbeMachine::test()->spying(['inlineProbeAction']))
         ->toThrow(InvalidArgumentException::class, "InlineBehaviorFake::spy('key')");
