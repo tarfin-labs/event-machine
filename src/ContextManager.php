@@ -215,6 +215,106 @@ class ContextManager extends Data
 
     // endregion
 
+    // region Testing Factory
+
+    /**
+     * Create a test-ready context instance without hand-writing Optional
+     * boilerplate or machine identity.
+     *
+     * Typed subclasses (any class whose resolved constructor is declared
+     * below ContextManager) are built by reflecting over the constructor:
+     * overrides win, native defaults apply next, Optional-typed parameters
+     * without defaults are filled with Optional::create(), and remaining
+     * required parameters fail construction naturally.
+     *
+     * @param  array<string, mixed>  $overrides
+     * @param  string|null  $machineId  Machine identity to set; null skips identity entirely.
+     */
+    public static function forTesting(array $overrides = [], ?string $machineId = 'test-machine-id'): static
+    {
+        $constructor = new \ReflectionMethod(static::class, '__construct');
+        $isTyped     = $constructor->getDeclaringClass()->getName() !== self::class;
+
+        if (!$isTyped && static::class !== self::class) {
+            throw new \InvalidArgumentException(sprintf(
+                'Cannot use %s::forTesting(): the class does not declare a typed constructor anywhere in its hierarchy. '.
+                'Declare a constructor with typed promoted properties, or construct the base ContextManager directly.',
+                static::class,
+            ));
+        }
+
+        $reflectionClass = new \ReflectionClass(static::class);
+
+        if (!$isTyped) {
+            $context = $reflectionClass->newInstanceArgs([$overrides]);
+        } else {
+            $parameterNames = array_map(
+                static fn (\ReflectionParameter $parameter): string => $parameter->getName(),
+                $constructor->getParameters(),
+            );
+
+            foreach (array_keys($overrides) as $key) {
+                if (!in_array($key, $parameterNames, true)) {
+                    throw new \InvalidArgumentException(sprintf(
+                        'Unknown override key [%s] for %s::forTesting(). Valid constructor parameters: [%s].',
+                        $key,
+                        static::class,
+                        implode(', ', $parameterNames),
+                    ));
+                }
+            }
+
+            $arguments = [];
+            foreach ($constructor->getParameters() as $parameter) {
+                $name = $parameter->getName();
+
+                if (array_key_exists($name, $overrides)) {
+                    $arguments[$name] = $overrides[$name];
+
+                    continue;
+                }
+
+                if ($parameter->isDefaultValueAvailable()) {
+                    continue;
+                }
+
+                if (self::typeAcceptsOptional($parameter->getType())) {
+                    $arguments[$name] = Optional::create();
+                }
+            }
+
+            $context = $reflectionClass->newInstanceArgs($arguments);
+        }
+
+        if ($machineId !== null) {
+            $context->setMachineIdentity(machineId: $machineId);
+        }
+
+        return $context;
+    }
+
+    /**
+     * Whether the declared parameter type is Optional itself or a union containing it.
+     */
+    private static function typeAcceptsOptional(?\ReflectionType $type): bool
+    {
+        if ($type instanceof \ReflectionNamedType) {
+            return $type->getName() === Optional::class;
+        }
+
+        if ($type instanceof \ReflectionUnionType) {
+            foreach ($type->getTypes() as $innerType) {
+                if ($innerType instanceof \ReflectionNamedType && $innerType->getName() === Optional::class) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // endregion
+
     // region Computed Context
 
     /**
