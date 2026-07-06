@@ -9,6 +9,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Events\PayloadedTestEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaisesArrayEventAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaisesPayloadedEventAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaisesNullPayloadEventAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaisesOptionalPayloadEventAction;
 use Tarfinlabs\EventMachine\Tests\Stubs\Actions\RaisesInvalidPayloadedEventAction;
 
 it('returns a fluent assertion object and keeps bare calls working', function (): void {
@@ -90,5 +91,15 @@ it('treats null instance payloads as empty arrays', function (): void {
         ->withoutPayloadKey('anything');
 
     expect(fn () => RaisesNullPayloadEventAction::assertRaised(PayloadedTestEvent::class)->withPayload(['anything' => 1]))
+        ->toThrow(AssertionFailedError::class, 'missing payload key [anything]');
+});
+
+it('treats Optional instance payloads as empty arrays', function (): void {
+    RaisesOptionalPayloadEventAction::runWithState(State::forTesting());
+
+    RaisesOptionalPayloadEventAction::assertRaised(PayloadedTestEvent::class)
+        ->withoutPayloadKey('anything');
+
+    expect(fn () => RaisesOptionalPayloadEventAction::assertRaised(PayloadedTestEvent::class)->withPayload(['anything' => 1]))
         ->toThrow(AssertionFailedError::class, 'missing payload key [anything]');
 });
