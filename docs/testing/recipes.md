@@ -826,6 +826,33 @@ Cherry-picking shines when the region is genuinely self-contained — most of it
 
 ## State Flow {#state-flow}
 
+## Recipe: Transition-Table Coverage for a Machine
+
+The gold-standard pattern for macro-level coverage: enumerate the machine's state×event→target table and cover **one edge per row**, each row booting fresh at its `from` state via `startingAt()` — no path replay, no hand-mirrored region configs. `Machine::assertTransitions()` runs the whole table in one test:
+
+<!-- doctest-attr: ignore -->
+```php
+it('covers the report-retrieval transition table', function (): void {
+    FindeksMachine::assertTransitions([
+        // state                                          × event            → target
+        ['from' => 'findeks.report_retrieval.syncing_phones',   'event' => 'PHONES_SYNCED',   'to' => 'findeks.report_retrieval.checking_consent'],
+        ['from' => 'findeks.report_retrieval.checking_consent', 'event' => 'CONSENT_MISSING', 'to' => 'findeks.awaiting_consent'],
+        ['from' => 'findeks.report_retrieval.checking_consent', 'event' => 'CONSENT_FOUND',   'to' => 'findeks.report_retrieval.fetching_report'],
+        // Edges that must be BLOCKED are part of the table too:
+        ['from' => 'findeks.awaiting_consent', 'event' => 'RETRY_REQUESTED', 'to' => null, 'guarded' => true],
+        // Rows needing different context override it per row:
+        ['from' => 'findeks.awaiting_consent', 'event' => 'CONSENT_GRANTED', 'to' => 'findeks.report_retrieval', 'context' => ['consent' => true]],
+    ], context: ['tckn' => '12345678901'], faking: [StorePhonesAction::class]);
+});
+```
+
+Guidelines:
+
+- Derive the rows from `php artisan machine:paths` output or the machine config itself — every `on:` entry of every state should appear as a row (including its guarded variants).
+- Keep behavior side effects out of the table: pass side-effectful actions in `faking:` — the table verifies **wiring**, dedicated behavior tests verify logic.
+- Use `assertPath()` instead when the scenario is one sequential journey whose steps build on each other; the table is for independent edges.
+- Pair with [path coverage](/testing/transitions-and-paths#path-coverage-analysis) (`assertPathCoverage()`) to prove the table — and your scenario tests — actually cover every enumerated path.
+
 ## Recipe: @always Guard Chain Routing
 
 Test a machine with multiple `@always` branches — each guarded, first match wins:
