@@ -1157,8 +1157,31 @@ class TestMachine
     //  Behavior Assertions (convenience)
     // ═══════════════════════════════════════════
 
-    public function assertBehaviorRan(string $classOrKey): self
+    /**
+     * Assert one or more behaviors ran.
+     *
+     * Accepts a behavior FQCN or inline-behavior key, or an array freely
+     * mixing both — each entry is asserted individually and the failure
+     * message names the entry that did not run.
+     *
+     * @param  string|array<int, string>  $classOrKey
+     */
+    public function assertBehaviorRan(string|array $classOrKey): self
     {
+        if (is_array($classOrKey)) {
+            if ($classOrKey === []) {
+                throw new \InvalidArgumentException(
+                    'assertBehaviorRan([]) asserts nothing — pass at least one behavior class or inline key.'
+                );
+            }
+
+            foreach ($classOrKey as $entry) {
+                $this->assertBehaviorRan($entry);
+            }
+
+            return $this;
+        }
+
         if (is_subclass_of($classOrKey, InvokableBehavior::class)) {
             $classOrKey::assertRan();
         } else {
