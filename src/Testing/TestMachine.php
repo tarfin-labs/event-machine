@@ -78,7 +78,7 @@ class TestMachine
     /**
      * @param  array<string, mixed>  $context
      * @param  array<class-string, bool>  $guards
-     * @param  array<class-string, mixed>  $faking
+     * @param  array<int, class-string>  $faking
      */
     public static function create(string $machineClass, array $context = [], array $guards = [], array $faking = []): self
     {
@@ -114,7 +114,7 @@ class TestMachine
     /**
      * @param  array<string, mixed>  $context
      * @param  array<class-string, bool>  $guards
-     * @param  array<class-string, mixed>  $faking
+     * @param  array<int, class-string>  $faking
      */
     public static function withContext(string $machineClass, array $context, array $guards = [], array $faking = []): self
     {
@@ -154,7 +154,7 @@ class TestMachine
     /**
      * @param  array<string, mixed>  $context
      * @param  array<class-string, bool>  $guards
-     * @param  array<class-string, mixed>  $faking
+     * @param  array<int, class-string>  $faking
      */
     public static function startingAt(
         string $machineClass,
