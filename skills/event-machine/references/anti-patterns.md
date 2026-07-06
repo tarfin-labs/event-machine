@@ -70,6 +70,16 @@ Search for what you're about to write. If a row matches, read the "instead" cell
 
 Full naming guide: `docs/building/conventions.md`. SKILL.md §1 has the table.
 
+## Testing anti-patterns
+
+| Anti-pattern | Instead |
+|--------------|---------|
+| Rebuilding a machine region inline via `TestMachine::define(config: [...])` to start a test deep | `MyMachine::startingAt('parent.region.state')` — config mirrors silently rot |
+| `assertTrue($machine->state()->matches('full.dotted.path'))` + `addToAssertionCount(1)` | `->assertState('leaf_or_dotted')` — named assertion, path-coverage aware |
+| Hand-rolled `makeContext()`/`buildContext()` helpers with `new Optional()` fills per test file | `YourContext::forTesting(['order' => $order])` + one base-TestCase `context()` factory |
+| N consecutive `SomeAction::spy();` lines opening every test | `->spying([A::class, B::class])` or `MyMachine::testIsolated()` |
+| Manual raised-event payload digging + hand-called `selfValidate()` | `Action::assertRaised(Event::class)->withPayload([...])->validated()` |
+
 ## When the agent reaches for an anti-pattern
 
 Before writing, ask:
