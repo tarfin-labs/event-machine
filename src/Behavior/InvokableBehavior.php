@@ -20,6 +20,7 @@ use Tarfinlabs\EventMachine\Traits\Fakeable;
 use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
+use Tarfinlabs\EventMachine\Testing\RaisedEventAssertion;
 use Tarfinlabs\EventMachine\Testing\CommunicationRecorder;
 use Tarfinlabs\EventMachine\Exceptions\NoParentMachineException;
 use Tarfinlabs\EventMachine\Exceptions\MissingMachineContextException;
@@ -430,9 +431,10 @@ abstract class InvokableBehavior
      * Assert that an event was raised during the last runWithState() call.
      *
      * Matches by event type string ('ORDER_SUBMITTED'), FQCN (OrderSubmittedEvent::class),
-     * or instanceof check.
+     * or instanceof check. Returns a fluent assertion object targeting the first
+     * matching raised event for payload/validation checks — safe to ignore.
      */
-    public static function assertRaised(string $eventTypeOrClass): void
+    public static function assertRaised(string $eventTypeOrClass): RaisedEventAssertion
     {
         $events = self::$raisedEventsPerClass[static::class] ?? null;
 
@@ -441,9 +443,11 @@ abstract class InvokableBehavior
             'Cannot assert raised events: runWithState() has not been called on '.static::class.'.'
         );
 
-        $found = $events->contains(fn (EventBehavior|array $event): bool => self::matchesRaisedEvent($event, $eventTypeOrClass));
+        $match = $events->first(fn (EventBehavior|array $event): bool => self::matchesRaisedEvent($event, $eventTypeOrClass));
 
-        Assert::assertTrue($found, "Expected event '{$eventTypeOrClass}' to be raised by ".static::class.' but it was not.');
+        Assert::assertNotNull($match, "Expected event '{$eventTypeOrClass}' to be raised by ".static::class.' but it was not.');
+
+        return new RaisedEventAssertion($match, static::class, $eventTypeOrClass);
     }
 
     /**
