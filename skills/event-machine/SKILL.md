@@ -355,7 +355,7 @@ class OrderContext extends ContextManager
 
 - `MyMachine::test($context = [])` — Boot + return `TestMachine` for fluent chain
 - `MyMachine::testIsolated($context = [])` — Preset: `test()` + `fakingAllActions()` (NOTE: `fakingAllActions(except:)` afterwards throws `LogicException` — use the long form for `except:`)
-- `MyMachine::startingAt('nested.state')` — Skip setup, jump to a specific state
+- `MyMachine::startingAt('nested.state')` — Skip setup, jump to a specific state. Parallel states: all regions activate at their initial leaves; a leaf inside one region auto-initializes sibling regions (test parallel gating on the REAL definition — no region mirrors)
 - `MyMachine::assertTransitions([['from' => ..., 'event' => ..., 'to' => ...], ...])` — Table-driven edge coverage; fresh machine per row; `'to' => null, 'guarded' => true` for blocked edges
 - `YourContext::forTesting(['order' => $order])` — Build a typed context: auto-fills `Optional` properties, sets machine identity (`test-machine-id`); overrides win. Primary tool for typed-context construction.
   - Needs app model factories on top? Layer them in a per-machine base TestCase `context()` factory — see `docs/testing/recipes.md` § "Base TestCase for Rich Typed Contexts". Never let `makeContext`/`buildContext` copies drift per file.

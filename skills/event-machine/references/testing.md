@@ -7,7 +7,7 @@ Synthesis of `docs/testing/*`, optimized for agent lookup. Always use `Interacts
 ```php
 OrderMachine::test($context = []);           // fluent TestMachine
 OrderMachine::testIsolated($context = []);   // preset: test() + fakingAllActions() (except: needs the long form)
-OrderMachine::startingAt('nested.state');    // skip setup, jump to state
+OrderMachine::startingAt('nested.state');    // skip setup, jump to state (parallel: regions auto-initialize, incl. siblings of an in-region leaf)
 OrderMachine::assertTransitions([...]);      // table-driven edge coverage (fresh machine per row)
 OrderContext::forTesting(['order' => $o]);   // typed context: auto-fills Optionals + machine identity
 State::forTesting($context);                 // build state for unit tests
