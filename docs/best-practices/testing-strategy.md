@@ -267,6 +267,46 @@ OrderWorkflowMachine::create(['orderId' => 'ORD-102', 'orderTotal' => 500])
 If your test has `fakingAllActions()` without `except:`, ask yourself: **"What behavior am I actually testing?"** If the answer is "just the transition config," consider whether that's worth a test — or whether your effort is better spent on a test that exercises real logic.
 :::
 
+## Migrating Legacy Machine Tests
+
+Audits of large EventMachine consumers show that test suites written before the current testing APIs drift into a handful of recurring legacy patterns. Each has a first-class replacement:
+
+| Legacy pattern | Replacement |
+|----------------|-------------|
+| Hand-rolled context builders (`makeContext()`/`buildContext()` per file, manual `new Optional()` fills, scattered `setMachineIdentity()`) | [`YourContext::forTesting(['order' => $order])`](/testing/isolated-testing#contextmanagerfortesting) — auto-fills `Optional`s and machine identity; layer app model factories in a base TestCase ([recipe](/testing/recipes#recipe-base-testcase-for-rich-typed-contexts)) |
+| Rebuilding a region's config inline via `TestMachine::define(config: [...])` to start deep | [`MyMachine::startingAt('parent.region.state')`](/testing/test-machine#starting-at-a-specific-state) — uses the real definition; config mirrors rot silently |
+| `$this->assertTrue($machine->state()->matches('full.dotted.path'))` + `addToAssertionCount(1)` | [`->assertState('leaf_or_dotted')`](/testing/test-machine#state-assertions) — self-documenting failure messages, path-coverage aware |
+| N consecutive `SomeAction::spy();` lines opening every test | [`->spying([A::class, B::class])`](/testing/test-machine#batch-spying--spying) — or `MyMachine::testIsolated()` when everything should be faked |
+| Manual raised-event payload digging + hand-called `selfValidate()` | [`Action::assertRaised(Event::class)->withPayload([...])->validated()`](/testing/isolated-testing#fluent-payload-assertions) |
+
+### Anti-pattern: region-mirror `TestMachine::define`
+
+<!-- doctest-attr: ignore -->
+```php
+// ❌ Wrong — re-types the machine's own region config just to start deep.
+// This mirror silently rots when the real machine changes:
+$testMachine = TestMachine::define(config: [
+    'id'      => 'customer_region',
+    'initial' => 'awaiting_address_info',
+    'states'  => [/* hand-copied region transition table */],
+]);
+
+// ✅ Right — jump into the REAL definition at the deep state:
+$testMachine = CarSalesMachine::startingAt('car_sales.customer_info.awaiting_address_info');
+```
+
+### Anti-pattern: asserting dotted paths via `state()->matches()`
+
+<!-- doctest-attr: ignore -->
+```php
+// ❌ Wrong — silent boolean assert, brittle full-path string, risky-test suppression:
+$this->assertTrue($machine->state()->matches('car_sales.allocation.awaiting_counter_offer_response'));
+$this->addToAssertionCount(1);
+
+// ✅ Right — named assertion with a real failure message:
+$machine->assertState('allocation.awaiting_counter_offer_response');
+```
+
 ## Related
 
 - [Testing Overview](/testing/overview) -- testing layers reference
