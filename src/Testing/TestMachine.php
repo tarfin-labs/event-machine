@@ -502,8 +502,13 @@ class TestMachine
                 continue;
             }
 
+            // @always fail records are post-transition routing, not a block of
+            // the sent event — a row whose target state has a guarded @always
+            // that stays put must not read as "transition blocked".
             $transitionFailed = $testMachine->state()->history->contains(
-                fn (mixed $event): bool => str_contains($event->type, '.transition.') && str_ends_with($event->type, '.fail')
+                fn (mixed $event): bool => str_contains($event->type, '.transition.')
+                    && str_ends_with($event->type, '.fail')
+                    && !str_contains($event->type, '@always')
             );
 
             if ($guarded) {
