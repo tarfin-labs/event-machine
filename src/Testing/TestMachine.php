@@ -186,10 +186,16 @@ class TestMachine
         // Initialize context from definition
         $contextManager = $definition->initializeContextFromState();
 
-        // Resolve state definition
+        // Resolve state definition — accept the leaf name, a dotted path
+        // relative to the machine ('parent.region.leaf'), or the full id.
         $fullId = str_contains($stateId, $definition->delimiter)
             ? $stateId
             : $definition->id.$definition->delimiter.$stateId;
+
+        if (!isset($definition->idMap[$fullId]) && isset($definition->idMap[$definition->id.$definition->delimiter.$stateId])) {
+            $fullId = $definition->id.$definition->delimiter.$stateId;
+        }
+
         $stateDef = $definition->idMap[$fullId]
             ?? throw new \InvalidArgumentException("State '{$stateId}' not found in machine definition. Available: ".implode(', ', array_keys($definition->idMap)));
 
