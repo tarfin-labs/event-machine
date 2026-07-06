@@ -74,6 +74,37 @@ TrafficLightsMachine::test()
     ]);
 ```
 
+## Table-Driven Transition Testing
+
+`Machine::assertTransitions()` verifies a set of **independent edges** — each row boots a fresh machine at `from` via `startingAt()`, sends the event, and asserts the target. It formalizes the gold-standard "one edge per test" pattern without one test method per edge:
+
+<!-- doctest-attr: ignore -->
+```php
+FindeksMachine::assertTransitions([
+    ['from' => 'findeks.report_retrieval.syncing_phones',  'event' => 'PHONES_SYNCED',   'to' => 'findeks.report_retrieval.checking_consent'],
+    ['from' => 'findeks.report_retrieval.checking_consent', 'event' => 'CONSENT_MISSING', 'to' => 'findeks.awaiting_consent'],
+    // Guarded edge: transition must be BLOCKED (guard fails or validation guard rejects)
+    ['from' => 'findeks.awaiting_consent', 'event' => 'RETRY_REQUESTED', 'to' => null, 'guarded' => true],
+    // Row-level context overrides the shared context for that row only
+    ['from' => 'findeks.awaiting_consent', 'event' => 'CONSENT_GRANTED', 'to' => 'findeks.report_retrieval', 'context' => ['consent' => true]],
+], context: ['tckn' => '12345678901'], faking: [StorePhonesAction::class]);
+```
+
+Semantics:
+
+- **Fresh machine per row** — rows never share mutated context or state; persistence is disabled (inherited from `startingAt()`). Rows run in order and the first failing row fails the test.
+- **Row context** is `array_replace`'d over the shared `context:` (row keys win).
+- **Unhandled events fail loudly** — an event with no transition from `from` fails the row with a distinct "event not handled" message (guarded or not), catching event-name typos.
+- **Guard-blocked rows fail unless `guarded: true`** — even when `to` equals `from`, so guard-blocked self-transitions can't pass vacuously. Guarded rows accept both regular guard blocks (`TRANSITION_FAIL`) and `ValidationGuardBehavior` rejections.
+- **Row shape is validated up front** — empty tables, missing `from`/`event`/`to` keys, `guarded: true` with a non-null `to`, `to: null` without `guarded`, and non-behavior `faking:` entries all throw `InvalidArgumentException` naming the row.
+- **Path coverage** — rows are tracked by `PathCoverageTracker` exactly like individual `startingAt()` + `send()` tests; guarded rows record only the `from` state.
+
+::: tip assertPath() vs assertTransitions()
+- **`assertPath()`** — ONE sequential journey: each step continues from the previous step's state. Use it to verify a multi-step workflow end to end.
+- **`assertTransitions()`** — INDEPENDENT edges: every row starts fresh at its own `from`. Use it to cover a machine's transition table (state × event → target) systematically.
+:::
+
+## Hierarchical State Transitions
 ## Hierarchical State Transitions
 
 Nested (compound) states are identified with dot notation, where the parent state name and child state name are joined by a dot (e.g., `checkout.shipping`). Use the same notation in `assertState()` and `assertTransition()` to target or verify any level of the hierarchy.
