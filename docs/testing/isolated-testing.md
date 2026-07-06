@@ -122,6 +122,28 @@ CheckProtocolAction::assertRaised('PROTOCOL_UNDECIDED');
 CheckProtocolAction::assertRaised(ProtocolUndecidedEvent::class);
 ```
 
+#### Fluent payload assertions
+
+`assertRaised()` returns a `RaisedEventAssertion` targeting the **first** matching raised event, so payload checks and self-validation chain directly — no manual array digging:
+
+<!-- doctest-attr: no_run -->
+```php
+CheckProtocolAction::runWithState($state);
+
+CheckProtocolAction::assertRaised(ProtocolRejectedEvent::class)
+    ->withPayload(['applicationDecision' => 'rejected'])   // key exists, value strictly ===
+    ->withPayload(['meta.attempt' => 2])                    // dot-notation for nested keys
+    ->withoutPayloadKey('application_decision')             // key must be absent
+    ->validated();                                          // runs the event's own selfValidate()
+```
+
+Semantics:
+
+- All payload keys are dot-notation paths (`Arr::get`/`Arr::has`) — payload keys containing a literal dot cannot be asserted on.
+- `withPayload()` compares values strictly (`===`); an array value compares the full array — use dot-notation keys to assert nested keys individually. An empty subset throws `InvalidArgumentException`.
+- Events raised as plain arrays work with `withPayload()`/`withoutPayloadKey()` (payload read from the `payload` key), but `validated()` fails on them — it needs an `EventBehavior` instance.
+- A `null` payload is treated as an empty array.
+- When multiple events of the same type were raised, the fluent assertions target the first match; use `assertRaisedCount()` for total-count checks.
 For actions that should NOT raise any events:
 
 <!-- doctest-attr: no_run -->
