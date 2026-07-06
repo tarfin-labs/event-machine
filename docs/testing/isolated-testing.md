@@ -24,8 +24,39 @@ $state = State::forTesting(['count' => 5], currentStateDefinition: $stateDef);
 ```
 
 ::: tip Rich typed contexts
-If a typed `ContextManager` subclass is rebuilt across many test files, don't hand-build it per test — centralize construction in a per-machine base TestCase with one `context(array $overrides = [])` factory and one `Optional` convention. See [Recipe: Base TestCase for Rich Typed Contexts](/testing/recipes#recipe-base-testcase-for-rich-typed-contexts).
+For typed `ContextManager` subclasses, prefer [`YourContext::forTesting()`](#contextmanagerfortesting) below — it fills `Optional` properties and machine identity automatically. If construction needs your app's model factories on top of that, centralize it in a per-machine base TestCase — see [Recipe: Base TestCase for Rich Typed Contexts](/testing/recipes#recipe-base-testcase-for-rich-typed-contexts).
 :::
+
+## ContextManager::forTesting()
+
+Build a test-ready context instance without hand-writing `Optional` boilerplate or machine identity:
+
+<!-- doctest-attr: ignore -->
+```php
+// Typed subclass — every Optional-typed constructor parameter without a
+// default is auto-filled with Optional::create(); overrides always win:
+$context = OrderContext::forTesting(['order' => $order]);
+
+// Machine identity is set automatically (default id: 'test-machine-id') —
+// behaviors calling $context->machineId() just work:
+$context->machineId(); // 'test-machine-id'
+
+// Custom or no identity:
+$context = OrderContext::forTesting(machineId: 'custom-id');
+$context = OrderContext::forTesting(machineId: null); // identity skipped
+
+// Base ContextManager — plain data-array passthrough plus identity:
+$context = ContextManager::forTesting(['count' => 1]);
+```
+
+How arguments are resolved on typed subclasses, in precedence order:
+
+1. A key present in `$overrides` is passed through as-is — models, scalars, `Optional` instances, `null`.
+2. A parameter with a native default keeps its default (even when its type also accepts `Optional`).
+3. A parameter without a default whose type is `Optional` (or a union containing it) is filled with `Optional::create()`.
+4. Any remaining required parameter fails construction with PHP's normal error — nothing is swallowed.
+
+Guardrails: an override key that matches no constructor parameter throws `InvalidArgumentException` listing the valid parameter names, and calling `forTesting()` on a subclass that never declares a typed constructor throws `InvalidArgumentException` (such subclasses can't be read through `get()`/`set()` anyway). Construction bypasses `from()`/`validateAndCreate()` — validation semantics are untouched.
 
 ## runWithState()
 
