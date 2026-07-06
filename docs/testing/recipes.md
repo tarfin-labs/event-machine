@@ -554,11 +554,12 @@ it('handles different order sizes', function () {
 
 ## Recipe: Base TestCase for Rich Typed Contexts
 
-When a machine has a rich typed `ContextManager` subclass (several model-typed properties, some `Optional`), every isolated behavior test needs a valid context instance. If each test file hand-builds it, the copies drift: different helper names (`makeContext` vs `buildContext`), different `Optional` idioms (`Optional::create()` vs `new Optional()`), different subsets of the model graph. Centralize construction in one abstract TestCase per machine — a single `context()` factory plus a `stateFor()` wrapper.
+When a machine has a rich typed `ContextManager` subclass (several model-typed properties, some `Optional`), every isolated behavior test needs a valid context instance. If each test file hand-builds it, the copies drift: different helper names (`makeContext` vs `buildContext`), different `Optional` idioms, different subsets of the model graph.
+
+[`YourContext::forTesting()`](/testing/isolated-testing#contextmanagerfortesting) already handles the `Optional` boilerplate and machine identity. What remains domain-specific is the **model graph** — EventMachine can't build a `Customer`. Centralize that in one abstract TestCase per machine — a single `context()` factory layered on `forTesting()`, plus a `stateFor()` wrapper:
 
 <!-- doctest-attr: ignore -->
 ```php
-use Spatie\LaravelData\Optional;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Testing\InteractsWithMachines;
@@ -568,18 +569,19 @@ abstract class OrderMachineTestCase extends TestCase
     use InteractsWithMachines;
 
     /**
-     * Canonical context factory — the single source of truth for
-     * helper naming, the Optional convention, and model construction.
-     * `??` short-circuits: factories only run for keys not overridden.
+     * Canonical context factory — the single source of truth for helper
+     * naming and default model construction. forTesting() fills the
+     * Optional-typed properties and machine identity; this layer only
+     * supplies the default model graph. `??` short-circuits: factories
+     * only run for keys not overridden.
      */
     protected function context(array $overrides = []): OrderContext
     {
-        return new OrderContext(
-            customer: $overrides['customer'] ?? Customer::factory()->create(),
-            retailer: $overrides['retailer'] ?? Retailer::factory()->create(),
-            order:    $overrides['order']    ?? Optional::create(),
-            invoice:  $overrides['invoice']  ?? Optional::create(),
-        );
+        return OrderContext::forTesting([
+            'customer' => $overrides['customer'] ?? Customer::factory()->create(),
+            'retailer' => $overrides['retailer'] ?? Retailer::factory()->create(),
+            ...$overrides,
+        ]);
     }
 
     protected function stateFor(OrderContext|array $context, ?EventBehavior $event = null): State
@@ -612,12 +614,11 @@ class ApproveOrderActionTest extends OrderMachineTestCase
 Conventions this locks in for the whole suite:
 
 - **One helper name** — `context()`, defined once, not re-invented per file.
-- **One `Optional` idiom** — pick `Optional::create()` and use it everywhere; never mix with `new Optional()`.
+- **No hand-written `Optional`s** — `forTesting()` fills absent Optional-typed properties; never construct `Optional` in tests.
 - **One default graph** — the factory builds the smallest valid model graph; tests override only what they assert on.
-- **Machine identity in one place** — if behaviors call `$context->machineId()`, set it inside the factory (`$context->setMachineIdentity(machineId: 'test-machine-id')`) instead of sprinkling it across tests.
+- **Machine identity for free** — `forTesting()` sets `machineId()` to `test-machine-id`; no scattered `setMachineIdentity()` calls.
 
 Context construction is rightly domain-specific — EventMachine can't build your models — but the *shape* of the helper shouldn't be re-decided per file. This is the context-side counterpart of [EventBuilder](/testing/isolated-testing#eventbuilder) for events.
-
 ## Job Actors {#job-actors}
 
 ## Recipe: Testing Managed Job Completion
