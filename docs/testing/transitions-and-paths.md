@@ -202,6 +202,17 @@ The trait works with both PHPUnit and Pest, including parallel test runners (Par
 
 The tracker records state transitions through `TestMachine`. Paths are completed when `assertFinished()` or `assertState()` (on a FINAL state) is called.
 
+### Adopting Path Coverage in Your Application
+
+Path coverage is not package-internal tooling — wire it into your Laravel app's test suite in three steps:
+
+1. **Enable tracking** — add `TracksPathCoverage` to your app's `tests/Pest.php` (`uses(TracksPathCoverage::class)->in('Machines')`) or to the base `TestCase` your machine tests extend. Scope it to the directories containing machine tests; it is a no-op elsewhere.
+2. **Enumerate what "all paths" means** — run `php artisan machine:paths "App\Machines\CarSales\CarSalesMachine"` locally to see every HAPPY/FAIL/TIMEOUT/GUARD_BLOCK path your tests should exercise. Uncovered path types are usually missing test scenarios, not tooling noise.
+3. **Assert coverage** — add a dedicated coverage test per machine (`CarSalesMachine::assertPathCoverage(minimum: 90.0)` or `assertAllPathsCovered()`), and/or gate it in CI after the suite: `php artisan machine:coverage "App\Machines\CarSales\CarSalesMachine" --min=90`.
+
+Start with a low `--min` and ratchet it up — turning on `assertAllPathsCovered()` for an existing machine usually surfaces genuinely untested branches (`@fail` routes, guard blocks, timeouts) rather than false gaps.
+
+### Coverage Assertions
 ### Coverage Assertions
 
 <!-- doctest-attr: ignore -->
