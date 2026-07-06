@@ -62,6 +62,19 @@ Guardrails: an override key that matches no constructor parameter throws `Invali
 
 Uses the **exact same** `injectInvokableBehaviorParameters` DI as the engine. What passes `runWithState()` is guaranteed to receive identical parameters during real execution.
 
+The first parameter accepts a `State`, a `ContextManager`, or a plain context array — raw contexts are wrapped via `State::forTesting()` internally, so most unit tests can skip the wrap:
+
+<!-- doctest-attr: ignore -->
+```php
+// All equivalent:
+IsCountPositiveGuard::runWithState(State::forTesting(['count' => 5]));
+IsCountPositiveGuard::runWithState(new ContextManager(['count' => 5]));
+IsCountPositiveGuard::runWithState(['count' => 5]);
+
+// Rich typed context, no State wrap:
+ApproveAction::runWithState(OrderContext::forTesting(['order' => $order]), eventBehavior: $event);
+```
+
 ### Guards — returns bool
 
 Guards return `true` to allow a transition or `false` to block it. Test them by creating a state with the context your guard depends on.
