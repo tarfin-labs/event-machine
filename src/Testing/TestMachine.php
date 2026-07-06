@@ -202,12 +202,44 @@ class TestMachine
         // Resolve compound state to initial child
         $resolvedState = $stateDef->findInitialStateDefinition() ?? $stateDef;
 
-        // Build state at target — minimal history for Machine::send() compatibility
-        $machine->state = new State(
-            context: $contextManager,
-            currentStateDefinition: $resolvedState,
-        );
-        $machine->state->setValues([$resolvedState->id]);
+        // Build state at target — minimal history for Machine::send() compatibility.
+        // The State constructor computes the value array from the state definition:
+        // for PARALLEL states this activates every region's initial leaf (matching
+        // real parallel-entry semantics); overriding it with the bare parent id
+        // would leave the regions inactive.
+        $parallelAncestor = self::findParallelAncestor($resolvedState);
+
+        if ($parallelAncestor instanceof StateDefinition && $resolvedState->id !== $parallelAncestor->id) {
+            // Target sits inside one region of a parallel state: anchor the state
+            // on the parallel ancestor and activate sibling regions at their
+            // initial leaves — matching real parallel-entry semantics — so
+            // events for sibling regions route and @done can fire.
+            $values = [];
+            foreach ($parallelAncestor->stateDefinitions ?? [] as $region) {
+                $regionPrefix = $region->id.$definition->delimiter;
+
+                if ($resolvedState->id === $region->id || str_starts_with($resolvedState->id, $regionPrefix)) {
+                    $values[] = $resolvedState->id;
+
+                    continue;
+                }
+
+                foreach ($region->findAllInitialStateDefinitions() as $regionInitial) {
+                    $values[] = $regionInitial->id;
+                }
+            }
+
+            $machine->state = new State(
+                context: $contextManager,
+                currentStateDefinition: $parallelAncestor,
+            );
+            $machine->state->setValues($values);
+        } else {
+            $machine->state = new State(
+                context: $contextManager,
+                currentStateDefinition: $resolvedState,
+            );
+        }
 
         // Add a minimal init event so Machine::send() can read history->last()
         $machine->state->setInternalEventBehavior(
@@ -221,6 +253,25 @@ class TestMachine
         $instance->trackStateEntry();
 
         return $instance;
+    }
+
+    /**
+     * Nearest PARALLEL ancestor of a state definition, or null when the state
+     * is not inside a parallel region.
+     */
+    private static function findParallelAncestor(StateDefinition $stateDefinition): ?StateDefinition
+    {
+        $current = $stateDefinition->parent;
+
+        while ($current instanceof StateDefinition) {
+            if ($current->type === StateDefinitionType::PARALLEL) {
+                return $current;
+            }
+
+            $current = $current->parent;
+        }
+
+        return null;
     }
 
     /**
