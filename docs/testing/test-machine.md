@@ -542,6 +542,16 @@ OrderMachine::startingAt('data_collection.product.product_selected')
     ->assertState('submitted');
 ```
 
+The `@always` drain covers region leaves too: starting at a leaf whose `@always` guard passes routes that region (running the transition's actions) while sibling regions stay at their leaves — the same behavior as real parallel entry.
+
+<!-- doctest-attr: ignore -->
+```php
+// retailer region routes via its leaf @always; documents region stays put
+CarSalesMachine::startingAt('processing.retailer.calculating')
+    ->assertRegionState('retailer', 'awaiting_options')
+    ->assertRegionState('documents', 'awaiting_docs');
+```
+
 No more hand-copied region configs to test parallel gating — use the real definition.
 
 ::: tip When to use startingAt() vs withContext()
