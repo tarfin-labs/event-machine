@@ -92,14 +92,18 @@ class StateDefinition
     /**
      * The action(s) to be executed upon entering the state definition.
      *
-     * @var null|array<string|callable>
+     * Items are behavior keys/FQCNs, callables, or tuple arrays parsed by BehaviorTupleParser.
+     *
+     * @var null|array<int, string|callable|array<mixed>>
      */
     public ?array $entry = [];
 
     /**
      * The action(s) to be executed upon exiting the state definition.
      *
-     * @var null|array<string|callable>
+     * Items are behavior keys/FQCNs, callables, or tuple arrays parsed by BehaviorTupleParser.
+     *
+     * @var null|array<int, string|callable|array<mixed>>
      */
     public ?array $exit = [];
 
