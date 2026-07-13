@@ -70,7 +70,7 @@ it('validates @done + target ambiguity', function (): void {
 
 // ─── Managed Job Actor (@done) ────────────────────────────────────
 
-it('dispatches ChildJobJob when entering a state with job key', function (): void {
+it('queues ChildJobJob when entering a state with job key, deferred until persist', function (): void {
     Queue::fake();
 
     $machine = MachineDefinition::define(
@@ -97,11 +97,17 @@ it('dispatches ChildJobJob when entering a state with job key', function (): voi
     $state = $machine->getInitialState();
     $state = $machine->transition(event: ['type' => 'START'], state: $state);
 
-    Queue::assertPushed(ChildJobJob::class, function (ChildJobJob $job): bool {
-        return $job->jobClass === 'App\\Jobs\\SendEmailJob'
-            && $job->jobData === ['email' => 'test@example.com']
-            && $job->fireAndForget === false;
-    });
+    // Dispatch is deferred to Machine::persist() — nothing on the queue yet
+    Queue::assertNothingPushed();
+
+    expect($machine->pendingChildDispatches)->toHaveCount(1);
+
+    /** @var ChildJobJob $job */
+    $job = $machine->pendingChildDispatches[0];
+    expect($job)->toBeInstanceOf(ChildJobJob::class)
+        ->and($job->jobClass)->toBe('App\\Jobs\\SendEmailJob')
+        ->and($job->jobData)->toBe(['email' => 'test@example.com'])
+        ->and($job->fireAndForget)->toBeFalse();
 });
 
 // ─── Fire-and-Forget Job Actor ────────────────────────────────────
@@ -134,11 +140,13 @@ it('dispatches fire-and-forget job and transitions immediately', function (): vo
     // Parent should have transitioned immediately to target
     expect($state->value)->toBe(['ff_parent.next_state']);
 
-    // Job should be dispatched as fire-and-forget
-    Queue::assertPushed(ChildJobJob::class, function (ChildJobJob $job): bool {
-        return $job->jobClass === 'App\\Jobs\\AuditLogJob'
-            && $job->fireAndForget === true;
-    });
+    // Job is queued as fire-and-forget (dispatched on persist)
+    expect($machine->pendingChildDispatches)->toHaveCount(1);
+
+    /** @var ChildJobJob $job */
+    $job = $machine->pendingChildDispatches[0];
+    expect($job->jobClass)->toBe('App\\Jobs\\AuditLogJob')
+        ->and($job->fireAndForget)->toBeTrue();
 });
 
 // ─── ChildJobJob execution ───────────────────────────────────────

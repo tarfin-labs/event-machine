@@ -557,7 +557,10 @@ it('silently stays in state when target references nonexistent state', function 
 
     // Parent stays in dispatching — target didn't resolve
     expect($state->currentStateDefinition->id)->toBe('ff_bad_target.dispatching');
-    Queue::assertPushed(ChildMachineJob::class);
+
+    // Child job queued (dispatched on persist)
+    expect($machine->pendingChildDispatches)->toHaveCount(1)
+        ->and($machine->pendingChildDispatches[0])->toBeInstanceOf(ChildMachineJob::class);
 });
 
 // ============================================================
@@ -595,10 +598,13 @@ it('@done.{state} prevents fire-and-forget detection (T18)', function (): void {
     // NOT fire-and-forget: MachineChild record should be created
     expect(DB::table('machine_children')->count())->toBe(1);
 
-    // ChildMachineJob should NOT have fireAndForget flag
-    Queue::assertPushed(ChildMachineJob::class, function (ChildMachineJob $job): bool {
-        return $job->fireAndForget === false;
-    });
+    // ChildMachineJob queued (dispatched on persist) without the fireAndForget flag
+    expect($machine->pendingChildDispatches)->toHaveCount(1);
+
+    /** @var ChildMachineJob $job */
+    $job = $machine->pendingChildDispatches[0];
+    expect($job)->toBeInstanceOf(ChildMachineJob::class)
+        ->and($job->fireAndForget)->toBeFalse();
 });
 
 it('@done.{state} allows @fail when not fire-and-forget (T19)', function (): void {
