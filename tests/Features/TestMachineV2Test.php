@@ -1146,6 +1146,16 @@ it('V54b: startingAt parks at a transient state when @always guards are pinned f
     $test->assertState('idle');
 });
 
+it('V54c: startingAt @always drain runs the transition actions', function (): void {
+    $test = AlwaysGuardMachine::startingAt(
+        stateId: 'idle',
+    );
+
+    // logAction on the @always transition ran during the drain
+    $test->assertState('done')
+        ->assertContext('logged', true);
+});
+
 it('V55: startingAt does not dispatch jobs', function (): void {
     Queue::fake();
 
