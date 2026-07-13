@@ -223,9 +223,12 @@ class Machine implements Castable, JsonSerializable, Stringable
     }
 
     /**
-     * Create a TestMachine at a specific state without running lifecycle.
+     * Create a TestMachine at a specific state without running its entry lifecycle.
      *
-     * No entry actions, no @always, no job dispatch.
+     * No entry actions and no job dispatch for the target state, but @always
+     * transitions ARE drained so the machine rests at a stable configuration
+     * (same as a real start). Pin @always guards to false via `guards:` to
+     * park at a transient state deliberately.
      * Uses the real definition — all transitions, guards, and actions available.
      *
      * @param  string  $stateId  The state to start at (resolved from idMap).

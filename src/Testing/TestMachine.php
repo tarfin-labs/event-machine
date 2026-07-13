@@ -20,6 +20,7 @@ use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\MachineOutput;
 use Tarfinlabs\EventMachine\Behavior\MachineFailure;
 use Tarfinlabs\EventMachine\Models\MachineTimerFire;
+use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
@@ -148,9 +149,13 @@ class TestMachine
     /**
      * @internal Use Machine::startingAt() instead.
      *
-     * Create a TestMachine at a specific state without running any lifecycle.
+     * Create a TestMachine at a specific state without running its entry lifecycle.
      *
-     * No entry actions, no @always transitions, no job dispatch, no history.
+     * The target state's entry actions and job dispatch are skipped, but
+     * eventless (@always) transitions ARE processed — a state whose @always
+     * guard passes is not a restable configuration, so the machine stabilizes
+     * exactly like a real start would. Pin @always guards to false via the
+     * `guards:` parameter to park at a transient state deliberately.
      * Uses the real machine definition — all transitions, guards, and actions
      * are available for subsequent operations.
      */
@@ -245,6 +250,24 @@ class TestMachine
         $machine->state->setInternalEventBehavior(
             type: InternalEvent::MACHINE_START,
         );
+
+        // Drain eventless (@always) transitions — same as getInitialState().
+        // A state whose @always guard passes is not a restable configuration;
+        // the real machine can never be observed resting there.
+        foreach ($machine->state->currentStateDefinition->transitionDefinitions ?? [] as $transitionDefinition) {
+            if ($transitionDefinition->isAlways === true) {
+                $machine->state = $definition->transition(
+                    event: [
+                        'type'  => TransitionProperty::Always->value,
+                        'actor' => $machine->state->currentEventBehavior->actor($contextManager),
+                    ],
+                    state: $machine->state,
+                    recursionDepth: 1,
+                );
+
+                break;
+            }
+        }
 
         $instance                 = new self($machine);
         $instance->fakedBehaviors = array_merge($instance->fakedBehaviors, $preInitFakes);
