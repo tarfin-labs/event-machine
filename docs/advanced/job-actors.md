@@ -2,6 +2,10 @@
 
 Job actors let you invoke a Laravel Job as a child actor — ideal for single-step async operations that don't need a full state machine.
 
+::: tip Dispatch Timing
+`ChildJobJob` is queued when the parent enters the job state and dispatched **after the parent's state is persisted** (`Machine::persist()`). Because dispatch happens after persist, `QUEUE_CONNECTION=sync` runs the whole chain inline and correctly — the job runs, `@done`/`@fail` routes, and the parent advances before `send()` returns. No queue worker needed for e2e tests.
+:::
+
 ## Config Syntax
 
 ### Managed Job (with @done/@fail)

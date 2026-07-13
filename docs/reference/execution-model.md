@@ -138,9 +138,13 @@ sequenceDiagram
 
 1. **Entry actions run before invoke.** An entry action can `raise()` an event that transitions the machine out of the delegating state. The child machine is never started.
 2. **Raised events are processed first.** All internal events queued during entry are resolved before delegation begins. This prevents orphaned child machines.
-3. **Async dispatch is also deferred.** `ChildMachineJob` is dispatched to the queue only after the macrostep completes, not during entry action execution.
+3. **Async dispatch is deferred to persist.** `ChildMachineJob`, `ChildJobJob`, `ChildMachineTimeoutJob`, and queued listener jobs are queued during the macrostep but only dispatched by `Machine::persist()`, after the parent's new state is durably written. These jobs restore the parent from the DB — dispatching earlier would let them observe the pre-transition state and silently drop completions.
 
 This ordering makes it safe to use `raise()` in entry actions to conditionally bypass delegation.
+
+::: tip Sync queue is fully supported
+Because dispatch happens after persist, `QUEUE_CONNECTION=sync` runs the whole delegation chain inline and correctly: persist → child job → `ChildMachineCompletionJob` → `@done`/`@fail` routing on the freshly-persisted parent. This makes browser/e2e test suites work without a queue worker — after `send()` returns, the parent has already advanced past the delegating state.
+:::
 
 ## Delegation Lifecycle
 
