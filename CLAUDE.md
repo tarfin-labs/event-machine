@@ -237,6 +237,7 @@ All behaviors should extend appropriate base classes:
 
 ### Testing Patterns
 - **Entry points**: `MyMachine::test()`, `MyMachine::startingAt('state')` — NOT `TestMachine::create()` (deprecated)
+- **`startingAt` drains `@always`**: it skips the target's entry actions/job dispatch but processes eventless transitions, so the machine rests at a stable configuration (like a real start). Pin `@always` guards false via `guards:` to park at a transient state.
 - **Trait**: Always use `InteractsWithMachines` — auto-resets all fakes between tests
 - Test stubs in `tests/Stubs/` provide examples: TrafficLights, Calculator, Elevator, ChildDelegation, Parallel, Endpoint, JobActors, ListenerMachines, AlwaysEventPreservation, and more
 - Package tests use `RefreshDatabase` trait and in-memory SQLite

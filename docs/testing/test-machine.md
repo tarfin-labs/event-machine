@@ -507,7 +507,20 @@ VerificationMachine::startingAt(
 ->assertState('verifying');
 ```
 
-`startingAt()` creates the machine at the given state without running any lifecycle (no entry actions, no `@always`, no job dispatch). The machine uses the real definition — all transitions, guards, and actions are available. The state id may be a leaf name, a machine-relative dotted path (`'parent.region.leaf'`), or the full id.
+`startingAt()` creates the machine at the given state without running its entry lifecycle: the target state's entry actions and job dispatch are skipped. Eventless (`@always`) transitions **are** processed, though — a state whose `@always` guard passes is not a restable configuration, so the machine stabilizes exactly like a real start would. This makes auto-routing states directly testable:
+
+<!-- doctest-attr: ignore -->
+```php
+// checking_info routes via guarded @always — assert the routing itself
+ApplicationMachine::startingAt('checking_info', context: ['score' => 10])
+    ->assertState('rejected');
+
+// Need to park AT the transient state? Pin its @always guards to false:
+ApplicationMachine::startingAt('checking_info', guards: [IsEligibleGuard::class => false])
+    ->assertState('checking_info');
+```
+
+The machine uses the real definition — all transitions, guards, and actions are available. The state id may be a leaf name, a machine-relative dotted path (`'parent.region.leaf'`), or the full id.
 
 ### Parallel states
 
