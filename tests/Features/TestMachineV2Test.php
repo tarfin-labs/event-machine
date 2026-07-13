@@ -711,12 +711,11 @@ it('V73: Machine::startingAt() creates machine at specified state', function ():
 it('V74: Machine::startingAt() supports context, guards, and faking', function (): void {
     $test = AlwaysGuardMachine::startingAt(
         stateId: 'idle',
-        guards: [IsAllowedGuard::class => true],
+        guards: [IsAllowedGuard::class => false],
     );
 
-    $test->assertState('idle') // @always didn't fire (startingAt skips lifecycle)
-        ->send('GO')
-        ->assertState('done');
+    // Faked guard applied through the Machine:: entry point parks the @always drain
+    $test->assertState('idle');
 });
 
 it('V75: assertNotDispatchedTo passes when no dispatch sent', function (): void {
@@ -1127,12 +1126,23 @@ it('V53: startingAt does not run entry actions', function (): void {
     $test->assertContext('paymentId', null);
 });
 
-it('V54: startingAt does not fire @always transitions', function (): void {
+it('V54: startingAt drains @always transitions to a stable state', function (): void {
     $test = AlwaysGuardMachine::startingAt(
         stateId: 'idle',
     );
 
-    // @always would transition to done if lifecycle ran — it didn't
+    // idle's @always guard passes — the machine stabilizes at done,
+    // exactly like a real start would
+    $test->assertState('done');
+});
+
+it('V54b: startingAt parks at a transient state when @always guards are pinned false', function (): void {
+    $test = AlwaysGuardMachine::startingAt(
+        stateId: 'idle',
+        guards: [IsAllowedGuard::class => false],
+    );
+
+    // Faked-false guard blocks the @always drain — machine rests at idle
     $test->assertState('idle');
 });
 
@@ -1171,14 +1181,14 @@ it('V58: startingAt supports simulateChildDone after creation', function (): voi
 it('V59: startingAt supports guards parameter', function (): void {
     $test = AlwaysGuardMachine::startingAt(
         stateId: 'idle',
-        guards: [IsAllowedGuard::class => true],
+        guards: [IsAllowedGuard::class => false],
     );
 
-    // Guard is faked but @always didn't fire (startingAt skips lifecycle)
+    // Faked-false guard applies to the @always drain — machine parks at idle
     $test->assertState('idle');
 
-    // Now send an event that triggers the guarded transition
-    $test->send('GO')->assertState('done');
+    // The same faked guard also blocks the event-driven transition
+    $test->send('GO')->assertState('idle');
 });
 
 it('V60: startingAt with fakingAllActions full flow', function (): void {
