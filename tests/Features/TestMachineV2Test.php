@@ -30,6 +30,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ParentOrderMach
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\SimpleChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ChildPaymentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\FailingChildMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\AlwaysInParallelRegionMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\MultiOutcomeChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateApprovedChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\ImmediateRejectedChildMachine;
@@ -1154,6 +1155,32 @@ it('V54c: startingAt @always drain runs the transition actions', function (): vo
     // logAction on the @always transition ran during the drain
     $test->assertState('done')
         ->assertContext('logged', true);
+});
+
+it('V54d: startingAt drains a region leaf @always inside a parallel state', function (): void {
+    $test = AlwaysInParallelRegionMachine::startingAt(
+        stateId: 'processing.retailer.calculating',
+    );
+
+    // The retailer region routed via its leaf @always (running calculateAction);
+    // the sibling documents region stays at its initial leaf.
+    $test->assertRegionState('retailer', 'awaiting_options')
+        ->assertRegionState('documents', 'awaiting_docs')
+        ->assertContext('calculatedData', [
+            'basePrice'      => 100000,
+            'vatAmount'      => 18000,
+            'totalPrice'     => 118000,
+            'monthlyPayment' => 3277,
+        ]);
+});
+
+it('V54e: startingAt parks at a parallel region leaf without @always', function (): void {
+    $test = AlwaysInParallelRegionMachine::startingAt(
+        stateId: 'processing.retailer.awaiting_input',
+    );
+
+    $test->assertRegionState('retailer', 'awaiting_input')
+        ->assertRegionState('documents', 'awaiting_docs');
 });
 
 it('V55: startingAt does not dispatch jobs', function (): void {
