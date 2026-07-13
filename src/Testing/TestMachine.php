@@ -251,21 +251,29 @@ class TestMachine
             type: InternalEvent::MACHINE_START,
         );
 
-        // Drain eventless (@always) transitions — same as getInitialState().
-        // A state whose @always guard passes is not a restable configuration;
-        // the real machine can never be observed resting there.
-        foreach ($machine->state->currentStateDefinition->transitionDefinitions ?? [] as $transitionDefinition) {
-            if ($transitionDefinition->isAlways === true) {
-                $machine->state = $definition->transition(
-                    event: [
-                        'type'  => TransitionProperty::Always->value,
-                        'actor' => $machine->state->currentEventBehavior->actor($contextManager),
-                    ],
-                    state: $machine->state,
-                    recursionDepth: 1,
-                );
+        // Drain eventless (@always) transitions — same as getInitialState() and
+        // parallel entry in transition(). A state whose @always guard passes is
+        // not a restable configuration; the real machine can never be observed
+        // resting there. Scan every active leaf: parallel targets anchor
+        // currentStateDefinition on the parallel ancestor, so the ancestor alone
+        // would miss a region leaf's @always. transition() routes the matching
+        // region and leaves sibling regions in place.
+        foreach ($machine->state->value as $activeStateId) {
+            $activeDefinition = $definition->idMap[$activeStateId] ?? null;
 
-                break;
+            foreach ($activeDefinition->transitionDefinitions ?? [] as $transitionDefinition) {
+                if ($transitionDefinition->isAlways === true) {
+                    $machine->state = $definition->transition(
+                        event: [
+                            'type'  => TransitionProperty::Always->value,
+                            'actor' => $machine->state->currentEventBehavior->actor($contextManager),
+                        ],
+                        state: $machine->state,
+                        recursionDepth: 1,
+                    );
+
+                    break 2;
+                }
             }
         }
 
