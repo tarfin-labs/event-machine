@@ -200,7 +200,7 @@ class MachineConfigValidatorCommand extends Command
             return null;
         }
 
-        $config = json_decode($content, associative: true, depth: JSON_THROW_ON_ERROR, flags: JSON_THROW_ON_ERROR);
+        $config = json_decode($content, associative: true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             return null;
         }
