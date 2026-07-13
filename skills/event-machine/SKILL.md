@@ -355,7 +355,7 @@ class OrderContext extends ContextManager
 
 - `MyMachine::test($context = [])` — Boot + return `TestMachine` for fluent chain
 - `MyMachine::testIsolated($context = [])` — Preset: `test()` + `fakingAllActions()` (NOTE: `fakingAllActions(except:)` afterwards throws `LogicException` — use the long form for `except:`)
-- `MyMachine::startingAt('nested.state')` — Skip setup, jump to a specific state. Parallel states: all regions activate at their initial leaves; a leaf inside one region auto-initializes sibling regions (test parallel gating on the REAL definition — no region mirrors)
+- `MyMachine::startingAt('nested.state')` — Skip setup, jump to a specific state. Skips the target's entry actions/job dispatch, but DRAINS `@always` transitions — the machine stabilizes like a real start, so auto-routing states are directly testable: `startingAt('deciding', context: [...])->assertState('rejected')`. Park at a transient state by pinning its guards: `guards: [IsEligibleGuard::class => false]`. Parallel states: all regions activate at their initial leaves; a leaf inside one region auto-initializes sibling regions (test parallel gating on the REAL definition — no region mirrors)
 - `MyMachine::assertTransitions([['from' => ..., 'event' => ..., 'to' => ...], ...])` — Table-driven edge coverage; fresh machine per row; `'to' => null, 'guarded' => true` for blocked edges
 - `YourContext::forTesting(['order' => $order])` — Build a typed context: auto-fills `Optional` properties, sets machine identity (`test-machine-id`); overrides win. Primary tool for typed-context construction.
   - Needs app model factories on top? Layer them in a per-machine base TestCase `context()` factory — see `docs/testing/recipes.md` § "Base TestCase for Rich Typed Contexts". Never let `makeContext`/`buildContext` copies drift per file.
@@ -603,7 +603,7 @@ Full reference: `docs/behaviors/outputs.md`. Cheat-sheet: `references/output-key
 2. **`dispatchToParent` is transient** — fire-and-forget job; parent may have already transitioned away → event silently dropped.
 3. **Region context keys must be disjoint** — `paymentStatus` + `shippingStatus`, never shared `status`.
 4. **Cross-region transitions rejected at define-time** — use `raise()` / `sendTo()` for coordination.
-5. **Invoke is deferred until after macrostep** — entry actions + raised events process first; if they cause transition, invoke is skipped (SCXML invoker-05).
+5. **Invoke is deferred until after macrostep; dispatch until after persist** — entry actions + raised events process first; if they cause transition, invoke is skipped (SCXML invoker-05). Child/listener jobs are dispatched by `Machine::persist()`, never mid-transition — so `QUEUE_CONNECTION=sync` runs full delegation chains inline and correctly (no queue worker needed for e2e tests).
 6. **`MachineCurrentState` may lag under parallel dispatch** — assert via restored machine (`Machine::create(state: $rootEventId)`), not by reading the table.
 7. **Async forward-endpoint responses don't contain child state** — wait for child, then restore to verify.
 8. **`ValidationGuardBehavior` aborts the whole transition** (422 via endpoints). Plain `GuardBehavior` failure = graceful.

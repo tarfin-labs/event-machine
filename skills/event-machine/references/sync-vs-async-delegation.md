@@ -53,7 +53,7 @@ No `queue` key → child runs in the same request, parent blocks until child rea
 ],
 ```
 
-- Parent transitions to delegation state; `ChildMachineJob` dispatched to the named queue.
+- Parent transitions to delegation state; `ChildMachineJob` is dispatched to the named queue **after the parent persists** (never mid-transition) — so `QUEUE_CONNECTION=sync` runs the whole chain inline and correctly for e2e tests.
 - Child runs on a worker; on completion, `ChildMachineCompletionJob` routes back to parent's `@done` / `@fail`.
 - `@timeout` is async-only — `'after' => N` seconds before parent times out waiting.
 - Use for: external APIs, anything that retries, long-running multi-step flows.
