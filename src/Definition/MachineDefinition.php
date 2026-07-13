@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Jobs\ChildJobJob;
 use Tarfinlabs\EventMachine\Jobs\ListenerJob;
@@ -120,6 +121,16 @@ class MachineDefinition
 
     /** @var array<int, array<string, mixed>> Pending parallel region dispatches (consumed by Machine::send after persist). */
     public array $pendingParallelDispatches = [];
+
+    /**
+     * @var array<int, ShouldQueue> Pending child machine/job/listener dispatches (flushed by Machine::persist()).
+     *
+     * These jobs restore this machine from the DB. Dispatching them mid-transition
+     * lets them observe a state that is not persisted yet — on sync queues the job
+     * runs inline, the completion finds the parent in its pre-transition state and
+     * is silently discarded, leaving the machine stuck in the invoking state.
+     */
+    public array $pendingChildDispatches = [];
 
     /** @var array<string, EndpointDefinition>|null Parsed endpoint definitions. */
     public ?array $parsedEndpoints = null;
@@ -1575,7 +1586,8 @@ class MachineDefinition
     /**
      * Handle a job actor invocation.
      *
-     * Dispatches a ChildJobJob to run the Laravel job.
+     * Queues a ChildJobJob to run the Laravel job — dispatched by
+     * Machine::persist() after the parent's transition is durably persisted.
      * For fire-and-forget (target set, no @done), transitions parent immediately.
      * For managed jobs (@done set), parent stays waiting for completion.
      */
@@ -1621,7 +1633,8 @@ class MachineDefinition
             $childJobJob->onConnection($invokeDefinition->connection);
         }
 
-        dispatch($childJobJob);
+        // Deferred to Machine::persist() — see $pendingChildDispatches.
+        $this->pendingChildDispatches[] = $childJobJob->afterCommit();
 
         // Fire-and-forget: transition to target immediately
         if ($isFireAndForget) {
@@ -1632,8 +1645,9 @@ class MachineDefinition
     /**
      * Handle an asynchronous child machine invocation.
      *
-     * Creates a MachineChild tracking record, dispatches ChildMachineJob,
-     * and optionally dispatches ChildMachineTimeoutJob with configured delay.
+     * Creates a MachineChild tracking record and queues ChildMachineJob (and
+     * optionally ChildMachineTimeoutJob with configured delay) — dispatched by
+     * Machine::persist() after the parent's transition is durably persisted.
      * Parent stays in the invoking state waiting for completion.
      */
     protected function handleAsyncMachineInvoke(State $state, StateDefinition $stateDefinition, MachineInvokeDefinition $invokeDefinition): void
@@ -1714,7 +1728,8 @@ class MachineDefinition
             $job->onConnection($invokeDefinition->connection);
         }
 
-        dispatch($job)->afterCommit();
+        // Deferred to Machine::persist() — see $pendingChildDispatches.
+        $this->pendingChildDispatches[] = $job->afterCommit();
 
         // Fire-and-forget: optionally transition to target, then return
         if ($isFireAndForget) {
@@ -1738,7 +1753,8 @@ class MachineDefinition
                 $timeoutJob->onQueue($invokeDefinition->queue);
             }
 
-            dispatch($timeoutJob)->afterCommit()->delay($invokeDefinition->timeout);
+            // Deferred to Machine::persist() — see $pendingChildDispatches.
+            $this->pendingChildDispatches[] = $timeoutJob->afterCommit()->delay($invokeDefinition->timeout);
         }
     }
 
@@ -2472,7 +2488,8 @@ class MachineDefinition
             $job->onQueue($queue);
         }
 
-        dispatch($job);
+        // Deferred to Machine::persist() — see $pendingChildDispatches.
+        $this->pendingChildDispatches[] = $job->afterCommit();
     }
 
     /**

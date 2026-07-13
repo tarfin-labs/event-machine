@@ -425,10 +425,52 @@ class Machine implements Castable, JsonSerializable, Stringable
                 $this->dispatchPendingParallelJobs();
             } else {
                 $this->definition->pendingParallelDispatches = [];
+                $this->definition->pendingChildDispatches    = [];
             }
         }
 
         return $this->state;
+    }
+
+    /**
+     * Dispatch deferred child machine/job/listener jobs after persist.
+     *
+     * These jobs restore this machine from the DB — dispatching them before the
+     * current transition is persisted lets them observe a stale state. On sync
+     * queues that meant child completions were silently discarded and the parent
+     * hung in the invoking state forever.
+     */
+    public function dispatchPendingChildJobs(): void
+    {
+        if ($this->definition->pendingChildDispatches === []) {
+            return;
+        }
+
+        // Clear before dispatching: on sync queues the jobs run inline and may
+        // re-enter persist() on this same instance.
+        $jobs                                     = $this->definition->pendingChildDispatches;
+        $this->definition->pendingChildDispatches = [];
+
+        foreach ($jobs as $job) {
+            dispatch($job);
+        }
+
+        // Sync driver: the dispatched chain ran inline and may have advanced this
+        // machine's persisted state past the in-memory snapshot. Reload — only when
+        // the DB actually grew (Queue::fake and deferred afterCommit dispatches leave
+        // it untouched) — so later operations on this instance don't fork a stale
+        // timeline.
+        if (config('queue.default') === 'sync') {
+            $rootEventId = $this->state->history->first()->root_event_id;
+
+            if (MachineEvent::where('root_event_id', $rootEventId)->count() > $this->state->history->count()) {
+                try {
+                    $this->state = $this->restoreStateFromRootEventId($rootEventId);
+                } catch (\Throwable) {
+                    // Defensive: if reload fails, continue with current local state.
+                }
+            }
+        }
     }
 
     /**
@@ -560,6 +602,10 @@ class Machine implements Castable, JsonSerializable, Stringable
 
         // Sync machine_current_states table (diff-based: only update changed states)
         $this->syncCurrentStates();
+
+        // Flush deferred child/listener dispatches now that the state those jobs
+        // will restore is durably visible.
+        $this->dispatchPendingChildJobs();
 
         return $this->state;
     }

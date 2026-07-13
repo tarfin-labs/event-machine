@@ -203,6 +203,7 @@ class ParallelRegionJob implements ShouldQueue
             } elseif (isset($freshMachine)) {
                 // Clear pending dispatches to prevent stale references
                 $freshMachine->definition->pendingParallelDispatches = [];
+                $freshMachine->definition->pendingChildDispatches    = [];
             }
         }
     }
