@@ -440,9 +440,9 @@ try {
 
 ### Re-entrant Lock Support
 
-Sync dispatch chains can cause the same process to call `send()` on a machine that is already locked by itself -- for example: `send()` -> `ChildMachineJob` -> `ChildMachineCompletionJob` -> `send()` on the same parent.
+Sync dispatch chains can cause the same process to need a lock it already holds -- for example: `send()` -> `ChildMachineJob` -> `ChildMachineCompletionJob` -> `send()` on the same parent, or a completion job whose `@done` routing invokes the next child inline (the nested completion then targets the same parent).
 
-`Machine::$heldLockIds` tracks which `root_event_id` values are locked by the current process. When a re-entrant call is detected, lock acquisition is skipped to prevent deadlock.
+`Machine::$heldLockIds` tracks which `root_event_id` values are locked by the current process. The registry is maintained centrally by `MachineLockManager::acquire()` and `MachineLockHandle::release()`, so every acquirer -- `send()`, `ChildMachineCompletionJob`, `ListenerJob`, the timeout and parallel-region jobs -- participates automatically. When a re-entrant call is detected, lock acquisition is skipped so the caller cannot deadlock on a lock held higher in its own call stack.
 
 ### Stale Lock Cleanup
 
