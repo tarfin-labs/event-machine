@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tarfinlabs\EventMachine\Jobs\ParallelRegionJob;
 use Tarfinlabs\EventMachine\Locks\MachineLockManager;
@@ -43,6 +44,10 @@ it('Machine::send() uses immediate lock mode (timeout=0)', function (): void {
         ttl: 60,
         context: 'test_hold',
     );
+
+    // acquire() registers in the process-local re-entrancy registry; drop the
+    // entry so the lock reads as held by ANOTHER process (foreign DB row only).
+    unset(Machine::$heldLockIds[$rootEventId]);
 
     // Machine::send() should throw immediately (timeout=0)
     $machine = ParallelDispatchMachine::create(state: $rootEventId);

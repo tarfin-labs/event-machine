@@ -60,6 +60,10 @@ it('throws MachineAlreadyRunningException when another process holds the lock', 
         context: 'other_process',
     );
 
+    // acquire() registers in the process-local re-entrancy registry; drop the
+    // entry so the lock reads as held by ANOTHER process (foreign DB row only).
+    unset(Machine::$heldLockIds[$rootEventId]);
+
     try {
         // Restore machine and attempt to send event while lock is held
         $contestedMachine = Machine::create($definition, state: $rootEventId);
@@ -123,6 +127,9 @@ it('preserves context data exactly after lock rejection', function (): void {
         ttl: 60,
         context: 'blocker',
     );
+
+    // Simulate a foreign holder — drop the process-local registration.
+    unset(Machine::$heldLockIds[$rootEventId]);
 
     try {
         $contestedMachine = Machine::create($definition, state: $rootEventId);

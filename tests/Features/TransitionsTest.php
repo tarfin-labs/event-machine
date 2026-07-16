@@ -129,6 +129,10 @@ it('If the machine is already running, it will throw exception', function (): vo
     // Hold a lock so send() cannot acquire it
     $handle = MachineLockManager::acquire($rootEventId);
 
+    // acquire() registers in the process-local re-entrancy registry; drop the
+    // entry so the lock reads as held by ANOTHER process (foreign DB row only).
+    unset(Machine::$heldLockIds[$rootEventId]);
+
     try {
         $machine->send(new EEvent());
     } finally {
