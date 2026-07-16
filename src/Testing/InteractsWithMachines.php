@@ -22,6 +22,7 @@ trait InteractsWithMachines
     protected function tearDownInteractsWithMachines(): void
     {
         Machine::resetMachineFakes();
+        Machine::$heldLockIds = [];
         CommunicationRecorder::reset();
         InlineBehaviorFake::resetAll();
         InvokableBehavior::resetAllFakes();
