@@ -64,11 +64,15 @@ class Machine implements Castable, JsonSerializable, Stringable
 
     /**
      * Tracks root_event_ids for which a lock is held in the current process.
-     * Enables re-entrant locking: when a transition dispatches a ChildMachineJob
-     * synchronously (sync queue) and the completion job tries to lock the parent,
-     * it detects the parent is already locked in-process and skips acquisition.
+     * Maintained by MachineLockManager::acquire() and MachineLockHandle::release(),
+     * so every acquirer participates automatically. Enables re-entrant locking:
+     * when a nested call in the same call stack (sync queue: send() →
+     * ChildMachineJob → ChildMachineCompletionJob → send()/ListenerJob on the
+     * same machine) targets an already-locked root_event_id, it detects the
+     * entry and skips acquisition instead of deadlocking on its own lock.
      *
-     * Public for cross-class access (ChildMachineCompletionJob, ListenerJob).
+     * Public for cross-class access (MachineLockManager, MachineLockHandle,
+     * ChildMachineCompletionJob, ListenerJob).
      *
      * @var array<string, true>
      */
@@ -373,8 +377,7 @@ class Machine implements Castable, JsonSerializable, Stringable
                         context: 'send',
                     );
 
-                    self::$heldLockIds[$rootEventId] = true;
-                    $acquiredLock                    = true;
+                    $acquiredLock = true;
                 } catch (MachineLockTimeoutException) {
                     throw MachineAlreadyRunningException::build($rootEventId);
                 }
@@ -420,7 +423,6 @@ class Machine implements Castable, JsonSerializable, Stringable
             $shouldDispatch = true;
         } finally {
             if ($acquiredLock && $rootEventId !== null) {
-                unset(self::$heldLockIds[$rootEventId]);
                 $lockHandle->release();
             }
 

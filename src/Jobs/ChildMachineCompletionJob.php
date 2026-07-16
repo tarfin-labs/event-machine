@@ -147,8 +147,10 @@ class ChildMachineCompletionJob implements ShouldQueue
         }
 
         // 3. Acquire lock for parent state mutation.
-        //    Re-entrant check: in sync queue mode, send() on the parent may already
-        //    hold the lock (send → transition → ChildMachineJob → ChildMachineCompletionJob).
+        //    Re-entrant check: in sync queue mode, send() or an outer completion job
+        //    on the parent may already hold the lock higher in this call stack
+        //    (send → transition → ChildMachineJob → ChildMachineCompletionJob, or a
+        //    nested delegation chain where @done invokes another child inline).
         $alreadyLocked = isset(Machine::$heldLockIds[$this->parentRootEventId]);
         $lockHandle    = null;
 

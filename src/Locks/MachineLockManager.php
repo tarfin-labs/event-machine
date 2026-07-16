@@ -6,6 +6,7 @@ namespace Tarfinlabs\EventMachine\Locks;
 
 use Illuminate\Support\Str;
 use Illuminate\Support\Sleep;
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Models\MachineStateLock;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
@@ -60,6 +61,12 @@ class MachineLockManager
                     'expires_at'    => now()->addSeconds($ttl),
                     'context'       => $context,
                 ]);
+
+                // Register in the process-local re-entrancy registry so nested
+                // callers in the same call stack (send(), completion/listener jobs)
+                // detect the held lock and skip acquisition instead of blocking
+                // on their own stack. MachineLockHandle::release() removes it.
+                Machine::$heldLockIds[$rootEventId] = true;
 
                 return new MachineLockHandle($rootEventId, $ownerId);
             } catch (UniqueConstraintViolationException) {
