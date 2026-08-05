@@ -6,7 +6,6 @@ namespace Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs;
 
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
 
 /**
  * Parent machine with forward delegation for scenario testing.
@@ -48,14 +47,6 @@ class ScenarioForwardParentMachine extends Machine
                     'completed' => ['type' => 'final'],
                     'failed'    => ['type' => 'final'],
                 ],
-            ],
-            behavior: [
-                'events' => [
-                    'APPROVE' => ApproveEvent::class,
-                ],
-            ],
-            endpoints: [
-                'APPROVE',
             ],
         );
     }
