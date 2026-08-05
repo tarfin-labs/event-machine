@@ -28,10 +28,15 @@ class QATypedFailingChildMachine extends Machine
                 'context' => [],
                 'states'  => [
                     'processing' => [
-                        'entry' => function (): void {
-                            throw new \RuntimeException('Payment gateway timeout');
-                        },
+                        'entry' => 'throwPaymentTimeoutAction',
                     ],
+                ],
+            ],
+            behavior: [
+                'actions' => [
+                    'throwPaymentTimeoutAction' => function (): void {
+                        throw new \RuntimeException('Payment gateway timeout');
+                    },
                 ],
             ],
         );
