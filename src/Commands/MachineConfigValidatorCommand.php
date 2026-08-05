@@ -34,27 +34,35 @@ class MachineConfigValidatorCommand extends Command
         $this->traverser->addVisitor($this->visitor);
     }
 
-    public function handle(): void
+    public function handle(): int
     {
         if ($this->option(key: 'all')) {
-            $this->validateAllMachines();
-
-            return;
+            return $this->validateAllMachines() ? self::SUCCESS : self::FAILURE;
         }
 
         $machines = $this->argument(key: 'machine');
         if ($machines === []) {
             $this->error(string: 'Please provide a machine class name or use --all option.');
 
-            return;
+            return self::INVALID;
         }
+
+        $passed = true;
 
         foreach ($machines as $machine) {
-            $this->validateMachine($machine);
+            // Every named machine is validated; one failure never short-circuits the rest.
+            if (!$this->validateMachine($machine)) {
+                $passed = false;
+            }
         }
+
+        return $passed ? self::SUCCESS : self::FAILURE;
     }
 
-    protected function validateMachine(string $machineClass): void
+    /**
+     * @return bool True when the machine validated cleanly.
+     */
+    protected function validateMachine(string $machineClass): bool
     {
         try {
             $machines = $this->findMachineClasses();
@@ -64,21 +72,24 @@ class MachineConfigValidatorCommand extends Command
             if ($fullClassName === null) {
                 $this->error(string: "Machine class '{$machineClass}' not found.");
 
-                return;
+                return false;
             }
 
             $definition = $fullClassName::definition();
             if ($definition === null) {
                 $this->error(string: "Machine '{$fullClassName}' has no definition.");
 
-                return;
+                return false;
             }
 
             StateConfigValidator::validate($definition->config);
             $this->info(string: "✓ Machine '{$fullClassName}' configuration is valid.");
 
+            return true;
         } catch (Throwable $e) {
             $this->error(string: "Error validating '{$machineClass}': ".$e->getMessage());
+
+            return false;
         }
     }
 
@@ -235,7 +246,7 @@ class MachineConfigValidatorCommand extends Command
         return null;
     }
 
-    protected function validateAllMachines(): void
+    protected function validateAllMachines(): bool
     {
         $validated = 0;
         $failed    = 0;
@@ -263,5 +274,9 @@ class MachineConfigValidatorCommand extends Command
 
         $this->newLine();
         $this->info(string: "Validation complete: {$validated} valid, {$failed} failed");
+
+        // A sweep that validated nothing is not a success: reporting SUCCESS for an
+        // empty run is the false green this command exists to remove.
+        return $failed === 0 && $validated > 0;
     }
 }
