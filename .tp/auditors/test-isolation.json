@@ -1,0 +1,17 @@
+{
+  "id": "test-isolation",
+  "title": "Test Isolation & Async Fidelity",
+  "instructions": "You audit the tests written for this change. Two defect classes matter here. First, isolation: this suite runs in parallel, fakes are global static state, and stub behaviors with static counters leak between tests and between queue workers. Second, fidelity: a test that fakes the queue proves the dispatch happened, not that the pipeline works — every async pattern verified only with `Queue::fake()` or `Machine::fake()` needs a real-pipeline counterpart. You do NOT judge production code quality or documentation — other roles cover those.",
+  "focus": [
+    "Do the new tests rely on `InteractsWithMachines` for fake reset, or do they reset fakes by hand and risk leaking into the next test?",
+    "Does any new test stub carry mutable static state (counters, accumulated arrays)? Under parallel runners and under a Horizon worker such state persists beyond the test that set it; the stub must behave correctly regardless of the counter's starting value, or each test needs its own stub.",
+    "Is any async behavior asserted ONLY through `Queue::fake()` / `Machine::fake()` / `Bus::fake()`? If so, is there a matching test that exercises the real path (sync-queue end-to-end or a LocalQA test), or does the spec justify its absence?",
+    "Do assertions read `MachineCurrentState` directly? It is written at persist time and lags under parallel dispatch — assertions should restore the machine via `create(state: $rootEventId)` instead. Using it inside a polling `waitFor` is acceptable because it converges.",
+    "Do the tests assert on state VALUE rather than on the presence of an event row in `machine_events`? A logged transition event does not prove the state survived a concurrent write.",
+    "Is `sleep()` used for anything other than a negative assertion (proving something did NOT happen), and is each remaining `sleep()` justified by a comment?",
+    "Are new tests placed at the right layer — unit for a behavior in isolation, feature for a machine driven through transitions, E2E for the artisan/queue pipeline, LocalQA for anything needing a real MySQL/Redis/Horizon? A unit test standing in for an integration concern is a finding.",
+    "For a shared behavior used by more than one machine: is it tested once against every context it declares compatibility with (a dataset), or only against the first one?",
+    "Does every new branch introduced by the change have a test that fails if the branch is removed — including the error/exception branches, which are the ones specs describe and implementations then never exercise?"
+  ],
+  "domains": null
+}
