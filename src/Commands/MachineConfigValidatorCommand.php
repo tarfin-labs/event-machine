@@ -65,29 +65,50 @@ class MachineConfigValidatorCommand extends Command
     protected function validateMachine(string $machineClass): bool
     {
         try {
-            $machines = $this->findMachineClasses();
             /** @var class-string<Machine>|null $fullClassName */
-            $fullClassName = $this->resolveFullClassName($machineClass, $machines);
+            $fullClassName = $this->resolveFullClassName($machineClass, $this->findMachineClasses());
+        } catch (Throwable $e) {
+            $this->error(string: "Error validating '{$machineClass}': ".$e->getMessage());
 
-            if ($fullClassName === null) {
-                $this->error(string: "Machine class '{$machineClass}' not found.");
+            return false;
+        }
 
-                return false;
-            }
+        if ($fullClassName === null) {
+            $this->error(string: "Machine class '{$machineClass}' not found.");
 
-            $definition = $fullClassName::definition();
+            return false;
+        }
+
+        return $this->validateResolvedMachine($fullClassName);
+    }
+
+    /**
+     * Validate one already-resolved machine class.
+     *
+     * Both entry points funnel through here, so a named invocation and `--all`
+     * cannot drift into running different checks or reporting a machine differently.
+     *
+     * @param  class-string<Machine>  $machineClass
+     *
+     * @return bool True when the machine produced no findings.
+     */
+    protected function validateResolvedMachine(string $machineClass): bool
+    {
+        try {
+            $definition = $machineClass::definition();
+
             if ($definition === null) {
-                $this->error(string: "Machine '{$fullClassName}' has no definition.");
+                $this->error(string: "✗ Machine '{$machineClass}' has no definition.");
 
                 return false;
             }
 
             StateConfigValidator::validate($definition->config);
-            $this->info(string: "✓ Machine '{$fullClassName}' configuration is valid.");
+            $this->info(string: "✓ Machine '{$machineClass}' configuration is valid.");
 
             return true;
         } catch (Throwable $e) {
-            $this->error(string: "Error validating '{$machineClass}': ".$e->getMessage());
+            $this->error(string: "✗ Error in '{$machineClass}': ".$e->getMessage());
 
             return false;
         }
@@ -251,25 +272,14 @@ class MachineConfigValidatorCommand extends Command
         $validated = 0;
         $failed    = 0;
 
-        $machines = $this->findMachineClasses();
-
-        foreach ($machines as $class) {
-            try {
-                $definition = $class::definition();
-                if ($definition === null) {
-                    $this->warn(string: "Machine '{$class}' has no definition.");
-                    $failed++;
-
-                    continue;
-                }
-
-                StateConfigValidator::validate($definition->config);
-                $this->info(string: "✓ Machine '{$class}' configuration is valid.");
+        foreach ($this->findMachineClasses() as $class) {
+            if ($this->validateResolvedMachine($class)) {
                 $validated++;
-            } catch (Throwable $e) {
-                $this->error(string: "✗ Error in '{$class}': ".$e->getMessage());
-                $failed++;
+
+                continue;
             }
+
+            $failed++;
         }
 
         $this->newLine();
