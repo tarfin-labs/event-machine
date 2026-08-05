@@ -23,3 +23,16 @@
 
 # Use bd merge for beads JSONL files
 .beads/issues.jsonl merge=beads
+
+# Teach git where a PHP function starts, so `git diff` hunk headers name the
+# enclosing method. Without this, indented methods are invisible to git's
+# funcname machinery and every diff in a class reads as one section — which
+# breaks hunk-level commit splitting and symbol-addressed edits.
+*.php diff=php
+
+# Pest tests are top-level `it(...)` / `test(...)` closures, not methods, so the
+# stock php driver treats a whole test file as one section. This driver opens a
+# section per test, making one-commit-per-test enforceable.
+# Requires (once per clone):
+#   git config diff.pest.xfuncname '^(it|test)\(.*$'
+tests/**/*.php diff=pest
