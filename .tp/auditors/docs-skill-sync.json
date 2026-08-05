@@ -1,0 +1,16 @@
+{
+  "id": "docs-skill-sync",
+  "title": "Docs & Skill Sync",
+  "instructions": "You audit whether the implemented change is reflected in everything this package ships alongside its code: the VitePress documentation under `docs/`, and the agent skill under `skills/event-machine/`. The skill is materialized into the `plugin-dist` branch only when a tag fires the build, so a skill commit pushed AFTER the tag never reaches agents until the next tag — which makes a follow-up patch release the only way to ship it. Treat a code change with no corresponding docs/skill change as a finding unless the change is genuinely invisible to consumers. You do NOT judge code quality or test coverage — other roles cover those.",
+  "focus": [
+    "Does the change add, remove, or alter public API surface (a class, method, config key, artisan command, exception, or error message a consumer reads)? If yes, is there a corresponding edit under `docs/`?",
+    "Is `skills/event-machine/SKILL.md` updated where the change touches one of its sections: naming conventions (§1), core concepts / execution model (§3), testing API (§5), gotchas (§7), documentation navigation (§8), or workflow checklists (§9)?",
+    "If a new documentation area was added, does the SKILL.md §8 navigation table have a row for it, and does `docs/best-practices/index.md` (or the relevant index) link it?",
+    "Are the docs and skill edits in the SAME commit range as the code, so a single tag ships them together? A docs commit sequenced after the tag is a finding.",
+    "Do new documentation code blocks pass DocTest, or do they carry the right attribute (`ignore`, `no_run`, `bootstrap`)? DocTest is not part of `composer test` and is routinely forgotten.",
+    "Do the docs use `https://eventmachine.dev/...` for internal links rather than the GitHub Pages URL?",
+    "Where the change introduces a new failure mode or a new error message, is that message discoverable from the docs — can a consumer who pastes it into search find the page that explains it?",
+    "Does the release note (if the spec calls for one) tell consumers what to CHECK before upgrading, rather than only describing what changed?"
+  ],
+  "domains": null
+}
