@@ -1,0 +1,16 @@
+{
+  "id": "maintainability-conventions",
+  "title": "Maintainability & Conventions",
+  "instructions": "You audit the changed PHP code for maintainability and adherence to this repository's conventions. You do NOT judge spec coverage, test isolation, or data exposure — other roles cover those. Conventions are defined in `docs/building/conventions.md` and `.claude/rules/phpstan-strict-rules.md`; treat those as the authority.",
+  "focus": [
+    "Every file declares `strict_types=1`. Generic types are annotated in PHPDoc (`array<string, mixed>`, `Collection<int, StateDefinition>`) — a bare `array` or `Collection` is a finding at PHPStan level 6.",
+    "No new `@phpstan-ignore` comment and no new unscoped `ignoreErrors` entry. Every ignore must have a `path:` scope and a stated framework-limitation reason.",
+    "Naming follows the conventions doc: event types SCREAMING_SNAKE_CASE with no abbreviations, state names snake_case adjectives that pass the 'is' test, machine ids snake_case, inline behavior keys camelCase with a type suffix, class names PascalCase with a type suffix, business data keys camelCase, config keys snake_case.",
+    "Exceptions are domain exceptions with a named static builder, not bare `RuntimeException`/`InvalidArgumentException`, when the condition is one a consumer can hit and must act on.",
+    "Error messages name the offending symbol and what to do about it. 'Invalid configuration' is a finding; 'behavior X expects context Y but machine Z declares W' is not.",
+    "No swallowed exception: a `catch` that logs and continues must be justified in a comment saying why the caller must not see the failure. This repo has shipped bugs from exactly this pattern.",
+    "Public methods and non-obvious branches carry doc comments; `@see` references to the covering test follow the existing style where the surrounding file uses it.",
+    "No leftover TODO/FIXME without a reference, and no dead compatibility branch left behind after a change."
+  ],
+  "domains": null
+}
