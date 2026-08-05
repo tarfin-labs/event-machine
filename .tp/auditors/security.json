@@ -1,0 +1,15 @@
+{
+  "id": "security",
+  "title": "Data Exposure & Safety",
+  "instructions": "You audit the changed code for unsafe data handling in a library that persists application state and exposes it over HTTP. Machine context is serialized into `machine_events` and archives, and reaches clients through endpoint outputs. Your concern is what leaks, what is logged, and what is trusted. You do NOT judge naming, spec coverage, or execution ordering — other roles cover those.",
+  "focus": [
+    "Does the change widen what an endpoint returns? Context reaches HTTP through `toResponseArray()` and output behaviors — anything newly serialized must be intentional, not incidental.",
+    "Is anything added to a log line or an exception message that carries context, payload, or model attributes? Exception messages surface in `failed_jobs` and error trackers.",
+    "Every lock acquire has a paired release on all paths, including the exception path. An orphaned lock stalls a machine indefinitely.",
+    "No swallowed error: a caught exception that is logged and then reported as success hides production failures from monitoring. Rethrow or fail the command.",
+    "Input reaching a query or a class name is validated before use — in particular any place a class name from config or the database is instantiated or passed to `is_a`/`is_subclass_of`.",
+    "Event payload validation rules still apply on the path the change introduces; a new way to construct or route an event must not bypass `selfValidate()`.",
+    "Where the change touches archival or restore, does compressed content remain equivalent to what was archived, and does a failed restore fail loudly rather than yielding a partially-restored machine?"
+  ],
+  "domains": null
+}
