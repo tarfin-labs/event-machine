@@ -1,0 +1,17 @@
+{
+  "id": "async-boundary",
+  "title": "Async Boundary",
+  "instructions": "You review this spec for everything that crosses a process boundary: queued jobs, locks, parallel-region dispatch, timers, schedules, and child-machine delegation. The recurring defect class in this codebase is a spec that reads correctly on the `sync` queue and is wrong under a real worker — because the job restores the machine from the database and therefore observes a DIFFERENT state than the code that dispatched it. Assume a real Redis queue with multiple concurrent workers unless the spec proves otherwise. You do NOT judge naming, documentation, or persistence format — other roles cover those.",
+  "focus": [
+    "For every job the change dispatches: does the spec say whether it is dispatched mid-transition or buffered until persist? A job dispatched before persist restores the PRE-transition state, and on a sync queue its completion is silently discarded.",
+    "Does the spec describe the behavior under `QUEUE_CONNECTION=sync` AND under a real worker, and are they the same? Where they differ, is the difference intended and stated?",
+    "For every lock acquired: is there a release on every path including exceptions, and does the spec address re-entrancy when the same machine is locked again deeper in a synchronous dispatch chain?",
+    "Where two jobs can touch the same machine concurrently, does the spec say what prevents lost-update (both restore the same base state, both persist, last writer wins)? Naming the lock is not enough — say which operations it serializes.",
+    "For parallel regions: does the spec address partial failure, where one region succeeds and another fails, and state which region's context survives?",
+    "For anything read from `machine_current_states`: does the spec account for it lagging behind the real state under parallel dispatch, since it is written at persist time?",
+    "Does the change touch parent/child communication? `dispatchToParent` is fire-and-forget and is silently dropped if the parent has already transitioned away. Does the spec say what happens when the parent has moved on?",
+    "For timers and schedules: does the spec state idempotency under a re-fire or a duplicate sweep, and what happens when the sweep runs while the machine is locked?",
+    "Does the change add a failure mode that surfaces only as a `failed_jobs` row? If so, does the spec say how an operator distinguishes it from a machine-level `@fail` route?"
+  ],
+  "domains": null
+}
