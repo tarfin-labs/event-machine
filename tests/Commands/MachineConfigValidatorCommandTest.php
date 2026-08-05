@@ -46,3 +46,17 @@ it('test it keeps validating the remaining named machines after a failure', func
         ->expectsOutput("✓ Machine '".AbcMachine::class."' configuration is valid.")
         ->assertExitCode(Command::FAILURE);
 });
+
+it('test it reports a machine identically whether named or swept', function (): void {
+    $line = "✓ Machine '".AbcMachine::class."' configuration is valid.";
+
+    $this
+        ->artisan('machine:validate', ['machine' => [class_basename(AbcMachine::class)]])
+        ->expectsOutput($line)
+        ->assertExitCode(Command::SUCCESS);
+
+    $this
+        ->artisan('machine:validate', ['--all' => true])
+        ->expectsOutputToContain($line)
+        ->assertExitCode(Command::SUCCESS);
+});
