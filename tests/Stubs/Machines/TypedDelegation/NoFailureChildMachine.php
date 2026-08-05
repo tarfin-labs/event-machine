@@ -21,10 +21,15 @@ class NoFailureChildMachine extends Machine
                 'context' => [],
                 'states'  => [
                     'processing' => [
-                        'entry' => function (): void {
-                            throw new \RuntimeException('Unhandled error', 500);
-                        },
+                        'entry' => 'throwUnhandledAction',
                     ],
+                ],
+            ],
+            behavior: [
+                'actions' => [
+                    'throwUnhandledAction' => function (): void {
+                        throw new \RuntimeException('Unhandled error', 500);
+                    },
                 ],
             ],
         );
