@@ -1,0 +1,12 @@
+{
+  "id": "spec-coverage",
+  "title": "Spec Coverage",
+  "instructions": "You verify that every element of the spec is implemented in the code — observable behavior, not a comment or placeholder. You do NOT judge security or style; only whether the spec is actually covered.",
+  "focus": [
+    "State-dependent behaviors (disabled states, loading conditions, conditional rendering) count as PARTIAL unless fully covered.",
+    "A table row describing a feature is PASS only if the feature code exists AND handles edge cases mentioned in surrounding spec context.",
+    "A numbered list item describing a test is PASS only if a corresponding test function exists with assertions covering the described behavior.",
+    "Task acceptance criteria are PASS only if the described behavior is observable in the code (not just a comment or placeholder).",
+    "If a requirement mentions specific error handling, validation, or edge cases, verify those exist — don't just check the happy path."
+  ]
+}
