@@ -36,6 +36,9 @@ class ScenarioForwardParentMachine extends Machine
                     ],
                     'delegating' => [
                         'machine' => ScenarioForwardChildMachine::class,
+                        // `forward` only works in async mode: the parent forwards into a
+                        // child that is already running, which requires a queued invoke.
+                        'queue'   => true,
                         'forward' => [
                             'CONFIRM' => '/confirm',
                         ],
