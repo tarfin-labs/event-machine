@@ -20,10 +20,15 @@ class TypedFailingChildMachine extends Machine
                 'context' => [],
                 'states'  => [
                     'processing' => [
-                        'entry' => function (): void {
-                            throw new \RuntimeException('Gateway timeout', 504);
-                        },
+                        'entry' => 'throwGatewayTimeoutAction',
                     ],
+                ],
+            ],
+            behavior: [
+                'actions' => [
+                    'throwGatewayTimeoutAction' => function (): void {
+                        throw new \RuntimeException('Gateway timeout', 504);
+                    },
                 ],
             ],
         );
