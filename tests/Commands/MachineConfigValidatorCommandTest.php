@@ -9,6 +9,7 @@ use Symfony\Component\Console\Command\Command;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\XyzMachine;
 use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
+use Tarfinlabs\EventMachine\Fixtures\InvalidMachines\BrokenDefinitionTimerMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 it('test it validates machine with valid config', function (): void {
@@ -91,5 +92,21 @@ it('test it reports the discovered machine count', function (): void {
     $this
         ->artisan('machine:validate', ['--all' => true])
         ->expectsOutputToContain('machine(s)')
+        ->assertExitCode(Command::SUCCESS);
+});
+
+it('test it validates an invalid fixture named explicitly without --all seeing it', function (): void {
+    $fixture = BrokenDefinitionTimerMachine::class;
+
+    // Named explicitly: class-first resolution reaches it and reports the failure.
+    $this
+        ->artisan('machine:validate', ['machine' => [$fixture]])
+        ->expectsOutputToContain('definition build failed')
+        ->assertExitCode(Command::FAILURE);
+
+    // The same fixture is invisible to the sweep, so --all stays green.
+    $this
+        ->artisan('machine:validate', ['--all' => true])
+        ->doesntExpectOutputToContain($fixture)
         ->assertExitCode(Command::SUCCESS);
 });
