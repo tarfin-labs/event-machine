@@ -18,3 +18,10 @@ thoughts/
 .emdash.json
 codedb.snapshot
 .allegro.lock
+
+# tp run artifacts: review rounds and the task file are local workflow state,
+# not part of the package. The spec they were produced from is committed.
+.tp-review/
+spec/upcoming-*.tasks.json
+spec/upcoming-*.tasks.json.lock
+.tp/local.json
