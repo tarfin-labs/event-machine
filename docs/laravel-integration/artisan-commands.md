@@ -4,19 +4,21 @@ EventMachine provides several Artisan commands for managing state machines.
 
 ## machine:validate
 
-Validate machine configuration for potential issues.
+Validate machine configuration and wiring. Exits non-zero on failure, so it can gate CI.
 
 ### Usage
 
 ```bash
-# Validate specific machine
+# Validate a specific machine (by class basename or fully-qualified name)
 php artisan machine:validate "App\Machines\OrderMachine"
 
-# Validate all machines in project
+# Validate every machine the command can discover
 php artisan machine:validate --all
 ```
 
 ### What It Checks
+
+**Configuration shape**
 
 - Valid state configuration keys
 - Final states without transitions
@@ -26,29 +28,44 @@ php artisan machine:validate --all
 - Typed contract declarations (`input` and `failure` config keys reference valid `MachineInput` and `MachineFailure` subclasses)
 - `MachineOutput` classes on final states are valid subclasses
 
+**Wiring**
+
+- **Behavior-to-context compatibility.** A behavior whose `__invoke()` type-hints a context the machine does not declare would raise a `TypeError` the first time its transition fires — possibly a rare branch, weeks after deploy. This reports it before the branch is ever taken.
+- **`$requiredContext` keys.** A key the machine's declared context class cannot supply is reported. The check errs toward silence: a key that might be satisfiable at runtime is left alone, because a false failure in a CI gate is worse than a missed one.
+- **Event-type collisions.** Two event classes deriving the same type collapse to one entry in the machine's event registry, and that registry is what reconstructs persisted events — so payload validation can come from the wrong class. The finding names the class that currently owns the type.
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Every validated machine produced no findings |
+| `1` | A machine produced findings, was unresolvable, had no definition, or threw |
+| `2` | Called with neither a machine argument nor `--all` |
+
+`--all` reporting zero discovered machines is a failure, not a success: a sweep that validated nothing must not read as clean. The discovered count is printed on every run, but it is **informational only** — a shrinking count never fails on its own, so it cannot serve as a discovery-regression signal. A project that wants one names its machines explicitly.
+
+::: warning What a passing run does not guarantee
+Two limitations feed the same exit code, and neither makes the run fail:
+
+- `--all` discovers only classes that **directly extend** `Machine`. A machine behind an intermediate base class is invisible to the sweep. Naming it explicitly still works — a named argument is resolved as a class first, so it is validated whether or not discovery found it.
+- The `$requiredContext` check deliberately under-reports (see above).
+
+A green exit means no finding was produced, not that the wiring is complete.
+:::
+
 ### Example Output
 
 ```
-Validating: App\Machines\OrderMachine
+$ php artisan machine:validate --all
+Discovered 14 machine(s)
+✓ Machine 'App\Machines\Findeks\FindeksMachine' configuration is valid.
+✗ Machine 'App\Machines\Conversion\ConversionMachine' has 2 wiring problem(s):
+  App\Machines\Shared\Actions\ApproveAction::__invoke() expects App\Machines\Application\ApplicationContext but machine App\Machines\Conversion\ConversionMachine declares context App\Machines\Conversion\ConversionContext.
+  App\Machines\Shared\Actions\ApproveAction::$requiredContext['application'] is not a property of App\Machines\Conversion\ConversionContext (machine App\Machines\Conversion\ConversionMachine).
 
-✓ State configuration is valid
-✓ Final states have no transitions
-✓ All behaviors are registered
-✓ Initial states are defined
-
-Validation passed!
-```
-
-### Error Examples
-
-```
-Validating: App\Machines\BrokenMachine
-
-✗ State 'completed' is final but has transitions
-✗ State 'processing' is compound but has no initial state
-✗ Behavior 'unknownAction' is not registered
-
-Validation failed with 3 errors.
+Validation complete: 12 valid, 2 failed
+$ echo $?
+1
 ```
 
 ## machine:uml
@@ -499,6 +516,12 @@ protected function schedule(Schedule $schedule): void
         ->emailOutputOnFailure('admin@example.com');
 }
 ```
+
+::: warning
+`machine:validate` only started returning a non-zero exit code in 9.16.0. Before that the
+`emailOutputOnFailure` hook above could never fire. Adopting this schedule on an existing
+project can start delivering mail immediately — validate locally first.
+:::
 
 ## Custom Commands
 
