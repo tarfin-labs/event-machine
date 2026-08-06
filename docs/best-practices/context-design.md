@@ -156,6 +156,39 @@ class IsRetryAllowedGuard extends GuardBehavior
 }
 ```
 
+
+### A behavior's contract with a machine
+
+A behavior declares what it needs from a machine in two places, and both are checked before
+runtime by `machine:validate`.
+
+**The context type-hint** on `__invoke()` is the compatibility contract. Parameter injection
+passes the machine's context and PHP type-checks it at the call, so a behavior type-hinting a
+context the machine does not declare raises a `TypeError` the first time its transition fires
+— possibly a rare branch, weeks after deploy.
+
+<!-- doctest-attr: ignore -->
+```php
+public function __invoke(OrderContext $context): void
+```
+
+One detail decides whether a union works: **the engine reduces a union to its first member**
+to choose what to inject. A union of context types is fine, and the matching member does not
+have to be first — PHP checks the argument against the whole union. But if the first member
+is not a context type, the engine injects something else entirely, so put the context first.
+
+**`static $requiredContext`** declares the keys the behavior reads:
+
+<!-- doctest-attr: ignore -->
+```php
+public static array $requiredContext = ['order' => Order::class];
+```
+
+At runtime this is satisfied against the live context instance, so a key an earlier action
+populates counts. `machine:validate` can only check the declared class, so it reports a key
+the context class cannot supply and stays silent about anything that might be satisfiable —
+a false failure in a CI gate is worse than a missed one.
+
 ## Best Practice: Separate Keys for Parallel Regions
 
 When using parallel states, give each region its own context namespace to avoid write conflicts.
@@ -236,6 +269,10 @@ The boolean flags become states. The "check status" polling loop becomes a natur
 5. **Prefer typed context for complex machines.** A `ContextManager` subclass catches typos at development time, not runtime.
 
 ## Related
+
+- [Artisan Commands](https://eventmachine.dev/laravel-integration/artisan-commands#machine-validate) — `machine:validate` checks both halves of the contract
+- [Event Design](./event-design) — how an event's type is derived from its class name
+
 
 - [Working with Context](/understanding/context) -- reference documentation
 - [Custom Context](/advanced/custom-context) -- typed ContextManager
