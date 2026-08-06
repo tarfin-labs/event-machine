@@ -4,12 +4,32 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Support;
 
-use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
-use Tarfinlabs\EventMachine\Behavior\EventBehavior;
-use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Support\WiringInspector;
-use Tarfinlabs\EventMachine\Behavior\EventCollection;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\Submit;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\SubmitEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\ApproveEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\KeyedContext;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\RenamedEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\ShapeContext;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\ListFormAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\NoInvokeAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\DottedKeyAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\MissingKeyAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\DeclaredKeyAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\ShapeChildContext;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\ShapeOtherContext;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\DefaultValueAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\ExactContextAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\UnionNoMatchAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\UntypedParamAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\UnionWithNullAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\NoContextParamAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\NonContextClassAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\SupertypeContextAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\DottedMissingRootAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\UnionMatchNotFirstAction;
+use Tarfinlabs\EventMachine\Tests\Stubs\WiringShapes\UnionFirstNotContextAction;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,62 +42,6 @@ use Tarfinlabs\EventMachine\Behavior\EventCollection;
 | as compatible ones.
 |
 */
-
-class ShapeContext extends ContextManager {}
-class ShapeChildContext extends ShapeContext {}
-class ShapeOtherContext extends ContextManager {}
-
-class ExactContextAction extends ActionBehavior
-{
-    public function __invoke(ShapeContext $context): void {}
-}
-
-class SupertypeContextAction extends ActionBehavior
-{
-    public function __invoke(ContextManager $context): void {}
-}
-
-class UnionMatchNotFirstAction extends ActionBehavior
-{
-    public function __invoke(ShapeOtherContext|ShapeContext $context): void {}
-}
-
-class UnionNoMatchAction extends ActionBehavior
-{
-    public function __invoke(ShapeOtherContext|ShapeChildContext $context): void {}
-}
-
-class UnionFirstNotContextAction extends ActionBehavior
-{
-    public function __invoke(State|ShapeOtherContext $state): void {}
-}
-
-class UnionWithNullAction extends ActionBehavior
-{
-    public function __invoke(?ShapeContext $context): void {}
-}
-
-class NoContextParamAction extends ActionBehavior
-{
-    public function __invoke(EventBehavior $event): void {}
-}
-
-class UntypedParamAction extends ActionBehavior
-{
-    public function __invoke($anything): void {}
-}
-
-class NonContextClassAction extends ActionBehavior
-{
-    public function __invoke(EventCollection $history): void {}
-}
-
-class DefaultValueAction extends ActionBehavior
-{
-    public function __invoke(?ShapeContext $context = null): void {}
-}
-
-class NoInvokeAction extends ActionBehavior {}
 
 dataset('context shapes', [
     'exact context type'              => [ExactContextAction::class, ShapeContext::class, null],
@@ -133,46 +97,6 @@ it('reports the same behavior differently against two machines', function (): vo
 |--------------------------------------------------------------------------
 */
 
-class DeclaredKeyAction extends ActionBehavior
-{
-    public static array $requiredContext = ['known' => 'string'];
-
-    public function __invoke(): void {}
-}
-
-class MissingKeyAction extends ActionBehavior
-{
-    public static array $requiredContext = ['absent' => 'string'];
-
-    public function __invoke(): void {}
-}
-
-class ListFormAction extends ActionBehavior
-{
-    public static array $requiredContext = ['string', 'int'];
-
-    public function __invoke(): void {}
-}
-
-class DottedKeyAction extends ActionBehavior
-{
-    public static array $requiredContext = ['known.nested.deep' => 'string'];
-
-    public function __invoke(): void {}
-}
-
-class DottedMissingRootAction extends ActionBehavior
-{
-    public static array $requiredContext = ['absent.nested' => 'string'];
-
-    public function __invoke(): void {}
-}
-
-class KeyedContext extends ContextManager
-{
-    public ?string $known = null;
-}
-
 it('reports a key a typed context class cannot supply', function (): void {
     // The positive verdict: without this row a never-reporting implementation passes.
     expect(WiringInspector::unsatisfiableRequiredContextKeys(MissingKeyAction::class, KeyedContext::class))
@@ -210,20 +134,6 @@ it('skips a machine whose declared context is the base ContextManager', function
 | Event type collisions
 |--------------------------------------------------------------------------
 */
-
-class SubmitEvent extends EventBehavior {}
-
-class Submit extends EventBehavior {}
-
-class ApproveEvent extends EventBehavior {}
-
-class RenamedEvent extends EventBehavior
-{
-    public static function getType(): string
-    {
-        return 'SOMETHING_ELSE';
-    }
-}
 
 it('reports two differently-named classes that derive the same type', function (): void {
     // getType() takes everything before the LAST "Event", so these two different
