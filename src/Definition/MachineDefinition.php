@@ -3575,4 +3575,165 @@ class MachineDefinition
     }
 
     // endregion
+
+    /**
+     * Config keys that hold behaviors, mapped to the behavior type they hold.
+     *
+     * The walk in referencedBehaviors() is key-aware rather than type-sniffing: a bare
+     * FQCN in config carries no bucket of its own, so the key it sits under is what
+     * tells us whether it is an action, a guard, a calculator or an output.
+     */
+    private const BEHAVIOR_KEYS = [
+        'entry'       => BehaviorType::Action,
+        'exit'        => BehaviorType::Action,
+        'actions'     => BehaviorType::Action,
+        'guards'      => BehaviorType::Guard,
+        'calculators' => BehaviorType::Calculator,
+        'output'      => BehaviorType::Output,
+    ];
+
+    /**
+     * Every behavior class this machine references, keyed by behavior type.
+     *
+     * Behaviors reach a machine through more than the `behavior:` maps — a bare FQCN in
+     * state config is the common case in real projects — so this walks the maps, the
+     * config tree, the endpoints and the scenarios together.
+     *
+     * The set stops at the delegation boundary by construction: a child machine, a `job`
+     * target and an endpoint action class are none of them InvokableBehavior subclasses,
+     * so the filter drops them. Their behaviors run under the child's context and are
+     * checked when the child machine itself is validated.
+     *
+     * Closures and inline keys resolving to closures are excluded: they have no
+     * statically known signature to check.
+     *
+     * @return array<string, list<class-string<InvokableBehavior>>>
+     */
+    public function referencedBehaviors(): array
+    {
+        /** @var array<string, list<class-string<InvokableBehavior>>> $found */
+        $found = [];
+
+        foreach (self::BEHAVIOR_KEYS as $type) {
+            $found[$type->value] ??= [];
+        }
+
+        foreach ($found as $typeValue => $_) {
+            foreach ($this->behavior[$typeValue] ?? [] as $candidate) {
+                $this->collectBehavior($found, $typeValue, $candidate);
+            }
+        }
+
+        $this->walkForBehaviors($this->config ?? [], $found);
+        $this->walkForBehaviors($this->scenarios ?? [], $found);
+
+        foreach ($this->parsedEndpoints ?? [] as $endpoint) {
+            $this->collectBehavior($found, BehaviorType::Output->value, $endpoint->output);
+        }
+
+        foreach ($found as $typeValue => $classes) {
+            $classes = array_values(array_unique($classes));
+            sort($classes);
+            $found[$typeValue] = $classes;
+        }
+
+        return $found;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $config
+     * @param  array<string, list<class-string<InvokableBehavior>>>  $found
+     */
+    private function walkForBehaviors(array $config, array &$found): void
+    {
+        foreach ($config as $key => $value) {
+            $type = is_string($key) ? (self::BEHAVIOR_KEYS[$key] ?? null) : null;
+
+            if ($type !== null) {
+                foreach (BehaviorTupleParser::normalizeToList($value) as $element) {
+                    $this->collectBehavior($found, $type->value, $element);
+                }
+
+                continue;
+            }
+
+            if (is_array($value)) {
+                $this->walkForBehaviors($value, $found);
+            }
+        }
+    }
+
+    /**
+     * @param  array<string, list<class-string<InvokableBehavior>>>  $found
+     */
+    private function collectBehavior(array &$found, string $typeValue, mixed $candidate): void
+    {
+        if (is_array($candidate)) {
+            // Behavior tuple: [Class::class, 'param' => value]
+            $candidate = $candidate[0] ?? null;
+        }
+
+        if (!is_string($candidate) || !class_exists($candidate)) {
+            return;
+        }
+
+        if (!is_subclass_of($candidate, InvokableBehavior::class)) {
+            return;
+        }
+
+        /* @var class-string<InvokableBehavior> $candidate */
+        $found[$typeValue][] = $candidate;
+    }
+
+    /**
+     * Every event class reachable from this machine.
+     *
+     * Event classes appear as config keys rather than values, and are Data subclasses
+     * rather than InvokableBehavior ones, so they are collected separately and feed the
+     * event-type collision check only.
+     *
+     * @return list<class-string<EventBehavior>>
+     */
+    public function referencedEventClasses(): array
+    {
+        $found = [];
+
+        foreach ($this->behavior[BehaviorType::Event->value] ?? [] as $candidate) {
+            if (is_string($candidate) && is_subclass_of($candidate, EventBehavior::class)) {
+                $found[] = $candidate;
+            }
+        }
+
+        $this->walkForEventClasses($this->config ?? [], $found);
+        $this->walkForEventClasses($this->scenarios ?? [], $found);
+
+        foreach ($this->parsedEndpoints ?? [] as $endpoint) {
+            $this->walkForEventClasses([$endpoint->eventType], $found);
+        }
+
+        $found = array_values(array_unique($found));
+        sort($found);
+
+        return $found;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $config
+     * @param  list<class-string<EventBehavior>>  $found
+     */
+    private function walkForEventClasses(array $config, array &$found): void
+    {
+        foreach ($config as $key => $value) {
+            foreach ([$key, $value] as $candidate) {
+                if (is_string($candidate) && class_exists($candidate) && is_subclass_of($candidate, EventBehavior::class)) {
+                    /* @var class-string<EventBehavior> $candidate */
+                    $found[] = $candidate;
+                }
+            }
+
+            if (is_array($value)) {
+                $this->walkForEventClasses($value, $found);
+            }
+        }
+    }
 }
