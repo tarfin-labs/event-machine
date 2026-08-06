@@ -204,3 +204,59 @@ it('skips a machine whose declared context is the base ContextManager', function
     expect(WiringInspector::unsatisfiableRequiredContextKeys(MissingKeyAction::class, ContextManager::class))
         ->toBeEmpty();
 });
+
+/*
+|--------------------------------------------------------------------------
+| Event type collisions
+|--------------------------------------------------------------------------
+*/
+
+class SubmitEvent extends EventBehavior {}
+
+class Submit extends EventBehavior {}
+
+class ApproveEvent extends EventBehavior {}
+
+class RenamedEvent extends EventBehavior
+{
+    public static function getType(): string
+    {
+        return 'SOMETHING_ELSE';
+    }
+}
+
+it('reports two differently-named classes that derive the same type', function (): void {
+    // getType() takes everything before the LAST "Event", so these two different
+    // basenames both derive SUBMIT. The old "same basename" framing missed this.
+    expect(SubmitEvent::getType())->toBe(Submit::getType());
+
+    $collisions = WiringInspector::eventTypeCollisions([SubmitEvent::class, Submit::class]);
+
+    expect($collisions)->toHaveCount(1)
+        ->and($collisions[0]['type'])->toBe('SUBMIT')
+        ->and($collisions[0]['classes'])->toEqualCanonicalizing([SubmitEvent::class, Submit::class]);
+});
+
+it('compares a class that overrides the derivation on its overridden value', function (): void {
+    expect(WiringInspector::eventTypeCollisions([RenamedEvent::class, ApproveEvent::class]))->toBeEmpty();
+});
+
+it('does not report the same class referenced repeatedly', function (): void {
+    expect(WiringInspector::eventTypeCollisions([SubmitEvent::class, SubmitEvent::class, SubmitEvent::class]))
+        ->toBeEmpty();
+});
+
+it('names the class that currently owns a colliding type', function (): void {
+    $collisions = WiringInspector::eventTypeCollisions(
+        [SubmitEvent::class, Submit::class],
+        ['SUBMIT' => Submit::class],
+    );
+
+    expect($collisions[0]['owner'])->toBe(Submit::class);
+});
+
+it('says so when a colliding type has no owner in the registry', function (): void {
+    $collisions = WiringInspector::eventTypeCollisions([SubmitEvent::class, Submit::class]);
+
+    expect($collisions[0]['owner'])->toBeNull();
+});
