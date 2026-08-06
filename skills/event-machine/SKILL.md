@@ -477,7 +477,7 @@ Full reference: `docs/laravel-integration/reads.md`.
 
 | Command | Purpose | When to use |
 |---------|---------|-------------|
-| `machine:validate` | Validate machine config | After editing machine definition — catches config errors before runtime |
+| `machine:validate --all` | Validate machine config **and wiring** | After editing a machine definition. Exits non-zero on failure, so it gates CI. Checks behavior-to-context compatibility, `$requiredContext` keys, and event-type collisions |
 | `machine:paths` | Enumerate all paths (static analysis) | After writing a scenario — confirm override states are on reachable paths |
 | `machine:scenario-validate` | Validate scenario structure | After every scenario file change — catches source/event/target mismatches |
 | `machine:scenario` | Scaffold a new scenario | Starting a new scenario — generates plan from BFS path analysis |
@@ -694,6 +694,29 @@ Don't propose a new `'jobs'` slot — wrapper Actions express fire-and-forget mo
 Full reference: `docs/building/defining-states.md` → "Listeners" (semantic split) and "Async Work in Entry Actions" (recipes).
 ---
 
+
+### Wiring gotchas — invisible until the transition fires
+
+**A behavior's context type-hint is its compatibility contract.** Injection passes the
+machine's context and PHP type-checks it *at the call*, so a behavior type-hinting a context
+the machine does not declare raises a `TypeError` the first time that transition runs — a
+rare branch can hide it for weeks. `machine:validate --all` reports it statically.
+
+**A union parameter's FIRST member decides what gets injected.** A union of context types is
+fine and the matching member need not be first, because PHP checks the argument against the
+whole union. But if the first member is not a context type, the engine injects something else
+entirely. Put the context type first.
+
+**Event types come from the class name, not a constant.** `getType()` takes the basename,
+keeps everything before the **last** `Event`, then snake-uppercases it — so `OrderSubmitted`
+and `OrderSubmittedEvent` derive the same `ORDER_SUBMITTED`, and `PaymentEventReceived`
+derives `PAYMENT`. Two classes deriving the same type in one machine silently collapse to
+one registry entry, and that registry is what reconstructs persisted events.
+
+**`$requiredContext` is verified against the live context at runtime**, so a key an earlier
+action populates counts. `machine:validate` can only check the declared class, so it reports
+what the class cannot supply and stays silent about the rest.
+
 ## 8. Documentation Navigation
 
 This skill ships with the **complete VitePress documentation** at `docs/` (materialized at release time, symlinked during development). The sections above are a starting point — `docs/` is always the authoritative source.
@@ -819,8 +842,9 @@ When a user asks you to build/modify an EventMachine workflow:
 4. **Pick closure or class by the work** — closure for trivial wire-up (1-5 lines, no DI, single use); class for reusable, DI'd, or independently tested behavior. See §4 for the decision matrix.
 5. **Write tests at the right layer** — unit for behaviors, integration for flows, E2E for persistence.
 6. **Run the quality gate** — `composer quality` (pint + rector + test). Never just `vendor/bin/pest`.
-7. **Use typed contracts** — `MachineInput`, `MachineOutput`, `MachineFailure` for delegation boundaries.
-8. **Never commit without explicit approval** — especially for tags/releases (no `v` prefix).
+7. **Run `php artisan machine:validate --all`** — catches wiring the gate cannot: a behavior type-hinting a context the machine does not declare is a `TypeError` at the first transition, not a test failure. Exits non-zero, so wire it into CI.
+8. **Use typed contracts** — `MachineInput`, `MachineOutput`, `MachineFailure` for delegation boundaries.
+9. **Never commit without explicit approval** — especially for tags/releases (no `v` prefix).
 
 ### Writing a scenario
 
