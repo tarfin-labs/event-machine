@@ -25,6 +25,17 @@ class MachineConfigValidatorCommand extends Command
     protected $signature   = 'machine:validate {machine?*} {--all : Validate all machines in the project}';
     protected $description = 'Validate machine configuration for potential issues';
     private readonly Parser $parser;
+
+    /**
+     * Discovery result for this invocation.
+     *
+     * The scan walks every search path with php-parser, and nothing it reads can change
+     * while the command runs — so doing it once per named machine was pure waste.
+     *
+     * @var array<int, string>|null
+     */
+    private ?array $discovered = null;
+
     private readonly NodeTraverser $traverser;
     private readonly MachineClassVisitor $visitor;
 
@@ -201,6 +212,10 @@ class MachineConfigValidatorCommand extends Command
      */
     protected function findMachineClasses(): array
     {
+        if ($this->discovered !== null) {
+            return $this->discovered;
+        }
+
         $searchPaths = $this->getSearchPaths();
         $machines    = [];
 
@@ -223,7 +238,7 @@ class MachineConfigValidatorCommand extends Command
             }
         }
 
-        return array_unique(array_merge(...$machines));
+        return $this->discovered = array_unique(array_merge(...$machines));
     }
 
     /**
