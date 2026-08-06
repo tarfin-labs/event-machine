@@ -40,7 +40,7 @@ final class WiringInspector
     {
         $invoke = self::invokeMethod($behaviorClass);
 
-        if ($invoke === null) {
+        if (!$invoke instanceof ReflectionMethod) {
             return null;
         }
 
@@ -150,7 +150,7 @@ final class WiringInspector
 
             $collisions[] = [
                 'type'    => $type,
-                'classes' => array_values($classes),
+                'classes' => $classes,
                 // A colliding class that never reaches the registry has no owner at all;
                 // saying so is more useful than naming an arbitrary one.
                 'owner' => $registry[$type] ?? null,
