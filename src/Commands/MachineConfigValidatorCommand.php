@@ -314,7 +314,9 @@ class MachineConfigValidatorCommand extends Command
         $validated = 0;
         $failed    = 0;
 
-        foreach ($this->findMachineClasses() as $class) {
+        foreach ($machines as $class) {
+            // One machine failing never stops the sweep: the remaining machines are
+            // still validated so a single break does not hide every other finding.
             if ($this->validateResolvedMachine($class)) {
                 $validated++;
 
