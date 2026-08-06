@@ -60,3 +60,10 @@ it('test it reports a machine identically whether named or swept', function (): 
         ->expectsOutputToContain($line)
         ->assertExitCode(Command::SUCCESS);
 });
+
+it('test it validates a machine named by its fully qualified class name', function (): void {
+    $this
+        ->artisan('machine:validate', ['machine' => [AbcMachine::class]])
+        ->expectsOutput("✓ Machine '".AbcMachine::class."' configuration is valid.")
+        ->assertExitCode(Command::SUCCESS);
+});
