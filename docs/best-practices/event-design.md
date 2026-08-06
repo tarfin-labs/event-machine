@@ -111,6 +111,49 @@ If different approver roles require different transitions (manager goes to one s
 ],
 ```
 
+## How the Event Type Is Derived
+
+A class-based event never carries its type directly. `EventBehavior::getType()` derives it
+from the class name: it takes the basename, keeps everything **before the last** `Event` in
+it, then snake-cases and uppercases the result.
+
+<!-- doctest-attr: ignore -->
+```php
+OrderSubmittedEvent::getType();   // ORDER_SUBMITTED
+OrderSubmitted::getType();        // ORDER_SUBMITTED  — same type, different name
+PaymentEventReceived::getType();  // PAYMENT          — "before the LAST Event"
+```
+
+The derived string is what matters everywhere else: it is written to `machine_events.type`,
+it is what `on` blocks are keyed by, and it is the key of the machine's event registry.
+
+Three consequences follow.
+
+**Two differently-named classes can collide.** `OrderSubmitted` and `OrderSubmittedEvent`
+derive the same type. Within one machine the second registration silently replaces the
+first, and since the registry is what reconstructs persisted events, payload validation can
+end up coming from the wrong class. `machine:validate` reports this and names the class that
+currently owns the type.
+
+**Renaming an event class is a data change.** Rows written before the rename keep the old
+type string; rows written after carry the new one. A restored machine has to route both.
+Overriding `getType()` on the new class is usually the safer move — it preserves the string
+that is already persisted:
+
+<!-- doctest-attr: ignore -->
+```php
+class OrderSubmittedV2Event extends EventBehavior
+{
+    public static function getType(): string
+    {
+        return 'ORDER_SUBMITTED';
+    }
+}
+```
+
+**The basename is effectively a wire format.** Choose it the way you would choose a column
+name, not the way you would choose a local variable.
+
 ## Class vs String Events
 
 EventMachine supports both string event types and class-based events. Choose based on complexity.
@@ -235,6 +278,10 @@ Notice the pattern: `{DOMAIN}_{PAST_PARTICIPLE}` for external facts, `{DOMAIN}_{
 5. **No abbreviations.** `ORDER_SUBMITTED`, not `ORD_SUB`. Clarity over brevity.
 
 ## Related
+
+- [Artisan Commands](https://eventmachine.dev/laravel-integration/artisan-commands#machine-validate) — `machine:validate` reports event-type collisions
+- [Context Design](./context-design) — the other half of a behavior's contract with a machine
+
 
 - [Events](/behaviors/events) -- reference documentation
 - [Naming Conventions](/building/conventions) -- event naming rules
