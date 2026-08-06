@@ -14,7 +14,7 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Yunus Emre Deligöz",
+            "name": "Yunus Emre Delig\u00f6z",
             "email": "ye@deligoz.me",
             "role": "Developer"
         }
@@ -52,7 +52,10 @@
     "autoload-dev": {
         "psr-4": {
             "Tarfinlabs\\EventMachine\\Tests\\": "tests"
-        }
+        },
+        "classmap": [
+            "fixtures/"
+        ]
     },
     "scripts": {
         "post-autoload-dump": "@php ./vendor/bin/testbench package:discover --ansi",
