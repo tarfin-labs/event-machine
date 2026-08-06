@@ -578,9 +578,8 @@ class ExportXStateCommand extends Command
      */
     private function extractContext(MachineDefinition $definition): array
     {
-        // Typed ContextManager class is moved to behavior['context'] during setupContextManager()
-        $contextClass = $definition->behavior[BehaviorType::Context->value] ?? null;
-        if (is_string($contextClass) && is_subclass_of($contextClass, ContextManager::class)) {
+        $contextClass = $definition->declaredContextClass();
+        if ($contextClass !== ContextManager::class) {
             return $this->extractTypedContext($contextClass);
         }
 

@@ -13,7 +13,6 @@ use PhpParser\ParserFactory;
 use Illuminate\Console\Command;
 use Symfony\Component\Finder\Finder;
 use Tarfinlabs\EventMachine\Actor\Machine;
-use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
@@ -162,7 +161,7 @@ class MachineConfigValidatorCommand extends Command
      */
     protected function wiringFindings(MachineDefinition $definition, string $machineClass): array
     {
-        $contextClass = $this->declaredContextClass($definition);
+        $contextClass = $definition->declaredContextClass();
 
         $findings = [];
 
@@ -195,26 +194,6 @@ class MachineConfigValidatorCommand extends Command
         }
 
         return $findings;
-    }
-
-    /**
-     * The context class a machine declares, or the base ContextManager when it declares none.
-     *
-     * A typed context is moved into the behavior map during construction and is a class
-     * string there; a machine without one leaves the slot holding an empty array, not
-     * null, so a `?? null` check would read the wrong thing.
-     *
-     * @return class-string<ContextManager>
-     */
-    protected function declaredContextClass(MachineDefinition $definition): string
-    {
-        $declared = $definition->behavior[BehaviorType::Context->value] ?? null;
-
-        if (is_string($declared) && is_subclass_of($declared, ContextManager::class)) {
-            return $declared;
-        }
-
-        return ContextManager::class;
     }
 
     /**
