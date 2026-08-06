@@ -3577,20 +3577,24 @@ class MachineDefinition
     // endregion
 
     /**
-     * Config keys that hold behaviors, mapped to the behavior type they hold.
+     * The context class this machine declares, or the base ContextManager when it declares none.
      *
-     * The walk in referencedBehaviors() is key-aware rather than type-sniffing: a bare
-     * FQCN in config carries no bucket of its own, so the key it sits under is what
-     * tells us whether it is an action, a guard, a calculator or an output.
+     * A typed context is moved into the behavior map by setupContextManager() and is a class
+     * string there; a machine without one leaves the slot holding the empty array written by
+     * initializeEmptyBehavior(), not null — so a `?? null` check reads the wrong thing.
+     *
+     * @return class-string<ContextManager>
      */
-    private const array BEHAVIOR_KEYS = [
-        'entry'       => BehaviorType::Action,
-        'exit'        => BehaviorType::Action,
-        'actions'     => BehaviorType::Action,
-        'guards'      => BehaviorType::Guard,
-        'calculators' => BehaviorType::Calculator,
-        'output'      => BehaviorType::Output,
-    ];
+    public function declaredContextClass(): string
+    {
+        $declared = $this->behavior[BehaviorType::Context->value] ?? null;
+
+        if (is_string($declared) && is_subclass_of($declared, ContextManager::class)) {
+            return $declared;
+        }
+
+        return ContextManager::class;
+    }
 
     /**
      * Every behavior class this machine references, keyed by behavior type.
@@ -3614,8 +3618,10 @@ class MachineDefinition
         /** @var array<string, list<class-string<InvokableBehavior>>> $found */
         $found = [];
 
-        foreach (self::BEHAVIOR_KEYS as $type) {
-            $found[$type->value] ??= [];
+        foreach (BehaviorType::cases() as $type) {
+            if ($type->configKeys() !== []) {
+                $found[$type->value] = [];
+            }
         }
 
         foreach ($found as $typeValue => $_) {
@@ -3647,7 +3653,7 @@ class MachineDefinition
     private function walkForBehaviors(array $config, array &$found): void
     {
         foreach ($config as $key => $value) {
-            $type = is_string($key) ? (self::BEHAVIOR_KEYS[$key] ?? null) : null;
+            $type = is_string($key) ? BehaviorType::fromConfigKey($key) : null;
 
             if ($type !== null) {
                 foreach (BehaviorTupleParser::normalizeToList($value) as $element) {
