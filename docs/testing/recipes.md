@@ -285,7 +285,9 @@ it('machine continues correctly after restore', function () {
 
 ## Recipe: Machine Configuration Validation in Tests
 
-Use `machine:validate` in your test suite to catch configuration errors early:
+Use `machine:validate` in your test suite to catch configuration and wiring errors early.
+
+The command returns a real exit code, so `assertSuccessful()` here is meaningful: it fails when a machine produces a finding, cannot be resolved, has no definition, or throws while building.
 
 <!-- doctest-attr: ignore -->
 ```php
@@ -302,7 +304,7 @@ it('validates all machines in project', function () {
 ```
 
 ::: tip CI Pipeline
-Add `php artisan machine:validate --all` to your CI pipeline alongside tests and static analysis. See [Artisan Commands](/laravel-integration/artisan-commands#machine-validate) for what it checks.
+Add `php artisan machine:validate --all` to your CI pipeline alongside tests and static analysis. See [Artisan Commands](https://eventmachine.dev/laravel-integration/artisan-commands#machine-validate) for what it checks, its exit codes, and what a passing run does **not** guarantee.
 :::
 
 ## Recipe: Inline Behavior Testing
