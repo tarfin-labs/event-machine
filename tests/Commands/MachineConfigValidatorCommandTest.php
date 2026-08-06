@@ -9,6 +9,7 @@ use Symfony\Component\Console\Command\Command;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\XyzMachine;
 use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
+use Tarfinlabs\EventMachine\Fixtures\InvalidMachines\MiswiredContextMachine;
 use Tarfinlabs\EventMachine\Fixtures\InvalidMachines\BrokenDefinitionTimerMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
@@ -109,4 +110,21 @@ it('test it validates an invalid fixture named explicitly without --all seeing i
         ->artisan('machine:validate', ['--all' => true])
         ->doesntExpectOutputToContain($fixture)
         ->assertExitCode(Command::SUCCESS);
+});
+
+it('test it reports wiring findings grouped under the machine', function (): void {
+    // A machine whose behaviors expect a context it does not declare: the engine would
+    // TypeError on the first transition, which is exactly what the check prevents.
+    $this
+        ->artisan('machine:validate', ['machine' => [MiswiredContextMachine::class]])
+        ->expectsOutputToContain('wiring problem(s):')
+        ->expectsOutputToContain('declares context')
+        ->assertExitCode(Command::FAILURE);
+});
+
+it('test it suppresses the success line for a machine with findings', function (): void {
+    $this
+        ->artisan('machine:validate', ['machine' => [MiswiredContextMachine::class]])
+        ->doesntExpectOutputToContain("✓ Machine '".MiswiredContextMachine::class."' configuration is valid.")
+        ->assertExitCode(Command::FAILURE);
 });
