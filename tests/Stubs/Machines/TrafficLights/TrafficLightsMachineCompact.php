@@ -23,6 +23,7 @@ class TrafficLightsMachineCompact extends Machine
         return MachineDefinition::define(
             config: [
                 'initial' => 'active',
+                'context' => TrafficLightsContext::class,
                 'states'  => [
                     'active' => [
                         'on' => [
