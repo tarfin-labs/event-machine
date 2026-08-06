@@ -25,7 +25,7 @@ class PathEnumerator
     private array $parallelGroups = [];
 
     /** Maximum number of paths before stopping enumeration. Prevents explosion in large machines. */
-    private int $maxPaths = 1000;
+    private readonly int $maxPaths;
 
     /** Whether the path limit was reached during enumeration. */
     private bool $pathLimitReached = false;
