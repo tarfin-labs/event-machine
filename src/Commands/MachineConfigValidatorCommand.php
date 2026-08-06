@@ -291,6 +291,26 @@ class MachineConfigValidatorCommand extends Command
 
     protected function validateAllMachines(): bool
     {
+        try {
+            $machines = $this->findMachineClasses();
+        } catch (Throwable $e) {
+            // Discovery itself failed, so no sweep happened. Reporting this the same
+            // way as a completed run would let a broken search path read as clean.
+            $this->error(string: 'Machine discovery failed: '.$e->getMessage());
+
+            return false;
+        }
+
+        if ($machines === []) {
+            $this->error(string: 'No machines discovered in: '.implode(', ', $this->getSearchPaths()));
+
+            return false;
+        }
+
+        // Informational only — a shrinking count never fails on its own, so it cannot
+        // serve as a discovery-regression signal. Name machines explicitly for that.
+        $this->info(string: 'Discovered '.count($machines).' machine(s)');
+
         $validated = 0;
         $failed    = 0;
 
@@ -307,8 +327,6 @@ class MachineConfigValidatorCommand extends Command
         $this->newLine();
         $this->info(string: "Validation complete: {$validated} valid, {$failed} failed");
 
-        // A sweep that validated nothing is not a success: reporting SUCCESS for an
-        // empty run is the false green this command exists to remove.
-        return $failed === 0 && $validated > 0;
+        return $failed === 0;
     }
 }
