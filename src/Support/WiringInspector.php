@@ -8,7 +8,6 @@ use ReflectionMethod;
 use ReflectionException;
 use ReflectionNamedType;
 use ReflectionUnionType;
-use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
@@ -199,20 +198,5 @@ final class WiringInspector
     private static function isContextType(string $name): bool
     {
         return $name === ContextManager::class || is_subclass_of($name, ContextManager::class);
-    }
-
-    /**
-     * The injection categories the engine recognises besides context.
-     *
-     * Kept beside isContextType() so the two stay in step: a name that resolves to one
-     * of these is injected by another arm of the engine's match and is not a context
-     * parameter, however the union is spelled.
-     */
-    public static function isFrameworkType(string $name): bool
-    {
-        return $name === EventBehavior::class
-            || is_subclass_of($name, EventBehavior::class)
-            || $name === State::class
-            || is_subclass_of($name, State::class);
     }
 }
