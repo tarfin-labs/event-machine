@@ -3583,7 +3583,7 @@ class MachineDefinition
      * FQCN in config carries no bucket of its own, so the key it sits under is what
      * tells us whether it is an action, a guard, a calculator or an output.
      */
-    private const BEHAVIOR_KEYS = [
+    private const array BEHAVIOR_KEYS = [
         'entry'       => BehaviorType::Action,
         'exit'        => BehaviorType::Action,
         'actions'     => BehaviorType::Action,
