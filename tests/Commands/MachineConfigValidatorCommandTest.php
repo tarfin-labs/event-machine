@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Tests\Commands;
 
+use Illuminate\Contracts\Console\Kernel;
 use Symfony\Component\Console\Command\Command;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\XyzMachine;
+use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 it('test it validates machine with valid config', function (): void {
@@ -65,5 +67,29 @@ it('test it validates a machine named by its fully qualified class name', functi
     $this
         ->artisan('machine:validate', ['machine' => [AbcMachine::class]])
         ->expectsOutput("✓ Machine '".AbcMachine::class."' configuration is valid.")
+        ->assertExitCode(Command::SUCCESS);
+});
+
+it('test it fails and names the searched paths when discovery finds nothing', function (): void {
+    $command = new class() extends MachineConfigValidatorCommand {
+        protected function getSearchPaths(): array
+        {
+            return [__DIR__.'/../Stubs/Failures'];
+        }
+    };
+    $command->setLaravel($this->app);
+
+    $this->app[Kernel::class]->registerCommand($command);
+
+    $this
+        ->artisan($command->getName(), ['--all' => true])
+        ->expectsOutputToContain('No machines discovered in:')
+        ->assertExitCode(Command::FAILURE);
+});
+
+it('test it reports the discovered machine count', function (): void {
+    $this
+        ->artisan('machine:validate', ['--all' => true])
+        ->expectsOutputToContain('machine(s)')
         ->assertExitCode(Command::SUCCESS);
 });
