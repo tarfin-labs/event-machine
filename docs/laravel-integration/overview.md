@@ -118,7 +118,7 @@ php artisan machine:archive-events --queue
 | Command | Description |
 |---------|-------------|
 | `machine:uml {machine}` | Generate PlantUML diagram |
-| `machine:validate {machine?} --all` | Validate configuration |
+| `machine:validate {machine?} --all` | Validate configuration and wiring; exits non-zero on failure |
 | `machine:archive-events` | Archive old events |
 | `machine:archive-status` | Check archive status |
 
