@@ -10,7 +10,6 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\XyzMachine;
 use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
 use Tarfinlabs\EventMachine\Fixtures\InvalidMachines\MiswiredContextMachine;
-use Tarfinlabs\EventMachine\Fixtures\InvalidMachines\BrokenDefinitionTimerMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 
 it('test it validates machine with valid config', function (): void {
@@ -25,15 +24,6 @@ it('test it fails for non existent machine', function (): void {
         ->artisan('machine:validate', ['machine' => ['NonExistentMachine']])
         ->expectsOutput("Machine class 'NonExistentMachine' not found.")
         ->assertExitCode(Command::FAILURE);
-});
-
-it('test it validates all machines', function (): void {
-    $this
-        ->artisan('machine:validate', ['--all' => true])
-        ->expectsOutputToContain("✓ Machine '".AbcMachine::class."' configuration is valid.")
-        ->expectsOutputToContain("✓ Machine '".XyzMachine::class."' configuration is valid.")
-        ->expectsOutputToContain("✓ Machine '".TrafficLightsMachine::class."' configuration is valid.")
-        ->assertExitCode(Command::SUCCESS);
 });
 
 it('test it reports a usage error without machine argument or all option', function (): void {
@@ -59,9 +49,16 @@ it('test it reports a machine identically whether named or swept', function (): 
         ->expectsOutput($line)
         ->assertExitCode(Command::SUCCESS);
 
+    // The only full sweep in this file. A sweep builds every discoverable machine
+    // definition and reflects over every behavior, so it is by far the most expensive
+    // thing here — everything that needs one asserts against this single run.
     $this
         ->artisan('machine:validate', ['--all' => true])
         ->expectsOutputToContain($line)
+        ->expectsOutputToContain("✓ Machine '".XyzMachine::class."' configuration is valid.")
+        ->expectsOutputToContain("✓ Machine '".TrafficLightsMachine::class."' configuration is valid.")
+        ->expectsOutputToContain('machine(s)')
+        ->doesntExpectOutputToContain(MiswiredContextMachine::class)
         ->assertExitCode(Command::SUCCESS);
 });
 
@@ -89,27 +86,13 @@ it('test it fails and names the searched paths when discovery finds nothing', fu
         ->assertExitCode(Command::FAILURE);
 });
 
-it('test it reports the discovered machine count', function (): void {
+it('test it validates an invalid fixture named explicitly', function (): void {
+    // Named explicitly: class-first resolution reaches a fixture the sweep never sees.
+    // That the sweep does not see it is asserted once, in the single-sweep test above.
     $this
-        ->artisan('machine:validate', ['--all' => true])
-        ->expectsOutputToContain('machine(s)')
-        ->assertExitCode(Command::SUCCESS);
-});
-
-it('test it validates an invalid fixture named explicitly without --all seeing it', function (): void {
-    $fixture = BrokenDefinitionTimerMachine::class;
-
-    // Named explicitly: class-first resolution reaches it and reports the failure.
-    $this
-        ->artisan('machine:validate', ['machine' => [$fixture]])
-        ->expectsOutputToContain('definition build failed')
+        ->artisan('machine:validate', ['machine' => [MiswiredContextMachine::class]])
+        ->expectsOutputToContain('wiring problem(s):')
         ->assertExitCode(Command::FAILURE);
-
-    // The same fixture is invisible to the sweep, so --all stays green.
-    $this
-        ->artisan('machine:validate', ['--all' => true])
-        ->doesntExpectOutputToContain($fixture)
-        ->assertExitCode(Command::SUCCESS);
 });
 
 it('test it reports wiring findings grouped under the machine', function (): void {
