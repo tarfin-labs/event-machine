@@ -64,14 +64,7 @@ class MachineConfigValidatorCommand extends Command
      */
     protected function validateMachine(string $machineClass): bool
     {
-        try {
-            /** @var class-string<Machine>|null $fullClassName */
-            $fullClassName = $this->resolveFullClassName($machineClass, $this->findMachineClasses());
-        } catch (Throwable $e) {
-            $this->error(string: "Error validating '{$machineClass}': ".$e->getMessage());
-
-            return false;
-        }
+        $fullClassName = $this->resolveNamedMachine($machineClass);
 
         if ($fullClassName === null) {
             $this->error(string: "Machine class '{$machineClass}' not found.");
@@ -80,6 +73,35 @@ class MachineConfigValidatorCommand extends Command
         }
 
         return $this->validateResolvedMachine($fullClassName);
+    }
+
+    /**
+     * Resolve a named machine, preferring the class over the discovered set.
+     *
+     * Discovery recognises only classes that directly extend Machine, so a machine
+     * behind an intermediate base class is invisible to it. Resolving the argument
+     * as a class first means naming such a machine validates it instead of failing
+     * the run, without widening discovery itself.
+     *
+     * @return class-string<Machine>|null
+     */
+    protected function resolveNamedMachine(string $machineClass): ?string
+    {
+        if (class_exists($machineClass) && is_subclass_of($machineClass, Machine::class)) {
+            /* @var class-string<Machine> $machineClass */
+            return $machineClass;
+        }
+
+        try {
+            /** @var class-string<Machine>|null $resolved */
+            $resolved = $this->resolveFullClassName($machineClass, $this->findMachineClasses());
+
+            return $resolved;
+        } catch (Throwable $e) {
+            $this->error(string: "Error validating '{$machineClass}': ".$e->getMessage());
+
+            return null;
+        }
     }
 
     /**
