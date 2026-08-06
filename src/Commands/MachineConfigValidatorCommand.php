@@ -13,7 +13,11 @@ use PhpParser\ParserFactory;
 use Illuminate\Console\Command;
 use Symfony\Component\Finder\Finder;
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\ContextManager;
+use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\StateConfigValidator;
+use Tarfinlabs\EventMachine\Support\WiringInspector;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineDiscoveryException;
 
 class MachineConfigValidatorCommand extends Command
@@ -126,14 +130,90 @@ class MachineConfigValidatorCommand extends Command
             }
 
             StateConfigValidator::validate($definition->config);
-            $this->info(string: "✓ Machine '{$machineClass}' configuration is valid.");
-
-            return true;
+            $findings = $this->wiringFindings($definition, $machineClass);
         } catch (Throwable $e) {
             $this->error(string: "✗ Error in '{$machineClass}': ".$e->getMessage());
 
             return false;
         }
+
+        if ($findings === []) {
+            $this->info(string: "✓ Machine '{$machineClass}' configuration is valid.");
+
+            return true;
+        }
+
+        $this->error(string: "✗ Machine '{$machineClass}' has ".count($findings).' wiring problem(s):');
+
+        foreach ($findings as $finding) {
+            $this->line(string: '  '.$finding);
+        }
+
+        return false;
+    }
+
+    /**
+     * The wiring findings for one machine, in a stable order.
+     *
+     * @param  class-string<Machine>  $machineClass
+     *
+     * @return list<string>
+     */
+    protected function wiringFindings(MachineDefinition $definition, string $machineClass): array
+    {
+        $contextClass = $this->declaredContextClass($definition);
+
+        $findings = [];
+
+        foreach ($definition->referencedBehaviors() as $behaviors) {
+            foreach ($behaviors as $behavior) {
+                $expected = WiringInspector::incompatibleContextTypes($behavior, $contextClass);
+
+                if ($expected !== null) {
+                    $findings[] = "{$behavior}::__invoke() expects ".implode('|', $expected).
+                        " but machine {$machineClass} declares context {$contextClass}.";
+                }
+
+                foreach (WiringInspector::unsatisfiableRequiredContextKeys($behavior, $contextClass) as $key) {
+                    $findings[] = "{$behavior}::\$requiredContext['{$key}'] is not a property of {$contextClass} (machine {$machineClass}).";
+                }
+            }
+        }
+
+        /** @var array<string, class-string<EventBehavior>> $registry */
+        $registry = $definition->behavior[BehaviorType::Event->value] ?? [];
+
+        foreach (WiringInspector::eventTypeCollisions($definition->referencedEventClasses(), $registry) as $collision) {
+            $owner = $collision['owner'] === null
+                ? 'no class currently owns it in the event registry'
+                : "the type is currently owned by {$collision['owner']}";
+
+            $findings[] = "Event type '{$collision['type']}' is derived by both ".
+                implode(' and ', $collision['classes']).
+                ". EventBehavior::getType() takes the class basename before its last 'Event', so classes with different names can produce the same type — {$owner}.";
+        }
+
+        return $findings;
+    }
+
+    /**
+     * The context class a machine declares, or the base ContextManager when it declares none.
+     *
+     * A typed context is moved into the behavior map during construction and is a class
+     * string there; a machine without one leaves the slot holding an empty array, not
+     * null, so a `?? null` check would read the wrong thing.
+     *
+     * @return class-string<ContextManager>
+     */
+    protected function declaredContextClass(MachineDefinition $definition): string
+    {
+        $declared = $definition->behavior[BehaviorType::Context->value] ?? null;
+
+        if (is_string($declared) && is_subclass_of($declared, ContextManager::class)) {
+            return $declared;
+        }
+
+        return ContextManager::class;
     }
 
     /**
