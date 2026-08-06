@@ -19,6 +19,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\BehaviorCoverage\TransitionActi
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\BehaviorCoverage\CoverageCalculator;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\BehaviorCoverage\CoverageStartedEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\BehaviorCoverage\BehaviorCoverageMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioForwardChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioForwardParentMachine;
 
 it('collects a behavior from every route it can be referenced by', function (): void {
@@ -80,14 +81,14 @@ it('collects event classes separately from behaviors', function (): void {
 
 it('stops at the delegation boundary', function (): void {
     $found = ScenarioForwardParentMachine::definition()->referencedBehaviors();
+    $all   = array_merge(...array_values($found));
 
-    // The parent delegates to a child machine. The child class is not an
-    // InvokableBehavior, and the child's own behaviors live in the child's
-    // definition, so neither reaches the parent's set.
-    foreach ($found as $classes) {
-        foreach ($classes as $class) {
-            expect(is_subclass_of($class, InvokableBehavior::class))->toBeTrue()
-                ->and(is_subclass_of($class, Machine::class))->toBeFalse();
-        }
+    // Unconditional: the parent delegates to a child machine, and neither the child
+    // class nor anything running under the child's context belongs in the parent's
+    // set. Asserting on the flattened set means this holds even when it is empty.
+    expect($all)->not->toContain(ScenarioForwardChildMachine::class);
+
+    foreach ($all as $class) {
+        expect(is_subclass_of($class, InvokableBehavior::class))->toBeTrue();
     }
 });
