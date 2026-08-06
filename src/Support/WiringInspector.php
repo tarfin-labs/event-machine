@@ -116,6 +116,51 @@ final class WiringInspector
     }
 
     /**
+     * Event classes that derive the same event type as another class in the same set.
+     *
+     * The comparison is on the DERIVED type, never the class name: getType() strips a
+     * trailing `Event` before snake-casing and is overridable, so two differently-named
+     * classes can collide and two similarly-named ones may not.
+     *
+     * Each returned group names the type, every class deriving it, and which class
+     * currently owns it in the machine's registry — ownership is last-writer-wins over
+     * the definition traversal, so a consumer cannot work it out by reading config.
+     *
+     * @param  list<class-string<EventBehavior>>  $eventClasses
+     * @param  array<string, class-string<EventBehavior>>  $registry
+     *
+     * @return list<array{type: string, classes: list<class-string<EventBehavior>>, owner: class-string<EventBehavior>|null}>
+     */
+    public static function eventTypeCollisions(array $eventClasses, array $registry = []): array
+    {
+        $byType = [];
+
+        foreach (array_unique($eventClasses) as $class) {
+            $byType[$class::getType()][] = $class;
+        }
+
+        $collisions = [];
+
+        foreach ($byType as $type => $classes) {
+            if (count($classes) < 2) {
+                continue;
+            }
+
+            sort($classes);
+
+            $collisions[] = [
+                'type'    => $type,
+                'classes' => array_values($classes),
+                // A colliding class that never reaches the registry has no owner at all;
+                // saying so is more useful than naming an arbitrary one.
+                'owner' => $registry[$type] ?? null,
+            ];
+        }
+
+        return $collisions;
+    }
+
+    /**
      * @param  class-string  $behaviorClass
      */
     private static function invokeMethod(string $behaviorClass): ?ReflectionMethod
