@@ -44,7 +44,7 @@ abstract class EventBehavior extends Data
     }
 
     /** Actor performing the event. */
-    private mixed $actor = null;
+    private mixed $actor;
 
     public bool $isTransactional = true;
 
