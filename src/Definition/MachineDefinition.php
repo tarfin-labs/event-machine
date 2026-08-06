@@ -3655,7 +3655,7 @@ class MachineDefinition
         foreach ($config as $key => $value) {
             $type = is_string($key) ? BehaviorType::fromConfigKey($key) : null;
 
-            if ($type !== null) {
+            if ($type instanceof BehaviorType) {
                 foreach (BehaviorTupleParser::normalizeToList($value) as $element) {
                     $this->collectBehavior($found, $type->value, $element);
                 }
