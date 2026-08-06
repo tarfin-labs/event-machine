@@ -621,10 +621,12 @@ Common validation errors include:
 You can also run validation via artisan:
 
 ```bash
-php artisan machine:validate
+php artisan machine:validate --all
 ```
 
-This scans all Machine classes and reports config errors without running the application.
+This scans every discoverable Machine class and reports config and wiring errors without
+running the application. `--all` (or a machine name) is required: calling it bare is a
+usage error.
 
 ::: tip MachineDefinitionNotFoundException
 If a Machine subclass does not implement the `definition()` method, `MachineDefinitionNotFoundException` is thrown when the machine is instantiated or discovered by artisan commands.
