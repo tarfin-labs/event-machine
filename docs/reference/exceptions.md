@@ -368,6 +368,8 @@ is `false`.
 
 Thrown by the scaffold command when no path exists from source to target.
 
+It carries two distinct findings, and they are not interchangeable. The default case means the states are genuinely not connected by that event. The `truncated()` factory means the search stopped at its iteration ceiling with work still pending — a path may well exist and simply was not reached. Only the second is fixable, by raising `--max-iterations`; treating it as the first is how a stopped search gets mistaken for a confident answer.
+
 - **Extends:** `RuntimeException`
 - **Thrown from:** `ScenarioPathResolver`
 

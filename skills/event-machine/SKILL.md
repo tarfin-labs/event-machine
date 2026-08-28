@@ -647,7 +647,7 @@ Full details: `docs/advanced/scenario-plan.md` → "Pitfalls" section.
 | `TypeError: Argument must be of type <MachineFailure>, null given` | Scenario `@fail` doesn't inject typed failure | Override the action with context-write proxy |
 | `ScenarioFailedException: Event mismatch` | Scenario slug attached to wrong endpoint | Check scenario's `$event` matches endpoint's registered event type |
 | `ScenarioFailedException: Source mismatch` | Machine not in expected source state | Check `$source` property vs current machine state |
-| `NoScenarioPathFoundException` | BFS can't reach target from source | Run `machine:paths` to find actual paths; add guard overrides for branching |
+| `NoScenarioPathFoundException` | BFS can't reach target from source — **or** the search hit its iteration ceiling first (the `truncated()` variant, whose message says "truncated at the search limit") | Read which of the two it is. Genuinely unreachable: run `machine:paths` to find actual paths, add guard overrides for branching. Truncated: raise `--max-iterations` |
 | `ScenarioTargetMismatchException` | Machine didn't reach `$target` after execution | Check plan overrides force the intended path; override branch guards |
 | `MissingMachineContextException` | Required context key missing | Read the enriched hint in the error; add key via `$requiredContext` or input closure |
 | `MachineAlreadyRunningException` | Concurrent HTTP request to same machine | Normal under load — endpoints return 423 (POST) or 200 (GET) |
