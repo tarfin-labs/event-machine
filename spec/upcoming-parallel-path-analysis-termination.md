@@ -242,7 +242,7 @@ Deferring the values only moves that risk unless the task that pins them is cons
 |---|---|
 | E1 | out-of-process enumeration of the stub reports success |
 | E2 | every region path step is checked against its region, allowing the recorded leaving step |
-| E3 | a transition inherited from at or above a parallel state appears once across machine and region output |
+| E3 | a transition inherited from at or above a parallel state appears once across machine and region output. Measured on the shipped corpus: 43 parallel groups, 0 violations. The check does not meet the shape that breaks E3 — the D10 shape puts the same transition in both the machine path and a region path — because no machine in the corpus has it |
 | E4 | a transition declared inside a region that leaves it appears in the output |
 | E5 | a region state the runtime can leave is not classified as a dead end |
 | E6 | a region state whose only continuations are ancestor-declared is recorded distinguishably from both a dead end and a region exit |
