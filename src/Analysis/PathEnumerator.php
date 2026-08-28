@@ -552,6 +552,16 @@ class PathEnumerator
 
                 $this->subPathsRecorded += $regionEnumerator->totalRecorded();
 
+                // A parallel state nested inside this region recorded its own group on
+                // the sub-enumerator. Dropping those left the nested parallel's regions
+                // out of the result entirely while the analysis still called itself
+                // complete, and made the command contradict itself: it counts parallel
+                // states from the definition but prints groups from here, so the two
+                // lines disagreed for any machine with a parallel inside a region.
+                foreach ($regionEnumerator->parallelGroups as $nestedGroup) {
+                    $this->parallelGroups[] = $nestedGroup;
+                }
+
                 // Region truncation had no route to the result before: the sub-enumerator's
                 // flags were discarded with it, so a region cut short still reported a
                 // complete analysis.
