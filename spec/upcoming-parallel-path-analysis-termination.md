@@ -26,7 +26,7 @@ parallel state with a transition that re-enters a parallel state. Reproduced by 
 | `CarSalesMachine` (production) | 46 | exit 139, no output |
 | `TractorSalesMachine` (production) | 47 | exit 139, no output |
 
-The crash is not size-related — an 11-state stub reproduces it. The trigger is a graph shape.
+The crash is not size-related — a 17-state stub reproduces it, against 46 and 47 for the two production machines by the same measure. The trigger is a graph shape.
 
 A second, independent defect makes `machine:scenario` answer "No path" for targets that are
 genuinely reachable. It is not a consequence of the first: the scenario resolver never crashes and
@@ -95,7 +95,7 @@ hands ownership upward.
 | T2 | A path that was cut short is distinguishable from one that reached a terminal point, in every one of those surfaces. |
 | T3 | No path kind introduced by this change enters the coverage denominator unless an observed run could match it. Path kinds already in the denominator keep their current treatment — `GUARD_BLOCK` is already there and already unmatchable, and changing that is a T5 break, not this change's business. |
 | T4 | Coverage never reports a passing figure computed over an enumeration that did not complete, without disclosing that it did not complete. |
-| T5 | A consumer whose suite passes today keeps passing, unless its machine contains a parallel state. Region path counts, `ParallelPathGroup::combinationCount()` and the console `PARALLEL:` block move for any parallel machine, because region enumeration escapes through inherited ancestor transitions today — that is §2.1's premise, so the blast radius is every parallel machine, not only those whose parallel state carries its own transitions. |
+| T5 | A consumer whose suite passes today keeps passing, unless its machine contains a parallel state. Region path counts, `ParallelPathGroup::combinationCount()` and the console `PARALLEL:` block move for any parallel machine, because region enumeration escapes through inherited ancestor transitions today — that is §2.1's premise. So the blast radius is not only machines whose parallel state carries its own transitions: it is every parallel machine where the parallel state **or an ancestor** carries one. A parallel machine with no transition at or above the parallel state produces byte-identical output before and after. |
 | T6 | A region sub-enumerator never walks outside its own region, following a region-declared escape included. It records the exit edge and stops at the boundary; continuing past the target is machine-level work. A nested parallel's escape target lies outside the enclosing region, so without this the region walk resumes at machine level and re-enumerates every parallel it reaches — work multiplying per nesting level while the top-level path count stays flat, so neither ceiling trips and the analysis still reports itself complete. |
 | T7 | `maxPaths` bounds the paths recorded by the analysis as a whole, region paths included. Region paths are handed to `ParallelPathGroup` rather than to the enumerator's own `$paths`, so a budget derived from `$paths` alone is re-issued near-full to every region at every nesting level, and a result can carry many times `maxPaths` while `pathLimitReached` stays false. |
 
@@ -154,9 +154,10 @@ Two facts, and the second is the one that matters:
 
 1. `MachineDefinition` gates `processPostEntryTransitions()` behind `count($state->value) <= 1` at
    both of its call sites, so that particular sweep does not run in a parallel configuration.
-2. `transitionParallelState()` and the parallel `@done` handling each run their **own ungated**
-   `@always` sweep, looping over `$state->value` and re-entering `transition()` for any active state
-   carrying an `@always`.
+2. `transitionParallelState()` and `transition()`'s parallel-entry branch each run their **own
+   ungated** `@always` sweep, looping over `$state->value` and re-entering `transition()` for any
+   active state carrying an `@always`. (An earlier revision of this section credited the second
+   sweep to the parallel `@done` handling, which contains none.)
 
 So region `@always` edges **are** runtime-reachable. Dropping them from the analysis on the strength
 of fact 1 alone would breach E4. An earlier revision of this spec drew exactly that wrong conclusion.
@@ -185,10 +186,14 @@ reaches.
 
 ### 7.7 Consumers construct the enumerator with defaults
 
-`MachineDefinition::enumeratePaths()` and `MachineCoverageCommand` construct `PathEnumerator` with no
-arguments, and `Machine::buildPathCoverageReport()` reaches it through the parameterless
-`enumeratePaths()`. So no coverage consumer can raise a ceiling that starts failing its suite — which
-is why T5 is stated the way it is.
+**This section describes the situation before the change and is retained for the reasoning that
+follows from it; §5 withdraws the conclusion.** As found, `MachineDefinition::enumeratePaths()` and
+`MachineCoverageCommand` constructed `PathEnumerator` with no arguments, and
+`Machine::buildPathCoverageReport()` reached it through the parameterless `enumeratePaths()`, so no
+coverage consumer could raise a ceiling that started failing its suite. That is why T5 was originally
+stated as it was. The change threads `maxPaths` and `maxDepth` through `enumeratePaths()`, both
+coverage assertions and `machine:coverage`, so the premise no longer holds and the carve-out it
+supported is withdrawn.
 
 `MachinePathsCommand` is the exception: it does pass `--max-paths`. It is not a coverage consumer, so
 it does not weaken T5, and an earlier revision of this spec wrongly lumped it in.
@@ -254,7 +259,7 @@ so agents do not read a truncated analysis as a complete one.
 |---|---|
 | `PathType` gains cases | the four per-type sites in §7.6 must handle them; no consumer `match` exists to break |
 | `PathEnumerationResult` and `PathEnumerator` gain settings | appended with defaults; existing construction sites unaffected |
-| E3/E4 change what is enumerated for parallel machines | path counts, region path counts and coverage percentages move for **every** machine containing a parallel state — the T5 exception. Not only those whose parallel state carries its own transitions: region enumeration escapes through inherited ancestor transitions today, which is §2.1's premise, so the blast radius is wider than an earlier revision of this row claimed |
+| E3/E4 change what is enumerated for parallel machines | path counts, region path counts and coverage percentages move for every parallel machine whose parallel state **or an ancestor** carries a transition — the T5 exception. Region enumeration escapes through inherited ancestor transitions today, which is §2.1's premise, so the radius is wider than "parallel states carrying their own transitions" (an earlier revision) but narrower than "every parallel machine" (the revision after it): with no transition at or above the parallel state, output is byte-identical |
 | S2 adds a step to routes through parallel regions | those routes did not resolve at all before |
 | `machine:paths --json` gains keys | additive; no existing key changes meaning |
 
