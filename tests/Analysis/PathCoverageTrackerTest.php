@@ -205,10 +205,10 @@ test('both test traits discard half-walked paths at set-up', function (): void {
 
             public function boot(): void
             {
-                // Skip the once-per-process boot: it cleans the export directory and
-                // registers a shutdown export, neither of which belongs in a unit test.
-                // The discard runs before that guard, which is the point.
-                self::$pathCoverageBooted = true;
+                // Consume the once-per-process boot first: it cleans the export directory and
+                // registers a shutdown export, neither of which belongs in a unit test. The
+                // discard runs before that guard, which is the point.
+                PathCoverageTracker::claimBoot();
 
                 $this->setUpTracksPathCoverage();
             }
