@@ -60,6 +60,27 @@ class PathCoverageReport
     }
 
     /**
+     * Was the enumeration this report was computed over cut short?
+     *
+     * A coverage figure over an incomplete enumeration is not a coverage
+     * guarantee: the paths that were never enumerated cannot be counted as
+     * uncovered, so the percentage flatters itself. Callers that gate on the
+     * percentage read this alongside it.
+     */
+    public function enumerationTruncated(): bool
+    {
+        return $this->enumeration->analysisTruncated();
+    }
+
+    /**
+     * How many enumerated paths were skipped as unmatchable.
+     */
+    public function skippedPathCount(): int
+    {
+        return count($this->enumeration->paths) - count($this->covered) - count($this->uncovered);
+    }
+
+    /**
      * Get the test names that covered a specific path.
      *
      * @return list<string>
