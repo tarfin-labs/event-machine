@@ -7,8 +7,13 @@ namespace Tarfinlabs\EventMachine\Analysis;
 /**
  * Classification of an enumerated machine path.
  *
- * Determined by scanning the full path (priority order):
- * LOOP > GUARD_BLOCK > FAIL > TIMEOUT > DEAD_END > HAPPY
+ * HAPPY, FAIL, TIMEOUT and DEAD_END are derived by scanning a completed path, in the
+ * priority order FAIL > TIMEOUT > DEAD_END > HAPPY. Every other case records a decision
+ * the scan cannot re-derive from the steps, so it is set directly during DFS: LOOP,
+ * GUARD_BLOCK, TRUNCATED, and the two region outcomes.
+ *
+ * REGION_EXIT and REGION_DEFERRED occur only in a region's own paths, which live in
+ * ParallelPathGroup and never enter PathEnumerationResult::$paths.
  */
 enum PathType: string
 {
