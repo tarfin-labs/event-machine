@@ -3228,9 +3228,9 @@ class MachineDefinition
      *
      * Convenience wrapper around PathEnumerator.
      */
-    public function enumeratePaths(): PathEnumerationResult
+    public function enumeratePaths(int $maxPaths = 1000, int $maxDepth = 200): PathEnumerationResult
     {
-        return (new PathEnumerator($this))->enumerate();
+        return (new PathEnumerator($this, $maxPaths, maxDepth: $maxDepth))->enumerate();
     }
 
     /**
