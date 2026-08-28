@@ -58,7 +58,9 @@ Each section below has step-by-step migration instructions with before/after exa
 
 - `machine:coverage --min` **rejects non-numeric input** instead of coercing it to `0`. `--min=abc` previously passed every gate silently; it now fails the command. It also refuses to judge a truncated analysis rather than printing a percentage that cannot mean what it claims.
 
-- `machine:scenario` separates **"no path exists"** from **"the search hit its iteration limit"**. Both are failures, but only the second is fixable, with `--max-iterations`. Previously both printed "No path".
+- `machine:scenario` separates **"no path exists"** from **"the search hit its iteration limit"**; previously both printed "No path". Only the second is fixable, with `--max-iterations`. It fails when no route was found and warns while continuing when one was, since the printed list may then be missing others. `machine:scenario-validate` gained the same `--max-iterations` option, which it previously lacked entirely.
+
+- **`--max-paths` now bounds region paths and machine paths together.** It was applied per region before, so a parallel machine could enumerate far past the ceiling without noticing. A machine that previously fitted under the default 1000 may now report itself truncated — and since truncation fails the coverage assertions (above), that can newly fail a suite. Raise `--max-paths`, in the assertion or on the command, to get the old reach back.
 
 - Targets **inside a parallel region** now resolve. `machine:scenario` descends into region initial states, marking region entry `@region` — distinct from `@entry`, which means exclusive compound descent. A route that previously reported "No path" for a reachable region-interior target now succeeds.
 
