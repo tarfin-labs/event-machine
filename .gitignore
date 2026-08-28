@@ -19,6 +19,10 @@ thoughts/
 codedb.snapshot
 .allegro.lock
 
+# Path-coverage exports. TracksPathCoverage writes one PID-suffixed file per worker to
+# getcwd()/storage/machine-path-coverage, so adopting it here leaves them in the repo root.
+storage/
+
 # tp run artifacts: review rounds and the task file are local workflow state,
 # not part of the package. The spec they were produced from is committed.
 .tp-review/
