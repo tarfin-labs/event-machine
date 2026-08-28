@@ -117,18 +117,32 @@ class PathEnumerator
         $this->parallelGroups[] = $group;
     }
 
+    /**
+     * @param  list<ParallelPathGroup>  $knownGroups  Groups the caller has already recorded,
+     *                                                so a region sub-enumerator reuses them
+     *                                                instead of re-analysing the same
+     *                                                parallel state.
+     */
     public function __construct(
         private readonly MachineDefinition $definition,
         int $maxPaths = 1000,
         ?StateDefinition $boundary = null,
         int $maxDepth = 200,
         int $depthOffset = 0,
+        array $knownGroups = [],
     ) {
-        $this->maxPaths    = $maxPaths;
-        $this->boundary    = $boundary;
-        $this->maxDepth    = $maxDepth;
-        $this->depthOffset = $depthOffset;
-        $this->graph       = new MachineGraph($definition);
+        // Seeding the groups a caller has already recorded is what stops a region
+        // sub-enumerator from re-analysing a parallel state its caller analysed. Without
+        // it the work was done and then discarded by the dedup, so the path budget was
+        // charged for results nobody keeps: a 44-state machine tripped the default
+        // ceiling, and raising it — the remedy the command prints — re-opened work that
+        // doubles per nesting level with every truncation flag still false.
+        $this->parallelGroups = $knownGroups;
+        $this->maxPaths       = $maxPaths;
+        $this->boundary       = $boundary;
+        $this->maxDepth       = $maxDepth;
+        $this->depthOffset    = $depthOffset;
+        $this->graph          = new MachineGraph($definition);
     }
 
     /**
@@ -584,6 +598,7 @@ class PathEnumerator
                     boundary: $region,
                     maxDepth: $this->maxDepth,
                     depthOffset: $this->depthOffset + count($steps),
+                    knownGroups: $this->parallelGroups,
                 );
                 $regionInitial = $region->findInitialStateDefinition();
 
