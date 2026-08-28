@@ -18,12 +18,6 @@ use Tarfinlabs\EventMachine\Exceptions\NoScenarioPathFoundException;
 class ScenarioPathResolver
 {
     /**
-     * @param  int  $maxIterations  BFS iteration cap. The default is the value this
-     *                              resolver has always used; it is a constructor setting
-     *                              only so the truncation behaviour can be exercised
-     *                              without changing what ships.
-     */
-    /**
      * Whether the most recent resolveAll() hit the iteration cap with work left.
      *
      * A capped search and a search that genuinely found nothing both return an
@@ -32,6 +26,12 @@ class ScenarioPathResolver
      */
     private bool $truncated = false;
 
+    /**
+     * @param  int  $maxIterations  BFS iteration cap. The default is the value this
+     *                              resolver has always used; it is a constructor setting
+     *                              only so the truncation behaviour can be exercised
+     *                              without changing what ships.
+     */
     public function __construct(
         private readonly MachineGraph $graph,
         private readonly int $maxIterations = 1000,
