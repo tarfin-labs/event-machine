@@ -75,11 +75,10 @@ class PathCoverageReport
     /**
      * Was the enumeration cut short by the DEPTH ceiling specifically?
      *
-     * Separated from enumerationTruncated() because the two ceilings differ in what a
-     * caller can do about them. The depth ceiling arrived with this analysis work and
-     * nothing depends on it yet; the path ceiling has been firing silently at its
-     * default for far longer, and the in-suite assertions expose no way to raise it,
-     * so failing on it would hand consumers a break they cannot fix.
+     * Separated from enumerationTruncated() so a report can name which ceiling it hit.
+     * Both now fail the in-suite assertions and both are parameters on them, so this is
+     * a reporting distinction rather than a policy one: it tells a caller whether to
+     * raise maxDepth or maxPaths, not whether the result may be trusted.
      */
     public function depthTruncated(): bool
     {
