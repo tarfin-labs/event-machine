@@ -30,6 +30,22 @@ class PathEnumerator
     /** Whether the path limit was reached during enumeration. */
     private bool $pathLimitReached = false;
 
+    /**
+     * Maximum total analysis depth before a path is cut short.
+     *
+     * Measured as the depth inherited from the caller plus the steps accumulated
+     * in this enumerator, so it bounds total recursion rather than each
+     * enumerator separately. This is the structural backstop: whatever shape a
+     * definition takes, enumeration terminates (E1).
+     */
+    private readonly int $maxDepth;
+
+    /** Depth already consumed by the enumerator that created this one. */
+    private readonly int $depthOffset;
+
+    /** Whether the depth ceiling was reached during enumeration. */
+    private bool $depthLimitReached = false;
+
     /** @var array<string, list<array{suffixSteps: list<PathStep>, type: PathType, terminalStateId: ?string}>> */
     private array $suffixCache = [];
 
@@ -53,10 +69,14 @@ class PathEnumerator
         private readonly MachineDefinition $definition,
         int $maxPaths = 1000,
         ?StateDefinition $boundary = null,
+        int $maxDepth = 200,
+        int $depthOffset = 0,
     ) {
-        $this->maxPaths = $maxPaths;
-        $this->boundary = $boundary;
-        $this->graph    = new MachineGraph($definition);
+        $this->maxPaths    = $maxPaths;
+        $this->boundary    = $boundary;
+        $this->maxDepth    = $maxDepth;
+        $this->depthOffset = $depthOffset;
+        $this->graph       = new MachineGraph($definition);
     }
 
     /**
@@ -165,10 +185,12 @@ class PathEnumerator
      */
     public function enumerate(): PathEnumerationResult
     {
-        $this->paths            = [];
-        $this->parallelGroups   = [];
-        $this->pathLimitReached = false;
-        $this->suffixCache      = [];
+        $this->paths             = [];
+        $this->parallelGroups    = [];
+        $this->pathLimitReached  = false;
+        $this->depthLimitReached = false;
+        $this->deferrals         = 0;
+        $this->suffixCache       = [];
 
         $initialState = $this->definition->initialStateDefinition;
 
@@ -185,6 +207,7 @@ class PathEnumerator
             parallelGroups: $this->parallelGroups,
             definition: $this->definition,
             pathLimitReached: $this->pathLimitReached,
+            depthLimitReached: $this->depthLimitReached,
         );
     }
 
@@ -214,6 +237,16 @@ class PathEnumerator
     ): void {
         // 0. Path limit — stop DFS when limit reached
         if ($this->pathLimitReached) {
+            return;
+        }
+
+        // 0b. Depth ceiling — the structural backstop that makes E1 hold whatever
+        // shape the graph takes. The branch is recorded as cut short rather than
+        // dropped, so a truncated analysis can never be read as a complete one.
+        if ($this->depthOffset + count($steps) >= $this->maxDepth) {
+            $this->depthLimitReached = true;
+            $this->recordPath($steps, PathType::TRUNCATED);
+
             return;
         }
 
