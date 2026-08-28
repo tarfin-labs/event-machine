@@ -6,8 +6,10 @@ use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\Analysis\MachineGraph;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
 use Tarfinlabs\EventMachine\Analysis\PathCoverageReport;
+use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Analysis\ScenarioPathResolver;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\E2EBasicMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ReentrantParallelMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 
@@ -104,6 +106,36 @@ test('a complete analysis lets the coverage assertions run normally', function (
     } catch (AssertionFailedError $e) {
         expect($e->getMessage())->toContain('below minimum')
             ->and($e->getMessage())->not->toContain('depth ceiling');
+    }
+});
+
+test('an unmatched observation does not fail the coverage assertions', function (): void {
+    // This pins a REVERT. An earlier revision failed assertAnalysisWasComplete() on an
+    // unmatched observation — a run walked a route the analysis does not know about, which
+    // reads like free evidence of an incomplete enumeration. It broke every consumer suite:
+    // trackStateEntry records a region leaf id while enumeration records the parallel
+    // container, so every parallel machine mismatches, and assertPathCoverage(0.0) —
+    // documented as a threshold every run clears — became unsatisfiable.
+    //
+    // Nothing else catches a reinstatement: putting the gate back leaves the suite green.
+    PathCoverageTracker::reset();
+    PathCoverageTracker::enable();
+
+    try {
+        E2EBasicMachine::test()->assertFinished();
+
+        $report = new PathCoverageReport(
+            (new PathEnumerator(E2EBasicMachine::definition()))->enumerate(),
+            PathCoverageTracker::observedPaths(E2EBasicMachine::class),
+        );
+
+        // The precondition: without a mismatch this test would pass for the wrong reason.
+        expect($report->unmatchedObservations())->not->toBeEmpty();
+
+        expect(fn () => E2EBasicMachine::assertPathCoverage(minimum: 0.0))
+            ->not->toThrow(AssertionFailedError::class);
+    } finally {
+        PathCoverageTracker::reset();
     }
 });
 
