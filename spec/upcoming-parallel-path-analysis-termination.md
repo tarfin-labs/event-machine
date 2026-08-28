@@ -254,7 +254,7 @@ so agents do not read a truncated analysis as a complete one.
 |---|---|
 | `PathType` gains cases | the four per-type sites in §7.6 must handle them; no consumer `match` exists to break |
 | `PathEnumerationResult` and `PathEnumerator` gain settings | appended with defaults; existing construction sites unaffected |
-| E3/E4 change what is enumerated for parallel machines | path counts, region path counts and coverage percentages move for machines with parallel states carrying their own transitions — the T5 exception |
+| E3/E4 change what is enumerated for parallel machines | path counts, region path counts and coverage percentages move for **every** machine containing a parallel state — the T5 exception. Not only those whose parallel state carries its own transitions: region enumeration escapes through inherited ancestor transitions today, which is §2.1's premise, so the blast radius is wider than an earlier revision of this row claimed |
 | S2 adds a step to routes through parallel regions | those routes did not resolve at all before |
 | `machine:paths --json` gains keys | additive; no existing key changes meaning |
 
