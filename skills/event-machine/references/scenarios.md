@@ -137,6 +137,7 @@ The trio that must be reactivated: classified outcomes (`self::$outcomes`/`self:
 ```bash
 php artisan machine:scenario-validate                # all scenarios
 php artisan machine:scenario-validate --scenario=at-review-scenario
+php artisan machine:scenario-validate --max-iterations=5000   # raise the path-search budget
 php artisan machine:scenario AtReview ... --dry-run  # scaffold preview
 ```
 

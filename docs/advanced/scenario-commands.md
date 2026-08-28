@@ -143,9 +143,14 @@ When a `@continue` event has `EventBehavior::rules()`, payload fields are extrac
 
 ```bash
 php artisan machine:scenario-validate
-    {machine?}        # Specific machine FQCN (optional — auto-discovers all if omitted)
-    {--scenario=}     # Filter: slug, class basename, or FQCN
+    {machine?}              # Specific machine FQCN (optional — auto-discovers all if omitted)
+    {--scenario=}           # Filter: slug, class basename, or FQCN
+    {--max-iterations=1000} # Cap the path search behind each scenario's reachability check
 ```
+
+**Options:**
+- `--scenario=` — validate a single scenario by slug, class basename, or FQCN.
+- `--max-iterations=N` — the search budget handed to the resolver for every scenario's path check (default: 1000). A scenario whose search hits the cap is reported as **truncated at the search limit**, which is a different finding from "no path": raising this number can resolve the first and never the second. Validated before anything is reported, so a typo fails the command rather than silently capping the search at zero.
 
 When `{machine}` is omitted, the command auto-discovers all Machine subclasses that have a `Scenarios/` directory (via Composer classmap, falls back to `app/Machines` file scan). Ensure autoload is up to date with `composer dump-autoload` if newly added machines aren't found.
 

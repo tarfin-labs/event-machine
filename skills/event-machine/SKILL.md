@@ -479,7 +479,7 @@ Full reference: `docs/laravel-integration/reads.md`.
 |---------|---------|-------------|
 | `machine:validate --all` | Validate machine config **and wiring** | After editing a machine definition. Exits non-zero on failure, so it gates CI. Checks behavior-to-context compatibility, `$requiredContext` keys, and event-type collisions |
 | `machine:paths` | Enumerate all paths (static analysis) | After writing a scenario — confirm override states are on reachable paths |
-| `machine:scenario-validate` | Validate scenario structure | After every scenario file change — catches source/event/target mismatches |
+| `machine:scenario-validate` | Validate scenario structure | After every scenario file change — catches source/event/target mismatches. `--max-iterations=N` raises the search budget behind each scenario's reachability check |
 | `machine:scenario` | Scaffold a new scenario | Starting a new scenario — generates plan from BFS path analysis. `--max-iterations=N` raises the search budget; a truncated search reports itself as such, which is **not** the same finding as "no path" |
 | `machine:coverage` | Path coverage report | Before adding transitions — verify no dead paths created. `--max-paths`/`--max-depth` raise the enumeration ceilings; `--min` refuses to pass judgement over a truncated analysis |
 | `machine:xstate` | Export to XState v5 JSON (Stately Studio) | For team discussion — visualize state topology |
