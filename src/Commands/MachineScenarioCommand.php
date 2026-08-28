@@ -76,6 +76,15 @@ class MachineScenarioCommand extends Command
             return self::FAILURE;
         }
 
+        // Truncation matters even when paths WERE found: the search stopped with work
+        // pending, so the list below may be missing routes, and --path=N indexes into a
+        // partial set. Reporting it only on the empty branch let a truncated search that
+        // happened to find one route look like an exhaustive answer.
+        if ($resolver->wasTruncated()) {
+            $this->warn("Path analysis was truncated at the search limit; other paths from '{$source}' to '{$parentTarget}' may exist.");
+            $this->line('Raise the ceiling with --max-iterations to search further.');
+        }
+
         // Select path
         $pathIndex = (int) $this->option('path');
 
