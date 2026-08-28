@@ -157,3 +157,54 @@ test('cleanExportDirectory removes stale files', function (): void {
     // Cleanup
     rmdir($tmpDir);
 });
+
+test('a half-walked path does not leak into the next completed one', function (): void {
+    // completePath() is the only thing that empties the active buffer, and it fires when a
+    // machine reaches a final state. A test that drives a machine partway and stops — the
+    // ordinary shape for asserting an intermediate state — used to leave its steps behind
+    // for the next completion to flush out as one signature, producing a route the machine
+    // never took and attributing it to the wrong test.
+    PathCoverageTracker::reset();
+    PathCoverageTracker::enable();
+
+    try {
+        // Test A: drives partway and never reaches a final state.
+        PathCoverageTracker::recordTransition('LeakProbeMachine', 'm.idle');
+        PathCoverageTracker::recordTransition('LeakProbeMachine', 'm.processing', 'START');
+
+        // What a harness does between tests.
+        PathCoverageTracker::discardActivePaths();
+
+        // Test B: a complete run of its own.
+        PathCoverageTracker::recordTransition('LeakProbeMachine', 'm.idle');
+        PathCoverageTracker::recordTransition('LeakProbeMachine', 'm.done', 'FINISH');
+        PathCoverageTracker::completePath('LeakProbeMachine');
+
+        $observed = PathCoverageTracker::observedPaths('LeakProbeMachine');
+
+        expect($observed)->toHaveCount(1)
+            ->and($observed[0]['signature'])->toBe('idle→done')
+            ->and($observed[0]['signature'])->not->toContain('processing');
+    } finally {
+        PathCoverageTracker::reset();
+    }
+});
+
+test('discarding active paths keeps what has already been observed', function (): void {
+    // The buffer and the record are different things: a run's whole point is the observed
+    // set, and it has to survive the between-test cleanup that drops half-walked paths.
+    PathCoverageTracker::reset();
+    PathCoverageTracker::enable();
+
+    try {
+        PathCoverageTracker::recordTransition('KeepProbeMachine', 'm.idle');
+        PathCoverageTracker::recordTransition('KeepProbeMachine', 'm.done', 'GO');
+        PathCoverageTracker::completePath('KeepProbeMachine');
+
+        PathCoverageTracker::discardActivePaths();
+
+        expect(PathCoverageTracker::observedPaths('KeepProbeMachine'))->toHaveCount(1);
+    } finally {
+        PathCoverageTracker::reset();
+    }
+});
