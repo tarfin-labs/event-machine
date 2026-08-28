@@ -185,7 +185,11 @@ class MachineScenarioCommand extends Command
             return self::FAILURE;
         }
 
-        if (@file_put_contents($scenarioFile, $content) === false) {
+        // A short write counts as a failure too. file_put_contents returns the byte count,
+        // not a boolean, so testing only for false lets a partially written file through as
+        // "Created:" — the same wrong claim this block exists to prevent, one step quieter
+        // now that the warning is suppressed.
+        if (@file_put_contents($scenarioFile, $content) !== strlen($content)) {
             $this->error("Could not write scenario file: {$scenarioFile}");
 
             return self::FAILURE;
