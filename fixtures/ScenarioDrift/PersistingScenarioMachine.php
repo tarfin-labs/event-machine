@@ -23,8 +23,11 @@ class PersistingScenarioMachine extends Machine
             'initial'        => 'idle',
             'should_persist' => true,
             'states'         => [
-                'idle' => ['on' => ['GO' => 'done']],
-                'done' => ['type' => 'final'],
+                // midway is deliberately NOT final: a scenario that finishes there is the case
+                // the deactivation fix is about, and a final target would take the other branch.
+                'idle'   => ['on' => ['GO' => 'midway']],
+                'midway' => ['on' => ['FINISH' => 'done']],
+                'done'   => ['type' => 'final'],
             ],
         ]);
     }
