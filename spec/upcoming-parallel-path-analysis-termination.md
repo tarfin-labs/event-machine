@@ -96,12 +96,21 @@ hands ownership upward.
 | T3 | No path kind introduced by this change enters the coverage denominator unless an observed run could match it. Path kinds already in the denominator keep their current treatment — `GUARD_BLOCK` is already there and already unmatchable, and changing that is a T5 break, not this change's business. |
 | T4 | Coverage never reports a passing figure computed over an enumeration that did not complete, without disclosing that it did not complete. |
 | T5 | A consumer whose suite passes today keeps passing, unless its machine contains a parallel state. Region path counts, `ParallelPathGroup::combinationCount()` and the console `PARALLEL:` block move for any parallel machine, because region enumeration escapes through inherited ancestor transitions today — that is §2.1's premise, so the blast radius is every parallel machine, not only those whose parallel state carries its own transitions. |
+| T6 | A region sub-enumerator never walks outside its own region, following a region-declared escape included. It records the exit edge and stops at the boundary; continuing past the target is machine-level work. A nested parallel's escape target lies outside the enclosing region, so without this the region walk resumes at machine level and re-enumerates every parallel it reaches — work multiplying per nesting level while the top-level path count stays flat, so neither ceiling trips and the analysis still reports itself complete. |
+| T7 | `maxPaths` bounds the paths recorded by the analysis as a whole, region paths included. Region paths are handed to `ParallelPathGroup` rather than to the enumerator's own `$paths`, so a budget derived from `$paths` alone is re-issued near-full to every region at every nesting level, and a result can carry many times `maxPaths` while `pathLimitReached` stays false. |
 
-T4 and T5 meet at the pre-existing `maxPaths` ceiling, which fires silently at its default with no
-coverage consumer able to control it (§7.7). T5 wins on the failing: that case does not newly fail a
-suite. T4 still binds on the disclosure: the truncation is reported, on every surface T1 names,
-including `machine:coverage`'s own output and exit path — a green gate computed over an incomplete
-enumeration with no signal anywhere is the defect T4 exists to prevent.
+T4 and T5 meet at the pre-existing `maxPaths` ceiling, which fires silently at its default (§7.7).
+An earlier revision of this spec resolved that meeting in T5's favour — the path ceiling would not
+newly fail a suite — on the ground that no coverage consumer could raise it. **That resolution is
+withdrawn**, because the premise stopped holding within this change: `assertAllPathsCovered()` and
+`assertPathCoverage()` now take `maxPaths` and `maxDepth`, so a consumer whose machine legitimately
+needs a larger budget can say so. With the ceiling under the consumer's control, T4 binds on both
+ceilings: a coverage assertion over a truncated enumeration fails rather than reporting a percentage
+computed on a partial analysis. A suite that newly fails this way was already being told something
+untrue, and now has the lever to fix it. T4 still binds on the disclosure too — the truncation is
+reported on every surface T1 names, including `machine:coverage`'s own output and exit path, because
+a green gate computed over an incomplete enumeration with no signal anywhere is the defect T4 exists
+to prevent.
 
 ## 6. Scenario resolution invariants
 
