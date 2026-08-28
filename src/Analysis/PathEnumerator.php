@@ -508,8 +508,30 @@ class PathEnumerator
             return;
         }
 
-        // No compound @done — record as terminal
+        // No compound @done — the machine rests here, so record the terminal path.
         $this->recordPath($steps, $this->classifyPath($steps));
+
+        // But resting is not the same as being stuck. findTransitionDefinition walks the
+        // parent chain with no special case for a FINAL state, so a handler declared on
+        // an ancestor still fires from a final child — verified against the runtime: a
+        // machine resting at a final leaf takes the inherited event and leaves. Consulting
+        // only the compound @done left those edges out of the analysis entirely: no path,
+        // no truncation flag, and a coverage figure that read 100% while whole routes were
+        // missing. Unlike the @done arm above, this does not replace the terminal path —
+        // @done fires on its own, whereas these need an event, so both outcomes are real.
+        $inherited = $this->graph->transitionsFrom($state);
+
+        if ($inherited === []) {
+            return;
+        }
+
+        $this->enumerateTransitions(
+            state: $state,
+            steps: $steps,
+            visitedIds: $visitedIds,
+            transitions: $inherited,
+            ownsOutcome: false,
+        );
     }
 
     /**
