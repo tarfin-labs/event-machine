@@ -347,7 +347,40 @@ class ScenarioPathResolver
                 break;
 
             case StateClassification::FINAL:
-                // Dead end — no next states
+                // Not a dead end. Two continuations survive a final state, and treating it
+                // as terminal made every target beyond one unreachable to the resolver
+                // while the runtime reaches them without difficulty.
+                //
+                // First, the enclosing compound's @done fires on its own once the child is
+                // final, which is how a nested flow hands control back up.
+                $parent = $state->parent;
+
+                if (
+                    $parent instanceof StateDefinition
+                    && $parent->onDoneTransition instanceof TransitionDefinition
+                ) {
+                    foreach ($parent->onDoneTransition->branches ?? [] as $branch) {
+                        if ($branch->target instanceof StateDefinition) {
+                            $next[] = [$branch->target, '@done', $branch->guards ?? [], $branch->actions ?? []];
+                        }
+                    }
+                }
+
+                // Second, a handler declared on an ancestor still fires from a final child:
+                // findTransitionDefinition walks the parent chain with no special case for
+                // FINAL, so the machine can be driven out of a final state by an event.
+                foreach ($this->graph->transitionsFrom($state) as $event => $transition) {
+                    if ($event === TransitionProperty::Always->value) {
+                        continue;
+                    }
+
+                    foreach ($transition->branches ?? [] as $branch) {
+                        if ($branch->target instanceof StateDefinition) {
+                            $next[] = [$branch->target, $event, $branch->guards ?? [], $branch->actions ?? []];
+                        }
+                    }
+                }
+
                 break;
         }
 
