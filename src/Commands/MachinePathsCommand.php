@@ -246,6 +246,20 @@ class MachinePathsCommand extends Command
             }
         }
 
+        // A child whose definition cannot be built is skipped by the check above. Saying so is
+        // the difference between "all outcomes handled" and "we could not look".
+        $unanalysable = $result->unanalysableChildren();
+
+        if ($unanalysable !== []) {
+            $this->line('');
+            $this->warn('CHILD MACHINES THAT COULD NOT BE ANALYSED:');
+            $this->line('  Their outcomes were not checked, so an unhandled one would not appear above.');
+
+            foreach ($unanalysable as $item) {
+                $this->line("  {$item['parentStateKey']} → ".class_basename($item['childClass']).": {$item['reason']}");
+            }
+        }
+
         $this->line('');
     }
 
@@ -297,6 +311,7 @@ class MachinePathsCommand extends Command
                 'depth_limit_reached'      => $result->depthLimitReached,
                 'analysis_truncated'       => $result->analysisTruncated(),
                 'unhandled_child_outcomes' => array_map(static fn (array $u): array => ['parent_state' => $u['parentStateKey'], 'child_class' => class_basename($u['childClass']), 'unhandled' => $u['unhandled']], $result->unhandledChildOutcomes()),
+                'unanalysable_children'    => array_map(static fn (array $u): array => ['parent_state' => $u['parentStateKey'], 'child_class' => class_basename($u['childClass']), 'reason' => $u['reason']], $result->unanalysableChildren()),
             ],
             'paths' => array_map(static fn (MachinePath $path, int $index): array => [
                 'id'        => $index + 1,
