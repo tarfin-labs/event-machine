@@ -351,3 +351,82 @@ test('enumerating twice on one instance gives the same answer both times', funct
         ->and($first['truncated'])->toBeFalse()
         ->and($second)->toBe($first);
 });
+
+test('the ceiling is not charged for region work the result discards', function (): void {
+    // A region sub-enumerator used to re-analyse a parallel its caller had already
+    // analysed; the dedup then threw the duplicate away, but the budget had been spent.
+    // So the smallest ceiling that admitted a complete analysis grew exponentially with
+    // nesting while what the result kept grew linearly — a 44-state machine tripped the
+    // default 1000, and raising it re-opened work that doubled per level with every
+    // truncation flag still false. Seeding each sub-enumerator with the groups its caller
+    // holds means the work is never done twice, so budget and result move together.
+    // The shape matters: `a` offers TWO routes, one straight into the nested parallel and
+    // one to the parallel enclosing it. Without that, every parallel is reachable one way
+    // only, the dedup never fires, and no work is discarded — a nested chain alone does
+    // not reproduce this at all.
+    $level = static function (int $i) use (&$level): array {
+        if ($i === 0) {
+            return [
+                'initial' => 'x',
+                'states'  => ['x' => ['on' => ['E' => 'y']], 'y' => ['type' => 'final']],
+            ];
+        }
+
+        return [
+            'initial' => 'a',
+            'states'  => [
+                'a' => ['on' => ['B' => 'b.rb.p', 'A' => 'b']],
+                'b' => [
+                    'type'   => 'parallel',
+                    'states' => [
+                        'rb' => [
+                            'initial' => 'p',
+                            'states'  => [
+                                'p' => ['type' => 'parallel', 'states' => ['rp' => $level($i - 1)]],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+    };
+
+    $build = static fn (int $depth): MachineDefinition => MachineDefinition::define(config: [
+        'id'      => 'ceiling_charge_probe',
+        'initial' => 'root',
+        'states'  => ['root' => ['type' => 'compound'] + $level($depth)],
+    ]);
+
+    $retainedOf = static function (PathEnumerationResult $result): int {
+        $total = count($result->paths);
+
+        foreach ($result->parallelGroups as $group) {
+            foreach ($group->regionPaths as $paths) {
+                $total += count($paths);
+            }
+        }
+
+        return $total;
+    };
+
+    foreach ([2, 5, 8] as $depth) {
+        $definition = $build($depth);
+
+        $complete = (new PathEnumerator($definition))->enumerate();
+        $retained = $retainedOf($complete);
+
+        expect($complete->analysisTruncated())->toBeFalse("depth {$depth} unbounded");
+
+        // Exactly the retained count must suffice. Charging for discarded work made the
+        // required budget grow as a power of the nesting depth instead.
+        $atExactly = (new PathEnumerator($definition, $retained))->enumerate();
+
+        expect($atExactly->analysisTruncated())->toBeFalse("depth {$depth} at maxPaths={$retained}")
+            ->and($retainedOf($atExactly))->toBe($retained, "depth {$depth} at maxPaths={$retained}");
+
+        // And one less must not, or the ceiling would not be binding at all.
+        $justUnder = (new PathEnumerator($definition, $retained - 1))->enumerate();
+
+        expect($justUnder->analysisTruncated())->toBeTrue("depth {$depth} at maxPaths=".($retained - 1));
+    }
+});
