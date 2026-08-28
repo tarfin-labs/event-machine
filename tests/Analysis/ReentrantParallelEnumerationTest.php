@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Symfony\Component\Process\Process;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\RegionBoundaryMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ReentrantParallelMachine;
 
 /**
@@ -108,6 +109,37 @@ test('a parallel state re-entered from its own transition terminates as a loop',
         'idle→[START]→data_collection→[RESTART]→data_collection',
         'idle→[START]→data_collection→[@done]→verification→[EDIT]→data_collection',
     );
+});
+
+test('a region that records an escape stays inside its own subtree apart from that step', function (): void {
+    // The containment check allows exactly one step outside the region: the escape a
+    // REGION_EXIT path records, which by definition names a state elsewhere in the machine.
+    // That allowance was never exercised — RegionBoundaryMachine is the only machine in the
+    // corpus that produces region_exit/region_deferred paths, and nothing asserted containment
+    // on it, so deleting the allowance left the whole Analysis suite green. Asserting it here
+    // pins both halves: the escape is permitted, and nothing else leaves.
+    $summary = enumerateOutOfProcess(RegionBoundaryMachine::class);
+
+    $groups = $summary['parallel_groups'];
+
+    expect($groups)->not->toBeEmpty();
+
+    $sawEscape = false;
+
+    foreach ($groups as $group) {
+        foreach ($group['regions'] as $regionKey => $region) {
+            expect($region['all_inside'])->toBeTrue("region {$regionKey} left its own subtree");
+
+            foreach ($region['types'] as $type => $count) {
+                if ($type === 'region_exit' || $type === 'region_deferred') {
+                    $sawEscape = true;
+                }
+            }
+        }
+    }
+
+    // Without this the test would pass on any machine whose regions never escape at all.
+    expect($sawEscape)->toBeTrue('no region recorded an escape, so the allowance was not exercised');
 });
 
 test('the depth ceiling cuts paths short and reports it', function (): void {
