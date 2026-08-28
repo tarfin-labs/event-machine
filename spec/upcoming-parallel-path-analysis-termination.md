@@ -22,7 +22,7 @@ parallel state with a transition that re-enters a parallel state. Reproduced by 
 
 | Machine | States | Result today |
 |---|---|---|
-| `ReentrantParallelMachine` (test stub) | 11 | exit 139, no output |
+| `ReentrantParallelMachine` (test stub) | 17 | exit 139, no output |
 | `CarSalesMachine` (production) | 46 | exit 139, no output |
 | `TractorSalesMachine` (production) | 47 | exit 139, no output |
 
@@ -267,9 +267,18 @@ An existing key's meaning is not redefined. Where a new reading is wanted, it ge
 
 ## 11. Release
 
-Minor release. `PathType` gains cases, two classes gain defaulted settings, `machine:paths` gains an
-option and JSON keys, and coverage accounting changes for truncated enumerations. Docs and skill
-ship in the same tag.
+Minor release. `PathType` gains cases and two classes gain defaulted settings. On the command
+surface: `machine:paths` gains `--max-depth` and JSON keys, `machine:coverage` gains `--max-paths`
+and `--max-depth`, and both `machine:scenario` and `machine:scenario-validate` gain
+`--max-iterations`; every integer option on those four commands is now validated rather than coerced
+to zero. Coverage accounting changes for truncated enumerations, and reports an observation no
+enumerated path matches.
+
+The change with the largest blast radius is not a flag: following the continuations out of a final
+state raises path counts substantially on machines that have them — by roughly 3.7× on the three
+production machines this was validated against — which lowers every coverage percentage computed
+over such a machine and will fail `assertAllPathsCovered()` where it passed. Release notes should
+lead with that, not with the segfault. Docs and skill ship in the same tag.
 
 ## 12. Deferred
 
@@ -277,12 +286,20 @@ Found during the audit rounds, deliberately left out of this change and recorded
 reader inherits the finding rather than rediscovering it. Each was checked against `main`: all are
 pre-existing, none is a regression from this work.
 
+**D1 was on this list and is now fixed instead.** It was the finding that `handleFinal()` never
+consulted `transitionsFrom()`, so a route continuing out of a final state was invisible. It was
+deferred as too large, then escalated when the security auditor verified against the runtime that
+the machine does take such a route while `assertAllPathsCovered()` passed over the gap. Both the
+enumerator and the scenario resolver now follow those continuations. The numbering below is left
+as it was so earlier round notes still resolve.
+
 | # | Finding | Why deferred |
 |---|---|---|
-| D1 | **E4/E5 gap: `handleFinal()` never reads `transitionsFrom`.** For a region whose only leaf is FINAL, an inherited escape vanishes from the output entirely — no region path, no machine path, no truncation flag — and the parallel state is recorded `DEAD_END`. This is a silent omission, not a labelling nuance; it should not be triaged as cosmetic. | Fixing it means teaching `handleFinal` about inherited transitions, which changes what a final state means to the enumerator. Too large to land safely alongside the rest. |
 | D2 | **A compound-sourced escape is labelled `REGION_EXIT` identically to the active-leaf case.** At runtime the two differ: `MachineDefinition`'s `array_search` misses for the compound source, so no state value updates. The analysis cannot currently tell them apart. | Needs a distinct path type or a step flag, i.e. new public surface. |
 | D3 | **A region whose `initial` child carries an explicit `id` resolves to `null`.** `findInitialStateDefinition()` returns null, the `if` around the region walk has no `else`, and the region is recorded empty with no disclosure. | Disclosing it needs a third truncation-like channel; both existing flags would name the wrong cause. |
-| D4 | **`handleParallel()` is 332 lines and carries eight concerns.** The obvious first extraction is the `@done`/`@fail` pair, two ~36-line near-clones differing only in the property and the event literal. | The last several commits each touched a *different* arm, so a rewrite now is the one change the suite cannot validate by diff. Extract after the tag. |
-| D5 | **`resolveClassFromFile()` is triplicated** across `MachineCoverageCommand`, `MachinePathsCommand` and `ExportXStateCommand`, byte-identical but for two comment lines. | Read-only class resolution with no shared state; cannot produce a wrong answer. |
+| D4 | **`handleParallel()` is over 330 lines and carries around eleven concerns** — group reuse, region sub-enumeration, budget arithmetic, nested-group merging, truncation propagation, escape collection, escape following, `@done`, `@fail`, own-transition partitioning, and the dead-end/deferred decision. The obvious first extraction is the `@done`/`@fail` pair, two ~36-line near-clones differing only in the property and the event literal. | Each audit round touched a *different* arm, so a rewrite is the one change the suite cannot validate by diff. **This reason renews itself** — every round's churn regenerates it — so it needs a commitment rather than a judgement: extract in the release after this one, before any further behaviour work lands in this method. |
+| D5 | **`resolveClassFromFile()` is triplicated** across `MachineCoverageCommand`, `MachinePathsCommand` and `ExportXStateCommand`, byte-identical but for two comment lines — and it is not merely duplication. It `require_once`s the file, so it loads code into the process, and its `preg_match('/class\s+(\w+)\s+extends/')` takes the **first** extending class in the file: a file declaring a helper class before the machine resolves to the wrong FQCN, which the command then calls `::definition()` on. | Deferred for scope, not because it is harmless — an earlier revision of this row claimed it was read-only and could not produce a wrong answer, and both halves of that were false. Fixing it means changing class resolution in three commands at once. |
 | D6 | **The `1000`/`200` ceilings are literals in six declarations** rather than `config/machine.php`, unlike `max_transition_depth`. | Each is overridable at the point it matters; config-backing is ergonomics, not correctness. |
-| D7 | **The two `catch (\Throwable) {}` reload fallbacks in `Machine`** — in `send()` and in `dispatchPendingChildJobs()` — state the fallback but not why the caller must not see the failure, and catch programming errors alongside transient ones. | Pre-existing and unchanged on this branch; neither reports a failure as success. |
+| D7 | **The two `catch (\Throwable) {}` reload fallbacks in `Machine`** — in `send()` and in `dispatchPendingChildJobs()` — state the fallback but not why the caller must not see the failure, and catch programming errors alongside transient ones. | Pre-existing and unchanged on this branch. Note the reason is weaker than it looks for `send()`: continuing on a stale local state then mutates a forked timeline under a freshly acquired lock, which does look like success to the caller. |
+| D8 | **`machine:coverage` run in-process destroys a tracking suite's observations.** `importFromFile`/`importFromDirectory` *replace* `$observedPaths`, so by the time the command's cleanup runs, whatever the surrounding suite had recorded is already gone. Restoring the enabled flag (which this change does) keeps collection alive from that point but cannot bring those back. | The documented flow runs the command in a separate process, where this cannot arise. Making it safe in-process means giving the tracker a snapshot/restore API — new public surface. |
+| D9 | **`PathCoverageTrackerTest` leaks its export directory.** It calls `setExportDirectory()` to a temp dir it later deletes, and `reset()` does not restore that static, so the path stays set for the rest of the process. Harmless today only because every coverage-command test passes `--from`. | Test-local, no production path reaches it, and the fix belongs with whatever gives the tracker a proper lifecycle. |
