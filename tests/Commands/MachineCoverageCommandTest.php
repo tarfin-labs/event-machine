@@ -22,16 +22,24 @@ function emptyCoverageFile(): string
 }
 
 /**
+ * Run the command once and report both halves of the result.
+ *
+ * The exit code and the console output are asserted by different tests, but the
+ * setup around them — a throwaway coverage file, and resetting the tracker so one
+ * test's observations cannot leak into the next — is the same either way.
+ *
  * @param  array<string, mixed>  $options
+ *
+ * @return array{code: int, output: string}
  */
-function runCoverage(string $machine, array $options = []): string
+function invokeCoverage(string $machine, array $options): array
 {
     $from = emptyCoverageFile();
 
     try {
-        Artisan::call('machine:coverage', ['machine' => $machine, '--from' => $from] + $options);
+        $code = Artisan::call('machine:coverage', ['machine' => $machine, '--from' => $from] + $options);
 
-        return Artisan::output();
+        return ['code' => $code, 'output' => Artisan::output()];
     } finally {
         @unlink($from);
         PathCoverageTracker::reset();
@@ -41,16 +49,17 @@ function runCoverage(string $machine, array $options = []): string
 /**
  * @param  array<string, mixed>  $options
  */
+function runCoverage(string $machine, array $options = []): string
+{
+    return invokeCoverage($machine, $options)['output'];
+}
+
+/**
+ * @param  array<string, mixed>  $options
+ */
 function coverageExitCode(string $machine, array $options = []): int
 {
-    $from = emptyCoverageFile();
-
-    try {
-        return Artisan::call('machine:coverage', ['machine' => $machine, '--from' => $from] + $options);
-    } finally {
-        @unlink($from);
-        PathCoverageTracker::reset();
-    }
+    return invokeCoverage($machine, $options)['code'];
 }
 
 // ── Disclosure ───────────────────────────────────────────────────────────────
