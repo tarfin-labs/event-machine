@@ -108,6 +108,16 @@ class MachineCoverageCommand extends Command
         $this->line(str_repeat('═', mb_strlen("{$name} — Path Coverage")));
         $this->line('');
         $this->line(sprintf('  Coverage: %d/%d paths (%.1f%%)', count($covered), $total, $percentage));
+
+        // A percentage computed over an enumeration that stopped early is not a
+        // coverage guarantee, and without this line it looks exactly like one.
+        if ($report->enumerationTruncated()) {
+            $this->warn(sprintf(
+                '  Analysis incomplete: enumeration stopped early, %d path(s) excluded. This figure covers only what was enumerated.',
+                $report->skippedPathCount(),
+            ));
+        }
+
         $this->line('');
 
         $pathNumber = 1;
@@ -188,11 +198,13 @@ class MachineCoverageCommand extends Command
         }
 
         $data = [
-            'machine'      => class_basename($machinePath),
-            'total_paths'  => $total,
-            'tested_paths' => count($covered),
-            'coverage'     => $report->coveragePercentage(),
-            'paths'        => $paths,
+            'machine'            => class_basename($machinePath),
+            'total_paths'        => $total,
+            'tested_paths'       => count($covered),
+            'coverage'           => $report->coveragePercentage(),
+            'analysis_truncated' => $report->enumerationTruncated(),
+            'skipped_paths'      => $report->skippedPathCount(),
+            'paths'              => $paths,
         ];
 
         return json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
