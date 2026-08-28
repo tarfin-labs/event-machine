@@ -11,6 +11,8 @@ use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
 
 class MachineCoverageCommand extends Command
 {
+    use ValidatesNumericOptions;
+
     protected $signature = 'machine:coverage
         {machine : The Machine class path or FQCN}
         {--json : Output as JSON}
@@ -74,10 +76,17 @@ class MachineCoverageCommand extends Command
         try {
             // Enumerate paths and build report
             $definition = $machinePath::definition();
+            $maxPaths   = $this->integerOption('max-paths', min: 1);
+            $maxDepth   = $this->integerOption('max-depth', min: 1);
+
+            if ($maxPaths === null || $maxDepth === null) {
+                return self::FAILURE;
+            }
+
             $enumerator = new PathEnumerator(
                 definition: $definition,
-                maxPaths: (int) $this->option('max-paths'),
-                maxDepth: (int) $this->option('max-depth'),
+                maxPaths: $maxPaths,
+                maxDepth: $maxDepth,
             );
             $enumeration = $enumerator->enumerate();
             $observed    = PathCoverageTracker::observedPaths($machinePath);
