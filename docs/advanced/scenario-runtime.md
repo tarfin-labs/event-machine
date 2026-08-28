@@ -87,7 +87,7 @@ All three paths converge on the same trio (outcomes + overrides + isActive). Wit
 | `ScenarioConfigurationException` | Invalid state route, delegation outcome on non-delegation state, missing properties, invalid params, machine is faked |
 | `ScenarioFailedException` | Guard rejection during replay, `@continue` event rejected, source mismatch (controller), event mismatch (controller) |
 | `ScenarioTargetMismatchException` | Machine did not reach `$target` after execution |
-| `NoScenarioPathFoundException` | `ScenarioPathResolver::resolve()`: no path from source to target, or — via its `truncated()` factory — the search stopped at its iteration ceiling with work still pending. Only the second is fixable with `--max-iterations`. Both commands catch it and print the distinction instead, so it escapes only to a caller using the resolver directly |
+| `NoScenarioPathFoundException` | `ScenarioPathResolver::resolve()`: no path from source to target, or — via its `truncated()` factory — the search stopped at its iteration ceiling with work still pending. Only the second is fixable with `--max-iterations`. Its only caller is `ScenarioValidator::validatePaths()`, which converts both variants to error strings for `machine:scenario-validate`; the scaffold command calls `resolveAll()` and never triggers it. So it escapes only to code calling `resolve()` directly |
 | `AmbiguousScenarioPathException` | Scaffold command: multiple paths exist |
 
 When a `MissingMachineContextException` is thrown during replay, it is enriched with hints from `$requiredContext` properties on guards and entry actions at the current state:

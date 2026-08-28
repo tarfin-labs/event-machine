@@ -206,7 +206,7 @@ was exhausted and the states really are not connected by transitions. "Truncated
 stopped at its own limit with work still pending, so whether a path exists is unknown — treat it as
 a prompt to look, not as an answer.
 
-`machine:scenario` accepts `--max-iterations` (default 1000) to raise that limit, and
+`machine:scenario-validate` accepts `--max-iterations` (default 1000) to raise that limit, and
 `ScenarioValidator` takes the same budget as a constructor argument. Both outcomes still exit with a
 failure, so nothing downstream needs to change how it reads the exit code.
 
