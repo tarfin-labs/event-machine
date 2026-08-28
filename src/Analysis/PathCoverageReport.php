@@ -73,6 +73,20 @@ class PathCoverageReport
     }
 
     /**
+     * Was the enumeration cut short by the DEPTH ceiling specifically?
+     *
+     * Separated from enumerationTruncated() because the two ceilings differ in what a
+     * caller can do about them. The depth ceiling arrived with this analysis work and
+     * nothing depends on it yet; the path ceiling has been firing silently at its
+     * default for far longer, and the in-suite assertions expose no way to raise it,
+     * so failing on it would hand consumers a break they cannot fix.
+     */
+    public function depthTruncated(): bool
+    {
+        return $this->enumeration->depthLimitReached;
+    }
+
+    /**
      * How many enumerated paths were skipped as unmatchable.
      */
     public function skippedPathCount(): int
