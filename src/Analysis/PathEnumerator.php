@@ -558,6 +558,16 @@ class PathEnumerator
     /**
      * PARALLEL state: enumerate per-region paths and follow @done/@fail.
      *
+     * BEFORE ADDING BEHAVIOUR HERE, EXTRACT FIRST. This method is past 330 lines and
+     * carries around eleven concerns: group reuse, region sub-enumeration, budget
+     * arithmetic, nested-group merging, truncation propagation, escape collection, escape
+     * following, @done, @fail, own-transition partitioning, and the dead-end/deferred
+     * decision. Every round of review deferred the split on the same reasoning — that the
+     * round had just touched a different arm, so a rewrite was the one change the suite
+     * could not validate by diff — and that reasoning renews itself indefinitely. The
+     * obvious first cut is the @done and @fail arms below: two ~37-line near-clones
+     * differing only in the property they read and the event literal they pass.
+     *
      * @param  list<PathStep>  $steps
      * @param  array<string, true>  $visitedIds
      */
