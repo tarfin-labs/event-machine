@@ -496,19 +496,19 @@ class PathEnumerator
         // enumerator at the next parallel state it met — recursion that neither the
         // cycle check nor the path budget could stop, because neither crossed the
         // boundary.
+        $regionPaths     = [];
         $alreadyRecorded = false;
 
         foreach ($this->parallelGroups as $existing) {
             if ($existing->parallelStateId === $state->id) {
                 $alreadyRecorded = true;
+                $regionPaths     = $existing->regionPaths;
 
                 break;
             }
         }
 
         if (!$alreadyRecorded) {
-            $regionPaths = [];
-
             foreach ($state->stateDefinitions ?? [] as $regionKey => $region) {
                 // The sub-enumerator inherits the caller's REMAINING path budget and the
                 // depth consumed so far, so both ceilings bound the analysis as a whole
@@ -548,6 +548,51 @@ class PathEnumerator
 
         $enumerated = false;
         $deferred   = false;
+
+        // Follow what lies beyond a region-declared escape.
+        //
+        // A transition declared inside a region that leaves it has no machine-level
+        // representation of its own: the transitions below only cover those sourced at
+        // or above the parallel state. Recording a region exit makes the edge visible,
+        // but everything past its target stayed invisible — a whole subtree missing from
+        // the analysis with no truncation flag to show for it, which is exactly the
+        // silent omission the rules forbid.
+        //
+        // Reusing the recorded group's region paths means a parallel state reached by
+        // several routes still follows its escapes on each one, without re-enumerating
+        // the regions themselves.
+        $escapeTargets = [];
+
+        foreach ($regionPaths as $paths) {
+            foreach ($paths as $regionPath) {
+                if ($regionPath->type !== PathType::REGION_EXIT) {
+                    continue;
+                }
+                if ($regionPath->steps === []) {
+                    continue;
+                }
+                $escapeStep = $regionPath->steps[count($regionPath->steps) - 1];
+                $escapeTargets[$escapeStep->stateId] ??= $escapeStep;
+            }
+        }
+
+        foreach ($escapeTargets as $stateId => $escapeStep) {
+            $target = $this->definition->idMap[$stateId] ?? null;
+
+            if (!$target instanceof StateDefinition) {
+                continue;
+            }
+
+            $this->dfs(
+                state: $target,
+                steps: $steps,
+                visitedIds: $visitedIds,
+                event: $escapeStep->event,
+                guards: $escapeStep->guards,
+                actions: $escapeStep->actions,
+            );
+            $enumerated = true;
+        }
 
         // Follow @done transition
         if ($state->onDoneTransition instanceof TransitionDefinition) {
@@ -664,7 +709,26 @@ class PathEnumerator
             $ownTransitions[$event] = $transition;
         }
 
-        if ($ownTransitions !== []) {
+        // Mirror handleAtomic's structure exactly: when an @always is present it owns
+        // both itself and the guard-fail continuation, so the remaining transitions are
+        // handed to it rather than enumerated separately. Doing both enumerated every
+        // own transition twice, once here and once from the guard-fail arm.
+        if ($alwaysTransition instanceof TransitionDefinition) {
+            $deferralsBefore = $this->deferrals;
+            $pathsBefore     = count($this->paths);
+
+            $this->handleAlwaysPriority(
+                state: $state,
+                steps: $steps,
+                visitedIds: $visitedIds,
+                alwaysTransition: $alwaysTransition,
+                remainingTransitions: $ownTransitions,
+                ownsOutcome: false,
+            );
+
+            $enumerated = $enumerated || count($this->paths) > $pathsBefore;
+            $deferred   = $deferred || $this->deferrals > $deferralsBefore;
+        } elseif ($ownTransitions !== []) {
             $enumerated = $this->enumerateTransitions(
                 state: $state,
                 steps: $steps,
@@ -672,20 +736,6 @@ class PathEnumerator
                 transitions: $ownTransitions,
                 ownsOutcome: false,
             ) || $enumerated;
-        }
-
-        // An @always on a parallel state is followed with the same priority rules an
-        // atomic state gets. It has to be followed rather than merely counted as an
-        // outcome: it is the only continuation on such a state, so skipping it while
-        // treating it as one records nothing at all.
-        if ($alwaysTransition instanceof TransitionDefinition) {
-            $deferralsBefore = $this->deferrals;
-            $pathsBefore     = count($this->paths);
-
-            $this->handleAlwaysPriority($state, $steps, $visitedIds, $alwaysTransition, $ownTransitions);
-
-            $enumerated = $enumerated || count($this->paths) > $pathsBefore;
-            $deferred   = $deferred || $this->deferrals > $deferralsBefore;
         }
 
         // Dead-end parallel: no @done, no @fail and no continuations of its own. The
@@ -777,6 +827,7 @@ class PathEnumerator
         array $visitedIds,
         TransitionDefinition $alwaysTransition,
         array $remainingTransitions,
+        bool $ownsOutcome = true,
     ): void {
         // @always is guaranteed to fire if ANY branch has no guard (unguarded fallback).
         // In runtime, getFirstValidTransitionBranch() tries branches in order — if all
@@ -836,7 +887,7 @@ class PathEnumerator
 
         if ($hasUnguardedFallback) {
             if ($remainingTransitions !== [] || $state->hasMachineInvoke()) {
-                $this->enumerateTransitions($state, $steps, $visitedIds, $remainingTransitions);
+                $this->enumerateTransitions($state, $steps, $visitedIds, $remainingTransitions, $ownsOutcome);
 
                 return;
             }
@@ -853,7 +904,7 @@ class PathEnumerator
 
         // Guarded @always: guard-fail continuation — enumerate remaining transitions
         if ($remainingTransitions !== [] || $state->hasMachineInvoke()) {
-            $this->enumerateTransitions($state, $steps, $visitedIds, $remainingTransitions);
+            $this->enumerateTransitions($state, $steps, $visitedIds, $remainingTransitions, $ownsOutcome);
 
             return;
         }
