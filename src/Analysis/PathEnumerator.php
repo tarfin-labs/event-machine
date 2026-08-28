@@ -80,6 +80,23 @@ class PathEnumerator
      */
     private int $deferrals = 0;
 
+    /**
+     * Paths recorded by region sub-enumerators spawned from this one, transitively.
+     *
+     * Region paths are handed to ParallelPathGroup rather than to $paths, so they
+     * are invisible to the path ceiling unless counted separately. This is what
+     * makes maxPaths bound the whole analysis instead of each region on its own.
+     */
+    private int $subPathsRecorded = 0;
+
+    /**
+     * Every path this enumerator is accountable for, its region sub-enumerators included.
+     */
+    private function totalRecorded(): int
+    {
+        return count($this->paths) + $this->subPathsRecorded;
+    }
+
     public function __construct(
         private readonly MachineDefinition $definition,
         int $maxPaths = 1000,
@@ -512,10 +529,15 @@ class PathEnumerator
             foreach ($state->stateDefinitions ?? [] as $regionKey => $region) {
                 // The sub-enumerator inherits the caller's REMAINING path budget and the
                 // depth consumed so far, so both ceilings bound the analysis as a whole
-                // rather than being re-issued in full at every region.
+                // rather than being re-issued in full at every region. Region paths never
+                // enter this enumerator's own $paths, so the remaining budget has to
+                // subtract what earlier regions and their nested regions already spent —
+                // counting only $paths would hand every region, at every nesting level, a
+                // near-full budget again and let the result carry many times maxPaths
+                // while pathLimitReached stayed false.
                 $regionEnumerator = new self(
                     definition: $this->definition,
-                    maxPaths: max(0, $this->maxPaths - count($this->paths)),
+                    maxPaths: max(0, $this->maxPaths - count($this->paths) - $this->subPathsRecorded),
                     boundary: $region,
                     maxDepth: $this->maxDepth,
                     depthOffset: $this->depthOffset + count($steps),
@@ -527,6 +549,8 @@ class PathEnumerator
                 }
 
                 $regionPaths[$regionKey] = $regionEnumerator->paths;
+
+                $this->subPathsRecorded += $regionEnumerator->totalRecorded();
 
                 // Region truncation had no route to the result before: the sub-enumerator's
                 // flags were discarded with it, so a region cut short still reported a
