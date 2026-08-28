@@ -366,9 +366,11 @@ is `false`.
 
 ### NoScenarioPathFoundException
 
-Thrown by the scaffold command when no path exists from source to target.
+Thrown when no path exists from source to target.
 
 It carries two distinct findings, and they are not interchangeable. The default case means the states are genuinely not connected by that event. The `truncated()` factory means the search stopped at its iteration ceiling with work still pending — a path may well exist and simply was not reached. Only the second is fixable, by raising `--max-iterations`; treating it as the first is how a stopped search gets mistaken for a confident answer.
+
+It reaches you through `machine:scenario-validate`, which calls `ScenarioPathResolver::resolve()`. The scaffold command `machine:scenario` never raises it — it calls `resolveAll()` and reads `wasTruncated()`, reporting the same distinction as console output instead.
 
 - **Extends:** `RuntimeException`
 - **Thrown from:** `ScenarioPathResolver`
