@@ -48,6 +48,32 @@ function makeScenario(array $overrides = []): MachineScenario
     };
 }
 
+// ── Truncated vs missing path ───────────────────────────────────────────────
+
+test('validator reports a missing path as a missing path', function (): void {
+    $scenario  = makeScenario(['source' => 'reviewing', 'event' => 'APPROVE', 'target' => 'blocked']);
+    $validator = new ScenarioValidator($scenario);
+
+    $errors = implode("\n", $validator->validatePaths());
+
+    expect($errors)->toContain("No path from 'reviewing' to 'blocked'")
+        ->and($errors)->not->toContain('truncated');
+});
+
+test('validator reports a truncated search as truncated, not as a missing path', function (): void {
+    // The same unreachable target, with a search budget too small to exhaust the graph.
+    // The validator caught the exception and emitted one fixed "No path" string whatever
+    // the cause, which turned "I stopped looking" into "there is nothing there".
+    $scenario  = makeScenario(['source' => 'reviewing', 'event' => 'START_PARALLEL', 'target' => 'blocked']);
+    $validator = new ScenarioValidator($scenario, maxIterations: 1);
+
+    $errors = implode("\n", $validator->validatePaths());
+
+    expect($errors)->toContain('was truncated at the search limit')
+        ->and($errors)->toContain('a path may still exist')
+        ->and($errors)->not->toContain('No path from');
+});
+
 // ── Level 1 — Static checks ─────────────────────────────────────────────────
 
 test('all valid scenario returns empty errors', function (): void {
