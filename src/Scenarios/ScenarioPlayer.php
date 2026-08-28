@@ -252,9 +252,20 @@ class ScenarioPlayer
                 $startIndex = $matchedIdx + 1;
             }
 
-            // Deactivate if final state reached, otherwise re-persist scenario
-            // (syncCurrentStates deletes old rows and creates new ones without scenario columns)
-            if ($state->currentStateDefinition->type === StateDefinitionType::FINAL) {
+            // Deactivate when the scenario is done with the machine, otherwise re-persist it
+            // (syncCurrentStates deletes old rows and creates new ones without scenario columns).
+            //
+            // "Done" is a final state OR a scenario with no continuation, and the second half
+            // used to be missing. A scenario that reached a non-final target and had nothing
+            // more to do stayed armed forever, so `scenario_class` no longer meant "a scenario
+            // is in flight" — which is what every reader of that column takes it to mean. It
+            // also left the stored params exposed to a world that keeps changing: a param with
+            // an `exists` rule pointing at a row someone later deleted made the machine
+            // unloadable, because the restore path re-validates.
+            $scenarioIsDone = $state->currentStateDefinition->type === StateDefinitionType::FINAL
+                || !$this->scenario->hasContinuation();
+
+            if ($scenarioIsDone) {
                 self::deactivateScenario($rootEventId);
             } elseif ($rootEventId !== '' && $this->shouldPersist($machine)) {
                 $this->persistScenario($rootEventId);
