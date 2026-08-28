@@ -7,6 +7,7 @@ use Tarfinlabs\EventMachine\Analysis\ScenarioPath;
 use Tarfinlabs\EventMachine\Analysis\ScenarioPathStep;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Analysis\StateClassification;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Analysis\ScenarioPathResolver;
 use Tarfinlabs\EventMachine\Exceptions\NoScenarioPathFoundException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Jobs\ProcessJob;
@@ -302,4 +303,69 @@ test('entry actions populated in ScenarioPathStep', function (): void {
     expect($processingStep)->not->toBeNull()
         ->and($processingStep->entryActions)->not->toBeEmpty()
         ->and($processingStep->entryActions[0])->toContain('ProcessAction');
+});
+
+// ── A final state is not where the search stops ──────────────────────────────
+
+test('a target beyond a compound @done is reachable through the final child', function (): void {
+    // getNextStates' FINAL arm was a hard "dead end — no next states", so anything past a
+    // final child was unreachable to the resolver while the runtime walks straight
+    // through: the compound's @done fires on its own once the child is final.
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'final_resolver',
+        'initial' => 'idle',
+        'states'  => [
+            'idle'  => ['on' => ['GO' => 'inner']],
+            'inner' => [
+                'initial' => 'leaf',
+                '@done'   => 'settled',
+                'states'  => ['leaf' => ['type' => 'final']],
+            ],
+            'settled' => ['type' => 'final'],
+        ],
+    ]);
+
+    $path = (new ScenarioPathResolver(new MachineGraph($definition)))
+        ->resolve('idle', 'GO', 'settled');
+
+    expect($path)->toBeInstanceOf(ScenarioPath::class)
+        ->and(implode(' ', array_map(
+            static fn (ScenarioPathStep $s): string => $s->stateRoute,
+            $path->steps,
+        )))->toContain('settled');
+});
+
+test('a target beyond an inherited handler is reachable from a final child', function (): void {
+    // The other continuation: an ancestor's handler still fires from a final child,
+    // because findTransitionDefinition walks the parent chain with no FINAL special case.
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'final_resolver_inherited',
+        'initial' => 'idle',
+        'on'      => ['EXPIRED' => 'expired'],
+        'states'  => [
+            'idle'  => ['on' => ['GO' => 'inner']],
+            'inner' => [
+                'initial' => 'leaf',
+                'states'  => ['leaf' => ['type' => 'final']],
+            ],
+            'expired' => ['type' => 'final'],
+        ],
+    ]);
+
+    $resolver = new ScenarioPathResolver(new MachineGraph($definition));
+
+    // The target must be reachable only by continuing THROUGH the final leaf. Starting
+    // the search at `inner.leaf` would not exercise the FINAL arm at all: the resolver
+    // applies the triggering event to the source directly, so the route never has to
+    // leave a final state and the test passes with the arm still a dead end.
+    $path = $resolver->resolve('idle', 'GO', 'expired');
+
+    $route = implode(' ', array_map(
+        static fn (ScenarioPathStep $s): string => $s->stateRoute,
+        $path->steps,
+    ));
+
+    expect($route)->toContain('inner.leaf')
+        ->and($route)->toContain('expired')
+        ->and($resolver->wasTruncated())->toBeFalse();
 });
