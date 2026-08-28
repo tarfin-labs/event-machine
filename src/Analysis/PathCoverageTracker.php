@@ -50,6 +50,21 @@ class PathCoverageTracker
     }
 
     /**
+     * Drop half-walked paths without touching what has already been observed.
+     *
+     * A path is only moved out of the active buffer by completePath(), which fires when a
+     * machine reaches a final state. A test that drives a machine partway and stops — the
+     * common shape for asserting an intermediate state — leaves its steps behind, and the
+     * next test's completion flushes them out as one signature: a route the machine never
+     * took, recorded against the wrong test. Test harnesses call this between tests;
+     * observed paths survive because they are the point of the run.
+     */
+    public static function discardActivePaths(): void
+    {
+        self::$activePaths = [];
+    }
+
+    /**
      * Set the export directory path.
      */
     public static function setExportDirectory(string $directory): void
