@@ -8,6 +8,7 @@ use Tarfinlabs\EventMachine\Exceptions\ScenarioConfigurationException;
 use Tarfinlabs\EventMachine\Fixtures\ScenarioDrift\DriftingParamScenario;
 use Tarfinlabs\EventMachine\Fixtures\ScenarioDrift\PersistingScenarioMachine;
 use Tarfinlabs\EventMachine\Fixtures\ScenarioDrift\ThrowsWhenHydratedScenario;
+use Tarfinlabs\EventMachine\Fixtures\ScenarioDrift\PlainNoContinuationScenario;
 
 /*
  * A scenario is a QA aid. Nothing about one may make a machine unloadable.
@@ -31,6 +32,29 @@ beforeEach(function (): void {
 
 afterEach(function (): void {
     ScenarioPlayer::cleanupOverrides();
+});
+
+test('a scenario with no continuation does not stay armed after it finishes', function (): void {
+    // The ordinary shape, and the one the first attempt at this fix missed: activated once, no
+    // continuation, finishing at a NON-final state. It goes through ScenarioPlayer::execute(),
+    // which used to re-persist unconditionally, so `scenario_class` stayed set forever — for
+    // almost every scenario anyone writes, not the rare one. Anything reading that column as
+    // "a scenario is in flight" then saw one that was not.
+    $machine = PersistingScenarioMachine::create();
+    $machine->persist();
+
+    $rootEventId = $machine->state->history->first()->root_event_id;
+
+    (new ScenarioPlayer(new PlainNoContinuationScenario()))->execute(
+        machine: $machine,
+        rootEventId: $rootEventId,
+    );
+
+    $stillArmed = MachineCurrentState::where('root_event_id', $rootEventId)
+        ->whereNotNull('scenario_class')
+        ->count();
+
+    expect($stillArmed)->toBe(0);
 });
 
 test('stored params are hydrated without being validated again', function (): void {
