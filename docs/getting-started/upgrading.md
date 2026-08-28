@@ -79,6 +79,10 @@ Every one of these is now validated: a non-numeric or out-of-range value fails t
 
 - Targets **inside a parallel region** now resolve. `machine:scenario` descends into region initial states, marking region entry `@region` — distinct from `@entry`, which means exclusive compound descent. A route that previously reported "No path" for a reachable region-interior target now succeeds.
 
+  **This also changes the answer for targets that already resolved.** The same descent adds routes that pass *through* a region on the way to a target outside it, so `resolveAll()` can return more paths than before for an unchanged query — measured on a test machine, one target went from 1 path to 3. Two consequences for existing callers: `machine:scenario` now prints "Found N paths" and offers a `--path=N` chooser where it used to scaffold silently, and **`--path` indices are not stable across this upgrade** — a script pinned to `--path=0` may scaffold a different route. Re-check any pinned index.
+
+- **`machine:scenario` validates the scenario name.** It must be a PHP class name — a letter or underscore, then letters, digits or underscores. A name containing a path separator previously wrote the file outside the `Scenarios/` directory and still reported "Created:", and a name containing PHP syntax was interpolated into the generated class file verbatim.
+
 **New path types:** `TRUNCATED` (a branch cut at a ceiling; excluded from coverage accounting), plus `REGION_EXIT` and `REGION_DEFERRED` for paths inside a parallel region. See [Transitions & Paths](/testing/transitions-and-paths#path-coverage-analysis).
 
 ---
