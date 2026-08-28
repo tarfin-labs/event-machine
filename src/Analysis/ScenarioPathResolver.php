@@ -17,9 +17,36 @@ use Tarfinlabs\EventMachine\Exceptions\NoScenarioPathFoundException;
  */
 class ScenarioPathResolver
 {
+    /**
+     * @param  int  $maxIterations  BFS iteration cap. The default is the value this
+     *                              resolver has always used; it is a constructor setting
+     *                              only so the truncation behaviour can be exercised
+     *                              without changing what ships.
+     */
+    /**
+     * Whether the most recent resolveAll() hit the iteration cap with work left.
+     *
+     * A capped search and a search that genuinely found nothing both return an
+     * empty list, which is what made machine:scenario report a confident "No path"
+     * for targets that exist.
+     */
+    private bool $truncated = false;
+
     public function __construct(
         private readonly MachineGraph $graph,
+        private readonly int $maxIterations = 1000,
     ) {}
+
+    /**
+     * Did the most recent resolution stop early rather than exhaust the search?
+     *
+     * Reset at the start of every resolveAll(), including the one resolve()
+     * performs internally, so it always describes the latest resolution.
+     */
+    public function wasTruncated(): bool
+    {
+        return $this->truncated;
+    }
 
     /**
      * Find the shortest path from source to target via the trigger event.
@@ -29,7 +56,9 @@ class ScenarioPathResolver
         $paths = $this->resolveAll($source, $event, $target);
 
         if ($paths === []) {
-            throw NoScenarioPathFoundException::noPath($source, $target, $this->graph->definition()->id);
+            throw $this->truncated
+                ? NoScenarioPathFoundException::truncated($source, $target, $this->graph->definition()->id)
+                : NoScenarioPathFoundException::noPath($source, $target, $this->graph->definition()->id);
         }
 
         return $paths[0];
@@ -42,6 +71,8 @@ class ScenarioPathResolver
      */
     public function resolveAll(string $source, string $event, string $target): array
     {
+        $this->truncated = false;
+
         $sourceState = $this->graph->resolveState($source);
         $targetState = $this->graph->resolveState($target);
 
@@ -128,7 +159,7 @@ class ScenarioPathResolver
 
         // BFS queue: [state, path-so-far, visited]
         $queue   = [[$startState, [$firstStep], [$startState->id => true]]];
-        $maxIter = 1000;
+        $maxIter = $this->maxIterations;
         $iter    = 0;
 
         while ($queue !== [] && $iter < $maxIter) {
@@ -167,6 +198,14 @@ class ScenarioPathResolver
 
                 $queue[] = [$nextState, $newPath, $newVisited];
             }
+        }
+
+        // The loop can end two ways, and they mean opposite things: an empty queue is
+        // an exhausted search, while a non-empty one means the cap stopped us with work
+        // still pending. Without recording that, a caller cannot tell "there is no path"
+        // from "I stopped looking".
+        if ($queue !== []) {
+            $this->truncated = true;
         }
     }
 
