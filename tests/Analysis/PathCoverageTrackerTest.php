@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Testing\TracksPathCoverage;
 use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
+use Tarfinlabs\EventMachine\Testing\InteractsWithMachines;
 
 beforeEach(function (): void {
     PathCoverageTracker::reset();
@@ -187,6 +189,61 @@ test('a half-walked path does not leak into the next completed one', function ()
             ->and($observed[0]['signature'])->not->toContain('processing');
     } finally {
         PathCoverageTracker::reset();
+    }
+});
+
+test('both test traits discard half-walked paths at set-up', function (): void {
+    // The discard has to be wired into the trait a suite actually has. TracksPathCoverage is
+    // the one that turns tracking on and the only one the documented adoption steps name, so
+    // a suite following them exactly used to get the leak; InteractsWithMachines carries it
+    // too because a suite may use only that one. Set-up, not teardown: trait teardowns run
+    // LIFO under Testbench and FIFO under Laravel, so a teardown discard can land before
+    // another trait's teardown calls completePath() and swallow it.
+    $harnesses = [
+        new class() {
+            use TracksPathCoverage;
+
+            public function boot(): void
+            {
+                // Skip the once-per-process boot: it cleans the export directory and
+                // registers a shutdown export, neither of which belongs in a unit test.
+                // The discard runs before that guard, which is the point.
+                self::$pathCoverageBooted = true;
+
+                $this->setUpTracksPathCoverage();
+            }
+        },
+        new class() {
+            use InteractsWithMachines;
+
+            public function boot(): void
+            {
+                $this->setUpInteractsWithMachines();
+            }
+        },
+    ];
+
+    foreach ($harnesses as $harness) {
+        PathCoverageTracker::reset();
+        PathCoverageTracker::enable();
+
+        try {
+            PathCoverageTracker::recordTransition('HookProbeMachine', 'm.idle');
+            PathCoverageTracker::recordTransition('HookProbeMachine', 'm.processing', 'START');
+
+            $harness->boot();
+
+            PathCoverageTracker::recordTransition('HookProbeMachine', 'm.idle');
+            PathCoverageTracker::recordTransition('HookProbeMachine', 'm.done', 'FINISH');
+            PathCoverageTracker::completePath('HookProbeMachine');
+
+            $observed = PathCoverageTracker::observedPaths('HookProbeMachine');
+
+            expect($observed)->toHaveCount(1)
+                ->and($observed[0]['signature'])->toBe('idle→done');
+        } finally {
+            PathCoverageTracker::reset();
+        }
     }
 });
 
