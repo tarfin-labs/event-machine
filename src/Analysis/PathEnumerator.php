@@ -308,10 +308,36 @@ class PathEnumerator
         //    non-cyclic portions of the graph.
         $cacheKey = $state->id;
 
-        if (isset($this->suffixCache[$cacheKey])) {
+        // A parallel state is neither served from the cache nor written to it. The
+        // cache hit below returns before the type dispatch runs, so replaying a
+        // parallel state's suffixes would skip handleParallel entirely — no region
+        // enumeration under its boundary, no depth accounting, and no
+        // ParallelPathGroup recorded on any encounter after the first.
+        $cacheable = $state->type !== StateDefinitionType::PARALLEL;
+
+        if ($cacheable && isset($this->suffixCache[$cacheKey])) {
             $prefixLength = count($steps);
 
             foreach ($this->suffixCache[$cacheKey] as $cached) {
+                $suffixLength = count($cached['suffixSteps']);
+
+                // Whether a path is truncated depends on how long its prefix is, while
+                // the cache is keyed on the state alone. Replaying a suffix onto a
+                // prefix longer than the one it was discovered under would emit an
+                // over-length path that no flag reports, so it is cut at the ceiling
+                // and recorded as truncated instead.
+                if ($this->depthOffset + $prefixLength + $suffixLength > $this->maxDepth) {
+                    $room = max(0, $this->maxDepth - $this->depthOffset - $prefixLength);
+
+                    $this->depthLimitReached = true;
+                    $this->recordPath(
+                        [...$steps, ...array_slice($cached['suffixSteps'], 0, $room)],
+                        PathType::TRUNCATED,
+                    );
+
+                    continue;
+                }
+
                 $fullSteps = [...$steps, ...$cached['suffixSteps']];
                 $this->recordPath($fullSteps, $cached['type']);
             }
@@ -331,13 +357,21 @@ class PathEnumerator
         };
 
         // 6. Cache the suffixes discovered from this (state, visitedIds) combination.
-        if (!$this->pathLimitReached) {
-            $prefixLength = count($steps);
-            $suffixes     = [];
-            $counter      = count($this->paths);
+        if ($cacheable && !$this->pathLimitReached) {
+            $prefixLength      = count($steps);
+            $suffixes          = [];
+            $counter           = count($this->paths);
+            $containsTruncated = false;
 
             for ($i = $pathCountBefore; $i < $counter; $i++) {
-                $path        = $this->paths[$i];
+                $path = $this->paths[$i];
+
+                if ($path->type === PathType::TRUNCATED) {
+                    $containsTruncated = true;
+
+                    break;
+                }
+
                 $suffixSteps = array_slice($path->steps, $prefixLength);
                 $suffixes[]  = [
                     'suffixSteps'     => $suffixSteps,
@@ -346,7 +380,13 @@ class PathEnumerator
                 ];
             }
 
-            $this->suffixCache[$cacheKey] = $suffixes;
+            // Truncation is a property of the prefix that reached this state, not of
+            // the state itself, so a suffix set containing one must never be replayed
+            // onto a different prefix — that would invent truncation where there is
+            // none and hide the real continuations.
+            if (!$containsTruncated) {
+                $this->suffixCache[$cacheKey] = $suffixes;
+            }
         }
     }
 
