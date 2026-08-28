@@ -18,6 +18,21 @@ use Tarfinlabs\EventMachine\Definition\MachineInvokeDefinition;
  */
 class PathEnumerator
 {
+    // The rules this class enforces, in one place, so the comments below can refer to
+    // them without citing a spec file whose name changes at release time:
+    //
+    //   1. Enumeration terminates for any definition, whatever the graph shape.
+    //   2. A region path stays inside its region, except a final step recording the
+    //      region being left, which names the escaping event and target.
+    //   3. A transition sourced at or above a parallel state is followed by machine-level
+    //      enumeration only; region enumeration does not repeat it.
+    //   4. Every transition the runtime can take is represented somewhere, or the
+    //      analysis reports that it was truncated. Silent omission is a defect.
+    //   5. No path is classified as a condition the runtime does not exhibit — a state
+    //      the runtime can leave is never a dead end.
+    //   6. A region state whose only continuations belong to machine level records that
+    //      fact, distinguishably from both a dead end and a region exit.
+
     /** @var list<MachinePath> Accumulated terminal paths. */
     private array $paths = [];
 
@@ -36,7 +51,7 @@ class PathEnumerator
      * Measured as the depth inherited from the caller plus the steps accumulated
      * in this enumerator, so it bounds total recursion rather than each
      * enumerator separately. This is the structural backstop: whatever shape a
-     * definition takes, enumeration terminates (E1).
+     * definition takes, enumeration terminates.
      */
     private readonly int $maxDepth;
 
@@ -59,7 +74,7 @@ class PathEnumerator
     private readonly ?StateDefinition $boundary;
 
     /**
-     * How many branches the boundary handed to machine-level enumeration (E3).
+     * How many branches the boundary handed to machine-level enumeration.
      * Callers compare this before and after enumerating a state's continuations
      * to tell "every continuation was deferred" from "there were none".
      */
@@ -138,7 +153,7 @@ class PathEnumerator
      *
      * Returns true when this call recorded a path, so the caller can tell an
      * outcome from silence. A branch inherited from at or above the parallel
-     * state records nothing here: machine-level enumeration owns it (E3), and
+     * state records nothing here: machine-level enumeration owns it, and
      * whether the state as a whole is REGION_DEFERRED is the caller's decision,
      * since only the caller knows whether every continuation was deferred.
      *
@@ -164,7 +179,7 @@ class PathEnumerator
 
         // Declared inside the region and leaving it. Nothing else represents
         // this edge, so the region path ends here with a step naming the event
-        // and target that leave the region (E2).
+        // and target that leave the region.
         $steps[] = new PathStep(
             stateId: $target->id,
             stateKey: $target->key ?? '',
@@ -613,16 +628,22 @@ class PathEnumerator
         //
         // Only the keys already followed by property above are excluded: anything
         // beginning with @done (covering both @done and @done.{state}) and @fail.
-        // @always needs no exclusion because enumerateTransitions skips any transition
-        // whose isAlways flag is set, and @timeout is followed as an ordinary transition
-        // since handleParallel does not follow onTimeoutTransition — that belongs to
-        // enumerateMachineInvoke, and a parallel state is not an invoke state.
+        // @timeout is followed as an ordinary transition since handleParallel does not
+        // follow onTimeoutTransition — that belongs to enumerateMachineInvoke, and a
+        // parallel state is not an invoke state.
+        //
+        // @always is separated out rather than passed through: enumerateTransitions
+        // skips any transition whose isAlways flag is set, so leaving it in the set
+        // made the state look like it had an outcome while nothing was ever recorded
+        // for it — the state, its regions and everything downstream vanished from the
+        // output with no truncation flag to show for it.
         //
         // Before this, a transition declared on a parallel state was never followed at
         // machine level at all, so those paths were absent from the output while
         // ScenarioPathResolver did follow them: the two analysers disagreed about the
         // same definition.
-        $ownTransitions = [];
+        $ownTransitions   = [];
+        $alwaysTransition = null;
 
         foreach ($this->graph->transitionsFrom($state) as $event => $transition) {
             if (str_starts_with($event, '@done')) {
@@ -630,6 +651,12 @@ class PathEnumerator
             }
 
             if ($event === '@fail') {
+                continue;
+            }
+
+            if ($transition->isAlways) {
+                $alwaysTransition = $transition;
+
                 continue;
             }
 
@@ -646,13 +673,28 @@ class PathEnumerator
             ) || $enumerated;
         }
 
-        // Dead-end parallel: no @done, no @fail and no transitions of its own. The test
-        // stays structural, as it was before, so a parallel whose only outcome is a
-        // targetless @done still records nothing rather than newly claiming a dead end.
-        // The deferred branch can only be reached under a boundary.
+        // An @always on a parallel state is followed with the same priority rules an
+        // atomic state gets. It has to be followed rather than merely counted as an
+        // outcome: it is the only continuation on such a state, so skipping it while
+        // treating it as one records nothing at all.
+        if ($alwaysTransition instanceof TransitionDefinition) {
+            $deferralsBefore = $this->deferrals;
+            $pathsBefore     = count($this->paths);
+
+            $this->handleAlwaysPriority($state, $steps, $visitedIds, $alwaysTransition, $ownTransitions);
+
+            $enumerated = $enumerated || count($this->paths) > $pathsBefore;
+            $deferred   = $deferred || $this->deferrals > $deferralsBefore;
+        }
+
+        // Dead-end parallel: no @done, no @fail and no continuations of its own. The
+        // test stays structural, as it was before, so a parallel whose only outcome is
+        // a targetless @done still records nothing rather than newly claiming a dead
+        // end. The deferred branch can only be reached under a boundary.
         $hasOutcome = $state->onDoneTransition instanceof TransitionDefinition
             || $state->onFailTransition instanceof TransitionDefinition
-            || $ownTransitions !== [];
+            || $ownTransitions !== []
+            || $alwaysTransition instanceof TransitionDefinition;
 
         if (!$hasOutcome) {
             $this->recordPath($steps, PathType::DEAD_END);
@@ -779,13 +821,29 @@ class PathEnumerator
             $enumerated = true;
         }
 
-        // If @always has an unguarded fallback: it always fires — remaining transitions unreachable
+        // If @always has an unguarded fallback: it always fires — remaining transitions unreachable.
+        //
+        // That reasoning only holds when the @always was actually followed. Under a
+        // boundary its branches can all be skipped, in which case it did NOT fire from
+        // this enumerator's point of view and the state's remaining transitions are
+        // still reachable. Returning here regardless dropped a region state's own
+        // in-region transitions whenever it inherited an escaping @always from its
+        // parallel parent.
+        if ($hasUnguardedFallback && $enumerated) {
+            return;
+        }
+
         if ($hasUnguardedFallback) {
-            // This path returns without recording, which is right when a branch was
-            // followed. Under a boundary it can now leave the state with no outcome
-            // at all, and a region @always is runtime-reachable (transitionParallelState
-            // runs its own ungated @always sweep), so silence here would breach E4.
-            if (!$enumerated && $deferred) {
+            if ($remainingTransitions !== [] || $state->hasMachineInvoke()) {
+                $this->enumerateTransitions($state, $steps, $visitedIds, $remainingTransitions);
+
+                return;
+            }
+
+            // Nothing else to follow, and a region @always is runtime-reachable
+            // (transitionParallelState runs its own ungated @always sweep), so silence
+            // here would breach E4.
+            if ($deferred) {
                 $this->recordPath($steps, PathType::REGION_DEFERRED);
             }
 
@@ -804,7 +862,7 @@ class PathEnumerator
 
         // Every @always branch belonged to machine level: the guard block records the
         // guard-fail outcome, and this records that the branches themselves are owned
-        // above the boundary (E6). They are different claims about the same state.
+        // above the boundary. They are different claims about the same state.
         if (!$enumerated && $deferred) {
             $this->recordPath($steps, PathType::REGION_DEFERRED);
         }
@@ -816,6 +874,14 @@ class PathEnumerator
      * @param  list<PathStep>  $steps
      * @param  array<string, true>  $visitedIds
      * @param  array<string, TransitionDefinition>  $transitions
+     * @param  bool  $ownsOutcome  Whether this call decides the state's outcome. True for
+     *                             an atomic state, which has no other continuations.
+     *                             handleParallel passes false: it may already have
+     *                             enumerated @done/@fail branches this call cannot see,
+     *                             so it owns the single DEAD_END decision and only needs
+     *                             to know whether anything was enumerated here.
+     *
+     * @return bool True when at least one continuation produced a path.
      */
     private function enumerateTransitions(
         StateDefinition $state,
@@ -983,7 +1049,7 @@ class PathEnumerator
         }
 
         // Every invoke outcome belonged to machine level, so the region records that
-        // rather than nothing (E6). The deferral counter is what distinguishes this
+        // rather than nothing. The deferral counter is what distinguishes this
         // from a state that simply has no invoke outcomes, which must keep recording
         // nothing exactly as it did before.
         if (!$enumerated && $this->deferrals > $deferralsBefore) {
