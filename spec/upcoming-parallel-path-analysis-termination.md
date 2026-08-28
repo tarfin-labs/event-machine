@@ -215,9 +215,12 @@ by running one harness against both trees. Anyone comparing against T16's eviden
 the larger figures from the shipped code.
 
 E1's failure modes are SIGSEGV, which cannot be caught and which kills a whole worker under parallel
-Pest, and non-termination, which no in-process assertion can observe at all. Every check that
-enumerates this stub therefore runs out of process — not only E1's — under a wall-clock bound, with
-a timeout counted as a failure rather than a hang. The subprocess reports its results as data the
+Pest, and non-termination, which no in-process assertion can observe at all. Every check that has to
+enumerate this stub **at a ceiling where it can recurse** therefore runs out of process — not only
+E1's — under a wall-clock bound, with a timeout counted as a failure rather than a hang. (Other
+suites do enumerate the same stub in process — the coverage-gate and command tests do — at ceilings
+where the fixed code cannot recurse; an earlier revision of this paragraph said "every check", which
+overstates it.) The subprocess reports its results as data the
 test decodes, so a check that never enumerated cannot pass by reporting success.
 
 Expected values for the stub are **derived and pinned during implementation**, from the invariants
