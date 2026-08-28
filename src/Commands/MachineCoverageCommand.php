@@ -170,6 +170,25 @@ class MachineCoverageCommand extends Command
             ));
         }
 
+        // A signature a test actually walked, with nothing enumerated to match it, says
+        // the analysis missed a route the machine can take. Without this the report can
+        // read 100% while holding the evidence against itself.
+        $unmatched = $report->unmatchedObservations();
+
+        if ($unmatched !== []) {
+            $this->warn(sprintf(
+                '  %d observed path(s) match nothing enumerated — the analysis is missing routes the machine took, or this coverage data predates the current definition.',
+                count($unmatched),
+            ));
+
+            foreach (array_slice($unmatched, 0, 3) as $signature) {
+                $this->line("    {$signature}");
+            }
+
+            if (count($unmatched) > 3) {
+                $this->line('    … and '.(count($unmatched) - 3).' more');
+            }
+        }
         $this->line('');
 
         $pathNumber = 1;
@@ -256,6 +275,7 @@ class MachineCoverageCommand extends Command
             'coverage'           => $report->coveragePercentage(),
             'analysis_truncated' => $report->enumerationTruncated(),
             'skipped_paths'      => $report->skippedPathCount(),
+            'unmatched_observed' => $report->unmatchedObservations(),
             'paths'              => $paths,
         ];
 
