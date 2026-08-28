@@ -46,7 +46,11 @@ class PathCoverageReport
 
     public function coveragePercentage(): float
     {
-        $total = count($this->enumeration->paths);
+        // The denominator is the paths that were actually counted, which excludes the
+        // ones computeCoverage() skips as unmatchable. Reading it off $enumeration->paths
+        // would leave a permanently uncoverable path in the denominator and put 100% out
+        // of reach.
+        $total = count($this->covered) + count($this->uncovered);
 
         if ($total === 0) {
             return 100.0;
@@ -86,6 +90,16 @@ class PathCoverageReport
         }
 
         foreach ($this->enumeration->paths as $path) {
+            // A truncated path is an incomplete prefix: enumeration stopped part way
+            // through it, so no observed run can ever match its signature. Counting it
+            // would make assertAllPathsCovered() unsatisfiable on any machine whose
+            // analysis hit a ceiling. Every pre-existing path kind keeps its current
+            // treatment — GUARD_BLOCK in particular stays counted, because changing that
+            // would move figures for suites that pass today.
+            if ($path->type === PathType::TRUNCATED) {
+                continue;
+            }
+
             $signature = $path->stateSignature();
 
             if (isset($observedIndex[$signature])) {
