@@ -175,7 +175,35 @@ EventMachine can statically enumerate all paths through a machine definition and
 php artisan machine:paths "App\Machines\FindeksMachine"
 ```
 
-This produces a complete list of all possible paths grouped by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END.
+This produces a complete list of all possible paths grouped by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END, TRUNCATED.
+
+### Parallel States
+
+A parallel state is analysed at two levels, and the distinction matters when reading the output.
+
+**Machine level** covers the parallel state's own continuations: its `@done` and `@fail` branches, and any transition declared on the state itself or inherited from an ancestor. A transition that re-enters a parallel state the path has already visited terminates as a `LOOP`, exactly as it would anywhere else.
+
+**Region level** is scoped to each region's own subtree and appears under the `PARALLEL:` heading, one block per region. A region's paths describe that region, never the whole machine, and each carries its own type:
+
+| Region path type | Meaning |
+|---|---|
+| `HAPPY`, `LOOP`, `GUARD_BLOCK`, `DEAD_END` | the usual outcomes, reached without leaving the region |
+| `REGION_EXIT` | a transition **declared inside** the region targets a state outside it. At runtime this re-points that region's slot while the parallel state stays active. The final step names the escaping event and its target. |
+| `REGION_DEFERRED` | every continuation of that state is declared at or above the parallel state, so machine-level enumeration owns it. This is not a dead end — the runtime can leave the state; it is simply represented one level up. |
+
+A transition is never represented at both levels. One inherited from at or above the parallel state is followed at machine level only, which is why a region records `REGION_DEFERRED` rather than repeating it.
+
+### When the Analysis Stops Early
+
+Enumeration is bounded on two axes, so it terminates whatever shape a definition takes:
+
+```bash
+php artisan machine:paths "App\Machines\CarSales\CarSalesMachine" --max-paths=2000 --max-depth=400
+```
+
+A branch that reaches either ceiling is recorded as a `TRUNCATED` path rather than dropped, and the command says so — a partial analysis is never presented as a complete one. The console prints which ceiling fired and how to raise it; `--json` carries `path_limit_reached`, `depth_limit_reached`, `analysis_truncated` and `truncated_paths` alongside the existing keys, and exposes region paths under `parallel_groups`.
+
+Truncated paths are excluded from path-coverage accounting: an incomplete prefix is one no test run could ever match, so counting it would put 100% permanently out of reach. `machine:coverage` reports `analysis_truncated` in both its human and JSON output for the same reason — a percentage computed over an enumeration that stopped early is not a coverage guarantee, even when it reads well.
 
 ### Tracking Coverage in Tests
 
