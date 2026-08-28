@@ -397,6 +397,14 @@ enumeration behind it. When enumeration stops at a ceiling, the command says so 
 surfaces — a warning under the coverage line, and `analysis_truncated` plus
 `skipped_paths` in `--json`.
 
+A ceiling is not the only way an enumeration can be incomplete. If a recorded test run
+walked a route no enumerated path matches, that is direct evidence the analysis missed
+something the machine can do — the command warns and lists the first few, and `--json`
+carries them under `unmatched_observed`. It is reported rather than failed because a
+coverage file left over from an older definition produces the same trace, and only you
+can tell those apart. The in-suite assertions have no such doubt: the observations come
+from the same process, so `assertAllPathsCovered()` fails on them.
+
 `--min` refuses to pass judgement on a truncated analysis and exits with a failure: a
 threshold cleared by a figure computed over part of a machine is a green gate over an
 unknown. The message points at both ceilings rather than naming the one that fired —

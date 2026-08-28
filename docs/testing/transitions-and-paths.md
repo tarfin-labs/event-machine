@@ -205,6 +205,8 @@ A branch cut at the **depth** ceiling is recorded as a `TRUNCATED` path rather t
 
 Truncated paths are excluded from path-coverage accounting: an incomplete prefix is one no test run could ever match, so counting it would put 100% permanently out of reach. `machine:coverage` reports `analysis_truncated` in both its human and JSON output for the same reason — a percentage computed over an enumeration that stopped early is not a coverage guarantee, even when it reads well.
 
+The reverse mismatch is reported too. An observed signature with no enumerated path to match it means a run took a route the analysis does not know about, so the enumeration is incomplete whatever the percentage says. `machine:coverage` warns and lists them, `--json` carries them as `unmatched_observed`, and `PathCoverageReport::unmatchedObservations()` exposes them. `assertAllPathsCovered()` and `assertPathCoverage()` fail on them outright: in a suite the observations were produced by that same run, so unlike a coverage file read off disk they cannot be stale leftovers from an older definition.
+
 ### Tracking Coverage in Tests
 
 Add the `TracksPathCoverage` trait to your test suite. It automatically enables the tracker, cleans stale data, and exports coverage when the process exits:
