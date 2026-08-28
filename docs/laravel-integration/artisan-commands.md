@@ -308,15 +308,19 @@ php artisan machine:paths "App\Machines\OrderMachine" --json
 
 # Increase path limit for large machines (default: 1000)
 php artisan machine:paths "App\Machines\LargeMachine" --max-paths=5000
+
+# Increase total analysis depth (default: 200)
+php artisan machine:paths "App\Machines\DeepMachine" --max-depth=400
 ```
 
 ### What It Shows
 
 - Machine stats: states, events, guards, actions, calculators, job actors, child machines, timers
 - Child machine and job actor names with async/sync mode and queue info
-- All terminal paths grouped by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END
+- All terminal paths grouped by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END, TRUNCATED
 - Child machine/job class names on invoke state steps
-- Parallel state per-region paths with combination count
+- Parallel state per-region paths with combination count, each tagged with its own type — including `REGION_EXIT` for a transition declared inside a region that leaves it, and `REGION_DEFERRED` for a state whose continuations are owned at machine level
+- Whether the analysis stopped early: the summary line names the ceiling that fired, and `--json` carries `path_limit_reached`, `depth_limit_reached`, `analysis_truncated`, `truncated_paths` and a `parallel_groups` array
 - Guard and action details per path
 - Unhandled child outcome warnings (child final states without parent @done.{state} routes)
 
