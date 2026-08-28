@@ -540,6 +540,13 @@ php artisan machine:scenario-validate "App\Machines\CarSalesMachine"
 php artisan machine:scenario-validate --scenario=AtCheckingProtocolScenario
 ```
 
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--scenario=` | Validate a single scenario by slug, class basename, or FQCN |
+| `--max-iterations=N` | Search budget for each scenario's reachability check (default: 1000). A scenario whose search hits the cap is reported as *truncated at the search limit* — a different finding from "no path". |
+
 ### What It Checks
 
 **Level 1 — Static validation:** machine class exists, source/target/event valid, plan() routes exist, behavior classes exist, delegation outcomes on correct states, child scenario machine matches.
