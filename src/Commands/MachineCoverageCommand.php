@@ -15,7 +15,9 @@ class MachineCoverageCommand extends Command
         {machine : The Machine class path or FQCN}
         {--json : Output as JSON}
         {--min= : Minimum coverage percentage (exit code 1 if below)}
-        {--from= : Path to coverage directory or JSON file}';
+        {--from= : Path to coverage directory or JSON file}
+        {--max-paths=1000 : Maximum paths to enumerate}
+        {--max-depth=200 : Maximum total analysis depth before a path is cut short}';
     protected $description = 'Report path coverage for a machine definition';
 
     public function handle(): int
@@ -65,8 +67,12 @@ class MachineCoverageCommand extends Command
         }
 
         // Enumerate paths and build report
-        $definition  = $machinePath::definition();
-        $enumerator  = new PathEnumerator($definition);
+        $definition = $machinePath::definition();
+        $enumerator = new PathEnumerator(
+            definition: $definition,
+            maxPaths: (int) $this->option('max-paths'),
+            maxDepth: (int) $this->option('max-depth'),
+        );
         $enumeration = $enumerator->enumerate();
         $observed    = PathCoverageTracker::observedPaths($machinePath);
         $report      = new PathCoverageReport($enumeration, $observed);
@@ -81,6 +87,17 @@ class MachineCoverageCommand extends Command
         $min = $this->option('min');
 
         if ($min !== null) {
+            // A threshold is an explicit gate, and a percentage computed over an
+            // enumeration that stopped early cannot clear it honestly: the paths never
+            // enumerated cannot be counted as uncovered, so the figure flatters itself.
+            // Printing a warning is not enough here — CI reads the exit code.
+            if ($report->enumerationTruncated()) {
+                $this->error('Cannot enforce a minimum over a truncated analysis: enumeration stopped early, so the coverage figure is computed over part of the machine.');
+                $this->line('Raise the ceiling with --max-paths or --max-depth, then re-run.');
+
+                return self::FAILURE;
+            }
+
             $coverage = $report->coveragePercentage();
 
             if ($coverage < (float) $min) {
