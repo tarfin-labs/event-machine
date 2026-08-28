@@ -857,10 +857,7 @@ class ScenarioPlayer
             // Try full ID first (machine.state.path)
             $found = $definition->idMap[$stateRoute] ?? null;
 
-            // Try with machine prefix
-            if ($found === null) {
-                $found = $definition->idMap[$definition->id.'.'.$stateRoute] ?? null;
-            }
+            $found ??= $definition->idMap[$definition->id.'.'.$stateRoute] ?? null;
 
             if ($found === null) {
                 throw ScenarioConfigurationException::invalidStateRoute(

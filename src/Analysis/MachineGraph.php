@@ -43,9 +43,7 @@ class MachineGraph
         while ($current instanceof StateDefinition) {
             if ($current->transitionDefinitions !== null) {
                 foreach ($current->transitionDefinitions as $event => $transition) {
-                    if (!isset($transitions[$event])) {
-                        $transitions[$event] = $transition;
-                    }
+                    $transitions[$event] ??= $transition;
                 }
             }
 

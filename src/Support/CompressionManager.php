@@ -16,13 +16,11 @@ class CompressionManager
      */
     protected static function getConfig(): array
     {
-        if (self::$config === null) {
-            self::$config = config('machine.archival', [
-                'enabled'   => true,
-                'level'     => 6,
-                'threshold' => 1000, // Minimum bytes before archival compression
-            ]);
-        }
+        self::$config ??= config('machine.archival', [
+            'enabled'   => true,
+            'level'     => 6,
+            'threshold' => 1000, // Minimum bytes before archival compression
+        ]);
 
         return self::$config;
     }

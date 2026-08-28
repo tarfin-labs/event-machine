@@ -67,9 +67,7 @@ abstract class EventBehavior extends Data
         #[WithoutValidation]
         public SourceType $source = SourceType::EXTERNAL,
     ) {
-        if ($this->type === null) {
-            $this->type = static::getType();
-        }
+        $this->type ??= static::getType();
 
         if ($isTransactional !== null) {
             $this->isTransactional = $isTransactional;
