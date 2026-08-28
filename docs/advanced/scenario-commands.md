@@ -34,7 +34,7 @@ The command:
 - `--dry-run` — prints generated PHP to stdout without writing the file
 - `--force` — overwrites an existing scenario file (without it, the command fails if the file exists)
 - `--path=N` — when multiple paths exist from source to target, selects path by index (default: 0). The command lists all paths with signatures and stats when multiple are found.
-- `--max-iterations=N` — caps the BFS that resolves the route (default: 1000). If the search stops with work still pending, the command says so and fails: **"truncated at the search limit" is a different finding from "no path exists"**, and only the first is fixable by raising this number. A genuinely unconnected source and target fail no matter how high it goes.
+- `--max-iterations=N` — caps the BFS that resolves the route (default: 1000). If the search stops with work still pending, the command always says so: **"truncated at the search limit" is a different finding from "no path exists"**, and only the first is fixable by raising this number. With no path found it fails; with a path found it warns and continues, because the route list — and therefore `--path=N` — may be missing routes. A genuinely unconnected source and target fail no matter how high it goes.
 
 ### Multiple Paths
 
