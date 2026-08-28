@@ -13,6 +13,8 @@ use Tarfinlabs\EventMachine\Analysis\PathEnumerationResult;
 
 class MachinePathsCommand extends Command
 {
+    use ValidatesNumericOptions;
+
     protected $signature = 'machine:paths
         {machine : The Machine class path or FQCN}
         {--json : Output as JSON}
@@ -42,8 +44,13 @@ class MachinePathsCommand extends Command
         }
 
         $definition = $machinePath::definition();
-        $maxPaths   = (int) $this->option('max-paths');
-        $maxDepth   = (int) $this->option('max-depth');
+        $maxPaths   = $this->integerOption('max-paths', min: 1);
+        $maxDepth   = $this->integerOption('max-depth', min: 1);
+
+        if ($maxPaths === null || $maxDepth === null) {
+            return self::FAILURE;
+        }
+
         $enumerator = new PathEnumerator($definition, $maxPaths, null, $maxDepth);
         $result     = $enumerator->enumerate();
 
