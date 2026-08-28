@@ -366,6 +366,12 @@ class Machine implements Castable, JsonSerializable, Stringable
                 try {
                     $this->state = $this->restoreStateFromRootEventId($rootEventId);
                 } catch (\Throwable) {
+                    // Defensive, and weaker than it looks: continuing on a stale local
+                    // state then mutates a forked timeline under a freshly acquired lock,
+                    // which the caller cannot tell from success. It also catches
+                    // programming errors alongside the transient database failures it is
+                    // aimed at. Narrowing it needs a reload contract this class does not
+                    // have yet.
                     // Defensive: if reload fails, continue with current local state.
                 }
 
@@ -472,6 +478,12 @@ class Machine implements Castable, JsonSerializable, Stringable
                 try {
                     $this->state = $this->restoreStateFromRootEventId($rootEventId);
                 } catch (\Throwable) {
+                    // Defensive, and weaker than it looks: continuing on a stale local
+                    // state then mutates a forked timeline under a freshly acquired lock,
+                    // which the caller cannot tell from success. It also catches
+                    // programming errors alongside the transient database failures it is
+                    // aimed at. Narrowing it needs a reload contract this class does not
+                    // have yet.
                     // Defensive: if reload fails, continue with current local state.
                 }
             }
