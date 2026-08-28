@@ -27,6 +27,8 @@ use Tarfinlabs\EventMachine\Jobs\ArchiveSingleMachineJob;
  */
 class ArchiveEventsCommand extends Command
 {
+    use ValidatesNumericOptions;
+
     protected $signature = 'machine:archive-events
                            {--dispatch-limit=50 : Max workflows to dispatch per run}
                            {--dry-run : Show what would be dispatched without dispatching}
@@ -43,9 +45,13 @@ class ArchiveEventsCommand extends Command
             return self::FAILURE;
         }
 
-        $dispatchLimit = (int) $this->option('dispatch-limit');
-        $dryRun        = $this->option('dry-run');
-        $sync          = $this->option('sync');
+        $dispatchLimit = $this->integerOption('dispatch-limit', min: 1);
+
+        if ($dispatchLimit === null) {
+            return self::FAILURE;
+        }
+        $dryRun = $this->option('dry-run');
+        $sync   = $this->option('sync');
 
         // Find eligible machines
         $cutoffDate = Carbon::now()->subDays($config['days_inactive'] ?? 30);

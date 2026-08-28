@@ -16,6 +16,8 @@ use Tarfinlabs\EventMachine\Models\MachineCurrentState;
  */
 class TimerStatusCommand extends Command
 {
+    use ValidatesNumericOptions;
+
     protected $signature = 'machine:timer-status
         {--class= : Filter by machine class}
         {--state= : Filter by state ID}
@@ -45,7 +47,13 @@ class TimerStatusCommand extends Command
             $query->where('machine_current_states.state_id', $this->option('state'));
         }
 
-        $results = $query->limit((int) $this->option('limit'))->get();
+        $limit = $this->integerOption('limit', min: 1);
+
+        if ($limit === null) {
+            return self::FAILURE;
+        }
+
+        $results = $query->limit($limit)->get();
 
         if ($results->isEmpty()) {
             $this->info('No active machine instances found.');
