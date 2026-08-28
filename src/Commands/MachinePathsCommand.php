@@ -341,7 +341,13 @@ class MachinePathsCommand extends Command
 
     /**
      * Resolve a FQCN from a PHP file path by extracting namespace and class name.
-     * Copied from ExportXStateCommand.
+     *
+     * Copied verbatim into MachineCoverageCommand and ExportXStateCommand — three copies,
+     * byte-identical but for comments. Two things about it are worth knowing before
+     * trusting or reusing it: it `require_once`s the file, so it loads code into the
+     * process rather than merely reading it, and its regex takes the FIRST class in the
+     * file that extends anything. A file declaring a helper class above the machine
+     * therefore resolves to the wrong FQCN, which the caller then asks for a definition.
      */
     private function resolveClassFromFile(string $filePath): ?string
     {
