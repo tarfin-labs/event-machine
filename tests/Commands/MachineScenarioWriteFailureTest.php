@@ -18,10 +18,14 @@ use Symfony\Component\Console\Command\Command;
  */
 function makeScenarioWriteProbe(string $suffix): array
 {
-    $dir = sys_get_temp_dir().'/em-scenario-write-'.$suffix.'-'.bin2hex(random_bytes(4));
+    $unique = bin2hex(random_bytes(4));
+    $dir    = sys_get_temp_dir().'/em-scenario-write-'.$suffix.'-'.$unique;
     mkdir($dir, 0755, true);
 
-    $namespace = 'EmScenarioWriteProbe'.$suffix;
+    // The random part belongs in the namespace as well as the directory. With only the
+    // caller's suffix distinguishing them, a second run inside the same process — a
+    // --repeat, or a retry after a failure — would redeclare the class and fatal.
+    $namespace = 'EmScenarioWriteProbe'.$suffix.$unique;
     $file      = $dir.'/ProbeMachine.php';
 
     file_put_contents($file, <<<PHP
