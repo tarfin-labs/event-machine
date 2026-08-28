@@ -397,9 +397,11 @@ enumeration behind it. When enumeration stops at a ceiling, the command says so 
 surfaces — a warning under the coverage line, and `analysis_truncated` plus
 `skipped_paths` in `--json`.
 
-`--min` refuses to pass judgement on a truncated analysis and exits with a failure
-naming the ceiling: a threshold cleared by a figure computed over part of a machine is a
-green gate over an unknown. Raise `--max-paths` or `--max-depth` and re-run.
+`--min` refuses to pass judgement on a truncated analysis and exits with a failure: a
+threshold cleared by a figure computed over part of a machine is a green gate over an
+unknown. The message points at both ceilings rather than naming the one that fired —
+raise `--max-paths` or `--max-depth` and re-run. (The in-suite assertions below do name
+it.)
 
 Truncated paths are excluded from the coverage denominator. An incomplete prefix is one
 no observed run can ever match, so counting it would put 100% permanently out of reach.
