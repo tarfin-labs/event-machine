@@ -242,8 +242,19 @@ class ScenarioPathResolver
                 if ($state->onFailTransition instanceof TransitionDefinition) {
                     $parallelTransitions['@fail'] = $state->onFailTransition;
                 }
-                // Include ALL transitionDefinitions (both @done-style and regular events)
-                foreach ($state->transitionDefinitions ?? [] as $event => $transition) {
+
+                // Resolved through transitionsFrom(), so own and inherited transitions are
+                // both included — the same set PathEnumerator uses for a parallel state.
+                // Reading $state->transitionDefinitions here instead would leave the two
+                // analysers disagreeing about the same definition, which is the defect this
+                // change exists to remove rather than to invert. @always is skipped for the
+                // same reason the INTERACTIVE case skips it: it is not an event a scenario
+                // can send.
+                foreach ($this->graph->transitionsFrom($state) as $event => $transition) {
+                    if ($event === TransitionProperty::Always->value) {
+                        continue;
+                    }
+
                     $parallelTransitions[$event] = $transition;
                 }
 
@@ -252,6 +263,23 @@ class ScenarioPathResolver
                         if ($branch->target instanceof StateDefinition) {
                             $next[] = [$branch->target, $event, $branch->guards ?? [], $branch->actions ?? []];
                         }
+                    }
+                }
+
+                // Descend into the regions. Entering a parallel state activates every
+                // region at once, so each region's initial state really is reachable —
+                // without this, every state inside a region looks unreachable and the
+                // resolver answers "no path" for targets the machine reaches in practice.
+                //
+                // The label is @region rather than @entry because the two mean different
+                // things: @entry is exclusive compound descent, while a route through one
+                // region is a projection of a concurrent configuration whose sibling
+                // regions are simultaneously active in unspecified states.
+                foreach ($state->stateDefinitions ?? [] as $region) {
+                    $regionInitial = $region->findInitialStateDefinition();
+
+                    if ($regionInitial instanceof StateDefinition && $regionInitial->id !== $state->id) {
+                        $next[] = [$regionInitial, '@region', [], []];
                     }
                 }
                 break;
