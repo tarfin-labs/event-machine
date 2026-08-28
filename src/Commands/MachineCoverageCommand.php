@@ -66,58 +66,65 @@ class MachineCoverageCommand extends Command
             return self::FAILURE;
         }
 
-        // Enumerate paths and build report
-        $definition = $machinePath::definition();
-        $enumerator = new PathEnumerator(
-            definition: $definition,
-            maxPaths: (int) $this->option('max-paths'),
-            maxDepth: (int) $this->option('max-depth'),
-        );
-        $enumeration = $enumerator->enumerate();
-        $observed    = PathCoverageTracker::observedPaths($machinePath);
-        $report      = new PathCoverageReport($enumeration, $observed);
+        // Importing populates a process-wide static singleton. Resetting it only on the
+        // success path left it populated after every failure return below, so one
+        // invocation's observations could leak into the next within the same process.
+        // The tests stayed isolated only because their helper reset it by hand — which is
+        // the test compensating for something the command should guarantee.
+        try {
+            // Enumerate paths and build report
+            $definition = $machinePath::definition();
+            $enumerator = new PathEnumerator(
+                definition: $definition,
+                maxPaths: (int) $this->option('max-paths'),
+                maxDepth: (int) $this->option('max-depth'),
+            );
+            $enumeration = $enumerator->enumerate();
+            $observed    = PathCoverageTracker::observedPaths($machinePath);
+            $report      = new PathCoverageReport($enumeration, $observed);
 
-        if ($this->option('json')) {
-            $this->line($this->renderJson($report, $machinePath));
-        } else {
-            $this->renderConsole($report, $machinePath);
+            if ($this->option('json')) {
+                $this->line($this->renderJson($report, $machinePath));
+            } else {
+                $this->renderConsole($report, $machinePath);
+            }
+
+            // Check minimum threshold
+            $min = $this->option('min');
+
+            if ($min !== null) {
+                // A gate silently disabled by a typo is worse than no gate: (float) turns
+                // --min=abc and --min= into 0.0, which every run clears.
+                if (!is_numeric($min)) {
+                    $this->error("--min must be a number between 0 and 100, got '{$min}'.");
+
+                    return self::FAILURE;
+                }
+
+                // A threshold is an explicit gate, and a percentage computed over an
+                // enumeration that stopped early cannot clear it honestly: the paths never
+                // enumerated cannot be counted as uncovered, so the figure flatters itself.
+                // Printing a warning is not enough here — CI reads the exit code.
+                if ($report->enumerationTruncated()) {
+                    $this->error('Cannot enforce a minimum over a truncated analysis: enumeration stopped early, so the coverage figure is computed over part of the machine.');
+                    $this->line('Raise the ceiling with --max-paths or --max-depth, then re-run.');
+
+                    return self::FAILURE;
+                }
+
+                $coverage = $report->coveragePercentage();
+
+                if ($coverage < (float) $min) {
+                    $this->error(sprintf('Path coverage %.1f%% is below minimum %s%%', $coverage, $min));
+
+                    return self::FAILURE;
+                }
+            }
+
+            return self::SUCCESS;
+        } finally {
+            PathCoverageTracker::reset();
         }
-
-        // Check minimum threshold
-        $min = $this->option('min');
-
-        if ($min !== null) {
-            // A gate silently disabled by a typo is worse than no gate: (float) turns
-            // --min=abc and --min= into 0.0, which every run clears.
-            if (!is_numeric($min)) {
-                $this->error("--min must be a number between 0 and 100, got '{$min}'.");
-
-                return self::FAILURE;
-            }
-
-            // A threshold is an explicit gate, and a percentage computed over an
-            // enumeration that stopped early cannot clear it honestly: the paths never
-            // enumerated cannot be counted as uncovered, so the figure flatters itself.
-            // Printing a warning is not enough here — CI reads the exit code.
-            if ($report->enumerationTruncated()) {
-                $this->error('Cannot enforce a minimum over a truncated analysis: enumeration stopped early, so the coverage figure is computed over part of the machine.');
-                $this->line('Raise the ceiling with --max-paths or --max-depth, then re-run.');
-
-                return self::FAILURE;
-            }
-
-            $coverage = $report->coveragePercentage();
-
-            if ($coverage < (float) $min) {
-                $this->error(sprintf('Path coverage %.1f%% is below minimum %s%%', $coverage, $min));
-
-                return self::FAILURE;
-            }
-        }
-
-        PathCoverageTracker::reset();
-
-        return self::SUCCESS;
     }
 
     private function renderConsole(PathCoverageReport $report, string $machinePath): void
