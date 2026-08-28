@@ -36,6 +36,17 @@ class MachineScenarioCommand extends Command
         $event        = $this->argument('event');
         $target       = $this->argument('target');
 
+        // The name becomes both a path segment and a class name in generated PHP, and it was
+        // taken verbatim into both. `../Foo` wrote the file outside Scenarios/ and still printed
+        // "Created:", and `Evil{} echo 1; class Zz` was interpolated into the template, putting
+        // top-level statements in a class file. A PHP class name is the only thing this can be.
+        if (preg_match('/^[A-Za-z_]\w*$/', $name) !== 1) {
+            $this->error("Invalid scenario name: {$name}");
+            $this->line('A scenario name must be a PHP class name: a letter or underscore, then letters, digits or underscores.');
+
+            return self::FAILURE;
+        }
+
         // Auto-add Scenario suffix
         if (!str_ends_with($name, 'Scenario')) {
             $name .= 'Scenario';
