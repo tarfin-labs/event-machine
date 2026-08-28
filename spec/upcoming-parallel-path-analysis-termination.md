@@ -137,7 +137,7 @@ the parallel state itself or one of its ancestors. Everything else is handled by
 | source is the parallel state or an ancestor of it | the whole parallel state is exited, sibling regions end |
 | source is an active region leaf, target is not parallel | that region's slot is re-pointed; the parallel state stays active |
 | source is a compound inside a region, so not itself an active leaf | `array_search` over `$state->value` misses and no state value is updated at all; only entry processing runs |
-| target is itself a parallel state | that one slot is `array_splice`d into the target's N initial leaves — this is the re-entrant shape §1 names as the crash trigger |
+| target is itself a parallel state, source an active region leaf | that one slot is `array_splice`d into the target's N initial leaves. **Not the crash shape** — an earlier revision said it was. `ReentrantParallelMachine`'s three transitions into a parallel state are either atomic-sourced or sourced *on* the parallel state, so they all take row 1; §1's crash trigger is row 1, and this row is reached only by a transition declared at an active region leaf |
 
 An analysis that treats these as one thing violates E5. Row 1 is the only case whose transition is
 also visible at machine level.
