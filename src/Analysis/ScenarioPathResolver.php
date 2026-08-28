@@ -373,11 +373,15 @@ class ScenarioPathResolver
      * Resolve a deep target (cross-delegation) into parent target + child target.
      *
      * Input: 'findeks.awaiting_birth_date_correction'
-     * Output: ['parentTarget' => 'verification', 'childMachine' => FindeksMachine::class, 'childTarget' => 'awaiting_birth_date_correction']
-     * Returns null if target is not a deep target.
-     */
-    /**
-     * @return array{parentTarget: string, childMachine: class-string, childTarget: string}|null
+     * Output: [
+     *   'parentTarget'    => 'verification',
+     *   'delegationState' => 'verification.findeks.running',
+     *   'childMachine'    => FindeksMachine::class,
+     *   'childTarget'     => 'awaiting_birth_date_correction',
+     * ]
+     * Returns null if the target is not a deep target.
+     *
+     * @return array{parentTarget: string, delegationState: string, childMachine: class-string, childTarget: string}|null
      */
     public function resolveDeepTarget(string $target): ?array
     {
