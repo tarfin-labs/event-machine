@@ -737,9 +737,21 @@ class Machine implements Castable, JsonSerializable, Stringable
             if ($scenarioRecord !== null) {
                 $scenarioClass = $scenarioRecord->scenario_class;
                 if (class_exists($scenarioClass) && is_subclass_of($scenarioClass, MachineScenario::class)) {
-                    $scenario = new $scenarioClass();
-                    $scenario->hydrateParams($scenarioRecord->scenario_params ?? []);
-                    ScenarioPlayer::registerOverrides($scenario);
+                    // A scenario is a QA aid. Nothing about one may make a machine unloadable,
+                    // and this restore used to do exactly that: hydrateParams() re-ran the full
+                    // validator, so a param with an `exists` rule pointing at a row someone
+                    // later deleted threw here — permanently, with no way back through the
+                    // application, because the code that clears the stored scenario runs after
+                    // this point and could never be reached. Params are hydrated without
+                    // re-validation, and anything else that goes wrong drops the overrides
+                    // rather than the machine.
+                    try {
+                        $scenario = new $scenarioClass();
+                        $scenario->hydrateParams($scenarioRecord->scenario_params ?? [], validate: false);
+                        ScenarioPlayer::registerOverrides($scenario);
+                    } catch (\Throwable) {
+                        ScenarioPlayer::cleanupOverrides();
+                    }
                 }
             }
         }
