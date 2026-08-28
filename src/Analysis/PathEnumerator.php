@@ -242,6 +242,7 @@ class PathEnumerator
         $this->pathLimitReached  = false;
         $this->depthLimitReached = false;
         $this->deferrals         = 0;
+        $this->subPathsRecorded  = 0;
         $this->suffixCache       = [];
 
         $initialState = $this->definition->initialStateDefinition;
