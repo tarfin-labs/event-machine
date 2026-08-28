@@ -123,7 +123,18 @@ class MachineCoverageCommand extends Command
 
             return self::SUCCESS;
         } finally {
+            // reset() also clears the enabled flag, and TracksPathCoverage enables the
+            // tracker once per process and exports on shutdown. Running this command
+            // in-process under that trait would therefore stop collection for the rest of
+            // the run and skip the export entirely, leaving a silently empty coverage
+            // file. Only the observations this invocation imported should be dropped.
+            $wasEnabled = PathCoverageTracker::isEnabled();
+
             PathCoverageTracker::reset();
+
+            if ($wasEnabled) {
+                PathCoverageTracker::enable();
+            }
         }
     }
 
