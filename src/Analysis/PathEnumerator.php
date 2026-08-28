@@ -255,7 +255,7 @@ class PathEnumerator
             return;
         }
 
-        // 0b. Depth ceiling — the structural backstop that makes E1 hold whatever
+        // 0b. Depth ceiling — the structural backstop behind rule 1, whatever
         // shape the graph takes. The branch is recorded as cut short rather than
         // dropped, so a truncated analysis can never be read as a complete one.
         if ($this->depthOffset + count($steps) >= $this->maxDepth) {
@@ -482,7 +482,12 @@ class PathEnumerator
      */
     private function handleParallel(StateDefinition $state, array $steps, array $visitedIds): void
     {
-        // Enumerate per-region paths.
+        // Enumerate per-region paths, unless this parallel state was already recorded.
+        //
+        // Multiple DFS forks can reach the same parallel state, and only the first one's
+        // regions are kept. Testing that first means the later forks stop re-enumerating
+        // regions whose results are then thrown away — the same work, multiplied by how
+        // many routes reach the state.
         //
         // Each region gets its own enumerator bounded to that region. Before this,
         // the sub-enumerator was unbounded and started with an empty visited set, so
@@ -491,10 +496,20 @@ class PathEnumerator
         // enumerator at the next parallel state it met — recursion that neither the
         // cycle check nor the path budget could stop, because neither crossed the
         // boundary.
-        $regionPaths = [];
+        $alreadyRecorded = false;
 
-        if ($state->stateDefinitions !== null) {
-            foreach ($state->stateDefinitions as $regionKey => $region) {
+        foreach ($this->parallelGroups as $existing) {
+            if ($existing->parallelStateId === $state->id) {
+                $alreadyRecorded = true;
+
+                break;
+            }
+        }
+
+        if (!$alreadyRecorded) {
+            $regionPaths = [];
+
+            foreach ($state->stateDefinitions ?? [] as $regionKey => $region) {
                 // The sub-enumerator inherits the caller's REMAINING path budget and the
                 // depth consumed so far, so both ceilings bound the analysis as a whole
                 // rather than being re-issued in full at every region.
@@ -524,21 +539,7 @@ class PathEnumerator
                     $this->depthLimitReached = true;
                 }
             }
-        }
 
-        // Only add to parallelGroups if this parallel state hasn't been recorded yet
-        // (multiple DFS forks can discover the same parallel state independently)
-        $alreadyRecorded = false;
-
-        foreach ($this->parallelGroups as $existing) {
-            if ($existing->parallelStateId === $state->id) {
-                $alreadyRecorded = true;
-
-                break;
-            }
-        }
-
-        if (!$alreadyRecorded) {
             $this->parallelGroups[] = new ParallelPathGroup(
                 parallelStateId: $state->id,
                 regionPaths: $regionPaths,
@@ -842,7 +843,7 @@ class PathEnumerator
 
             // Nothing else to follow, and a region @always is runtime-reachable
             // (transitionParallelState runs its own ungated @always sweep), so silence
-            // here would breach E4.
+            // here would breach rule 4.
             if ($deferred) {
                 $this->recordPath($steps, PathType::REGION_DEFERRED);
             }
