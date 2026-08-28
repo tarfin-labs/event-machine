@@ -737,8 +737,10 @@ class MachineController extends Controller
                         $scenario = new $scenarioClass();
 
                         if ($scenario->hasContinuation()) {
+                            // Stored params, so not re-validated — see MachineScenario::hydrateParams().
                             $scenario->hydrateParams(
-                                $currentState->scenario_params ?? []
+                                $currentState->scenario_params ?? [],
+                                validate: false,
                             );
                             $scenario->isContinuation = true;
 

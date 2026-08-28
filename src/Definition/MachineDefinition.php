@@ -2070,8 +2070,10 @@ class MachineDefinition
             return false;
         }
 
-        // hydrateParams MUST precede executeContinuation — continuation loop depends on hydrated state
-        $scenario->hydrateParams($record->scenario_params ?? []);
+        // hydrateParams MUST precede executeContinuation — continuation loop depends on hydrated state.
+        // Not re-validated: these params were validated when they were accepted, and a rule that
+        // reads the world can fail later with nothing about the machine having changed.
+        $scenario->hydrateParams($record->scenario_params ?? [], validate: false);
         $scenario->isContinuation = true;
 
         $player = new ScenarioPlayer($scenario);
