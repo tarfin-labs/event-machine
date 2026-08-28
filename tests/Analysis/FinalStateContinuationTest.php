@@ -88,3 +88,64 @@ test('a compound @done still replaces the terminal path rather than joining it',
 
     expect($signatures)->toBe(['idle→[GO]→inner→leaf→[@done]→settled']);
 });
+
+test('a guarded compound @done leaves the final state reachable', function (): void {
+    // An @done whose every branch is guarded may not fire, and then the machine rests at
+    // the final child and can still be driven out by an inherited handler. handleFinal
+    // returned as soon as the parent had ANY onDoneTransition, so both the rest-at-final
+    // path and everything beyond the inherited event were absent with no truncation flag
+    // — and coverage read 100% while assertAllPathsCovered() passed over the gap.
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'guarded_done',
+        'initial' => 'idle',
+        'on'      => ['ESCAPE' => 'escaped'],
+        'states'  => [
+            'idle'  => ['on' => ['GO' => 'inner']],
+            'inner' => [
+                'initial' => 'leaf',
+                '@done'   => [['target' => 'settled', 'guards' => 'neverGuard']],
+                'states'  => ['leaf' => ['type' => 'final']],
+            ],
+            'settled' => ['type' => 'final'],
+            'escaped' => ['type' => 'final'],
+        ],
+    ], behavior: [
+        'guards' => ['neverGuard' => static fn (): bool => false],
+    ]);
+
+    $signatures = finalPathSignatures($definition);
+
+    expect($signatures)->toContain('idle→[GO]→inner→leaf→[@done]→settled')
+        ->and($signatures)->toContain('idle→[GO]→inner→leaf')
+        ->and($signatures)->toContain('idle→[GO]→inner→leaf→[ESCAPE]→escaped');
+});
+
+test('an unguarded compound @done still replaces the terminal path', function (): void {
+    // The control for the test above: an @done that always fires means the machine never
+    // rests at the leaf, so the terminal path must NOT appear. Without this the fix could
+    // record a rest-at-final path unconditionally and nothing would notice.
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'unguarded_done',
+        'initial' => 'idle',
+        'on'      => ['ESCAPE' => 'escaped'],
+        'states'  => [
+            'idle'  => ['on' => ['GO' => 'inner']],
+            'inner' => [
+                'initial' => 'leaf',
+                '@done'   => 'settled',
+                'states'  => ['leaf' => ['type' => 'final']],
+            ],
+            'settled' => ['type' => 'final'],
+            'escaped' => ['type' => 'final'],
+        ],
+    ]);
+
+    $signatures = finalPathSignatures($definition);
+
+    // The @done continuation is there, and the rest-at-final path is NOT: that absence is
+    // the whole assertion. Listing the full set would be brittle for the wrong reason —
+    // `settled` is itself a final state that now follows the machine-level ESCAPE, so the
+    // set legitimately contains continuations past it.
+    expect($signatures)->toContain('idle→[GO]→inner→leaf→[@done]→settled')
+        ->and($signatures)->not->toContain('idle→[GO]→inner→leaf');
+});
