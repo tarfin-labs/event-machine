@@ -1247,7 +1247,11 @@ class PathEnumerator
      */
     private function recordPath(array $steps, PathType $type): void
     {
-        if (count($this->paths) >= $this->maxPaths) {
+        // Gate on everything this enumerator is accountable for, region paths included.
+        // Counting only $paths let regions spend the whole budget and machine level then
+        // record maxPaths more on top of it — twice the ceiling, with pathLimitReached
+        // still false because neither half alone reached it.
+        if ($this->totalRecorded() >= $this->maxPaths) {
             $this->pathLimitReached = true;
 
             return;
