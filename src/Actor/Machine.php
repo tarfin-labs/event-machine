@@ -1073,15 +1073,17 @@ class Machine implements Castable, JsonSerializable, Stringable
         //
         // It looks like free evidence of an incomplete enumeration — a run walked a route
         // the analysis does not know about — and an earlier revision failed on it for that
-        // reason. It broke everything. The mismatch usually comes from how paths are
-        // recorded, not from a gap in the analysis: PathCoverageTracker::$activePaths is
-        // keyed by machine class and never reset between tests, and completePath() only
-        // fires from assertFinished()/assertState() on a final state, so a test that stops
-        // short leaves its steps in the buffer to be flushed into the NEXT test's
-        // signature. Separately, trackStateEntry records a region leaf id while enumeration
-        // records the parallel container, so every parallel machine mismatches — one fails
-        // with no events sent at all. assertPathCoverage(0.0), documented as a threshold
-        // every run clears, became unsatisfiable.
+        // reason. It broke everything. The mismatch comes from how paths are recorded, not
+        // from a gap in the analysis: trackStateEntry records a region leaf id while
+        // enumeration records the parallel container, so every parallel machine mismatches
+        // — one failed with no events sent at all — and assertPathCoverage(0.0), documented
+        // as a threshold every run clears, became unsatisfiable.
+        //
+        // A second cause has since been fixed and is no longer a reason on its own:
+        // PathCoverageTracker::$activePaths was never cleared between tests, so a test that
+        // stopped at an intermediate state left its steps to be flushed into the next
+        // test's signature. InteractsWithMachines now discards them per test. The parallel
+        // mismatch above is untouched by that, and is enough on its own.
         //
         // machine:coverage reports the same signal as a warning, which is the right shape
         // for it: there it is a hint to a human, not a gate. Making it a gate needs the
