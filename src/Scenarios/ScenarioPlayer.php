@@ -181,11 +181,28 @@ class ScenarioPlayer
             // Step 9: Validate target
             $this->validateTarget($state);
 
-            // Step 10: Re-persist scenario after state changes
-            // syncCurrentStates deletes old rows and creates new ones without scenario columns.
-            // Re-persist so activeScenario is visible in buildResponse and continuation persists.
-            if ($rootEventId !== null && $rootEventId !== '' && $this->shouldPersist($machine)) {
-                $this->persistScenario($rootEventId);
+            // Step 10: Re-persist the scenario after state changes, unless it is done with the
+            // machine. syncCurrentStates deletes old rows and creates new ones without scenario
+            // columns, so a scenario that is still in flight has to write itself back.
+            //
+            // "Done" is a final state OR no continuation, the same rule executeContinuation()
+            // applies. This exit used to re-persist unconditionally, which is how an ordinary
+            // scenario — activated once, no continuation, running to a non-final target — left
+            // `scenario_class` set forever. That is the common path, so the column lied for
+            // almost every scenario rather than the rare one.
+            //
+            // Deactivating here cannot cost the response its activeScenario block: the
+            // controller emits that block only when hasContinuation() is true, which is exactly
+            // when this leaves the row in place.
+            $scenarioIsDone = $state->currentStateDefinition->type === StateDefinitionType::FINAL
+                || !$this->scenario->hasContinuation();
+
+            if ($rootEventId !== null && $rootEventId !== '') {
+                if ($scenarioIsDone) {
+                    self::deactivateScenario($rootEventId);
+                } elseif ($this->shouldPersist($machine)) {
+                    $this->persistScenario($rootEventId);
+                }
             }
         } finally {
             // Step 11: Cleanup — unbind overrides from container
