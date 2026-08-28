@@ -687,7 +687,8 @@ class PathEnumerator
         array $steps,
         array $visitedIds,
         array $transitions,
-    ): void {
+        bool $ownsOutcome = true,
+    ): bool {
         $enumerated = false;
         $deferred   = false;
 
@@ -753,9 +754,15 @@ class PathEnumerator
         // continuation belongs to machine level, which is not a dead end — the runtime can
         // leave this state. $deferred is only ever true when a boundary is set, so the
         // no-boundary path records exactly what it recorded before.
-        if (!$enumerated) {
+        //
+        // $ownsOutcome is false when handleParallel calls this: a parallel state may have
+        // already enumerated @done/@fail branches this function cannot see, so it owns the
+        // single outcome decision and only wants to know whether anything was enumerated.
+        if (!$enumerated && $ownsOutcome) {
             $this->recordPath($steps, $deferred ? PathType::REGION_DEFERRED : PathType::DEAD_END);
         }
+
+        return $enumerated;
     }
 
     /**
@@ -817,8 +824,8 @@ class PathEnumerator
             return;
         }
 
-        $enumerated       = false;
-        $deferralsBefore  = $this->deferrals;
+        $enumerated      = false;
+        $deferralsBefore = $this->deferrals;
 
         // @done.{state} transitions — per-final-state routing
         foreach ($state->onDoneStateTransitions as $finalStateName => $transition) {
