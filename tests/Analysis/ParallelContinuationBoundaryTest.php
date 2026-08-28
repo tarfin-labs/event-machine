@@ -410,3 +410,59 @@ test('a nested parallel escape does not carry the region walk out of its region'
     expect(implode(' | ', array_map(static fn (MachinePath $p): string => $p->signature(), $result->paths)))
         ->toContain('sink');
 });
+
+// ── The two continuation arms must reach the same verdict ────────────────────
+
+test('an inherited plain event defers a region exactly as an inherited @always does', function (): void {
+    // handleParallel picks one of two arms for the parallel's own continuations, and they
+    // disagreed. The @always arm snapshots $this->deferrals around the call; the plain
+    // arm kept only enumerateTransitions()'s bool and dropped the callee's local
+    // $deferred. Same machine, one key changed: with @always the region recorded
+    // REGION_DEFERRED, with a plain event it recorded nothing at all — and the nested
+    // parallel with its own region vanished from the result too, analysisTruncated()
+    // still reporting a complete analysis.
+    $build = static fn (string $event): MachineDefinition => MachineDefinition::define(config: [
+        'id'      => 'deferral_symmetry',
+        'initial' => 'par',
+        'states'  => [
+            'par' => [
+                'type'   => 'parallel',
+                'on'     => [$event => 'settled'],
+                'states' => [
+                    'ra' => [
+                        'initial' => 'inner',
+                        'states'  => [
+                            'inner' => [
+                                'type'   => 'parallel',
+                                'states' => [
+                                    'rb' => [
+                                        'initial' => 'x',
+                                        'states'  => ['x' => ['on' => ['E' => 'y']], 'y' => ['type' => 'final']],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            'settled' => ['type' => 'final'],
+        ],
+    ]);
+
+    foreach (['@always', 'GO'] as $event) {
+        $definition = $build($event);
+
+        // The region's only continuation is declared on the parallel state, so machine
+        // level owns it: deferred, never a dead end.
+        $regionPaths = regionPathsFor($definition, 'ra');
+
+        expect($regionPaths)->toHaveCount(1, "region ra under {$event}")
+            ->and($regionPaths[0]->type)->toBe(PathType::REGION_DEFERRED, "region ra under {$event}");
+
+        // And the parallel nested inside that region is still analysed and reported.
+        expect(regionPathsFor($definition, 'rb'))->toHaveCount(1, "nested region rb under {$event}");
+
+        expect((new PathEnumerator($definition))->enumerate()->analysisTruncated())
+            ->toBeFalse("truncation flag under {$event}");
+    }
+});
