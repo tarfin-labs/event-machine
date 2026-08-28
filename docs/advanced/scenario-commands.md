@@ -199,6 +199,10 @@ was exhausted and the states really are not connected by transitions. "Truncated
 stopped at its own limit with work still pending, so whether a path exists is unknown — treat it as
 a prompt to look, not as an answer.
 
+`machine:scenario` accepts `--max-iterations` (default 1000) to raise that limit, and
+`ScenarioValidator` takes the same budget as a constructor argument. Both outcomes still exit with a
+failure, so nothing downstream needs to change how it reads the exit code.
+
 Targets inside a parallel region resolve normally: entering a parallel state activates every region,
 so each region's initial state is reachable and the resolved route marks that step `@region` to
 distinguish it from `@entry`, which is exclusive descent into a compound state. A route through one

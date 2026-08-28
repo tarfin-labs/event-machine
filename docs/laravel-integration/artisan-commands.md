@@ -385,7 +385,31 @@ php artisan machine:coverage "App\Machines\OrderMachine" --min=100
 
 # Custom coverage file location
 php artisan machine:coverage "App\Machines\OrderMachine" --from=path/to/coverage.json
+
+# Raise the enumeration ceilings (same defaults as machine:paths)
+php artisan machine:coverage "App\Machines\LargeMachine" --max-paths=5000 --max-depth=400
 ```
+
+### Truncated Analysis
+
+Coverage is computed over the enumerated paths, so it is only as complete as the
+enumeration behind it. When enumeration stops at a ceiling, the command says so on both
+surfaces — a warning under the coverage line, and `analysis_truncated` plus
+`skipped_paths` in `--json`.
+
+`--min` refuses to pass judgement on a truncated analysis and exits with a failure
+naming the ceiling: a threshold cleared by a figure computed over part of a machine is a
+green gate over an unknown. Raise `--max-paths` or `--max-depth` and re-run.
+
+Truncated paths are excluded from the coverage denominator. An incomplete prefix is one
+no observed run can ever match, so counting it would put 100% permanently out of reach.
+
+The in-suite assertions behave slightly differently by design:
+`Machine::assertAllPathsCovered()` and `assertPathCoverage()` fail when the **depth**
+ceiling was hit, but not when the **path** ceiling was — they offer no way to raise a
+ceiling, and failing on one that has been firing silently at its default since before
+this behaviour existed would be a break the caller cannot fix. A path-truncated run says
+so in the assertion message when it fails for its own reasons.
 
 ### Coverage Matching
 

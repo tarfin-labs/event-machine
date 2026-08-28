@@ -766,7 +766,7 @@ Default limit is 1000. The command warns when the limit is reached.
 
 #### Path Types
 
-Enumerated paths are classified by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END.
+Enumerated paths are classified by type: HAPPY, FAIL, TIMEOUT, LOOP, GUARD_BLOCK, DEAD_END, and — since the parallel path-analysis work — TRUNCATED, plus REGION_EXIT and REGION_DEFERRED for paths inside a parallel region.
 
 See [Transitions & Paths — Path Coverage Analysis](/testing/transitions-and-paths#path-coverage-analysis) for full documentation.
 

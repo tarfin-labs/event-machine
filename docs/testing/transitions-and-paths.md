@@ -201,7 +201,7 @@ Enumeration is bounded on two axes, so it terminates whatever shape a definition
 php artisan machine:paths "App\Machines\CarSales\CarSalesMachine" --max-paths=2000 --max-depth=400
 ```
 
-A branch that reaches either ceiling is recorded as a `TRUNCATED` path rather than dropped, and the command says so — a partial analysis is never presented as a complete one. The console prints which ceiling fired and how to raise it; `--json` carries `path_limit_reached`, `depth_limit_reached`, `analysis_truncated` and `truncated_paths` alongside the existing keys, and exposes region paths under `parallel_groups`.
+A branch that reaches either ceiling is recorded as a `TRUNCATED` path rather than dropped, and the command says so — a partial analysis is never presented as a complete one. The console prints which ceiling fired and how to raise it. In `--json`, the flags `path_limit_reached`, `depth_limit_reached`, `analysis_truncated` and `truncated_paths` live inside the `stats` object alongside the existing counts, and region paths arrive under a top-level `parallel_groups` array. `stats.terminal_paths` keeps its existing meaning — the size of the `paths` array — rather than being redefined to exclude truncated entries.
 
 Truncated paths are excluded from path-coverage accounting: an incomplete prefix is one no test run could ever match, so counting it would put 100% permanently out of reach. `machine:coverage` reports `analysis_truncated` in both its human and JSON output for the same reason — a percentage computed over an enumeration that stopped early is not a coverage guarantee, even when it reads well.
 
@@ -252,14 +252,22 @@ FindeksMachine::assertPathCoverage(minimum: 90.0);
 
 ### Path Types
 
-| Type | Meaning |
-|------|---------|
-| HAPPY | Reached a FINAL state without @fail or timer |
-| FAIL | Path contains an @fail step |
-| TIMEOUT | Path contains a timer-triggered step or @timeout |
-| LOOP | Cycle detected — path revisits a state |
-| GUARD_BLOCK | All guards fail with no fallback — event swallowed |
-| DEAD_END | ATOMIC state with no transitions and not FINAL |
+Console and JSON output print the enum's own value, in lower case — `happy`, `region_exit` — while this table names the cases.
+
+| Type | Level | Meaning |
+|------|-------|---------|
+| HAPPY | machine, region | Reached a FINAL state without @fail or timer |
+| FAIL | machine, region | Path contains an @fail step |
+| TIMEOUT | machine, region | Path contains a timer-triggered step or @timeout |
+| LOOP | machine, region | Cycle detected — path revisits a state |
+| GUARD_BLOCK | machine, region | All guards fail with no fallback — event swallowed |
+| DEAD_END | machine, region | ATOMIC state with no transitions and not FINAL |
+| TRUNCATED | machine, region | Enumeration hit a ceiling and the path was cut short |
+| REGION_EXIT | region only | A transition declared inside the region targets a state outside it |
+| REGION_DEFERRED | region only | Every continuation is declared at or above the parallel state, so machine level owns it |
+
+The last two appear only inside a `PARALLEL:` block: region paths are collected
+separately from machine-level paths, so they never show up in the per-type groups.
 
 ### Child Machine Visibility
 
