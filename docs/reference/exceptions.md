@@ -370,7 +370,7 @@ Thrown when no path exists from source to target.
 
 It carries two distinct findings, and they are not interchangeable. The default case means the states are genuinely not connected by that event. The `truncated()` factory means the search stopped at its iteration ceiling with work still pending — a path may well exist and simply was not reached. Only the second is fixable, by raising `--max-iterations`; treating it as the first is how a stopped search gets mistaken for a confident answer.
 
-**Neither shipped command lets it escape.** `ScenarioPathResolver::resolve()` raises it, and its only caller is `ScenarioValidator::validatePaths()`, which catches it and turns both variants into error strings for `machine:scenario-validate` to print. `machine:scenario` never triggers it at all — it calls `resolveAll()`, which does not throw, and reads `wasTruncated()` instead. So you meet this exception only by calling `resolve()` yourself; from either command you get the same distinction as console output.
+**Neither shipped command lets it escape.** `ScenarioPathResolver::resolve()` raises it, and its only caller is `ScenarioValidator::validatePaths()`, which catches it and turns both variants into error strings for `machine:scenario-validate` to print. `machine:scenario` never triggers it at all — it calls `resolveAll()`, which does not raise this exception, and reads `wasTruncated()` instead (`resolveAll()` can still raise `InvalidArgumentException` for an unresolvable state name, which the command catches separately). So you meet this exception only by calling `resolve()` yourself; from either command you get the same distinction as console output.
 
 - **Extends:** `RuntimeException`
 - **Thrown from:** `ScenarioPathResolver`
