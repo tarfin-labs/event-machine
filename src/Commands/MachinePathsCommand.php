@@ -96,6 +96,9 @@ class MachinePathsCommand extends Command
         }
 
         // Group paths by type
+        // REGION_EXIT and REGION_DEFERRED are deliberately absent: region paths live in
+        // ParallelPathGroup::$regionPaths and never reach $paths, so a group over $paths
+        // could only ever be empty. They are surfaced inside the PARALLEL block instead.
         $groups = [
             'HAPPY PATHS'       => $result->happyPaths(),
             'FAIL PATHS'        => $result->failPaths(),
@@ -103,6 +106,7 @@ class MachinePathsCommand extends Command
             'LOOP PATHS'        => $result->loopPaths(),
             'GUARD BLOCK PATHS' => $result->guardBlockPaths(),
             'DEAD END PATHS'    => $result->deadEndPaths(),
+            'TRUNCATED PATHS'   => $result->truncatedPaths(),
         ];
 
         // Render parallel regions
