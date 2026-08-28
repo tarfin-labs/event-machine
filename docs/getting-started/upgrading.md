@@ -33,6 +33,63 @@ Each section below has step-by-step migration instructions with before/after exa
 
 ---
 
+## From 9.17.x to 9.18.0
+
+### A scenario can no longer make a machine unloadable
+
+**Bug fix, no action needed — and it un-sticks machines that are already broken.**
+
+Stored scenario params were re-validated on every machine load. A rule that reads the world —
+`exists` on a row someone later deleted, `after_or_equal:today` once midnight passes — went from
+passing to failing with nothing about the machine having changed, and the machine then threw
+`ScenarioConfigurationException` on every load. It was unrecoverable through the application,
+because the code that clears the stored scenario runs *after* the restore and could never be
+reached; the only way out was a direct `UPDATE` on `machine_current_states`.
+
+Three changes: stored params are hydrated without being re-validated (validation still happens when
+params are accepted); a scenario that reached its target with no continuation is deactivated instead
+of staying armed forever; and anything that goes wrong hydrating a stored scenario now drops the
+scenario overrides rather than the machine.
+
+`MachineScenario::hydrateParams()` gained a second parameter, `bool $validate = true`. The default
+preserves the old behaviour, so an override in your own scenario base class keeps working — but if
+you override `hydrateParams()`, add the parameter to match the signature.
+
+### `machine:scenario-validate` reports — and fails on — scenarios it could not load
+
+**Breaking change.** A scenario file that cannot be loaded or constructed used to leave the list
+silently: the command reported a smaller total and exited `0`. A scenario broken in its class body
+was indistinguishable from one nobody had written, and the comment in the source claimed the
+validate command caught these later — it could not, because it takes its list from the same method
+that dropped them.
+
+The command now names each skipped file with its reason, and counts it as a failure:
+
+```
+  12 scenario files found, 11 validated — 1 could not be loaded:
+  ✗ AtAllocationUnderReviewScenario  (not validated)
+    class not found — the file does not declare App\Machines\CarSales\Scenarios\AtAllocationUnderReviewScenario
+
+Total: 11 passed, 1 not loaded
+```
+
+**What can newly fail:** a CI job running `machine:scenario-validate` starts failing on scenarios
+that were already broken and already not being exercised. Nothing regressed — run it once locally
+before trusting the pipeline. A `--scenario` filter is unaffected: narrowing the list is the point,
+so the excluded files are not reported.
+
+`ScenarioDiscovery::skippedFor(string $machineClass)` exposes the same list programmatically, as
+`list<array{file: string, class: string, reason: string}>`.
+
+### Dependency and toolchain fixes
+
+- `symfony/process` (dev) was constrained to `^6.0|^7.0`, which excludes what Laravel 12/13 install.
+  It is now `^7.0|^8.0`. This only affected contributors to the package, not consumers — but with a
+  gitignored `composer.lock` it meant a local dependency tree that differed from CI's.
+- `Machine::resolveOutputBehavior()` handed a non-string, non-callable output definition to
+  `resolve()`, producing a container error that named neither the machine nor the state. It now
+  throws `MachineOutputResolutionException` naming the type it got.
+
 ## From 9.16.x to 9.17.0
 
 ### Path Analysis: Bounded Enumeration and Explicit Truncation
