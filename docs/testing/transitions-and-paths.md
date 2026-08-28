@@ -193,6 +193,21 @@ A parallel state is analysed at two levels, and the distinction matters when rea
 
 The two types divide the work differently. A transition inherited from at or above the parallel state is followed at machine level only, which is why a region records `REGION_DEFERRED` rather than repeating it. A transition declared *inside* a region that leaves it works the other way round: the region records the edge as `REGION_EXIT`, and machine-level enumeration continues from that target, so this one edge does appear at both levels — once as the region's exit, once as the continuation beyond it. Without that second half, everything downstream of a region escape would be absent from the analysis with no truncation flag to show for it.
 
+### Final States Are Not Where Paths Stop
+
+A final state is an outcome, not necessarily an ending. `findTransitionDefinition` walks the parent chain with no special case for `FINAL`, so the runtime can leave a final state three ways, and all three are enumerated:
+
+| Shape | What the runtime does | What the analysis records |
+|---|---|---|
+| A handler declared on an ancestor | The machine rests at the final child until that event arrives, then leaves | The terminal path **and** the continuation past the event — both are real outcomes |
+| A compound `@done` whose branches are **all guarded** | If every guard fails the `@done` does not fire and the machine rests at the final child | Same: the `@done` continuation, the rest-at-final path, and anything reachable from there |
+| A compound `@done` with an **unguarded** branch | It always fires; the machine never rests | Only the continuation — no terminal path, because resting never happens |
+| A final state that delegates (`machine`/`job`) | Its `@done`/`@fail` still route | The terminal path and both delegation outcomes |
+
+This is why a machine with any of those shapes enumerates substantially more paths than it used to. Before, a final state ended the walk unconditionally, so those routes were missing from the analysis with no truncation flag to say so — and a coverage figure computed over the shorter list read higher than it should have. See [Upgrading](/getting-started/upgrading) for the re-baselining advice.
+
+The scenario resolver follows the same rules, so `machine:scenario` can now route through a final state to a target beyond it.
+
 ### When the Analysis Stops Early
 
 Enumeration is bounded on two axes, so it terminates whatever shape a definition takes:
@@ -205,7 +220,7 @@ A branch cut at the **depth** ceiling is recorded as a `TRUNCATED` path rather t
 
 Truncated paths are excluded from path-coverage accounting: an incomplete prefix is one no test run could ever match, so counting it would put 100% permanently out of reach. `machine:coverage` reports `analysis_truncated` in both its human and JSON output for the same reason — a percentage computed over an enumeration that stopped early is not a coverage guarantee, even when it reads well.
 
-The reverse mismatch is reported too. An observed signature with no enumerated path to match it means a run took a route the analysis does not know about, so the enumeration is incomplete whatever the percentage says. `machine:coverage` warns and lists them, `--json` carries them as `unmatched_observed`, and `PathCoverageReport::unmatchedObservations()` exposes them. `assertAllPathsCovered()` and `assertPathCoverage()` fail on them outright: in a suite the observations were produced by that same run, so unlike a coverage file read off disk they cannot be stale leftovers from an older definition.
+The reverse mismatch is reported too. An observed signature with no enumerated path to match it means a run took a route the analysis does not know about, so the enumeration is incomplete whatever the percentage says. `machine:coverage` warns and lists them, `--json` carries them as `unmatched_observed`, and `PathCoverageReport::unmatchedObservations()` exposes them. The assertions deliberately do **not** fail on it: the tracker can produce a signature no enumerated path matches for reasons of its own — a parallel machine records a region leaf id where enumeration records the parallel container — so gating on it would fail suites whose analysis is perfectly complete. Read it as a hint that something is worth checking, not as a verdict.
 
 ### Tracking Coverage in Tests
 
