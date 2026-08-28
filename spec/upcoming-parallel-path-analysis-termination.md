@@ -270,3 +270,19 @@ An existing key's meaning is not redefined. Where a new reading is wanted, it ge
 Minor release. `PathType` gains cases, two classes gain defaulted settings, `machine:paths` gains an
 option and JSON keys, and coverage accounting changes for truncated enumerations. Docs and skill
 ship in the same tag.
+
+## 12. Deferred
+
+Found during the audit rounds, deliberately left out of this change and recorded here so the next
+reader inherits the finding rather than rediscovering it. Each was checked against `main`: all are
+pre-existing, none is a regression from this work.
+
+| # | Finding | Why deferred |
+|---|---|---|
+| D1 | **E4/E5 gap: `handleFinal()` never reads `transitionsFrom`.** For a region whose only leaf is FINAL, an inherited escape vanishes from the output entirely — no region path, no machine path, no truncation flag — and the parallel state is recorded `DEAD_END`. This is a silent omission, not a labelling nuance; it should not be triaged as cosmetic. | Fixing it means teaching `handleFinal` about inherited transitions, which changes what a final state means to the enumerator. Too large to land safely alongside the rest. |
+| D2 | **A compound-sourced escape is labelled `REGION_EXIT` identically to the active-leaf case.** At runtime the two differ: `MachineDefinition`'s `array_search` misses for the compound source, so no state value updates. The analysis cannot currently tell them apart. | Needs a distinct path type or a step flag, i.e. new public surface. |
+| D3 | **A region whose `initial` child carries an explicit `id` resolves to `null`.** `findInitialStateDefinition()` returns null, the `if` around the region walk has no `else`, and the region is recorded empty with no disclosure. | Disclosing it needs a third truncation-like channel; both existing flags would name the wrong cause. |
+| D4 | **`handleParallel()` is 332 lines and carries eight concerns.** The obvious first extraction is the `@done`/`@fail` pair, two ~36-line near-clones differing only in the property and the event literal. | The last several commits each touched a *different* arm, so a rewrite now is the one change the suite cannot validate by diff. Extract after the tag. |
+| D5 | **`resolveClassFromFile()` is triplicated** across `MachineCoverageCommand`, `MachinePathsCommand` and `ExportXStateCommand`, byte-identical but for two comment lines. | Read-only class resolution with no shared state; cannot produce a wrong answer. |
+| D6 | **The `1000`/`200` ceilings are literals in six declarations** rather than `config/machine.php`, unlike `max_transition_depth`. | Each is overridable at the point it matters; config-backing is ergonomics, not correctness. |
+| D7 | **The two `catch (\Throwable) {}` reload fallbacks in `Machine`** — in `send()` and in `dispatchPendingChildJobs()` — state the fallback but not why the caller must not see the failure, and catch programming errors alongside transient ones. | Pre-existing and unchanged on this branch; neither reports a failure as success. |
