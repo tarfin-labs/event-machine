@@ -40,6 +40,10 @@ test('a non-numeric ceiling is rejected rather than read as zero', function (
     'scenario --max-iterations' => ['machine:scenario', ['name' => 'AtX', 'machine' => ScenarioTestMachine::class, 'source' => 'reviewing', 'event' => 'APPROVE', 'target' => 'approved', '--max-iterations' => 'abc', '--dry-run' => true], 'max-iterations'],
     'scenario --path'           => ['machine:scenario', ['name' => 'AtX', 'machine' => ScenarioTestMachine::class, 'source' => 'reviewing', 'event' => 'APPROVE', 'target' => 'approved', '--path' => 'abc', '--dry-run' => true], 'path'],
     'validate --max-iterations' => ['machine:scenario-validate', ['machine' => ScenarioTestMachine::class, '--max-iterations' => 'abc'], 'max-iterations'],
+    // Not a typo a human would type, but Artisan::call passes whatever it is given, and
+    // the non-scalar arm is the one that would otherwise throw "Array to string
+    // conversion" from inside its own error message instead of reporting the problem.
+    'paths --max-paths as array' => ['machine:paths', ['machine' => ReentrantParallelMachine::class, '--max-paths' => []], 'max-paths'],
 ]);
 
 test('a ceiling below its floor is rejected too', function (): void {
