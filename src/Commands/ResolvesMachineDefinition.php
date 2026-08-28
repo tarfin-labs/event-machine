@@ -4,20 +4,29 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Commands;
 
+use Throwable;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineDefinitionNotFoundException;
 
 /**
- * Turn a caller-supplied class name into a definition, or a clean failure.
+ * Turn a caller-supplied class name — or file path — into a definition, or a clean failure.
  *
- * Two things have to be true before `$class::definition()` is worth calling, and
- * `class_exists()` alone establishes neither. The class must actually be a Machine —
- * otherwise the command invokes a static method on a stranger, and gets a TypeError
- * where an exit code belonged. And it must actually define a machine: `Machine` itself
- * declares `definition()` as a thrower, so an abstract or half-written subclass passes
- * every structural check and then raises `MachineDefinitionNotFoundException` from
- * inside the call. Both used to reach the user as a stack trace.
+ * Every command here takes something a human typed and ends up calling a static method on
+ * whatever it names. Each step of that is a way to hand the user a stack trace where an exit
+ * code belonged, and each one was reachable:
+ *
+ * - `class_exists()` alone admits any resolvable class, so `$class::definition()` called a
+ *   stranger's static method and got a TypeError.
+ * - `Machine` declares `definition()` as a thrower, so an abstract or half-written subclass
+ *   passes every structural check and raises from inside the call.
+ * - `definition()` is ordinary user code and can throw anything at all, not just the one
+ *   exception this trait first learned to catch.
+ * - The file-path form is worse still: it `require_once`s the file, so it runs the caller's
+ *   code before any check, and the path may not be a readable, parseable PHP file — pointing
+ *   the command at a DIRECTORY was enough to raise `file_get_contents(): Is a directory`.
+ *
+ * Everything below fails closed with a printed reason and a null return.
  */
 trait ResolvesMachineDefinition
 {
@@ -36,6 +45,13 @@ trait ResolvesMachineDefinition
             $definition = $class::definition();
         } catch (MachineDefinitionNotFoundException $e) {
             $this->error("{$class}: {$e->getMessage()}");
+
+            return null;
+        } catch (Throwable $e) {
+            // definition() is ordinary user code: a missing behavior class, a bad config, a
+            // failed container resolve. Naming the class and the message is more use than the
+            // trace, and the command still owes the caller an exit code.
+            $this->error("{$class}::definition() failed: {$e->getMessage()}");
 
             return null;
         }
