@@ -561,6 +561,24 @@ Enable dispatch mode via `config/machine.php` → `parallel_dispatch.enabled => 
 - True concurrency — two 5s + 2s regions finish in 5s (not 7s)
 - Last-writer-wins on context — **separate keys per region is mandatory**
 
+### Reading path analysis on a parallel machine
+
+`machine:paths` reports a parallel state at two levels, and conflating them leads to wrong conclusions.
+
+| Level | What it covers |
+|---|---|
+| Machine | the parallel state's `@done`/`@fail` **and** any transition declared on it or inherited from an ancestor. A transition re-entering an already-visited parallel state is a `LOOP`. |
+| Region (`PARALLEL:` block) | each region's own subtree only. A region's paths describe that region, never the whole machine. |
+
+Two region path types exist only here, and neither is a defect:
+
+- **`REGION_EXIT`** — a transition *declared inside* the region targets a state outside it. At runtime this re-points that region's slot while the parallel state stays active. It is not the same as a transition declared *on* the parallel state, which exits the whole thing.
+- **`REGION_DEFERRED`** — every continuation of that state is declared at or above the parallel state, so machine-level enumeration owns it. **This is not a dead end** — the runtime can leave the state; it is just represented one level up.
+
+**Never read a truncated analysis as a complete one.** Enumeration is bounded by `--max-paths` (default 1000) and `--max-depth` (default 200). A branch hitting either ceiling is recorded as `TRUNCATED`, the console names the ceiling that fired, and `--json` carries `analysis_truncated`, `path_limit_reached`, `depth_limit_reached` and `truncated_paths`. Check that flag before concluding a path does not exist — and note truncated paths are excluded from coverage accounting, so `machine:coverage` can read 100% over a partial analysis and reports `analysis_truncated` for exactly that reason.
+
+The same distinction applies to `machine:scenario`: **"No path" and "truncated at the search limit" are different findings.** The first means the states are genuinely not connected; the second means the search stopped with work pending and the answer is unknown. Targets inside a parallel region do resolve — the route marks region entry `@region`, distinct from `@entry` (exclusive compound descent), because a single-region route is a projection of a concurrent configuration whose sibling regions are simultaneously active.
+
 ### `output` keyword — three semantics, one keyword
 
 The `'output'` key has **three different meanings** depending on where it appears. Confusing them is the #1 source of `InvalidOutputDefinitionException` errors.
