@@ -87,6 +87,14 @@ class MachineCoverageCommand extends Command
         $min = $this->option('min');
 
         if ($min !== null) {
+            // A gate silently disabled by a typo is worse than no gate: (float) turns
+            // --min=abc and --min= into 0.0, which every run clears.
+            if (!is_numeric($min)) {
+                $this->error("--min must be a number between 0 and 100, got '{$min}'.");
+
+                return self::FAILURE;
+            }
+
             // A threshold is an explicit gate, and a percentage computed over an
             // enumeration that stopped early cannot clear it honestly: the paths never
             // enumerated cannot be counted as uncovered, so the figure flatters itself.
