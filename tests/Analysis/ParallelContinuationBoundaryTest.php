@@ -176,6 +176,108 @@ test('the boundary applies to an invoke @done leaving a region', function (): vo
         ->and(implode(' | ', $signatures))->toContain('[@fail]');
 });
 
+// ── What lies beyond a region-declared escape ───────────────────────────────
+
+test('everything past a region-declared escape is enumerated', function (): void {
+    // Recording the exit made the edge visible; the subtree beyond its target stayed
+    // invisible, with no truncation flag to show for it. A transition declared inside a
+    // region has no machine-level representation of its own, so nothing else would have
+    // reached 'review', let alone 'resolved'.
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'downstream_probe',
+        'initial' => 'idle',
+        'states'  => [
+            'idle'    => ['on' => ['START' => 'working']],
+            'working' => [
+                'type'   => 'parallel',
+                '@done'  => 'finished',
+                'states' => [
+                    'alpha' => [
+                        'initial' => 'a1',
+                        'states'  => ['a1' => ['on' => ['ESCALATE' => 'review']]],
+                    ],
+                ],
+            ],
+            'review'   => ['on' => ['RESOLVE' => 'resolved']],
+            'resolved' => ['type' => 'final'],
+            'finished' => ['type' => 'final'],
+        ],
+    ]);
+
+    $result     = (new PathEnumerator($definition))->enumerate();
+    $signatures = array_map(static fn (MachinePath $p): string => $p->signature(), $result->paths);
+
+    expect($signatures)->toContain('idle→[START]→working→[ESCALATE]→review→[RESOLVE]→resolved')
+        ->and($result->analysisTruncated())->toBeFalse();
+
+    // The region still records the edge itself, so both levels tell the same story.
+    expect(typeValues(regionPathsFor($definition, 'alpha')))->toContain('region_exit');
+});
+
+test('two regions escaping to the same target follow it once', function (): void {
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'shared_escape_probe',
+        'initial' => 'idle',
+        'states'  => [
+            'idle'    => ['on' => ['START' => 'working']],
+            'working' => [
+                'type'   => 'parallel',
+                '@done'  => 'finished',
+                'states' => [
+                    'alpha' => ['initial' => 'a1', 'states' => ['a1' => ['on' => ['ESCALATE' => 'review']]]],
+                    'beta'  => ['initial' => 'b1', 'states' => ['b1' => ['on' => ['ESCALATE' => 'review']]]],
+                ],
+            ],
+            'review'   => ['type' => 'final'],
+            'finished' => ['type' => 'final'],
+        ],
+    ]);
+
+    $result = (new PathEnumerator($definition))->enumerate();
+
+    $toReview = array_filter(
+        $result->paths,
+        static fn (MachinePath $p): bool => str_contains($p->signature(), 'review'),
+    );
+
+    expect($toReview)->toHaveCount(1);
+});
+
+// ── An @always never enumerates the remaining transitions twice ──────────────
+
+test('a guarded @always on a parallel state does not double-enumerate', function (): void {
+    // handleParallel enumerated the own transitions, then handed the same array to
+    // handleAlwaysPriority, whose guard-fail arm enumerated them again.
+    $definition = MachineDefinition::define(
+        config: [
+            'id'      => 'double_probe',
+            'initial' => 'idle',
+            'states'  => [
+                'idle'    => ['on' => ['START' => 'working']],
+                'working' => [
+                    'type' => 'parallel',
+                    'on'   => [
+                        '@always' => [['guards' => 'neverGuard', 'target' => 'gated']],
+                        'SKIP'    => 'skipped',
+                    ],
+                    'states' => [
+                        'alpha' => ['initial' => 'a1', 'states' => ['a1' => ['on' => ['AD' => 'a2']], 'a2' => ['type' => 'final']]],
+                    ],
+                ],
+                'gated'   => ['type' => 'final'],
+                'skipped' => ['type' => 'final'],
+            ],
+        ],
+        behavior: ['guards' => ['neverGuard' => fn (): bool => false]],
+    );
+
+    $result     = (new PathEnumerator($definition))->enumerate();
+    $signatures = array_map(static fn (MachinePath $p): string => $p->signature(), $result->paths);
+
+    expect($result->paths)->toHaveCount(2)
+        ->and(array_count_values($signatures)['idle→[START]→working→[SKIP]→skipped'])->toBe(1);
+});
+
 // ── The unbounded enumerator is untouched by any of it ───────────────────────
 
 test('no region outcome can be recorded without a boundary', function (): void {
