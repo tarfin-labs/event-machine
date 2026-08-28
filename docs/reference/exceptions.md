@@ -120,6 +120,7 @@ Thrown when `definition()` is not implemented on a Machine subclass.
 
 - **Extends:** `RuntimeException`
 - **Thrown from:** `Machine`, `MachineScheduler`
+- **Caught, not surfaced, by:** the `machine:*` commands, which print `<Class>: <message>` and exit `1`. See [Resolving the machine argument](/laravel-integration/artisan-commands#resolving-the-machine-argument).
 
 ### MachineDiscoveryException
 
