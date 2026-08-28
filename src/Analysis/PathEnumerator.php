@@ -608,8 +608,17 @@ class PathEnumerator
 
         $terminalStateId = $steps !== [] ? $steps[count($steps) - 1]->stateId : null;
 
-        // For non-terminal types, clear the terminal state
-        if (in_array($type, [PathType::LOOP, PathType::GUARD_BLOCK], true)) {
+        // For non-terminal types, clear the terminal state. None of these reached
+        // a terminal point: LOOP returns to a visited state, GUARD_BLOCK stays put,
+        // TRUNCATED was cut at the ceiling, and the two region outcomes end at a
+        // boundary rather than at a final state.
+        if (in_array($type, [
+            PathType::LOOP,
+            PathType::GUARD_BLOCK,
+            PathType::TRUNCATED,
+            PathType::REGION_EXIT,
+            PathType::REGION_DEFERRED,
+        ], true)) {
             $terminalStateId = null;
         }
 
