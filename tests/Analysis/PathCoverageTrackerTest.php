@@ -247,6 +247,56 @@ test('both test traits discard half-walked paths at set-up', function (): void {
     }
 });
 
+test('reset restores the export directory', function (): void {
+    // The export directory is process state like the rest of it, and reset() left it set. A test
+    // that pointed the tracker at a temp dir and then deleted the dir left every later
+    // --from-less `machine:coverage` in that process reading a path that no longer exists —
+    // which is live under random order, because a command test really does call it without --from.
+    $default = PathCoverageTracker::getExportDirectory();
+
+    PathCoverageTracker::setExportDirectory('/tmp/em-export-probe-'.getmypid());
+
+    expect(PathCoverageTracker::getExportDirectory())->not->toBe($default);
+
+    PathCoverageTracker::reset();
+
+    expect(PathCoverageTracker::getExportDirectory())->toBe($default);
+});
+
+test('the once-per-process boot is claimed once across every using class', function (): void {
+    // The flag used to live on TracksPathCoverage, and a trait's statics are copied into each
+    // using class — so a project with two base TestCases both using the trait booted twice, and
+    // the second boot's cleanExportDirectory() deleted coverage files that finished workers had
+    // already written. Two distinct using classes must see exactly one claim between them.
+    PathCoverageTracker::reset();
+
+    $a = new class() {
+        use TracksPathCoverage;
+
+        public function claim(): bool
+        {
+            return PathCoverageTracker::claimBoot();
+        }
+    };
+
+    $b = new class() {
+        use TracksPathCoverage;
+
+        public function claim(): bool
+        {
+            return PathCoverageTracker::claimBoot();
+        }
+    };
+
+    try {
+        expect($a->claim())->toBeTrue()
+            ->and($b->claim())->toBeFalse()
+            ->and($a->claim())->toBeFalse();
+    } finally {
+        PathCoverageTracker::reset();
+    }
+});
+
 test('discarding active paths keeps what has already been observed', function (): void {
     // The buffer and the record are different things: a run's whole point is the observed
     // set, and it has to survive the between-test cleanup that drops half-walked paths.
