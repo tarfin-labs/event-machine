@@ -21,7 +21,9 @@ readonly class MachinePath
     /**
      * @param  list<PathStep>  $steps  Ordered steps from initial to terminal state.
      * @param  PathType  $type  Classification of this path.
-     * @param  ?string  $terminalStateId  Final state ID, or null for LOOP/GUARD_BLOCK.
+     * @param  ?string  $terminalStateId  Final state ID, or null for every type that did
+     *                                    not reach a terminal point: LOOP, GUARD_BLOCK,
+     *                                    TRUNCATED, REGION_EXIT and REGION_DEFERRED.
      */
     public function __construct(
         public array $steps,
