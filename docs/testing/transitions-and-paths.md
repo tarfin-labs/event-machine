@@ -250,6 +250,22 @@ FindeksMachine::assertAllPathsCovered();
 FindeksMachine::assertPathCoverage(minimum: 90.0);
 ```
 
+`minimum` is a percentage between 0 and 100, so `minimum: 0.8` is a threshold every run
+clears rather than "80%".
+
+Both assertions fail when path enumeration stopped early at **either** ceiling, because a
+figure measured over part of a machine is not coverage. Both ceilings are parameters, so a
+machine that legitimately needs more room can say so:
+
+<!-- doctest-attr: ignore -->
+```php
+FindeksMachine::assertAllPathsCovered(maxPaths: 5000, maxDepth: 400);
+FindeksMachine::assertPathCoverage(minimum: 90.0, maxPaths: 5000);
+```
+
+The failure message names which ceiling fired. Inspect it with
+`php artisan machine:paths <machine> --max-paths=<larger> --max-depth=<larger>`.
+
 ### Path Types
 
 Console and JSON output print the enum's own value, in lower case — `happy`, `region_exit` — while this table names the cases.

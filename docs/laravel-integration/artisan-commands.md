@@ -404,12 +404,10 @@ green gate over an unknown. Raise `--max-paths` or `--max-depth` and re-run.
 Truncated paths are excluded from the coverage denominator. An incomplete prefix is one
 no observed run can ever match, so counting it would put 100% permanently out of reach.
 
-The in-suite assertions behave slightly differently by design:
-`Machine::assertAllPathsCovered()` and `assertPathCoverage()` fail when the **depth**
-ceiling was hit, but not when the **path** ceiling was — they offer no way to raise a
-ceiling, and failing on one that has been firing silently at its default since before
-this behaviour existed would be a break the caller cannot fix. A path-truncated run says
-so in the assertion message when it fails for its own reasons.
+The in-suite assertions follow the same rule: `Machine::assertAllPathsCovered()` and
+`assertPathCoverage()` fail when enumeration stopped early at either ceiling, and both
+take `maxPaths` and `maxDepth` so a machine that needs more room can ask for it. The
+failure message names the ceiling that fired.
 
 ### Coverage Matching
 
@@ -475,6 +473,11 @@ php artisan machine:scenario AtAllocation CarSalesMachine \
 | `--dry-run` | Print generated file to stdout without writing |
 | `--force` | Overwrite existing scenario file |
 | `--path=N` | Select path by index when multiple paths exist (default: 0) |
+| `--max-iterations=N` | Search budget before the path search reports itself truncated (default: 1000) |
+
+When the search hits that budget the command says the analysis was truncated rather than
+that no path exists — the two are different findings and only the first means the states
+are genuinely unconnected. Both exit with a failure.
 
 The command classifies each intermediate state (transient, delegation, interactive, parallel) and generates appropriate `plan()` entries with TODO comments. Supports deep targets (cross-delegation) with automatic child scenario discovery.
 

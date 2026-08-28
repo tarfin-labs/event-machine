@@ -73,7 +73,8 @@ OrderMachine::test(['total' => 100])
 
 ### Path coverage
 - `Machine::assertAllPathsCovered()`
-- `Machine::assertPathCoverage(minimum: 0.8)`
+- `Machine::assertPathCoverage(minimum: 90.0)` — a **percentage**, 0–100. `0.8` is not "80%", it is a threshold every run clears.
+- Both fail when path analysis stopped early at either ceiling, because coverage measured over part of a machine is not coverage. Both take `maxPaths`/`maxDepth` — e.g. `assertAllPathsCovered(maxPaths: 5000)`. Inspect with `machine:paths <machine> --max-paths=<larger> --max-depth=<larger>`.
 - Add `TracksPathCoverage` trait to TestCase
 
 ## Faking patterns
