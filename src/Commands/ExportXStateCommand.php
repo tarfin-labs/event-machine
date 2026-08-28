@@ -1002,49 +1002,4 @@ class ExportXStateCommand extends Command
 
         return $data;
     }
-
-    /**
-     * Resolve a FQCN from a PHP file path by extracting namespace and class name.
-     *
-     * Two hazards, shared with the identical copies in machine:paths and machine:coverage.
-     * This require_once's the file, so it executes the caller's code before any check runs.
-     * And the regex takes the FIRST class in the file that extends anything: a file
-     * declaring a helper class above the machine resolves to the wrong FQCN, which the
-     * caller then asks for a definition.
-     */
-    private function resolveClassFromFile(string $filePath): ?string
-    {
-        if (!file_exists($filePath)) {
-            // Try relative to base_path
-            $filePath = base_path($filePath);
-            if (!file_exists($filePath)) {
-                return null;
-            }
-        }
-
-        $contents  = file_get_contents($filePath);
-        $namespace = null;
-        $class     = null;
-
-        if (preg_match('/namespace\s+([^;]+);/', $contents, $matches)) {
-            $namespace = trim($matches[1]);
-        }
-
-        if (preg_match('/class\s+(\w+)\s+extends/', $contents, $matches)) {
-            $class = $matches[1];
-        }
-
-        if ($class === null) {
-            return null;
-        }
-
-        $fqcn = $namespace !== null ? $namespace.'\\'.$class : $class;
-
-        // Ensure the class is autoloaded
-        if (!class_exists($fqcn)) {
-            require_once $filePath;
-        }
-
-        return class_exists($fqcn) ? $fqcn : null;
-    }
 }

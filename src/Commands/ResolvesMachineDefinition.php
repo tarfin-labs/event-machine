@@ -64,4 +64,72 @@ trait ResolvesMachineDefinition
 
         return $definition;
     }
+
+    /**
+     * Resolve a FQCN from a PHP file path by extracting its namespace and class name.
+     *
+     * One known sharp edge remains, and it is behavioural rather than a crash: the regex takes
+     * the FIRST class in the file that extends anything, so a file declaring a helper class
+     * above the machine resolves to the wrong FQCN. That fails cleanly — the caller asks the
+     * wrong class for a definition and machineDefinitionFor() refuses it — but it is still the
+     * wrong answer, and a proper fix means parsing rather than matching.
+     */
+    protected function resolveClassFromFile(string $filePath): ?string
+    {
+        // is_file, not file_exists: a directory satisfies file_exists, and reading one raises
+        // rather than returning false. `machine:paths src/Analysis` was enough to hit it.
+        if (!is_file($filePath)) {
+            $filePath = base_path($filePath);
+
+            if (!is_file($filePath)) {
+                return null;
+            }
+        }
+
+        if (!is_readable($filePath)) {
+            $this->error("File is not readable: {$filePath}");
+
+            return null;
+        }
+
+        $contents = file_get_contents($filePath);
+
+        if ($contents === false) {
+            $this->error("Could not read file: {$filePath}");
+
+            return null;
+        }
+
+        $namespace = null;
+        $class     = null;
+
+        if (preg_match('/namespace\s+([^;]+);/', $contents, $matches)) {
+            $namespace = trim($matches[1]);
+        }
+
+        if (preg_match('/class\s+(\w+)\s+extends/', $contents, $matches)) {
+            $class = $matches[1];
+        }
+
+        if ($class === null) {
+            return null;
+        }
+
+        $fqcn = $namespace !== null ? $namespace.'\\'.$class : $class;
+
+        try {
+            // Both branches execute the caller's file — require_once directly, class_exists()
+            // through the autoloader — so both can raise anything the file raises, including a
+            // ParseError the caller cannot otherwise see the source of.
+            if (!class_exists($fqcn)) {
+                require_once $filePath;
+            }
+
+            return class_exists($fqcn) ? $fqcn : null;
+        } catch (Throwable $e) {
+            $this->error("Loading {$filePath} failed: {$e->getMessage()}");
+
+            return null;
+        }
+    }
 }

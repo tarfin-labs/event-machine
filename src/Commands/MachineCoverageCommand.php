@@ -288,46 +288,4 @@ class MachineCoverageCommand extends Command
 
         return json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
-
-    /**
-     * Resolve a FQCN from a PHP file path by extracting namespace and class name.
-     *
-     * One of three byte-identical copies (see MachinePathsCommand and ExportXStateCommand).
-     * It `require_once`s the file rather than only reading it, and its regex takes the
-     * FIRST extending class in the file — so a file that declares a helper class above the
-     * machine resolves to the wrong FQCN.
-     */
-    private function resolveClassFromFile(string $filePath): ?string
-    {
-        if (!file_exists($filePath)) {
-            $filePath = base_path($filePath);
-            if (!file_exists($filePath)) {
-                return null;
-            }
-        }
-
-        $contents  = file_get_contents($filePath);
-        $namespace = null;
-        $class     = null;
-
-        if (preg_match('/namespace\s+([^;]+);/', $contents, $matches)) {
-            $namespace = trim($matches[1]);
-        }
-
-        if (preg_match('/class\s+(\w+)\s+extends/', $contents, $matches)) {
-            $class = $matches[1];
-        }
-
-        if ($class === null) {
-            return null;
-        }
-
-        $fqcn = $namespace !== null ? $namespace.'\\'.$class : $class;
-
-        if (!class_exists($fqcn)) {
-            require_once $filePath;
-        }
-
-        return class_exists($fqcn) ? $fqcn : null;
-    }
 }
