@@ -92,3 +92,41 @@ test('a target inside a parallel region scaffolds successfully', function (): vo
 
 // ScenarioValidator's side of this distinction is covered behaviourally in
 // tests/Features/ScenarioValidatorTest.php, where the makeScenario() helper lives.
+
+test('a truncated search that did find a path still says it was truncated', function (): void {
+    // The truncation notice used to live inside the "no paths" branch only, so a search
+    // that stopped with work pending but happened to find one route reported nothing at
+    // all. The route list is then partial and --path=N indexes into a partial set, which
+    // is exactly the "stopped looking" case the command is supposed to disclose.
+    $result = runScenario([
+        'name'             => 'AtCheckingA',
+        'machine'          => ScenarioTestMachine::class,
+        'source'           => 'reviewing',
+        'event'            => 'START_PARALLEL',
+        'target'           => 'parallel_check.region_a.checking_a',
+        '--max-iterations' => 3,
+        '--dry-run'        => true,
+    ]);
+
+    expect($result['output'])->toContain('truncated at the search limit')
+        ->and($result['output'])->toContain('--max-iterations')
+        ->and($result['output'])->not->toContain('No path from')
+        ->and($result['exit'])->toBe(Command::SUCCESS);
+});
+
+test('an exhaustive search that found a path says nothing about truncation', function (): void {
+    // Same route, budget raised past the point where the search completes. Without this
+    // the warning above could be unconditional and the test would not notice.
+    $result = runScenario([
+        'name'             => 'AtCheckingA',
+        'machine'          => ScenarioTestMachine::class,
+        'source'           => 'reviewing',
+        'event'            => 'START_PARALLEL',
+        'target'           => 'parallel_check.region_a.checking_a',
+        '--max-iterations' => 1000,
+        '--dry-run'        => true,
+    ]);
+
+    expect($result['output'])->not->toContain('truncated')
+        ->and($result['exit'])->toBe(Command::SUCCESS);
+});
