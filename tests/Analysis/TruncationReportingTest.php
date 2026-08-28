@@ -162,3 +162,61 @@ test('the truncation flag describes the latest resolution only', function (): vo
     $resolver->resolveAll('reviewing', 'APPROVE', 'approved');
     expect($resolver->wasTruncated())->toBeFalse();
 });
+
+test('the path ceiling bounds region paths too, not each region on its own', function (): void {
+    // Region paths are handed to ParallelPathGroup rather than to the enumerator's own
+    // $paths, so a budget computed from $paths alone was re-issued near-full to every
+    // region at every nesting level. A result could then carry many times maxPaths while
+    // pathLimitReached stayed false and the analysis reported itself complete.
+    $regions = [];
+
+    foreach (['ra', 'rb'] as $regionKey) {
+        $branches = [];
+        $fan      = [];
+
+        for ($j = 0; $j < 6; $j++) {
+            $branches['leaf'.$j] = ['type' => 'final'];
+            $fan['E'.$j]         = 'leaf'.$j;
+        }
+
+        $branches['fan']     = ['on' => $fan];
+        $regions[$regionKey] = ['initial' => 'fan', 'states' => $branches];
+    }
+
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'region_budget_probe',
+        'initial' => 'idle',
+        'states'  => [
+            'idle'     => ['on' => ['START' => 'working']],
+            'working'  => ['type' => 'parallel', 'states' => $regions, 'on' => ['NEXT' => 'finished']],
+            'finished' => ['type' => 'final'],
+        ],
+    ]);
+
+    // Unbounded: 6 branches per region, both regions enumerated in full.
+    $complete    = (new PathEnumerator($definition))->enumerate();
+    $completeAll = count($complete->paths);
+
+    foreach ($complete->parallelGroups as $group) {
+        foreach ($group->regionPaths as $paths) {
+            $completeAll += count($paths);
+        }
+    }
+
+    expect($completeAll)->toBeGreaterThan(10)
+        ->and($complete->analysisTruncated())->toBeFalse();
+
+    // Bounded at 10: the ceiling must cover machine paths and region paths together.
+    $cut      = (new PathEnumerator($definition, 10))->enumerate();
+    $recorded = count($cut->paths);
+
+    foreach ($cut->parallelGroups as $group) {
+        foreach ($group->regionPaths as $paths) {
+            $recorded += count($paths);
+        }
+    }
+
+    expect($recorded)->toBeLessThanOrEqual(10)
+        ->and($cut->pathLimitReached)->toBeTrue()
+        ->and($cut->analysisTruncated())->toBeTrue();
+});
