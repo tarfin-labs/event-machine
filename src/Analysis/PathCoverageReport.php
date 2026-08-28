@@ -17,6 +17,9 @@ class PathCoverageReport
     /** @var list<MachinePath> */
     private array $uncovered;
 
+    /** @var list<string> Observed signatures with no enumerated path to match them. */
+    private array $unmatchedObserved;
+
     /**
      * @param  PathEnumerationResult  $enumeration  All enumerated paths from static analysis.
      * @param  list<array{signature: string, test: string}>  $observedPaths  Paths recorded by PathCoverageTracker.
@@ -42,6 +45,21 @@ class PathCoverageReport
     public function uncoveredPaths(): array
     {
         return $this->uncovered;
+    }
+
+    /**
+     * Signatures a run actually walked that no enumerated path matches.
+     *
+     * Each one is a route the machine took and the analysis does not know about, so a
+     * non-empty list means the enumeration is incomplete regardless of what the
+     * percentage says. Reported rather than failed: a coverage file left over from an
+     * older definition produces the same trace, and only the caller can tell them apart.
+     *
+     * @return list<string>
+     */
+    public function unmatchedObservations(): array
+    {
+        return $this->unmatchedObserved;
     }
 
     public function coveragePercentage(): float
@@ -113,8 +131,9 @@ class PathCoverageReport
 
     private function computeCoverage(): void
     {
-        $this->covered   = [];
-        $this->uncovered = [];
+        $this->covered           = [];
+        $this->uncovered         = [];
+        $this->unmatchedObserved = [];
 
         // Index observed signatures → test names
         $observedIndex = [];
@@ -122,6 +141,8 @@ class PathCoverageReport
         foreach ($this->observedPaths as $observed) {
             $observedIndex[$observed['signature']][] = $observed['test'];
         }
+
+        $matched = [];
 
         foreach ($this->enumeration->paths as $path) {
             // A truncated path is an incomplete prefix: enumeration stopped part way
@@ -137,12 +158,26 @@ class PathCoverageReport
             $signature = $path->stateSignature();
 
             if (isset($observedIndex[$signature])) {
+                $matched[$signature] = true;
+
                 $this->covered[] = [
                     'path'  => $path,
                     'tests' => array_values(array_unique($observedIndex[$signature])),
                 ];
             } else {
                 $this->uncovered[] = $path;
+            }
+        }
+
+        // A signature a run actually walked, with no enumerated path to match it, is
+        // free evidence that the enumeration missed something the machine can do.
+        // Discarding it let the report answer 100% while holding the proof it was
+        // incomplete. It is disclosed rather than failed: a stale coverage file left over
+        // from an older definition leaves the same trace, and that is the caller's to
+        // judge.
+        foreach (array_keys($observedIndex) as $signature) {
+            if (!isset($matched[$signature])) {
+                $this->unmatchedObserved[] = $signature;
             }
         }
     }
