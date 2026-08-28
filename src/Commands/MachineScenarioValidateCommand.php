@@ -15,7 +15,8 @@ class MachineScenarioValidateCommand extends Command
 {
     protected $signature = 'machine:scenario-validate
         {machine? : Validate scenarios for a specific machine (FQCN or class name)}
-        {--scenario= : Validate a single scenario by class name or slug}';
+        {--scenario= : Validate a single scenario by class name or slug}
+        {--max-iterations=1000 : Maximum BFS iterations before the path search is reported as truncated}';
     protected $description = 'Validate all scenarios against their machine definitions';
 
     public function handle(): int
@@ -213,7 +214,13 @@ class MachineScenarioValidateCommand extends Command
         $failed = 0;
 
         foreach ($scenarios as $scenario) {
-            $validator = new ScenarioValidator($scenario);
+            // Without this the ceiling was unreachable from the command line: a scenario
+            // whose path search truncated reported a failure the caller had no way to act
+            // on, while every other command exposing this resolver could raise it.
+            $validator = new ScenarioValidator(
+                $scenario,
+                maxIterations: (int) $this->option('max-iterations'),
+            );
 
             // Level 1: Static checks
             $errors = $validator->validate();
