@@ -440,14 +440,34 @@ class PathEnumerator
 
         if ($state->stateDefinitions !== null) {
             foreach ($state->stateDefinitions as $regionKey => $region) {
-                $regionEnumerator = new self($this->definition, $this->maxPaths, $region);
-                $regionInitial    = $region->findInitialStateDefinition();
+                // The sub-enumerator inherits the caller's REMAINING path budget and the
+                // depth consumed so far, so both ceilings bound the analysis as a whole
+                // rather than being re-issued in full at every region.
+                $regionEnumerator = new self(
+                    definition: $this->definition,
+                    maxPaths: max(0, $this->maxPaths - count($this->paths)),
+                    boundary: $region,
+                    maxDepth: $this->maxDepth,
+                    depthOffset: $this->depthOffset + count($steps),
+                );
+                $regionInitial = $region->findInitialStateDefinition();
 
                 if ($regionInitial instanceof StateDefinition) {
                     $regionEnumerator->dfs($regionInitial, [], []);
                 }
 
                 $regionPaths[$regionKey] = $regionEnumerator->paths;
+
+                // Region truncation had no route to the result before: the sub-enumerator's
+                // flags were discarded with it, so a region cut short still reported a
+                // complete analysis.
+                if ($regionEnumerator->pathLimitReached) {
+                    $this->pathLimitReached = true;
+                }
+
+                if ($regionEnumerator->depthLimitReached) {
+                    $this->depthLimitReached = true;
+                }
             }
         }
 
