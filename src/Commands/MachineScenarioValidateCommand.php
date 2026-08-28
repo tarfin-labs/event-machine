@@ -13,6 +13,11 @@ use Tarfinlabs\EventMachine\Scenarios\ScenarioValidator;
 
 class MachineScenarioValidateCommand extends Command
 {
+    use ValidatesNumericOptions;
+
+    /** Search budget handed to every scenario's path resolver, validated once in handle(). */
+    private int $maxIterations = 1000;
+
     protected $signature = 'machine:scenario-validate
         {machine? : Validate scenarios for a specific machine (FQCN or class name)}
         {--scenario= : Validate a single scenario by class name or slug}
@@ -29,6 +34,16 @@ class MachineScenarioValidateCommand extends Command
 
             return self::FAILURE;
         }
+
+        // Validated once here rather than per scenario: the value is the same for the
+        // whole run, and a typo should stop the command before it reports anything.
+        $maxIterations = $this->integerOption('max-iterations', min: 1);
+
+        if ($maxIterations === null) {
+            return self::FAILURE;
+        }
+
+        $this->maxIterations = $maxIterations;
 
         if ($machineClass !== null) {
             return $this->validateMachine($machineClass, $scenarioFilter);
@@ -217,10 +232,7 @@ class MachineScenarioValidateCommand extends Command
             // Without this the ceiling was unreachable from the command line: a scenario
             // whose path search truncated reported a failure the caller had no way to act
             // on, while every other command exposing this resolver could raise it.
-            $validator = new ScenarioValidator(
-                $scenario,
-                maxIterations: (int) $this->option('max-iterations'),
-            );
+            $validator = new ScenarioValidator($scenario, maxIterations: $this->maxIterations);
 
             // Level 1: Static checks
             $errors = $validator->validate();
