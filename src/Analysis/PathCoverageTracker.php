@@ -25,7 +25,19 @@ class PathCoverageTracker
     private static array $observedPaths = [];
 
     /** Default export directory (relative to getcwd()). */
-    private static string $exportDirectory = 'storage/machine-path-coverage';
+    private const string DEFAULT_EXPORT_DIRECTORY = 'storage/machine-path-coverage';
+
+    private static string $exportDirectory = self::DEFAULT_EXPORT_DIRECTORY;
+
+    /**
+     * Whether this process has already booted tracking (enable + shutdown export).
+     *
+     * It lives here rather than on TracksPathCoverage because a trait's statics are copied
+     * into every using class: a project with two base TestCases both using the trait booted
+     * twice, and the second boot's cleanExportDirectory() deleted coverage files that finished
+     * workers had already written. "Once per process" has to mean once per process.
+     */
+    private static bool $booted = false;
 
     public static function enable(): void
     {
@@ -47,6 +59,25 @@ class PathCoverageTracker
         self::$enabled       = false;
         self::$activePaths   = [];
         self::$observedPaths = [];
+        // The export directory is process state like the rest of it. Leaving it set meant a
+        // test that pointed the tracker at a temp dir and deleted the dir left every later
+        // --from-less `machine:coverage` in that process reading a path that no longer exists.
+        self::$exportDirectory = self::DEFAULT_EXPORT_DIRECTORY;
+        self::$booted          = false;
+    }
+
+    /**
+     * Claim the once-per-process boot, returning false if it was already claimed.
+     */
+    public static function claimBoot(): bool
+    {
+        if (self::$booted) {
+            return false;
+        }
+
+        self::$booted = true;
+
+        return true;
     }
 
     /**
