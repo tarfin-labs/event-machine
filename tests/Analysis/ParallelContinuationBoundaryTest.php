@@ -312,3 +312,101 @@ test('no region outcome can be recorded without a boundary', function (): void {
         ->and(implode(' | ', array_map(static fn (MachinePath $p): string => $p->signature(), $result->paths)))
         ->toContain('[ABORT]');
 });
+
+// ── A followed escape is an outcome, even though it is not a structural one ───
+
+test('a parallel continued only by a region escape is not also a dead end', function (): void {
+    // The dead-end test was purely structural — @done, @fail, own transitions, @always —
+    // so once escapes became followable, a parallel state whose ONLY continuation is an
+    // escape declared inside a region recorded both the followed path and a contradictory
+    // dead end for that same state. Every other escape test in this file gives its
+    // parallel state a @done, which satisfies the structural test and masks the gate;
+    // this one deliberately gives it none.
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'escape_only_continuation',
+        'initial' => 'idle',
+        'states'  => [
+            'idle' => ['on' => ['START' => 'work']],
+            'work' => [
+                'type'   => 'parallel',
+                'states' => [
+                    'alpha' => [
+                        'initial' => 'a1',
+                        'states'  => ['a1' => ['on' => ['ESCALATE' => 'review']]],
+                    ],
+                ],
+            ],
+            'review'   => ['on' => ['RESOLVE' => 'resolved']],
+            'resolved' => ['type' => 'final'],
+        ],
+    ]);
+
+    $result = (new PathEnumerator($definition))->enumerate();
+
+    expect(typeValues($result->paths))->not->toContain('dead_end')
+        ->and($result->paths)->toHaveCount(1)
+        ->and($result->paths[0]->signature())->toContain('[ESCALATE]')
+        ->and($result->paths[0]->signature())->toContain('resolved');
+});
+
+// ── Following an escape still stops at the enclosing region's boundary ───────
+
+test('a nested parallel escape does not carry the region walk out of its region', function (): void {
+    // A NESTED parallel's escape target lies outside the enclosing region. Following it
+    // without the boundary check let the region sub-enumerator resume walking the machine
+    // at large and re-enumerate every parallel it reached, each on a budget of its own.
+    // Work then doubled per nesting level while the top-level path count stayed flat, so
+    // neither ceiling ever tripped and analysisTruncated() still reported a complete
+    // analysis — the same unbounded walk this class exists to prevent, only quieter.
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'nested_escape_boundary',
+        'initial' => 'outer',
+        'states'  => [
+            'outer' => [
+                'type'   => 'parallel',
+                'states' => [
+                    'ra' => [
+                        'initial' => 'inner',
+                        'states'  => [
+                            'inner' => [
+                                'type'   => 'parallel',
+                                'states' => [
+                                    'rb' => [
+                                        'initial' => 'deep',
+                                        'states'  => ['deep' => ['on' => ['OUT' => 'faraway']]],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                    'rc' => ['initial' => 'y', 'states' => ['y' => ['type' => 'final']]],
+                ],
+            ],
+            'faraway' => ['on' => ['NEXT' => 'sink']],
+            'sink'    => ['type' => 'final'],
+        ],
+    ]);
+
+    $raPaths = regionPathsFor($definition, 'ra');
+
+    expect($raPaths)->toHaveCount(1)
+        ->and($raPaths[0]->type)->toBe(PathType::REGION_EXIT);
+
+    // A region exit names its target as the path's LAST step — that is how the edge out
+    // is represented — but nothing beyond that target belongs to the region.
+    $steps = $raPaths[0]->steps;
+
+    expect($steps[count($steps) - 1]->stateId)->toContain('faraway');
+
+    // 'sink' is one hop PAST the escape target, reachable only by continuing to walk at
+    // machine level. Its appearance in a region path is the breach itself.
+    foreach ($raPaths as $path) {
+        expect($path->signature())->not->toContain('sink');
+    }
+
+    // The escape is still followed where it belongs: at machine level, from the parallel.
+    $result = (new PathEnumerator($definition))->enumerate();
+
+    expect(implode(' | ', array_map(static fn (MachinePath $p): string => $p->signature(), $result->paths)))
+        ->toContain('sink');
+});
