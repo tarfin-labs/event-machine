@@ -777,6 +777,15 @@ class PathEnumerator
             $enumerated = $enumerated || count($this->paths) > $pathsBefore;
             $deferred   = $deferred || $this->deferrals > $deferralsBefore;
         } elseif ($ownTransitions !== []) {
+            // Snapshot the deferral counter here too, exactly as the @always arm above
+            // does. enumerateTransitions() reports only whether it enumerated anything;
+            // its own notion of "deferred" is local and dies with the call. Without this
+            // the two sibling arms disagreed on the same machine: an inherited @always on
+            // a parallel state recorded the region's REGION_DEFERRED, while an inherited
+            // plain event recorded nothing at all — the region, the nested parallel and
+            // its own regions all vanished from the result with no truncation flag.
+            $deferralsBefore = $this->deferrals;
+
             $enumerated = $this->enumerateTransitions(
                 state: $state,
                 steps: $steps,
@@ -784,6 +793,8 @@ class PathEnumerator
                 transitions: $ownTransitions,
                 ownsOutcome: false,
             ) || $enumerated;
+
+            $deferred = $deferred || $this->deferrals > $deferralsBefore;
         }
 
         // Dead-end parallel: no @done, no @fail, no continuations of its own, and no
