@@ -607,6 +607,30 @@ class PathEnumerator
                 continue;
             }
 
+            // Following the escape must still respect this enumerator's own boundary.
+            // Without this the walk continues past it: a nested parallel's escape target
+            // lies outside the enclosing region, so a region sub-enumerator would resume
+            // walking the machine at large, re-enumerating every parallel it reaches with
+            // a budget of its own. Work then doubles per nesting level while the path
+            // count stays flat, so neither ceiling ever trips and the analysis reports
+            // itself complete — the same unbounded walk this class exists to prevent,
+            // only quieter.
+            if ($this->leavesBoundary($target)) {
+                $recorded = $this->recordBoundarySkip(
+                    steps: $steps,
+                    target: $target,
+                    source: $state,
+                    event: $escapeStep->event,
+                    guards: $escapeStep->guards,
+                    actions: $escapeStep->actions,
+                );
+
+                $enumerated = $enumerated || $recorded;
+                $deferred   = $deferred || !$recorded;
+
+                continue;
+            }
+
             $this->dfs(
                 state: $target,
                 steps: $steps,
