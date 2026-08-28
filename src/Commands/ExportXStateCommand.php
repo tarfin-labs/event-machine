@@ -1005,6 +1005,12 @@ class ExportXStateCommand extends Command
 
     /**
      * Resolve a FQCN from a PHP file path by extracting namespace and class name.
+     *
+     * Two hazards, shared with the identical copies in machine:paths and machine:coverage.
+     * This require_once's the file, so it executes the caller's code before any check runs.
+     * And the regex takes the FIRST class in the file that extends anything: a file
+     * declaring a helper class above the machine resolves to the wrong FQCN, which the
+     * caller then asks for a definition.
      */
     private function resolveClassFromFile(string $filePath): ?string
     {
