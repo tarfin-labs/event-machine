@@ -37,6 +37,16 @@ trait TracksPathCoverage
 
     protected function setUpTracksPathCoverage(): void
     {
+        // Every test, not just the first: a test that stops at an intermediate state
+        // leaves a half-walked path in the buffer, and the next test's completion
+        // flushes it out as one signature — a route no machine ever took, recorded
+        // against the wrong test. Observed paths are untouched.
+        //
+        // This lives here as well as in InteractsWithMachines because this is the trait
+        // that turns tracking on, and it is the only one a suite following the documented
+        // adoption steps is guaranteed to have. Both calls are idempotent.
+        PathCoverageTracker::discardActivePaths();
+
         if (self::$pathCoverageBooted) {
             return;
         }
