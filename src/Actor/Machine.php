@@ -986,14 +986,19 @@ class Machine implements Castable, JsonSerializable, Stringable
     {
         $report = self::buildPathCoverageReport();
 
+        self::assertAnalysisWasComplete($report);
+
         $uncovered = $report->uncoveredPaths();
 
         Assert::assertEmpty(
             $uncovered,
             sprintf(
-                "%d untested path(s) in %s:\n%s",
+                "%d untested path(s) in %s:%s\n%s",
                 count($uncovered),
                 static::class,
+                $report->enumerationTruncated()
+                    ? ' (analysis was truncated, so this list is incomplete)'
+                    : '',
                 implode("\n", array_map(
                     static fn (MachinePath $p): string => "  - {$p->signature()} ({$p->type->value})",
                     $uncovered,
@@ -1009,16 +1014,47 @@ class Machine implements Castable, JsonSerializable, Stringable
      */
     public static function assertPathCoverage(float $minimum): void
     {
-        $report   = self::buildPathCoverageReport();
+        $report = self::buildPathCoverageReport();
+
+        self::assertAnalysisWasComplete($report);
+
         $coverage = $report->coveragePercentage();
 
         Assert::assertGreaterThanOrEqual(
             $minimum,
             $coverage,
             sprintf(
-                'Path coverage %.1f%% is below minimum %.1f%% for %s',
+                'Path coverage %.1f%% is below minimum %.1f%% for %s%s',
                 $coverage,
                 $minimum,
+                static::class,
+                $report->enumerationTruncated()
+                    ? ' (analysis was truncated, so this figure covers only part of the machine)'
+                    : '',
+            ),
+        );
+    }
+
+    /**
+     * Refuse to draw a coverage conclusion from an enumeration that stopped at the
+     * depth ceiling.
+     *
+     * Only the depth ceiling fails here. It arrived with the path-analysis work and no
+     * existing suite can be relying on it, whereas the path ceiling has been firing
+     * silently at its default for far longer and these assertions offer no way to raise
+     * it — failing on that would be a break the caller cannot fix. A path-truncated run
+     * still says so in the assertion message above when it fails for its own reasons.
+     *
+     * @throws AssertionFailedError
+     */
+    private static function assertAnalysisWasComplete(PathCoverageReport $report): void
+    {
+        Assert::assertFalse(
+            $report->depthTruncated(),
+            sprintf(
+                'Path analysis for %s hit the depth ceiling, so coverage would be measured over part of the machine. '
+                .'Inspect it with: php artisan machine:paths "%s" --max-depth=<larger>',
+                static::class,
                 static::class,
             ),
         );
