@@ -516,10 +516,48 @@ class PathEnumerator
             }
         }
 
-        // No @done and no @fail — dead-end parallel. The condition is unchanged so
-        // that an unbounded enumerator records exactly what it recorded before; the
-        // deferred branch below can only be reached under a boundary.
-        if (!$state->onDoneTransition instanceof TransitionDefinition && !$state->onFailTransition instanceof TransitionDefinition) {
+        // Follow the parallel state's own remaining transitions.
+        //
+        // Only the keys already followed by property above are excluded: anything
+        // beginning with @done (covering both @done and @done.{state}) and @fail.
+        // @always needs no exclusion because enumerateTransitions skips any transition
+        // whose isAlways flag is set, and @timeout is followed as an ordinary transition
+        // since handleParallel does not follow onTimeoutTransition — that belongs to
+        // enumerateMachineInvoke, and a parallel state is not an invoke state.
+        //
+        // Before this, a transition declared on a parallel state was never followed at
+        // machine level at all, so those paths were absent from the output while
+        // ScenarioPathResolver did follow them: the two analysers disagreed about the
+        // same definition.
+        $ownTransitions = [];
+
+        foreach ($this->graph->transitionsFrom($state) as $event => $transition) {
+            if (str_starts_with((string) $event, '@done') || $event === '@fail') {
+                continue;
+            }
+
+            $ownTransitions[$event] = $transition;
+        }
+
+        if ($ownTransitions !== []) {
+            $enumerated = $this->enumerateTransitions(
+                state: $state,
+                steps: $steps,
+                visitedIds: $visitedIds,
+                transitions: $ownTransitions,
+                ownsOutcome: false,
+            ) || $enumerated;
+        }
+
+        // Dead-end parallel: no @done, no @fail and no transitions of its own. The test
+        // stays structural, as it was before, so a parallel whose only outcome is a
+        // targetless @done still records nothing rather than newly claiming a dead end.
+        // The deferred branch can only be reached under a boundary.
+        $hasOutcome = $state->onDoneTransition instanceof TransitionDefinition
+            || $state->onFailTransition instanceof TransitionDefinition
+            || $ownTransitions !== [];
+
+        if (!$hasOutcome) {
             $this->recordPath($steps, PathType::DEAD_END);
         } elseif (!$enumerated && $deferred) {
             $this->recordPath($steps, PathType::REGION_DEFERRED);
