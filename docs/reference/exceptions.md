@@ -370,7 +370,7 @@ Thrown when no path exists from source to target.
 
 It carries two distinct findings, and they are not interchangeable. The default case means the states are genuinely not connected by that event. The `truncated()` factory means the search stopped at its iteration ceiling with work still pending — a path may well exist and simply was not reached. Only the second is fixable, by raising `--max-iterations`; treating it as the first is how a stopped search gets mistaken for a confident answer.
 
-It reaches you through `machine:scenario-validate`, which calls `ScenarioPathResolver::resolve()`. The scaffold command `machine:scenario` never raises it — it calls `resolveAll()` and reads `wasTruncated()`, reporting the same distinction as console output instead.
+**Neither shipped command lets it escape.** `ScenarioPathResolver::resolve()` raises it; `ScenarioValidator::validatePaths()` catches it and turns both variants into strings, which `machine:scenario-validate` prints, and `machine:scenario` never sees it at all because it calls `resolveAll()` and reads `wasTruncated()`. So you meet this exception only by calling `resolve()` yourself — from a command you will see the same distinction as console output.
 
 - **Extends:** `RuntimeException`
 - **Thrown from:** `ScenarioPathResolver`
