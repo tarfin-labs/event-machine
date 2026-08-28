@@ -993,12 +993,9 @@ class Machine implements Castable, JsonSerializable, Stringable
         Assert::assertEmpty(
             $uncovered,
             sprintf(
-                "%d untested path(s) in %s:%s\n%s",
+                "%d untested path(s) in %s:\n%s",
                 count($uncovered),
                 static::class,
-                $report->enumerationTruncated()
-                    ? ' (analysis was truncated, so this list is incomplete)'
-                    : '',
                 implode("\n", array_map(
                     static fn (MachinePath $p): string => "  - {$p->signature()} ({$p->type->value})",
                     $uncovered,
@@ -1027,13 +1024,10 @@ class Machine implements Castable, JsonSerializable, Stringable
             $minimum,
             $coverage,
             sprintf(
-                'Path coverage %.1f%% is below minimum %.1f%% for %s%s',
+                'Path coverage %.1f%% is below minimum %.1f%% for %s',
                 $coverage,
                 $minimum,
                 static::class,
-                $report->enumerationTruncated()
-                    ? ' (analysis was truncated, so this figure covers only part of the machine)'
-                    : '',
             ),
         );
     }
@@ -1060,6 +1054,25 @@ class Machine implements Castable, JsonSerializable, Stringable
                 static::class,
                 $report->depthTruncated() ? 'depth ceiling' : 'path ceiling',
                 static::class,
+            ),
+        );
+
+        // A ceiling is not the only way an enumeration can be incomplete. When a run
+        // walked a route the analysis does not know about, that is proof of a gap and it
+        // is proof this suite produced: the observations come from this very process, so
+        // unlike a coverage file read off disk they cannot be stale leftovers from an
+        // older definition. Passing here while holding that evidence is how a coverage
+        // gate reads 100% over a machine with whole routes missing.
+        $unmatched = $report->unmatchedObservations();
+
+        Assert::assertEmpty(
+            $unmatched,
+            sprintf(
+                '%d observed path(s) in %s match nothing the analysis enumerated, so the enumeration is '
+                ."missing routes this suite actually took:\n%s",
+                count($unmatched),
+                static::class,
+                implode("\n", array_map(static fn (string $s): string => "  - {$s}", $unmatched)),
             ),
         );
     }
