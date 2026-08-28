@@ -650,7 +650,9 @@ class PathEnumerator
         }
 
         // Priority: FAIL > TIMEOUT > DEAD_END > HAPPY
-        // (LOOP and GUARD_BLOCK are set directly during DFS, not here)
+        // LOOP, GUARD_BLOCK, TRUNCATED, REGION_EXIT and REGION_DEFERRED are set
+        // directly during DFS and are never returned from here: each records a
+        // decision the classifier cannot re-derive from the steps alone.
         if ($hasFailStep) {
             return PathType::FAIL;
         }
