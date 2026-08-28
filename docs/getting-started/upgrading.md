@@ -46,8 +46,15 @@ Each section below has step-by-step migration instructions with before/after exa
 | `machine:paths` | `--max-depth=N` | 200 |
 | `machine:coverage` | `--max-paths=N`, `--max-depth=N` | 1000, 200 |
 | `machine:scenario` | `--max-iterations=N` | 1000 |
+| `machine:scenario-validate` | `--max-iterations=N` | 1000 |
+
+Every one of these is now validated: a non-numeric or out-of-range value fails the command instead of being coerced to `0`. That matters most for `machine:scenario --path`, where zero is a valid index — `--path=abc` used to scaffold path 0 and report "Created:".
 
 **Changes that can newly fail an existing suite:**
+
+- **Path counts rise sharply on machines with final states under an inherited handler — expect coverage percentages to drop.** A final state was treated as terminal by both the enumerator and the scenario resolver, so any route continuing out of one was invisible. The runtime does not stop there: `findTransitionDefinition` walks the parent chain with no special case for `FINAL`, and a handler declared on an ancestor fires from a final child. Those routes are now enumerated. On the three production machines this change was validated against, the totals went **239 → 878**, **99 → 390** and **223 → 862** paths.
+
+  The practical consequence: every coverage percentage previously computed on such a machine was inflated by roughly that factor, because the denominator was missing real paths. `assertAllPathsCovered()` will now fail where it passed, and `machine:coverage --min` gates will drop below their thresholds. Nothing regressed — the earlier numbers were measuring less than they claimed. Re-baseline the thresholds against the new figures, and use `machine:paths` to see which routes appeared.
 
 - `assertAllPathsCovered()` and `assertPathCoverage()` now **fail when the enumeration was truncated** by either ceiling, instead of reporting coverage over a partial analysis. Both take `maxPaths` and `maxDepth`, so a machine that legitimately needs more can raise them:
 
