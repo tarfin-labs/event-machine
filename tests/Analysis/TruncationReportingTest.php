@@ -61,6 +61,53 @@ test('the coverage report discloses that its enumeration was cut short', functio
         ->and($cut->coveragePercentage())->toBe(100.0);
 });
 
+test('a region that truncates raises the flag on the top-level result', function (): void {
+    // The region sub-enumerator's flags used to be discarded along with the enumerator,
+    // so a region cut short still reported a complete analysis. Delete the propagation
+    // in handleParallel and this is the test that notices.
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'region_truncation_probe',
+        'initial' => 'idle',
+        'states'  => [
+            'idle'    => ['on' => ['START' => 'working']],
+            'working' => [
+                'type'   => 'parallel',
+                '@done'  => 'finished',
+                'states' => [
+                    'alpha' => [
+                        'initial' => 'a1',
+                        'states'  => [
+                            'a1' => ['on' => ['N' => 'a2']],
+                            'a2' => ['on' => ['N' => 'a3']],
+                            'a3' => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'finished' => ['type' => 'final'],
+        ],
+    ]);
+
+    // Deep enough for the machine-level path, too shallow for the region beneath it:
+    // the parallel state sits at depth 2, so the region enumerator starts with that
+    // offset and its own two steps cross the ceiling.
+    $result = (new PathEnumerator($definition, 1000, null, 3))->enumerate();
+
+    $regionPaths = [];
+
+    foreach ($result->parallelGroups as $group) {
+        foreach ($group->regionPaths as $paths) {
+            $regionPaths = [...$regionPaths, ...$paths];
+        }
+    }
+
+    $regionTypes = array_map(static fn ($path): string => $path->type->value, $regionPaths);
+
+    expect($regionTypes)->toContain('truncated')
+        ->and($result->depthLimitReached)->toBeTrue()
+        ->and($result->analysisTruncated())->toBeTrue();
+});
+
 test('an exhausted scenario search is not reported as truncated', function (): void {
     $resolver = new ScenarioPathResolver(new MachineGraph(ScenarioTestMachine::definition()));
 
