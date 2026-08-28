@@ -83,6 +83,10 @@ Every one of these is now validated: a non-numeric or out-of-range value fails t
 
 - **`machine:scenario` validates the scenario name.** It must be a PHP class name — a letter or underscore, then letters, digits or underscores. A name containing a path separator previously wrote the file outside the `Scenarios/` directory and still reported "Created:", and a name containing PHP syntax was interpolated into the generated class file verbatim.
 
+- **Expect `machine:scenario-validate` to find dead scenarios on the first run.** On a machine that crashed, the command could not get far enough to load its scenarios, so one whose imports had rotted stayed silently broken. One consumer's upgrade surfaced a scenario dead since an unrelated namespace move (`include(...): Failed to open stream`). That is the fix working, not the upgrade breaking something.
+
+- **Calibrate `--max-iterations` on large machines.** The default of 1000 is low for a real machine: one consumer's machine reports "truncated at the search limit" on a query whose answer is already complete, and needs `--max-iterations=50000` before the warning clears — with the same 8 paths at every ceiling. The warning names the ceiling it hit so you can tell which number to raise past.
+
 **New path types:** `TRUNCATED` (a branch cut at a ceiling; excluded from coverage accounting), plus `REGION_EXIT` and `REGION_DEFERRED` for paths inside a parallel region. See [Transitions & Paths](/testing/transitions-and-paths#path-coverage-analysis).
 
 ---
