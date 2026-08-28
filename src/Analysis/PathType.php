@@ -41,4 +41,29 @@ enum PathType: string
      * ATOMIC state with no transitions and not FINAL.
      */
     case DEAD_END = 'dead_end';
+
+    /**
+     * Enumeration stopped at the depth ceiling — the path was cut short and
+     * did not reach a terminal point.
+     */
+    case TRUNCATED = 'truncated';
+
+    /**
+     * A region path that ends by leaving its region: a transition declared
+     * inside the region whose target lies outside it. The final step names
+     * the escaping event and its target.
+     *
+     * Region-level only — never appears in PathEnumerationResult::$paths.
+     */
+    case REGION_EXIT = 'region_exit';
+
+    /**
+     * A region state whose only continuations are declared at or above the
+     * parallel state, and so are followed by machine-level enumeration rather
+     * than by the region. Distinct from DEAD_END: the runtime can leave this
+     * state. Distinct from REGION_EXIT: the region does not follow it.
+     *
+     * Region-level only — never appears in PathEnumerationResult::$paths.
+     */
+    case REGION_DEFERRED = 'region_deferred';
 }
