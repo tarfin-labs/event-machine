@@ -794,20 +794,24 @@ Two fake registries need resetting between tests, and they're separate:
 | `Machine::$machineFakes` | Stubbed child machines registered via `Machine::fake()` | `Machine::resetMachineFakes()` |
 | `InvokableBehavior::$inlineFakes` | Behavior fakes registered via `MyAction::fake(...)` or `fakingAllActions()` | `InvokableBehavior::resetAllFakes()` |
 
-The `InteractsWithMachines` trait calls **both** in its `tearDown`. If you don't use the trait, you must call both manually:
+If you also collect path coverage, a third static needs clearing for a different reason. `PathCoverageTracker` moves a walked path out of its buffer only when a machine reaches a final state, so a test that stops at an intermediate state leaves its steps behind — and the next test's completion flushes them out as one signature, recording a route no machine ever took against the wrong test. `PathCoverageTracker::discardActivePaths()` drops those half-walked paths without touching what has already been observed, which is the whole point of the run.
+
+The `InteractsWithMachines` trait calls **all three** in its `tearDown`. If you don't use the trait, you must call them manually:
 
 <!-- doctest-attr: ignore -->
 ```php
 use Tests\TestCase;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
 
 class PricingRegionTest extends TestCase
 {
     protected function tearDown(): void
     {
-        Machine::resetMachineFakes();        // child machine fakes
-        InvokableBehavior::resetAllFakes();  // inline behavior fakes
+        Machine::resetMachineFakes();            // child machine fakes
+        InvokableBehavior::resetAllFakes();      // inline behavior fakes
+        PathCoverageTracker::discardActivePaths(); // half-walked coverage paths
         parent::tearDown();
     }
 }
