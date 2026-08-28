@@ -402,8 +402,10 @@ walked a route no enumerated path matches, that is direct evidence the analysis 
 something the machine can do — the command warns and lists the first few, and `--json`
 carries them under `unmatched_observed`. It is reported rather than failed because a
 coverage file left over from an older definition produces the same trace, and only you
-can tell those apart. The in-suite assertions have no such doubt: the observations come
-from the same process, so `assertAllPathsCovered()` fails on them.
+can tell them apart. The in-suite assertions do not fail on it either: the tracker can
+produce a signature no enumerated path matches for reasons of its own — a parallel machine
+records a region leaf where enumeration records the container — so it is a hint to read,
+not a gate to trip.
 
 `--min` refuses to pass judgement on a truncated analysis and exits with a failure: a
 threshold cleared by a figure computed over part of a machine is a green gate over an
