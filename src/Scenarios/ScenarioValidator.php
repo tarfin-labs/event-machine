@@ -183,7 +183,12 @@ class ScenarioValidator
                 target: $this->scenario->target(),
             );
         } catch (NoScenarioPathFoundException) {
-            $errors[] = "No path from '{$this->scenario->source()}' to '{$this->scenario->target()}' via '{$this->scenario->eventType()}'";
+            // The resolver distinguishes an exhausted search from one that stopped at
+            // its cap; emitting one fixed message here would throw that away and report
+            // a truncated analysis as a definite absence.
+            $errors[] = $resolver->wasTruncated()
+                ? "Path analysis from '{$this->scenario->source()}' to '{$this->scenario->target()}' via '{$this->scenario->eventType()}' was truncated at the search limit — a path may still exist"
+                : "No path from '{$this->scenario->source()}' to '{$this->scenario->target()}' via '{$this->scenario->eventType()}'";
         } catch (\InvalidArgumentException $e) {
             $errors[] = $e->getMessage();
         }
