@@ -478,8 +478,11 @@ php artisan machine:scenario AtAllocation CarSalesMachine \
 | `--max-iterations=N` | Search budget before the path search reports itself truncated (default: 1000) |
 
 When the search hits that budget the command says the analysis was truncated rather than
-that no path exists — the two are different findings and only the first means the states
-are genuinely unconnected. Both exit with a failure.
+that no path exists — the two are different findings, and it is "no path" that means the
+states are genuinely unconnected. Truncation means only that the search stopped with work
+pending, and it is the one a larger `--max-iterations` can resolve. "No path" always
+fails; truncation fails when nothing was found and warns while continuing when a route
+was, because the list it printed may be missing others.
 
 The command classifies each intermediate state (transient, delegation, interactive, parallel) and generates appropriate `plan()` entries with TODO comments. Supports deep targets (cross-delegation) with automatic child scenario discovery.
 
