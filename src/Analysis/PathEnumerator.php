@@ -519,10 +519,19 @@ class PathEnumerator
                 $this->recordPath($steps, PathType::REGION_DEFERRED);
             }
 
-            return;
+            // An @done with an unguarded branch always fires, so the machine never rests
+            // at this final state and the continuation above is the only outcome. If every
+            // branch is guarded the guards can all fail, and then the machine does rest
+            // here — verified against the runtime — and can still be driven out by an
+            // inherited handler. Returning unconditionally dropped that whole subtree with
+            // no truncation flag, which is the same silent omission this method was just
+            // fixed for one level up.
+            if (!$this->isAllBranchesGuarded($parent->onDoneTransition)) {
+                return;
+            }
         }
 
-        // No compound @done — the machine rests here, so record the terminal path.
+        // The machine can rest here, so record the terminal path.
         $this->recordPath($steps, $this->classifyPath($steps));
 
         // But resting is not the same as being stuck. findTransitionDefinition walks the
@@ -531,19 +540,17 @@ class PathEnumerator
         // machine resting at a final leaf takes the inherited event and leaves. Consulting
         // only the compound @done left those edges out of the analysis entirely: no path,
         // no truncation flag, and a coverage figure that read 100% while whole routes were
-        // missing. Unlike the @done arm above, this does not replace the terminal path —
+        // missing. Unlike an unguarded @done, this does not replace the terminal path —
         // @done fires on its own, whereas these need an event, so both outcomes are real.
-        $inherited = $this->graph->transitionsFrom($state);
-
-        if ($inherited === []) {
-            return;
-        }
-
+        //
+        // enumerateTransitions is called even with nothing inherited: it also owns the
+        // machine-invoke arm, and returning early here dropped the @done/@fail routes of a
+        // final state that delegates.
         $this->enumerateTransitions(
             state: $state,
             steps: $steps,
             visitedIds: $visitedIds,
-            transitions: $inherited,
+            transitions: $this->graph->transitionsFrom($state),
             ownsOutcome: false,
         );
     }
