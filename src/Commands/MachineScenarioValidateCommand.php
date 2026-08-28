@@ -10,9 +10,11 @@ use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioValidator;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
 class MachineScenarioValidateCommand extends Command
 {
+    use ResolvesMachineDefinition;
     use ValidatesNumericOptions;
 
     /** Search budget handed to every scenario's path resolver, validated once in handle(). */
@@ -29,9 +31,9 @@ class MachineScenarioValidateCommand extends Command
         $machineClass   = $this->argument('machine');
         $scenarioFilter = $this->option('scenario');
 
-        if ($machineClass !== null && !class_exists($machineClass)) {
-            $this->error("Machine class not found: {$machineClass}");
-
+        // The same guard the other four machine:* commands use. class_exists alone let a
+        // machine whose definition() throws reach the scenario validator and stack-trace there.
+        if ($machineClass !== null && !$this->machineDefinitionFor($machineClass) instanceof MachineDefinition) {
             return self::FAILURE;
         }
 
