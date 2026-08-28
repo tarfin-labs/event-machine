@@ -133,10 +133,16 @@ class MachineCoverageCommand extends Command
             return self::SUCCESS;
         } finally {
             // reset() also clears the enabled flag, and TracksPathCoverage enables the
-            // tracker once per process and exports on shutdown. Running this command
-            // in-process under that trait would therefore stop collection for the rest of
-            // the run and skip the export entirely, leaving a silently empty coverage
-            // file. Only the observations this invocation imported should be dropped.
+            // tracker once per process and exports on shutdown. Without restoring it, an
+            // in-process run under that trait would stop collection for the rest of the
+            // suite and skip the export entirely.
+            //
+            // This does not make an in-process run harmless. importFromFile and
+            // importFromDirectory REPLACE $observedPaths, so whatever the suite had
+            // recorded is already gone by the time this block runs; restoring the flag
+            // keeps collection alive from here on but cannot bring those back. Running
+            // machine:coverage inside a suite that is itself tracking coverage is still
+            // the wrong shape — the documented flow is a separate process.
             $wasEnabled = PathCoverageTracker::isEnabled();
 
             PathCoverageTracker::reset();
