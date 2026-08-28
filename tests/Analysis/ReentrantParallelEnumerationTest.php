@@ -61,7 +61,7 @@ function enumerateOutOfProcess(string $machineClass, ?int $maxDepth = null): arr
 test('ReentrantParallelMachine enumerates to completion in a bounded subprocess', function (): void {
     $summary = enumerateOutOfProcess(ReentrantParallelMachine::class);
 
-    // Derived by hand in spec/upcoming-parallel-path-analysis-termination.derivation.md
+    // Derived by hand in spec/9.17.0-parallel-path-analysis-termination.derivation.md
     // before the enumerator was changed, so these values come from the invariants and
     // the stub definition rather than from the implementation they are guarding.
     expect($summary['path_count'])->toBe(3)

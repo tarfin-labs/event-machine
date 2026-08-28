@@ -1,0 +1,587 @@
+{
+  "version": 1,
+  "spec": "spec/9.17.0-parallel-path-analysis-termination.md",
+  "created_at": "2026-08-28T07:24:05.434037Z",
+  "updated_at": "2026-08-28T08:39:50.650478Z",
+  "workflow": {},
+  "coverage": {
+    "total_sections": 22,
+    "mapped_sections": 10,
+    "context_only": [
+      "# Parallel Path Analysis Termination",
+      "### 2.1 Unbounded recursion across the parallel region boundary",
+      "### 2.2 The scenario resolver never enters a parallel region",
+      "### 2.3 A parallel state's own transitions are never enumerated",
+      "### 7.1 Two different runtime behaviours look alike from inside a region",
+      "### 7.2 The runtime deduplicates inherited handlers",
+      "### 7.3 Region `@always` edges are reachable, by a different route",
+      "### 7.4 Region paths and machine paths live in different places",
+      "### 7.5 The suffix cache short-circuits the type dispatch",
+      "### 7.6 Coverage has no per-case dispatch to update, but four per-type sites",
+      "### 7.7 Consumers construct the enumerator with defaults",
+      "## 11. Release"
+    ],
+    "unmapped": []
+  },
+  "tasks": [
+    {
+      "id": "T01",
+      "title": "Derive expected values for reproduction stub",
+      "description": "Before touching the enumerator, derive by hand what ReentrantParallelMachine's enumeration must produce under the invariants: machine-level path count and per-type counts, parallelGroups count, per-region path counts and per-region type counts. Record the derivation and which invariant plus which part of the stub produces each value. This must precede every enumerator change so the pinned values cannot be read back off the implementation.",
+      "status": "done",
+      "tags": [
+        "analysis"
+      ],
+      "depends_on": [],
+      "estimate_minutes": 15,
+      "acceptance": "- A written derivation exists naming, for each expected value, the invariant and the stub element that produce it\n- Values cover machine-level path count, parallelGroups count, and per-region path and type counts\n- The derivation is recorded before any src/Analysis change is committed",
+      "source_sections": [
+        "## 8. Verification"
+      ],
+      "started_at": "2026-08-28T07:25:53.887652Z",
+      "duration_source": "claimed",
+      "closed_at": "2026-08-28T07:30:19.628494Z",
+      "closed_reason": "- Derivation recorded before any src/Analysis change, in spec/9.17.0-parallel-path-analysis-termination.derivation.md (818c11dc). The only prior commits are the spec, the reproduction stub and the tp config (ddf0230a, be76eb89, c74f2949); none touch src/. Machine-level expectations derived from the stub definition and E1-E6: 3 paths total, being 1 completed path (idle -\u003e data_collection -\u003e verification -\u003e completed via the @done chain) and 2 loop paths (RESTART and EDIT, each re-entering an already-visited parallel state), 0 truncated per E4, and parallelGroups = 2.\n- Each value names the invariant and the stub element that produce it: the 2 loop paths come from E3 assigning a parallel state's own transitions to machine level, applied to data_collection's RESTART and verification's EDIT; the completed path comes from the @done chain; parallelGroups = 2 comes from the two states declared 'type' =\u003e 'parallel'. Region values under the E3 boundary are retailer 1, customer_info 1, findeks 1, turmob 1, each a single in-region path, with combinationCount() = 1 per group, because every region's inherited transition has its source at the parallel state itself and so belongs to machine level.\n- Gap surfaced and carried into T15: the stub yields 0 REGION_EXIT and 0 machine-level-owned paths, so it exercises neither outcome. A region exit needs a transition declared inside a region targeting outside it, and E6 needs a region state whose only continuations are ancestor-declared; neither holds here. T15's acceptance was updated to require a second stub covering both, so those two invariants do not ship untested.\n",
+      "gate_passed_at": "2026-08-28T07:30:19.628494Z",
+      "commit_sha": "818c11dc",
+      "commit_shas": [
+        "818c11dc"
+      ],
+      "commit_files": [
+        "spec/9.17.0-parallel-path-analysis-termination.derivation.md"
+      ]
+    },
+    {
+      "id": "T02",
+      "title": "Add path types for region and truncation outcomes",
+      "description": "PathType gains the cases the invariants need: a cut-short path, a region path that ends by leaving its region, and a region state whose continuations are owned at machine level (E6). Update every per-type site named in 7.6 so a new case cannot fall through silently.",
+      "status": "done",
+      "tags": [
+        "types"
+      ],
+      "depends_on": [
+        "T01"
+      ],
+      "estimate_minutes": 12,
+      "acceptance": "- PathType carries a distinct case for each of: truncated, region exit, and machine-level-owned continuation\n- The per-type sites in 7.6 (result filters, console grouping, classifyPath, terminal-state nulling, MachinePath's GUARD_BLOCK special case) each handle the new cases\n- Existing tests pass unchanged",
+      "source_sections": [
+        "## 7. Constraints on any mechanism",
+        "## 4. Enumeration invariants"
+      ],
+      "started_at": "2026-08-28T07:34:16.476991Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T07:34:16.477069Z",
+      "closed_reason": "- PathType gains three distinct cases (812e9dc1): TRUNCATED for a path cut at the depth ceiling, REGION_EXIT for a region path that ends by leaving its region, and REGION_DEFERRED for a region state whose only continuations are followed at machine level under E3. Each case documents what distinguishes it from the neighbours it could be confused with — REGION_DEFERRED from DEAD_END because the runtime can leave that state, and from REGION_EXIT because the region does not follow the transition.\n- Every per-type site named in section 7.6 now handles them. PathEnumerationResult gains truncatedPaths(), regionExitPaths() and regionDeferredPaths() (3e2d3c47). PathEnumerator::recordPath() adds all three to the terminal-state nulling list, since none reaches a terminal point (9feb944a), and classifyPath() records that they are set during DFS and never returned from it (b8817a49). MachinePath documents that only GUARD_BLOCK carries a signature suffix (f2f6340a). MachinePathsCommand gains a TRUNCATED PATHS group, and states why the two region types are deliberately absent from a grouping built over $paths (28cc189c).\n- Existing tests pass unchanged: composer quality ran green at close, covering pint, rector, phpstan, the parallel unit suite and 100% type coverage. No enumeration behaviour changed in this task — the new cases are declared and wired but nothing yet records them, so every existing expectation holds.\n",
+      "gate_passed_at": "2026-08-28T07:34:16.477069Z",
+      "commit_sha": "812e9dc1",
+      "commit_shas": [
+        "812e9dc1",
+        "3e2d3c47",
+        "9feb944a",
+        "b8817a49",
+        "f2f6340a",
+        "28cc189c"
+      ],
+      "commit_files": [
+        "src/Analysis/MachinePath.php",
+        "src/Analysis/PathEnumerationResult.php",
+        "src/Analysis/PathEnumerator.php",
+        "src/Analysis/PathType.php",
+        "src/Commands/MachinePathsCommand.php"
+      ]
+    },
+    {
+      "id": "T03",
+      "title": "Confine region enumeration to its region",
+      "description": "Give the region sub-enumerator a boundary so it cannot walk the whole machine. Membership is structural (walk StateDefinition::$parent and compare identity), never an id prefix, because buildId() honours an explicit config['id'] and the delimiter is per-machine. This is the change that stops the unbounded recursion.",
+      "status": "done",
+      "tags": [
+        "engine"
+      ],
+      "depends_on": [
+        "T02"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- Region enumeration follows no transition whose target lies outside the region, across on transitions, @always branches, invoke transitions and the compound @done continuation\n- Membership is decided structurally by parent-chain identity and holds for a region child with an overriding config['id'] and for a machine with a non-dot delimiter\n- Every enumerator without a boundary behaves exactly as before",
+      "source_sections": [
+        "## 4. Enumeration invariants",
+        "## 2. Root causes"
+      ],
+      "started_at": "2026-08-28T07:44:05.80414Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T07:44:05.804239Z",
+      "closed_reason": "- Region enumeration is confined to its region (df1d98ae). handleParallel now builds each region's sub-enumerator as new self($this-\u003edefinition, $this-\u003emaxPaths, $region), and every place the enumerator follows a target is gated on leavesBoundary(): on transitions and the GUARD_BLOCK path in enumerateTransitions, @always branches in handleAlwaysPriority, @done/@fail in handleParallel, the fire-and-forget target and every @done/@done.{state}/@fail/@timeout branch through enumerateMachineInvoke and followInvokeTransition, and the compound @done continuation in handleFinal. The compound @done case matters: leaving it out would have left region DFS able to escape and the crash path open.\n- Membership is structural, by walking StateDefinition::$parent and comparing object identity, never an id prefix. isInsideBoundary() documents why: buildId() returns $this-\u003econfig['id'] ?? implode($this-\u003emachine-\u003edelimiter, ...), so an explicit id in the config bypasses the path-derived prefix and the delimiter is a per-machine setting rather than a literal dot. Both make a lexical test unsound. The reproduction now enumerates to completion: exit 0 where it was exit 139, with 2 parallelGroups and one in-region path per region, matching T01's derivation exactly.\n- Every enumerator without a boundary behaves exactly as before, and the full suite proves it: 2782 tests, 2781 passed, 1 skipped, exit 0, with no existing expectation changed. leavesBoundary() returns false whenever $boundary is null, so each new branch is unreachable at machine level; handleParallel's DEAD_END condition was deliberately left as it was for the same reason. Two bugs found and fixed while writing this: enumerateMachineInvoke recorded REGION_DEFERRED for any invoke state with no outcome transitions even with no boundary, now gated on a real deferral counter, and followInvokeTransition still assigned a removed variable.\n",
+      "gate_passed_at": "2026-08-28T07:44:05.804239Z",
+      "commit_sha": "df1d98ae",
+      "commit_shas": [
+        "df1d98ae"
+      ],
+      "commit_files": [
+        "src/Analysis/PathEnumerator.php"
+      ]
+    },
+    {
+      "id": "T04",
+      "title": "Record region outcomes without mislabelling them",
+      "description": "Every region continuation gets a truthful outcome. A transition declared inside the region that leaves it is a region exit naming its event and target. A transition whose source is at or above the parallel state is owned by machine level and recorded as such, not as a dead end and not as an exit. Region @always edges are reachable at runtime and must not be dropped.",
+      "status": "done",
+      "tags": [
+        "engine"
+      ],
+      "depends_on": [
+        "T03"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- A region state whose only transition is declared inside the region and leaves it records a region exit naming the event and target\n- A region state whose only continuations are ancestor-declared records the machine-level-owned outcome, distinct from both a dead end and a region exit\n- A region @always whose branches leave the region records an outcome rather than silence, including the unguarded-fallback path where handleAlwaysPriority returns early",
+      "source_sections": [
+        "## 4. Enumeration invariants",
+        "## 7. Constraints on any mechanism"
+      ],
+      "started_at": "2026-08-28T07:46:05.036377Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T07:46:05.036468Z",
+      "closed_reason": "- A region state whose only transition is declared inside the region and leaves it records a region exit naming the event and target. Verified by running the enumerator over a probe machine whose region 'a' holds only a1 with on: {LEAVE =\u003e escaped}: the region yields exactly one path, [region_exit] a1 -\u003e [LEAVE] -\u003e escaped. recordBoundarySkip() appends that final step with the event, target, guards, actions and invoke type before recording, which is what E2's \"except a final step that records the region being left\" requires.\n- A region state whose only continuations are ancestor-declared records the machine-level-owned outcome, distinct from both a dead end and a region exit. Same probe, region 'b' holds b1 with no transitions of its own, inheriting only ABORT from the parallel state: the region yields [region_deferred] b1. It is not DEAD_END, which would assert the machine is stuck when the runtime can leave that state, and not REGION_EXIT, because the region does not follow the transition — machine-level enumeration owns it under E3. The distinction is drawn by isDeclaredInsideBoundary() on the transition's source, mirroring MachineDefinition::isParallelEscapeSource().\n- A region @always whose branches leave the region records an outcome rather than silence, including the unguarded-fallback path. Same probe, region 'c' holds c1 with on: {@always =\u003e escaped}: the region yields [region_exit] c1 -\u003e [@always] -\u003e escaped. That branch reaches handleAlwaysPriority's $hasUnguardedFallback early return, which previously returned recording nothing at all; region @always edges are runtime-reachable because transitionParallelState runs its own ungated @always sweep over $state-\u003evalue, so silence there would have breached E4. Full suite green at close.\n",
+      "gate_passed_at": "2026-08-28T07:46:05.036468Z",
+      "commit_sha": "df1d98ae",
+      "commit_shas": [
+        "df1d98ae"
+      ],
+      "commit_files": [
+        "src/Analysis/PathEnumerator.php"
+      ]
+    },
+    {
+      "id": "T05",
+      "title": "Enumerate a parallel state's own transitions",
+      "description": "handleParallel follows the parallel state's remaining transitions in addition to @done and @fail, so the transitions that E3 assigns to machine level are actually enumerated there. Only the keys already followed by property are excluded. Update the existing PathEnumeratorTest expectations this changes in the same commit, since the gate runs at close.",
+      "status": "done",
+      "tags": [
+        "engine"
+      ],
+      "depends_on": [
+        "T04"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- A transition declared on a parallel state is enumerated at machine level, and one that re-enters an already-visited parallel state terminates as a loop\n- No transition is enumerated twice against the @done/@fail branches handleParallel already follows\n- PathEnumeratorTest's parallel expectations are updated in this commit and the suite is green",
+      "source_sections": [
+        "## 4. Enumeration invariants",
+        "## 2. Root causes"
+      ],
+      "started_at": "2026-08-28T07:51:49.195815Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T07:51:49.195914Z",
+      "closed_reason": "- A transition declared on a parallel state is now enumerated at machine level, and one that re-enters an already-visited parallel state terminates as a loop (147c66fe). handleParallel resolves the state's remaining transitions through MachineGraph::transitionsFrom() and enumerates them after @done and @fail. Verified against T01's derivation, written before any enumerator change: ReentrantParallelMachine yields exactly the three derived paths — [happy] idle -\u003e data_collection -\u003e verification -\u003e completed, [loop] ... verification -\u003e [EDIT] -\u003e data_collection, and [loop] idle -\u003e data_collection -\u003e [RESTART] -\u003e data_collection. A probe machine whose parallel state carries only an ABORT transition now follows it instead of recording a dead end.\n- No transition is enumerated twice against the @done/@fail branches handleParallel already follows. The exclusion is by event key and covers exactly those: anything beginning with @done, taking both @done and @done.{state}, plus @fail. @always needs no exclusion because enumerateTransitions already skips transitions whose isAlways flag is set, and @timeout is followed as an ordinary transition since handleParallel does not follow onTimeoutTransition — that belongs to enumerateMachineInvoke, and a parallel state is not an invoke state.\n- The suite is green and no existing expectation needed updating: 2782 tests, 2781 passed, 1 skipped. To be explicit, because the acceptance is worded as though an update were required: PathEnumeratorTest is NOT in `git diff main...HEAD -- tests/` and never was. That is the outcome, not a gap — the existing parallel expectations still hold under the new enumeration, and the whole tests/ diff for this branch is insertions only, zero deletions, so no expectation anywhere was rewritten to make this branch pass. The first close attempt failed the gate at exit 4 and was right to: composer test:unit passed while phpstan rejected a redundant (string) cast on an already-string array key, and rector split the filter's or-condition into two continues. Both are in d103288c, the cast removed rather than suppressed per the project's phpstan rules, and rector's refactor reviewed as semantically identical. enumerateTransitions' new ownsOutcome parameter defaults to true (fb291859) so handleAtomic and handleAlwaysPriority are unchanged, and handleParallel's dead-end test stays structural so a targetless-@done parallel still records nothing.\n",
+      "gate_passed_at": "2026-08-28T07:51:49.195914Z",
+      "commit_sha": "fb291859",
+      "commit_shas": [
+        "fb291859",
+        "147c66fe",
+        "d103288c"
+      ],
+      "commit_files": [
+        "src/Analysis/PathEnumerator.php"
+      ]
+    },
+    {
+      "id": "T06",
+      "title": "Bound analysis depth and report truncation",
+      "description": "Add a cumulative depth ceiling so recursion is bounded whatever the graph shape, measured as inherited offset plus steps in the current enumerator. A branch that reaches it records a cut-short path rather than disappearing. Sub-enumerators inherit the remaining budget and propagate their limit flags back, which today they do not.",
+      "status": "done",
+      "tags": [
+        "engine"
+      ],
+      "depends_on": [
+        "T05"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- A branch reaching the ceiling records a truncated path and raises a depth-limit flag rather than being dropped\n- A sub-enumerator inherits the caller's remaining path budget and consumed depth, and its limit flags reach the result\n- Enumeration of the reproduction stub and of every machine in the existing suites completes without truncation",
+      "source_sections": [
+        "## 5. Truncation invariants",
+        "## 4. Enumeration invariants"
+      ],
+      "started_at": "2026-08-28T07:55:42.812949Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T07:55:42.813038Z",
+      "closed_reason": "- A branch reaching the ceiling records a truncated path and raises a depth-limit flag rather than being dropped (ef890a2a). dfs() checks depthOffset + count($steps) against maxDepth before descending, records the steps so far as TRUNCATED and returns. Measured on ReentrantParallelMachine: at maxDepth 3 the result is loop=1 truncated=2 with depthLimitReached true; at maxDepth 2 it is truncated=2; at maxDepth 1 it is truncated=1. Nothing is silently dropped at any setting, so a partial analysis cannot be read as a complete one.\n- A sub-enumerator inherits the caller's remaining path budget and consumed depth, and its limit flags reach the result (8eaf23ff). handleParallel constructs each region enumerator with maxPaths reduced by the paths already recorded and depthOffset set to the caller's consumed depth, so both ceilings bound the analysis as a whole instead of being re-issued in full per region. The flags are then folded back into the parent, which they were not before: a region enumerator's pathLimitReached was discarded along with the enumerator, so a region cut short still reported a complete analysis. Proof: at maxDepth 2 the region path count drops from 4 to 2 and depthLimitReached is true on the top-level result. PathEnumerationResult carries the new flag and analysisTruncated() (13fa8077).\n- The reproduction stub and every machine in the existing suites enumerate to completion without truncation at the default ceiling of 200: the stub reports depthLimit no, pathLimit no, truncated no with its 3 derived paths intact, and composer quality ran green before committing — pint, rector, phpstan, 2782 tests and 100% type coverage, exit 0, with rector making no further change.\n",
+      "gate_passed_at": "2026-08-28T07:55:42.813038Z",
+      "commit_sha": "13fa8077",
+      "commit_shas": [
+        "13fa8077",
+        "ef890a2a",
+        "8eaf23ff"
+      ],
+      "commit_files": [
+        "src/Analysis/PathEnumerationResult.php",
+        "src/Analysis/PathEnumerator.php"
+      ]
+    },
+    {
+      "id": "T07",
+      "title": "Stop the suffix cache laundering decisions",
+      "description": "dfs() returns from a cache hit before dispatching on state type, so a repeat encounter of a parallel state skips region enumeration, the boundary and the depth accounting entirely. Close that, and stop a suffix discovered under one prefix or one boundary from being replayed where it does not hold.",
+      "status": "done",
+      "tags": [
+        "engine"
+      ],
+      "depends_on": [
+        "T06"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- A repeat encounter of a parallel state still performs region enumeration and records its group\n- A cached suffix is never replayed onto a prefix where it would exceed the depth ceiling, and a replay that would is recorded as truncated with the flag raised\n- A suffix discovered under a boundary is never used by an enumerator without that boundary, or vice versa",
+      "source_sections": [
+        "## 7. Constraints on any mechanism",
+        "## 5. Truncation invariants"
+      ],
+      "started_at": "2026-08-28T08:00:40.779718Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T08:00:40.779836Z",
+      "closed_reason": "- A repeat encounter of a parallel state still performs region enumeration and records its group. dfs() returns from a cache hit before the match on state type, so replaying a parallel state's suffixes skipped handleParallel outright — no region enumeration under its boundary, no depth accounting. Parallel states are now neither served from the cache nor written to it, so handleParallel runs on every encounter. Stated plainly: I could not build a probe where the group COUNT differs, because the pre-existing $alreadyRecorded check already dedupes it. What the change actually guarantees is that a parallel state's machine-level continuations are enumerated fresh against the current visitedIds instead of replayed from a suffix that baked in the first prefix's cycle-detection results.\n- A cached suffix is never replayed onto a prefix where it would exceed the depth ceiling, and a replay that would is recorded as truncated with the flag raised. Measured on a probe where 'mid' is reached first at prefix length 2, caching a 3-step suffix, then again at prefix length 5: at maxDepth 200 the long route yields the full 7-step path, and at maxDepth 6 the same replay is cut to exactly 6 steps, typed truncated, with depthLimitReached true. Before this it emitted a 7-step path over a ceiling of 6 that no flag reported. A suffix set containing a TRUNCATED path is also never cached at all, since truncation is a property of the prefix rather than of the state.\n- A suffix discovered under a boundary is never used by an enumerator without that boundary, or vice versa. This holds structurally rather than by new code: $suffixCache is an instance property and handleParallel builds each region enumerator as a fresh new self(...), so the two caches never touch. Verified by reading the constructor and the property declaration. composer quality ran green before committing — pint, rector, phpstan, 2782 tests, 100% type coverage, exit 0. One self-inflicted error on the way: the patch left a duplicate closing brace, which I masked by chaining php -l into \u0026\u0026 with its output sent to /dev/null; running the lint on its own surfaced the parse error immediately.\n",
+      "gate_passed_at": "2026-08-28T08:00:40.779836Z",
+      "commit_sha": "ec950852",
+      "commit_shas": [
+        "ec950852"
+      ],
+      "commit_files": [
+        "src/Analysis/PathEnumerator.php"
+      ]
+    },
+    {
+      "id": "T08",
+      "title": "Keep truncated paths out of coverage",
+      "description": "A cut-short path is an incomplete prefix no observed run can match by signature, so it must not sit in the coverage denominator. Path kinds already in the denominator keep their current treatment: GUARD_BLOCK stays, because changing it would break suites that pass today.",
+      "status": "done",
+      "tags": [
+        "engine"
+      ],
+      "depends_on": [
+        "T06"
+      ],
+      "estimate_minutes": 12,
+      "acceptance": "- PathCoverageReport excludes truncated paths from the denominator and from uncoveredPaths()\n- GUARD_BLOCK and every other pre-existing path kind keep their current denominator treatment\n- A suite asserting coverage on a machine with no parallel state produces the same figure as before",
+      "source_sections": [
+        "## 5. Truncation invariants"
+      ],
+      "started_at": "2026-08-28T08:04:40.356246Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T08:04:40.356358Z",
+      "closed_reason": "- PathCoverageReport excludes truncated paths from the denominator and from uncoveredPaths() (7d1cf352). computeCoverage() skips a path typed TRUNCATED before it is binned, so it lands in neither list, and coveragePercentage() takes its denominator from covered + uncovered rather than from count($enumeration-\u003epaths). Measured on a probe machine enumerated at maxDepth 6, which yields one complete path and one truncated one: covered=1, uncovered=0, coverage 100.0%. Read off $enumeration-\u003epaths the same run would report 50% with a path in the denominator that no observed run can ever match by signature, making assertAllPathsCovered() unsatisfiable.\n- GUARD_BLOCK and every other pre-existing path kind keep their current denominator treatment. The skip is keyed on PathType::TRUNCATED alone and the comment records why: GUARD_BLOCK is already counted and already unmatchable, and changing that would move figures for suites that pass today, which is a compatibility break this task must not make. REGION_EXIT and REGION_DEFERRED need no rule at all, since region paths are collected into ParallelPathGroup::$regionPaths and never enter $paths, the only list this report reads.\n- A suite asserting coverage on a machine with no parallel state produces the same figure as before: with no truncation the skip never fires and the denominator equals the enumerated path count exactly as it did. Verified by the same probe at maxDepth 200, which reports enumerated=2, truncated=0, coverage 100.0%, and by composer quality running green before the commit — pint, rector, phpstan, 2782 tests including PathCoverageAssertionTest and PathCoverageReportTest, and 100% type coverage, exit 0. The probe also shows why T09 is needed: coverage reads 100.0% while analysisTruncated is true, so a gate reading only the percentage would pass over an incomplete analysis. (That last sentence is stale as of the end of this release: the in-suite assertions no longer read the percentage alone — assertAnalysisWasComplete() refuses a verdict over either ceiling. It still describes machine:coverage --min, which is percentage-only.)\n",
+      "gate_passed_at": "2026-08-28T08:04:40.356358Z",
+      "commit_sha": "7d1cf352",
+      "commit_shas": [
+        "7d1cf352"
+      ],
+      "commit_files": [
+        "src/Analysis/PathCoverageReport.php"
+      ]
+    },
+    {
+      "id": "T09",
+      "title": "Disclose truncation on the coverage surface",
+      "description": "A coverage figure computed over an enumeration that did not complete must say so, or machine:coverage --min turns a partial analysis into a green gate with no signal anywhere. Disclosure only: a pre-existing path-limit truncation must not newly fail a suite that passes today.",
+      "status": "done",
+      "tags": [
+        "engine"
+      ],
+      "depends_on": [
+        "T08"
+      ],
+      "estimate_minutes": 12,
+      "acceptance": "- The coverage report exposes whether the enumeration it was computed over was truncated\n- machine:coverage reports truncation on its human and JSON output\n- No consumer suite that passes today fails because of a pre-existing path-limit truncation",
+      "source_sections": [
+        "## 5. Truncation invariants",
+        "## 10. Backward compatibility"
+      ],
+      "started_at": "2026-08-28T08:06:37.432661Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T08:06:37.432752Z",
+      "closed_reason": "- The coverage report exposes whether the enumeration it was computed over was truncated (22305a03). PathCoverageReport gains enumerationTruncated(), delegating to PathEnumerationResult::analysisTruncated(), and skippedPathCount() for how many enumerated paths were left out as unmatchable. The docblock states why a caller gating on the percentage must read it: paths that were never enumerated cannot be counted as uncovered, so a figure over an incomplete enumeration flatters itself.\n- machine:coverage reports truncation on its human and JSON output (5e29d686). The console prints a warning under the coverage line naming how many paths were excluded and that the figure covers only what was enumerated; the JSON gains analysis_truncated and skipped_paths beside the existing keys. No existing key changes meaning — total_paths and coverage were already computed from covered + uncovered, which is the same denominator T08 established.\n- No consumer suite that passes today fails because of a pre-existing path-limit truncation. At the time this task closed it was disclosure only: --min still compared the percentage alone, and Machine::assertAllPathsCovered() and assertPathCoverage() were untouched, because pathLimitReached fired silently at a default ceiling no coverage consumer could raise — Machine::buildPathCoverageReport() reached the enumerator through the parameterless MachineDefinition::enumeratePaths(), so making that case newly fail would have broken suites for a reason their owners could not fix. LATER IN THIS RELEASE THAT CHANGED and this clause no longer describes what ships: both assertions now take maxPaths/maxDepth, so the justification for exempting them is gone, and assertAnalysisWasComplete() refuses a verdict over EITHER ceiling. That is a documented breaking change (docs/getting-started/upgrading.md), not an untouched surface — a suite whose machine truncates at the default now fails and has the lever to fix it. --min on machine:coverage is still percentage-only. composer quality ran green before committing: pint, rector, phpstan, 2782 tests, 100% type coverage, exit 0.\n",
+      "gate_passed_at": "2026-08-28T08:06:37.432752Z",
+      "commit_sha": "22305a03",
+      "commit_shas": [
+        "22305a03",
+        "5e29d686"
+      ],
+      "commit_files": [
+        "src/Analysis/PathCoverageReport.php",
+        "src/Commands/MachineCoverageCommand.php"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Descend into parallel regions when resolving scenarios",
+      "description": "The scenario resolver never enters a parallel state's regions, so every target inside a region looks unreachable. Yield each region's initial state, labelled distinctly from exclusive compound descent, since entering a parallel state activates all regions at once and a single-region route is a projection.",
+      "status": "done",
+      "tags": [
+        "engine"
+      ],
+      "depends_on": [
+        "T02"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- ScenarioTestMachine resolves reviewing/START_PARALLEL to a target inside parallel_check's region\n- The step entering a region is labelled distinctly from compound entry, and ScenarioScaffolder handles that label rather than falling through its default arm\n- ScenarioPathResolverTest's existing routes still resolve with the same meaning",
+      "source_sections": [
+        "## 6. Scenario resolution invariants",
+        "## 2. Root causes"
+      ],
+      "started_at": "2026-08-28T08:09:59.422587Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T08:09:59.422694Z",
+      "closed_reason": "- ScenarioTestMachine resolves reviewing/START_PARALLEL to a target inside parallel_check's region (94cd91db). getNextStates() now yields each region's initial state from a PARALLEL state, so the two cases that produced 0 paths when this bug was first reproduced both resolve: scenario_test reviewing --START_PARALLEL--\u003e parallel_check.region_a.checking_a is 1 path, and reentrant_parallel idle --START--\u003e data_collection.retailer.awaiting_vehicle is 1 path. This is the defect behind the misleading \"No path\" report — the resolver never entered a region, so every state inside one looked unreachable.\n- The step entering a region is labelled distinctly from compound entry, and ScenarioScaffolder handles it. The label is @region, not @entry: @entry means exclusive compound descent while entering a parallel state activates every region at once, so a single-region route is a projection of a concurrent configuration. The resolved route reads parallel_check -\u003e [@region] checking_a. Scaffolding that path produces a complete scenario class with both steps in its plan — parallel_check and parallel_check.region_a.checking_a — so nothing reaches the scaffolder's default arm; it dispatches on StateClassification rather than on the label, and no new classification was introduced.\n- ScenarioPathResolverTest's existing routes still resolve with the same meaning. Checked directly: all_checked still resolves via [@done], skipped still via [SKIP_CHECK], approved still via [APPROVE]. The parallel transition set was also moved to MachineGraph::transitionsFrom() so the resolver and PathEnumerator use the same set for a parallel state, with @always skipped as the INTERACTIVE case already does — otherwise the analyser disagreement this work set out to remove would merely have been inverted. composer quality green: pint, rector with no changes, phpstan 0 errors, 2782 tests, 100% type coverage, exit 0.\n",
+      "gate_passed_at": "2026-08-28T08:09:59.422694Z",
+      "commit_sha": "94cd91db",
+      "commit_shas": [
+        "94cd91db"
+      ],
+      "commit_files": [
+        "src/Analysis/ScenarioPathResolver.php"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Make the scenario search cap injectable",
+      "description": "The BFS iteration cap is a hardcoded local, so the truncation behaviour cannot be exercised at all. Make it a constructor setting keeping its shipped default, which is the seam the next task's tests need.",
+      "status": "done",
+      "tags": [
+        "engine"
+      ],
+      "depends_on": [
+        "T10"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "- ScenarioPathResolver accepts the iteration cap as a setting whose default is the value shipped today\n- A test can drive a search into the cap without changing the shipped default\n- Existing resolver behaviour is unchanged at the default",
+      "source_sections": [
+        "## 3. Scope",
+        "## 6. Scenario resolution invariants"
+      ],
+      "started_at": "2026-08-28T08:14:35.536255Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T08:14:35.53632Z",
+      "closed_reason": "- ScenarioPathResolver accepts the iteration cap as a setting whose default is the value shipped today (94f6c5bd). The constructor gains int $maxIterations = 1000, which is the literal bfs() has always used, and bfs() reads it from the property instead of a hardcoded local. The docblock records why the parameter exists: to exercise truncation without changing what ships.\n- A test can drive a search into the cap without changing the shipped default. Verified by constructing new ScenarioPathResolver($graph, 1) and running a search that needs more than one iteration: it returns 0 paths with wasTruncated() true, while the same search on a default-constructed resolver exhausts normally. This is the seam T12's behaviour needs; without it the cap is a hardcoded local and truncation cannot be reached from a test at all.\n- Existing resolver behaviour is unchanged at the default. Every existing construction site passes only the graph and so gets 1000 exactly as before, and composer quality ran green before committing — pint, rector with no changes, phpstan 0 errors, 2782 tests including ScenarioPathResolverTest and both scenario command suites, 100% type coverage, exit 0.\n",
+      "gate_passed_at": "2026-08-28T08:14:35.53632Z",
+      "commit_sha": "94f6c5bd",
+      "commit_shas": [
+        "94f6c5bd"
+      ],
+      "commit_files": [
+        "src/Analysis/ScenarioPathResolver.php"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Distinguish a truncated search from an exhausted one",
+      "description": "A capped search and a search that genuinely found nothing are indistinguishable today, which is what made machine:scenario report a misleading No path. Make the difference visible to all three callers: the command, the validator, and programmatic callers.",
+      "status": "done",
+      "tags": [
+        "cli"
+      ],
+      "depends_on": [
+        "T11"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- The resolver reports whether the most recent resolution was truncated, reset per resolution\n- machine:scenario prints a different message for a truncated search than for an exhausted one, and both still fail\n- ScenarioValidator and the programmatic resolve() path each distinguish the two rather than emitting one fixed message",
+      "source_sections": [
+        "## 6. Scenario resolution invariants"
+      ],
+      "started_at": "2026-08-28T08:15:51.05831Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T08:15:51.058402Z",
+      "closed_reason": "- The resolver reports whether the most recent resolution was truncated, reset per resolution (94f6c5bd). bfs() sets a flag when its loop ends with a non-empty queue, which is the case that means the cap stopped the search rather than the search exhausting the graph; wasTruncated() exposes it and resolveAll() clears it on entry, including the call resolve() makes internally. Verified: a capped resolver reports 0 paths with wasTruncated() true, a default one reports 0 paths with false, and after a capped call followed by a clean one the flag reads YES then no, so it is not sticky.\n- machine:scenario prints a different message for a truncated search than for an exhausted one, and both still fail (24463841). The command calls resolveAll() and never catches the exception, so it reads the distinction off the resolver after the empty-result check: a truncated search reports that analysis stopped at the search limit and that a path may still exist, an exhausted one keeps the existing \"No path from X to Y via Z.\" wording. Both return FAILURE, so no caller's exit-code handling changes.\n- ScenarioValidator and the programmatic resolve() path each distinguish the two rather than emitting one fixed message (e0a48538, 47db6eda). resolve() now throws NoScenarioPathFoundException::truncated() when the search was capped and ::noPath() otherwise, and the new factory's message states plainly that a path may still exist and this is not a finding that none does. ScenarioValidator caught the exception and emitted one fixed \"No path\" string regardless of cause, which would have absorbed the distinction; it now selects its message from wasTruncated(). Confirmed by running resolve() under both a default cap and a cap of 1 and reading the two messages. composer quality green: pint, rector no changes, phpstan 0 errors, 2782 tests, 100% type coverage, exit 0.\n",
+      "gate_passed_at": "2026-08-28T08:15:51.058402Z",
+      "commit_sha": "94f6c5bd",
+      "commit_shas": [
+        "94f6c5bd",
+        "47db6eda",
+        "e0a48538",
+        "24463841"
+      ],
+      "commit_files": [
+        "src/Analysis/ScenarioPathResolver.php",
+        "src/Commands/MachineScenarioCommand.php",
+        "src/Exceptions/NoScenarioPathFoundException.php",
+        "src/Scenarios/ScenarioValidator.php"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Report truncation on the paths command",
+      "description": "machine:paths must not present a partial analysis as complete, on either surface. Its JSON serializes neither limit flag today and omits region paths entirely, so a cut-short region path would be invisible to every JSON consumer.",
+      "status": "done",
+      "tags": [
+        "cli"
+      ],
+      "depends_on": [
+        "T07"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- Console output marks a truncated analysis and renders cut-short paths distinguishably, including region paths inside the PARALLEL block\n- JSON output carries the truncation signal and exposes region paths with their types\n- No existing JSON key changes meaning; new readings get new keys",
+      "source_sections": [
+        "## 5. Truncation invariants",
+        "## 10. Backward compatibility"
+      ],
+      "started_at": "2026-08-28T08:19:25.836001Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T08:19:25.836112Z",
+      "closed_reason": "- Console output marks a truncated analysis and renders cut-short paths distinguishably, including region paths inside the PARALLEL block (c0166d30). The Terminal paths line carries a note per ceiling that fired, naming --max-paths or --max-depth, and a warning states plainly that the paths shown are what was reached rather than the full set. Region paths gain a type tag inside the PARALLEL block, which they needed because they never enter $paths and so cannot appear in the per-type groups — without it a path that ends by leaving its region looked identical to one that reached a region final state. The command also gained --max-depth=200 and passes it to the enumerator.\n- JSON output carries the truncation signal and exposes region paths with their types. stats gains truncated_paths, path_limit_reached, depth_limit_reached and analysis_truncated, and a new parallel_groups array carries each group's parallel state, combination count and per-region paths with type, signature and steps. Verified by rendering the same shape over ReentrantParallelMachine: at the default ceiling it reports 3 terminal paths, 0 truncated, all flags false, and both parallel groups with one typed path per region — region paths reached no JSON consumer at all before this, since renderJson serialized only $paths.\n- No existing JSON key changes meaning. terminal_paths still counts the paths array exactly as before rather than being redefined to exclude truncated entries, and the code carries a comment saying so, because redefining an existing key is the silent break that rule exists to prevent. Every other pre-existing key in stats and paths is untouched.\n- New readings get new keys. The truncated count is truncated_paths rather than a changed terminal_paths, the two ceiling flags and the combined analysis_truncated are new names, and region data arrives under a new parallel_groups key — so every addition is purely additive for existing consumers. composer quality green before committing: pint, rector no changes, phpstan 0 errors, 2782 tests, 100% type coverage, exit 0.\n",
+      "gate_passed_at": "2026-08-28T08:19:25.836112Z",
+      "commit_sha": "c0166d30",
+      "commit_shas": [
+        "c0166d30"
+      ],
+      "commit_files": [
+        "src/Commands/MachinePathsCommand.php"
+      ]
+    },
+    {
+      "id": "T14",
+      "title": "Pin the reproduction stub out of process",
+      "description": "Enumerating the stub in process risks a segfault killing a worker or a hang stalling the suite, and asserting only that enumeration returns is satisfied by the depth ceiling alone even if the boundary regresses. Run it as a bounded subprocess that reports results as data, and assert T01's derived values.",
+      "status": "done",
+      "tags": [
+        "tests"
+      ],
+      "depends_on": [
+        "T01",
+        "T07"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- Every check that enumerates the stub runs out of process under a wall-clock bound, with a timeout counted as a failure\n- The subprocess reports its results as data the test decodes, so a run that never enumerated cannot pass\n- The assertions use T01's derived values, and any disagreement with the implementation is resolved and recorded rather than silently adopted",
+      "source_sections": [
+        "## 8. Verification"
+      ],
+      "started_at": "2026-08-28T08:26:18.142162Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T08:26:18.142274Z",
+      "closed_reason": "- Every check that enumerates the stub runs out of process under a wall-clock bound, with a timeout counted as a failure (40064956, c8c55669). tests/Support/enumerate-machine.php enumerates a machine in an isolated process; the test drives it through Symfony Process with a 30-second timeout and turns a timeout into a RuntimeException naming the machine. Both of this stub's failure modes need that: SIGSEGV cannot be caught and takes a whole parallel worker down rather than failing one test, and non-termination produces nothing to assert on while stalling the suite.\n- The subprocess reports its results as data the test decodes, so a run that never enumerated cannot pass. The script emits a JSON summary — path count, counts per type, signatures, parallel groups with per-region path counts and a structurally computed all_inside flag, and the truncation flags — and the harness asserts the summary decodes and carries enumerated: true before any other check. Exit code 0 alone is not accepted as success.\n- The assertions use T01's derived values, and disagreement is resolved rather than silently adopted. The pins are 3 machine-level paths, happy=1 and loop=2, 2 parallel groups, one path per region with every step inside its own region, and both loop signatures for RESTART and EDIT — all taken from spec/9.17.0-parallel-path-analysis-termination.derivation.md, written before the enumerator changed. The implementation agreed with every one, so there was nothing to reconcile. Proven non-tautological by mutation: disabling the region boundary made 4 of the 5 tests fail, the fifth being the depth-ceiling test, which correctly does not depend on the boundary. That mutation also exposed a real defect in the harness — the timeout path called expect()-\u003efail(), which does not exist, so a genuine hang would have reported \"Method fail does not exist in NULL\" instead of the timeout; it now throws. composer quality green: 2787 tests, exit 0.\n",
+      "gate_passed_at": "2026-08-28T08:26:18.142274Z",
+      "commit_sha": "40064956",
+      "commit_shas": [
+        "40064956",
+        "c8c55669"
+      ],
+      "commit_files": [
+        "tests/Analysis/ReentrantParallelEnumerationTest.php",
+        "tests/Support/enumerate-machine.php"
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "Cover the region and scenario invariants",
+      "description": "Add the regression coverage for the invariants that the stub test does not reach: region membership edge cases, the three region outcomes, coverage accounting, and the scenario truncation paths.",
+      "status": "done",
+      "tags": [
+        "tests"
+      ],
+      "depends_on": [
+        "T09",
+        "T12",
+        "T13",
+        "T14"
+      ],
+      "estimate_minutes": 15,
+      "acceptance": "- A second stub exercises the region-exit and machine-level-owned outcomes, which the reproduction stub does not reach\n- Region membership holds under a non-dot delimiter, and the config['id'] case is recorded as unreachable rather than claimed as covered\n- Coverage accounting and both scenario truncation paths are covered, and the existing suites named in section 8 still pass",
+      "source_sections": [
+        "## 8. Verification"
+      ],
+      "started_at": "2026-08-28T08:30:36.531709Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T08:30:36.531833Z",
+      "closed_reason": "- A second stub exercises the region-exit and machine-level-owned outcomes, which the reproduction stub does not reach (703c4f5f, 6b5ade30). RegionBoundaryMachine gives each outcome its own region: retailer holds a transition declared inside the region that leaves it, recorded as REGION_EXIT with the escaping event and target named; customer_info has no transitions of its own and inherits only ABORT, recorded as REGION_DEFERRED and asserted explicitly not to be DEAD_END, because the runtime can leave that state; documents holds an @always leaving the region, which reaches handleAlwaysPriority's unguarded-fallback path that previously returned recording nothing. The gap was found by deriving ReentrantParallelMachine's enumeration by hand in T01, which showed it yields zero of both types.\n- Region membership holds under a non-dot delimiter, and the config['id'] case is recorded as unreachable rather than claimed as covered. The delimiter test builds a machine with delimiter '::' and asserts its region still enumerates normally, which a boundary test hardcoding a dot would fail. The id-override half could not be written: three attempts all broke in the definition layer rather than in the boundary — an explicit id on a region's initial state makes findInitialStateDefinition() miss, since it builds its lookup from the parent id and delimiter, and the state can then be targeted by neither its key nor its overridden id, both raising UndefinedTargetStateException. So no enumerable region path can contain such a state. The test was removed rather than contorted, the reason is recorded in the test file, and this task's acceptance was corrected to say so instead of claiming coverage it does not have.\n- Coverage accounting and both scenario truncation paths are covered, and the existing suites still pass (422e6e01). Coverage: a chain enumerated at a low ceiling yields a truncated path that is excluded from the denominator, so uncoveredPaths() is empty where the complete enumeration reports one, and the report discloses enumerationTruncated() while still reading 100% — which is exactly why the flag exists. Scenarios: an exhausted search reports wasTruncated() false, a capped one true, resolve() throws distinguishable messages for the two, and the flag is proven to clear on the next resolution rather than persisting. composer quality green: 2792 tests, exit 0.\n",
+      "gate_passed_at": "2026-08-28T08:30:36.531833Z",
+      "commit_sha": "703c4f5f",
+      "commit_shas": [
+        "703c4f5f",
+        "6b5ade30",
+        "422e6e01"
+      ],
+      "commit_files": [
+        "tests/Analysis/RegionBoundaryOutcomeTest.php",
+        "tests/Analysis/TruncationReportingTest.php",
+        "tests/Stubs/Machines/Parallel/RegionBoundaryMachine.php"
+      ]
+    },
+    {
+      "id": "T16",
+      "title": "Verify the fix on production machines",
+      "description": "Run the enumeration against CarSalesMachine, IyiFinansCarSalesMachine and TractorSalesMachine in the tarfin-core backend, using the harness that preloads this package's Analysis classes ahead of the vendor copies so nothing in that repository is modified. Before the fix all three exit 139.",
+      "status": "done",
+      "tags": [
+        "verification"
+      ],
+      "depends_on": [
+        "T14"
+      ],
+      "estimate_minutes": 12,
+      "acceptance": "- All three production machines enumerate to completion with a zero exit code\n- The recorded output includes path counts, per-type counts and the truncation flags for each\n- The core backend repository is left unmodified",
+      "source_sections": [
+        "## 1. Motivation"
+      ],
+      "started_at": "2026-08-28T08:31:33.888457Z",
+      "closed_at": "2026-08-28T08:31:33.888458Z",
+      "closed_reason": "- All three production machines enumerate to completion with a zero exit code. Measured against the tarfin-core backend using the harness that pre-requires this package's src/Analysis classes ahead of the vendor copies: CarSalesMachine exit 0 in 3ms, IyiFinansCarSalesMachine exit 0 in 2ms, TractorSalesMachine exit 0 in 3ms. All three exited 139 with no output when this work started, which is the before-state recorded at the beginning of the session.\n- The recorded output includes path counts, per-type counts and the truncation flags for each. STALE AS RECORDED, refreshed in round 10: the figures below were correct when measured but predate the final-state change, which raises all three. Re-measured against the same backend at ceilings 1000/200 — CarSales 878, IyiFinansCarSales 390, TractorSales 862, with verification(findeks=11, turmob=3) and data_collection(product=5); the same harness run against vendor (tarfin-labs/event-machine 9.16.0, main 3139b623) still exits 139 on all three, an independent reproduction of the before-state. The original record, kept because it is what this task measured: CarSales: 239 paths, happy=111 guard_block=88 loop=36 timeout=4, 2 parallel groups with verification(findeks=6, turmob=2) and data_collection(retailer=16, customer_info=54). IyiFinansCarSales: 99 paths, happy=53 guard_block=30 loop=16, groups verification(findeks=6, turmob=2) and data_collection(product=3, customer_info=52). TractorSales: 223 paths, happy=111 guard_block=80 loop=28 timeout=4, groups verification(findeks=6, turmob=2) and data_collection(retailer=26, customer_info=54). Every machine reports pathLimit=no, depthLimit=no, truncated=no, so the default ceilings are comfortably above what real machines of this size need, and the bounded region path counts are themselves evidence the boundary holds — an unbounded region walks the whole machine and would produce far more.\n- The core backend repository is left unmodified. The harness only reads that repository: it requires its autoloader, boots its kernel and pre-requires this package's Analysis classes so PSR-4 never reaches the vendor copies, which is why no path-repository or symlink change was needed. Confirmed afterwards with git status --porcelain in core/backend: no modified or staged entries at all; the 27 untracked entries are pre-existing skill directories that were there before this session and that I did not create.\n",
+      "gate_passed_at": "2026-08-28T08:31:33.888458Z",
+      "commit_sha": null
+    },
+    {
+      "id": "T17",
+      "title": "Document the parallel path analysis behaviour",
+      "description": "Update the documentation so the new behaviour is discoverable: region scoping, the machine-level enumeration of a parallel state's own transitions, truncation reporting, and how truncation interacts with coverage.",
+      "status": "done",
+      "tags": [
+        "docs"
+      ],
+      "depends_on": [
+        "T15"
+      ],
+      "estimate_minutes": 12,
+      "acceptance": "- Documentation covers region scoping and the region outcomes\n- It covers machine-level enumeration of a parallel state's own transitions\n- It covers truncation reporting and its effect on coverage figures",
+      "source_sections": [
+        "## 9. Documentation and skill"
+      ],
+      "started_at": "2026-08-28T08:38:41.097312Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T08:38:41.097418Z",
+      "closed_reason": "- Documentation covers region scoping and the region outcomes (5033907a, 12edbaa9). docs/testing/transitions-and-paths.md gains a Parallel States section separating the two levels a parallel state is analysed at — machine level for its @done/@fail and its own or inherited transitions, region level scoped to each region's subtree — with a table for the region path types. REGION_EXIT is described as a transition declared inside the region that leaves it, re-pointing that region's slot while the parallel state stays active; REGION_DEFERRED is stated explicitly not to be a dead end, since the runtime can leave the state and machine level simply owns the transition. The artisan reference lists both types under what machine:paths shows.\n- It covers machine-level enumeration of a parallel state's own transitions. The same section states that a transition declared on the parallel state, or inherited from an ancestor, is followed at machine level, and that one re-entering an already-visited parallel state terminates as a LOOP — which is what the reported production machines' RESTART and EDIT transitions do, and what was previously absent from the output entirely. It also records the rule that no transition is represented at both levels.\n- It covers truncation reporting and its effect on coverage figures. A When the Analysis Stops Early section documents both ceilings with the new --max-depth flag, states that a branch reaching either is recorded as TRUNCATED rather than dropped, and lists the JSON keys — path_limit_reached, depth_limit_reached, analysis_truncated, truncated_paths and parallel_groups. It explains that truncated paths are excluded from coverage accounting because an incomplete prefix is unmatchable, and that machine:coverage reports analysis_truncated because a percentage over an enumeration that stopped early is not a guarantee. docs/advanced/scenario-commands.md separately records that \"No path\" and \"truncated at the search limit\" are different findings, and that region-interior targets now resolve with an @region step. composer quality green (2797 tests, exit 0) and DocTest run separately per the project rule: 1311 blocks, 365 passed, 946 skipped, 0 failures, exit 0.\n",
+      "gate_passed_at": "2026-08-28T08:38:41.097418Z",
+      "commit_sha": "5033907a",
+      "commit_shas": [
+        "5033907a",
+        "12edbaa9",
+        "fd758757"
+      ],
+      "commit_files": [
+        "docs/advanced/scenario-commands.md",
+        "docs/laravel-integration/artisan-commands.md",
+        "docs/testing/transitions-and-paths.md"
+      ]
+    },
+    {
+      "id": "T18",
+      "title": "Update the agent skill gotchas",
+      "description": "The skill ships to agents on the release tag, so it must carry the new behaviour in the same tag or it will not reach agents until the next one. Add the parallel path-analysis behaviour to the gotcha material.",
+      "status": "done",
+      "tags": [
+        "docs"
+      ],
+      "depends_on": [
+        "T17"
+      ],
+      "estimate_minutes": 10,
+      "acceptance": "- SKILL.md's gotcha material states that a truncated analysis must not be read as a complete one\n- It states that region paths are scoped to their region and what the region outcomes mean\n- The change is committed before the release tag rather than after",
+      "source_sections": [
+        "## 9. Documentation and skill"
+      ],
+      "started_at": "2026-08-28T08:39:50.639176Z",
+      "duration_source": "implicit",
+      "closed_at": "2026-08-28T08:39:50.639268Z",
+      "closed_reason": "- SKILL.md's gotcha material states that a truncated analysis must not be read as a complete one (ce2d6d44). A new \"Reading path analysis on a parallel machine\" subsection under section 7's parallel-region gotchas says it in bold, names both ceilings and their defaults, lists the JSON flags an agent should check — analysis_truncated, path_limit_reached, depth_limit_reached, truncated_paths — and warns that machine:coverage can read 100% over a partial analysis, which is why it reports analysis_truncated. It also records that \"No path\" and \"truncated at the search limit\" are different findings from machine:scenario, which is precisely the confusion that produced the original bug report.\n- It states that region paths are scoped to their region and what the region outcomes mean. A two-row table separates machine-level analysis from the region-level PARALLEL block, and both new types are explained as not being defects: REGION_EXIT as a transition declared inside the region that leaves it, distinguished from one declared on the parallel state which exits the whole thing, and REGION_DEFERRED called out in bold as not a dead end because the runtime can leave that state. Region entry in a resolved scenario route is documented as @region rather than @entry, with the reason — a single-region route is a projection of a concurrent configuration.\n- The change is committed before the release tag rather than after. ce2d6d44 is on the working branch with every other commit of this work, and no tag has been created; the release itself is yours to approve. This ordering is what the project rule requires: the skill is materialized into plugin-dist only when a tag triggers the build, so a skill commit landing after the tag would not reach agents until the next release. composer quality green with the skill change in the tree: pint, rector with no changes, phpstan 0 errors, 2797 tests, 100% type coverage, exit 0.\n",
+      "gate_passed_at": "2026-08-28T08:39:50.639268Z",
+      "commit_sha": "ce2d6d44",
+      "commit_shas": [
+        "ce2d6d44"
+      ],
+      "commit_files": [
+        "skills/event-machine/SKILL.md"
+      ]
+    }
+  ]
+}
