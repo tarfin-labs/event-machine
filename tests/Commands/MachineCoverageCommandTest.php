@@ -33,7 +33,7 @@ function runCoverage(string $machine, array $options = []): string
 
         return Artisan::output();
     } finally {
-        @unlink($path ?? $from);
+        @unlink($from);
         PathCoverageTracker::reset();
     }
 }
@@ -97,6 +97,28 @@ test('a minimum cannot be enforced over a truncated analysis', function (): void
 
     expect(coverageExitCode(ReentrantParallelMachine::class, ['--min' => 0, '--max-depth' => 3]))
         ->toBe(Command::FAILURE);
+});
+
+test('a non-numeric minimum is rejected rather than silently ignored', function (): void {
+    // (float) turns --min=abc and --min= into 0.0, which every run clears — a gate
+    // disabled by a typo is worse than no gate, because it still looks like one.
+    foreach (['abc', ''] as $bad) {
+        $output = runCoverage(ReentrantParallelMachine::class, ['--min' => $bad]);
+
+        expect($output)->toContain('--min must be a number')
+            ->and($output)->not->toContain('below minimum');
+
+        expect(coverageExitCode(ReentrantParallelMachine::class, ['--min' => $bad]))
+            ->toBe(Command::FAILURE);
+    }
+});
+
+test('a numeric minimum still reaches the comparison', function (): void {
+    // The guard must reject only what it is for: a valid threshold is unaffected.
+    $output = runCoverage(ReentrantParallelMachine::class, ['--min' => '75.5']);
+
+    expect($output)->toContain('below minimum')
+        ->and($output)->not->toContain('--min must be a number');
 });
 
 test('a minimum is enforced normally over a complete analysis', function (): void {
