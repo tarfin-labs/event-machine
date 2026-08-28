@@ -190,8 +190,20 @@ php artisan machine:scenario-validate --scenario=App\\Machines\\Order\\Scenarios
 | Check | Example error |
 |-------|---------------|
 | Path exists from source to target | `No path from 'idle' to 'allocation' via 'StartEvent'` |
+| Path search completed | `Path analysis from 'idle' to 'allocation' via 'StartEvent' was truncated at the search limit — a path may still exist` |
 | `@continue` events lead toward target | Directional check |
 | Deep target child scenario exists | `No scenario found for PaymentMachine targeting 'awaiting_otp'` |
+
+The first two are different findings and must not be read the same way. "No path" means the search
+was exhausted and the states really are not connected by transitions. "Truncated" means the search
+stopped at its own limit with work still pending, so whether a path exists is unknown — treat it as
+a prompt to look, not as an answer.
+
+Targets inside a parallel region resolve normally: entering a parallel state activates every region,
+so each region's initial state is reachable and the resolved route marks that step `@region` to
+distinguish it from `@entry`, which is exclusive descent into a compound state. A route through one
+region is a projection of a concurrent configuration — its sibling regions are simultaneously active
+in unspecified states.
 
 ### Output
 
