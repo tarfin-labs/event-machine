@@ -220,3 +220,71 @@ test('the path ceiling bounds region paths too, not each region on its own', fun
         ->and($cut->pathLimitReached)->toBeTrue()
         ->and($cut->analysisTruncated())->toBeTrue();
 });
+
+test('machine paths cannot spend the ceiling a second time after the regions', function (): void {
+    // Charging region paths to $subPathsRecorded bounded what the REGIONS spent, but
+    // recordPath still gated on count($paths) alone. Regions could therefore consume the
+    // whole budget and machine level then record maxPaths more on top — twice the
+    // ceiling, with pathLimitReached false because neither half reached it by itself.
+    // The earlier ceiling test does not catch this: its numbers happen to trip the flag.
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'double_spend_probe',
+        'initial' => 'idle',
+        'states'  => [
+            'idle' => ['on' => ['START' => 'work']],
+            'work' => [
+                'type'   => 'parallel',
+                '@done'  => 'after',
+                'states' => [
+                    'ra' => [
+                        'initial' => 'fan',
+                        'states'  => [
+                            'fan' => ['on' => ['E0' => 'l0', 'E1' => 'l1']],
+                            'l0'  => ['type' => 'final'],
+                            'l1'  => ['type' => 'final'],
+                        ],
+                    ],
+                    'rb' => [
+                        'initial' => 'fan',
+                        'states'  => [
+                            'fan' => ['on' => ['F0' => 'm0', 'F1' => 'm1']],
+                            'm0'  => ['type' => 'final'],
+                            'm1'  => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            // Three continuations past the parallel, so machine level has real work left
+            // once the regions have already spent the whole budget.
+            'after' => ['on' => ['G0' => 'end0', 'G1' => 'end1', 'G2' => 'end2']],
+            'end0'  => ['type' => 'final'],
+            'end1'  => ['type' => 'final'],
+            'end2'  => ['type' => 'final'],
+        ],
+    ]);
+
+    $countAll = static function (int $budget) use ($definition): array {
+        $result = (new PathEnumerator($definition, $budget))->enumerate();
+        $total  = count($result->paths);
+
+        foreach ($result->parallelGroups as $group) {
+            foreach ($group->regionPaths as $paths) {
+                $total += count($paths);
+            }
+        }
+
+        return [$total, $result];
+    };
+
+    // Unbounded: 4 region paths and 3 machine paths, so a budget of 4 is genuinely
+    // exceeded by the regions alone and leaves machine-level work pending.
+    [$uncapped] = $countAll(1000);
+
+    expect($uncapped)->toBe(7);
+
+    [$capped, $result] = $countAll(4);
+
+    expect($capped)->toBeLessThanOrEqual(4)
+        ->and($result->pathLimitReached)->toBeTrue()
+        ->and($result->analysisTruncated())->toBeTrue();
+});
