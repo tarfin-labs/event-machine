@@ -268,7 +268,7 @@ so agents do not read a truncated analysis as a complete one.
 | `PathEnumerationResult` and `PathEnumerator` gain settings | appended with defaults; existing construction sites unaffected |
 | E3/E4 change what is enumerated for parallel machines | path counts, region path counts and coverage percentages move for every parallel machine whose parallel state **or an ancestor** carries a transition — the T5 exception. Region enumeration escapes through inherited ancestor transitions today, which is §2.1's premise, so the radius is wider than "parallel states carrying their own transitions" (an earlier revision) but narrower than "every parallel machine" (the revision after it): with no transition at or above the parallel state, output is byte-identical |
 | S2 adds a step to routes through parallel regions | those routes did not resolve at all before |
-| Final states gain continuations (both analysers) | path counts rise on **any** machine with a final state under an inherited handler, a guarded compound `@done`, or a delegating final state — parallel or not. This is the release's largest blast radius: 239→878, 99→390, 223→862 on the production machines, and 2→5 / 2→8 on plain compound ones. Coverage percentages fall accordingly and `assertAllPathsCovered()` fails where it passed |
+| Final states gain continuations (both analysers) | path counts rise on **any** machine with a final state under an inherited handler, a guarded compound `@done`, or a delegating final state — parallel or not. This is the release's largest blast radius: 239→878, 99→390, 223→862 on the production machines, and 2→8 on a plain compound one. The "before" figures are mid-release (post-crash-fix, pre-final-state) — `main` produces no number for those three machines at all, because `machine:paths` segfaults on each of them; see §8. Coverage percentages fall accordingly and `assertAllPathsCovered()` fails where it passed |
 | `machine:paths --json` gains keys | additive; no existing key changes meaning |
 
 An existing key's meaning is not redefined. Where a new reading is wanted, it gets a new key.
@@ -284,7 +284,8 @@ enumerated path matches.
 
 The change with the largest blast radius is not a flag: following the continuations out of a final
 state raises path counts substantially on machines that have them — by roughly 3.7× on the three
-production machines this was validated against — which lowers every coverage percentage computed
+production machines this was validated against, measured against the mid-release tree rather than
+against `main`, which segfaults on all three (§8) — which lowers every coverage percentage computed
 over such a machine and will fail `assertAllPathsCovered()` where it passed. Release notes should
 lead with that, not with the segfault. Docs and skill ship in the same tag.
 
