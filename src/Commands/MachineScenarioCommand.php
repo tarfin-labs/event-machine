@@ -165,12 +165,20 @@ class MachineScenarioCommand extends Command
             return self::SUCCESS;
         }
 
-        // Write file
-        if (!is_dir($scenarioDir)) {
-            mkdir($scenarioDir, 0755, true);
+        // Write file. Reporting "Created:" for a write that failed sends the caller
+        // looking for a file that is not there.
+        if (!is_dir($scenarioDir) && !mkdir($scenarioDir, 0755, true) && !is_dir($scenarioDir)) {
+            $this->error("Could not create scenario directory: {$scenarioDir}");
+
+            return self::FAILURE;
         }
 
-        file_put_contents($scenarioFile, $content);
+        if (file_put_contents($scenarioFile, $content) === false) {
+            $this->error("Could not write scenario file: {$scenarioFile}");
+
+            return self::FAILURE;
+        }
+
         $this->info("Created: {$scenarioFile}");
 
         return self::SUCCESS;
