@@ -19,7 +19,10 @@ function enumerateOutOfProcess(string $machineClass, ?int $maxDepth = null): arr
 {
     $script = dirname(__DIR__).'/Support/enumerate-machine.php';
 
-    $command = ['php', '-d', 'xdebug.mode=off', $script, $machineClass];
+    // PHP_BINARY rather than 'php': it removes the PATH dependency outright and
+    // guarantees the subprocess runs the same interpreter as the suite, which matters
+    // on a CI matrix that tests several PHP versions.
+    $command = [PHP_BINARY, '-d', 'xdebug.mode=off', $script, $machineClass];
 
     if ($maxDepth !== null) {
         $command[] = (string) $maxDepth;
