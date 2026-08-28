@@ -32,9 +32,9 @@ class ReentrantParallelMachine extends Machine
                         'on' => ['START' => 'data_collection'],
                     ],
                     'data_collection' => [
-                        'type'  => 'parallel',
-                        'on'    => ['RESTART' => 'data_collection'],
-                        '@done' => 'verification',
+                        'type'   => 'parallel',
+                        'on'     => ['RESTART' => 'data_collection'],
+                        '@done'  => 'verification',
                         'states' => [
                             'retailer' => [
                                 'initial' => 'awaiting_vehicle',
@@ -57,9 +57,9 @@ class ReentrantParallelMachine extends Machine
                         ],
                     ],
                     'verification' => [
-                        'type'  => 'parallel',
-                        'on'    => ['EDIT' => 'data_collection'],
-                        '@done' => 'completed',
+                        'type'   => 'parallel',
+                        'on'     => ['EDIT' => 'data_collection'],
+                        '@done'  => 'completed',
                         'states' => [
                             'findeks' => [
                                 'initial' => 'running',
