@@ -13,9 +13,6 @@ parameters:
         - identifier: larastan.noEnvCallsOutsideOfConfig
           path: config/
 
-        # Fakeable trait: Mockery return types
-        - identifier: return.type
-          path: src/Traits/Fakeable.php
         # Package traits — used by consumers, not within src/
         - identifier: trait.unused
           path: src/Testing/
