@@ -97,6 +97,26 @@ class PathEnumerator
         return count($this->paths) + $this->subPathsRecorded;
     }
 
+    /**
+     * Record a parallel state's group unless one is already held for that state.
+     *
+     * A parallel state reachable by several routes is analysed once and its group kept
+     * once — the same rule handleParallel applies when it reuses an already-recorded
+     * group's region paths. The check lives here because groups arrive by two routes,
+     * this level's own enumeration and a region sub-enumerator's merged results, and a
+     * sub-enumerator is a fresh object that cannot see what its caller already holds.
+     */
+    private function recordParallelGroup(ParallelPathGroup $group): void
+    {
+        foreach ($this->parallelGroups as $existing) {
+            if ($existing->parallelStateId === $group->parallelStateId) {
+                return;
+            }
+        }
+
+        $this->parallelGroups[] = $group;
+    }
+
     public function __construct(
         private readonly MachineDefinition $definition,
         int $maxPaths = 1000,
@@ -558,8 +578,15 @@ class PathEnumerator
                 // complete, and made the command contradict itself: it counts parallel
                 // states from the definition but prints groups from here, so the two
                 // lines disagreed for any machine with a parallel inside a region.
+                //
+                // They are deduplicated on the way in. A sub-enumerator is a fresh object,
+                // so its own already-recorded scan above cannot see what this level holds:
+                // appending unconditionally recorded one parallel state twice, gave the two
+                // copies different region paths whenever the second ran on a smaller
+                // budget, and under nesting retained groups exponentially — all while the
+                // result still called itself complete.
                 foreach ($regionEnumerator->parallelGroups as $nestedGroup) {
-                    $this->parallelGroups[] = $nestedGroup;
+                    $this->recordParallelGroup($nestedGroup);
                 }
 
                 // Region truncation had no route to the result before: the sub-enumerator's
@@ -574,10 +601,10 @@ class PathEnumerator
                 }
             }
 
-            $this->parallelGroups[] = new ParallelPathGroup(
+            $this->recordParallelGroup(new ParallelPathGroup(
                 parallelStateId: $state->id,
                 regionPaths: $regionPaths,
-            );
+            ));
         }
 
         $enumerated = false;
