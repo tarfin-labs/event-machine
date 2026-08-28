@@ -1,0 +1,5 @@
+{
+  "workflow": {
+    "quality_gate": "composer quality"
+  }
+}
