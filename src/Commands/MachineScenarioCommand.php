@@ -87,8 +87,8 @@ class MachineScenarioCommand extends Command
             // the distinction off the resolver. Both outcomes still fail; what changes is
             // whether we claim there is no path or admit we stopped looking.
             if ($resolver->wasTruncated()) {
-                $this->error("Path analysis from '{$source}' to '{$parentTarget}' via '{$event}' was truncated at the search limit.");
-                $this->line('A path may still exist — this is not a finding that none does.');
+                $this->error("Path analysis from '{$source}' to '{$parentTarget}' via '{$event}' was truncated at the search limit ({$maxIterations} iterations).");
+                $this->line('A path may still exist — this is not a finding that none does. Raise the ceiling with --max-iterations.');
             } else {
                 $this->error("No path from '{$source}' to '{$parentTarget}' via '{$event}'.");
             }
@@ -101,8 +101,11 @@ class MachineScenarioCommand extends Command
         // partial set. Reporting it only on the empty branch let a truncated search that
         // happened to find one route look like an exhaustive answer.
         if ($resolver->wasTruncated()) {
-            $this->warn("Path analysis was truncated at the search limit; other paths from '{$source}' to '{$parentTarget}' may exist.");
-            $this->line('Raise the ceiling with --max-iterations to search further.');
+            // Naming the ceiling is the difference between a warning and an actionable one:
+            // a large machine trips the default on a query whose answer is already complete,
+            // and without the number the reader cannot tell which value to raise past.
+            $this->warn("Path analysis was truncated at the search limit ({$maxIterations} iterations); other paths from '{$source}' to '{$parentTarget}' may exist.");
+            $this->line('Raise the ceiling with --max-iterations to search further — a large machine can need 50000 or more.');
         }
 
         // Select path
