@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Tarfinlabs\EventMachine\Analysis\PathType;
 use Tarfinlabs\EventMachine\Analysis\MachinePath;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
-use Tarfinlabs\EventMachine\Definition\MachineDefinition;
-use Tarfinlabs\EventMachine\Analysis\ParallelPathGroup;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
+use Tarfinlabs\EventMachine\Analysis\ParallelPathGroup;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Jobs\ProcessJob;
 
 /**
@@ -400,8 +400,11 @@ test('a nested parallel escape does not carry the region walk out of its region'
 
     expect($steps[count($steps) - 1]->stateId)->toContain('faraway');
 
-    // 'sink' is one hop PAST the escape target, reachable only by continuing to walk at
-    // machine level. Its appearance in a region path is the breach itself.
+    // A belt-and-braces guard rather than the assertion that catches the regression: with
+    // the boundary check removed the walk is stopped one hop later by the other
+    // leavesBoundary() test inside enumerateTransitions, so 'sink' never reaches a region
+    // path either way. What actually fails then is the REGION_EXIT type above (it becomes
+    // REGION_DEFERRED) and the machine-level expectation below.
     foreach ($raPaths as $path) {
         expect($path->signature())->not->toContain('sink');
     }
