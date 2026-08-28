@@ -91,7 +91,7 @@ abstract class MachineScenario
     /**
      * @param  array<string, mixed>  $rawParams
      */
-    public function hydrateParams(array $rawParams): void
+    public function hydrateParams(array $rawParams, bool $validate = true): void
     {
         $paramDefs = $this->params();
 
@@ -103,16 +103,28 @@ abstract class MachineScenario
 
         $rules = $this->extractValidationRules($paramDefs);
 
-        $validator = Validator::make($rawParams, $rules);
+        // Validation belongs to the moment the params are ACCEPTED, not to every later read of
+        // them. Rules that read the world — `exists`, `after_or_equal:today`, a unique check —
+        // can go from passing to failing with nothing about the machine having changed: the row
+        // a param pointed at is deleted, or midnight passes. Re-running them on restore turned
+        // that into an unloadable machine, so callers restoring stored params pass false.
+        if ($validate) {
+            $validator = Validator::make($rawParams, $rules);
 
-        if ($validator->fails()) {
-            throw ScenarioConfigurationException::invalidScenarioParams(
-                scenarioClass: static::class,
-                errors: $validator->errors()->all(),
-            );
+            if ($validator->fails()) {
+                throw ScenarioConfigurationException::invalidScenarioParams(
+                    scenarioClass: static::class,
+                    errors: $validator->errors()->all(),
+                );
+            }
         }
 
-        $this->resolvedParams = $validator->validated();
+        // Without validation there is no validated() to read, so the stored values are taken
+        // as they are, narrowed to the keys the scenario declares. They were validated once,
+        // when they were accepted; this is a read of that decision, not a second one.
+        $this->resolvedParams = $validate
+            ? $validator->validated()
+            : array_intersect_key($rawParams, $rules);
     }
 
     /**
