@@ -95,7 +95,7 @@ hands ownership upward.
 | T2 | A path that was cut short is distinguishable from one that reached a terminal point, in every one of those surfaces. |
 | T3 | No path kind introduced by this change enters the coverage denominator unless an observed run could match it. Path kinds already in the denominator keep their current treatment — `GUARD_BLOCK` is already there and already unmatchable, and changing that is a T5 break, not this change's business. |
 | T4 | Coverage never reports a passing figure computed over an enumeration that did not complete, without disclosing that it did not complete. |
-| T5 | A consumer whose suite passes today keeps passing, unless its machine contains a parallel state. Region path counts, `ParallelPathGroup::combinationCount()` and the console `PARALLEL:` block move for any parallel machine, because region enumeration escapes through inherited ancestor transitions today — that is §2.1's premise. So the blast radius is not only machines whose parallel state carries its own transitions: it is every parallel machine where the parallel state **or an ancestor** carries one. A parallel machine with no transition at or above the parallel state produces byte-identical output before and after. |
+| T5 | **Withdrawn as stated.** It read "a consumer whose suite passes today keeps passing, unless its machine contains a parallel state", and that was true of E3/E4 only. Following the continuations out of a final state (added later, see §12's D1 note) moves path counts on machines with **no** parallel state at all — measured at 3 paths → 7 on a plain compound machine — so the carve-out no longer holds and no suite is guaranteed untouched. What remains true of E3/E4 alone: Region path counts, `ParallelPathGroup::combinationCount()` and the console `PARALLEL:` block move for any parallel machine, because region enumeration escapes through inherited ancestor transitions today — that is §2.1's premise. So the blast radius is not only machines whose parallel state carries its own transitions: it is every parallel machine where the parallel state **or an ancestor** carries one. A parallel machine with no transition at or above the parallel state produces byte-identical output before and after. |
 | T6 | A region sub-enumerator never walks outside its own region, following a region-declared escape included. It records the exit edge and stops at the boundary; continuing past the target is machine-level work. A nested parallel's escape target lies outside the enclosing region, so without this the region walk resumes at machine level and re-enumerates every parallel it reaches — work multiplying per nesting level while the top-level path count stays flat, so neither ceiling trips and the analysis still reports itself complete. |
 | T7 | `maxPaths` bounds the paths recorded by the analysis as a whole, region paths included. Region paths are handed to `ParallelPathGroup` rather than to the enumerator's own `$paths`, so a budget derived from `$paths` alone is re-issued near-full to every region at every nesting level, and a result can carry many times `maxPaths` while `pathLimitReached` stays false. |
 
@@ -175,7 +175,7 @@ surfacing to satisfy T1 and T2.
 encounter of a parallel state does not re-run region enumeration. Any depth or boundary rule that
 assumes the dispatch always runs is unsound.
 
-### 7.6 Coverage has no per-case dispatch to update, but four per-type sites
+### 7.6 Coverage has no per-case dispatch to update, but five per-type sites
 
 There is no `match` or `switch` over `PathType` in the package. A new case instead affects
 `PathEnumerationResult`'s per-type filters, `MachinePathsCommand`'s console grouping,
@@ -206,6 +206,13 @@ has no route to the result at all, which T1 and T2 require it to have.
 
 The reproduction stub is `tests/Stubs/Machines/Parallel/ReentrantParallelMachine.php`: two parallel
 states, each carrying a transition that re-enters a parallel state.
+
+**On the production figures recorded during implementation.** T16 pinned 239 / 99 / 223 paths for
+CarSales, IyiFinansCarSales and TractorSales. Those were correct when measured and remain the right
+record of that task, but they are the **pre-final-state** numbers: the later change that follows
+continuations out of a final state raises the same three machines to **878 / 390 / 862**, verified
+by running one harness against both trees. Anyone comparing against T16's evidence should expect
+the larger figures from the shipped code.
 
 E1's failure modes are SIGSEGV, which cannot be caught and which kills a whole worker under parallel
 Pest, and non-termination, which no in-process assertion can observe at all. Every check that
@@ -257,10 +264,11 @@ so agents do not read a truncated analysis as a complete one.
 
 | Change | Impact |
 |---|---|
-| `PathType` gains cases | the four per-type sites in §7.6 must handle them; no consumer `match` exists to break |
+| `PathType` gains cases | the five per-type sites in §7.6 must handle them; no consumer `match` exists to break |
 | `PathEnumerationResult` and `PathEnumerator` gain settings | appended with defaults; existing construction sites unaffected |
 | E3/E4 change what is enumerated for parallel machines | path counts, region path counts and coverage percentages move for every parallel machine whose parallel state **or an ancestor** carries a transition — the T5 exception. Region enumeration escapes through inherited ancestor transitions today, which is §2.1's premise, so the radius is wider than "parallel states carrying their own transitions" (an earlier revision) but narrower than "every parallel machine" (the revision after it): with no transition at or above the parallel state, output is byte-identical |
 | S2 adds a step to routes through parallel regions | those routes did not resolve at all before |
+| Final states gain continuations (both analysers) | path counts rise on **any** machine with a final state under an inherited handler, a guarded compound `@done`, or a delegating final state — parallel or not. This is the release's largest blast radius: 239→878, 99→390, 223→862 on the production machines, and 3→7 on a plain compound one. Coverage percentages fall accordingly and `assertAllPathsCovered()` fails where it passed |
 | `machine:paths --json` gains keys | additive; no existing key changes meaning |
 
 An existing key's meaning is not redefined. Where a new reading is wanted, it gets a new key.
