@@ -11,6 +11,7 @@ use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Definition\StateDefinition;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\TransitionDefinition;
 use Tarfinlabs\EventMachine\Exceptions\NoScenarioPathFoundException;
 
@@ -469,14 +470,30 @@ class ScenarioPathResolver
             if ($childMachineClass === '') {
                 continue;
             }
-            if (!class_exists($childMachineClass)) {
+            // is_subclass_of, not class_exists: the value comes from a machine config, so it can
+            // name anything, and the next line calls a static method on it.
+            if (!is_subclass_of($childMachineClass, Machine::class)) {
                 continue;
             }
 
-            // Check if the child state part exists in the child machine
-            $childDefinition = $childMachineClass::definition();
-            $childTarget     = $parts[1];
-            $found           = $childDefinition->idMap[$childTarget]
+            // Check if the child state part exists in the child machine.
+            //
+            // A child whose definition() throws means "no path through this child", which is
+            // what continue already says here. Letting it escape was worse than useless: this
+            // runs from MachineScenarioCommand outside its try/catch, so the throw reached the
+            // user as a stack trace instead of the command's own "no path" report.
+            try {
+                $childDefinition = $childMachineClass::definition();
+            } catch (Throwable) {
+                continue;
+            }
+
+            if (!$childDefinition instanceof MachineDefinition) {
+                continue;
+            }
+
+            $childTarget = $parts[1];
+            $found       = $childDefinition->idMap[$childTarget]
                 ?? $childDefinition->idMap[$childDefinition->id.'.'.$childTarget]
                 ?? null;
 
