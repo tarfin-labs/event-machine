@@ -42,6 +42,7 @@ use Tarfinlabs\EventMachine\Exceptions\RestoringStateException;
 use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
 use Tarfinlabs\EventMachine\Exceptions\MachineLockTimeoutException;
 use Tarfinlabs\EventMachine\Exceptions\MachineAlreadyRunningException;
+use Tarfinlabs\EventMachine\Exceptions\MachineOutputResolutionException;
 use Tarfinlabs\EventMachine\Exceptions\MachineDefinitionNotFoundException;
 
 class Machine implements Castable, JsonSerializable, Stringable
@@ -1485,9 +1486,14 @@ class Machine implements Castable, JsonSerializable, Stringable
                 $arguments                    = explode(',', $colonArgs);
             }
 
-            $outputBehavior = is_string($outputBehavior)
-                ? $this->definition->resolveOutputKey($outputBehavior)
-                : resolve($outputBehavior);
+            // Not callable and not a string leaves array, object and scalar. resolve() takes
+            // a string abstract or a callable, so passing one of those through produced a
+            // container error that named neither the machine nor the state it came from.
+            if (!is_string($outputBehavior)) {
+                throw MachineOutputResolutionException::unresolvableDefinition($outputBehavior);
+            }
+
+            $outputBehavior = $this->definition->resolveOutputKey($outputBehavior);
         }
 
         $params = InvokableBehavior::injectInvokableBehaviorParameters(
