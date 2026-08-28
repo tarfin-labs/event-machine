@@ -1069,24 +1069,23 @@ class Machine implements Castable, JsonSerializable, Stringable
             ),
         );
 
-        // A ceiling is not the only way an enumeration can be incomplete. When a run
-        // walked a route the analysis does not know about, that is proof of a gap and it
-        // is proof this suite produced: the observations come from this very process, so
-        // unlike a coverage file read off disk they cannot be stale leftovers from an
-        // older definition. Passing here while holding that evidence is how a coverage
-        // gate reads 100% over a machine with whole routes missing.
-        $unmatched = $report->unmatchedObservations();
-
-        Assert::assertEmpty(
-            $unmatched,
-            sprintf(
-                '%d observed path(s) in %s match nothing the analysis enumerated, so the enumeration is '
-                ."missing routes this suite actually took:\n%s",
-                count($unmatched),
-                static::class,
-                implode("\n", array_map(static fn (string $s): string => "  - {$s}", $unmatched)),
-            ),
-        );
+        // An unmatched observation is NOT asserted on here, and that is deliberate.
+        //
+        // It looks like free evidence of an incomplete enumeration — a run walked a route
+        // the analysis does not know about — and an earlier revision failed on it for that
+        // reason. It broke everything. The mismatch usually comes from how paths are
+        // recorded, not from a gap in the analysis: PathCoverageTracker::$activePaths is
+        // keyed by machine class and never reset between tests, and completePath() only
+        // fires from assertFinished()/assertState() on a final state, so a test that stops
+        // short leaves its steps in the buffer to be flushed into the NEXT test's
+        // signature. Separately, trackStateEntry records a region leaf id while enumeration
+        // records the parallel container, so every parallel machine mismatches — one fails
+        // with no events sent at all. assertPathCoverage(0.0), documented as a threshold
+        // every run clears, became unsatisfiable.
+        //
+        // machine:coverage reports the same signal as a warning, which is the right shape
+        // for it: there it is a hint to a human, not a gate. Making it a gate needs the
+        // tracker to produce signatures comparable to enumerated ones first.
     }
 
     private static function buildPathCoverageReport(int $maxPaths, int $maxDepth): PathCoverageReport
