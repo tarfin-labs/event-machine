@@ -109,9 +109,39 @@ class MachinePathsCommand extends Command
             $this->warn('  Analysis incomplete — enumeration stopped early. The paths below are what was reached, not the full set.');
         }
 
-        foreach ($result->parallelGroups as $group) {
-            $regionCount = count($group->regionPaths);
-            $this->line("  Parallel regions: 1 ({$regionCount} regions, {$group->combinationCount()} combination".($group->combinationCount() !== 1 ? 's' : '').')');
+        // One summary line for the whole machine. This printed once per group with a
+        // hardcoded "1", so a machine with two parallel states claimed "Parallel
+        // regions: 1" twice — invisible while every test machine had a single parallel
+        // state, wrong as soon as one had two.
+        if ($result->parallelGroups !== []) {
+            $parallelCount = count($result->parallelGroups);
+            $regionCount   = 0;
+
+            foreach ($result->parallelGroups as $group) {
+                $regionCount += count($group->regionPaths);
+            }
+
+            $this->line(sprintf(
+                '  Parallel states: %d (%d region%s)',
+                $parallelCount,
+                $regionCount,
+                $regionCount === 1 ? '' : 's',
+            ));
+
+            foreach ($result->parallelGroups as $group) {
+                $key = str_contains($group->parallelStateId, '.')
+                    ? substr($group->parallelStateId, strrpos($group->parallelStateId, '.') + 1)
+                    : $group->parallelStateId;
+
+                $this->line(sprintf(
+                    '    %s: %d region%s, %d combination%s',
+                    $key,
+                    count($group->regionPaths),
+                    count($group->regionPaths) === 1 ? '' : 's',
+                    $group->combinationCount(),
+                    $group->combinationCount() === 1 ? '' : 's',
+                ));
+            }
         }
 
         // Group paths by type
