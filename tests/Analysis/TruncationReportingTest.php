@@ -433,3 +433,61 @@ test('the ceiling is not charged for region work the result discards', function 
         expect($justUnder->analysisTruncated())->toBeTrue("depth {$depth} at maxPaths=".($retained - 1));
     }
 });
+
+test('a region truncation is disclosed even when the parent records nothing', function (): void {
+    // handleParallel propagates two region flags. The depth half is covered above; this is
+    // the path half, and finding a shape for it took three attempts. The shared budget
+    // normally makes the parent's own recordPath refuse first, which raises the flag
+    // without the propagation — so a plain region, and then a nested one, both left the
+    // mutation alive, and a 2400-case sweep wrongly concluded the line was unreachable.
+    //
+    // The shape that isolates it: a parallel whose @done branch has NO target. The @done
+    // loop skips the null target so nothing is enumerated, while the state still counts as
+    // having an outcome, so neither a continuation nor a dead end is recorded. No
+    // machine-level recordPath runs at any budget — verified below — and propagating the
+    // region's flag is the only way the result can admit it was cut short.
+    $regions = [];
+
+    foreach (['ra', 'rb'] as $regionKey) {
+        $branches = [];
+        $fan      = [];
+
+        for ($j = 0; $j < 5; $j++) {
+            $branches['leaf'.$j] = ['type' => 'final'];
+            $fan['E'.$j]         = 'leaf'.$j;
+        }
+
+        $branches['fan']     = ['on' => $fan];
+        $regions[$regionKey] = ['initial' => 'fan', 'states' => $branches];
+    }
+
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'targetless_done_probe',
+        'initial' => 'idle',
+        'states'  => [
+            'idle' => ['on' => ['START' => 'work']],
+            'work' => [
+                'type'   => 'parallel',
+                '@done'  => [['actions' => 'noteAction']],
+                'states' => $regions,
+            ],
+        ],
+    ], behavior: [
+        'actions' => ['noteAction' => static function (): void {}],
+    ]);
+
+    // Ten region paths in total, so a budget of eight cuts the second region short.
+    $cut = (new PathEnumerator($definition, 8))->enumerate();
+
+    expect($cut->paths)->toBe([], 'the parent must record nothing, or its own gate would raise the flag')
+        ->and($cut->pathLimitReached)->toBeTrue()
+        ->and($cut->analysisTruncated())->toBeTrue();
+
+    // And with room for all ten it reports itself complete, so the flag above is not
+    // simply always on for this shape.
+    $whole = (new PathEnumerator($definition, 10))->enumerate();
+
+    expect($whole->paths)->toBe([])
+        ->and($whole->pathLimitReached)->toBeFalse()
+        ->and($whole->analysisTruncated())->toBeFalse();
+});
