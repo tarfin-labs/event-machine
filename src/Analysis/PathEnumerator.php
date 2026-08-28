@@ -532,7 +532,11 @@ class PathEnumerator
         $ownTransitions = [];
 
         foreach ($this->graph->transitionsFrom($state) as $event => $transition) {
-            if (str_starts_with((string) $event, '@done') || $event === '@fail') {
+            if (str_starts_with($event, '@done')) {
+                continue;
+            }
+
+            if ($event === '@fail') {
                 continue;
             }
 
