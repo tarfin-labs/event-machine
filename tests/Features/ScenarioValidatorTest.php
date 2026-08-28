@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Artisan;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioValidator;
 use Tarfinlabs\EventMachine\Commands\MachineScenarioValidateCommand;
@@ -85,6 +86,24 @@ test('the validate command exposes the search ceiling it hands to the validator'
 
     expect($definition->hasOption('max-iterations'))->toBeTrue()
         ->and($definition->getOption('max-iterations')->getDefault())->toBe('1000');
+});
+
+test('the validate command actually hands its ceiling to the validator', function (): void {
+    // Asserting the option exists is not enough: deleting `maxIterations: $this->…` from
+    // the ScenarioValidator construction left the whole suite green, because the only test
+    // touching the flag failed inside handle()'s guard — which runs BEFORE the wiring.
+    // This drives the flag end to end and reads the outcome instead.
+    Artisan::call('machine:scenario-validate', [
+        'machine'          => ScenarioTestMachine::class,
+        '--max-iterations' => 1,
+    ]);
+    $capped = Artisan::output();
+
+    Artisan::call('machine:scenario-validate', ['machine' => ScenarioTestMachine::class]);
+    $uncapped = Artisan::output();
+
+    expect($capped)->toContain('truncated at the search limit')
+        ->and($uncapped)->not->toContain('truncated at the search limit');
 });
 
 // ── Level 1 — Static checks ─────────────────────────────────────────────────
