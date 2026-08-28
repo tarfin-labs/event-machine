@@ -8,6 +8,7 @@ use ReflectionClass;
 use Illuminate\Console\Command;
 use Spatie\LaravelData\Optional;
 use Illuminate\Support\Facades\File;
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
@@ -44,7 +45,11 @@ class ExportXStateCommand extends Command
             }
         }
 
-        if (!class_exists($machinePath)) {
+        // is_subclass_of, not just class_exists: `$machinePath::definition()` on an
+        // arbitrary class calls a stranger's static method and, when it has none, replaces
+        // a clean exit code with an uncaught TypeError. The path may also have been
+        // require_once'd above, so by here it can be any class the caller pointed at.
+        if (!class_exists($machinePath) || !is_subclass_of($machinePath, Machine::class)) {
             $this->error("Machine class not found: {$machinePath}");
 
             return self::FAILURE;

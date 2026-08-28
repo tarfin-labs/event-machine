@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Commands;
 
 use Illuminate\Console\Command;
+use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Analysis\PathStep;
 use Tarfinlabs\EventMachine\Analysis\MachinePath;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
@@ -37,7 +38,11 @@ class MachinePathsCommand extends Command
             }
         }
 
-        if (!class_exists($machinePath)) {
+        // is_subclass_of, not just class_exists: `$machinePath::definition()` on an
+        // arbitrary class calls a stranger's static method and, when it has none, replaces
+        // a clean exit code with an uncaught TypeError. The path may also have been
+        // require_once'd above, so by here it can be any class the caller pointed at.
+        if (!class_exists($machinePath) || !is_subclass_of($machinePath, Machine::class)) {
             $this->error("Machine class not found: {$machinePath}");
 
             return self::FAILURE;
