@@ -305,7 +305,15 @@ readonly class PathEnumerationResult
                 continue;
             }
 
-            // Try to get child definition
+            // Try to get child definition.
+            //
+            // Building a child definition runs that machine's own config, which can throw
+            // for reasons that have nothing to do with the parent: a missing behavior
+            // class, a definition that needs runtime config, a half-written stub. This is
+            // a warning feature, so one unbuildable child must not take down the whole
+            // report for every other state. The cost is that such a child is skipped
+            // silently — an unhandled outcome there goes unmentioned rather than being
+            // reported as unknown, which is worth revisiting separately.
             try {
                 if (!class_exists($def->machineClass)) {
                     continue;
