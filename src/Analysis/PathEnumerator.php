@@ -786,16 +786,19 @@ class PathEnumerator
             ) || $enumerated;
         }
 
-        // Dead-end parallel: no @done, no @fail and no continuations of its own. The
-        // test stays structural, as it was before, so a parallel whose only outcome is
-        // a targetless @done still records nothing rather than newly claiming a dead
-        // end. The deferred branch can only be reached under a boundary.
+        // Dead-end parallel: no @done, no @fail, no continuations of its own, and no
+        // region-declared escape followed above. The structural test alone stopped being
+        // sufficient once escapes became followable — a parallel whose only continuation
+        // is an escape declared inside one of its regions has no outcome of its own, yet
+        // is plainly not a dead end. Consulting $enumerated keeps the two from being
+        // recorded for the same state. A targetless @done still records nothing rather
+        // than newly claiming a dead end. The deferred branch needs a boundary to be hit.
         $hasOutcome = $state->onDoneTransition instanceof TransitionDefinition
             || $state->onFailTransition instanceof TransitionDefinition
             || $ownTransitions !== []
             || $alwaysTransition instanceof TransitionDefinition;
 
-        if (!$hasOutcome) {
+        if (!$hasOutcome && !$enumerated) {
             $this->recordPath($steps, PathType::DEAD_END);
         } elseif (!$enumerated && $deferred) {
             $this->recordPath($steps, PathType::REGION_DEFERRED);
