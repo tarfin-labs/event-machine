@@ -191,7 +191,7 @@ A parallel state is analysed at two levels, and the distinction matters when rea
 | `REGION_EXIT` | a transition **declared inside** the region targets a state outside it. At runtime this re-points that region's slot while the parallel state stays active. The final step names the escaping event and its target. |
 | `REGION_DEFERRED` | every continuation of that state is declared at or above the parallel state, so machine-level enumeration owns it. This is not a dead end — the runtime can leave the state; it is simply represented one level up. |
 
-A transition is never represented at both levels. One inherited from at or above the parallel state is followed at machine level only, which is why a region records `REGION_DEFERRED` rather than repeating it.
+The two types divide the work differently. A transition inherited from at or above the parallel state is followed at machine level only, which is why a region records `REGION_DEFERRED` rather than repeating it. A transition declared *inside* a region that leaves it works the other way round: the region records the edge as `REGION_EXIT`, and machine-level enumeration continues from that target, so this one edge does appear at both levels — once as the region's exit, once as the continuation beyond it. Without that second half, everything downstream of a region escape would be absent from the analysis with no truncation flag to show for it.
 
 ### When the Analysis Stops Early
 

@@ -572,7 +572,7 @@ Enable dispatch mode via `config/machine.php` → `parallel_dispatch.enabled => 
 
 Two region path types exist only here, and neither is a defect:
 
-- **`REGION_EXIT`** — a transition *declared inside* the region targets a state outside it. At runtime this re-points that region's slot while the parallel state stays active. It is not the same as a transition declared *on* the parallel state, which exits the whole thing.
+- **`REGION_EXIT`** — a transition *declared inside* the region targets a state outside it. At runtime this re-points that region's slot while the parallel state stays active. It is not the same as a transition declared *on* the parallel state, which exits the whole thing. Machine-level enumeration continues from that target, so the edge shows up in both the region's paths and the machine's.
 - **`REGION_DEFERRED`** — every continuation of that state is declared at or above the parallel state, so machine-level enumeration owns it. **This is not a dead end** — the runtime can leave the state; it is just represented one level up.
 
 **Never read a truncated analysis as a complete one.** Enumeration is bounded by `--max-paths` (default 1000) and `--max-depth` (default 200). A branch hitting either ceiling is recorded as `TRUNCATED`, the console names the ceiling that fired, and `--json` carries `analysis_truncated`, `path_limit_reached`, `depth_limit_reached` and `truncated_paths`. Check that flag before concluding a path does not exist — and note truncated paths are excluded from coverage accounting, so `machine:coverage` can read 100% over a partial analysis and reports `analysis_truncated` for exactly that reason.
