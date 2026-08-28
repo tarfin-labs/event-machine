@@ -25,8 +25,11 @@ function emptyCoverageFile(): string
  * Run the command once and report both halves of the result.
  *
  * The exit code and the console output are asserted by different tests, but the
- * setup around them — a throwaway coverage file, and resetting the tracker so one
- * test's observations cannot leak into the next — is the same either way.
+ * throwaway coverage file around them is the same either way.
+ *
+ * This helper deliberately does NOT reset the tracker afterwards. It used to, and that
+ * hid the very thing the command is supposed to guarantee: the command's own cleanup
+ * could have been deleted and the suite would have stayed green.
  *
  * @param  array<string, mixed>  $options
  *
@@ -42,7 +45,6 @@ function invokeCoverage(string $machine, array $options): array
         return ['code' => $code, 'output' => Artisan::output()];
     } finally {
         @unlink($from);
-        PathCoverageTracker::reset();
     }
 }
 
@@ -147,4 +149,59 @@ test('the ceilings are configurable, so a truncated gate can be fixed', function
 
     expect(coverageExitCode(ReentrantParallelMachine::class, ['--min' => 0, '--max-depth' => 200]))
         ->toBe(Command::SUCCESS);
+});
+
+// ── Cleanup is the command's job, not the caller's ───────────────────────────
+
+test('the imported observations are dropped even when the command fails', function (): void {
+    // Importing populates a process-wide static singleton. Resetting it only on the
+    // success path left every failure return leaking one invocation's observations into
+    // whatever ran next in the same process. This test calls Artisan directly rather
+    // than through invokeCoverage() so nothing but the command itself can do the
+    // cleanup — if the command's `finally` goes away, this goes red.
+    $from = sys_get_temp_dir().'/em-coverage-leak-'.bin2hex(random_bytes(6)).'.json';
+
+    file_put_contents($from, json_encode([
+        ReentrantParallelMachine::class => [
+            [
+                'signature' => 'idle→[START]→data_collection',
+                'test'      => 'a previous invocation',
+                'steps'     => [
+                    ['state' => 'idle', 'event' => null],
+                    ['state' => 'data_collection', 'event' => 'START'],
+                ],
+            ],
+        ],
+    ], JSON_THROW_ON_ERROR));
+
+    try {
+        // --min=abc is one of the failure returns that sits after the import.
+        $exit = Artisan::call('machine:coverage', [
+            'machine' => ReentrantParallelMachine::class,
+            '--from'  => $from,
+            '--min'   => 'abc',
+        ]);
+        Artisan::output();
+
+        expect($exit)->toBe(Command::FAILURE)
+            ->and(PathCoverageTracker::observedPaths(ReentrantParallelMachine::class))->toBe([]);
+    } finally {
+        @unlink($from);
+        PathCoverageTracker::reset();
+    }
+});
+
+test('a command run does not switch tracking off for the rest of the process', function (): void {
+    // reset() also clears the enabled flag. TracksPathCoverage enables the tracker once
+    // per process and exports on shutdown, so a blanket reset here would stop collection
+    // for the remainder of a suite and skip the export — a silently empty coverage file.
+    PathCoverageTracker::enable();
+
+    try {
+        runCoverage(ReentrantParallelMachine::class);
+
+        expect(PathCoverageTracker::isEnabled())->toBeTrue();
+    } finally {
+        PathCoverageTracker::reset();
+    }
 });
