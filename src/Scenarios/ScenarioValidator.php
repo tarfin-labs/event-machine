@@ -21,8 +21,15 @@ class ScenarioValidator
     /** @var list<string> Accumulated validation errors. */
     private array $errors = [];
 
+    /**
+     * @param  int  $maxIterations  Search budget handed to the path resolver. Defaults
+     *                              to the resolver's own default; it is a parameter so
+     *                              the truncated-search branch below is reachable from a
+     *                              test, which it otherwise would not be.
+     */
     public function __construct(
         private readonly MachineScenario $scenario,
+        private readonly int $maxIterations = 1000,
     ) {}
 
     /**
@@ -173,7 +180,7 @@ class ScenarioValidator
 
         $definition = $machineClass::definition();
         $graph      = new MachineGraph($definition);
-        $resolver   = new ScenarioPathResolver($graph);
+        $resolver   = new ScenarioPathResolver($graph, $this->maxIterations);
 
         // Check 1: Path exists from source to target
         try {
