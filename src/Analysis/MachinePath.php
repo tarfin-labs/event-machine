@@ -8,8 +8,13 @@ namespace Tarfinlabs\EventMachine\Analysis;
  * An enumerated path through a state machine.
  *
  * Represents an ordered sequence of PathSteps from the initial state
- * to a terminal point (FINAL, cycle, guard block, or dead end).
+ * to a terminal point (FINAL, cycle, guard block, or dead end), or to the
+ * point where enumeration stopped (depth ceiling, region boundary).
  * Used for both static analysis display and coverage matching.
+ *
+ * Only GUARD_BLOCK carries a signature suffix; every other type — including
+ * TRUNCATED, REGION_EXIT and REGION_DEFERRED — is identified by its type,
+ * not by a marker inside the signature.
  */
 readonly class MachinePath
 {
