@@ -547,6 +547,24 @@ php artisan machine:scenario-validate --scenario=AtCheckingProtocolScenario
 | `--scenario=` | Validate a single scenario by slug, class basename, or FQCN |
 | `--max-iterations=N` | Search budget for each scenario's reachability check (default: 1000). A scenario whose search hits the cap is reported as *truncated at the search limit* — a different finding from "no path". |
 
+### Scenario files that could not be loaded
+
+A scenario file is skipped when nothing loads under the class name its path implies, or when the
+class loads but cannot be constructed. Skipping is deliberate — one broken file must not stop the
+other scenarios being validated — but the command names them rather than dropping them:
+
+```
+CarSalesMachine (11 scenarios)
+
+  12 scenario files found, 11 validated — 1 could not be loaded:
+  ✗ AtAllocationUnderReviewScenario  (not validated)
+    class not found — the file does not declare App\Machines\CarSales\Scenarios\AtAllocationUnderReviewScenario
+```
+
+A file in that state **fails the command** (`1 not loaded` in the summary, exit `1`). The usual
+cause is a namespace move that left the file behind, which is invisible in every other way: the
+scenario simply stops being exercised.
+
 ### What It Checks
 
 **Level 1 — Static validation:** machine class exists, source/target/event valid, plan() routes exist, behavior classes exist, delegation outcomes on correct states, child scenario machine matches.
