@@ -2,6 +2,29 @@
 
 EventMachine provides several Artisan commands for managing state machines.
 
+## Resolving the machine argument
+
+`machine:paths`, `machine:coverage`, `machine:xstate`, `machine:scenario` and
+`machine:scenario-validate` share one guard on the class you name. Each failure prints a reason
+and exits `1` rather than raising:
+
+| Message | Meaning |
+|---|---|
+| `Machine class not found: X` | `X` does not exist, or exists but does not extend `Machine`. |
+| `X: The machine definition is not defined…` | `X` extends `Machine` but never overrides `definition()`. |
+| `X::definition() returned no machine definition.` | `definition()` is implemented but returned `null`. |
+| `X::definition() failed: …` | `definition()` threw. The message is the one it threw. |
+
+`machine:paths`, `machine:coverage` and `machine:xstate` also accept a **file path** instead of a
+class name. Resolving one `require_once`s the file, so it runs that file's top-level code; a path
+that is a directory, is unreadable, cannot be parsed, or throws while loading is reported by name:
+
+| Message | Meaning |
+|---|---|
+| `Could not resolve a Machine class from the given file path.` | No `class … extends …` was found — including when the path is a directory. |
+| `File is not readable: …` | The file exists but cannot be opened. |
+| `Loading … failed: …` | The file raised while being loaded — a parse error, or code that throws at load time. |
+
 ## machine:validate
 
 Validate machine configuration and wiring. Exits non-zero on failure, so it can gate CI.
