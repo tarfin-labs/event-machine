@@ -46,13 +46,16 @@ class ExportXStateCommand extends Command
             }
         }
 
-        if (!$this->machineDefinitionFor($machinePath) instanceof MachineDefinition) {
+        $definition = $this->machineDefinitionFor($machinePath);
+
+        if (!$definition instanceof MachineDefinition) {
             return self::FAILURE;
         }
 
-        $machine = $machinePath::create();
-
-        $xstate = $this->buildMachineNode($machine->definition);
+        // The definition is what gets exported, so take it from the guard that already
+        // validated it rather than starting an actor to read the same object off. That also
+        // removes a static call on a value the argument parser types as mixed.
+        $xstate = $this->buildMachineNode($definition);
 
         $xstate = $this->convertEmptyArraysToObjects($xstate);
         $json   = json_encode($xstate, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -63,8 +66,8 @@ class ExportXStateCommand extends Command
             return self::SUCCESS;
         }
 
-        $output  = $this->resolveOutputPath($machinePath, $machine->definition->root->key);
-        $content = $this->wrapOutput($json, $machine->definition->id, $machine->definition);
+        $output  = $this->resolveOutputPath($machinePath, $definition->root->key);
+        $content = $this->wrapOutput($json, $definition->id, $definition);
 
         File::put($output, $content);
 
