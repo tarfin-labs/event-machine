@@ -1054,10 +1054,11 @@ class PathEnumerator
         }
 
         // If nothing was enumerated (e.g., only @always transitions exist but we skip them).
-        // Under a boundary, "nothing enumerated but something was deferred" is E6: every
-        // continuation belongs to machine level, which is not a dead end — the runtime can
-        // leave this state. $deferred is only ever true when a boundary is set, so the
-        // no-boundary path records exactly what it recorded before.
+        // Under a boundary, "nothing enumerated but something was deferred" means every
+        // continuation is declared at or above the parallel state, so machine level owns
+        // them: not a dead end, because the runtime can still leave this state. $deferred
+        // is only ever true when a boundary is set, so the no-boundary path records
+        // exactly what it recorded before.
         //
         // $ownsOutcome is false when handleParallel calls this: a parallel state may have
         // already enumerated @done/@fail branches this function cannot see, so it owns the
