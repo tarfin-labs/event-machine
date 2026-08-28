@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioValidator;
+use Tarfinlabs\EventMachine\Commands\MachineScenarioValidateCommand;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Events\ApproveEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligibleGuard;
@@ -72,6 +73,18 @@ test('validator reports a truncated search as truncated, not as a missing path',
     expect($errors)->toContain('was truncated at the search limit')
         ->and($errors)->toContain('a path may still exist')
         ->and($errors)->not->toContain('No path from');
+});
+
+test('the validate command exposes the search ceiling it hands to the validator', function (): void {
+    // ScenarioValidator has taken maxIterations since this work started, but the command
+    // never passed it and offered no option, so a scenario whose path search truncated
+    // reported a failure with no lever to act on — while every other command exposing the
+    // same resolver could raise its ceiling. Documenting --max-iterations as the remedy
+    // named a flag this command did not have.
+    $definition = (new MachineScenarioValidateCommand())->getDefinition();
+
+    expect($definition->hasOption('max-iterations'))->toBeTrue()
+        ->and($definition->getOption('max-iterations')->getDefault())->toBe('1000');
 });
 
 // ── Level 1 — Static checks ─────────────────────────────────────────────────
