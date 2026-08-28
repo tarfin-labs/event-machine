@@ -606,6 +606,10 @@ class PathEnumerator
                     continue;
                 }
                 $escapeStep = $regionPath->steps[count($regionPath->steps) - 1];
+                // First escape to a given target wins. A second escape reaching the same
+                // state adds no new continuation to follow — everything past the target
+                // is identical — so it is deduplicated here. Its own event and guards are
+                // not lost: the region path that carries them is still recorded.
                 $escapeTargets[$escapeStep->stateId] ??= $escapeStep;
             }
         }
