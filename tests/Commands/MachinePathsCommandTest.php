@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
+use Tarfinlabs\EventMachine\ContextManager;
+use Symfony\Component\Console\Command\Command;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\RegionBoundaryMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ReentrantParallelMachine;
 
@@ -163,4 +165,22 @@ test('each region path is tagged with its own type', function (): void {
     expect($output)->toContain('PARALLEL: collecting')
         ->and($output)->toContain('[region_exit]')
         ->and($output)->toContain('[region_deferred]');
+});
+
+test('a class that is not a machine is refused before its statics are touched', function (): void {
+    // class_exists alone let any resolvable class through, and the next line called
+    // `$class::definition()` on it — a stranger's static method, and an uncaught TypeError
+    // where an exit code belonged. The commands accept a FILE PATH too, which is
+    // require_once'd, so the class reaching this check is whatever the caller pointed at.
+    $exit = Artisan::call('machine:paths', ['machine' => ContextManager::class]);
+
+    expect($exit)->toBe(Command::FAILURE)
+        ->and(Artisan::output())->toContain('Machine class not found');
+});
+
+test('a real machine still resolves', function (): void {
+    // The control: the guard must not reject the thing it exists to admit.
+    $exit = Artisan::call('machine:paths', ['machine' => ReentrantParallelMachine::class]);
+
+    expect($exit)->toBe(Command::SUCCESS);
 });
