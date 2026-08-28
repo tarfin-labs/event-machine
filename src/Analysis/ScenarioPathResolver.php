@@ -355,8 +355,14 @@ class ScenarioPathResolver
                 // final, which is how a nested flow hands control back up.
                 $parent = $state->parent;
 
+                // The COMPOUND guard matches the enumerator's: a PARALLEL parent's @done
+                // fires only once EVERY region is final, so following it from one final
+                // child would claim a continuation the runtime does not offer. Omitting
+                // it here would reintroduce exactly the disagreement between the two
+                // analysers that this arm exists to remove.
                 if (
                     $parent instanceof StateDefinition
+                    && $parent->type === StateDefinitionType::COMPOUND
                     && $parent->onDoneTransition instanceof TransitionDefinition
                 ) {
                     foreach ($parent->onDoneTransition->branches ?? [] as $branch) {
