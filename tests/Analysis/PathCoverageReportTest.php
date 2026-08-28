@@ -72,3 +72,37 @@ test('empty enumeration returns 100% coverage', function (): void {
 
     expect($report->coveragePercentage())->toBe(100.0);
 });
+
+test('an observed path matching nothing enumerated is reported, not discarded', function (): void {
+    // computeCoverage walked only the enumerated side, so a signature a run actually took
+    // with no enumerated counterpart fell out of the arithmetic entirely. The report then
+    // answered 100% while holding the proof it was incomplete: every enumerated path is
+    // covered, and the route nobody enumerated is invisible.
+    $enumerated = makeTestPath('done');
+
+    $report = new PathCoverageReport(
+        enumeration: new PathEnumerationResult(paths: [$enumerated]),
+        observedPaths: [
+            ['signature' => $enumerated->stateSignature(), 'test' => 'covers the known path'],
+            ['signature' => 'm.idle → m.somewhere_else', 'test' => 'walked a route nobody enumerated'],
+        ],
+    );
+
+    expect($report->coveragePercentage())->toBe(100.0)
+        ->and($report->uncoveredPaths())->toBe([])
+        ->and($report->unmatchedObservations())->toBe(['m.idle → m.somewhere_else']);
+});
+
+test('nothing is reported unmatched when every observation lines up', function (): void {
+    $enumerated = makeTestPath('done');
+
+    $report = new PathCoverageReport(
+        enumeration: new PathEnumerationResult(paths: [$enumerated]),
+        observedPaths: [
+            ['signature' => $enumerated->stateSignature(), 'test' => 'one'],
+            ['signature' => $enumerated->stateSignature(), 'test' => 'two'],
+        ],
+    );
+
+    expect($report->unmatchedObservations())->toBe([]);
+});
