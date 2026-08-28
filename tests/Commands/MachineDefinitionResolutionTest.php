@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Artisan;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Fixtures\InvalidMachines\UndefinedMachine;
 use Tarfinlabs\EventMachine\Fixtures\InvalidMachines\NullDefinitionMachine;
+use Tarfinlabs\EventMachine\Fixtures\InvalidMachines\ThrowingDefinitionMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ReentrantParallelMachine;
 
 /**
@@ -38,10 +39,18 @@ function argsFor(string $command, string $machineClass): array
 }
 
 $commands = [
+    'machine:paths'             => 'machine:paths',
+    'machine:coverage'          => 'machine:coverage',
+    'machine:xstate'            => 'machine:xstate',
+    'machine:scenario'          => 'machine:scenario',
+    'machine:scenario-validate' => 'machine:scenario-validate',
+];
+
+// The three commands that also accept a FILE PATH for the machine argument.
+$fileCommands = [
     'machine:paths'    => 'machine:paths',
     'machine:coverage' => 'machine:coverage',
     'machine:xstate'   => 'machine:xstate',
-    'machine:scenario' => 'machine:scenario',
 ];
 
 test('a class that is not a machine is refused before its statics are touched', function (string $command): void {
@@ -72,6 +81,88 @@ test('a definition() that returns null fails instead of being used', function (s
     expect($exit)->toBe(Command::FAILURE)
         ->and(Artisan::output())->toContain('returned no machine definition');
 })->with($commands);
+
+test('a definition() that throws anything else fails with the class and the reason', function (string $command): void {
+    // The catch was keyed on MachineDefinitionNotFoundException alone, so every other cause —
+    // a missing behavior class, a bad config, a container resolve that fails — was uncaught in
+    // all five commands. definition() is ordinary user code; it can throw anything.
+    $exit = Artisan::call($command, argsFor($command, ThrowingDefinitionMachine::class));
+
+    // Artisan::output() drains the buffer, so it is read once.
+    $output = Artisan::output();
+
+    expect($exit)->toBe(Command::FAILURE)
+        ->and($output)->toContain('definition() failed')
+        ->and($output)->toContain('App\\Actions\\Missing');
+})->with($commands);
+
+test('a directory given where a file was expected fails cleanly', function (string $command): void {
+    // The easiest of these to hit by accident: str_contains(DIRECTORY_SEPARATOR) enters the
+    // file-path branch and file_exists() is true for a directory, so file_get_contents() raised
+    // `Read of N bytes failed with errno=21 Is a directory` — a stack trace, not an exit code.
+    $exit = Artisan::call($command, ['machine' => 'src'.DIRECTORY_SEPARATOR.'Analysis']);
+
+    expect($exit)->toBe(Command::FAILURE)
+        ->and(Artisan::output())->toContain('Could not resolve a Machine class');
+})->with($fileCommands);
+
+test('an unreadable file fails cleanly', function (string $command): void {
+    $token = getmypid().'_'.mt_rand();
+    $path  = sys_get_temp_dir().'/em_unreadable_'.$token.'.php';
+    file_put_contents($path, "<?php\nnamespace Probe{$token};\nclass P extends \\stdClass {}\n");
+    chmod($path, 0o000);
+
+    try {
+        $exit = Artisan::call($command, ['machine' => $path]);
+
+        expect($exit)->toBe(Command::FAILURE)
+            ->and(Artisan::output())->toContain('not readable');
+    } finally {
+        chmod($path, 0o644);
+        @unlink($path);
+    }
+})->with($fileCommands)->skip(
+    posix_geteuid() === 0,
+    'chmod 000 does not restrict root, so the unreadable branch cannot be reached.',
+);
+
+test('a file that cannot be parsed fails cleanly', function (string $command): void {
+    // require_once runs before any check can look at the result, so a ParseError escaped. The
+    // file must contain `class X extends` for the regex to produce an FQCN worth loading.
+    $token = getmypid().'_'.mt_rand();
+    $path  = sys_get_temp_dir().'/em_unparseable_'.$token.'.php';
+    file_put_contents($path, "<?php\nnamespace ProbeBad{$token};\nclass Broken extends \\stdClass { this is not php }\n");
+
+    try {
+        $exit = Artisan::call($command, ['machine' => $path]);
+
+        expect($exit)->toBe(Command::FAILURE)
+            ->and(Artisan::output())->toContain('failed');
+    } finally {
+        @unlink($path);
+    }
+})->with($fileCommands);
+
+test('a file that throws while loading fails cleanly', function (string $command): void {
+    // The namespace has to be unique per invocation, not just the path: once one dataset row
+    // has loaded the file, class_exists() is true for the rest of the process and the load is
+    // skipped — which would make the later rows pass for the wrong reason.
+    $token = getmypid().'_'.mt_rand();
+    $path  = sys_get_temp_dir().'/em_throws_'.$token.'.php';
+    file_put_contents(
+        $path,
+        "<?php\nnamespace ProbeThrow{$token};\nclass Boom extends \\stdClass {}\nthrow new \\RuntimeException('load-time boom');\n",
+    );
+
+    try {
+        $exit = Artisan::call($command, ['machine' => $path]);
+
+        expect($exit)->toBe(Command::FAILURE)
+            ->and(Artisan::output())->toContain('load-time boom');
+    } finally {
+        @unlink($path);
+    }
+})->with($fileCommands);
 
 test('a real machine is not refused by the guard', function (string $command): void {
     // The control: the guard must not reject the thing it exists to admit. Commands can
