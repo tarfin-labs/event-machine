@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Tarfinlabs\EventMachine\Analysis\PathStep;
 use Tarfinlabs\EventMachine\Analysis\MachinePath;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
+use Tarfinlabs\EventMachine\Analysis\ParallelPathGroup;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerationResult;
 
 class MachinePathsCommand extends Command
@@ -15,7 +16,8 @@ class MachinePathsCommand extends Command
     protected $signature = 'machine:paths
         {machine : The Machine class path or FQCN}
         {--json : Output as JSON}
-        {--max-paths=1000 : Maximum paths to enumerate (prevents explosion in large machines)}';
+        {--max-paths=1000 : Maximum paths to enumerate (prevents explosion in large machines)}
+        {--max-depth=200 : Maximum total analysis depth before a path is cut short}';
     protected $description = 'Enumerate all paths through a machine definition';
 
     public function handle(): int
@@ -41,7 +43,8 @@ class MachinePathsCommand extends Command
 
         $definition = $machinePath::definition();
         $maxPaths   = (int) $this->option('max-paths');
-        $enumerator = new PathEnumerator($definition, $maxPaths);
+        $maxDepth   = (int) $this->option('max-depth');
+        $enumerator = new PathEnumerator($definition, $maxPaths, null, $maxDepth);
         $result     = $enumerator->enumerate();
 
         if ($this->option('json')) {
@@ -88,7 +91,23 @@ class MachinePathsCommand extends Command
         }
 
         $this->line("  Timers: {$result->timerCount()}");
-        $this->line('  Terminal paths: '.count($result->paths).($result->pathLimitReached ? ' (limit reached — increase with --max-paths)' : ''));
+        $notes = [];
+
+        if ($result->pathLimitReached) {
+            $notes[] = 'path limit reached — increase with --max-paths';
+        }
+
+        if ($result->depthLimitReached) {
+            $notes[] = 'depth limit reached — increase with --max-depth';
+        }
+
+        $this->line('  Terminal paths: '.count($result->paths).($notes !== [] ? ' ('.implode('; ', $notes).')' : ''));
+
+        // Say it once, plainly, rather than leaving the reader to infer it from a
+        // parenthetical: a partial analysis must not read as a complete one.
+        if ($result->analysisTruncated()) {
+            $this->warn('  Analysis incomplete — enumeration stopped early. The paths below are what was reached, not the full set.');
+        }
 
         foreach ($result->parallelGroups as $group) {
             $regionCount = count($group->regionPaths);
@@ -123,7 +142,11 @@ class MachinePathsCommand extends Command
                 $this->line("  {$regionKey} region: ".count($regionPaths).' path'.(count($regionPaths) !== 1 ? 's' : ''));
 
                 foreach ($regionPaths as $path) {
-                    $this->renderPathSteps($path, '    ');
+                    // Region paths never reach $paths, so the per-type groups below cannot
+                    // show them. Without a tag here a path that ends by leaving its region
+                    // is indistinguishable from one that reached a region final state.
+                    $this->line('    ['.$path->type->value.']');
+                    $this->renderPathSteps($path, '      ');
                 }
             }
         }
@@ -218,17 +241,23 @@ class MachinePathsCommand extends Command
         $data = [
             'machine' => class_basename($machinePath),
             'stats'   => [
-                'states'                   => $stateStats['total'],
-                'atomic_states'            => $stateStats['atomic'],
-                'final_states'             => $stateStats['final'],
-                'events'                   => $result->eventCount(),
-                'guards'                   => $result->guardCount(),
-                'actions'                  => $result->actionCount(),
-                'calculators'              => $result->calculatorCount(),
-                'job_actors'               => array_map(static fn (array $j): array => ['state' => $j['stateKey'], 'class' => class_basename($j['class']), 'queue' => $j['queue']], $result->jobActors()),
-                'child_machines'           => array_map(static fn (array $c): array => ['state' => $c['stateKey'], 'class' => class_basename($c['class']), 'async' => $c['async'], 'queue' => $c['queue']], $result->childMachines()),
-                'timers'                   => $result->timerCount(),
+                'states'         => $stateStats['total'],
+                'atomic_states'  => $stateStats['atomic'],
+                'final_states'   => $stateStats['final'],
+                'events'         => $result->eventCount(),
+                'guards'         => $result->guardCount(),
+                'actions'        => $result->actionCount(),
+                'calculators'    => $result->calculatorCount(),
+                'job_actors'     => array_map(static fn (array $j): array => ['state' => $j['stateKey'], 'class' => class_basename($j['class']), 'queue' => $j['queue']], $result->jobActors()),
+                'child_machines' => array_map(static fn (array $c): array => ['state' => $c['stateKey'], 'class' => class_basename($c['class']), 'async' => $c['async'], 'queue' => $c['queue']], $result->childMachines()),
+                'timers'         => $result->timerCount(),
+                // terminal_paths keeps its existing meaning — the size of the paths array.
+                // The truncated count gets its own key rather than redefining this one.
                 'terminal_paths'           => count($result->paths),
+                'truncated_paths'          => count($result->truncatedPaths()),
+                'path_limit_reached'       => $result->pathLimitReached,
+                'depth_limit_reached'      => $result->depthLimitReached,
+                'analysis_truncated'       => $result->analysisTruncated(),
                 'unhandled_child_outcomes' => array_map(static fn (array $u): array => ['parent_state' => $u['parentStateKey'], 'child_class' => class_basename($u['childClass']), 'unhandled' => $u['unhandled']], $result->unhandledChildOutcomes()),
             ],
             'paths' => array_map(static fn (MachinePath $path, int $index): array => [
@@ -248,6 +277,26 @@ class MachinePathsCommand extends Command
                 'guards'  => $path->guardNames(),
                 'actions' => $path->actionNames(),
             ], $result->paths, array_keys($result->paths)),
+
+            // Region paths live in ParallelPathGroup and never enter $paths, so before
+            // this they reached no JSON consumer at all — a region path that ends by
+            // leaving its region was invisible. Additive: no existing key changes.
+            'parallel_groups' => array_map(static fn (ParallelPathGroup $group): array => [
+                'parallel_state' => str_contains($group->parallelStateId, '.')
+                    ? substr($group->parallelStateId, strrpos($group->parallelStateId, '.') + 1)
+                    : $group->parallelStateId,
+                'combinations' => $group->combinationCount(),
+                'regions'      => array_map(static fn (array $paths): array => array_map(static fn (MachinePath $path): array => [
+                    'type'      => $path->type->value,
+                    'signature' => $path->signature(),
+                    'steps'     => array_map(static fn (PathStep $step): array => array_filter([
+                        'state'       => $step->stateKey,
+                        'event'       => $step->event,
+                        'invoke_type' => $step->invokeType,
+                        'timer_type'  => $step->timerType,
+                    ], static fn (?string $v): bool => $v !== null), $path->steps),
+                ], $paths), $group->regionPaths),
+            ], $result->parallelGroups),
         ];
 
         return json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
