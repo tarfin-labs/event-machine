@@ -6,6 +6,8 @@ use Tarfinlabs\EventMachine\Analysis\PathType;
 use Tarfinlabs\EventMachine\Analysis\MachinePath;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
+use Tarfinlabs\EventMachine\Analysis\ParallelPathGroup;
+use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Jobs\ProcessJob;
 
 /**
@@ -465,4 +467,71 @@ test('an inherited plain event defers a region exactly as an inherited @always d
         expect((new PathEnumerator($definition))->enumerate()->analysisTruncated())
             ->toBeFalse("truncation flag under {$event}");
     }
+});
+
+// ── A parallel inside a region is still part of the result ───────────────────
+
+test('a parallel nested inside a region is reported as its own group', function (): void {
+    // Region sub-enumerators record their own parallelGroups, and handleParallel used to
+    // harvest only their paths and truncation flags. The nested parallel and its regions
+    // were dropped, so machine:paths counted parallel states from the definition and
+    // printed groups from the enumeration and the two lines disagreed — while
+    // analysisTruncated() still claimed the analysis was complete.
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'nested_group_reporting',
+        'initial' => 'par',
+        'states'  => [
+            'par' => [
+                'type'   => 'parallel',
+                'on'     => ['ESC' => 'settled'],
+                'states' => [
+                    'ra' => [
+                        'initial' => 'inner',
+                        'states'  => [
+                            'inner' => [
+                                'type'   => 'parallel',
+                                'states' => [
+                                    'rb' => [
+                                        'initial' => 'x',
+                                        'states'  => ['x' => ['on' => ['E' => 'y']], 'y' => ['type' => 'final']],
+                                    ],
+                                    'rc' => [
+                                        'initial' => 'z',
+                                        'states'  => ['z' => ['on' => ['F' => 'w']], 'w' => ['type' => 'final']],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            'settled' => ['type' => 'final'],
+        ],
+    ]);
+
+    $result = (new PathEnumerator($definition))->enumerate();
+
+    // Two parallel states are defined, so two groups must be reported.
+    $parallelStateIds = [];
+
+    foreach ($definition->idMap as $id => $state) {
+        if ($state->type === StateDefinitionType::PARALLEL) {
+            $parallelStateIds[] = $id;
+        }
+    }
+
+    $groupIds = array_map(
+        static fn (ParallelPathGroup $g): string => $g->parallelStateId,
+        $result->parallelGroups,
+    );
+
+    sort($parallelStateIds);
+    sort($groupIds);
+
+    expect($groupIds)->toBe($parallelStateIds)
+        ->and($result->analysisTruncated())->toBeFalse();
+
+    // Both of the nested parallel's regions are present, not just the outer one.
+    expect(regionPathsFor($definition, 'rb'))->toHaveCount(1)
+        ->and(regionPathsFor($definition, 'rc'))->toHaveCount(1);
 });
