@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tarfinlabs\EventMachine\Analysis;
 
+use Throwable;
+use Tarfinlabs\EventMachine\Actor\Machine;
+use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Scenarios\MachineScenario;
@@ -85,10 +88,17 @@ class ScenarioPathResolver
         } else {
             $eventTransition = $transitions[$event] ?? null;
 
-            // Try EventBehavior::getType() match
-            if ($eventTransition === null) {
+            // Try EventBehavior::getType() match.
+            //
+            // is_subclass_of, not class_exists + method_exists: $event is a raw CLI argument, so
+            // class_exists() autoloads whatever it names and runs that file's top-level code
+            // before anything has established it is an event at all, and method_exists() then
+            // admits a non-static getType() — which raised `Non-static method cannot be called
+            // statically` from inside the resolver. Requiring an EventBehavior subclass settles
+            // both: the signature is guaranteed, and a stranger is never loaded.
+            if ($eventTransition === null && is_subclass_of($event, EventBehavior::class)) {
                 foreach ($transitions as $eventKey => $transition) {
-                    if (class_exists($event) && method_exists($event, 'getType') && $eventKey === $event::getType()) {
+                    if ($eventKey === $event::getType()) {
                         $eventTransition = $transition;
                         break;
                     }
