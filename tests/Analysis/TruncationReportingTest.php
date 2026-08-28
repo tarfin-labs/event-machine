@@ -7,6 +7,7 @@ use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
 use Tarfinlabs\EventMachine\Analysis\PathCoverageReport;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Analysis\ScenarioPathResolver;
+use Tarfinlabs\EventMachine\Analysis\PathEnumerationResult;
 use Tarfinlabs\EventMachine\Exceptions\NoScenarioPathFoundException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 
@@ -287,4 +288,66 @@ test('machine paths cannot spend the ceiling a second time after the regions', f
     expect($capped)->toBeLessThanOrEqual(4)
         ->and($result->pathLimitReached)->toBeTrue()
         ->and($result->analysisTruncated())->toBeTrue();
+});
+
+test('enumerating twice on one instance gives the same answer both times', function (): void {
+    // enumerate() reinitialises the mutable fields so an instance can be reused, but
+    // $subPathsRecorded was added later and missed that list. Since recordPath() gates on
+    // totalRecorded(), a second run started with the first run's spend already counted:
+    // it would record nothing and declare the path ceiling reached. Every call site today
+    // builds a fresh enumerator, so this was latent — which is exactly why it needs a test
+    // rather than an argument.
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'reuse_probe',
+        'initial' => 'idle',
+        'states'  => [
+            'idle' => ['on' => ['START' => 'work']],
+            'work' => [
+                'type'   => 'parallel',
+                '@done'  => 'settled',
+                'states' => [
+                    'ra' => [
+                        'initial' => 'fan',
+                        'states'  => [
+                            'fan' => ['on' => ['E0' => 'l0', 'E1' => 'l1']],
+                            'l0'  => ['type' => 'final'],
+                            'l1'  => ['type' => 'final'],
+                        ],
+                    ],
+                ],
+            ],
+            'settled' => ['type' => 'final'],
+        ],
+    ]);
+
+    // One run records 3 paths: 2 in region ra, 1 at machine level. A ceiling of 4 admits
+    // one run and not two, so a leaked spend shows up as the second run being truncated.
+    // At the default 1000 the leak is invisible on a machine this size — the ceiling has
+    // to be close enough for the carried-over count to cross it.
+    $enumerator = new PathEnumerator($definition, 4);
+
+    $summarise = static function (PathEnumerationResult $result): array {
+        $regions = 0;
+
+        foreach ($result->parallelGroups as $group) {
+            foreach ($group->regionPaths as $paths) {
+                $regions += count($paths);
+            }
+        }
+
+        return [
+            'paths'     => count($result->paths),
+            'regions'   => $regions,
+            'groups'    => count($result->parallelGroups),
+            'truncated' => $result->analysisTruncated(),
+        ];
+    };
+
+    $first  = $summarise($enumerator->enumerate());
+    $second = $summarise($enumerator->enumerate());
+
+    expect($first['paths'])->toBeGreaterThan(0)
+        ->and($first['regions'])->toBeGreaterThan(0)
+        ->and($first['truncated'])->toBeFalse()
+        ->and($second)->toBe($first);
 });
