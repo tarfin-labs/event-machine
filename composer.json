@@ -41,7 +41,7 @@
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan-strict-rules": "^2.0",
         "rector/rector": "^2.0",
-        "symfony/process": "^6.0|^7.0",
+        "symfony/process": "^7.0|^8.0",
         "testflowlabs/doctest": "^1.0"
     },
     "autoload": {
