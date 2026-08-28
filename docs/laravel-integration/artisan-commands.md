@@ -446,7 +446,9 @@ failure message names the ceiling that fired.
 
 ### Coverage Matching
 
-The command compares enumerated paths (static analysis) against observed paths (test runtime) using state-sequence matching. Enable tracking in tests with `PathCoverageTracker::enable()` and record paths via `TestMachine::assertFinished()`.
+The command compares enumerated paths (static analysis) against observed paths (test runtime) using state-sequence matching. Enable tracking by adding the `TracksPathCoverage` trait to your base `TestCase` (or `uses(TracksPathCoverage::class)->in('Feature', 'Unit')` in `tests/Pest.php`) — it turns the tracker on, discards half-walked paths between tests, and writes one PID-suffixed `coverage_*.json` per worker on shutdown. Paths are recorded when `TestMachine::assertFinished()`, or `assertState()` on a FINAL state, completes them.
+
+Calling `PathCoverageTracker::enable()` by hand is not enough: it registers no shutdown export, so no coverage file is written and this command then reports `Coverage path not found`. It also skips the per-test discard, which is what keeps a test that stops at an intermediate state from having its half-walked path flushed into the next test's signature.
 
 ### Example Output
 
