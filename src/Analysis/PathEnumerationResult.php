@@ -25,7 +25,19 @@ readonly class PathEnumerationResult
         public array $parallelGroups = [],
         public ?MachineDefinition $definition = null,
         public bool $pathLimitReached = false,
+        public bool $depthLimitReached = false,
     ) {}
+
+    /**
+     * Did the analysis stop early, for either reason?
+     *
+     * Every surface that presents an enumeration reads this: a partial analysis
+     * must never be presentable as a complete one.
+     */
+    public function analysisTruncated(): bool
+    {
+        return $this->pathLimitReached || $this->depthLimitReached;
+    }
 
     // region Filters
 
