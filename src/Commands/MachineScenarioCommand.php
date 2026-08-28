@@ -20,7 +20,8 @@ class MachineScenarioCommand extends Command
         {target : Target state route (full or partial)}
         {--dry-run : Print generated file without writing}
         {--force : Overwrite existing scenario file}
-        {--path=0 : Select path by index when multiple paths exist}';
+        {--path=0 : Select path by index when multiple paths exist}
+        {--max-iterations=1000 : Maximum BFS iterations before the search is reported as truncated}';
     protected $description = 'Generate a MachineScenario class by analyzing the machine definition';
 
     public function handle(): int
@@ -45,7 +46,7 @@ class MachineScenarioCommand extends Command
 
         $definition = $machineClass::definition();
         $graph      = new MachineGraph($definition);
-        $resolver   = new ScenarioPathResolver($graph);
+        $resolver   = new ScenarioPathResolver($graph, (int) $this->option('max-iterations'));
         $scaffolder = new ScenarioScaffolder();
 
         // Check for deep target
