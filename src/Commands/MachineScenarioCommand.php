@@ -12,6 +12,8 @@ use Tarfinlabs\EventMachine\Analysis\ScenarioPathResolver;
 
 class MachineScenarioCommand extends Command
 {
+    use ValidatesNumericOptions;
+
     protected $signature = 'machine:scenario
         {name : Scenario class name (Scenario suffix auto-added if missing)}
         {machine : Machine class FQCN}
@@ -44,9 +46,15 @@ class MachineScenarioCommand extends Command
             return self::FAILURE;
         }
 
-        $definition = $machineClass::definition();
-        $graph      = new MachineGraph($definition);
-        $resolver   = new ScenarioPathResolver($graph, (int) $this->option('max-iterations'));
+        $definition    = $machineClass::definition();
+        $graph         = new MachineGraph($definition);
+        $maxIterations = $this->integerOption('max-iterations', min: 1);
+
+        if ($maxIterations === null) {
+            return self::FAILURE;
+        }
+
+        $resolver   = new ScenarioPathResolver($graph, $maxIterations);
         $scaffolder = new ScenarioScaffolder();
 
         // Check for deep target
@@ -86,7 +94,13 @@ class MachineScenarioCommand extends Command
         }
 
         // Select path
-        $pathIndex = (int) $this->option('path');
+        // A bad --path is the worst of these: zero is a valid index, so the command would
+        // scaffold path 0 and report "Created:" for a file the caller never asked for.
+        $pathIndex = $this->integerOption('path', min: 0);
+
+        if ($pathIndex === null) {
+            return self::FAILURE;
+        }
 
         if (count($paths) > 1 && $pathIndex === 0) {
             $this->info('Found '.count($paths)." paths from {$source} to {$parentTarget}:");
