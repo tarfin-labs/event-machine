@@ -77,6 +77,40 @@ readonly class PathEnumerationResult
         return $this->filterByType(PathType::DEAD_END);
     }
 
+    /**
+     * @return list<MachinePath>
+     */
+    public function truncatedPaths(): array
+    {
+        return $this->filterByType(PathType::TRUNCATED);
+    }
+
+    /**
+     * Region paths that end by leaving their region.
+     *
+     * Region paths live in ParallelPathGroup::$regionPaths, so this filter over
+     * $paths is empty for a machine-level result. It exists so a caller holding
+     * a region enumerator's own result can group by type uniformly.
+     *
+     * @return list<MachinePath>
+     */
+    public function regionExitPaths(): array
+    {
+        return $this->filterByType(PathType::REGION_EXIT);
+    }
+
+    /**
+     * Region paths whose continuations are followed at machine level.
+     *
+     * Empty for a machine-level result, for the same reason as regionExitPaths().
+     *
+     * @return list<MachinePath>
+     */
+    public function regionDeferredPaths(): array
+    {
+        return $this->filterByType(PathType::REGION_DEFERRED);
+    }
+
     // endregion
 
     // region Stats
