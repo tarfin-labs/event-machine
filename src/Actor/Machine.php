@@ -982,9 +982,9 @@ class Machine implements Castable, JsonSerializable, Stringable
      *
      * @throws AssertionFailedError
      */
-    public static function assertAllPathsCovered(): void
+    public static function assertAllPathsCovered(int $maxPaths = 1000, int $maxDepth = 200): void
     {
-        $report = self::buildPathCoverageReport();
+        $report = self::buildPathCoverageReport($maxPaths, $maxDepth);
 
         self::assertAnalysisWasComplete($report);
 
@@ -1010,11 +1010,14 @@ class Machine implements Castable, JsonSerializable, Stringable
     /**
      * Assert that path coverage meets a minimum percentage.
      *
+     * @param  float  $minimum  A percentage between 0 and 100 — 0.8 is not "80%", it is
+     *                          a threshold every run clears.
+     *
      * @throws AssertionFailedError
      */
-    public static function assertPathCoverage(float $minimum): void
+    public static function assertPathCoverage(float $minimum, int $maxPaths = 1000, int $maxDepth = 200): void
     {
-        $report = self::buildPathCoverageReport();
+        $report = self::buildPathCoverageReport($maxPaths, $maxDepth);
 
         self::assertAnalysisWasComplete($report);
 
@@ -1036,34 +1039,35 @@ class Machine implements Castable, JsonSerializable, Stringable
     }
 
     /**
-     * Refuse to draw a coverage conclusion from an enumeration that stopped at the
-     * depth ceiling.
+     * Refuse to draw a coverage conclusion from an enumeration that stopped early.
      *
-     * Only the depth ceiling fails here. It arrived with the path-analysis work and no
-     * existing suite can be relying on it, whereas the path ceiling has been firing
-     * silently at its default for far longer and these assertions offer no way to raise
-     * it — failing on that would be a break the caller cannot fix. A path-truncated run
-     * still says so in the assertion message above when it fails for its own reasons.
+     * Either ceiling fails here. An earlier revision failed only on the depth ceiling,
+     * on the grounds that the caller had no way to raise the path ceiling through these
+     * assertions — a failure nobody can fix is worse than a documented gap. Both are now
+     * parameters, so the justification is gone and the honest rule applies to both: a
+     * coverage figure measured over part of a machine is not coverage.
      *
      * @throws AssertionFailedError
      */
     private static function assertAnalysisWasComplete(PathCoverageReport $report): void
     {
         Assert::assertFalse(
-            $report->depthTruncated(),
+            $report->enumerationTruncated(),
             sprintf(
-                'Path analysis for %s hit the depth ceiling, so coverage would be measured over part of the machine. '
-                .'Inspect it with: php artisan machine:paths "%s" --max-depth=<larger>',
+                'Path analysis for %s stopped early (%s), so coverage would be measured over part of the machine. '
+                .'Raise the ceiling by passing maxPaths/maxDepth to this assertion, and inspect it with: '
+                .'php artisan machine:paths "%s" --max-paths=<larger> --max-depth=<larger>',
                 static::class,
+                $report->depthTruncated() ? 'depth ceiling' : 'path ceiling',
                 static::class,
             ),
         );
     }
 
-    private static function buildPathCoverageReport(): PathCoverageReport
+    private static function buildPathCoverageReport(int $maxPaths, int $maxDepth): PathCoverageReport
     {
         $definition  = static::definition();
-        $enumeration = $definition->enumeratePaths();
+        $enumeration = $definition->enumeratePaths($maxPaths, $maxDepth);
         $observed    = PathCoverageTracker::observedPaths(static::class);
 
         return new PathCoverageReport($enumeration, $observed);
