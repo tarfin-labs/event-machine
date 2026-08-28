@@ -6,13 +6,14 @@ namespace Tarfinlabs\EventMachine\Commands;
 
 use ReflectionClass;
 use Illuminate\Console\Command;
-use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Analysis\MachineGraph;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioScaffolder;
 use Tarfinlabs\EventMachine\Analysis\ScenarioPathResolver;
 
 class MachineScenarioCommand extends Command
 {
+    use ResolvesMachineDefinition;
     use ValidatesNumericOptions;
 
     protected $signature = 'machine:scenario
@@ -41,16 +42,12 @@ class MachineScenarioCommand extends Command
         }
 
         // Validate machine class
-        // is_subclass_of, not just class_exists: `$machineClass::definition()` on an
-        // arbitrary class calls a stranger's static method and, when it has none, replaces
-        // a clean exit code with an uncaught TypeError.
-        if (!class_exists($machineClass) || !is_subclass_of($machineClass, Machine::class)) {
-            $this->error("Machine class not found: {$machineClass}");
+        $definition = $this->machineDefinitionFor($machineClass);
 
+        if (!$definition instanceof MachineDefinition) {
             return self::FAILURE;
         }
 
-        $definition    = $machineClass::definition();
         $graph         = new MachineGraph($definition);
         $maxIterations = $this->integerOption('max-iterations', min: 1);
 

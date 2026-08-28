@@ -10,10 +10,12 @@ use Tarfinlabs\EventMachine\Analysis\PathStep;
 use Tarfinlabs\EventMachine\Analysis\MachinePath;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
 use Tarfinlabs\EventMachine\Analysis\ParallelPathGroup;
+use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerationResult;
 
 class MachinePathsCommand extends Command
 {
+    use ResolvesMachineDefinition;
     use ValidatesNumericOptions;
 
     protected $signature = 'machine:paths
@@ -38,19 +40,13 @@ class MachinePathsCommand extends Command
             }
         }
 
-        // is_subclass_of, not just class_exists: `$machinePath::definition()` on an
-        // arbitrary class calls a stranger's static method and, when it has none, replaces
-        // a clean exit code with an uncaught TypeError. The path may also have been
-        // require_once'd above, so by here it can be any class the caller pointed at.
-        if (!class_exists($machinePath) || !is_subclass_of($machinePath, Machine::class)) {
-            $this->error("Machine class not found: {$machinePath}");
+        $definition = $this->machineDefinitionFor($machinePath);
 
+        if (!$definition instanceof MachineDefinition) {
             return self::FAILURE;
         }
-
-        $definition = $machinePath::definition();
-        $maxPaths   = $this->integerOption('max-paths', min: 1);
-        $maxDepth   = $this->integerOption('max-depth', min: 1);
+        $maxPaths = $this->integerOption('max-paths', min: 1);
+        $maxDepth = $this->integerOption('max-depth', min: 1);
 
         if ($maxPaths === null || $maxDepth === null) {
             return self::FAILURE;
