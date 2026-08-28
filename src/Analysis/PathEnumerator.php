@@ -35,12 +35,129 @@ class PathEnumerator
 
     private readonly MachineGraph $graph;
 
+    /**
+     * When set, enumeration is confined to this state's subtree — the region
+     * of a parallel state. Null for machine-level enumeration, which is
+     * unaffected by every boundary rule below.
+     */
+    private readonly ?StateDefinition $boundary;
+
+    /**
+     * How many branches the boundary handed to machine-level enumeration (E3).
+     * Callers compare this before and after enumerating a state's continuations
+     * to tell "every continuation was deferred" from "there were none".
+     */
+    private int $deferrals = 0;
+
     public function __construct(
         private readonly MachineDefinition $definition,
         int $maxPaths = 1000,
+        ?StateDefinition $boundary = null,
     ) {
         $this->maxPaths = $maxPaths;
+        $this->boundary = $boundary;
         $this->graph    = new MachineGraph($definition);
+    }
+
+    /**
+     * Is this state inside the current boundary?
+     *
+     * Structural, by parent-chain identity — never a string prefix on the id.
+     * StateDefinition::buildId() returns `$this->config['id'] ?? implode(...)`,
+     * so an explicit `id` in the config bypasses the path-derived prefix
+     * entirely, and the delimiter is a per-machine setting rather than a
+     * literal dot. Both make a lexical test unsound.
+     */
+    private function isInsideBoundary(StateDefinition $state): bool
+    {
+        if (!$this->boundary instanceof StateDefinition) {
+            return true;
+        }
+
+        $current = $state;
+
+        while ($current instanceof StateDefinition) {
+            if ($current === $this->boundary) {
+                return true;
+            }
+
+            $current = $current->parent;
+        }
+
+        return false;
+    }
+
+    /**
+     * Would following this branch leave the boundary?
+     */
+    private function leavesBoundary(?StateDefinition $target): bool
+    {
+        return $this->boundary instanceof StateDefinition
+            && $target instanceof StateDefinition
+            && !$this->isInsideBoundary($target);
+    }
+
+    /**
+     * Is this transition declared inside the boundary, rather than inherited
+     * from the parallel state or one of its ancestors?
+     *
+     * The distinction matters because the runtime treats the two differently:
+     * a handler at or above the parallel state exits the whole parallel state
+     * (MachineDefinition::isParallelEscapeSource), while one declared inside a
+     * region only re-points that region's slot and leaves the parallel state
+     * active. Only the second has no machine-level representation, so only the
+     * second is recorded here as a region exit.
+     */
+    private function isDeclaredInsideBoundary(?StateDefinition $source): bool
+    {
+        return $source instanceof StateDefinition && $this->isInsideBoundary($source);
+    }
+
+    /**
+     * Record the outcome for a branch the boundary stopped us following.
+     *
+     * Returns true when this call recorded a path, so the caller can tell an
+     * outcome from silence. A branch inherited from at or above the parallel
+     * state records nothing here: machine-level enumeration owns it (E3), and
+     * whether the state as a whole is REGION_DEFERRED is the caller's decision,
+     * since only the caller knows whether every continuation was deferred.
+     *
+     * @param  list<PathStep>  $steps
+     * @param  array<string>  $guards
+     * @param  array<string>  $actions
+     */
+    private function recordBoundarySkip(
+        array $steps,
+        StateDefinition $target,
+        ?StateDefinition $source,
+        ?string $event,
+        array $guards = [],
+        array $actions = [],
+        ?string $timerType = null,
+        ?string $invokeType = null,
+    ): bool {
+        if (!$this->isDeclaredInsideBoundary($source)) {
+            $this->deferrals++;
+
+            return false;
+        }
+
+        // Declared inside the region and leaving it. Nothing else represents
+        // this edge, so the region path ends here with a step naming the event
+        // and target that leave the region (E2).
+        $steps[] = new PathStep(
+            stateId: $target->id,
+            stateKey: $target->key ?? '',
+            event: $event,
+            guards: $guards,
+            actions: $actions,
+            timerType: $timerType,
+            invokeType: $invokeType,
+        );
+
+        $this->recordPath($steps, PathType::REGION_EXIT);
+
+        return true;
     }
 
     /**
@@ -216,20 +333,50 @@ class PathEnumerator
             && $parent->type === StateDefinitionType::COMPOUND
             && $parent->onDoneTransition instanceof TransitionDefinition
         ) {
+            $enumerated = false;
+            $deferred   = false;
+
             // Follow compound @done branches
             foreach ($parent->onDoneTransition->branches ?? [] as $index => $branch) {
-                if ($branch->target instanceof StateDefinition) {
-                    $this->dfs(
-                        state: $branch->target,
+                if (!$branch->target instanceof StateDefinition) {
+                    continue;
+                }
+
+                // The compound @done continuation is a way out of a region just like
+                // any other transition, so the boundary applies to it too. Omitting it
+                // would leave region enumeration able to escape.
+                if ($this->leavesBoundary($branch->target)) {
+                    $recorded = $this->recordBoundarySkip(
                         steps: $steps,
-                        visitedIds: $visitedIds,
+                        target: $branch->target,
+                        source: $parent,
                         event: '@done',
-                        branchIndex: count($parent->onDoneTransition->branches) > 1 ? $index : null,
                         guards: $branch->guards ?? [],
                         actions: $branch->actions ?? [],
                         invokeType: '@done',
                     );
+
+                    $enumerated = $enumerated || $recorded;
+                    $deferred   = $deferred || !$recorded;
+
+                    continue;
                 }
+
+                $this->dfs(
+                    state: $branch->target,
+                    steps: $steps,
+                    visitedIds: $visitedIds,
+                    event: '@done',
+                    branchIndex: count($parent->onDoneTransition->branches) > 1 ? $index : null,
+                    guards: $branch->guards ?? [],
+                    actions: $branch->actions ?? [],
+                    invokeType: '@done',
+                );
+                $enumerated = true;
+            }
+
+            if (!$enumerated && $deferred) {
+                $this->recordPath($steps, PathType::REGION_DEFERRED);
             }
 
             return;
@@ -247,12 +394,20 @@ class PathEnumerator
      */
     private function handleParallel(StateDefinition $state, array $steps, array $visitedIds): void
     {
-        // Enumerate per-region paths
+        // Enumerate per-region paths.
+        //
+        // Each region gets its own enumerator bounded to that region. Before this,
+        // the sub-enumerator was unbounded and started with an empty visited set, so
+        // region DFS followed an inherited ancestor transition straight out of the
+        // region, walked the whole machine, and spawned another empty-visited
+        // enumerator at the next parallel state it met — recursion that neither the
+        // cycle check nor the path budget could stop, because neither crossed the
+        // boundary.
         $regionPaths = [];
 
         if ($state->stateDefinitions !== null) {
             foreach ($state->stateDefinitions as $regionKey => $region) {
-                $regionEnumerator = new self($this->definition);
+                $regionEnumerator = new self($this->definition, $this->maxPaths, $region);
                 $regionInitial    = $region->findInitialStateDefinition();
 
                 if ($regionInitial instanceof StateDefinition) {
@@ -282,45 +437,92 @@ class PathEnumerator
             );
         }
 
+        $enumerated = false;
+        $deferred   = false;
+
         // Follow @done transition
         if ($state->onDoneTransition instanceof TransitionDefinition) {
             foreach ($state->onDoneTransition->branches ?? [] as $index => $branch) {
-                if ($branch->target instanceof StateDefinition) {
-                    $this->dfs(
-                        state: $branch->target,
+                if (!$branch->target instanceof StateDefinition) {
+                    continue;
+                }
+
+                if ($this->leavesBoundary($branch->target)) {
+                    $recorded = $this->recordBoundarySkip(
                         steps: $steps,
-                        visitedIds: $visitedIds,
+                        target: $branch->target,
+                        source: $state,
                         event: '@done',
-                        branchIndex: count($state->onDoneTransition->branches) > 1 ? $index : null,
                         guards: $branch->guards ?? [],
                         actions: $branch->actions ?? [],
                         invokeType: '@done',
                     );
+
+                    $enumerated = $enumerated || $recorded;
+                    $deferred   = $deferred || !$recorded;
+
+                    continue;
                 }
+
+                $this->dfs(
+                    state: $branch->target,
+                    steps: $steps,
+                    visitedIds: $visitedIds,
+                    event: '@done',
+                    branchIndex: count($state->onDoneTransition->branches) > 1 ? $index : null,
+                    guards: $branch->guards ?? [],
+                    actions: $branch->actions ?? [],
+                    invokeType: '@done',
+                );
+                $enumerated = true;
             }
         }
 
         // Follow @fail transition
         if ($state->onFailTransition instanceof TransitionDefinition) {
             foreach ($state->onFailTransition->branches ?? [] as $index => $branch) {
-                if ($branch->target instanceof StateDefinition) {
-                    $this->dfs(
-                        state: $branch->target,
+                if (!$branch->target instanceof StateDefinition) {
+                    continue;
+                }
+
+                if ($this->leavesBoundary($branch->target)) {
+                    $recorded = $this->recordBoundarySkip(
                         steps: $steps,
-                        visitedIds: $visitedIds,
+                        target: $branch->target,
+                        source: $state,
                         event: '@fail',
-                        branchIndex: count($state->onFailTransition->branches) > 1 ? $index : null,
                         guards: $branch->guards ?? [],
                         actions: $branch->actions ?? [],
                         invokeType: '@fail',
                     );
+
+                    $enumerated = $enumerated || $recorded;
+                    $deferred   = $deferred || !$recorded;
+
+                    continue;
                 }
+
+                $this->dfs(
+                    state: $branch->target,
+                    steps: $steps,
+                    visitedIds: $visitedIds,
+                    event: '@fail',
+                    branchIndex: count($state->onFailTransition->branches) > 1 ? $index : null,
+                    guards: $branch->guards ?? [],
+                    actions: $branch->actions ?? [],
+                    invokeType: '@fail',
+                );
+                $enumerated = true;
             }
         }
 
-        // No @done and no @fail — dead-end parallel
+        // No @done and no @fail — dead-end parallel. The condition is unchanged so
+        // that an unbounded enumerator records exactly what it recorded before; the
+        // deferred branch below can only be reached under a boundary.
         if (!$state->onDoneTransition instanceof TransitionDefinition && !$state->onFailTransition instanceof TransitionDefinition) {
             $this->recordPath($steps, PathType::DEAD_END);
+        } elseif (!$enumerated && $deferred) {
+            $this->recordPath($steps, PathType::REGION_DEFERRED);
         }
     }
 
@@ -405,9 +607,28 @@ class PathEnumerator
         // have guards (every branch could fail).
         $hasUnguardedFallback = !$this->isAllBranchesGuarded($alwaysTransition);
 
+        $enumerated = false;
+        $deferred   = false;
+
         // Enumerate @always guard-pass forks
         foreach ($alwaysTransition->branches ?? [] as $index => $branch) {
             if (!$branch->target instanceof StateDefinition) {
+                continue;
+            }
+
+            if ($this->leavesBoundary($branch->target)) {
+                $recorded = $this->recordBoundarySkip(
+                    steps: $steps,
+                    target: $branch->target,
+                    source: $alwaysTransition->source,
+                    event: '@always',
+                    guards: $branch->guards ?? [],
+                    actions: $branch->actions ?? [],
+                );
+
+                $enumerated = $enumerated || $recorded;
+                $deferred   = $deferred || !$recorded;
+
                 continue;
             }
 
@@ -420,19 +641,37 @@ class PathEnumerator
                 guards: $branch->guards ?? [],
                 actions: $branch->actions ?? [],
             );
+            $enumerated = true;
         }
 
         // If @always has an unguarded fallback: it always fires — remaining transitions unreachable
         if ($hasUnguardedFallback) {
+            // This path returns without recording, which is right when a branch was
+            // followed. Under a boundary it can now leave the state with no outcome
+            // at all, and a region @always is runtime-reachable (transitionParallelState
+            // runs its own ungated @always sweep), so silence here would breach E4.
+            if (!$enumerated && $deferred) {
+                $this->recordPath($steps, PathType::REGION_DEFERRED);
+            }
+
             return;
         }
 
         // Guarded @always: guard-fail continuation — enumerate remaining transitions
         if ($remainingTransitions !== [] || $state->hasMachineInvoke()) {
             $this->enumerateTransitions($state, $steps, $visitedIds, $remainingTransitions);
-        } else {
-            // No remaining transitions and guard failed → GUARD_BLOCK
-            $this->recordPath($steps, PathType::GUARD_BLOCK);
+
+            return;
+        }
+
+        // No remaining transitions and guard failed → GUARD_BLOCK
+        $this->recordPath($steps, PathType::GUARD_BLOCK);
+
+        // Every @always branch belonged to machine level: the guard block records the
+        // guard-fail outcome, and this records that the branches themselves are owned
+        // above the boundary (E6). They are different claims about the same state.
+        if (!$enumerated && $deferred) {
+            $this->recordPath($steps, PathType::REGION_DEFERRED);
         }
     }
 
@@ -450,6 +689,7 @@ class PathEnumerator
         array $transitions,
     ): void {
         $enumerated = false;
+        $deferred   = false;
 
         foreach ($transitions as $event => $transition) {
             // @always is handled before enumerateTransitions is called
@@ -462,6 +702,23 @@ class PathEnumerator
             foreach ($transition->branches ?? [] as $index => $branch) {
                 // Skip self-transitions (target === null)
                 if (!$branch->target instanceof StateDefinition) {
+                    continue;
+                }
+
+                if ($this->leavesBoundary($branch->target)) {
+                    $recorded = $this->recordBoundarySkip(
+                        steps: $steps,
+                        target: $branch->target,
+                        source: $transition->source,
+                        event: $event,
+                        guards: $branch->guards ?? [],
+                        actions: $branch->actions ?? [],
+                        timerType: $timerType,
+                    );
+
+                    $enumerated = $enumerated || $recorded;
+                    $deferred   = $deferred || !$recorded;
+
                     continue;
                 }
 
@@ -491,9 +748,13 @@ class PathEnumerator
             $enumerated = true;
         }
 
-        // If nothing was enumerated (e.g., only @always transitions exist but we skip them)
+        // If nothing was enumerated (e.g., only @always transitions exist but we skip them).
+        // Under a boundary, "nothing enumerated but something was deferred" is E6: every
+        // continuation belongs to machine level, which is not a dead end — the runtime can
+        // leave this state. $deferred is only ever true when a boundary is set, so the
+        // no-boundary path records exactly what it recorded before.
         if (!$enumerated) {
-            $this->recordPath($steps, PathType::DEAD_END);
+            $this->recordPath($steps, $deferred ? PathType::REGION_DEFERRED : PathType::DEAD_END);
         }
     }
 
@@ -530,6 +791,20 @@ class PathEnumerator
             $targetState = $this->definition->getNearestStateDefinitionByString($invokeDefinition->target, $state);
 
             if ($targetState instanceof StateDefinition) {
+                if ($this->leavesBoundary($targetState)) {
+                    if (!$this->recordBoundarySkip(
+                        steps: $steps,
+                        target: $targetState,
+                        source: $state,
+                        event: 'fire-and-forget',
+                        invokeType: 'fire-and-forget',
+                    )) {
+                        $this->recordPath($steps, PathType::REGION_DEFERRED);
+                    }
+
+                    return;
+                }
+
                 $this->dfs(
                     state: $targetState,
                     steps: $steps,
@@ -542,24 +817,35 @@ class PathEnumerator
             return;
         }
 
+        $enumerated       = false;
+        $deferralsBefore  = $this->deferrals;
+
         // @done.{state} transitions — per-final-state routing
         foreach ($state->onDoneStateTransitions as $finalStateName => $transition) {
-            $this->followInvokeTransition($transition, $steps, $visitedIds, "@done.{$finalStateName}");
+            $enumerated = $this->followInvokeTransition($transition, $steps, $visitedIds, "@done.{$finalStateName}", $state) || $enumerated;
         }
 
         // @done catch-all transition
         if ($state->onDoneTransition instanceof TransitionDefinition) {
-            $this->followInvokeTransition($state->onDoneTransition, $steps, $visitedIds, '@done');
+            $enumerated = $this->followInvokeTransition($state->onDoneTransition, $steps, $visitedIds, '@done', $state) || $enumerated;
         }
 
         // @fail transition
         if ($state->onFailTransition instanceof TransitionDefinition) {
-            $this->followInvokeTransition($state->onFailTransition, $steps, $visitedIds, '@fail');
+            $enumerated = $this->followInvokeTransition($state->onFailTransition, $steps, $visitedIds, '@fail', $state) || $enumerated;
         }
 
         // @timeout transition
         if ($state->onTimeoutTransition instanceof TransitionDefinition) {
-            $this->followInvokeTransition($state->onTimeoutTransition, $steps, $visitedIds, '@timeout');
+            $enumerated = $this->followInvokeTransition($state->onTimeoutTransition, $steps, $visitedIds, '@timeout', $state) || $enumerated;
+        }
+
+        // Every invoke outcome belonged to machine level, so the region records that
+        // rather than nothing (E6). The deferral counter is what distinguishes this
+        // from a state that simply has no invoke outcomes, which must keep recording
+        // nothing exactly as it did before.
+        if (!$enumerated && $this->deferrals > $deferralsBefore) {
+            $this->recordPath($steps, PathType::REGION_DEFERRED);
         }
     }
 
@@ -568,15 +854,40 @@ class PathEnumerator
      *
      * @param  list<PathStep>  $steps
      * @param  array<string, true>  $visitedIds
+     * @param  StateDefinition  $source  The state that owns the invoke, used to
+     *                                   classify a boundary skip.
+     *
+     * @return bool True when this call produced an outcome — a followed branch or
+     *              a recorded region exit. False means every branch was either
+     *              targetless or handed to machine-level enumeration.
      */
     private function followInvokeTransition(
         TransitionDefinition $transition,
         array $steps,
         array $visitedIds,
         string $invokeEvent,
-    ): void {
+        StateDefinition $source,
+    ): bool {
+        $enumerated = false;
+
         foreach ($transition->branches ?? [] as $index => $branch) {
             if (!$branch->target instanceof StateDefinition) {
+                continue;
+            }
+
+            if ($this->leavesBoundary($branch->target)) {
+                $recorded = $this->recordBoundarySkip(
+                    steps: $steps,
+                    target: $branch->target,
+                    source: $source,
+                    event: $invokeEvent,
+                    guards: $branch->guards ?? [],
+                    actions: $branch->actions ?? [],
+                    invokeType: $invokeEvent,
+                );
+
+                $enumerated = $enumerated || $recorded;
+
                 continue;
             }
 
@@ -590,7 +901,10 @@ class PathEnumerator
                 actions: $branch->actions ?? [],
                 invokeType: $invokeEvent,
             );
+            $enumerated = true;
         }
+
+        return $enumerated;
     }
 
     /**
