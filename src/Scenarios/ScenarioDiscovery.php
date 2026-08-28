@@ -17,6 +17,21 @@ class ScenarioDiscovery
     private static array $cache = [];
 
     /**
+     * Scenario files found on disk that never became a scenario, and why.
+     *
+     * Both skips below are correct — one unusable file must not take down discovery for every
+     * other scenario — but doing them silently made a broken scenario indistinguishable from
+     * one that does not exist. It simply left the list, so the command that validates
+     * scenarios reported a smaller total and exited 0. That is the shape this records.
+     *
+     * @var array<string, list<array{file: string, class: string, reason: string}>>
+     */
+    private static array $fileSkips = [];
+
+    /** @var array<string, list<array{file: string, class: string, reason: string}>> */
+    private static array $constructSkips = [];
+
+    /**
      * Discover all scenarios for a machine class.
      *
      * @return Collection<int, MachineScenario>
@@ -25,18 +40,48 @@ class ScenarioDiscovery
     {
         $scenarioClasses = self::discoverClasses($machineClass);
 
+        // Rebuilt per call rather than accumulated: forMachine() is not cached, and a list that
+        // grew on every call would report the same broken scenario several times.
+        self::$constructSkips[$machineClass] = [];
+
         return collect($scenarioClasses)
-            ->map(function (string $class): ?MachineScenario {
+            ->map(function (string $class) use ($machineClass): ?MachineScenario {
                 try {
                     return new $class();
-                } catch (\Throwable) {
-                    // Skip scenarios that fail to construct (e.g., missing/invalid properties).
-                    // These are caught by machine:scenario-validate command during validation.
+                } catch (\Throwable $e) {
+                    // A scenario that cannot be constructed is skipped so one broken file does
+                    // not take down the rest. An earlier revision of this comment claimed the
+                    // validate command caught these later; it cannot — that command takes its
+                    // list from this method, so a scenario dropped here never reaches it.
+                    // Recording the skip is what makes it visible.
+                    self::$constructSkips[$machineClass][] = [
+                        'file'   => (string) (new ReflectionClass($class))->getFileName(),
+                        'class'  => $class,
+                        'reason' => 'construction failed — '.$e->getMessage(),
+                    ];
+
                     return null;
                 }
             })
             ->filter()
             ->values();
+    }
+
+    /**
+     * Scenario files that were found but never validated, with the reason for each.
+     *
+     * @return list<array{file: string, class: string, reason: string}>
+     */
+    public static function skippedFor(string $machineClass): array
+    {
+        // Discovery has to have run for the answer to mean anything, and both stages are
+        // idempotent, so asking for the skips is enough to produce them.
+        self::forMachine($machineClass);
+
+        return array_merge(
+            self::$fileSkips[$machineClass] ?? [],
+            self::$constructSkips[$machineClass] ?? [],
+        );
     }
 
     /**
@@ -108,7 +153,9 @@ class ScenarioDiscovery
      */
     public static function resetCache(): void
     {
-        self::$cache = [];
+        self::$cache          = [];
+        self::$fileSkips      = [];
+        self::$constructSkips = [];
     }
 
     /**
@@ -121,6 +168,8 @@ class ScenarioDiscovery
         if (isset(self::$cache[$machineClass])) {
             return self::$cache[$machineClass];
         }
+
+        self::$fileSkips[$machineClass] = [];
 
         $reflection  = new ReflectionClass($machineClass);
         $machineFile = $reflection->getFileName();
@@ -162,6 +211,15 @@ class ScenarioDiscovery
             );
 
             if (!class_exists($className)) {
+                // The file is there and named like a scenario, but nothing loads under that
+                // FQCN — a namespace that does not match the path, or a class the autoloader
+                // cannot resolve. Skipping is right; skipping silently is what hid it.
+                self::$fileSkips[$machineClass][] = [
+                    'file'   => $file->getPathname(),
+                    'class'  => $className,
+                    'reason' => 'class not found — the file does not declare '.$className,
+                ];
+
                 continue;
             }
 
