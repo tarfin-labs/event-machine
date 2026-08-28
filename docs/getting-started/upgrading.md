@@ -37,7 +37,9 @@ Each section below has step-by-step migration instructions with before/after exa
 
 ### Path Analysis: Bounded Enumeration and Explicit Truncation
 
-`machine:paths` previously crashed (exit 139) on machines where a transition declared inside a parallel region targets a state outside it: the region walk escaped its own boundary and recursed without bound. Enumeration is now confined to the region and bounded by two ceilings, and every command reports when a ceiling fired.
+**Read this first if you use `assertAllPathsCovered()` or a `--min` coverage gate.** The analysis now finds routes it used to miss, so path counts rise and coverage percentages fall on machines that have them — substantially. Details and the re-baselining advice are under "Changes that can newly fail an existing suite" below; nothing regressed, the old numbers were measuring less than they claimed.
+
+The crash this work started from: `machine:paths` previously terminated the process (exit 139) on machines where a transition declared inside a parallel region targets a state outside it, because the region walk escaped its own boundary and recursed without bound. Enumeration is now confined to the region and bounded by two ceilings, and every command reports when a ceiling fired.
 
 **New flags:**
 
@@ -52,9 +54,11 @@ Every one of these is now validated: a non-numeric or out-of-range value fails t
 
 **Changes that can newly fail an existing suite:**
 
-- **Path counts rise sharply on machines with final states under an inherited handler — expect coverage percentages to drop.** A final state was treated as terminal by both the enumerator and the scenario resolver, so any route continuing out of one was invisible. The runtime does not stop there: `findTransitionDefinition` walks the parent chain with no special case for `FINAL`, and a handler declared on an ancestor fires from a final child. Those routes are now enumerated. On the three production machines this change was validated against, the totals went **239 → 878**, **99 → 390** and **223 → 862** paths.
+- **Path counts rise sharply — expect coverage percentages to drop.** On the three production machines this release was validated against, the totals went **239 → 878**, **99 → 390** and **223 → 862** paths (3.7–3.9×).
 
-  The practical consequence: every coverage percentage previously computed on such a machine was inflated by roughly that factor, because the denominator was missing real paths. `assertAllPathsCovered()` will now fail where it passed, and `machine:coverage --min` gates will drop below their thresholds. Nothing regressed — the earlier numbers were measuring less than they claimed. Re-baseline the thresholds against the new figures, and use `machine:paths` to see which routes appeared.
+  Several changes contribute, and the largest is the final-state one: a final state was treated as terminal by both the enumerator and the scenario resolver, so any route continuing out of one was invisible — yet `findTransitionDefinition` walks the parent chain with no special case for `FINAL`, so a handler declared on an ancestor does fire from a final child, and a compound `@done` whose guards all fail leaves the machine resting there. Those routes are now enumerated. On a machine with **no** final state under an inherited handler that change alone makes no difference at all; the rest of the rise comes from a parallel state's own transitions, an `@always` declared on a parallel state, and the continuation beyond a region-declared escape — all previously dropped. How much any given machine moves therefore depends on which of these shapes it uses: measured in isolation, the final-state change alone ranged from 1.0× to 12.5× across synthetic shapes.
+
+  The practical consequence is the same whichever cause dominates: every coverage percentage previously computed on such a machine was inflated, because the denominator was missing real paths. `assertAllPathsCovered()` will now fail where it passed, and `machine:coverage --min` gates will drop below their thresholds. Nothing regressed — the earlier numbers were measuring less than they claimed. Re-baseline the thresholds against the new figures, and use `machine:paths` to see which routes appeared.
 
 - `assertAllPathsCovered()` and `assertPathCoverage()` now **fail when the enumeration was truncated** by either ceiling, instead of reporting coverage over a partial analysis. Both take `maxPaths` and `maxDepth`, so a machine that legitimately needs more can raise them:
 
