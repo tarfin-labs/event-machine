@@ -65,13 +65,15 @@ class MachineScenarioValidateCommand extends Command
             return self::SUCCESS;
         }
 
-        $totalPassed = 0;
-        $totalFailed = 0;
+        $totalPassed  = 0;
+        $totalFailed  = 0;
+        $totalSkipped = 0;
 
         foreach ($machineClasses as $machineClass) {
             $result = $this->validateMachineAndCount($machineClass, $scenarioFilter);
             $totalPassed += $result['passed'];
             $totalFailed += $result['failed'];
+            $totalSkipped += $result['skipped'];
         }
 
         $this->line('');
@@ -80,9 +82,15 @@ class MachineScenarioValidateCommand extends Command
         if ($totalFailed > 0) {
             $summary .= ", <fg=red>{$totalFailed} failed</>";
         }
+        if ($totalSkipped > 0) {
+            $summary .= ", <fg=red>{$totalSkipped} not loaded</>";
+        }
         $this->line("Total: {$summary}");
 
-        return $totalFailed > 0 ? self::FAILURE : self::SUCCESS;
+        // A scenario that could not be loaded is a broken scenario, not an absent one, so it
+        // fails the command the same way a validation error does. Before this it left the list
+        // entirely and the command exited 0 with a smaller total.
+        return $totalFailed > 0 || $totalSkipped > 0 ? self::FAILURE : self::SUCCESS;
     }
 
     /**
@@ -194,13 +202,16 @@ class MachineScenarioValidateCommand extends Command
         if ($result['failed'] > 0) {
             $summary .= ", <fg=red>{$result['failed']} failed</>";
         }
+        if ($result['skipped'] > 0) {
+            $summary .= ", <fg=red>{$result['skipped']} not loaded</>";
+        }
         $this->line($summary);
 
-        return $result['failed'] > 0 ? self::FAILURE : self::SUCCESS;
+        return $result['failed'] > 0 || $result['skipped'] > 0 ? self::FAILURE : self::SUCCESS;
     }
 
     /**
-     * @return array{passed: int, failed: int}
+     * @return array{passed: int, failed: int, skipped: int}
      */
     private function validateMachineAndCount(string $machineClass, ?string $scenarioFilter): array
     {
@@ -219,13 +230,31 @@ class MachineScenarioValidateCommand extends Command
             });
         }
 
-        if ($scenarios->isEmpty()) {
-            return ['passed' => 0, 'failed' => 0];
+        // A scenario file that could not be loaded or constructed never reaches this list, so
+        // before the count is printed it has to be said out loud. Otherwise a broken scenario
+        // is indistinguishable from one that was never written: the total is simply smaller.
+        // Only reported when no --scenario filter is in play, since a filter is meant to
+        // narrow the list and every other file is then legitimately absent.
+        $skipped = $scenarioFilter === null ? ScenarioDiscovery::skippedFor($machineClass) : [];
+
+        if ($scenarios->isEmpty() && $skipped === []) {
+            return ['passed' => 0, 'failed' => 0, 'skipped' => 0];
         }
 
         $machineShort = class_basename($machineClass);
         $this->line('');
         $this->line("<info>{$machineShort}</info> ({$scenarios->count()} scenarios)");
+
+        if ($skipped !== []) {
+            $found = $scenarios->count() + count($skipped);
+            $this->line('');
+            $this->line("  <fg=yellow>{$found} scenario files found, {$scenarios->count()} validated — ".count($skipped).' could not be loaded:</>');
+
+            foreach ($skipped as $item) {
+                $this->line('  <fg=red>✗</> '.class_basename($item['class']).'  <fg=gray>(not validated)</>');
+                $this->line("    <fg=red>{$item['reason']}</>");
+            }
+        }
 
         $passed = 0;
         $failed = 0;
@@ -261,6 +290,6 @@ class MachineScenarioValidateCommand extends Command
             }
         }
 
-        return ['passed' => $passed, 'failed' => $failed];
+        return ['passed' => $passed, 'failed' => $failed, 'skipped' => count($skipped)];
     }
 }
