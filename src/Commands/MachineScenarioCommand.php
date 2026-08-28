@@ -176,13 +176,17 @@ class MachineScenarioCommand extends Command
 
         // Write file. Reporting "Created:" for a write that failed sends the caller
         // looking for a file that is not there.
-        if (!is_dir($scenarioDir) && !mkdir($scenarioDir, 0755, true) && !is_dir($scenarioDir)) {
+        // The warnings are suppressed because the return values ARE the handling: under
+        // Laravel's error handler a raw warning is promoted to an ErrorException, which
+        // made both branches below unreachable — the caller got a stack trace instead of
+        // the message, and neither branch could be exercised at all.
+        if (!is_dir($scenarioDir) && !@mkdir($scenarioDir, 0755, true) && !is_dir($scenarioDir)) {
             $this->error("Could not create scenario directory: {$scenarioDir}");
 
             return self::FAILURE;
         }
 
-        if (file_put_contents($scenarioFile, $content) === false) {
+        if (@file_put_contents($scenarioFile, $content) === false) {
             $this->error("Could not write scenario file: {$scenarioFile}");
 
             return self::FAILURE;
