@@ -538,3 +538,81 @@ test('a parallel nested inside a region is reported as its own group', function 
     expect(regionPathsFor($definition, 'rb'))->toHaveCount(1)
         ->and(regionPathsFor($definition, 'rc'))->toHaveCount(1);
 });
+
+// ── One group per parallel state, however many routes reach it ───────────────
+
+test('a parallel reached by two routes is still recorded as one group', function (): void {
+    // Merging a region sub-enumerator's groups into the parent's without deduplicating
+    // recorded the same parallel state twice: a sub-enumerator is a fresh object and its
+    // own already-recorded scan cannot see what the caller holds. The two copies could
+    // disagree — the second ran on whatever budget was left — and under nesting the
+    // retained groups grew exponentially, all while the result called itself complete.
+    //
+    // Here a transition declared inside q1's region jumps straight into a state nested
+    // in q2, so the parallel at q2.rc.deep is reached both through that escape and by
+    // machine-level enumeration of q2.
+    $definition = MachineDefinition::define(config: [
+        'id'      => 'two_routes_one_group',
+        'initial' => 'q1',
+        'states'  => [
+            'q1' => [
+                'type'   => 'parallel',
+                'on'     => ['NEXT' => 'q2'],
+                'states' => [
+                    'ra' => [
+                        'initial' => 'a',
+                        'states'  => ['a' => ['on' => ['JUMP' => 'q2.rc.deep']]],
+                    ],
+                ],
+            ],
+            'q2' => [
+                'type'   => 'parallel',
+                'states' => [
+                    'rc' => [
+                        'initial' => 'deep',
+                        'states'  => [
+                            'deep' => [
+                                'type'   => 'parallel',
+                                'states' => [
+                                    'rd' => [
+                                        'initial' => 'z',
+                                        'states'  => ['z' => ['on' => ['F' => 'w']], 'w' => ['type' => 'final']],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    $result = (new PathEnumerator($definition))->enumerate();
+
+    $groupIds = array_map(
+        static fn (ParallelPathGroup $g): string => $g->parallelStateId,
+        $result->parallelGroups,
+    );
+
+    $duplicated = array_keys(array_filter(
+        array_count_values($groupIds),
+        static fn (int $count): bool => $count > 1,
+    ));
+
+    expect($duplicated)->toBe([]);
+
+    // And the count still agrees with the definition, which is the contradiction a reader
+    // of `machine:paths` would otherwise see between its two summary lines.
+    $parallelStateIds = [];
+
+    foreach ($definition->idMap as $id => $state) {
+        if ($state->type === StateDefinitionType::PARALLEL) {
+            $parallelStateIds[] = $id;
+        }
+    }
+
+    sort($parallelStateIds);
+    sort($groupIds);
+
+    expect($groupIds)->toBe($parallelStateIds);
+});
