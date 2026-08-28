@@ -637,6 +637,14 @@ class PathEnumerator
                 // Region truncation had no route to the result before: the sub-enumerator's
                 // flags were discarded with it, so a region cut short still reported a
                 // complete analysis.
+                //
+                // The path half of that is now belt-and-braces rather than load-bearing.
+                // Once the budget became shared, a region that exhausts it also starves
+                // the parent's own recordPath, and refusing there raises the same flag. A
+                // differential sweep over 2400 (shape, budget) pairs found no case where
+                // removing this line changes any flag. It is kept because nothing enforces
+                // the invariant that makes it redundant, and it costs one comparison — but
+                // it is not covered by a test, and no test can cover it while that holds.
                 if ($regionEnumerator->pathLimitReached) {
                     $this->pathLimitReached = true;
                 }

@@ -64,8 +64,11 @@ test('the coverage report discloses that its enumeration was cut short', functio
 
 test('a region that truncates raises the flag on the top-level result', function (): void {
     // The region sub-enumerator's flags used to be discarded along with the enumerator,
-    // so a region cut short still reported a complete analysis. Delete the propagation
-    // in handleParallel and this is the test that notices.
+    // so a region cut short still reported a complete analysis. This covers the DEPTH
+    // half. The path half has no test on purpose: the shared budget makes the parent's
+    // own gate fire first in every case, so removing that arm changes no flag on any of
+    // 2400 fuzzed (shape, budget) pairs. The comment at its site records that rather
+    // than this test pretending to cover both.
     $definition = MachineDefinition::define(config: [
         'id'      => 'region_truncation_probe',
         'initial' => 'idle',
