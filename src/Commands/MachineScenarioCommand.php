@@ -199,10 +199,13 @@ class MachineScenarioCommand extends Command
             return self::FAILURE;
         }
 
-        // A short write counts as a failure too. file_put_contents returns the byte count,
-        // not a boolean, so testing only for false lets a partially written file through as
-        // "Created:" — the same wrong claim this block exists to prevent, one step quieter
-        // now that the warning is suppressed.
+        // Compared against the byte count rather than false, though the two are equivalent
+        // here: PHP folds a partial write into `false` (it returns -1 internally on a short
+        // count), so a positive-but-short return cannot occur — demonstrated with a
+        // userland stream wrapper, which returns the full length even when its writes make
+        // progress in small chunks. An earlier comment here claimed the opposite. The
+        // stricter form is kept because it states the intent, not because it catches a
+        // case `=== false` misses.
         if (@file_put_contents($scenarioFile, $content) !== strlen($content)) {
             $this->error("Could not write scenario file: {$scenarioFile}");
 
