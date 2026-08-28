@@ -33,6 +33,39 @@ Each section below has step-by-step migration instructions with before/after exa
 
 ---
 
+## From 9.16.x to 9.17.0
+
+### Path Analysis: Bounded Enumeration and Explicit Truncation
+
+`machine:paths` previously crashed (exit 139) on machines where a transition declared inside a parallel region targets a state outside it: the region walk escaped its own boundary and recursed without bound. Enumeration is now confined to the region and bounded by two ceilings, and every command reports when a ceiling fired.
+
+**New flags:**
+
+| Command | Flag | Default |
+|---------|------|---------|
+| `machine:paths` | `--max-depth=N` | 200 |
+| `machine:coverage` | `--max-paths=N`, `--max-depth=N` | 1000, 200 |
+| `machine:scenario` | `--max-iterations=N` | 1000 |
+
+**Changes that can newly fail an existing suite:**
+
+- `assertAllPathsCovered()` and `assertPathCoverage()` now **fail when the enumeration was truncated** by either ceiling, instead of reporting coverage over a partial analysis. Both take `maxPaths` and `maxDepth`, so a machine that legitimately needs more can raise them:
+
+  <!-- doctest-attr: ignore -->
+  ```php
+  FindeksMachine::assertAllPathsCovered(maxPaths: 5000, maxDepth: 400);
+  ```
+
+- `machine:coverage --min` **rejects non-numeric input** instead of coercing it to `0`. `--min=abc` previously passed every gate silently; it now fails the command. It also refuses to judge a truncated analysis rather than printing a percentage that cannot mean what it claims.
+
+- `machine:scenario` separates **"no path exists"** from **"the search hit its iteration limit"**. Both are failures, but only the second is fixable, with `--max-iterations`. Previously both printed "No path".
+
+- Targets **inside a parallel region** now resolve. `machine:scenario` descends into region initial states, marking region entry `@region` — distinct from `@entry`, which means exclusive compound descent. A route that previously reported "No path" for a reachable region-interior target now succeeds.
+
+**New path types:** `TRUNCATED` (a branch cut at a ceiling; excluded from coverage accounting), plus `REGION_EXIT` and `REGION_DEFERRED` for paths inside a parallel region. See [Transitions & Paths](/testing/transitions-and-paths#path-coverage-analysis).
+
+---
+
 ## From 9.6.x to 9.7.0
 
 ### Child Scenario Persistence on Interactive Pause
