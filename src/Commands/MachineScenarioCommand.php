@@ -62,7 +62,15 @@ class MachineScenarioCommand extends Command
         }
 
         if ($paths === []) {
-            $this->error("No path from '{$source}' to '{$parentTarget}' via '{$event}'.");
+            // The command calls resolveAll() and never catches the exception, so it reads
+            // the distinction off the resolver. Both outcomes still fail; what changes is
+            // whether we claim there is no path or admit we stopped looking.
+            if ($resolver->wasTruncated()) {
+                $this->error("Path analysis from '{$source}' to '{$parentTarget}' via '{$event}' was truncated at the search limit.");
+                $this->line('A path may still exist — this is not a finding that none does.');
+            } else {
+                $this->error("No path from '{$source}' to '{$parentTarget}' via '{$event}'.");
+            }
 
             return self::FAILURE;
         }
