@@ -33,8 +33,6 @@ use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
  */
 trait TracksPathCoverage
 {
-    private static bool $pathCoverageBooted = false;
-
     protected function setUpTracksPathCoverage(): void
     {
         // Every test, not just the first: a test that stops at an intermediate state
@@ -47,11 +45,13 @@ trait TracksPathCoverage
         // adoption steps is guaranteed to have. Both calls are idempotent.
         PathCoverageTracker::discardActivePaths();
 
-        if (self::$pathCoverageBooted) {
+        // The flag lives on the tracker, not here: a trait's statics are copied into every
+        // using class, so a project with two base TestCases both using this trait booted twice
+        // and the second boot's cleanExportDirectory() deleted coverage files that finished
+        // workers had already written.
+        if (!PathCoverageTracker::claimBoot()) {
             return;
         }
-
-        self::$pathCoverageBooted = true;
 
         // Clean stale files from previous test runs (only first boot in this process)
         PathCoverageTracker::cleanExportDirectory();
