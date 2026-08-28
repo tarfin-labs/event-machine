@@ -269,6 +269,65 @@ readonly class PathEnumerationResult
     }
 
     /**
+     * Child machines the analysis could not build, and why.
+     *
+     * unhandledChildOutcomes() has to skip a child whose definition cannot be built — one
+     * unbuildable child must not take down the report for every other state. But skipping it
+     * silently makes it indistinguishable from a child whose outcomes are all handled, so a
+     * missing @done route hides behind an exception nobody sees. This names them, and the
+     * commands print them as a warning: disclosure, not a gate, matching how truncation and
+     * unmatched observations are reported.
+     *
+     * @return list<array{parentStateKey: string, childClass: string, reason: string}>
+     */
+    public function unanalysableChildren(): array
+    {
+        $result = [];
+
+        foreach ($this->definition->idMap ?? [] as $state) {
+            if (!$state->hasMachineInvoke()) {
+                continue;
+            }
+
+            $def = $state->getMachineInvokeDefinition();
+            if ($def === null) {
+                continue;
+            }
+            if ($def->isJob()) {
+                continue;
+            }
+            if ($def->machineClass === '') {
+                continue;
+            }
+            if ($def->target !== null) {
+                continue;
+            }
+
+            if (!class_exists($def->machineClass)) {
+                $result[] = [
+                    'parentStateKey' => $state->key ?? '',
+                    'childClass'     => $def->machineClass,
+                    'reason'         => 'class not found',
+                ];
+
+                continue;
+            }
+
+            try {
+                $def->machineClass::definition();
+            } catch (\Throwable $e) {
+                $result[] = [
+                    'parentStateKey' => $state->key ?? '',
+                    'childClass'     => $def->machineClass,
+                    'reason'         => $e->getMessage(),
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * Detect child machines whose final states are not fully handled by the parent.
      *
      * Only checks non-fire-and-forget, non-job invoke states where the parent
@@ -311,9 +370,11 @@ readonly class PathEnumerationResult
             // for reasons that have nothing to do with the parent: a missing behavior
             // class, a definition that needs runtime config, a half-written stub. This is
             // a warning feature, so one unbuildable child must not take down the whole
-            // report for every other state. The cost is that such a child is skipped
-            // silently — an unhandled outcome there goes unmentioned rather than being
-            // reported as unknown, which is worth revisiting separately.
+            // report for every other state.
+            //
+            // Skipping it is right; skipping it SILENTLY was not. A child whose definition
+            // cannot be built is indistinguishable from one whose outcomes are all handled —
+            // caught, then reported as success. unanalysableChildren() names them instead.
             try {
                 if (!class_exists($def->machineClass)) {
                     continue;
