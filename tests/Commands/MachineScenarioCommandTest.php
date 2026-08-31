@@ -136,8 +136,8 @@ test('--path=999 out of range — returns FAILURE', function (): void {
 
 // ── File handling ────────────────────────────────────────────────────────────
 
-test('creates Scenarios/ directory if it doesn\'t exist', function (): void {
-    // Use --dry-run to verify output without actually writing
+test('--dry-run succeeds when the Scenarios/ directory does not exist', function (): void {
+    // The real mkdir is covered in MachineScenarioCommandWriteTest -- a dry run never creates it.
     $this->artisan('machine:scenario', [
         'name'      => 'AtApproved',
         'machine'   => ScenarioTestMachine::class,
@@ -148,8 +148,8 @@ test('creates Scenarios/ directory if it doesn\'t exist', function (): void {
     ])->assertSuccessful();
 });
 
-test('writes PHP file to Scenarios/ directory next to machine class', function (): void {
-    // Use --dry-run for all file-writing tests to avoid polluting test stubs
+test('--dry-run reports success without touching the Scenarios/ directory', function (): void {
+    // The write itself is covered in MachineScenarioCommandWriteTest, against a temp directory.
     $this->artisan('machine:scenario', [
         'name'      => 'AtApproved',
         'machine'   => ScenarioTestMachine::class,
@@ -183,8 +183,8 @@ test('file already exists — returns FAILURE with Use --force hint', function (
     ])->assertFailed();
 });
 
-test('--force overwrites existing file', function (): void {
-    // Use --dry-run + --force to verify it doesn't fail on existing
+test('--force with --dry-run does not fail on an existing file', function (): void {
+    // The real overwrite is covered in MachineScenarioCommandWriteTest.
     $this->artisan('machine:scenario', [
         'name'      => 'HappyPath',
         'machine'   => ScenarioTestMachine::class,
