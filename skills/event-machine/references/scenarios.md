@@ -60,7 +60,7 @@ Both inline outcomes and child scenario classes work transparently for `'queue:'
 If a `'queue:'` parent's child runs full I/O despite the scenario plan referencing it:
 - Confirm package version is 9.10.3 or later
 - Confirm `config('machine.scenarios.enabled') === true` in the worker's environment (workers may load a different config than HTTP requests)
-- Inspect `MachineCurrentState.scenario_class` for the dispatched child; if `null`, the dispatch site couldn't resolve the active child scenario for that state route
+- Inspect `MachineCurrentState.scenario_class` for the dispatched child **while the scenario is still in flight**. From 9.18.1 that column is cleared as soon as a scenario is done with the machine — a final state, or any scenario with no `continuation()` — so `null` after a completed run is the normal, correct state and says nothing about dispatch. Read it during the run, or from the child's own row before the parent finishes; a `null` there means the dispatch site could not resolve the active child scenario for that state route
 
 ## Common patterns
 
