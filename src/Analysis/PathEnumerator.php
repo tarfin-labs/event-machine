@@ -749,80 +749,15 @@ class PathEnumerator
             $enumerated = true;
         }
 
-        // Follow @done transition
-        if ($state->onDoneTransition instanceof TransitionDefinition) {
-            foreach ($state->onDoneTransition->branches ?? [] as $index => $branch) {
-                if (!$branch->target instanceof StateDefinition) {
-                    continue;
-                }
+        // Follow the @done and @fail outcomes.
+        //
+        // These were two near-identical 36-line blocks differing only in the property they
+        // read and the event literal they recorded — the extraction §12's D4 committed to.
+        foreach (['@done' => $state->onDoneTransition, '@fail' => $state->onFailTransition] as $event => $transition) {
+            $outcome = $this->followParallelOutcome($transition, $event, $state, $steps, $visitedIds);
 
-                if ($this->leavesBoundary($branch->target)) {
-                    $recorded = $this->recordBoundarySkip(
-                        steps: $steps,
-                        target: $branch->target,
-                        source: $state,
-                        event: '@done',
-                        guards: $branch->guards ?? [],
-                        actions: $branch->actions ?? [],
-                        invokeType: '@done',
-                    );
-
-                    $enumerated = $enumerated || $recorded;
-                    $deferred   = $deferred || !$recorded;
-
-                    continue;
-                }
-
-                $this->dfs(
-                    state: $branch->target,
-                    steps: $steps,
-                    visitedIds: $visitedIds,
-                    event: '@done',
-                    branchIndex: count($state->onDoneTransition->branches) > 1 ? $index : null,
-                    guards: $branch->guards ?? [],
-                    actions: $branch->actions ?? [],
-                    invokeType: '@done',
-                );
-                $enumerated = true;
-            }
-        }
-
-        // Follow @fail transition
-        if ($state->onFailTransition instanceof TransitionDefinition) {
-            foreach ($state->onFailTransition->branches ?? [] as $index => $branch) {
-                if (!$branch->target instanceof StateDefinition) {
-                    continue;
-                }
-
-                if ($this->leavesBoundary($branch->target)) {
-                    $recorded = $this->recordBoundarySkip(
-                        steps: $steps,
-                        target: $branch->target,
-                        source: $state,
-                        event: '@fail',
-                        guards: $branch->guards ?? [],
-                        actions: $branch->actions ?? [],
-                        invokeType: '@fail',
-                    );
-
-                    $enumerated = $enumerated || $recorded;
-                    $deferred   = $deferred || !$recorded;
-
-                    continue;
-                }
-
-                $this->dfs(
-                    state: $branch->target,
-                    steps: $steps,
-                    visitedIds: $visitedIds,
-                    event: '@fail',
-                    branchIndex: count($state->onFailTransition->branches) > 1 ? $index : null,
-                    guards: $branch->guards ?? [],
-                    actions: $branch->actions ?? [],
-                    invokeType: '@fail',
-                );
-                $enumerated = true;
-            }
+            $enumerated = $enumerated || $outcome['enumerated'];
+            $deferred   = $deferred || $outcome['deferred'];
         }
 
         // Follow the parallel state's own remaining transitions.
@@ -921,6 +856,71 @@ class PathEnumerator
         } elseif (!$enumerated && $deferred) {
             $this->recordPath($steps, PathType::REGION_DEFERRED);
         }
+    }
+
+    /**
+     * Follow one of a parallel state's invoke outcomes — @done or @fail.
+     *
+     * The two are the same walk over a different property, so they are one method taking the
+     * transition and the event literal. Split out per §12's D4: handleParallel carried both as
+     * near-identical 36-line blocks, and every audit round that touched one had to remember the
+     * other.
+     *
+     * @param  list<PathStep>  $steps
+     * @param  array<string, true>  $visitedIds
+     *
+     * @return array{enumerated: bool, deferred: bool}
+     */
+    private function followParallelOutcome(
+        ?TransitionDefinition $transition,
+        string $event,
+        StateDefinition $state,
+        array $steps,
+        array $visitedIds,
+    ): array {
+        if (!$transition instanceof TransitionDefinition) {
+            return ['enumerated' => false, 'deferred' => false];
+        }
+
+        $enumerated = false;
+        $deferred   = false;
+
+        foreach ($transition->branches ?? [] as $index => $branch) {
+            if (!$branch->target instanceof StateDefinition) {
+                continue;
+            }
+
+            if ($this->leavesBoundary($branch->target)) {
+                $recorded = $this->recordBoundarySkip(
+                    steps: $steps,
+                    target: $branch->target,
+                    source: $state,
+                    event: $event,
+                    guards: $branch->guards ?? [],
+                    actions: $branch->actions ?? [],
+                    invokeType: $event,
+                );
+
+                $enumerated = $enumerated || $recorded;
+                $deferred   = $deferred || !$recorded;
+
+                continue;
+            }
+
+            $this->dfs(
+                state: $branch->target,
+                steps: $steps,
+                visitedIds: $visitedIds,
+                event: $event,
+                branchIndex: count($transition->branches) > 1 ? $index : null,
+                guards: $branch->guards ?? [],
+                actions: $branch->actions ?? [],
+                invokeType: $event,
+            );
+            $enumerated = true;
+        }
+
+        return ['enumerated' => $enumerated, 'deferred' => $deferred];
     }
 
     /**
