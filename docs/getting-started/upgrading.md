@@ -33,6 +33,35 @@ Each section below has step-by-step migration instructions with before/after exa
 
 ---
 
+## From 9.18.x to 9.19.0
+
+### The sweep commands now fail instead of exiting 0 having done nothing
+
+**Breaking change for anything that reads their exit code** — including a cron monitor, which is
+the point.
+
+- `machine:process-scheduled` exits `1` when the schedule's resolver throws. It used to catch the
+  throwable, print it, and return an empty instance list, which `handle()` reported as
+  "No matching instances found" and exited `0`. "The resolver blew up" and "nothing to process"
+  were the same outcome, so a monitor stayed green while nothing was dispatched.
+- `machine:process-timers` exits `1` when a machine's `definition()` cannot be built. It used to
+  print the error and exit `0`.
+
+**What can newly fail:** a scheduled job that has been quietly broken starts reporting it. Run both
+commands by hand once before trusting the schedule again.
+
+### A parallel machine is dispatched once, not once per region
+
+`machine_current_states` holds one row per active region, and `machine:process-scheduled` plucked
+`root_event_id` without `distinct()` on both its resolver and auto-detect paths. An instance active
+in N regions received N identical events. Timers were never affected.
+
+### `ProcessTimersCommand::processClass()` returns `bool`
+
+It was `void`. The method is `protected`, so only a consumer subclassing the command to override it
+is affected — update the signature to match. A machine with no timers returns `true`; sharding runs
+the command per class, and having nothing to do is not a failure.
+
 ## From 9.17.x to 9.18.0
 
 ### A scenario can no longer make a machine unloadable
