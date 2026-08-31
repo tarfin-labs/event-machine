@@ -12,6 +12,7 @@ use Tarfinlabs\EventMachine\Jobs\SendToMachineJob;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Definition\ScheduleDefinition;
+use Tarfinlabs\EventMachine\Exceptions\ScheduleResolverFailedException;
 
 /**
  * Processes a scheduled event for a machine class.
@@ -54,8 +55,17 @@ class ProcessScheduledCommand extends Command
             return self::FAILURE;
         }
 
-        $scheduleDef  = $definition->parsedSchedules[$eventType];
-        $rootEventIds = $this->resolveInstances($scheduleDef, $definition, $machineClass, $eventType);
+        $scheduleDef = $definition->parsedSchedules[$eventType];
+
+        try {
+            $rootEventIds = $this->resolveInstances($scheduleDef, $definition, $machineClass, $eventType);
+        } catch (ScheduleResolverFailedException $e) {
+            // A resolver that threw is not an empty result. Reporting it as one is how this
+            // command used to exit SUCCESS having dispatched nothing.
+            $this->error($e->getMessage());
+
+            return self::FAILURE;
+        }
 
         if ($rootEventIds->isEmpty()) {
             $this->info('No matching instances found.');
@@ -128,9 +138,11 @@ class ProcessScheduledCommand extends Command
                 return collect();
             }
         } catch (Throwable $e) {
-            $this->error("Resolver failed: {$e->getMessage()}");
-
-            return collect();
+            // Rethrown rather than swallowed. Returning an empty collection here made "the
+            // resolver blew up" indistinguishable from "nothing to process": handle() reported
+            // "No matching instances found" and exited SUCCESS, so a cron monitor stayed green
+            // while nothing was dispatched. handle() catches this and fails the command.
+            throw ScheduleResolverFailedException::forResolver($machineClass, $e);
         }
 
         // Safety cross-check: only keep IDs for this machine class.
