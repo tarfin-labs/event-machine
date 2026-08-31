@@ -44,31 +44,38 @@ class ProcessTimersCommand extends Command
         $machineClass = (string) $this->option('class');
         $batchSize    = (int) config('machine.timers.batch_size', 100);
 
-        if ($machineClass !== '') {
-            $this->processClass($machineClass, $batchSize);
-        } else {
+        if ($machineClass === '') {
             $this->warn('No --class specified. Use MachineServiceProvider auto-registration for per-class sharding.');
 
             return self::FAILURE;
         }
 
-        return self::SUCCESS;
+        return $this->processClass($machineClass, $batchSize)
+            ? self::SUCCESS
+            : self::FAILURE;
     }
 
-    protected function processClass(string $machineClass, int $batchSize): void
+    /**
+     * @return bool True when the sweep ran; false when the class could not be processed.
+     */
+    protected function processClass(string $machineClass, int $batchSize): bool
     {
         try {
             $definition = $machineClass::definition();
         } catch (\Throwable $e) {
+            // Reported AND failed. Returning void here left handle() exiting SUCCESS, so a
+            // machine whose definition stopped building swept nothing while the schedule that
+            // runs this command looked healthy — the same swallow the schedules resolver had.
             $this->error("Failed to load definition for {$machineClass}: {$e->getMessage()}");
 
-            return;
+            return false;
         }
 
         $timerDefinitions = $this->collectTimerDefinitions($definition);
 
         if ($timerDefinitions === []) {
-            return;
+            // A machine with no timers is not a failure — sharding runs this per class.
+            return true;
         }
 
         foreach ($timerDefinitions as $timerDef) {
@@ -78,6 +85,8 @@ class ProcessTimersCommand extends Command
                 $this->processEveryTimer($machineClass, $timerDef, $batchSize);
             }
         }
+
+        return true;
     }
 
     /**
