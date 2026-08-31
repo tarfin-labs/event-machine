@@ -115,6 +115,8 @@ Player auto-sends `ApproveEvent` when the machine arrives at `reviewing`. Typica
 | Path | Trigger | Activation site | Source of scenario class |
 |------|---------|-----------------|---------------------------|
 | Existing-machine restoration | `Machine::create(state: $rootEventId)` | `restoreStateFromRootEventId` §9 block | `machine_current_states.scenario_class` row |
+
+From 9.18.0 the restoration row above is fail-safe in both directions: stored params are hydrated **without** being re-validated, and anything that goes wrong hydrating a stored scenario drops the overrides rather than the machine. Before that, a param rule that reads the world — `exists` on a row someone later deleted, `after_or_equal:today` once midnight passes — made the machine throw on every load, permanently, with no way back through the application.
 | Fresh async child boot (9.10.3+) | `ChildMachineJob::handle()` for `'queue:'` parent | `ScenarioPlayer::activateForAsyncBoot()` in `try`, `deactivate()` in `finally` | `ChildMachineJob::$scenarioClass` payload |
 | Sync child scenario reference | Parent transitions into delegation state with child scenario reference in plan | `ScenarioPlayer::executeChildScenario()` in-process | Resolved from parent's plan |
 
