@@ -36,3 +36,12 @@
 # Requires (once per clone):
 #   git config diff.pest.xfuncname '^(it|test)\(.*$'
 tests/**/*.php diff=pest
+
+# A markdown file's sections are its headings. Without this, git's funcname falls
+# back to whatever line precedes a hunk, which in prose is a sentence: a change in
+# docs/reference/exceptions.md was labelled "Thrown when `definition()` is not
+# implemented…" and one in upgrading.md got the paragraph above it. Neither is a
+# section a reader of those files would recognise, and hunk-level commit splitting
+# groups by exactly that label. With the driver they become "### MachineDefinition
+# NotFoundException" and "## Version Compatibility".
+*.md diff=markdown
