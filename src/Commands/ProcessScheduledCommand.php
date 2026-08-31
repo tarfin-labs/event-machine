@@ -152,6 +152,9 @@ class ProcessScheduledCommand extends Command
         foreach ($rootEventIds->chunk(1000) as $chunk) {
             $validated = $validated->merge(
                 MachineCurrentState::query()
+                    // distinct: a parallel machine records one row per active region, so an
+                    // instance in N regions plucked N identical ids and was dispatched N times.
+                    ->distinct()
                     ->whereIn('root_event_id', $chunk)
                     ->where('machine_class', $machineClass)
                     ->pluck('root_event_id')
@@ -192,7 +195,9 @@ class ProcessScheduledCommand extends Command
             $query->whereIn('state_id', $targetStates);
         }
 
-        return $query->pluck('root_event_id');
+        // distinct for the same reason as the resolver path: one row per active region means
+        // a parallel instance would otherwise be dispatched once per region it occupies.
+        return $query->distinct()->pluck('root_event_id');
     }
 
     /**
