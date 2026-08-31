@@ -133,6 +133,8 @@ The trio that must be reactivated: classified outcomes (`self::$outcomes`/`self:
 | 5 | Parallel `@continue` on parent silently no-ops | Declare on a leaf state of one region; player walks regions round-robin |
 | 6 | Async child runs full I/O despite scenario | Upgrade to 9.10.3+ |
 | 7 | Plan key prefix mismatch → no override applied | Use full state route (`car_sales.allocation.checking`) — suffix matching is permissive but explicit is safer |
+| 8 | `params()` rules are checked **once, at activation** | Do not expect `exists`/date rules to be re-checked on later requests — from 9.18.0 stored params are hydrated without re-validation, because re-checking them made machines unloadable when the world moved |
+| 9 | A scenario file that cannot load is a **failure**, not an absence | From 9.18.0 `machine:scenario-validate` names it and exits non-zero. A scenario broken in its class body used to vanish from the count — usually after a namespace move left its import dangling |
 
 ## Validator + diagnostics
 
