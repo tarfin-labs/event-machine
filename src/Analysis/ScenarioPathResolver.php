@@ -149,12 +149,12 @@ class ScenarioPathResolver
             // Seeded at the cost of its own first step, not at zero. `visited` holds that branch
             // target and nothing else: the trigger's source is deliberately absent, so a cyclic
             // machine may re-enter it as an ordinary step and be priced for it.
-            $frontier[] = [
-                $branch->target,
-                [$firstStep],
-                [$branch->target->id => true],
-                $firstStep->classification->weight(),
-            ];
+            $frontier[] = new FrontierEntry(
+                state: $branch->target,
+                path: [$firstStep],
+                visited: [$branch->target->id => true],
+                cost: $firstStep->classification->weight(),
+            );
         }
 
         $this->bestFirst($frontier, $targetId, $paths);
@@ -196,19 +196,19 @@ class ScenarioPathResolver
      * array priorities element-wise, so this is cost first, insertion order second, and the
      * negation is because the queue is a max-heap.
      *
-     * @param  list<array{0: StateDefinition, 1: list<ScenarioPathStep>, 2: array<string, true>, 3: int}>  $seeds
+     * @param  list<FrontierEntry>  $seeds
      * @param  list<ScenarioPath>  $results  Accumulated results (passed by reference).
      */
     private function bestFirst(array $seeds, string $targetId, array &$results): void
     {
-        /** @var SplPriorityQueue<array{0: int, 1: int}, array{0: StateDefinition, 1: list<ScenarioPathStep>, 2: array<string, true>, 3: int}> $frontier */
+        /** @var SplPriorityQueue<array{0: int, 1: int}, FrontierEntry> $frontier */
         $frontier = new SplPriorityQueue();
         $frontier->setExtractFlags(SplPriorityQueue::EXTR_DATA);
 
         $sequence = 0;
 
         foreach ($seeds as $seed) {
-            $frontier->insert($seed, [-$seed[3], -$sequence]);
+            $frontier->insert($seed, [-$seed->cost, -$sequence]);
             $sequence++;
         }
 
@@ -220,15 +220,15 @@ class ScenarioPathResolver
 
         while (!$frontier->isEmpty() && $iter < $maxIter) {
             $iter++;
-            [$currentState, $currentPath, $visited, $cost] = $frontier->extract();
+            $entry = $frontier->extract();
 
-            foreach ($this->getNextStates($currentState) as [$nextState, $nextEvent, $nextGuards, $nextActions]) {
-                if (isset($visited[$nextState->id])) {
+            foreach ($this->getNextStates($entry->state) as [$nextState, $nextEvent, $nextGuards, $nextActions]) {
+                if (isset($entry->visited[$nextState->id])) {
                     continue; // Cycle
                 }
 
                 $step    = $this->step($nextState, $nextEvent, $nextGuards, $nextActions);
-                $newPath = [...$currentPath, $step];
+                $newPath = [...$entry->path, $step];
 
                 // Recorded when its final step is PUSHED. A target is never placed on the
                 // frontier and never expanded, so every path is recorded exactly once.
@@ -238,11 +238,14 @@ class ScenarioPathResolver
                     continue; // Found one path, keep searching for alternatives
                 }
 
-                $newVisited                 = $visited;
+                $newVisited                 = $entry->visited;
                 $newVisited[$nextState->id] = true;
-                $nextCost                   = $cost + $step->classification->weight();
+                $nextCost                   = $entry->cost + $step->classification->weight();
 
-                $frontier->insert([$nextState, $newPath, $newVisited, $nextCost], [-$nextCost, -$sequence]);
+                $frontier->insert(
+                    new FrontierEntry($nextState, $newPath, $newVisited, $nextCost),
+                    [-$nextCost, -$sequence],
+                );
                 $sequence++;
             }
         }
