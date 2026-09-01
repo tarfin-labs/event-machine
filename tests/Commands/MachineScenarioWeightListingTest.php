@@ -18,6 +18,9 @@ test('the multi-path listing shows each path weight', function (): void {
     ])
         ->expectsOutputToContain('@continue, weight 3')
         ->expectsOutputToContain('@continue, weight 7')
+        // Paired with the single-path test below, which asserts this line is ABSENT. Without an
+        // assertion on both sides, deleting the hint outright would leave the suite green.
+        ->expectsOutputToContain('Use --path=N to select. Using path [0].')
         ->assertSuccessful();
 });
 
