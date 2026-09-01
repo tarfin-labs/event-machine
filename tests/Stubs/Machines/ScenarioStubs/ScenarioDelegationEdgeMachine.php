@@ -13,17 +13,20 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Jobs\ProcessJob;
  *
  *   fire_forget  job + target + an ordinary `on:`   none of the four keys, so it dead-ends
  *   fail_only    job + @done + @fail + an `on:`     walkable by BOTH delegation keys
- *   fail_pure    job + @fail + target               walkable by @fail with no @done present
+ *   fail_pure    job + @fail + target + an `on:`   walkable by @fail with no @done present
  *
  * `target` is the fire-and-forget destination the ENGINE takes; it is not a transition, and the
  * resolver does not follow it. Neither are the ordinary `on:` transitions. That is why
  * `after_edge` is unreachable through all three states even though every one of them names it.
  *
- * fail_pure carries the discriminating case: a reader could reasonably believe the resolver
- * collects `@fail` only alongside `@done`. It has to carry `target` as well, because the engine
- * rejects a `job` state with neither `@done` nor `target`
- * (InvalidStateConfigException::jobRequiresDoneOrTarget) — `@fail` entirely on its own is not a
- * definition that can be written, so the closest constructible shape is the one used here.
+ * fail_pure carries the discriminating case, and carries it twice over. A reader could reasonably
+ * believe the resolver collects `@fail` only alongside `@done`, or that it falls back to ordinary
+ * `on:` transitions once `@done` is absent. Both beliefs pass every assertion that `fail_only` can
+ * make, because `fail_only` has `@done`. So fail_pure carries an `on:` of its own.
+ *
+ * It has to carry `target` as well, because the engine rejects a `job` state with neither `@done`
+ * nor `target` (InvalidStateConfigException::jobRequiresDoneOrTarget) — `@fail` entirely on its own
+ * is not a definition that can be written. `on:` is unconstrained by that rule.
  *
  * The refusal to follow ordinary `on:` transitions out of a delegation state is the resolver's
  * graph, not the runtime's behaviour; the divergence is catalogued in
@@ -56,6 +59,9 @@ class ScenarioDelegationEdgeMachine extends Machine
                         'job'    => ProcessJob::class,
                         '@fail'  => 'failed_out',
                         'target' => 'after_edge',
+                        'on'     => [
+                            'SKIP' => 'after_edge',
+                        ],
                     ],
                     'fail_only' => [
                         'job'   => ProcessJob::class,
