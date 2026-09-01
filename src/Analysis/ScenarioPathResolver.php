@@ -116,9 +116,15 @@ class ScenarioPathResolver
             // argument as "class FQCN or event type string", and resolving an FQCN to its type
             // means loading the class. Gating on class_exists($event, false) would make the
             // sentence above true at the cost of silently failing to match any event class that
-            // was not already loaded. The residual exposure is a developer running
-            // `php artisan machine:scenario` with an argument of their own choosing, which is
-            // authority that command already has.
+            // was not already loaded — `::class` is a compile-time string, so nothing preloads an
+            // event named on the command line.
+            //
+            // Two callers reach here. `machine:scenario` passes its `event` argument straight
+            // through, chosen at the command line. `machine:scenario-validate` arrives via
+            // ScenarioValidator::validatePaths(), where the value is the scenario class's own
+            // `protected string $event` and MachineScenario::eventType() has already loaded it by
+            // the same means. So the residual exposure is a developer running one of those two
+            // commands over input they control, which is authority those commands already have.
             if ($eventTransition === null && is_subclass_of($event, EventBehavior::class)) {
                 foreach ($transitions as $eventKey => $transition) {
                     if ($eventKey === $event::getType()) {
