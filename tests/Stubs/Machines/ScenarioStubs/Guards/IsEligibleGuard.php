@@ -13,6 +13,9 @@ class IsEligibleGuard extends GuardBehavior
 
     public function __invoke(ContextManager $ctx): bool
     {
-        return $ctx->get('eligible', true);
+        // ContextManager::get() takes ONE argument, so the second one here was silently
+        // discarded: with 'eligible' absent this returned null and tripped the bool return
+        // type. `?? true` is the default the second argument was reaching for.
+        return $ctx->get('eligible') ?? true;
     }
 }
