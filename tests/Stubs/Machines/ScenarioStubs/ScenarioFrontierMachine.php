@@ -16,9 +16,18 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligible
  *   PARTLY  entry --> {hop | (targetless)}      one branch has no target at all
  *   CYCLE   entry --> loop_a --> entry --> goal the source is re-entered as an ordinary step
  *   FORK    entry --> fork, whose @always has an expensive first branch and a cheap second
+ *   SPLIT   split_entry --> {costly | thrifty}  the TRIGGER itself has the two branches
  *
- * FORK is the one that separates a shared frontier from a per-branch search: the cheap route
- * lives in the SECOND branch of `fork`'s @always, and the expensive one in the first.
+ * FORK and SPLIT both put the cheap route second, but at different levels, and only SPLIT
+ * separates a shared frontier from a per-branch search. FORK's trigger has ONE branch and the
+ * costly/thrifty choice lives below it in `fork`'s @always, so a per-branch search would order
+ * it correctly too — what FORK exercises is the global sort. SPLIT puts the choice in the
+ * trigger's own branches, which is the only shape where seeding one frontier from every branch
+ * is what produces the order.
+ *
+ * SPLIT hangs off its own source state rather than `entry`. Adding a sixth event to `entry`
+ * would give the CYCLE case new successors to expand when it re-enters the source, quietly
+ * changing what a test written for a different rule observes.
  */
 class ScenarioFrontierMachine extends Machine
 {
@@ -50,6 +59,18 @@ class ScenarioFrontierMachine extends Machine
                             'BUDGET' => [
                                 ['target' => 'free_1', 'guards' => IsEligibleGuard::class],
                                 ['target' => 'pricey'],
+                            ],
+                        ],
+                    ],
+
+                    // The trigger's own branches: costly (PARALLEL, 5) first, thrifty
+                    // (INTERACTIVE, 1) second. Both reach `goal`, so the cheaper route is
+                    // reachable only through the SECOND branch of the trigger.
+                    'split_entry' => [
+                        'on' => [
+                            'SPLIT' => [
+                                ['target' => 'costly', 'guards' => IsEligibleGuard::class],
+                                ['target' => 'thrifty'],
                             ],
                         ],
                     ],
