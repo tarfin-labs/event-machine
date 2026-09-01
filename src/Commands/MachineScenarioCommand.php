@@ -124,7 +124,9 @@ class MachineScenarioCommand extends Command
             foreach ($paths as $i => $p) {
                 $stats = $p->stats();
                 $this->line("  [{$i}] ".$p->signature());
-                $this->line("      {$stats['overrides']} overrides, {$stats['outcomes']} delegation outcomes, {$stats['continues']} @continue");
+                // The weight is what the list is now ordered by, so it belongs beside the counts
+                // that describe each path rather than in a legend the reader has to correlate.
+                $this->line("      {$stats['overrides']} overrides, {$stats['outcomes']} delegation outcomes, {$stats['continues']} @continue, weight {$p->totalWeight}");
             }
 
             $this->line('');
