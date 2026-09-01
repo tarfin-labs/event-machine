@@ -3,8 +3,6 @@
 declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Analysis\MachineGraph;
-use Tarfinlabs\EventMachine\Analysis\ScenarioPath;
-use Tarfinlabs\EventMachine\Analysis\ScenarioPathStep;
 use Tarfinlabs\EventMachine\Analysis\StateClassification;
 use Tarfinlabs\EventMachine\Analysis\ScenarioPathResolver;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioDelegationEdgeMachine;
@@ -14,11 +12,6 @@ function edgeResolver(): ScenarioPathResolver
     return new ScenarioPathResolver(new MachineGraph(ScenarioDelegationEdgeMachine::definition()));
 }
 
-function routeKeys(ScenarioPath $path): array
-{
-    return array_map(fn (ScenarioPathStep $s): string => $s->stateKey, $path->steps);
-}
-
 test('a delegation state with none of the four keys terminates a path', function (): void {
     $resolver = edgeResolver();
 
@@ -26,13 +19,14 @@ test('a delegation state with none of the four keys terminates a path', function
     $asTarget = $resolver->resolveAll('root', 'FF', 'fire_forget');
 
     expect($asTarget)->toHaveCount(1)
-        ->and(routeKeys($asTarget[0]))->toBe(['fire_forget'])
+        ->and(scenarioStateKeys($asTarget[0]))->toBe(['fire_forget'])
         ->and($asTarget[0]->steps[0]->classification)->toBe(StateClassification::DELEGATION)
         ->and($asTarget[0]->totalWeight)->toBe(3);
 
-    // Beyond it there is nothing: its ordinary `on: CONTINUE` is not a successor the resolver
-    // follows, so after_edge is unreachable through it — and this is an exhausted search, not
-    // a truncated one, so the emptiness is a real answer rather than a cap.
+    // Beyond it there is nothing. fire_forget names after_edge twice — once as the engine's
+    // fire-and-forget `target` and once as an ordinary `on: CONTINUE` — and the resolver
+    // follows neither, so after_edge is unreachable through it. This is an exhausted search,
+    // not a truncated one, so the emptiness is a real answer rather than a cap.
     $beyond = $resolver->resolveAll('root', 'FF', 'after_edge');
 
     expect($beyond)->toBeEmpty()
@@ -47,7 +41,7 @@ test('a delegation state is walked by its four keys and by nothing else', functi
     $viaFail = $resolver->resolveAll('root', 'PARTIAL', 'failed_out');
 
     expect($viaDone)->toHaveCount(1)
-        ->and(routeKeys($viaDone[0]))->toBe(['fail_only', 'recovered'])
+        ->and(scenarioStateKeys($viaDone[0]))->toBe(['fail_only', 'recovered'])
         // fail_only (DELEGATION 3) + recovered (FINAL 0)
         ->and($viaDone[0]->totalWeight)->toBe(3)
         ->and($viaDone[0]->steps[1]->event)->toBe('@done')
