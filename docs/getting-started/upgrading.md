@@ -80,9 +80,11 @@ test asserting these strings, and any parser that treated an absent listing as "
 `$totalWeight` appears in anything that serialises a path. It is *derived* in the constructor rather
 than accepted, so hydration that bypasses the constructor — `unserialize()`, reflection-based
 rebuilding — leaves it uninitialised and reading it throws. On rollback the mirror applies: a path
-serialised by 9.20 and read back by the old class carries `totalWeight` as an undeclared property,
-which is a dynamic-property deprecation on PHP 8.3 and fatal under a strict error handler. Do not
-carry a serialised `ScenarioPath` across the version boundary; regenerate it.
+serialised by 9.20 and read back by the old class carries `totalWeight` as an undeclared property.
+`ScenarioPath` is a `readonly class`, and a readonly class forbids dynamic properties outright, so
+`unserialize()` raises `Error: Cannot create dynamic property` unconditionally — on every supported
+PHP, whatever your error handler. Do not carry a serialised `ScenarioPath` across the version
+boundary; regenerate it.
 
 ## From 9.18.x to 9.19.0
 
