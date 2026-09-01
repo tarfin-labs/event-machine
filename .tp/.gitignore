@@ -1,2 +1,6 @@
 local.json
 locks/
+run-*.json
+runs/
+rounds/
+last_failure-*.json
